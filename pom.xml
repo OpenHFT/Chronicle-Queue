@@ -25,7 +25,7 @@
     <artifactId>chronicle</artifactId>
     <version>2.0-SNAPSHOT</version>
     <name>OpenHTF.net Java Chronicle</name>
-    <description>Java library for persisted low latency messaging (Java 7+)</description>
+    <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -59,8 +59,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.6</source>
+                    <target>1.6</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

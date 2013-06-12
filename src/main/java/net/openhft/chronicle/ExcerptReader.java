@@ -16,13 +16,13 @@
 
 package net.openhft.chronicle;
 
-import java.io.Closeable;
+import net.openhft.lang.io.Bytes;
 
 /**
  * @author peter.lawrey
  */
-public interface Chronicle extends Closeable {
-    ExcerptReader createReader();
+public interface ExcerptReader extends Bytes {
+    public boolean nextIndex();
 
-    ExcerptWriter createWriter();
+    public void finish();
 }

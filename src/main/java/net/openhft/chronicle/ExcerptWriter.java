@@ -21,7 +21,7 @@ import net.openhft.lang.io.Bytes;
 /**
  * @author peter.lawrey
  */
-public interface Excerpt extends Bytes {
+public interface ExcerptWriter extends Bytes {
     public void startExcerpt(int capacity);
 
     public void finish();
