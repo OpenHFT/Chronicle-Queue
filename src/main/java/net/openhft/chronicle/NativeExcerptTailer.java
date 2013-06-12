@@ -10,19 +10,57 @@ import java.nio.channels.FileChannel;
 /**
  * @author peter.lawrey
  */
-public class NativeExcerptReader extends NativeBytes implements ExcerptReader {
+public class NativeExcerptTailer extends NativeBytes implements Excerpt {
     private final IndexedChronicle chronicle;
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
+    private long index = -1;
 
-    public NativeExcerptReader(IndexedChronicle chronicle) {
+    public NativeExcerptTailer(IndexedChronicle chronicle) {
         super(0, 0, 0);
         this.chronicle = chronicle;
         newIndexLine();
     }
 
+    @Override
+    public long index() {
+        return index;
+    }
+
+    @Override
+    public boolean index(long l) {
+        if (index == l)
+            return true;
+        if (index + 1 == l)
+            return nextIndex();
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Excerpt toStart() {
+        index(-1);
+        return this;
+    }
+
+    @Override
+    public Excerpt toEnd() {
+        index = chronicle().size() - 1;
+        return this;
+    }
+
+    @Override
+    public boolean isPadding(long l) {
+        return false;
+    }
+
+    @Override
+    public Chronicle chronicle() {
+        return chronicle;
+    }
+
     // relatively static
-    private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE, indexStartAddr, indexLimitAddr;
+    private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE;
+    private long indexLimitAddr;
     private long dataStart = -IndexedChronicle.DATA_BLOCK_SIZE;
     // changed per line
     private long dataPositionAtStartOfLine;
@@ -67,6 +105,7 @@ public class NativeExcerptReader extends NativeBytes implements ExcerptReader {
             return false;
         }
 
+        index++;
         return nextIndex0(offset);
     }
 
@@ -80,7 +119,7 @@ public class NativeExcerptReader extends NativeBytes implements ExcerptReader {
                 checkNewIndexLine2();
                 return false;
             }
-            if (dataPositionAtStartOfLine + offset >= dataStart + IndexedChronicle.DATA_BLOCK_SIZE)
+            if (dataPositionAtStartOfLine + offset > dataStart + IndexedChronicle.DATA_BLOCK_SIZE)
                 loadNextDataBuffer();
             limitAddr = (dataPositionAtStartOfLine + offset - dataStart) + startAddr;
             indexPositionAddr += 4;
@@ -119,7 +158,7 @@ public class NativeExcerptReader extends NativeBytes implements ExcerptReader {
 
                 indexStart += IndexedChronicle.INDEX_BLOCK_SIZE;
                 indexBuffer = getMap(chronicle.indexFile, indexStart, IndexedChronicle.INDEX_BLOCK_SIZE);
-                indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+                long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
                 indexLimitAddr = indexStartAddr + IndexedChronicle.INDEX_BLOCK_SIZE;
             } catch (IOException e) {
                 throw new IllegalStateException(e);

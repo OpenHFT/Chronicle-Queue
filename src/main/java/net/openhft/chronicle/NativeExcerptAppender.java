@@ -10,19 +10,59 @@ import java.nio.channels.FileChannel;
 /**
  * @author peter.lawrey
  */
-public class NativeExcerptWriter extends NativeBytes implements ExcerptWriter {
+public class NativeExcerptAppender extends NativeBytes implements ExcerptAppender {
     private final IndexedChronicle chronicle;
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
+    private long index = -1;
 
-    public NativeExcerptWriter(IndexedChronicle chronicle) {
+    public NativeExcerptAppender(IndexedChronicle chronicle) {
         super(0, 0, 0);
         this.chronicle = chronicle;
     }
 
+    @Override
+    public long index() {
+        return index;
+    }
+
+    @Override
+    public boolean index(long l) {
+        if (index == l) return true;
+        if (index < l) return false;
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean nextIndex() {
+        return index(index + 1);
+    }
+
+    @Override
+    public Excerpt toStart() {
+        index(-1);
+        return this;
+    }
+
+    @Override
+    public Excerpt toEnd() {
+        index = chronicle().size() - 1;
+        return this;
+    }
+
+    @Override
+    public boolean isPadding(long l) {
+        return false;
+    }
+
+    @Override
+    public Chronicle chronicle() {
+        return chronicle;
+    }
 
     // relatively static
-    private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE, indexStartAddr, indexLimitAddr;
+    private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE;
+    private long indexLimitAddr;
     private long dataStart = -IndexedChronicle.DATA_BLOCK_SIZE, dataLimitAddr;
     // changed per line
     private long dataPositionAtStartOfLine;
@@ -64,6 +104,7 @@ public class NativeExcerptWriter extends NativeBytes implements ExcerptWriter {
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= 0xFFFFFFFF");
         UNSAFE.putOrderedInt(null, indexPositionAddr, 0xFFFFFFFF);
         indexPositionAddr += 4;
+        index++;
     }
 
     private void loadNextDataBuffer() throws IOException {
@@ -85,6 +126,8 @@ public class NativeExcerptWriter extends NativeBytes implements ExcerptWriter {
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
         UNSAFE.putOrderedInt(null, indexPositionAddr, (int) (dataPosition() - dataPositionAtStartOfLine));
         indexPositionAddr += 4;
+        index++;
+        chronicle.incrSize();
     }
 
     private void newIndexLine() {
@@ -95,7 +138,7 @@ public class NativeExcerptWriter extends NativeBytes implements ExcerptWriter {
 
                 indexStart += IndexedChronicle.INDEX_BLOCK_SIZE;
                 indexBuffer = chronicle.indexFile.map(FileChannel.MapMode.READ_WRITE, indexStart, IndexedChronicle.INDEX_BLOCK_SIZE);
-                indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+                long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
                 indexLimitAddr = indexStartAddr + IndexedChronicle.INDEX_BLOCK_SIZE;
             } catch (IOException e) {
                 throw new IllegalStateException(e);

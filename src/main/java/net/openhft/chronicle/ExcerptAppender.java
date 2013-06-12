@@ -16,13 +16,9 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.Bytes;
-
 /**
  * @author peter.lawrey
  */
-public interface ExcerptWriter extends Bytes {
+public interface ExcerptAppender extends Excerpt {
     public void startExcerpt(int capacity);
-
-    public void finish();
 }
