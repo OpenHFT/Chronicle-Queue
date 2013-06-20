@@ -19,10 +19,12 @@ package net.openhft.chronicle;
 /**
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends Excerpt {
-    public void startExcerpt(int capacity);
+public interface ExcerptTailer extends Excerpt {
+    public boolean nextIndex();
 
-    public void roll();
+    public boolean index(long l);
 
-    public ExcerptAppender toEnd();
+    public ExcerptTailer toStart();
+
+    public ExcerptTailer toEnd();
 }

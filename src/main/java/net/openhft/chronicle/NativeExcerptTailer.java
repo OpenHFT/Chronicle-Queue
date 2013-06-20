@@ -10,7 +10,7 @@ import java.nio.channels.FileChannel;
 /**
  * @author peter.lawrey
  */
-public class NativeExcerptTailer extends NativeBytes implements Excerpt {
+public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, ExcerptReader {
     private final IndexedChronicle chronicle;
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
@@ -28,29 +28,20 @@ public class NativeExcerptTailer extends NativeBytes implements Excerpt {
     }
 
     @Override
-    public boolean index(long l) {
-        if (index == l)
-            return true;
-        if (index + 1 == l)
-            return nextIndex();
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Excerpt toStart() {
-        index(-1);
-        return this;
-    }
-
-    @Override
-    public Excerpt toEnd() {
+    public ExcerptReader toEnd() {
         index = chronicle().size() - 1;
         return this;
     }
 
     @Override
-    public boolean isPadding(long l) {
+    public boolean index(long l) {
         return false;
+    }
+
+    @Override
+    public ExcerptReader toStart() {
+        index = -1;
+        return this;
     }
 
     @Override
@@ -76,9 +67,12 @@ public class NativeExcerptTailer extends NativeBytes implements Excerpt {
     private MappedByteBuffer getMap(FileChannel fileChannel, long start, int size) throws IOException {
         for (int i = 1; ; i++) {
             try {
+                long startTime = System.nanoTime();
                 MappedByteBuffer map = fileChannel.map(FileChannel.MapMode.READ_WRITE, start, size);
                 if (i > 1)
                     System.out.println("i=" + i);
+                long time = System.nanoTime() - startTime;
+                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
                 return map;
             } catch (IOException e) {
                 if (e.getMessage() == null || !e.getMessage().endsWith("user-mapped section open")) {
@@ -146,6 +140,8 @@ public class NativeExcerptTailer extends NativeBytes implements Excerpt {
     private void checkNewIndexLine2() {
         if ((indexPositionAddr & (IndexedChronicle.LINE_SIZE - 1)) == 8) {
             dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
+            if (dataPositionAtStartOfLine < 0 || dataPositionAtStartOfLine > 1L << 48)
+                throw new AssertionError("Corrupt index: " + dataPositionAtStartOfLine);
             // System.out.println(Long.toHexString(indexPositionAddr - 8 - indexStartAddr + indexStart) + " WAS " + dataPositionAtStartOfLine);
         }
     }
@@ -165,5 +161,10 @@ public class NativeExcerptTailer extends NativeBytes implements Excerpt {
             }
         }
         indexPositionAddr += 8;
+    }
+
+    @Override
+    public long size() {
+        return chronicle.size();
     }
 }

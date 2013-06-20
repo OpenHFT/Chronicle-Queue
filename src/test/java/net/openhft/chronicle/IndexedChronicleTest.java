@@ -17,7 +17,7 @@ public class IndexedChronicleTest {
 
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         ExcerptAppender w = chronicle.createAppender();
-        Excerpt r = chronicle.createTailer();
+        ExcerptTailer r = chronicle.createTailer();
         OUTER:
         for (int i = 0; i < 50000; i++) {
             // System.out.println(i);
@@ -54,7 +54,7 @@ public class IndexedChronicleTest {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
-        final Excerpt r = chronicle.createTailer();
+        final ExcerptTailer r = chronicle.createTailer();
 
         final int runs = 100 * 1000 * 1000;
         long start = System.nanoTime();

@@ -17,8 +17,9 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     private long index = -1;
 
     public NativeExcerptAppender(IndexedChronicle chronicle) {
-        super(0, 0, 0);
+        super(-IndexedChronicle.DATA_BLOCK_SIZE, 0, 0);
         this.chronicle = chronicle;
+        finished = true;
     }
 
     @Override
@@ -27,32 +28,9 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     }
 
     @Override
-    public boolean index(long l) {
-        if (index == l) return true;
-        if (index < l) return false;
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean nextIndex() {
-        return index(index + 1);
-    }
-
-    @Override
-    public Excerpt toStart() {
-        index(-1);
-        return this;
-    }
-
-    @Override
-    public Excerpt toEnd() {
+    public ExcerptAppender toEnd() {
         index = chronicle().size() - 1;
         return this;
-    }
-
-    @Override
-    public boolean isPadding(long l) {
-        return false;
     }
 
     @Override
@@ -80,6 +58,7 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
 
         // update the soft limitAddr
         limitAddr = positionAddr + capacity;
+        finished = false;
     }
 
     private void checkNewIndexLine() {
@@ -128,6 +107,11 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         indexPositionAddr += 4;
         index++;
         chronicle.incrSize();
+
+        if (chronicle.config.synchronousMode()) {
+            dataBuffer.force();
+            indexBuffer.force();
+        }
     }
 
     private void newIndexLine() {
@@ -150,5 +134,15 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
 
         indexPositionAddr += 8;
+    }
+
+    @Override
+    public void roll() {
+        // nothing to do
+    }
+
+    @Override
+    public long size() {
+        return chronicle.size();
     }
 }

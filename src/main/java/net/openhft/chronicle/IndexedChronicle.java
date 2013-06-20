@@ -31,9 +31,15 @@ public class IndexedChronicle implements Chronicle {
 
     final FileChannel indexFile;
     final FileChannel dataFile;
+    final ChronicleConfig config;
     private long size = 0;
 
     public IndexedChronicle(String basePath) throws FileNotFoundException {
+        this(basePath, ChronicleConfig.DEFAULT);
+    }
+
+    public IndexedChronicle(String basePath, ChronicleConfig config) throws FileNotFoundException {
+        this.config = config.clone();
         this.indexFile = new RandomAccessFile(basePath + ".index", "rw").getChannel();
         this.dataFile = new RandomAccessFile(basePath + ".data", "rw").getChannel();
     }
@@ -45,12 +51,12 @@ public class IndexedChronicle implements Chronicle {
     }
 
     @Override
-    public Excerpt createReader() {
+    public ExcerptReader createReader() {
         return new NativeExcerptTailer(this);
     }
 
     @Override
-    public Excerpt createTailer() {
+    public ExcerptTailer createTailer() {
         return new NativeExcerptTailer(this);
     }
 

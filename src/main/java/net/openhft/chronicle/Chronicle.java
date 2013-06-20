@@ -22,9 +22,9 @@ import java.io.Closeable;
  * @author peter.lawrey
  */
 public interface Chronicle extends Closeable {
-    Excerpt createReader();
+    ExcerptReader createReader();
 
-    Excerpt createTailer();
+    ExcerptTailer createTailer();
 
     ExcerptAppender createAppender();
 
