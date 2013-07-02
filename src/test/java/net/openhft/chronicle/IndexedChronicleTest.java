@@ -56,8 +56,8 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final int runs = 1600 * 1000 * 1000;
-        final int size = 32;
+        final int runs = 1000 * 1000 * 1000;
+        final int size = 2;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
             @Override
@@ -67,7 +67,7 @@ public class IndexedChronicleTest {
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         w.startExcerpt(8 * size);
-                        for (int s = 0; s < size; s+=2) {
+                        for (int s = 0; s < size; s += 2) {
                             w.writeLong(1 + i);
                             w.writeLong(1 + i);
                         }
@@ -89,7 +89,7 @@ public class IndexedChronicleTest {
             do {
             } while (!r.nextIndex());
             try {
-                for (int s = 0; s < size; s+=2) {
+                for (int s = 0; s < size; s += 2) {
                     long l = r.readLong();
 //                    if (l != i + 1)
 //                        throw new AssertionError();
@@ -111,6 +111,6 @@ public class IndexedChronicleTest {
         }
         r.close();
         long rate = runs / size * 10000L / (System.nanoTime() - start);
-        System.out.println("Rate = " + rate/10.0 + " Mmsg/sec");
+        System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
     }
 }
