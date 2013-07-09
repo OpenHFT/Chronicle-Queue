@@ -56,7 +56,8 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final int runs = 100 * 1000 * 1000;
+        final int runs = 1000 * 1000 * 1000;
+        final int size = 2;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
             @Override
@@ -64,9 +65,12 @@ public class IndexedChronicleTest {
                 try {
                     IndexedChronicle chronicle = new IndexedChronicle(basePath);
                     final ExcerptAppender w = chronicle.createAppender();
-                    for (int i = 0; i < runs; i++) {
-                        w.startExcerpt(8);
-                        w.writeInt(1 + i);
+                    for (int i = 0; i < runs; i += size) {
+                        w.startExcerpt(8 * size);
+                        for (int s = 0; s < size; s += 2) {
+                            w.writeLong(1 + i);
+                            w.writeLong(1 + i);
+                        }
 //                        w.writeDouble(2);
 //                        w.writeShort(3);
 //                        w.writeByte(4);
@@ -81,13 +85,18 @@ public class IndexedChronicleTest {
         });
         t.start();
 
-        for (int i = 0; i < runs; i++) {
+        for (int i = 0; i < runs; i += size) {
             do {
             } while (!r.nextIndex());
             try {
-                int l = r.readInt();
-                if (l != i + 1)
-                    throw new AssertionError();
+                for (int s = 0; s < size; s += 2) {
+                    long l = r.readLong();
+//                    if (l != i + 1)
+//                        throw new AssertionError();
+                    long l2 = r.readLong();
+//                    if (l2 != i + 1)
+//                        throw new AssertionError();
+                }
 //            double d = r.readDouble();
 //            short s = r.readShort();
 //                byte b = r.readByte();
@@ -101,7 +110,7 @@ public class IndexedChronicleTest {
             }
         }
         r.close();
-        long rate = runs * 1000L / (System.nanoTime() - start);
-        System.out.println("Rate = " + rate + " Mmsg/sec");
+        long rate = runs / size * 10000L / (System.nanoTime() - start);
+        System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
     }
 }

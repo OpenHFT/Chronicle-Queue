@@ -26,7 +26,7 @@ import java.nio.channels.FileChannel;
  */
 public class IndexedChronicle implements Chronicle {
     static final int LINE_SIZE = 64;
-    static final int DATA_BLOCK_SIZE = 128 * 1024 * 1024;
+    static final int DATA_BLOCK_SIZE = 256 * 1024 * 1024;
     static final int INDEX_BLOCK_SIZE = DATA_BLOCK_SIZE / 4;
 
     final FileChannel indexFile;
