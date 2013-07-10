@@ -56,8 +56,8 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final int runs = 1000 * 1000 * 1000;
-        final int size = 2;
+        final int runs = 100 * 1000 * 1000; // longs
+        final int size = 2; // longs
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
             @Override
@@ -112,5 +112,7 @@ public class IndexedChronicleTest {
         r.close();
         long rate = runs / size * 10000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
+        chronicle.close();
+        System.gc();
     }
 }

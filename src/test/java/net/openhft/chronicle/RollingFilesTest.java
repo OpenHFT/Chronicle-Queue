@@ -1,6 +1,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -11,6 +12,7 @@ import java.io.IOException;
  */
 public class RollingFilesTest {
     @Test
+    @Ignore
     public void findLast() throws IOException {
         String dirPath = Jvm.TMP + File.separatorChar + "findLast";
         ChronicleTools.deleteDirOnExit(dirPath);
@@ -20,6 +22,7 @@ public class RollingFilesTest {
     }
 
     @Test
+    @Ignore
     public void rollOnDemand() throws IOException {
         String dirPath = Jvm.TMP + File.separatorChar + "rollOnDemand";
         ChronicleTools.deleteDirOnExit(dirPath);
