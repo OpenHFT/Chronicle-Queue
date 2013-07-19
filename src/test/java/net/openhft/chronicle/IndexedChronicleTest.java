@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 //import net.openhft.lang.affinity.PosixJNAAffinity;
 
+import net.openhft.lang.affinity.PosixJNAAffinity;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -28,6 +29,22 @@ import static org.junit.Assert.assertEquals;
  * @author peter.lawrey
  */
 public class IndexedChronicleTest {
+    static final boolean WITH_BINDING;
+
+    static {
+        boolean binding = false;
+
+        if (Runtime.getRuntime().availableProcessors() > 10) {
+            try {
+                PosixJNAAffinity.INSTANCE.getcpu();
+                binding = true;
+                System.out.println("binding: true");
+            } catch (Throwable ignored) {
+            }
+        }
+        WITH_BINDING = binding;
+    }
+
     @Test
     public void singleThreaded() throws IOException {
         final String basePath = System.getProperty("java.io.tmpdir") + "/singleThreaded";
@@ -74,20 +91,21 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 1000L * 1000 * 1000; // * 1000 * 1000;
-        final int size = 1;
+        final long words = 2000L * 1000 * 1000;
+        final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
+                    if (WITH_BINDING)
+                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < words; i += size) {
                         w.startExcerpt(4L * size);
-//                        for (int s = 0; s < size; s++)
-                        w.writeInt(1 + i);
+                        for (int s = 0; s < size; s++)
+                            w.writeInt(1 + i);
 //                        w.position(4L * size);
                         w.finish();
                     }
@@ -100,7 +118,8 @@ public class IndexedChronicleTest {
         });
         t.start();
 
-//        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
+        if (WITH_BINDING)
+            PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
 
         for (long i = 0; i < words; i += size) {
             int counter = 0;
@@ -141,7 +160,8 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
+                    if (WITH_BINDING)
+                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
@@ -163,7 +183,8 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
+                    if (WITH_BINDING)
+                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath);
                     final ExcerptTailer r = chronicle.createTailer();
                     IndexedChronicle chronicle2 = new IndexedChronicle(basePath2);
@@ -187,7 +208,6 @@ public class IndexedChronicleTest {
         });
         t2.start();
 
-//        PosixJNAAffinity.INSTANCE.setAffinity(1L << 7);
         IndexedChronicle chronicle = new IndexedChronicle(basePath2);
         final ExcerptTailer r = chronicle.createTailer();
 
