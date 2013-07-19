@@ -83,12 +83,10 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     private MappedByteBuffer getMap(FileChannel fileChannel, long start, int size) throws IOException {
         for (int i = 1; ; i++) {
             try {
-                long startTime = System.nanoTime();
+//                long startTime = System.nanoTime();
                 MappedByteBuffer map = fileChannel.map(FileChannel.MapMode.READ_WRITE, start, size);
-                if (i > 1)
-                    System.out.println("i=" + i);
-                long time = System.nanoTime() - startTime;
-                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
+//                long time = System.nanoTime() - startTime;
+//                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
                 return map;
             } catch (IOException e) {
                 if (e.getMessage() == null || !e.getMessage().endsWith("user-mapped section open")) {
@@ -156,8 +154,8 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     private void checkNewIndexLine2() {
         if ((indexPositionAddr & (IndexedChronicle.LINE_SIZE - 1)) == 8) {
             dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
-            if (dataPositionAtStartOfLine < 0 || dataPositionAtStartOfLine > 1L << 48)
-                throw new AssertionError("Corrupt index: " + dataPositionAtStartOfLine);
+            assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine <= 1L << 48 :
+                    "Corrupt index: " + dataPositionAtStartOfLine;
             // System.out.println(Long.toHexString(indexPositionAddr - 8 - indexStartAddr + indexStart) + " WAS " + dataPositionAtStartOfLine);
         }
     }

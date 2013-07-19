@@ -20,7 +20,7 @@ package net.openhft.chronicle;
  * @author peter.lawrey
  */
 public interface ExcerptAppender extends Excerpt {
-    public void startExcerpt(int capacity);
+    public void startExcerpt(long capacity);
 
     public void roll();
 

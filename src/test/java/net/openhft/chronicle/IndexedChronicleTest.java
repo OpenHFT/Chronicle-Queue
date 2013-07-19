@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+//import net.openhft.lang.affinity.PosixJNAAffinity;
+
 import org.junit.Test;
 
 import java.io.IOException;
@@ -66,30 +68,27 @@ public class IndexedChronicleTest {
     }
 
     @Test
-    public void multiThreaded() throws IOException {
+    public void multiThreaded() throws IOException, InterruptedException {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final int runs = 100 * 1000 * 1000; // longs
-        final int size = 2; // longs
+        final long words = 1000L * 1000 * 1000; // * 1000 * 1000;
+        final int size = 1;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
+//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath);
                     final ExcerptAppender w = chronicle.createAppender();
-                    for (int i = 0; i < runs; i += size) {
-                        w.startExcerpt(8 * size);
-                        for (int s = 0; s < size; s += 2) {
-                            w.writeLong(1 + i);
-                            w.writeLong(1 + i);
-                        }
-//                        w.writeDouble(2);
-//                        w.writeShort(3);
-//                        w.writeByte(4);
+                    for (int i = 0; i < words; i += size) {
+                        w.startExcerpt(4L * size);
+//                        for (int s = 0; s < size; s++)
+                        w.writeInt(1 + i);
+//                        w.position(4L * size);
                         w.finish();
                     }
                     w.close();
@@ -101,23 +100,106 @@ public class IndexedChronicleTest {
         });
         t.start();
 
+//        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
+
+        for (long i = 0; i < words; i += size) {
+            int counter = 0;
+            while (!r.nextIndex()) {
+                if (counter++ > 1000000000)
+                    throw new AssertionError("index: " + r.index());
+            }
+            try {
+//                for (int s = 0; s < size; s++) {
+//                    int j = r.readInt();
+//                    if (j != i + 1)
+//                        throw new AssertionError();
+//                }
+                r.finish();
+            } catch (Exception e) {
+                System.err.println("i= " + i);
+                e.printStackTrace();
+                break;
+            }
+        }
+
+        r.close();
+        long rate = words / size * 10 * 1000L / (System.nanoTime() - start);
+        System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages");
+    }
+
+    @Test
+    public void multiThreaded2() throws IOException {
+        final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
+        final String basePath2 = System.getProperty("java.io.tmpdir") + "/multiThreaded2";
+        ChronicleTools.deleteOnExit(basePath);
+        ChronicleTools.deleteOnExit(basePath2);
+
+        final int runs = 1000 * 1000 * 1000;
+        final int size = 4;
+        long start = System.nanoTime();
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    final ExcerptAppender w = chronicle.createAppender();
+                    for (int i = 0; i < runs; i += size) {
+                        w.startExcerpt(4 * size);
+                        for (int s = 0; s < size; s++)
+                            w.writeInt(1 + i);
+                        w.finish();
+                    }
+                    w.close();
+                    chronicle.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        t.start();
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+//                    PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    final ExcerptTailer r = chronicle.createTailer();
+                    IndexedChronicle chronicle2 = new IndexedChronicle(basePath2);
+                    final ExcerptAppender w = chronicle2.createAppender();
+                    for (int i = 0; i < runs; i += size) {
+                        do {
+                        } while (!r.nextIndex());
+
+                        w.startExcerpt(r.remaining());
+                        for (int s = 0; s < size; s++)
+                            w.writeInt(r.readInt());
+                        r.finish();
+                        w.finish();
+                    }
+                    w.close();
+                    chronicle.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        t2.start();
+
+//        PosixJNAAffinity.INSTANCE.setAffinity(1L << 7);
+        IndexedChronicle chronicle = new IndexedChronicle(basePath2);
+        final ExcerptTailer r = chronicle.createTailer();
+
         for (int i = 0; i < runs; i += size) {
             do {
             } while (!r.nextIndex());
             try {
-                for (int s = 0; s < size; s += 2) {
-                    long l = r.readLong();
-//                    if (l != i + 1)
-//                        throw new AssertionError();
-                    long l2 = r.readLong();
-//                    if (l2 != i + 1)
-//                        throw new AssertionError();
+                for (int s = 0; s < size; s++) {
+                    long l = r.readInt();
+                    if (l != i + 1)
+                        throw new AssertionError();
                 }
-//            double d = r.readDouble();
-//            short s = r.readShort();
-//                byte b = r.readByte();
-//                if (b != 4)
-//                    throw new AssertionError();
                 r.finish();
             } catch (Exception e) {
                 System.err.println("i= " + i);
@@ -126,9 +208,7 @@ public class IndexedChronicleTest {
             }
         }
         r.close();
-        long rate = runs / size * 10000L / (System.nanoTime() - start);
+        long rate = 2 * runs / size * 10000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
-        chronicle.close();
-        System.gc();
     }
 }

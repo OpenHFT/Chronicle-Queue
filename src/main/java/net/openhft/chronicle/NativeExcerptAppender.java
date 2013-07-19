@@ -38,32 +38,17 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         finished = true;
     }
 
-    @Override
-    public long index() {
-        return index;
-    }
-
-    @Override
-    public ExcerptAppender toEnd() {
-        index = chronicle().size() - 1;
-        return this;
-    }
-
-    @Override
-    public Chronicle chronicle() {
-        return chronicle;
-    }
-
     // relatively static
     private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE;
     private long indexLimitAddr;
-    private long dataStart = -IndexedChronicle.DATA_BLOCK_SIZE, dataLimitAddr;
+    private long bufferAddr = -IndexedChronicle.DATA_BLOCK_SIZE;
+    private long dataStart = bufferAddr, dataLimitAddr;
     // changed per line
     private long dataPositionAtStartOfLine;
     // changed per entry.
     private long indexPositionAddr;
 
-    public void startExcerpt(int capacity) {
+    public void startExcerpt(long capacity) {
         // check we are the start of a block.
         checkNewIndexLine();
 
@@ -73,6 +58,7 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         }
 
         // update the soft limitAddr
+        startAddr = positionAddr;
         limitAddr = positionAddr + capacity;
         finished = false;
     }
@@ -105,12 +91,12 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     private void loadNextDataBuffer() throws IOException {
         dataStart += IndexedChronicle.DATA_BLOCK_SIZE;
         dataBuffer = chronicle.dataFile.map(FileChannel.MapMode.READ_WRITE, dataStart, IndexedChronicle.DATA_BLOCK_SIZE);
-        startAddr = positionAddr = ((DirectBuffer) dataBuffer).address();
+        bufferAddr = startAddr = positionAddr = ((DirectBuffer) dataBuffer).address();
         dataLimitAddr = startAddr + IndexedChronicle.DATA_BLOCK_SIZE;
     }
 
     private long dataPosition() {
-        return positionAddr - startAddr + dataStart;
+        return positionAddr - bufferAddr + dataStart;
     }
 
     @Override
@@ -119,7 +105,9 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
 
         // push out the entry is available.  This is what the reader polls.
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
-        UNSAFE.putOrderedInt(null, indexPositionAddr, (int) (dataPosition() - dataPositionAtStartOfLine));
+        int relativeOffset = (int) (dataPosition() - dataPositionAtStartOfLine);
+        assert relativeOffset > 0;
+        UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
         indexPositionAddr += 4;
         index++;
         chronicle.incrSize();
@@ -146,7 +134,9 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         }
         // sets the base address
         dataPositionAtStartOfLine = dataPosition();
-        UNSAFE.putOrderedLong(null, indexPositionAddr, dataPositionAtStartOfLine);
+        assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine < 1L << 48 :
+                "dataPositionAtStartOfLine out of bounds, was " + dataPositionAtStartOfLine;
+        UNSAFE.putLong(indexPositionAddr, dataPositionAtStartOfLine);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
 
         indexPositionAddr += 8;
@@ -160,5 +150,22 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     @Override
     public long size() {
         return chronicle.size();
+    }
+
+
+    @Override
+    public long index() {
+        return index;
+    }
+
+    @Override
+    public ExcerptAppender toEnd() {
+        index = chronicle().size() - 1;
+        return this;
+    }
+
+    @Override
+    public Chronicle chronicle() {
+        return chronicle;
     }
 }

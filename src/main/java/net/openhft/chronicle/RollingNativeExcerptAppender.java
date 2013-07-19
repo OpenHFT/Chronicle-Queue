@@ -48,7 +48,7 @@ public class RollingNativeExcerptAppender extends NativeBytes implements Excerpt
     }
 
     @Override
-    public void startExcerpt(int capacity) {
+    public void startExcerpt(long capacity) {
     }
 
     @Override
