@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
  * @author peter.lawrey
  */
 public class IndexedChronicleTest {
-    static final boolean WITH_BINDING;
+    public static final boolean WITH_BINDING;
 
     static {
         boolean binding = false;

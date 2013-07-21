@@ -17,8 +17,8 @@
 package net.openhft.chronicle;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * @author peter.lawrey
@@ -43,7 +43,7 @@ public enum ChronicleTools {
     enum DeleteStatic {
         INSTANCE;
 
-        final List<String> toDeleteList = new ArrayList<String>();
+        final Set<String> toDeleteList = new LinkedHashSet<String>();
 
         {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {

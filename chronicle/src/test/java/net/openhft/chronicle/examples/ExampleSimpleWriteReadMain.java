@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.examples;
+
+import net.openhft.chronicle.*;
+import net.openhft.lang.affinity.PosixJNAAffinity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -30,10 +33,14 @@ public class ExampleSimpleWriteReadMain {
         final String basePath = System.getProperty("user.home") + "/ExampleSimpleWriteReadMain";
         ChronicleTools.deleteOnExit(basePath);
 
+        if (IndexedChronicleTest.WITH_BINDING)
+            PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
+                    if (IndexedChronicleTest.WITH_BINDING)
+                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
                     IndexedChronicle ic = new IndexedChronicle(basePath);
 //                    ic.useUnsafe(true); // for benchmarks
                     ExcerptAppender excerpt = ic.createAppender();
@@ -46,6 +53,7 @@ public class ExampleSimpleWriteReadMain {
                         excerpt.finish();
                     }
                     ic.close();
+                    System.nanoTime();
                 } catch (IOException e) {
                     throw new AssertionError(e);
                 }
@@ -54,7 +62,7 @@ public class ExampleSimpleWriteReadMain {
 
         IndexedChronicle ic = new IndexedChronicle(basePath);
 //        ic.useUnsafe(true); // for benchmarks
-        int time2 = 0, time10 = 0, time100 = 0, time1ms = 0, time10ms = 0;
+        int time1 = 0, time3 = 0, time10 = 0, time30 = 0, time100 = 0;
         ExcerptTailer excerpt = ic.createTailer();
         for (int i = 1; i <= runs; i++) {
             do {
@@ -63,19 +71,19 @@ public class ExampleSimpleWriteReadMain {
             char ch = (char) excerpt.readUnsignedByte();
             long l = excerpt.readLong();
             long time = System.nanoTime() - l;
-            if (time > 2000) {
+            if (time > 1000) {
+                if (time > 3000)
+                    time3++;
                 if (time > 10000)
                     time10++;
+                if (time > 30000)
+                    time30++;
                 if (time > 100000)
                     time100++;
-                if (time > 1000000)
-                    time1ms++;
-                if (time > 10000000)
-                    time10ms++;
-                time2++;
+                time1++;
             }
             if (i == 50000)
-                time2 = time10 = time100 = time1ms = time10ms = 0;
+                time1 = time3 = time10 = time30 = time100 = 0;
             double d = excerpt.readDouble();
 //            System.out.println(l);
 //            assert ch == 'M';
@@ -87,12 +95,16 @@ public class ExampleSimpleWriteReadMain {
 
         long time = System.nanoTime() - start;
         System.out.printf("Took %.2f to write and read %,d entries%n", time / 1e9, runs);
-        System.out.printf("Time 2us: %.2f%%  10us: %.2f%%  100us: %.2f%%  1ms: %.2f%%  10ms: %.3f%%%n",
-                time2 * 100.0 / runs, time10 * 100.0 / runs, time100 * 100.0 / runs, time1ms * 100.0 / runs, time10ms * 100.0 / runs);
+        System.out.printf("Time 1us: %.2f%%  3us: %.2f%%  10us: %.2f%%  30us: %.3f%%  100us: %.3f%%%n",
+                time1 * 100.0 / runs, time3 * 100.0 / runs, time10 * 100.0 / runs, time30 * 100.0 / runs, time100 * 100.0 / runs);
     }
 }
 
 /*
+On an i7 desktop
+Took 17.45 to write and read 30,050,000 entries
+Time 1us: 13.05%  3us: 2.88%  10us: 0.13%  30us: 0.004%  100us: 0.004%
+
 On an i5 laptop
 Took 6.98 to write and read 30,050,000 entries
 Time 2us: 2.06%  10us: 1.45%  100us: 0.47%  1ms: 0.07%  10ms: 0.000%
