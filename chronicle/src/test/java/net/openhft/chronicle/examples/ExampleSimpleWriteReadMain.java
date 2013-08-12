@@ -16,7 +16,11 @@
 
 package net.openhft.chronicle.examples;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.IndexedChronicleTest;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 
 import java.io.IOException;

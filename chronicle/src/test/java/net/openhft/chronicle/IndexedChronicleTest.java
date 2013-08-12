@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 //import net.openhft.lang.affinity.PosixJNAAffinity;
 
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 import org.junit.Test;
 

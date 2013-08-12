@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.tools;
 
 import java.io.File;
 import java.util.LinkedHashSet;

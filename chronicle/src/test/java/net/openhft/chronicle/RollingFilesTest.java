@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.Jvm;
 import org.junit.Ignore;
 import org.junit.Test;

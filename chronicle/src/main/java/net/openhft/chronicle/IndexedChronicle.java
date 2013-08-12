@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -40,6 +41,9 @@ public class IndexedChronicle implements Chronicle {
 
     public IndexedChronicle(String basePath, ChronicleConfig config) throws FileNotFoundException {
         this.config = config.clone();
+        File parentFile = new File(basePath).getParentFile();
+        if (parentFile != null)
+            parentFile.mkdirs();
         this.indexFile = new RandomAccessFile(basePath + ".index", "rw").getChannel();
         this.dataFile = new RandomAccessFile(basePath + ".data", "rw").getChannel();
     }

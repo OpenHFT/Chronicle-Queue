@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,11 @@
 
 package net.openhft.chronicle.examples;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.IndexedChronicleTest;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 
 import java.io.File;
