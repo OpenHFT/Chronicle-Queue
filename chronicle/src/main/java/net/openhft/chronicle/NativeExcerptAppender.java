@@ -31,17 +31,25 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
     private long index = -1;
+    private final int cacheLineMask;
+    private final int dataBlockSize, indexBlockSize;
 
     public NativeExcerptAppender(IndexedChronicle chronicle) {
-        super(-IndexedChronicle.DATA_BLOCK_SIZE, 0, 0);
+        super(-chronicle.config.dataBlockSize(), 0, 0);
         this.chronicle = chronicle;
+        cacheLineMask = (chronicle.config.cacheLineSize() - 1);
+        dataBlockSize = chronicle.config.dataBlockSize();
+        indexBlockSize = chronicle.config.indexBlockSize();
+        bufferAddr = -dataBlockSize;
+        indexStart = -indexBlockSize;
+
         finished = true;
     }
 
     // relatively static
-    private long indexStart = -IndexedChronicle.INDEX_BLOCK_SIZE;
+    private long indexStart;
     private long indexLimitAddr;
-    private long bufferAddr = -IndexedChronicle.DATA_BLOCK_SIZE;
+    private long bufferAddr;
     private long dataStart = bufferAddr, dataLimitAddr;
     // changed per line
     private long dataPositionAtStartOfLine;
@@ -64,7 +72,7 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     }
 
     private void checkNewIndexLine() {
-        if ((indexPositionAddr & (IndexedChronicle.LINE_SIZE - 1)) == 0) {
+        if ((indexPositionAddr & cacheLineMask) == 0) {
             newIndexLine();
         }
     }
@@ -89,10 +97,10 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     }
 
     private void loadNextDataBuffer() throws IOException {
-        dataStart += IndexedChronicle.DATA_BLOCK_SIZE;
-        dataBuffer = chronicle.dataFile.map(FileChannel.MapMode.READ_WRITE, dataStart, IndexedChronicle.DATA_BLOCK_SIZE);
+        dataStart += dataBlockSize;
+        dataBuffer = chronicle.dataFile.map(FileChannel.MapMode.READ_WRITE, dataStart, dataBlockSize);
         bufferAddr = startAddr = positionAddr = ((DirectBuffer) dataBuffer).address();
-        dataLimitAddr = startAddr + IndexedChronicle.DATA_BLOCK_SIZE;
+        dataLimitAddr = startAddr + dataBlockSize;
     }
 
     private long dataPosition() {
@@ -124,10 +132,10 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
             try {
                 // roll index memory mapping.
 
-                indexStart += IndexedChronicle.INDEX_BLOCK_SIZE;
-                indexBuffer = chronicle.indexFile.map(FileChannel.MapMode.READ_WRITE, indexStart, IndexedChronicle.INDEX_BLOCK_SIZE);
+                indexStart += indexBlockSize;
+                indexBuffer = chronicle.indexFile.map(FileChannel.MapMode.READ_WRITE, indexStart, indexBlockSize);
                 long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
-                indexLimitAddr = indexStartAddr + IndexedChronicle.INDEX_BLOCK_SIZE;
+                indexLimitAddr = indexStartAddr + indexBlockSize;
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }

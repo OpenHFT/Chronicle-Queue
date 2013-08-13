@@ -51,15 +51,20 @@ public class IndexedChronicleTest {
         final String basePath = System.getProperty("java.io.tmpdir") + "/singleThreaded";
         ChronicleTools.deleteOnExit(basePath);
 
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        config.dataBlockSize(4096);
+        config.indexBlockSize(4096);
+        IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         ExcerptAppender w = chronicle.createAppender();
         ExcerptTailer r = chronicle.createTailer();
         OUTER:
-        for (int i = 0; i < 50000; i++) {
+        for (int i = 0; i < 100000; i++) {
             // System.out.println(i);
 
-            w.startExcerpt(8);
-            w.writeLong(1);
+            w.startExcerpt(9);
+            assertEquals(0, w.position());
+            w.writeLong(i);
+            assertEquals(8, w.position());
 /*
             w.writeDouble(2);
             w.write(3);
@@ -71,9 +76,15 @@ public class IndexedChronicleTest {
                 if (count-- < 0)
                     break OUTER;
             } while (!r.nextIndex());
+            assertEquals(8, r.capacity());
+            assertEquals(0, r.position());
             long l = r.readLong();
+            assertEquals(i, l);
+            assertEquals(8, r.position());
+            r.position(0);
+            long l2 = r.readLong();
+            assertEquals(i, l2);
             r.finish();
-            assertEquals(1, l);
 /*
             double d = r.readDouble();
             assertEquals(2, d, 0.0);

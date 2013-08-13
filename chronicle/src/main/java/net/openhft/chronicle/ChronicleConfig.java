@@ -31,6 +31,9 @@ public class ChronicleConfig implements Cloneable {
     private boolean useUnsafe = false;
     private boolean synchronousMode = false;
     private ByteOrder byteOrder = ByteOrder.nativeOrder();
+    private int cacheLineSize = 64;
+    private int dataBlockSize = 128 * 1024 * 1024;
+    private int indexBlockSize = dataBlockSize / 4;
 
     // 16 billion max, or one per day for 11 years.
     public static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true);
@@ -100,6 +103,31 @@ public class ChronicleConfig implements Cloneable {
     public ByteOrder byteOrder() {
         return byteOrder;
     }
+
+    public void cacheLineSize(int cacheLineSize) {
+        this.cacheLineSize = cacheLineSize;
+    }
+
+    public int cacheLineSize() {
+        return cacheLineSize;
+    }
+
+    public void dataBlockSize(int dataBlockSize) {
+        this.dataBlockSize = dataBlockSize;
+    }
+
+    public int dataBlockSize() {
+        return dataBlockSize;
+    }
+
+    public void indexBlockSize(int indexBlockSize) {
+        this.indexBlockSize = indexBlockSize;
+    }
+
+    public int indexBlockSize() {
+        return indexBlockSize;
+    }
+
 
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override
