@@ -24,7 +24,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.AccessMode;
 
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
@@ -219,6 +218,10 @@ public class IndexedChronicle1Test {
         }
         assertEquals(0, reader.remaining());
         reader.finish();
+    }
+
+    enum AccessMode {
+        EXECUTE, READ, WRITE
     }
 
     @Test
