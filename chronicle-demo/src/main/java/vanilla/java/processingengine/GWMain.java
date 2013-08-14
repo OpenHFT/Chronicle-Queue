@@ -52,15 +52,20 @@ public class GWMain {
         Gw2PeWriter gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
         IndexedChronicle pe2gw = new IndexedChronicle(pePath);
-        final Histogram times = new Histogram(10000, 100);
+        final Histogram warmup = new Histogram(10000, 100);
+        final Histogram running = new Histogram(10000, 100);
+        final Histogram[] times = {warmup};
         final AtomicInteger reportCount = new AtomicInteger();
         Pe2GwEvents listener = new Pe2GwEvents() {
             @Override
             public void report(MetaData metaData, SmallReport smallReport) {
                 if (metaData.sourceId != gwId) return;
 
-                if (!throughputTest)
-                    times.sample(metaData.inReadTimestamp7Delta * 100);
+                if (!throughputTest) {
+                    if (reportCount.get() == 10000)
+                        times[0] = running;
+                    times[0].sample(metaData.inReadTimestamp7Delta * 100);
+                }
                 reportCount.getAndIncrement();
             }
         };
@@ -84,6 +89,7 @@ public class GWMain {
         StringBuilder clientOrderId = command.clientOrderId;
         long count = 0;
         for (int i = 0; i < orders; i++) {
+
             clientOrderId.setLength(0);
             clientOrderId.append("clientOrderId-");
             clientOrderId.append(gwId);
@@ -114,11 +120,12 @@ public class GWMain {
         long time = System.nanoTime() - start;
         System.out.printf("Processed %,d events in and out in %.1f seconds%n", orders, time / 1e9);
         if (!throughputTest) {
-            System.out.printf("The latency distribution was %.1f, %.1f/%.1f/%.1f us for the 1, 90/99/99.9 %%tile%n",
-                    times.percentile(0.01) / 1e3,
-                    times.percentile(0.90) / 1e3,
-                    times.percentile(0.99) / 1e3,
-                    times.percentile(0.999) / 1e3
+            System.out.printf("The latency distribution was %.1f, %.1f/%.1f, %.1f/%.1f us for the 1, 90/99, 99.9/99.99 %%tile%n",
+                    times[0].percentile(0.01) / 1e3,
+                    times[0].percentile(0.90) / 1e3,
+                    times[0].percentile(0.99) / 1e3,
+                    times[0].percentile(0.999) / 1e3,
+                    times[0].percentile(0.9999) / 1e3
             );
         }
         gw2pe.close();
