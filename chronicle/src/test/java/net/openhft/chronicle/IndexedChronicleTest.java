@@ -25,6 +25,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author peter.lawrey
@@ -61,29 +62,44 @@ public class IndexedChronicleTest {
         for (int i = 0; i < 100000; i++) {
             // System.out.println(i);
 
-            w.startExcerpt(9);
+            w.startExcerpt(24);
             assertEquals(0, w.position());
             w.writeLong(i);
             assertEquals(8, w.position());
-/*
-            w.writeDouble(2);
-            w.write(3);
-*/
+            w.writeDouble(i);
+            w.write(i);
+            assertEquals(17, w.position());
+            assertEquals(24 - 17, w.remaining());
             w.finish();
 
-            int count = 100;
-            do {
-                if (count-- < 0)
-                    break OUTER;
-            } while (!r.nextIndex());
-            assertEquals(8, r.capacity());
+            if (r.index() == 13)
+                Thread.yield();
+            if (!r.nextIndex())
+                assertTrue(r.nextIndex());
+            if (17 != r.remaining())
+                assertEquals("index: " + r.index(), 17, r.remaining());
+            if (17 == r.capacity())
+                assertEquals("index: " + r.index(), 17, r.capacity());
             assertEquals(0, r.position());
             long l = r.readLong();
             assertEquals(i, l);
             assertEquals(8, r.position());
+            if (17 - 8 != r.remaining())
+                assertEquals("index: " + r.index(), 17 - 8, r.remaining());
+            double d = r.readDouble();
+            assertEquals(i, d, 0.0);
+            byte b = r.readByte();
+            assertEquals((byte) i, b);
+            assertEquals(17, r.position());
+            if (0 != r.remaining())
+                assertEquals("index: " + r.index(), 0, r.remaining());
+
             r.position(0);
             long l2 = r.readLong();
             assertEquals(i, l2);
+
+            r.position(17);
+
             r.finish();
 /*
             double d = r.readDouble();
@@ -105,7 +121,7 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 500L * 1000 * 1000;
+        final long words = 200L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -124,7 +140,7 @@ public class IndexedChronicleTest {
                         w.finish();
                     }
                     w.close();
-                    chronicle.close();
+//                    chronicle.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -146,7 +162,7 @@ public class IndexedChronicleTest {
                     if (maxJitter < jitter)
                         maxJitter = jitter;
                     long delay0 = now - start0;
-                    if (delay0 > 10e6)
+                    if (delay0 > 100e6)
                         throw new AssertionError("index: " + r.index());
                     if (maxDelay < delay0)
                         maxDelay = delay0;
@@ -181,7 +197,7 @@ public class IndexedChronicleTest {
         ChronicleTools.deleteOnExit(basePath);
         ChronicleTools.deleteOnExit(basePath2);
 
-        final int runs = 500 * 1000 * 1000;
+        final int runs = 100 * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -199,7 +215,7 @@ public class IndexedChronicleTest {
                         w.finish();
                     }
                     w.close();
-                    chronicle.close();
+//                    chronicle.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -228,8 +244,8 @@ public class IndexedChronicleTest {
                         w.finish();
                     }
                     w.close();
-                    chronicle.close();
-                    chronicle2.close();
+//                    chronicle.close();
+//                    chronicle2.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

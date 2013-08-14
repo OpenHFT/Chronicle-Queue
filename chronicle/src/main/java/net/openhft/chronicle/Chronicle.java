@@ -17,16 +17,17 @@
 package net.openhft.chronicle;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 /**
  * @author peter.lawrey
  */
 public interface Chronicle extends Closeable {
-    ExcerptReader createReader();
+    ExcerptReader createReader() throws IOException;
 
-    ExcerptTailer createTailer();
+    ExcerptTailer createTailer() throws IOException;
 
-    ExcerptAppender createAppender();
+    ExcerptAppender createAppender() throws IOException;
 
     long size();
 }

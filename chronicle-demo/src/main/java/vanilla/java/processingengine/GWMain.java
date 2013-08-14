@@ -40,7 +40,7 @@ public class GWMain {
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
 
-        int orders = 10 * 1000 * 1000;
+        int orders = 30;
 
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");

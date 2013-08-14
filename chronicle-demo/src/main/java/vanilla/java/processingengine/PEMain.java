@@ -36,7 +36,7 @@ public class PEMain {
         final Pe2GwWriter pe2GwWriter = new Pe2GwWriter(excerpt);
 
         Gw2PeEvents listener = new PEEvents(pe2GwWriter);
-        Gw2PeReader[] readers = new Gw2PeReader[2];
+        Gw2PeReader[] readers = new Gw2PeReader[1];
         IndexedChronicle[] gw2pe = new IndexedChronicle[readers.length];
         for (int i = 0; i < readers.length; i++) {
             int sourceId = i + 1;
@@ -51,6 +51,11 @@ public class PEMain {
             boolean readOne = false;
             for (Gw2PeReader reader : readers) {
                 readOne |= reader.readOne();
+            }
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
             if (readOne) {
                 // did something

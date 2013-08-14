@@ -36,9 +36,12 @@ public class Gw2PeReader {
     }
 
     public boolean readOne() {
+        if (excerpt.index() == 13)
+            Thread.yield();
         if (!excerpt.nextIndex()) return false;
 
         long pos = excerpt.position();
+        System.out.println("Reading " + excerpt.index() + " " + excerpt.capacity());
         MessageType mt = excerpt.readEnum(MessageType.class);
         if (mt == null) {
             // rewind and read again.

@@ -135,7 +135,7 @@ public class IndexedChronicle1Test {
 //                ic.useUnsafe(true);
                 ExcerptTailer excerpt = ic.createTailer();
                 for (int i = 1; i <= records; i++) {
-                    boolean found = excerpt.nextIndex();
+                    boolean found = excerpt.nextIndex() || excerpt.nextIndex();
                     if (!found)
                         assertTrue(found);
                     long l = excerpt.readLong();
@@ -149,7 +149,7 @@ public class IndexedChronicle1Test {
                 ic.close();
             }
             long time = System.nanoTime() - start;
-            System.out.printf("Time taken %,d ms", time / 1000000);
+            System.out.printf("Time taken %,d ms%n", time / 1000000);
         }
     }
 

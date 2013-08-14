@@ -21,40 +21,42 @@ import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerptAppender extends NativeBytes implements ExcerptAppender {
     private final IndexedChronicle chronicle;
+    private final int cacheLineMask;
+    private final int dataBlockSize, indexBlockSize;
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
     private long index = -1;
-    private final int cacheLineMask;
-    private final int dataBlockSize, indexBlockSize;
-
-    public NativeExcerptAppender(IndexedChronicle chronicle) {
-        super(-chronicle.config.dataBlockSize(), 0, 0);
-        this.chronicle = chronicle;
-        cacheLineMask = (chronicle.config.cacheLineSize() - 1);
-        dataBlockSize = chronicle.config.dataBlockSize();
-        indexBlockSize = chronicle.config.indexBlockSize();
-        bufferAddr = -dataBlockSize;
-        indexStart = -indexBlockSize;
-
-        finished = true;
-    }
-
     // relatively static
     private long indexStart;
     private long indexLimitAddr;
     private long bufferAddr;
-    private long dataStart = bufferAddr, dataLimitAddr;
+    private long dataStart, dataLimitAddr;
     // changed per line
     private long dataPositionAtStartOfLine;
     // changed per entry.
     private long indexPositionAddr;
+
+    public NativeExcerptAppender(IndexedChronicle chronicle) throws IOException {
+        super(0, 0, 0);
+        this.chronicle = chronicle;
+        cacheLineMask = (chronicle.config.cacheLineSize() - 1);
+        dataBlockSize = chronicle.config.dataBlockSize();
+        indexBlockSize = chronicle.config.indexBlockSize();
+
+        indexStart = 0;
+        loadIndexBuffer();
+        dataStart = 0;
+        loadDataBuffer();
+        limitAddr = startAddr;
+
+        finished = true;
+    }
 
     public void startExcerpt(long capacity) {
         // check we are the start of a block.
@@ -98,8 +100,12 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
 
     private void loadNextDataBuffer() throws IOException {
         dataStart += dataBlockSize;
-        dataBuffer = chronicle.dataFile.map(FileChannel.MapMode.READ_WRITE, dataStart, dataBlockSize);
-        bufferAddr = startAddr = positionAddr = ((DirectBuffer) dataBuffer).address();
+        loadDataBuffer();
+    }
+
+    private void loadDataBuffer() throws IOException {
+        dataBuffer = MapUtils.getMap(chronicle.dataFile, dataStart, dataBlockSize);
+        bufferAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
         dataLimitAddr = startAddr + dataBlockSize;
     }
 
@@ -133,9 +139,7 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
                 // roll index memory mapping.
 
                 indexStart += indexBlockSize;
-                indexBuffer = chronicle.indexFile.map(FileChannel.MapMode.READ_WRITE, indexStart, indexBlockSize);
-                long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
-                indexLimitAddr = indexStartAddr + indexBlockSize;
+                loadIndexBuffer();
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
@@ -150,6 +154,12 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         indexPositionAddr += 8;
     }
 
+    private void loadIndexBuffer() throws IOException {
+        indexBuffer = MapUtils.getMap(chronicle.indexFile, indexStart, indexBlockSize);
+        long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+        indexLimitAddr = indexStartAddr + indexBlockSize;
+    }
+
     @Override
     public void roll() {
         // nothing to do
@@ -159,7 +169,6 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     public long size() {
         return chronicle.size();
     }
-
 
     @Override
     public long index() {

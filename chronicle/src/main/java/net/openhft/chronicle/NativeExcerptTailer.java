@@ -28,22 +28,37 @@ import java.nio.channels.FileChannel;
  */
 public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, ExcerptReader {
     private final IndexedChronicle chronicle;
+    private final int cacheLineMask;
+    private final int dataBlockSize, indexBlockSize;
     @SuppressWarnings("FieldCanBeLocal")
     private MappedByteBuffer indexBuffer, dataBuffer;
     private long index = -1;
-    private final int cacheLineMask;
-    private final int dataBlockSize, indexBlockSize;
+    // relatively static
+    private long indexStart;
+    private long indexLimitAddr;
+    private long bufferAddr = 0, dataStart;
+    // changed per line
+    private long dataPositionAtStartOfLine;
+    // changed per entry.
+    private long indexPositionAddr;
+    private long dataLimitAddr;
 
-    public NativeExcerptTailer(IndexedChronicle chronicle) {
+    public NativeExcerptTailer(IndexedChronicle chronicle) throws IOException {
         super(0, 0, 0);
         this.chronicle = chronicle;
         cacheLineMask = (chronicle.config.cacheLineSize() - 1);
         dataBlockSize = chronicle.config.dataBlockSize();
         indexBlockSize = chronicle.config.indexBlockSize();
-        bufferAddr = -dataBlockSize;
-        indexStart = -indexBlockSize;
 
-        newIndexLine();
+
+        indexStart = 0;
+        loadIndexBuffer();
+
+        dataStart = 0;
+        loadDataBuffer();
+        limitAddr = startAddr;
+
+        finished = true;
     }
 
     @Override
@@ -73,47 +88,19 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
         return chronicle;
     }
 
-    // relatively static
-    private long indexStart;
-    private long indexLimitAddr;
-    private long bufferAddr = 0, dataStart;
-    // changed per line
-    private long dataPositionAtStartOfLine;
-    // changed per entry.
-    private long indexPositionAddr;
-
     private void loadNextDataBuffer() throws IOException {
         dataStart += dataBlockSize;
-        dataBuffer = getMap(chronicle.dataFile, dataStart, dataBlockSize);
-        bufferAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
+        loadDataBuffer();
     }
 
-    private MappedByteBuffer getMap(FileChannel fileChannel, long start, int size) throws IOException {
-        for (int i = 1; ; i++) {
-            try {
-//                long startTime = System.nanoTime();
-                MappedByteBuffer map = fileChannel.map(FileChannel.MapMode.READ_WRITE, start, size);
-//                long time = System.nanoTime() - startTime;
-//                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
-                return map;
-            } catch (IOException e) {
-                if (e.getMessage() == null || !e.getMessage().endsWith("user-mapped section open")) {
-                    throw e;
-                }
-                if (i < 10)
-                    Thread.yield();
-                else
-                    try {
-                        Thread.sleep(1);
-                    } catch (InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
-                        throw e;
-                    }
-            }
-        }
+    private void loadDataBuffer() throws IOException {
+        dataBuffer = MapUtils.getMap(chronicle.dataFile, dataStart, dataBlockSize);
+        bufferAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
+        dataLimitAddr = startAddr + dataBlockSize;
     }
 
     private void checkNewIndexLine1() {
+        assert indexPositionAddr != 0;
         if ((indexPositionAddr & cacheLineMask) == 0) {
             newIndexLine();
         }
@@ -121,7 +108,11 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
 
     public boolean nextIndex() {
         // update the soft limitAddr
-        long offset = UNSAFE.getIntVolatile(null, indexPositionAddr) & 0xFFFFFFFFL;
+        assert indexPositionAddr != 0;
+        checkNewIndexLine2();
+        long offset = UNSAFE.getInt(null, indexPositionAddr) & 0xFFFFFFFFL;
+        if (offset == 0)
+            offset = UNSAFE.getIntVolatile(null, indexPositionAddr) & 0xFFFFFFFFL;
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
         if (offset == 0) {
             return false;
@@ -143,9 +134,21 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
             }
             if (dataPositionAtStartOfLine + offset > dataStart + dataBlockSize)
                 loadNextDataBuffer();
+            assert limitAddr != 0;
+            long pstartAddr = startAddr;
             startAddr = limitAddr;
             limitAddr = (dataPositionAtStartOfLine + offset - dataStart) + bufferAddr;
+//            System.out.println(Long.toHexString(startAddr) + " to " + Long.toHexString(limitAddr));
+            assert limitAddr <= dataLimitAddr;
             indexPositionAddr += 4;
+            assert limitAddr > startAddr : "index=" + index() + " % " + index() % 14
+                    + " pstartAddr: " + (pstartAddr - bufferAddr)
+                    + " startAddr: " + (startAddr - bufferAddr)
+                    + " limitAddr: " + (limitAddr - bufferAddr)
+                    + " dataPositionAtStartOfLine: " + dataPositionAtStartOfLine
+                    + " offset: " + offset
+                    + " dataStart: " + dataStart
+                    ;
             return true;
         } catch (IOException e) {
             throw new IllegalStateException(e);
@@ -161,29 +164,48 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     }
 
     private void checkNewIndexLine2() {
-        if ((indexPositionAddr & cacheLineMask) == 8) {
-            dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
+        if ((indexPositionAddr & cacheLineMask) == 0) {
+            dataPositionAtStartOfLine = UNSAFE.getLong(null, indexPositionAddr);
+            if (dataPositionAtStartOfLine == 0 && index > 0) {
+                int count = 0;
+                while (dataPositionAtStartOfLine == 0) {
+                    dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr);
+                    if (count++ > 100000000)
+                        throw new AssertionError("blank dataPositionAtStartOfLine");
+                }
+//                System.out.println("b db " + count);
+            }
             assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine <= 1L << 48 :
                     "Corrupt index: " + dataPositionAtStartOfLine;
+            indexPositionAddr += 8;
             // System.out.println(Long.toHexString(indexPositionAddr - 8 - indexStartAddr + indexStart) + " WAS " + dataPositionAtStartOfLine);
         }
     }
 
     private void newIndexLine() {
         // check we have a valid index
+        assert indexPositionAddr != 0;
+        assert indexLimitAddr != 0;
         if (indexPositionAddr >= indexLimitAddr) {
-            try {
-                // roll index memory mapping.
-
-                indexStart += indexBlockSize;
-                indexBuffer = getMap(chronicle.indexFile, indexStart, indexBlockSize);
-                long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
-                indexLimitAddr = indexStartAddr + indexBlockSize;
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+            newIndexLine2();
         }
-        indexPositionAddr += 8;
+    }
+
+    private void newIndexLine2() {
+        try {
+            // roll index memory mapping.
+
+            indexStart += indexBlockSize;
+            loadIndexBuffer();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void loadIndexBuffer() throws IOException {
+        indexBuffer = chronicle.indexFile.map(FileChannel.MapMode.READ_WRITE, indexStart, indexBlockSize);
+        long indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+        indexLimitAddr = indexStartAddr + indexBlockSize;
     }
 
     @Override

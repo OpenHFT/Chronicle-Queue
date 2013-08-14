@@ -51,17 +51,17 @@ public class IndexedChronicle implements Chronicle {
     }
 
     @Override
-    public ExcerptReader createReader() {
+    public ExcerptReader createReader() throws IOException {
         return new NativeExcerptTailer(this);
     }
 
     @Override
-    public ExcerptTailer createTailer() {
+    public ExcerptTailer createTailer() throws IOException {
         return new NativeExcerptTailer(this);
     }
 
     @Override
-    public ExcerptAppender createAppender() {
+    public ExcerptAppender createAppender() throws IOException {
         return new NativeExcerptAppender(this);
     }
 
