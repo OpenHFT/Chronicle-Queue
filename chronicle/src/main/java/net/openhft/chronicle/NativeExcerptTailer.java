@@ -22,11 +22,13 @@ import sun.nio.ch.DirectBuffer;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.logging.Logger;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, ExcerptReader {
+    private static final Logger LOGGER = Logger.getLogger(NativeExcerptTailer.class.getName());
     private final IndexedChronicle chronicle;
     private final int cacheLineMask;
     private final int dataBlockSize, indexBlockSize;
@@ -38,7 +40,7 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     private long indexLimitAddr;
     private long bufferAddr = 0, dataStart;
     // changed per line
-    private long dataPositionAtStartOfLine;
+    private long dataPositionAtStartOfLine = 0;
     // changed per entry.
     private long indexPositionAddr;
     private long dataLimitAddr;
@@ -109,7 +111,10 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     public boolean nextIndex() {
         // update the soft limitAddr
         assert indexPositionAddr != 0;
-        checkNewIndexLine2();
+
+        if ((indexPositionAddr & cacheLineMask) == 0) {
+            indexPositionAddr += 8;
+        }
         long offset = UNSAFE.getInt(null, indexPositionAddr) & 0xFFFFFFFFL;
         if (offset == 0)
             offset = UNSAFE.getIntVolatile(null, indexPositionAddr) & 0xFFFFFFFFL;
@@ -117,6 +122,7 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
         if (offset == 0) {
             return false;
         }
+        checkNewIndexLine2();
 
         index++;
         return nextIndex0(offset);
@@ -164,20 +170,11 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     }
 
     private void checkNewIndexLine2() {
-        if ((indexPositionAddr & cacheLineMask) == 0) {
-            dataPositionAtStartOfLine = UNSAFE.getLong(null, indexPositionAddr);
-            if (dataPositionAtStartOfLine == 0 && index > 0) {
-                int count = 0;
-                while (dataPositionAtStartOfLine == 0) {
-                    dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr);
-                    if (count++ > 100000000)
-                        throw new AssertionError("blank dataPositionAtStartOfLine");
-                }
-//                System.out.println("b db " + count);
-            }
+        if ((indexPositionAddr & cacheLineMask) == 8) {
+            dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
+
             assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine <= 1L << 48 :
                     "Corrupt index: " + dataPositionAtStartOfLine;
-            indexPositionAddr += 8;
             // System.out.println(Long.toHexString(indexPositionAddr - 8 - indexStartAddr + indexStart) + " WAS " + dataPositionAtStartOfLine);
         }
     }

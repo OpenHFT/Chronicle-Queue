@@ -35,10 +35,13 @@ public class Pe2GwReader {
     }
 
     public boolean readOne() {
-        if (!excerpt.nextIndex()) return false;
+        if (!excerpt.nextIndex()) {
+//            System.out.println("r- " + excerpt.index());
+            return false;
+        }
 
         long pos = excerpt.position();
-        System.out.println("Reading " + excerpt.index());
+//        System.out.println("Reading " + excerpt.index());
         MessageType mt = excerpt.readEnum(MessageType.class);
         if (mt == null) {
             // rewind and read again.

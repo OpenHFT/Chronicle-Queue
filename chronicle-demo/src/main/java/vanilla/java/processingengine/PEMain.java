@@ -52,11 +52,6 @@ public class PEMain {
             for (Gw2PeReader reader : readers) {
                 readOne |= reader.readOne();
             }
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             if (readOne) {
                 // did something
                 count = 0;

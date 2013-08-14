@@ -40,7 +40,7 @@ public class GWMain {
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
 
-        int orders = 30;
+        int orders = 5 * 1000 * 1000;
 
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
@@ -82,6 +82,7 @@ public class GWMain {
         SmallCommand command = new SmallCommand();
         @SuppressWarnings("MismatchedQueryAndUpdateOfStringBuilder")
         StringBuilder clientOrderId = command.clientOrderId;
+        long count = 0;
         for (int i = 0; i < orders; i++) {
             clientOrderId.setLength(0);
             clientOrderId.append("clientOrderId-");
@@ -101,6 +102,8 @@ public class GWMain {
             } else {
                 do {
                     /* read another */
+                    if (++count % 1000000000 == 0)
+                        System.out.println("reportCount: " + reportCount);
                 } while (pe2GwReader.readOne() || reportCount.get() < i - 1);
             }
         }
