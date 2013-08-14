@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import static junit.framework.Assert.assertSame;
@@ -33,6 +34,54 @@ import static junit.framework.Assert.assertTrue;
  */
 public class IndexedChronicle1Test {
     static final String TMP = System.getProperty("java.io.tmpdir");
+
+    static void assertEquals(long a, long b) {
+        if (a != b)
+            Assert.assertEquals(a, b);
+    }
+
+    static <T> void assertEquals(T a, T b) {
+        if (a == null) {
+            if (b == null) return;
+        } else if (a.equals(b)) {
+            return;
+        }
+        Assert.assertEquals(a, b);
+    }
+
+    @Test
+    public void testSerializationPerformance() throws IOException, ClassNotFoundException, InterruptedException {
+        String testPath = TMP + File.separator + "chronicle-object";
+        IndexedChronicle tsc = new IndexedChronicle(testPath);
+        ChronicleTools.deleteOnExit(testPath);
+
+//        tsc.clear();
+        ExcerptAppender appender = tsc.createAppender();
+        int objects = 1000000;
+        long start = System.nanoTime();
+        for (int i = 0; i < objects; i++) {
+            appender.startExcerpt(28);
+            appender.writeObject(BigDecimal.valueOf(i % 1000));
+            appender.finish();
+        }
+        ExcerptTailer tailer = tsc.createTailer();
+        for (int i = 0; i < objects; i++) {
+            assertTrue(tailer.nextIndex() || tailer.nextIndex());
+            BigDecimal bd = (BigDecimal) tailer.readObject();
+            assertEquals(i % 1000, bd.longValue());
+            tailer.finish();
+        }
+        //        System.out.println("waiting");
+        //        Thread.sleep(20000);
+        //        System.out.println("waited");
+        //        System.gc();
+        tsc.close();
+        long time = System.nanoTime() - start;
+        System.out.printf("The average time to write and read a BigDecimal was %,d ns%n", time / objects);
+        //        tsc = null;
+        //        System.gc();
+        //        Thread.sleep(10000);
+    }
 
     @Test
     public void rewritibleEntries() throws IOException {
@@ -153,7 +202,6 @@ public class IndexedChronicle1Test {
         }
     }
 
-
     /**
      * https://github.com/peter-lawrey/Java-Chronicle/issues/9
      *
@@ -220,10 +268,6 @@ public class IndexedChronicle1Test {
         reader.finish();
     }
 
-    enum AccessMode {
-        EXECUTE, READ, WRITE
-    }
-
     @Test
     public void testEnum() throws IOException {
         String testPath = TMP + File.separator + "chroncle-bool-enum";
@@ -271,53 +315,7 @@ public class IndexedChronicle1Test {
         assertSame(zero, zero2);
     }
 
-    /*
-        @Test
-        public void testSerializationPerformance() throws IOException, ClassNotFoundException, InterruptedException {
-            String testPath = TMP + File.separator + "chronicle-object";
-            IndexedChronicle tsc = new IndexedChronicle(testPath, 16, ByteOrder.nativeOrder(), true);
-            tsc.useUnsafe(true);
-            ChronicleTools.deleteOnExit(testPath);
-
-            tsc.clear();
-            Excerpt excerpt = tsc.createExcerpt();
-            int objects = 5000000;
-            long start = System.nanoTime();
-            for (int i = 0; i < objects; i++) {
-                excerpt.startExcerpt(28);
-                excerpt.writeObject(BigDecimal.valueOf(i % 1000));
-                excerpt.finish();
-            }
-            for (int i = 0; i < objects; i++) {
-                assertTrue(excerpt.index(i));
-                BigDecimal bd = (BigDecimal) excerpt.readObject();
-                assertEquals(i % 1000, bd.longValue());
-                excerpt.finish();
-            }
-    //        System.out.println("waiting");
-    //        Thread.sleep(20000);
-    //        System.out.println("waited");
-    //        System.gc();
-            tsc.close();
-            long time = System.nanoTime() - start;
-            System.out.printf("The average time to write and read a double was %.1f us%n", time / 1e3 / objects / 10);
-    //        tsc = null;
-    //        System.gc();
-    //        Thread.sleep(10000);
-        }
-
-    */
-    static void assertEquals(long a, long b) {
-        if (a != b)
-            Assert.assertEquals(a, b);
-    }
-
-    static <T> void assertEquals(T a, T b) {
-        if (a == null) {
-            if (b == null) return;
-        } else if (a.equals(b)) {
-            return;
-        }
-        Assert.assertEquals(a, b);
+    enum AccessMode {
+        EXECUTE, READ, WRITE
     }
 }

@@ -33,7 +33,6 @@ import static junit.framework.Assert.assertEquals;
  */
 public class ExampleKeyedExcerptMain {
     private static final String TMP = System.getProperty("java.io.tmpdir");
-
     private final Chronicle chronicle;
     private final ExcerptReader reader;
     private final ExcerptTailer tailer;
@@ -50,34 +49,6 @@ public class ExampleKeyedExcerptMain {
         tailer = chronicle.createTailer();
         appender = chronicle.createAppender();
         reader = chronicle.createReader();
-    }
-
-    public void load() {
-        while (tailer.nextIndex()) {
-            String key = tailer.readUTF();
-            keyToExcerpt.put(key, tailer.index());
-        }
-    }
-
-    public void putMapFor(String key, Map<String, String> map) {
-        appender.startExcerpt(4096); // a guess
-        appender.writeUTF(key);
-        appender.writeMap(map);
-        appender.finish();
-    }
-
-    public Map<String, String> getMapFor(String key) {
-
-        long value = keyToExcerpt.get(key);
-        if (value < 0) return Collections.emptyMap();
-        reader.index(value);
-        // skip the key
-        reader.skip(reader.readStopBit());
-        return reader.readMap(String.class, String.class);
-    }
-
-    public void close() {
-        IOTools.close(chronicle);
     }
 
     public static void main(String... ignored) throws IOException {
@@ -111,5 +82,33 @@ public class ExampleKeyedExcerptMain {
         long time = System.nanoTime() - start;
         long time2 = System.nanoTime() - start2;
         System.out.printf("Took an average of %,d ns to write and read each entry, an average of %,d ns to lookup%n", time / keys, time2 / keys);
+    }
+
+    public void load() {
+        while (tailer.nextIndex()) {
+            String key = tailer.readUTF();
+            keyToExcerpt.put(key, tailer.index());
+        }
+    }
+
+    public void putMapFor(String key, Map<String, String> map) {
+        appender.startExcerpt(4096); // a guess
+        appender.writeUTF(key);
+        appender.writeMap(map);
+        appender.finish();
+    }
+
+    public Map<String, String> getMapFor(String key) {
+
+        long value = keyToExcerpt.get(key);
+        if (value < 0) return Collections.emptyMap();
+        reader.index(value);
+        // skip the key
+        reader.skip(reader.readStopBit());
+        return reader.readMap(String.class, String.class);
+    }
+
+    public void close() {
+        IOTools.close(chronicle);
     }
 }

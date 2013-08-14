@@ -24,6 +24,18 @@ import java.nio.ByteOrder;
  * @author peter.lawrey
  */
 public class ChronicleConfig implements Cloneable {
+    // 16 billion max, or one per day for 11 years.
+    public static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true);
+    // 256 billion max
+    public static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false);
+    // 4 trillion max
+    public static final ChronicleConfig LARGE = new ChronicleConfig(64 * 1024, 64 * 1024 * 1024, false);
+    // 1 quadrillion max
+    public static final ChronicleConfig HUGE = new ChronicleConfig(4 * 1024 * 1024, 256 * 1024 * 1024, false);
+    // maximise overhead for testing purposes
+    public static final ChronicleConfig TEST = new ChronicleConfig(1024 * 1024, 4 * 1024, true);
+    // default used by Chronicle if not specified.
+    public static final ChronicleConfig DEFAULT = Jvm.is64Bit() ? MEDIUM : SMALL;
     private int indexFileCapacity;
     private int indexFileExcerpts;
     private boolean minimiseFootprint;
@@ -34,21 +46,6 @@ public class ChronicleConfig implements Cloneable {
     private int cacheLineSize = 64;
     private int dataBlockSize = 128 * 1024 * 1024;
     private int indexBlockSize = dataBlockSize / 4;
-
-    // 16 billion max, or one per day for 11 years.
-    public static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true);
-    // 256 billion max
-    public static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false);
-    // 4 trillion max
-    public static final ChronicleConfig LARGE = new ChronicleConfig(64 * 1024, 64 * 1024 * 1024, false);
-    // 1 quadrillion max
-    public static final ChronicleConfig HUGE = new ChronicleConfig(4 * 1024 * 1024, 256 * 1024 * 1024, false);
-
-    // maximise overhead for testing purposes
-    public static final ChronicleConfig TEST = new ChronicleConfig(1024 * 1024, 4 * 1024, true);
-
-    // default used by Chronicle if not specified.
-    public static final ChronicleConfig DEFAULT = Jvm.is64Bit() ? MEDIUM : SMALL;
 
     public ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint) {
         this.indexFileCapacity = indexFileCapacity;
@@ -127,7 +124,6 @@ public class ChronicleConfig implements Cloneable {
     public int indexBlockSize() {
         return indexBlockSize;
     }
-
 
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override

@@ -40,9 +40,12 @@ public enum ChronicleTools {
         }
     }
 
+    public static void deleteDirOnExit(String dirPath) {
+        DeleteStatic.INSTANCE.add(dirPath);
+    }
+
     enum DeleteStatic {
         INSTANCE;
-
         final Set<String> toDeleteList = new LinkedHashSet<String>();
 
         {
@@ -71,9 +74,5 @@ public enum ChronicleTools {
             }
             dir.delete();
         }
-    }
-
-    public static void deleteDirOnExit(String dirPath) {
-        DeleteStatic.INSTANCE.add(dirPath);
     }
 }

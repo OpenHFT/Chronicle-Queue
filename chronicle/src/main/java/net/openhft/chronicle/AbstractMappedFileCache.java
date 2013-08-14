@@ -32,7 +32,6 @@ public abstract class AbstractMappedFileCache implements MappedFileCache {
     private static final int HEADER_INDEX_EXCERPTS = HEADER_VERSION + 4;
     private static final int HEADER_INDEX_COUNT = HEADER_INDEX_EXCERPTS + 4;
     private static final int HEADER_SIZE = 128;
-
     protected final File dir;
     private final File masterFile;
     private final FileChannel masterFileChannel;
