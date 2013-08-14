@@ -16,6 +16,7 @@
 
 package vanilla.java.processingengine;
 
+import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import vanilla.java.processingengine.api.*;
 import vanilla.java.processingengine.testing.Histogram;
@@ -31,6 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author peter.lawrey
  */
+/*
+on a dual core i7-4700 laptop
+Processed 10,000,000 events in and out in 7.5 seconds
+The latency distribution was 0.3, 1.2/2.5, 3.8/9.3 us for the 1, 90/99, 99.9/99.99 %tile
+ */
 public class GWMain {
     public static void main(String... args) throws IOException, InterruptedException {
         if (args.length < 2) {
@@ -40,7 +46,7 @@ public class GWMain {
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
 
-        int orders = 5 * 1000 * 1000;
+        int orders = 10 * 1000 * 1000;
 
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
@@ -48,10 +54,13 @@ public class GWMain {
         String pePath = tmp + "/demo/pe";
 
         // setup
-        IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath);
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//        config.dataBlockSize(4 * 1024);
+//        config.indexBlockSize(4 * 1024);
+        IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath, config);
         Gw2PeWriter gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
-        IndexedChronicle pe2gw = new IndexedChronicle(pePath);
+        IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
         final Histogram warmup = new Histogram(10000, 100);
         final Histogram running = new Histogram(10000, 100);
         final Histogram[] times = {warmup};
@@ -62,7 +71,7 @@ public class GWMain {
                 if (metaData.sourceId != gwId) return;
 
                 if (!throughputTest) {
-                    if (reportCount.get() == 10000)
+                    if (reportCount.get() == 20000)
                         times[0] = running;
                     times[0].sample(metaData.inReadTimestamp7Delta * 100);
                 }
@@ -91,7 +100,7 @@ public class GWMain {
         for (int i = 0; i < orders; i++) {
 
             clientOrderId.setLength(0);
-            clientOrderId.append("clientOrderId-");
+            clientOrderId.append("orderId-");
             clientOrderId.append(gwId);
             clientOrderId.append('-');
             clientOrderId.append(i);
@@ -108,8 +117,8 @@ public class GWMain {
             } else {
                 do {
                     /* read another */
-                    if (++count % 1000000000 == 0)
-                        System.out.println("reportCount: " + reportCount);
+//                    if (++count % 1000000000 == 0)
+//                        System.out.println("reportCount: " + reportCount);
                 } while (pe2GwReader.readOne() || reportCount.get() < i - 1);
             }
         }

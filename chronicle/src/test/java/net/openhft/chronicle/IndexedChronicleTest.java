@@ -54,7 +54,7 @@ public class IndexedChronicleTest {
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
         config.dataBlockSize(4096);
-        config.indexBlockSize(4096);
+//        config.indexBlockSize(4096);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         ExcerptAppender w = chronicle.createAppender();
         ExcerptTailer r = chronicle.createTailer();
@@ -62,6 +62,8 @@ public class IndexedChronicleTest {
         for (int i = 0; i < 100000; i++) {
             // System.out.println(i);
 
+            if (w.index() == 1203)
+                Thread.yield();
             w.startExcerpt(24);
             assertEquals(0, w.position());
             w.writeLong(i);
@@ -72,7 +74,7 @@ public class IndexedChronicleTest {
             assertEquals(24 - 17, w.remaining());
             w.finish();
 
-            if (r.index() == 13)
+            if (r.index() == 1203)
                 Thread.yield();
             if (!r.nextIndex())
                 assertTrue(r.nextIndex());
@@ -118,7 +120,11 @@ public class IndexedChronicleTest {
     public void multiThreaded() throws IOException, InterruptedException {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+        int dataBlockSize = 8 * 1024 * 1024;
+        config.dataBlockSize(dataBlockSize);
+        config.indexBlockSize(dataBlockSize / 4);
+        IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
         final long words = 200L * 1000 * 1000;
@@ -130,7 +136,7 @@ public class IndexedChronicleTest {
                 try {
                     if (WITH_BINDING)
                         PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < words; i += size) {
                         w.startExcerpt(4L * size);

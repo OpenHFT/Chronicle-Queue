@@ -148,6 +148,9 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         dataPositionAtStartOfLine = dataPosition();
         assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine < 1L << 48 :
                 "dataPositionAtStartOfLine out of bounds, was " + dataPositionAtStartOfLine;
+        assert dataPositionAtStartOfLine >= dataStart;
+        assert dataPositionAtStartOfLine <= dataStart + dataBlockSize;
+//        System.out.println("w "+dataPositionAtStartOfLine);
         UNSAFE.putLong(indexPositionAddr, dataPositionAtStartOfLine);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
 

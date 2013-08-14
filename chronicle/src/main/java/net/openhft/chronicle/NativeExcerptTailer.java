@@ -113,7 +113,9 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
         assert indexPositionAddr != 0;
 
         if ((indexPositionAddr & cacheLineMask) == 0) {
+            newIndexLine();
             indexPositionAddr += 8;
+            checkNewIndexLine2();
         }
         long offset = UNSAFE.getInt(null, indexPositionAddr) & 0xFFFFFFFFL;
         if (offset == 0)
@@ -122,7 +124,6 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
         if (offset == 0) {
             return false;
         }
-        checkNewIndexLine2();
 
         index++;
         return nextIndex0(offset);
@@ -130,7 +131,6 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
 
     private boolean nextIndex0(long offset) {
         try {
-            checkNewIndexLine2();
             if (offset == 0xFFFFFFFFL) {
                 indexPositionAddr += 4;
                 loadNextDataBuffer();
@@ -138,12 +138,15 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
                 checkNewIndexLine2();
                 return false;
             }
+            checkNewIndexLine2();
             if (dataPositionAtStartOfLine + offset > dataStart + dataBlockSize)
                 loadNextDataBuffer();
             assert limitAddr != 0;
             long pstartAddr = startAddr;
             startAddr = limitAddr;
-            limitAddr = (dataPositionAtStartOfLine + offset - dataStart) + bufferAddr;
+            long offsetInThisBuffer = dataPositionAtStartOfLine + offset - dataStart;
+            assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize;
+            limitAddr = offsetInThisBuffer + bufferAddr;
 //            System.out.println(Long.toHexString(startAddr) + " to " + Long.toHexString(limitAddr));
             assert limitAddr <= dataLimitAddr;
             indexPositionAddr += 4;
@@ -174,7 +177,7 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
             dataPositionAtStartOfLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
 
             assert dataPositionAtStartOfLine >= 0 && dataPositionAtStartOfLine <= 1L << 48 :
-                    "Corrupt index: " + dataPositionAtStartOfLine;
+                    "Corrupt index: " + dataPositionAtStartOfLine + " at " + index;
             // System.out.println(Long.toHexString(indexPositionAddr - 8 - indexStartAddr + indexStart) + " WAS " + dataPositionAtStartOfLine);
         }
     }

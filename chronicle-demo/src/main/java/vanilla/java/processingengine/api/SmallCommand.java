@@ -35,8 +35,8 @@ public class SmallCommand implements ExcerptMarshallable {
         in.readUTF(clientOrderId);
         // cachable.
         instrument = in.readEnum(String.class);
-        price = in.readDouble();
-        quantity = in.readInt();
+        price = in.readCompactDouble();
+        quantity = (int) in.readStopBit();
         side = in.readEnum(Side.class);
     }
 
@@ -44,8 +44,8 @@ public class SmallCommand implements ExcerptMarshallable {
     public void writeMarshallable(Excerpt out) {
         out.writeUTF(clientOrderId);
         out.writeEnum(instrument);
-        out.writeDouble(price);
-        out.writeInt(quantity);
+        out.writeCompactDouble(price);
+        out.writeStopBit(quantity);
         out.writeEnum(side);
     }
 }

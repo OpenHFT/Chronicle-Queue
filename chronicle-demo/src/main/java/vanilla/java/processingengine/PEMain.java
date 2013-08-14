@@ -16,6 +16,7 @@
 
 package vanilla.java.processingengine;
 
+import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import vanilla.java.processingengine.api.*;
@@ -30,8 +31,12 @@ public class PEMain {
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
 
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//        config.dataBlockSize(4 * 1024);
+//        config.indexBlockSize(4 * 1024);
+
         String pePath = tmp + "/demo/pe";
-        IndexedChronicle pe2gw = new IndexedChronicle(pePath);
+        IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
         ExcerptAppender excerpt = pe2gw.createAppender();
         final Pe2GwWriter pe2GwWriter = new Pe2GwWriter(excerpt);
 
@@ -41,7 +46,7 @@ public class PEMain {
         for (int i = 0; i < readers.length; i++) {
             int sourceId = i + 1;
             String gw2pePath = tmp + "/demo/gw2pe" + sourceId;
-            gw2pe[i] = new IndexedChronicle(gw2pePath);
+            gw2pe[i] = new IndexedChronicle(gw2pePath, config);
             readers[i] = new Gw2PeReader(sourceId, gw2pe[i].createTailer(), listener);
         }
 
