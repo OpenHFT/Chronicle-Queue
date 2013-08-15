@@ -35,10 +35,11 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
     // relatively static
     private long indexStart;
     private long indexLimitAddr;
-    private long bufferAddr;
-    private long dataStart, dataLimitAddr;
+    private long bufferAddr = 0;
+    private long dataStart;
+    private long dataLimitAddr;
     // changed per line
-    private long dataPositionAtStartOfLine;
+    private long dataPositionAtStartOfLine = 0;
     // changed per entry.
     private long indexPositionAddr;
 
@@ -49,13 +50,41 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         dataBlockSize = chronicle.config.dataBlockSize();
         indexBlockSize = chronicle.config.indexBlockSize();
 
+
         indexStart = 0;
         loadIndexBuffer();
+
         dataStart = 0;
         loadDataBuffer();
         limitAddr = startAddr;
 
         finished = true;
+    }
+
+    @Override
+    public long index() {
+        return index;
+    }
+
+    @Override
+    public ExcerptAppender toEnd() {
+        index = chronicle().size() - 1;
+        return this;
+    }
+
+    @Override
+    public void roll() {
+        // nothing to do
+    }
+
+    @Override
+    public long size() {
+        return chronicle.size();
+    }
+
+    @Override
+    public Chronicle chronicle() {
+        return chronicle;
     }
 
     public void startExcerpt(long capacity) {
@@ -163,29 +192,4 @@ public class NativeExcerptAppender extends NativeBytes implements ExcerptAppende
         indexLimitAddr = indexStartAddr + indexBlockSize;
     }
 
-    @Override
-    public void roll() {
-        // nothing to do
-    }
-
-    @Override
-    public long size() {
-        return chronicle.size();
-    }
-
-    @Override
-    public long index() {
-        return index;
-    }
-
-    @Override
-    public ExcerptAppender toEnd() {
-        index = chronicle().size() - 1;
-        return this;
-    }
-
-    @Override
-    public Chronicle chronicle() {
-        return chronicle;
-    }
 }

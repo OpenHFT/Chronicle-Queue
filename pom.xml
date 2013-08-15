@@ -32,5 +32,6 @@
     <modules>
         <module>chronicle</module>
         <module>chronicle-demo</module>
+        <module>chronicle-db</module>
     </modules>
 </project>

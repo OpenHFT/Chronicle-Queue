@@ -38,12 +38,13 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
     // relatively static
     private long indexStart;
     private long indexLimitAddr;
-    private long bufferAddr = 0, dataStart;
+    private long bufferAddr = 0;
+    private long dataStart;
+    private long dataLimitAddr;
     // changed per line
     private long dataPositionAtStartOfLine = 0;
     // changed per entry.
     private long indexPositionAddr;
-    private long dataLimitAddr;
 
     public NativeExcerptTailer(IndexedChronicle chronicle) throws IOException {
         super(0, 0, 0);
@@ -70,7 +71,7 @@ public class NativeExcerptTailer extends NativeBytes implements ExcerptTailer, E
 
     @Override
     public ExcerptReader toEnd() {
-        index = chronicle().size() - 1;
+        index(chronicle().size() - 1);
         return this;
     }
 

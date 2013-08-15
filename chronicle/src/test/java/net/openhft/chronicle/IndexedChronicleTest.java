@@ -53,7 +53,7 @@ public class IndexedChronicleTest {
         ChronicleTools.deleteOnExit(basePath);
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.dataBlockSize(4096);
+//        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         ExcerptAppender w = chronicle.createAppender();
@@ -62,8 +62,6 @@ public class IndexedChronicleTest {
         for (int i = 0; i < 100000; i++) {
             // System.out.println(i);
 
-            if (w.index() == 1203)
-                Thread.yield();
             w.startExcerpt(24);
             assertEquals(0, w.position());
             w.writeLong(i);
@@ -74,8 +72,6 @@ public class IndexedChronicleTest {
             assertEquals(24 - 17, w.remaining());
             w.finish();
 
-            if (r.index() == 1203)
-                Thread.yield();
             if (!r.nextIndex())
                 assertTrue(r.nextIndex());
             if (17 != r.remaining())
@@ -121,9 +117,9 @@ public class IndexedChronicleTest {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        int dataBlockSize = 8 * 1024 * 1024;
-        config.dataBlockSize(dataBlockSize);
-        config.indexBlockSize(dataBlockSize / 4);
+//        int dataBlockSize = 8 * 1024 * 1024;
+//        config.dataBlockSize(dataBlockSize);
+//        config.indexBlockSize(dataBlockSize / 4);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
