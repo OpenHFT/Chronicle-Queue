@@ -114,7 +114,7 @@ public class IndexedChronicleTest {
 
     @Test
     public void multiThreaded() throws IOException, InterruptedException {
-        if(Runtime.getRuntime().availableProcessors() < 2) {
+        if (Runtime.getRuntime().availableProcessors() < 2) {
             System.err.println("Test requires 2 CPUs, skipping");
             return;
         }
@@ -199,7 +199,7 @@ public class IndexedChronicleTest {
 
     @Test
     public void multiThreaded2() throws IOException, InterruptedException {
-        if(Runtime.getRuntime().availableProcessors() < 3) {
+        if (Runtime.getRuntime().availableProcessors() < 3) {
             System.err.println("Test requires 3 CPUs, skipping");
             return;
         }

@@ -32,7 +32,8 @@ import static org.junit.Assert.fail;
  */
 public class NewNumberAppendTest {
     static final String TMP = System.getProperty("java.io.tmpdir");
-
+    static final Class[] NUMBER_TYPES = {long.class, double.class};
+    static final Class[] EXCERPT_TYPES = {/*ByteBuffer.class,*/ Unsafe.class};
     private static final int NUM_ENTRIES_PER_RECORD = 20;
     private static final int NUM_RECORDS = 50 * 1000;
     private static final int NUM_WARMUP_RECORDS = 10 * 1000;
@@ -55,10 +56,6 @@ public class NewNumberAppendTest {
             RANDOM_DOUBLES[i][0] = 0;
         }
     }
-
-    static final Class[] NUMBER_TYPES = {long.class, double.class};
-    static final Class[] EXCERPT_TYPES = {/*ByteBuffer.class,*/ Unsafe.class};
-
 
     @Test
     public void testNumberAppends() throws IOException {
