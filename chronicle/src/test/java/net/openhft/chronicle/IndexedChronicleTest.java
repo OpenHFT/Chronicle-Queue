@@ -114,7 +114,11 @@ public class IndexedChronicleTest {
 
     @Test
     public void multiThreaded() throws IOException, InterruptedException {
-        assertTrue(Runtime.getRuntime().availableProcessors() > 1);
+        if(Runtime.getRuntime().availableProcessors() < 2) {
+            System.err.println("Test requires 2 CPUs, skipping");
+            return;
+        }
+
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
@@ -195,7 +199,10 @@ public class IndexedChronicleTest {
 
     @Test
     public void multiThreaded2() throws IOException, InterruptedException {
-        assertTrue(Runtime.getRuntime().availableProcessors() > 2);
+        if(Runtime.getRuntime().availableProcessors() < 3) {
+            System.err.println("Test requires 3 CPUs, skipping");
+            return;
+        }
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         final String basePath2 = System.getProperty("java.io.tmpdir") + "/multiThreaded2";
         ChronicleTools.deleteOnExit(basePath);
