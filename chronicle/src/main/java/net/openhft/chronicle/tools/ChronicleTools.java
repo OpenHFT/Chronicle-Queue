@@ -46,6 +46,7 @@ public enum ChronicleTools {
 
     enum DeleteStatic {
         INSTANCE;
+        @SuppressWarnings("TypeMayBeWeakened")
         final Set<String> toDeleteList = new LinkedHashSet<String>();
 
         {
@@ -69,8 +70,10 @@ public enum ChronicleTools {
             File dir = new File(dirPath);
             // delete one level.
             if (dir.isDirectory()) {
-                for (File file : dir.listFiles())
-                    file.delete();
+                File[] files = dir.listFiles();
+                if (files != null)
+                    for (File file : files)
+                        file.delete();
             }
             dir.delete();
         }

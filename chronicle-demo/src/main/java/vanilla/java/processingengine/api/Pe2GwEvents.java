@@ -22,5 +22,5 @@ package vanilla.java.processingengine.api;
  * @author peter.lawrey
  */
 public interface Pe2GwEvents {
-    public void report(MetaData metaData, SmallReport smallReport);
+    void report(MetaData metaData, SmallReport smallReport);
 }

@@ -42,6 +42,7 @@ public enum ChronicleReader {
         //noinspection InfiniteLoopStatement
         while (true) {
             while (!excerpt.index(index))
+                //noinspection BusyWait
                 Thread.sleep(50);
             System.out.print(index + ": ");
             int nullCount = 0;

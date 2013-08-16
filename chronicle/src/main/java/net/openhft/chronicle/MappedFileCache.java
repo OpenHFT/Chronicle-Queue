@@ -22,11 +22,11 @@ import java.io.IOException;
  * @author peter.lawrey
  */
 public interface MappedFileCache {
-    public void randomAccess(boolean randomAccess);
+    void randomAccess(boolean randomAccess);
 
-    public long findLast() throws IOException;
+    long findLast() throws IOException;
 
-    public void close();
+    void close();
 
-    public void roll();
+    void roll();
 }

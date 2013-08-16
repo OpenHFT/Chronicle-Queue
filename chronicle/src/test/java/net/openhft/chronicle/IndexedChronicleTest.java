@@ -18,11 +18,13 @@ package net.openhft.chronicle;
 
 //import net.openhft.lang.affinity.PosixJNAAffinity;
 
+import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -53,63 +55,75 @@ public class IndexedChronicleTest {
         ChronicleTools.deleteOnExit(basePath);
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
-//        config.dataBlockSize(4096);
-//        config.indexBlockSize(4096);
+        config.dataBlockSize(4096);
+        config.indexBlockSize(4096);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
-        ExcerptAppender w = chronicle.createAppender();
-        ExcerptTailer r = chronicle.createTailer();
-        OUTER:
-        for (int i = 0; i < 100000; i++) {
-            // System.out.println(i);
+        try {
+            ExcerptAppender w = chronicle.createAppender();
+            ExcerptTailer r = chronicle.createTailer();
+            Random rand = new Random(1);
+            // finish just at the end of the first page.
+            for (int i = 0; i < 5000; i++) {
+//            System.out.println(i);
 
-            w.startExcerpt(24);
-            assertEquals(0, w.position());
-            w.writeLong(i);
-            assertEquals(8, w.position());
-            w.writeDouble(i);
-            w.write(i);
-            assertEquals(17, w.position());
-            assertEquals(24 - 17, w.remaining());
-            w.finish();
+                int capacity = 16 * (1 + rand.nextInt(7));
+//                if (i == 251)
+//                    Thread.yield();
+                w.startExcerpt(capacity);
+                assertEquals(0, w.position());
+                w.writeLong(i);
+                assertEquals(8, w.position());
+                w.writeDouble(i);
 
-            if (!r.nextIndex())
-                assertTrue(r.nextIndex());
-            if (17 != r.remaining())
-                assertEquals("index: " + r.index(), 17, r.remaining());
-            if (17 == r.capacity())
-                assertEquals("index: " + r.index(), 17, r.capacity());
-            assertEquals(0, r.position());
-            long l = r.readLong();
-            assertEquals(i, l);
-            assertEquals(8, r.position());
-            if (17 - 8 != r.remaining())
-                assertEquals("index: " + r.index(), 17 - 8, r.remaining());
-            double d = r.readDouble();
-            assertEquals(i, d, 0.0);
-            byte b = r.readByte();
-            assertEquals((byte) i, b);
-            assertEquals(17, r.position());
-            if (0 != r.remaining())
-                assertEquals("index: " + r.index(), 0, r.remaining());
+                int expected = 16;
+                assertEquals(expected, w.position());
+                assertEquals(capacity - expected, w.remaining());
 
-            r.position(0);
-            long l2 = r.readLong();
-            assertEquals(i, l2);
+                w.finish();
 
-            r.position(17);
 
-            r.finish();
+                if (!r.nextIndex()) {
+//                System.out.println(i);
+                    assertTrue(r.nextIndex());
+                }
+                if (expected != r.remaining())
+                    assertEquals("index: " + r.index(), expected, r.remaining());
+                if (expected != r.capacity())
+                    assertEquals("index: " + r.index(), expected, r.capacity());
+                assertEquals(0, r.position());
+                long l = r.readLong();
+                assertEquals(i, l);
+                assertEquals(8, r.position());
+                if (expected - 8 != r.remaining())
+                    assertEquals("index: " + r.index(), expected - 8, r.remaining());
+                double d = r.readDouble();
+                assertEquals(i, d, 0.0);
+
+
+                if (0 != r.remaining())
+                    assertEquals("index: " + r.index(), 0, r.remaining());
+
+                r.position(0);
+                long l2 = r.readLong();
+                assertEquals(i, l2);
+
+                r.position(expected);
+
+                r.finish();
 /*
             double d = r.readDouble();
             assertEquals(2, d, 0.0);
             byte b = r.readByte();
             assertEquals(3, b);
 */
+            }
+            w.close();
+            r.close();
+        } finally {
+            chronicle.close();
+            ChronicleIndexReader.main(basePath + ".index");
+            ChronicleTools.deleteOnExit(basePath);
         }
-        w.close();
-        r.close();
-        chronicle.close();
-        ChronicleTools.deleteOnExit(basePath);
     }
 
     @Test
@@ -122,13 +136,13 @@ public class IndexedChronicleTest {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-//        int dataBlockSize = 8 * 1024 * 1024;
-//        config.dataBlockSize(dataBlockSize);
-//        config.indexBlockSize(dataBlockSize / 4);
+        int dataBlockSize = 4 * 1024;
+        config.dataBlockSize(dataBlockSize);
+        config.indexBlockSize(dataBlockSize);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 200L * 1000 * 1000;
+        final long words = 5130; //200L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -179,8 +193,10 @@ public class IndexedChronicleTest {
             try {
                 for (int s = 0; s < size; s++) {
                     int j = r.readInt();
-                    if (j != i + 1)
-                        throw new AssertionError();
+                    if (j != i + 1) {
+                        ChronicleIndexReader.main(basePath + ".index");
+                        throw new AssertionError(j + " != " + (i + 1));
+                    }
                 }
                 r.finish();
             } catch (Exception e) {
@@ -205,8 +221,12 @@ public class IndexedChronicleTest {
         }
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         final String basePath2 = System.getProperty("java.io.tmpdir") + "/multiThreaded2";
-        ChronicleTools.deleteOnExit(basePath);
-        ChronicleTools.deleteOnExit(basePath2);
+//        ChronicleTools.deleteOnExit(basePath);
+//        ChronicleTools.deleteOnExit(basePath2);
+
+        final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//        config.dataBlockSize(4*1024);
+//        config.indexBlockSize(4 * 1024);
 
         final int runs = 100 * 1000 * 1000;
         final int size = 4;
@@ -217,7 +237,7 @@ public class IndexedChronicleTest {
                 try {
                     if (WITH_BINDING)
                         PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         w.startExcerpt(4 * size);
@@ -231,7 +251,7 @@ public class IndexedChronicleTest {
                     e.printStackTrace();
                 }
             }
-        });
+        }, "t1");
         t.start();
 
         Thread t2 = new Thread(new Runnable() {
@@ -240,9 +260,9 @@ public class IndexedChronicleTest {
                 try {
                     if (WITH_BINDING)
                         PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptTailer r = chronicle.createTailer();
-                    IndexedChronicle chronicle2 = new IndexedChronicle(basePath2);
+                    IndexedChronicle chronicle2 = new IndexedChronicle(basePath2, config);
                     final ExcerptAppender w = chronicle2.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         do {
@@ -261,10 +281,10 @@ public class IndexedChronicleTest {
                     e.printStackTrace();
                 }
             }
-        });
+        }, "t2");
         t2.start();
 
-        IndexedChronicle chronicle = new IndexedChronicle(basePath2);
+        IndexedChronicle chronicle = new IndexedChronicle(basePath2, config);
         final ExcerptTailer r = chronicle.createTailer();
 
         for (int i = 0; i < runs; i += size) {

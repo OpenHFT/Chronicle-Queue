@@ -20,5 +20,5 @@ package vanilla.java.processingengine.api;
  * @author peter.lawrey
  */
 public interface Gw2PeEvents {
-    public void small(MetaData metaData, SmallCommand command);
+    void small(MetaData metaData, SmallCommand command);
 }

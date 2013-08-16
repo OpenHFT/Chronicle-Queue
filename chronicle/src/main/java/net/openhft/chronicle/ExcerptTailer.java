@@ -20,11 +20,11 @@ package net.openhft.chronicle;
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends Excerpt {
-    public boolean nextIndex();
+    boolean nextIndex();
 
-    public boolean index(long l);
+    boolean index(long l);
 
-    public ExcerptTailer toStart();
+    ExcerptTailer toStart();
 
-    public ExcerptTailer toEnd();
+    ExcerptTailer toEnd();
 }

@@ -37,7 +37,7 @@ public class ExampleRewriteMain {
     public static void main(String... ignored) throws IOException {
         final String basePath = System.getProperty("java.io.tmpdir") + File.separator + "test";
         ChronicleTools.deleteOnExit(basePath);
-        final int[] consolidates = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+        final int[] consolidates = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
         final int warmup = 1000000;
         final int repeats = 10000000;
 
@@ -72,6 +72,7 @@ public class ExampleRewriteMain {
             private void doSomeThinking() {
                 // real programs do some work between messages
                 // this has an impact on the worst case latencies.
+                //noinspection CallToThreadYield
                 Thread.yield();
             }
         });

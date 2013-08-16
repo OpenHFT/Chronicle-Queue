@@ -133,7 +133,7 @@ public class IndexedChronicle1Test {
      * Tests that <code>IndexedChronicle.close()</code> does not blow up (anymore) when you
      * reopen an existing chronicle due to the null data buffers created internally.
      *
-     * @throws java.io.IOException if opening chronicle fails
+     * @throws IOException if opening chronicle fails
      */
     @Test
     public void testCloseWithNullBuffers() throws IOException {
@@ -289,7 +289,7 @@ public class IndexedChronicle1Test {
         excerpt.writeEnum(BigInteger.TEN);
         excerpt.writeEnum(BigInteger.ZERO);
         excerpt.finish();
-        System.out.println("size=" + excerpt.position());
+//        System.out.println("size=" + excerpt.position());
 
         ExcerptTailer tailer = tsc.createTailer();
         tailer.nextIndex();

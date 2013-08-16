@@ -55,10 +55,10 @@ public class GWMain {
 
         // setup
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-//        config.dataBlockSize(4 * 1024);
+        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
         IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath, config);
-        Gw2PeWriter gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
+        Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
         IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
         final Histogram warmup = new Histogram(10000, 100);
@@ -76,6 +76,7 @@ public class GWMain {
                     times[0].sample(metaData.inReadTimestamp7Delta * 100);
                 }
                 reportCount.getAndIncrement();
+                System.out.println(reportCount);
             }
         };
         Pe2GwReader pe2GwReader = new Pe2GwReader(gwId, pe2gw.createTailer(), listener);
@@ -87,6 +88,7 @@ public class GWMain {
             for (int i = startTime; i > 0; i--) {
                 System.out.print(i + " ");
                 System.out.flush();
+                //noinspection BusyWait
                 Thread.sleep(1000);
             }
         }
@@ -110,6 +112,8 @@ public class GWMain {
             command.side = (i & 1) == 0 ? Side.BUY : Side.SELL;
             gw2PeWriter.small(null, command);
 
+            if (i % 1000000 == 0)
+                System.out.println("processed " + i);
             if (throughputTest) {
                 do {
                     /* read another */
@@ -117,8 +121,8 @@ public class GWMain {
             } else {
                 do {
                     /* read another */
-//                    if (++count % 1000000000 == 0)
-//                        System.out.println("reportCount: " + reportCount);
+                    if (++count % 1000000000 == 0)
+                        System.out.println("reportCount: " + reportCount);
                 } while (pe2GwReader.readOne() || reportCount.get() < i - 1);
             }
         }

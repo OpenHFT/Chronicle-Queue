@@ -22,13 +22,13 @@ import net.openhft.lang.io.Bytes;
  * @author peter.lawrey
  */
 public interface Excerpt extends Bytes {
-    public long index();
+    long index();
 
-    public long size();
+    long size();
 
-    public Excerpt toEnd();
+    Excerpt toEnd();
 
-    public Chronicle chronicle();
+    Chronicle chronicle();
 
-    public void finish();
+    void finish();
 }

@@ -20,7 +20,7 @@ package net.openhft.chronicle;
  * @author peter.lawrey
  */
 public interface ExcerptReader extends ExcerptTailer {
-    public ExcerptReader toStart();
+    ExcerptReader toStart();
 
-    public ExcerptReader toEnd();
+    ExcerptReader toEnd();
 }

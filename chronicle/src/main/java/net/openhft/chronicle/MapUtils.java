@@ -14,6 +14,7 @@ public class MapUtils {
         for (int i = 1; ; i++) {
             try {
 //                long startTime = System.nanoTime();
+                @SuppressWarnings("UnnecessaryLocalVariable")
                 MappedByteBuffer map = fileChannel.map(FileChannel.MapMode.READ_WRITE, start, size);
 //                long time = System.nanoTime() - startTime;
 //                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
@@ -24,9 +25,11 @@ public class MapUtils {
                     throw e;
                 }
                 if (i < 10)
+                    //noinspection CallToThreadYield
                     Thread.yield();
                 else
                     try {
+                        //noinspection BusyWait
                         Thread.sleep(1);
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();

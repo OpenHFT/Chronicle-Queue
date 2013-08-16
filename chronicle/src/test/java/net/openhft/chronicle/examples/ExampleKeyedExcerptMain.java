@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.examples;
 
+import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -37,7 +38,7 @@ public class ExampleKeyedExcerptMain {
     private final ExcerptReader reader;
     private final ExcerptTailer tailer;
     private final ExcerptAppender appender;
-    private final TObjectLongHashMap<String> keyToExcerpt = new TObjectLongHashMap<String>() {
+    private final TObjectLongMap<String> keyToExcerpt = new TObjectLongHashMap<String>() {
         @Override
         public long getNoEntryValue() {
             return -1;
@@ -71,7 +72,7 @@ public class ExampleKeyedExcerptMain {
         map2.load();
         long start2 = System.nanoTime();
         for (int i = 0; i < keys; i++) {
-            Map<String, Object> props = new LinkedHashMap<String, Object>();
+            Map<String, String> props = new LinkedHashMap<String, String>();
             props.put("a", Integer.toString(i)); // an int.
             props.put("b", "value-" + i); // String
             props.put("c", Double.toString(i / 1000.0)); // a double

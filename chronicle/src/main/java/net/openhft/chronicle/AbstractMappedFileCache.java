@@ -33,7 +33,7 @@ public abstract class AbstractMappedFileCache implements MappedFileCache {
     private static final int HEADER_INDEX_COUNT = HEADER_INDEX_EXCERPTS + 4;
     private static final int HEADER_SIZE = 128;
     protected final File dir;
-    private final File masterFile;
+    @SuppressWarnings("FieldCanBeLocal")
     private final FileChannel masterFileChannel;
     private final MappedByteBuffer masterBuffer;
     private final ChronicleConfig config;
@@ -43,7 +43,7 @@ public abstract class AbstractMappedFileCache implements MappedFileCache {
         dir = new File(dirPath);
         if (!dir.isDirectory() && !dir.mkdirs())
             throw new FileNotFoundException("Unable to create directory " + dir);
-        masterFile = new File(dir, "master");
+        File masterFile = new File(dir, "master");
         long size = Math.max(masterFile.length(), config.indexFileCapacity() * 4);
         masterFileChannel = new RandomAccessFile(masterFile, "rw").getChannel();
         masterBuffer = masterFileChannel.map(FileChannel.MapMode.READ_WRITE, 0, size);
@@ -81,6 +81,7 @@ public abstract class AbstractMappedFileCache implements MappedFileCache {
         if (byteBuffer.getInt(8) == 0)
             return lastIndexFileNumber() * indexFileExcerpts();
         // find the line first.
+        @SuppressWarnings("UnnecessaryLocalVariable")
         int lines = (indexFileExcerpts() + 13) / 14 * 16; // 14 entries in each line of 16.
         int lo = 1, hi = lines;
         while (lo < hi) {

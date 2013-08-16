@@ -17,6 +17,7 @@
 package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.Excerpt;
+import net.openhft.lang.io.RandomDataOutput;
 
 /**
  * @author peter.lawrey
@@ -40,7 +41,7 @@ public class MetaData {
         return System.nanoTime() / 100;
     }
 
-    public static void writeForGateway(Excerpt out) {
+    public static void writeForGateway(RandomDataOutput out) {
         out.writeLong(System.currentTimeMillis());
         out.writeLong(fastTime());
         out.writeInt(0);
@@ -56,7 +57,7 @@ public class MetaData {
                     inReadTimestamp7Delta = fastTime() - inWriteTimestamp7);
     }
 
-    public void writeForEngine(Excerpt out) {
+    public void writeForEngine(RandomDataOutput out) {
         out.writeInt(sourceId);
         out.writeLong(excerptId);
         out.writeLong(writeTimestampMillis);

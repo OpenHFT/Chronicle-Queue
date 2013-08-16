@@ -25,7 +25,7 @@ import java.io.IOException;
  */
 public class RollingNativeExcerptAppender extends NativeBytes implements ExcerptAppender {
     private final RollingChronicle chronicle;
-    private long size;
+    private final long size;
 
     public RollingNativeExcerptAppender(RollingChronicle chronicle) throws IOException {
         super(0, 0, 0);

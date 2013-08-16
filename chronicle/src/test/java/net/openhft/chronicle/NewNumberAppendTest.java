@@ -66,7 +66,7 @@ public class NewNumberAppendTest {
 //        }
     }
 
-    private void timeAppends(
+    private static void timeAppends(
             Class excerptType,
             Class numType) throws IOException {
 
