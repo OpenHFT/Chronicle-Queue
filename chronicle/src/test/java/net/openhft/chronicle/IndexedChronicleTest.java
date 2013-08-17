@@ -69,8 +69,6 @@ public class IndexedChronicleTest {
 
                 int capacity = 16 * (1 + rand.nextInt(7));
 
-                if (i == 4784)
-                    Thread.yield();
                 w.startExcerpt(capacity);
                 assertEquals(0, w.position());
                 w.writeLong(i);
@@ -86,7 +84,6 @@ public class IndexedChronicleTest {
 //                ChronicleIndexReader.main(basePath + ".index");
 
                 if (!r.nextIndex()) {
-//                System.out.println(i);
                     assertTrue(r.nextIndex());
                 }
                 if (expected != r.remaining())
@@ -146,7 +143,7 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 200L * 1000 * 1000;
+        final long words = 1000L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
