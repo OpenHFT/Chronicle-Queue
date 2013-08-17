@@ -32,7 +32,7 @@ public class PEMain {
 //        String tmp = System.getProperty("user.home");
 
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        config.dataBlockSize(4 * 1024);
+//        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
 
         String pePath = tmp + "/demo/pe";
@@ -83,7 +83,7 @@ public class PEMain {
         @Override
         public void small(MetaData metaData, SmallCommand command) {
             smallReport.orderOkay(command.clientOrderId);
-            System.out.println(++count);
+//            System.out.println(++count);
             pe2GwWriter.report(metaData, smallReport);
         }
     }

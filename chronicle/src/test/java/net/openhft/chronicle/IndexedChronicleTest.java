@@ -58,17 +58,19 @@ public class IndexedChronicleTest {
         config.dataBlockSize(4096);
         config.indexBlockSize(4096);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+        int i = 0;
         try {
             ExcerptAppender w = chronicle.createAppender();
             ExcerptTailer r = chronicle.createTailer();
             Random rand = new Random(1);
             // finish just at the end of the first page.
-            for (int i = 0; i < 5000; i++) {
+            for (i = 0; i < 5000; i++) {
 //            System.out.println(i);
 
                 int capacity = 16 * (1 + rand.nextInt(7));
-//                if (i == 251)
-//                    Thread.yield();
+
+                if (i == 4784)
+                    Thread.yield();
                 w.startExcerpt(capacity);
                 assertEquals(0, w.position());
                 w.writeLong(i);
@@ -81,6 +83,7 @@ public class IndexedChronicleTest {
 
                 w.finish();
 
+//                ChronicleIndexReader.main(basePath + ".index");
 
                 if (!r.nextIndex()) {
 //                System.out.println(i);
@@ -121,7 +124,8 @@ public class IndexedChronicleTest {
             r.close();
         } finally {
             chronicle.close();
-            ChronicleIndexReader.main(basePath + ".index");
+            System.out.println("i: " + i);
+//            ChronicleIndexReader.main(basePath + ".index");
             ChronicleTools.deleteOnExit(basePath);
         }
     }
@@ -136,13 +140,13 @@ public class IndexedChronicleTest {
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        int dataBlockSize = 4 * 1024;
-        config.dataBlockSize(dataBlockSize);
-        config.indexBlockSize(dataBlockSize);
+//        int dataBlockSize = 4 * 1024;
+//        config.dataBlockSize(dataBlockSize);
+//        config.indexBlockSize(dataBlockSize);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 5130; //200L * 1000 * 1000;
+        final long words = 200L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -221,8 +225,8 @@ public class IndexedChronicleTest {
         }
         final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
         final String basePath2 = System.getProperty("java.io.tmpdir") + "/multiThreaded2";
-//        ChronicleTools.deleteOnExit(basePath);
-//        ChronicleTools.deleteOnExit(basePath2);
+        ChronicleTools.deleteOnExit(basePath);
+        ChronicleTools.deleteOnExit(basePath2);
 
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4*1024);

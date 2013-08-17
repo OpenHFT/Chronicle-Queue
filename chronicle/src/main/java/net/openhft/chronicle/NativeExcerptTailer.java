@@ -50,14 +50,13 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     public boolean nextIndex() {
         checkNextLine();
-        long offset = UNSAFE.getInt(null, indexPositionAddr) & UNSIGNED_INT_MASK;
+        long offset = UNSAFE.getInt(null, indexPositionAddr);
         if (offset == 0)
-            offset = UNSAFE.getIntVolatile(null, indexPositionAddr) & UNSIGNED_INT_MASK;
+            offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
         if (offset == 0) {
             return false;
         }
-
         index++;
         return nextIndex0(offset);
     }
@@ -87,11 +86,17 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
             offset = -offset;
         }
         checkNewIndexLine2();
-
+        checkNewDataBlock();
         startAddr = limitAddr;
         setLmitAddr(offset);
-        assert limitAddr > startAddr;
+        assert limitAddr > startAddr || (!present && limitAddr == startAddr);
+        indexPositionAddr += 4;
         return present;
+    }
+
+    private void checkNewDataBlock() {
+        if (limitAddr >= dataStartAddr + dataBlockSize)
+            loadNextDataBuffer();
     }
 
     private void setLmitAddr(long offset) {

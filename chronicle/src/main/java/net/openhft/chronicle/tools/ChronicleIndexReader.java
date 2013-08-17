@@ -15,12 +15,15 @@ public class ChronicleIndexReader {
     static final boolean HEX = Boolean.getBoolean("hex");
 
     public static void main(String... args) throws IOException {
+        int zeros = 0;
         FileChannel fc = new FileInputStream(args[0]).getChannel();
         ByteBuffer buffer = ByteBuffer.allocateDirect(4096).order(ByteOrder.nativeOrder());
         while (fc.read(buffer) > 0) {
             for (int i = 0; i < buffer.capacity(); i += 4 * 16) {
                 long indexStart = buffer.getLong(i);
-                if (indexStart == 0) continue;
+                if (indexStart == 0 && zeros++ > 2) {
+                    continue;
+                }
                 System.out.print(HEX ? Long.toHexString(indexStart) : "" + indexStart);
                 for (int j = i + 8; j < i + 64; j += 4) {
                     System.out.print(' ');

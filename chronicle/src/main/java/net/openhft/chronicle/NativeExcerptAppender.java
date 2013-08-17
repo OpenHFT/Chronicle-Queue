@@ -29,6 +29,9 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     public void startExcerpt(long capacity) {
         // if the capacity is to large, roll the previous entry, and there was one
         if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
+            // check we are the start of a block.
+            checkNewIndexLine();
+
             writePaddedEntry();
 
             loadNextDataBuffer();
@@ -44,7 +47,8 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     }
 
     private void writePaddedEntry() {
-        int size = (int) (dataStartAddr + dataBlockSize - positionAddr);
+        int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
+        assert size >= 0;
         if (size == 0)
             return;
         checkNewIndexLine();
@@ -59,8 +63,8 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         // push out the entry is available.  This is what the reader polls.
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
         long offsetInBlock = positionAddr - dataStartAddr;
-        assert offsetInBlock >= 0 && offsetInBlock < dataBlockSize;
-        int relativeOffset = (int) (offsetInBlock - indexBaseForLine);
+        assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
+        int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
         assert relativeOffset > 0;
         UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
         indexPositionAddr += 4;

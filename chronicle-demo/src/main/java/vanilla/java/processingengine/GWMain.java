@@ -55,7 +55,7 @@ public class GWMain {
 
         // setup
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        config.dataBlockSize(4 * 1024);
+//        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
         IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath, config);
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
@@ -76,7 +76,7 @@ public class GWMain {
                     times[0].sample(metaData.inReadTimestamp7Delta * 100);
                 }
                 reportCount.getAndIncrement();
-                System.out.println(reportCount);
+//                System.out.println(reportCount);
             }
         };
         Pe2GwReader pe2GwReader = new Pe2GwReader(gwId, pe2gw.createTailer(), listener);
