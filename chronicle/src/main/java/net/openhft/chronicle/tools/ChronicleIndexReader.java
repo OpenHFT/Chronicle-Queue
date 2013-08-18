@@ -17,6 +17,7 @@
 package net.openhft.chronicle.tools;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -32,7 +33,13 @@ public class ChronicleIndexReader {
 
     public static void main(String... args) throws IOException {
         int zeros = 0;
-        FileChannel fc = new FileInputStream(args[0]).getChannel();
+        FileChannel fc = null;
+        try {
+            fc = new FileInputStream(args[0]).getChannel();
+        } catch (FileNotFoundException e) {
+            System.err.println(e);
+            return;
+        }
         ByteBuffer buffer = ByteBuffer.allocateDirect(4096).order(ByteOrder.nativeOrder());
         while (fc.read(buffer) > 0) {
             for (int i = 0; i < buffer.capacity(); i += 4 * 16) {

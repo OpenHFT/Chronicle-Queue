@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -232,40 +233,49 @@ public class IndexedChronicle1Test {
 
     @Test
     public void testStopBitEncoded() throws IOException {
+        boolean ok = false;
         String testPath = TMP + File.separator + "chroncle-stop-bit";
-        IndexedChronicle tsc = new IndexedChronicle(testPath);
         ChronicleTools.deleteOnExit(testPath);
+        IndexedChronicle tsc = new IndexedChronicle(testPath);
+        ChronicleIndexReader.main(testPath);
 
-        ExcerptAppender writer = tsc.createAppender();
-        ExcerptTailer reader = tsc.createTailer();
-        long[] longs = {Long.MIN_VALUE, Integer.MIN_VALUE, Short.MIN_VALUE, Character.MIN_VALUE, Byte.MIN_VALUE,
-                Long.MAX_VALUE, Integer.MAX_VALUE, Short.MAX_VALUE, Character.MAX_CODE_POINT, Character.MAX_VALUE, Byte.MAX_VALUE};
-        for (long l : longs) {
-            writer.startExcerpt(12);
-            writer.writeChar('T');
-            writer.writeStopBit(l);
+        try {
+            ExcerptAppender writer = tsc.createAppender();
+            ExcerptTailer reader = tsc.createTailer();
+            long[] longs = {Long.MIN_VALUE, Integer.MIN_VALUE, Short.MIN_VALUE, Character.MIN_VALUE, Byte.MIN_VALUE,
+                    Long.MAX_VALUE, Integer.MAX_VALUE, Short.MAX_VALUE, Character.MAX_CODE_POINT, Character.MAX_VALUE, Byte.MAX_VALUE};
+            for (long l : longs) {
+                writer.startExcerpt(12);
+                writer.writeChar('T');
+                writer.writeStopBit(l);
+                writer.finish();
+                System.out.println("finished");
+
+                reader.nextIndex();
+                reader.readChar();
+                long l2 = reader.readStopBit();
+                reader.finish();
+                assertEquals(l, l2);
+            }
+            writer.startExcerpt(longs.length * 10);
+            writer.writeChar('t');
+            for (long l : longs)
+                writer.writeStopBit(l);
             writer.finish();
 
             reader.nextIndex();
             reader.readChar();
-            long l2 = reader.readStopBit();
+            for (long l : longs) {
+                long l2 = reader.readStopBit();
+                assertEquals(l, l2);
+            }
+            assertEquals(0, reader.remaining());
             reader.finish();
-            assertEquals(l, l2);
+            tsc.close();
+            ok = true;
+        } finally {
+            ChronicleIndexReader.main(testPath);
         }
-        writer.startExcerpt(longs.length * 10);
-        writer.writeChar('t');
-        for (long l : longs)
-            writer.writeStopBit(l);
-        writer.finish();
-
-        reader.nextIndex();
-        reader.readChar();
-        for (long l : longs) {
-            long l2 = reader.readStopBit();
-            assertEquals(l, l2);
-        }
-        assertEquals(0, reader.remaining());
-        reader.finish();
     }
 
     @Test

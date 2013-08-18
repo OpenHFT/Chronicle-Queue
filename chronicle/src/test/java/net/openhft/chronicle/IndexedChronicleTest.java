@@ -143,7 +143,7 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 1000L * 1000 * 1000;
+        final long words = 200L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -184,7 +184,7 @@ public class IndexedChronicleTest {
                     if (maxJitter < jitter)
                         maxJitter = jitter;
                     long delay0 = now - start0;
-                    if (delay0 > 100e6)
+                    if (delay0 > 200e6)
                         throw new AssertionError("index: " + r.index());
                     if (maxDelay < delay0)
                         maxDelay = delay0;

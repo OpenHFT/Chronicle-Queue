@@ -19,15 +19,13 @@ package net.openhft.chronicle;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 
 /**
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {
-    final FileChannel indexFile;
-    final FileChannel dataFile;
+    final SingleMappedFileCache indexFileCache;
+    final SingleMappedFileCache dataFileCache;
     final ChronicleConfig config;
     private long size = 0;
 
@@ -40,14 +38,14 @@ public class IndexedChronicle implements Chronicle {
         File parentFile = new File(basePath).getParentFile();
         if (parentFile != null)
             parentFile.mkdirs();
-        this.indexFile = new RandomAccessFile(basePath + ".index", "rw").getChannel();
-        this.dataFile = new RandomAccessFile(basePath + ".data", "rw").getChannel();
+        this.indexFileCache = new SingleMappedFileCache(basePath + ".index", config.indexBlockSize());
+        this.dataFileCache = new SingleMappedFileCache(basePath + ".data", config.dataBlockSize());
     }
 
     @Override
     public void close() throws IOException {
-        this.indexFile.close();
-        this.dataFile.close();
+        this.indexFileCache.close();
+        this.dataFileCache.close();
     }
 
     @Override

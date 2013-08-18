@@ -115,21 +115,13 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     }
 
     void loadDataBuffer() throws IOException {
-        long start = System.nanoTime();
-        dataBuffer = MapUtils.getMap(chronicle.dataFile, dataStartOffset, dataBlockSize);
+        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize);
         dataStartAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
-        long time = System.nanoTime() - start;
-        if (time > 50e3)
-            System.out.println("Took " + time / 1000 + " us to obtain a data chunk");
     }
 
     void loadIndexBuffer() throws IOException {
-        long start = System.nanoTime();
-        indexBuffer = MapUtils.getMap(chronicle.indexFile, indexStartOffset, indexBlockSize);
+        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexStartOffset / indexBlockSize);
         indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
-        long time = System.nanoTime() - start;
-        if (time > 50e3)
-            System.out.println("Took " + time / 1000 + " us to obtain an index chunk");
     }
 
 }

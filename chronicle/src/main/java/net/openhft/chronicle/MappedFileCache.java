@@ -16,17 +16,17 @@
 
 package net.openhft.chronicle;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
  */
-public interface MappedFileCache {
-    void randomAccess(boolean randomAccess);
+public interface MappedFileCache extends Closeable {
+    MappedByteBuffer acquireBuffer(long index);
 
     long findLast() throws IOException;
 
     void close();
-
-    void roll();
 }
