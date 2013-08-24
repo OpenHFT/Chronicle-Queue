@@ -24,8 +24,8 @@ import java.io.IOException;
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {
-    final SingleMappedFileCache indexFileCache;
-    final SingleMappedFileCache dataFileCache;
+    final MappedFileCache indexFileCache;
+    final MappedFileCache dataFileCache;
     final ChronicleConfig config;
     private long size = 0;
 
@@ -38,8 +38,8 @@ public class IndexedChronicle implements Chronicle {
         File parentFile = new File(basePath).getParentFile();
         if (parentFile != null)
             parentFile.mkdirs();
-        this.indexFileCache = new SingleMappedFileCache(basePath + ".index", config.indexBlockSize());
-        this.dataFileCache = new SingleMappedFileCache(basePath + ".data", config.dataBlockSize());
+        this.indexFileCache = new PrefetchingMappedFileCache(basePath + ".index", config.indexBlockSize());
+        this.dataFileCache = new PrefetchingMappedFileCache(basePath + ".data", config.dataBlockSize());
     }
 
     @Override
@@ -49,8 +49,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     @Override
-    public ExcerptReader createReader() throws IOException {
-        return new NativeExcerptTailer(this);
+    public Excerpt createExcerpt() throws IOException {
+        return new NativeExcerpt(this);
     }
 
     @Override

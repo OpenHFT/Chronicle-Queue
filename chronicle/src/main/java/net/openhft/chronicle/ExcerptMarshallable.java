@@ -26,12 +26,12 @@ public interface ExcerptMarshallable {
      * @param in to read from
      * @throws IllegalStateException if the object could not be read.
      */
-    void readMarshallable(Excerpt in) throws IllegalStateException;
+    void readMarshallable(ExcerptCommon in) throws IllegalStateException;
 
     /**
      * write an object to an excerpt
      *
      * @param out to write to
      */
-    void writeMarshallable(Excerpt out);
+    void writeMarshallable(ExcerptCommon out);
 }

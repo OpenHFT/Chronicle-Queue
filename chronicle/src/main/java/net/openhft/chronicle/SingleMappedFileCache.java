@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * User: peter
@@ -12,9 +13,13 @@ import java.nio.channels.FileChannel;
  * Time: 14:58
  */
 public class SingleMappedFileCache implements MappedFileCache {
+    public static final AtomicLong totalWait = new AtomicLong();
+
     final String basePath;
     final FileChannel fileChannel;
     final int blockSize;
+    long lastIndex = Long.MIN_VALUE;
+    MappedByteBuffer lastMBB = null;
 
     public SingleMappedFileCache(String basePath, int blockSize) throws FileNotFoundException {
         this.basePath = basePath;
@@ -24,6 +29,8 @@ public class SingleMappedFileCache implements MappedFileCache {
 
     @Override
     public MappedByteBuffer acquireBuffer(long index) {
+        if (index == lastIndex)
+            return lastMBB;
         long start = System.nanoTime();
         MappedByteBuffer mappedByteBuffer;
         try {
@@ -31,9 +38,13 @@ public class SingleMappedFileCache implements MappedFileCache {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-        long time = System.nanoTime() - start;
-        if (time > 50e3)
-            System.out.println("Took " + time / 1000 + " us to obtain a data chunk");
+        lastIndex = index;
+        lastMBB = mappedByteBuffer;
+
+        long time = (System.nanoTime() - start);
+        if (index > 0)
+            totalWait.addAndGet(time);
+//            System.out.println("Took " + time + " us to obtain a data chunk");
         return mappedByteBuffer;
     }
 

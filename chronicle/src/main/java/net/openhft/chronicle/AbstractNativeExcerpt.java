@@ -25,7 +25,7 @@ import java.nio.MappedByteBuffer;
 /**
  * @author peter.lawrey
  */
-public abstract class AbstractNativeExcerpt extends NativeBytes implements Excerpt {
+public abstract class AbstractNativeExcerpt extends NativeBytes implements ExcerptCommon {
     protected final IndexedChronicle chronicle;
     final int cacheLineMask;
     final int dataBlockSize;
@@ -77,7 +77,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     }
 
     @Override
-    public Excerpt toEnd() {
+    public ExcerptCommon toEnd() {
         index = chronicle().size() - 1;
         return this;
     }

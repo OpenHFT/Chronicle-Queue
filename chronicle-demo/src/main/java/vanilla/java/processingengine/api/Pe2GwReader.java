@@ -25,7 +25,7 @@ public class Pe2GwReader {
     private final int sourceId;
     private final ExcerptTailer excerpt;
     private final Pe2GwEvents gwEvents;
-    private final MetaData metaData = new MetaData(false);
+    private final MetaData metaData = new MetaData(true);
     private final SmallReport report = new SmallReport();
 
     public Pe2GwReader(int sourceId, ExcerptTailer excerpt, Pe2GwEvents gwEvents) {

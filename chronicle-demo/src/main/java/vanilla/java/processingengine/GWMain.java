@@ -18,12 +18,12 @@ package vanilla.java.processingengine;
 
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
-import vanilla.java.processingengine.testing.Histogram;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -36,12 +36,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 /*
 on a dual core i7-4500 laptop
-Processed 10,000,000 events in and out in 7.5 seconds
-The latency distribution was 0.3, 1.2/2.5, 3.8/9.3 us for the 1, 90/99, 99.9/99.99 %tile
+Processed 10,000,000 events in and out in 100.2 seconds
+The latency distribution was 0.5, 0.6/3.4, 322/947 (3,683) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.6, 0.7/3.1, 15/544 (1,856) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
 
-on a hex core i7-3970X
-Processed 5,000,000 events in and out in 10.0 seconds
-The latency distribution was 0.2, 0.3/1.5, 3.1/31.4 us for the 1, 90/99, 99.9/99.99 %tile
+Processed 10,000,000 events in and out in 50.1 seconds
+The latency distribution was 0.6, 0.7/4.0, 132/3563 (6,319) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.5, 0.6/3.2, 58/1557 (4,031) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 10,000,000 events in and out in 20.0 seconds
+The latency distribution was 0.5, 0.6/5.7, 74784/83000 (83,250) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.5, 0.7/3.7, 1494/5587 (7,428) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 10,000,000 events in and out in 10.1 seconds
+The latency distribution was 31386.8, 80422.8/97564.0, 99054/99780 (100,282) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.5, 40561.4/54889.5, 56752/56876 (56,902) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
  */
 public class GWMain {
     public static final boolean WITH_BINDING;
@@ -61,13 +71,14 @@ public class GWMain {
     }
 
     public static final int WARMUP = 20000; // number of events
-    public static final long EVENT_SPACING = 1000L;
+    public static final long EVENT_SPACING = 10000L;
 
     public static void main(String... args) throws IOException, InterruptedException {
         if (args.length < 2) {
             System.err.print("java " + GWMain.class.getName() + " [1 or 2] {throughput}");
             System.exit(-1);
         }
+        ChronicleTools.warmup();
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
 
@@ -86,21 +97,17 @@ public class GWMain {
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
         IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
-        final Histogram warmup = new Histogram(100000, 100);
-        final Histogram running = new Histogram(100000, 100);
-        final Histogram[] times = {warmup};
+        final long[] times = new long[orders];
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {
             @Override
             public void report(MetaData metaData, SmallReport smallReport) {
                 if (metaData.sourceId != gwId) return;
 
+                int count = reportCount.getAndIncrement();
                 if (!throughputTest) {
-                    if (reportCount.get() == WARMUP)
-                        times[0] = running;
-                    times[0].sample(metaData.inReadTimestamp7Delta * 100);
+                    times[Math.abs(count)] = (metaData.inReadTimestamp - metaData.inWriteTimestamp);
                 }
-                reportCount.getAndIncrement();
 //                System.out.println(reportCount);
             }
         };
@@ -140,10 +147,8 @@ public class GWMain {
 
         System.out.println("Started");
         long start = System.nanoTime();
-        long[] startTime = new long[orders + 1];
-        startTime[0] = start;
-        for (int i = -WARMUP; i < orders; i++) {
-            if (i == 0)
+        for (int i = 0; i < orders + WARMUP; i++) {
+            if (i == WARMUP)
                 start = System.nanoTime();
             clientOrderId.setLength(0);
             clientOrderId.append("orderId-");
@@ -154,39 +159,33 @@ public class GWMain {
             command.price = 1209.41;
             command.quantity = 1000;
             command.side = (i & 1) == 0 ? Side.BUY : Side.SELL;
-            gw2PeWriter.small(null, command);
-            startTime[Math.abs(i)] = System.nanoTime();
-            if (!throughputTest) {
-                long expectedTime = start + i * EVENT_SPACING;
+            long expectedTime;
+            if (throughputTest) {
+                expectedTime = System.nanoTime();
+            } else {
+                expectedTime = start + i * EVENT_SPACING;
                 while (System.nanoTime() < expectedTime) {
                     //
                 }
             }
+            gw2PeWriter.small(null, command);
         }
         System.out.println("Received " + reportCount.get());
         t.join();
         long time = System.nanoTime() - start;
+        Arrays.sort(times);
         System.out.printf("Processed %,d events in and out in %.1f seconds%n", orders, time / 1e9);
         if (!throughputTest) {
-            System.out.printf("The latency distribution was %.1f, %.1f/%.1f, %.1f/%.1f us for the 1, 90/99, 99.9/99.99 %%tile%n",
-                    times[0].percentile(0.01) / 1e3,
-                    times[0].percentile(0.90) / 1e3,
-                    times[0].percentile(0.99) / 1e3,
-                    times[0].percentile(0.999) / 1e3,
-                    times[0].percentile(0.9999) / 1e3
+            System.out.printf("The latency distribution was %.1f, %.1f/%.1f, %d/%d (%,d) us for the 50, 90/99, 99.9/99.99 %%tile, (worst)%n",
+                    times[orders / 2] / 1e3,
+                    times[orders * 9 / 10] / 1e3,
+                    times[orders - orders / 100] / 1e3,
+                    times[orders - orders / 1000] / 1000,
+                    times[orders - orders / 10000] / 1000,
+                    times[orders - 1] / 1000
             );
         }
         gw2pe.close();
         pe2gw.close();
-
-        PrintWriter pw = new PrintWriter("/tmp/report.csv");
-        for (int i = 0; i < orders; i++) {
-            long delay = startTime[i + 1] - startTime[i];
-            long expected = startTime[i] - (start + (i + 1) * EVENT_SPACING);
-            if (delay > 100e3 || expected > 1e6) {
-                pw.printf("%d, %d, %d%n", i + 1, delay / 1000, expected / 1000);
-            }
-        }
-        pw.close();
     }
 }

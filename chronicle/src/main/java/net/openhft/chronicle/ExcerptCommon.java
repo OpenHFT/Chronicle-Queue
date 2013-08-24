@@ -16,11 +16,19 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.Bytes;
+
 /**
  * @author peter.lawrey
  */
-public interface ExcerptReader extends ExcerptTailer {
-    ExcerptReader toStart();
+public interface ExcerptCommon extends Bytes {
+    long index();
 
-    ExcerptReader toEnd();
+    long size();
+
+    ExcerptCommon toEnd();
+
+    Chronicle chronicle();
+
+    void finish();
 }

@@ -234,10 +234,10 @@ public class IndexedChronicle1Test {
     @Test
     public void testStopBitEncoded() throws IOException {
         boolean ok = false;
-        String testPath = TMP + File.separator + "chroncle-stop-bit";
+        String testPath = TMP + File.separator + "chronicle-stop-bit";
         ChronicleTools.deleteOnExit(testPath);
         IndexedChronicle tsc = new IndexedChronicle(testPath);
-        ChronicleIndexReader.main(testPath);
+//        ChronicleIndexReader.main(testPath);
 
         try {
             ExcerptAppender writer = tsc.createAppender();
@@ -249,7 +249,7 @@ public class IndexedChronicle1Test {
                 writer.writeChar('T');
                 writer.writeStopBit(l);
                 writer.finish();
-                System.out.println("finished");
+//                System.out.println("finished");
 
                 reader.nextIndex();
                 reader.readChar();
@@ -274,7 +274,8 @@ public class IndexedChronicle1Test {
             tsc.close();
             ok = true;
         } finally {
-            ChronicleIndexReader.main(testPath);
+            if (!ok)
+                ChronicleIndexReader.main(testPath);
         }
     }
 

@@ -16,7 +16,7 @@
 
 package vanilla.java.processingengine.api;
 
-import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptMarshallable;
 
 /**
@@ -40,7 +40,7 @@ public class SmallReport implements ExcerptMarshallable {
     }
 
     @Override
-    public void readMarshallable(Excerpt in) throws IllegalStateException {
+    public void readMarshallable(ExcerptCommon in) throws IllegalStateException {
         StringBuilder clientOrderId = (StringBuilder) this.clientOrderId;
         in.readUTF(clientOrderId);
         status = in.readEnum(ReportStatus.class);
@@ -49,7 +49,7 @@ public class SmallReport implements ExcerptMarshallable {
     }
 
     @Override
-    public void writeMarshallable(Excerpt out) {
+    public void writeMarshallable(ExcerptCommon out) {
         out.writeUTF(clientOrderId);
         out.writeEnum(status);
         out.writeUTF(rejectedReason);

@@ -16,7 +16,13 @@
 
 package net.openhft.chronicle.tools;
 
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -76,6 +82,42 @@ public enum ChronicleTools {
                         file.delete();
             }
             dir.delete();
+        }
+    }
+
+    public static void warmup() {
+        boolean done = ChronicleWarmup.DONE;
+    }
+}
+
+class ChronicleWarmup {
+    public static final boolean DONE;
+    public static final int WARMUP_ITER = 200000;
+    private static final String TMP = System.getProperty("java.io.tmpdir");
+
+    static {
+        ChronicleConfig cc = ChronicleConfig.DEFAULT.clone();
+        cc.dataBlockSize(64);
+        cc.indexBlockSize(64);
+        String basePath = TMP + "/warmup-" + Math.random();
+        ChronicleTools.deleteOnExit(basePath);
+        try {
+            IndexedChronicle ic = new IndexedChronicle(basePath, cc);
+            ExcerptAppender appender = ic.createAppender();
+            ExcerptTailer tailer = ic.createTailer();
+            for (int i = 0; i < WARMUP_ITER; i++) {
+                appender.startExcerpt(4);
+                appender.writeInt(i);
+                appender.finish();
+                boolean b = tailer.nextIndex() || tailer.nextIndex();
+                tailer.readInt();
+                tailer.finish();
+            }
+            ic.close();
+            System.gc();
+            DONE = true;
+        } catch (IOException e) {
+            throw new AssertionError();
         }
     }
 }

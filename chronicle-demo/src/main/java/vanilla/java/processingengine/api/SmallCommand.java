@@ -16,7 +16,7 @@
 
 package vanilla.java.processingengine.api;
 
-import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptMarshallable;
 
 /**
@@ -30,7 +30,7 @@ public class SmallCommand implements ExcerptMarshallable {
     public Side side;
 
     @Override
-    public void readMarshallable(Excerpt in) throws IllegalStateException {
+    public void readMarshallable(ExcerptCommon in) throws IllegalStateException {
         // changes often.
         in.readUTF(clientOrderId);
         // cachable.
@@ -41,7 +41,7 @@ public class SmallCommand implements ExcerptMarshallable {
     }
 
     @Override
-    public void writeMarshallable(Excerpt out) {
+    public void writeMarshallable(ExcerptCommon out) {
         out.writeUTF(clientOrderId);
         out.writeEnum(instrument);
         out.writeCompactDouble(price);

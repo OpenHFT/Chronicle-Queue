@@ -23,7 +23,7 @@ import java.io.IOException;
  * @author peter.lawrey
  */
 public interface Chronicle extends Closeable {
-    ExcerptReader createReader() throws IOException;
+    Excerpt createExcerpt() throws IOException;
 
     ExcerptTailer createTailer() throws IOException;
 

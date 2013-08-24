@@ -21,13 +21,13 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author peter.lawrey
@@ -49,24 +49,61 @@ public class IndexedChronicleTest {
         WITH_BINDING = binding;
     }
 
+    public static final String TMP = System.getProperty("java.io.tmpdir");
+    private static final long WARMUP = 20000;
+
+    private static void validateExcerpt(ExcerptCommon r, int i, int expected) {
+        if (expected > r.remaining() || 8 * expected < r.remaining())
+            assertEquals("index: " + r.index(), expected, r.remaining());
+        if (expected > r.capacity() || 8 * expected < r.capacity())
+            assertEquals("index: " + r.index(), expected, r.capacity());
+        assertEquals(0, r.position());
+        long l = r.readLong();
+        assertEquals(i, l);
+        assertEquals(8, r.position());
+        if (expected - 8 != r.remaining())
+            assertEquals("index: " + r.index(), expected - 8, r.remaining());
+        double d = r.readDouble();
+        assertEquals(i, d, 0.0);
+
+
+        if (0 != r.remaining())
+            assertEquals("index: " + r.index(), 0, r.remaining());
+
+        r.position(0);
+        long l2 = r.readLong();
+        assertEquals(i, l2);
+
+        r.position(expected);
+
+        r.finish();
+    }
+
     @Test
     public void singleThreaded() throws IOException {
-        final String basePath = System.getProperty("java.io.tmpdir") + "/singleThreaded";
+        final String basePath = TMP + "/singleThreaded";
         ChronicleTools.deleteOnExit(basePath);
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.dataBlockSize(4096);
-        config.indexBlockSize(4096);
+        int dataBlockSize = 4096;
+        config.dataBlockSize(dataBlockSize);
+        config.indexBlockSize(128);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         int i = 0;
         try {
             ExcerptAppender w = chronicle.createAppender();
             ExcerptTailer r = chronicle.createTailer();
+            Excerpt e = chronicle.createExcerpt();
             Random rand = new Random(1);
             // finish just at the end of the first page.
-            for (i = 0; i < 5000; i++) {
-//            System.out.println(i);
+            int idx = 0;
+            for (i = 0; i < 50000; i++) {
+//                System.out.println(i + " " + idx);
+//                if (i == 28)
+//                    ChronicleIndexReader.main(basePath + ".index");
 
+                assertFalse(r.nextIndex());
+                assertFalse(e.index(idx));
                 int capacity = 16 * (1 + rand.nextInt(7));
 
                 w.startExcerpt(capacity);
@@ -86,36 +123,16 @@ public class IndexedChronicleTest {
                 if (!r.nextIndex()) {
                     assertTrue(r.nextIndex());
                 }
-                if (expected != r.remaining())
-                    assertEquals("index: " + r.index(), expected, r.remaining());
-                if (expected != r.capacity())
-                    assertEquals("index: " + r.index(), expected, r.capacity());
-                assertEquals(0, r.position());
-                long l = r.readLong();
-                assertEquals(i, l);
-                assertEquals(8, r.position());
-                if (expected - 8 != r.remaining())
-                    assertEquals("index: " + r.index(), expected - 8, r.remaining());
-                double d = r.readDouble();
-                assertEquals(i, d, 0.0);
+                validateExcerpt(r, i, expected);
 
+//                if (i >= 111)
+//                    ChronicleIndexReader.main(basePath + ".index");
+                if (!e.index(idx++)) {
+                    assertTrue(e.wasPadding());
+                    assertTrue(e.index(idx++));
+                }
+                validateExcerpt(e, i, expected);
 
-                if (0 != r.remaining())
-                    assertEquals("index: " + r.index(), 0, r.remaining());
-
-                r.position(0);
-                long l2 = r.readLong();
-                assertEquals(i, l2);
-
-                r.position(expected);
-
-                r.finish();
-/*
-            double d = r.readDouble();
-            assertEquals(2, d, 0.0);
-            byte b = r.readByte();
-            assertEquals(3, b);
-*/
             }
             w.close();
             r.close();
@@ -129,21 +146,22 @@ public class IndexedChronicleTest {
 
     @Test
     public void multiThreaded() throws IOException, InterruptedException {
+//        for (int i = 0; i < 20; i++) System.out.println();
         if (Runtime.getRuntime().availableProcessors() < 2) {
             System.err.println("Test requires 2 CPUs, skipping");
             return;
         }
 
-        final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
+        final String basePath = TMP + "/multiThreaded";
         ChronicleTools.deleteOnExit(basePath);
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-//        int dataBlockSize = 4 * 1024;
-//        config.dataBlockSize(dataBlockSize);
-//        config.indexBlockSize(dataBlockSize);
+        int dataBlockSize = 1 << 26;
+        config.dataBlockSize(dataBlockSize);
+        config.indexBlockSize(dataBlockSize / 4);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 200L * 1000 * 1000;
+        final long words = 500L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
@@ -162,6 +180,7 @@ public class IndexedChronicleTest {
                         w.finish();
                     }
                     w.close();
+
 //                    chronicle.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -181,12 +200,12 @@ public class IndexedChronicleTest {
                 while (!r.nextIndex()) {
                     long now = System.nanoTime();
                     long jitter = now - last;
-                    if (maxJitter < jitter)
+                    if (i > WARMUP && maxJitter < jitter)
                         maxJitter = jitter;
                     long delay0 = now - start0;
-                    if (delay0 > 200e6)
+                    if (delay0 > 20e6)
                         throw new AssertionError("index: " + r.index());
-                    if (maxDelay < delay0)
+                    if (i > WARMUP && maxDelay < delay0)
                         maxDelay = delay0;
                     last = now;
                 }
@@ -209,7 +228,10 @@ public class IndexedChronicleTest {
 
         r.close();
         long rate = words / size * 10 * 1000L / (System.nanoTime() - start);
-        System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages, maxJitter: " + maxJitter + " ns, maxDelay: " + maxDelay + " ns.");
+        System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages, " +
+                "maxJitter: " + maxJitter / 1000 + " us, " +
+                "maxDelay: " + maxDelay / 1000 + " us," +
+                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
         Thread.sleep(200);
         ChronicleTools.deleteOnExit(basePath);
     }
@@ -220,8 +242,8 @@ public class IndexedChronicleTest {
             System.err.println("Test requires 3 CPUs, skipping");
             return;
         }
-        final String basePath = System.getProperty("java.io.tmpdir") + "/multiThreaded";
-        final String basePath2 = System.getProperty("java.io.tmpdir") + "/multiThreaded2";
+        final String basePath = TMP + "/multiThreaded";
+        final String basePath2 = TMP + "/multiThreaded2";
         ChronicleTools.deleteOnExit(basePath);
         ChronicleTools.deleteOnExit(basePath2);
 
@@ -311,5 +333,30 @@ public class IndexedChronicleTest {
         Thread.sleep(200);
         ChronicleTools.deleteOnExit(basePath);
         ChronicleTools.deleteOnExit(basePath2);
+    }
+
+    @Test
+    @Ignore
+    public void testWarmup() throws IOException {
+        ChronicleConfig cc = ChronicleConfig.DEFAULT;
+        cc.dataBlockSize(64);
+        cc.indexBlockSize(64);
+        String basePath = TMP + "/warmup";
+        ChronicleTools.deleteOnExit(basePath);
+        IndexedChronicle ic = new IndexedChronicle(basePath, cc);
+        ExcerptAppender appender = ic.createAppender();
+        ExcerptTailer tailer = ic.createTailer();
+        for (int i = 0; i < 200000; i++) {
+            if (i % 1000 == 0)
+                System.out.println(i);
+            appender.startExcerpt(4);
+            appender.writeInt(i);
+            appender.finish();
+            boolean b = tailer.nextIndex() || tailer.nextIndex();
+            tailer.readInt();
+            tailer.finish();
+        }
+        ic.close();
+
     }
 }

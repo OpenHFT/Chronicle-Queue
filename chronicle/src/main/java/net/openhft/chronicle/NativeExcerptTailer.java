@@ -21,7 +21,7 @@ import java.io.IOException;
 /**
  * @author peter.lawrey
  */
-public class NativeExcerptTailer extends AbstractNativeExcerpt implements ExcerptTailer, ExcerptReader {
+public class NativeExcerptTailer extends AbstractNativeExcerpt implements ExcerptTailer {
 
     public static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
 
@@ -30,22 +30,9 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
     }
 
     @Override
-    public ExcerptReader toEnd() {
+    public ExcerptTailer toEnd() {
         super.toEnd();
         return this;
-    }
-
-    @Override
-    public ExcerptReader toStart() {
-        index = -1;
-        return this;
-    }
-
-    @Override
-    public boolean index(long l) {
-        if (l != size() - 1)
-            throw new UnsupportedOperationException();
-        return true;
     }
 
     public boolean nextIndex() {

@@ -19,7 +19,7 @@ package net.openhft.chronicle;
 /**
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends Excerpt {
+public interface ExcerptAppender extends ExcerptCommon {
     void startExcerpt(long capacity);
 
     void roll();

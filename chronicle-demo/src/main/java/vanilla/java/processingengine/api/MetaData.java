@@ -16,7 +16,7 @@
 
 package vanilla.java.processingengine.api;
 
-import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.lang.io.RandomDataOutput;
 
 /**
@@ -28,56 +28,56 @@ public class MetaData {
     public int sourceId;
     public long excerptId;
     public long writeTimestampMillis;
-    public long inWriteTimestamp7; // tenths of a micro-second
-    public long inReadTimestamp7Delta; // tenths of a micro-second
-    public long outWriteTimestamp7Delta; // tenths of a micro-second
-    public long outReadTimestamp7Delta; // tenths of a micro-second
+    public long inWriteTimestamp;
+    public long inReadTimestamp;
+    public long outWriteTimestamp;
+    public long outReadTimestamp;
 
     public MetaData(boolean targetReader) {
         this.targetReader = targetReader;
     }
 
     private static long fastTime() {
-        return System.nanoTime() / 100;
+        return System.nanoTime();
     }
 
     public static void writeForGateway(RandomDataOutput out) {
         out.writeLong(System.currentTimeMillis());
         out.writeLong(fastTime());
-        out.writeInt(0);
+        out.writeLong(0);
     }
 
-    public void readFromGateway(Excerpt in) {
+    public void readFromGateway(ExcerptCommon in) {
         excerptId = in.index();
         writeTimestampMillis = in.readLong();
-        inWriteTimestamp7 = in.readLong();
-        inReadTimestamp7Delta = in.readUnsignedInt();
-        if (inReadTimestamp7Delta == 0 && targetReader)
-            in.writeUnsignedInt(in.position() - 4,
-                    inReadTimestamp7Delta = fastTime() - inWriteTimestamp7);
+        inWriteTimestamp = in.readLong();
+        inReadTimestamp = in.readLong();
+        if (inReadTimestamp == 0 && targetReader)
+            in.writeLong(in.position() - 8,
+                    inReadTimestamp = fastTime());
     }
 
     public void writeForEngine(RandomDataOutput out) {
         out.writeInt(sourceId);
         out.writeLong(excerptId);
         out.writeLong(writeTimestampMillis);
-        out.writeLong(inWriteTimestamp7);
-        out.writeUnsignedInt(inReadTimestamp7Delta);
-        out.writeUnsignedInt(fastTime() - inWriteTimestamp7);
-        out.writeUnsignedInt(0L);
+        out.writeLong(inWriteTimestamp);
+        out.writeLong(inReadTimestamp);
+        out.writeLong(fastTime());
+        out.writeLong(0L);
     }
 
-    public void readFromEngine(Excerpt in, int sourceId) {
+    public void readFromEngine(ExcerptCommon in, int sourceId) {
         this.sourceId = in.readInt();
         excerptId = in.readLong();
         targetReader = sourceId == this.sourceId;
         writeTimestampMillis = in.readLong();
-        inWriteTimestamp7 = in.readLong();
-        inReadTimestamp7Delta = in.readUnsignedInt();
-        outWriteTimestamp7Delta = in.readUnsignedInt();
-        outReadTimestamp7Delta = in.readUnsignedInt();
-        if (outReadTimestamp7Delta == 0 && targetReader)
-            in.writeUnsignedInt(in.position() - 4,
-                    outReadTimestamp7Delta = fastTime() - inWriteTimestamp7);
+        inWriteTimestamp = in.readLong();
+        inReadTimestamp = in.readLong();
+        outWriteTimestamp = in.readLong();
+        outReadTimestamp = in.readLong();
+        if (outReadTimestamp == 0 && targetReader)
+            in.writeLong(in.position() - 8,
+                    outReadTimestamp = fastTime());
     }
 }

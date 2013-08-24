@@ -19,12 +19,8 @@ package net.openhft.chronicle;
 /**
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends Excerpt {
+public interface ExcerptTailer extends ExcerptCommon {
     boolean nextIndex();
-
-    boolean index(long l);
-
-    ExcerptTailer toStart();
 
     ExcerptTailer toEnd();
 }

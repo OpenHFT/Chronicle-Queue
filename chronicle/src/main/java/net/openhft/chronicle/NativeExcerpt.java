@@ -16,13 +16,18 @@
 
 package net.openhft.chronicle;
 
+import sun.nio.ch.DirectBuffer;
+
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
  */
-public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
-    public NativeExcerptAppender(IndexedChronicle chronicle) throws IOException {
+public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
+    private boolean padding = true;
+
+    public NativeExcerpt(IndexedChronicle chronicle) throws IOException {
         super(chronicle);
     }
 
@@ -54,23 +59,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         checkNewIndexLine();
         UNSAFE.putInt(indexPositionAddr, -size);
         indexPositionAddr += 4;
-        index++;
     }
 
     @Override
     public void finish() {
         super.finish();
-
-        // push out the entry is available.  This is what the reader polls.
-        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
-        long offsetInBlock = positionAddr - dataStartAddr;
-        assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
-        int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
-        assert relativeOffset > 0;
-        UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
-        indexPositionAddr += 4;
-        index++;
-        chronicle.incrSize();
 
         if (chronicle.config.synchronousMode()) {
             dataBuffer.force();
@@ -79,7 +72,7 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     }
 
     @Override
-    public ExcerptAppender toEnd() {
+    public Excerpt toEnd() {
         super.toEnd();
         return this;
     }
@@ -108,5 +101,48 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
         indexPositionAddr += 8;
+    }
+
+    @Override
+    public boolean index(long l) {
+        long lineNo = l / 14;
+        int inLine = (int) (l % 14);
+        long lineOffset = lineNo << 4;
+        long indexLookup = lineOffset / (indexBlockSize / 4);
+        long indexLookupMod = lineOffset % (indexBlockSize / 4);
+        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup);
+        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        indexPositionAddr = indexStartAddr + (indexLookupMod << 2);
+        int dataOffsetEnd = UNSAFE.getInt(indexPositionAddr + 8 + (inLine << 2));
+        if (dataOffsetEnd <= 0) {
+            padding = dataOffsetEnd < 0;
+            return false;
+        }
+        indexBaseForLine = UNSAFE.getLong(indexPositionAddr);
+        int startOffset = UNSAFE.getInt(indexPositionAddr + 4 + (inLine << 2));
+        long dataOffsetStart = inLine == 0 ? indexBaseForLine : (indexBaseForLine + Math.abs(startOffset));
+        long dataLookup = dataOffsetStart / dataBlockSize;
+        long dataLookupMod = dataOffsetStart % dataBlockSize;
+        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup);
+        startAddr = positionAddr = ((DirectBuffer) dataMBB).address() + dataLookupMod;
+        limitAddr = ((DirectBuffer) dataMBB).address() + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
+        padding = false;
+        return true;
+    }
+
+    @Override
+    public ExcerptTailer toStart() {
+        this.index(1);
+        return this;
+    }
+
+    @Override
+    public boolean nextIndex() {
+        return index(index() + 1);
+    }
+
+    @Override
+    public boolean wasPadding() {
+        return padding;
     }
 }

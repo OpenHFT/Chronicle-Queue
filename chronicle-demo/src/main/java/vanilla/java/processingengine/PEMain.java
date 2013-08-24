@@ -19,6 +19,7 @@ package vanilla.java.processingengine;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
@@ -29,6 +30,7 @@ import java.io.IOException;
  */
 public class PEMain {
     public static void main(String... ignored) throws IOException {
+        ChronicleTools.warmup();
         if (GWMain.WITH_BINDING)
             PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
         String tmp = System.getProperty("java.io.tmpdir");

@@ -35,7 +35,7 @@ import static junit.framework.Assert.assertEquals;
 public class ExampleKeyedExcerptMain {
     private static final String TMP = System.getProperty("java.io.tmpdir");
     private final Chronicle chronicle;
-    private final ExcerptReader reader;
+    private final Excerpt reader;
     private final ExcerptTailer tailer;
     private final ExcerptAppender appender;
     private final TObjectLongMap<String> keyToExcerpt = new TObjectLongHashMap<String>() {
@@ -49,7 +49,7 @@ public class ExampleKeyedExcerptMain {
         chronicle = new IndexedChronicle(basePath);
         tailer = chronicle.createTailer();
         appender = chronicle.createAppender();
-        reader = chronicle.createReader();
+        reader = chronicle.createExcerpt();
     }
 
     public static void main(String... ignored) throws IOException {

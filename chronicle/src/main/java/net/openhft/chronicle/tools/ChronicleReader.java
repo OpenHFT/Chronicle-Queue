@@ -41,7 +41,7 @@ public enum ChronicleReader {
         ExcerptTailer excerpt = ic.createTailer();
         //noinspection InfiniteLoopStatement
         while (true) {
-            while (!excerpt.index(index))
+            while (!excerpt.nextIndex())
                 //noinspection BusyWait
                 Thread.sleep(50);
             System.out.print(index + ": ");
