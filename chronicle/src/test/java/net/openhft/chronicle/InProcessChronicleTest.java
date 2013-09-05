@@ -19,7 +19,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.affinity.PosixJNAAffinity;
 import net.openhft.lang.io.StopCharTesters;
 import org.junit.Test;
 
@@ -53,7 +52,7 @@ public class InProcessChronicleTest {
             @Override
             public void run() {
                 try {
-                    PosixJNAAffinity.INSTANCE.setAffinity(1 << 1);
+//                    PosixJNAAffinity.INSTANCE.setAffinity(1 << 1);
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
@@ -71,7 +70,7 @@ public class InProcessChronicleTest {
             }
         });
 
-        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
+//        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
         String snkBasePath = baseDir + "/IPCT.testOverTCP.sink";
         ChronicleTools.deleteOnExit(snkBasePath);
         Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(snkBasePath), "localhost", PORT + 1);
