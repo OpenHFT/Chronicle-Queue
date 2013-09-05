@@ -131,14 +131,22 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     }
 
     @Override
-    public ExcerptTailer toStart() {
-        this.index(1);
+    public Excerpt toStart() {
+        this.index(0);
         return this;
     }
 
     @Override
     public boolean nextIndex() {
-        return index(index() + 1);
+        if (index(index() + 1)) {
+            index++;
+            return true;
+        }
+        if (wasPadding()) {
+            index++;
+            return index(index() + 1);
+        }
+        return false;
     }
 
     @Override

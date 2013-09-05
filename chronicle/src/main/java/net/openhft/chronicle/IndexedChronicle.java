@@ -24,6 +24,7 @@ import java.io.IOException;
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {
+    private final String basePath;
     final MappedFileCache indexFileCache;
     final MappedFileCache dataFileCache;
     final ChronicleConfig config;
@@ -34,12 +35,18 @@ public class IndexedChronicle implements Chronicle {
     }
 
     public IndexedChronicle(String basePath, ChronicleConfig config) throws FileNotFoundException {
+        this.basePath = basePath;
         this.config = config.clone();
         File parentFile = new File(basePath).getParentFile();
         if (parentFile != null)
             parentFile.mkdirs();
         this.indexFileCache = new PrefetchingMappedFileCache(basePath + ".index", config.indexBlockSize());
         this.dataFileCache = new PrefetchingMappedFileCache(basePath + ".data", config.dataBlockSize());
+    }
+
+    @Override
+    public String name() {
+        return basePath;
     }
 
     @Override

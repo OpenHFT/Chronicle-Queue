@@ -1,6 +1,6 @@
 package net.openhft.chronicle;
 
-import net.openhft.lang.thread.NamedThreadPool;
+import net.openhft.lang.thread.NamedThreadFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class PrefetchingMappedFileCache implements MappedFileCache {
     public static final AtomicLong totalWait = new AtomicLong();
-    static final ExecutorService PREFETCHER = Executors.newCachedThreadPool(new NamedThreadPool("mmap-prefetch", true));
+    static final ExecutorService PREFETCHER = Executors.newCachedThreadPool(new NamedThreadFactory("mmap-prefetch", true));
     private static final IndexedMBB NULL_IMBB = new IndexedMBB(Long.MIN_VALUE, null, -1);
     final String basePath;
     final FileChannel fileChannel;

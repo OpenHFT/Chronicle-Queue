@@ -25,7 +25,7 @@ public interface Excerpt extends ExcerptTailer {
 
     boolean wasPadding();
 
-    ExcerptTailer toStart();
+    Excerpt toStart();
 
     Excerpt toEnd();
 }
