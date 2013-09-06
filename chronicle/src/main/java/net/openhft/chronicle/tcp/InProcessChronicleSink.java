@@ -31,7 +31,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * This listens to a ChronicleSource and copies new entries. This SInk can be any number of excerpt behind the source and can be restart many times without losing data.
+ * This listens to a ChronicleSource and copies new entries. This SInk can be any number of excerpt behind the source
+ * and can be restart many times without losing data.
  * <p/>
  * Can be used as a component with lower over head than ChronicleSink
  *
@@ -167,7 +168,7 @@ public class InProcessChronicleSink implements Chronicle {
             }
             long size = readBuffer.getInt();
             if (size == InProcessChronicleSource.IN_SYNC_LEN) {
-                System.out.println("... received inSync");
+//                System.out.println("... received inSync");
                 return false;
             }
 

@@ -32,7 +32,7 @@ public class SmallCommand implements ExcerptMarshallable {
     @Override
     public void readMarshallable(ExcerptCommon in) throws IllegalStateException {
         // changes often.
-        in.readUTF(clientOrderId);
+        in.readUTFΔ(clientOrderId);
         // cachable.
         instrument = in.readEnum(String.class);
         price = in.readCompactDouble();
@@ -42,7 +42,7 @@ public class SmallCommand implements ExcerptMarshallable {
 
     @Override
     public void writeMarshallable(ExcerptCommon out) {
-        out.writeUTF(clientOrderId);
+        out.writeUTFΔ(clientOrderId);
         out.writeEnum(instrument);
         out.writeCompactDouble(price);
         out.writeStopBit(quantity);

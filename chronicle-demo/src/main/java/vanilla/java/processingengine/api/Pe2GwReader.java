@@ -46,7 +46,7 @@ public class Pe2GwReader {
         if (mt == null) {
             // rewind and read again.
             excerpt.position(pos);
-            System.err.println("Unknown message type " + excerpt.readUTF());
+            System.err.println("Unknown message type " + excerpt.readUTFΔ());
             return true;
         }
         switch (mt) {

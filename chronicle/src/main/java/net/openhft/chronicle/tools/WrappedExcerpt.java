@@ -86,8 +86,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.remaining();
     }
 
-    public void readFully(byte[] b) {
-        common.readFully(b);
+    public void readFully(byte[] bytes) {
+        common.readFully(bytes);
     }
 
     public int skipBytes(int n) {
@@ -131,17 +131,17 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public boolean readUTF(Appendable appendable) {
-        return appendUTF(appendable);
-    }
-
-    public boolean readUTF(StringBuilder stringBuilder) {
-        return common.readUTF(stringBuilder);
+    public String readUTFΔ() {
+        return common.readUTFΔ();
     }
 
     @Override
-    public boolean appendUTF(Appendable appendable) {
-        return common.appendUTF(appendable);
+    public void writeBytesΔ(CharSequence s) {
+        common.writeBytesΔ(s);
+    }
+
+    public boolean readUTFΔ(StringBuilder stringBuilder) {
+        return common.readUTFΔ(stringBuilder);
     }
 
     public String parseUTF(StopCharTester tester) {
@@ -152,8 +152,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         common.parseUTF(builder, tester);
     }
 
-    public String readUTF(long offset) {
-        return common.readUTF(offset);
+    public String readUTFΔ(long offset) {
+        return common.readUTFΔ(offset);
     }
 
     public short readCompactShort() {
@@ -209,8 +209,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.readCompactDouble();
     }
 
-    public void readByteString(StringBuilder sb) {
-        common.readByteString(sb);
+    public void readBytesΔ(StringBuilder sb) {
+        common.readBytesΔ(sb);
     }
 
     public void readChars(StringBuilder sb) {
@@ -237,10 +237,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         common.writeBytes(s);
     }
 
-    public void writeBytes(CharSequence s) {
-        common.writeBytes(s);
-    }
-
     public void writeChars(String s) {
         common.writeChars(s);
     }
@@ -249,8 +245,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         common.writeUTF(s);
     }
 
-    public void writeUTF(CharSequence str) {
-        common.writeUTF(str);
+    public void writeUTFΔ(CharSequence str) {
+        common.writeUTFΔ(str);
     }
 
     public void writeByte(int v) {

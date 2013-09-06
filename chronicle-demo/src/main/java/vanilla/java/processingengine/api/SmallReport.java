@@ -42,16 +42,16 @@ public class SmallReport implements ExcerptMarshallable {
     @Override
     public void readMarshallable(ExcerptCommon in) throws IllegalStateException {
         StringBuilder clientOrderId = (StringBuilder) this.clientOrderId;
-        in.readUTF(clientOrderId);
+        in.readUTFΔ(clientOrderId);
         status = in.readEnum(ReportStatus.class);
         StringBuilder rejectedReason = (StringBuilder) this.rejectedReason;
-        in.readUTF(rejectedReason);
+        in.readUTFΔ(rejectedReason);
     }
 
     @Override
     public void writeMarshallable(ExcerptCommon out) {
-        out.writeUTF(clientOrderId);
+        out.writeUTFΔ(clientOrderId);
         out.writeEnum(status);
-        out.writeUTF(rejectedReason);
+        out.writeUTFΔ(rejectedReason);
     }
 }

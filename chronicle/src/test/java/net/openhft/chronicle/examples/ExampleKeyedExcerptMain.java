@@ -87,14 +87,14 @@ public class ExampleKeyedExcerptMain {
 
     public void load() {
         while (tailer.nextIndex()) {
-            String key = tailer.readUTF();
+            String key = tailer.readUTFΔ();
             keyToExcerpt.put(key, tailer.index());
         }
     }
 
     public void putMapFor(String key, Map<String, String> map) {
         appender.startExcerpt(4096); // a guess
-        appender.writeUTF(key);
+        appender.writeUTFΔ(key);
         appender.writeMap(map);
         appender.finish();
     }
