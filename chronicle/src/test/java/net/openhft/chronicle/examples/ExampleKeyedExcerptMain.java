@@ -100,13 +100,14 @@ public class ExampleKeyedExcerptMain {
     }
 
     public Map<String, String> getMapFor(String key) {
-
         long value = keyToExcerpt.get(key);
         if (value < 0) return Collections.emptyMap();
         reader.index(value);
         // skip the key
         reader.skip(reader.readStopBit());
-        return reader.readMap(String.class, String.class);
+        Map<String, String> map = new LinkedHashMap<String, String>();
+        reader.readMap(map, String.class, String.class);
+        return map;
     }
 
     public void close() {
