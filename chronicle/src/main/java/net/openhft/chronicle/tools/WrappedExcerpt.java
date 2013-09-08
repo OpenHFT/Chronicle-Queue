@@ -252,8 +252,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void write(byte[] b) {
-        common.write(b);
+    public void write(byte[] bytes) {
+        common.write(bytes);
     }
 
     @Override
@@ -303,13 +303,13 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void write(long offset, byte[] b) {
-        common.write(offset, b);
+    public void write(long offset, byte[] bytes) {
+        common.write(offset, bytes);
     }
 
     @Override
-    public void write(byte[] b, int off, int len) {
-        common.write(b, off, len);
+    public void write(byte[] bytes, int off, int len) {
+        common.write(bytes, off, len);
     }
 
     @Override
