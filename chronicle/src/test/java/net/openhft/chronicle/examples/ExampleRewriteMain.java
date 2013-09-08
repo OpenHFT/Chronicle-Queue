@@ -19,9 +19,7 @@ package net.openhft.chronicle.examples;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.IndexedChronicleTest;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.affinity.PosixJNAAffinity;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +28,9 @@ import java.util.Arrays;
 /**
  * @author peter.lawrey
  *         <p/>
- *         Chronicle 1.7: 50.0% took 0.3 µs,  90.0% took 0.4 µs,  99.0% took 33.5 µs,  99.9% took 66.9 µs,  99.99% took 119.7 µs,  worst took 183 µs
- *         Chronicle 2.0: 50.0% took 0.13 µs, 90.0% took 0.15 µs, 99.0% took 0.44 µs, 99.9% took 14.37 µs, 99.99% took 22.16 µs, worst took 40 µs
+ *         Chronicle 1.7: 50.0% took 0.3 µs,  90.0% took 0.4 µs,  99.0% took 33.5 µs,  99.9% took 66.9 µs,  99.99% took
+ *         119.7 µs,  worst took 183 µs Chronicle 2.0: 50.0% took 0.13 µs, 90.0% took 0.15 µs, 99.0% took 0.44 µs, 99.9%
+ *         took 14.37 µs, 99.99% took 22.16 µs, worst took 40 µs
  */
 public class ExampleRewriteMain {
     public static void main(String... ignored) throws IOException {
@@ -41,15 +40,11 @@ public class ExampleRewriteMain {
         final int warmup = 1000000;
         final int repeats = 10000000;
 
-        if (IndexedChronicleTest.WITH_BINDING)
-            PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
         //Write
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (IndexedChronicleTest.WITH_BINDING)
-                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
                     final IndexedChronicle chronicle = new IndexedChronicle(basePath);
 //                    chronicle.useUnsafe(true); // for benchmarks.
                     final ExcerptAppender excerpt = chronicle.createAppender();

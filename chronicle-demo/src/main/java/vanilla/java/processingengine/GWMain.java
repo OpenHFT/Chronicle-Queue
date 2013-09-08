@@ -19,7 +19,7 @@ package vanilla.java.processingengine;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.affinity.PosixJNAAffinity;
+import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
 import java.io.IOException;
@@ -27,10 +27,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * For a latency test
- * Start first: PEMain
- * Then run: GEMain 2 false
- * When the count down is reached:  GEMain 1 false
+ * For a latency test Start first: PEMain Then run: GEMain 2 false When the count down is reached:  GEMain 1 false
  *
  * @author peter.lawrey
  */

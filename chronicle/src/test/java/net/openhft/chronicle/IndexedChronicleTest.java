@@ -16,11 +16,10 @@
 
 package net.openhft.chronicle;
 
-//import net.openhft.lang.affinity.PosixJNAAffinity;
+//import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.affinity.PosixJNAAffinity;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -33,21 +32,6 @@ import static org.junit.Assert.*;
  * @author peter.lawrey
  */
 public class IndexedChronicleTest {
-    public static final boolean WITH_BINDING;
-
-    static {
-        boolean binding = false;
-
-        if (Runtime.getRuntime().availableProcessors() > 10) {
-            try {
-                PosixJNAAffinity.INSTANCE.getcpu();
-                binding = true;
-                System.out.println("binding: true");
-            } catch (Throwable ignored) {
-            }
-        }
-        WITH_BINDING = binding;
-    }
 
     public static final String TMP = System.getProperty("java.io.tmpdir");
     private static final long WARMUP = 20000;
@@ -168,8 +152,6 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-                    if (WITH_BINDING)
-                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < words; i += size) {
@@ -188,9 +170,6 @@ public class IndexedChronicleTest {
             }
         });
         t.start();
-
-        if (WITH_BINDING)
-            PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
 
         long maxDelay = 0, maxJitter = 0;
         for (long i = 0; i < words; i += size) {
@@ -258,8 +237,6 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-                    if (WITH_BINDING)
-                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
@@ -281,8 +258,6 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-                    if (WITH_BINDING)
-                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptTailer r = chronicle.createTailer();
                     IndexedChronicle chronicle2 = new IndexedChronicle(basePath2, config);

@@ -36,6 +36,14 @@
             <artifactId>chronicle</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!-- on linux install with sudo apt-get install libjna-java -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.0.0</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 </project>

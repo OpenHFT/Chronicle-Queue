@@ -19,9 +19,7 @@ package net.openhft.chronicle.examples;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.IndexedChronicleTest;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.affinity.PosixJNAAffinity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -37,14 +35,10 @@ public class ExampleSimpleWriteReadMain {
         final String basePath = System.getProperty("user.home") + "/ExampleSimpleWriteReadMain";
         ChronicleTools.deleteOnExit(basePath);
 
-        if (IndexedChronicleTest.WITH_BINDING)
-            PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (IndexedChronicleTest.WITH_BINDING)
-                        PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
                     IndexedChronicle ic = new IndexedChronicle(basePath);
 //                    ic.useUnsafe(true); // for benchmarks
                     ExcerptAppender excerpt = ic.createAppender();
