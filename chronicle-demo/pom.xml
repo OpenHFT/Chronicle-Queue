@@ -36,6 +36,12 @@
             <artifactId>chronicle</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.kohsuke.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>9.0</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- on linux install with sudo apt-get install libjna-java -->
         <dependency>

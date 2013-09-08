@@ -18,6 +18,7 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
@@ -29,7 +30,7 @@ import java.io.IOException;
 public enum ChronicleReader {
     ;
 
-    public static void main(String... args) throws IOException, InterruptedException {
+    public static void main(@NotNull String... args) throws IOException, InterruptedException {
         if (args.length < 1) {
             System.err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} [from-index]");
             System.exit(-1);

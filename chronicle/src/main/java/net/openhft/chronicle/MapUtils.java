@@ -16,17 +16,17 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 /**
- * User: peter
- * Date: 13/08/13
- * Time: 18:58
+ * User: peter Date: 13/08/13 Time: 18:58
  */
 public class MapUtils {
-    public static MappedByteBuffer getMap(FileChannel fileChannel, long start, int size) throws IOException {
+    public static MappedByteBuffer getMap(@NotNull FileChannel fileChannel, long start, int size) throws IOException {
         for (int i = 1; ; i++) {
             try {
 //                long startTime = System.nanoTime();

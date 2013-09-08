@@ -16,6 +16,7 @@
 
 package vanilla.java.processingengine;
 
+import org.jetbrains.annotations.NotNull;
 import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 
 import java.io.PrintStream;
@@ -98,7 +99,7 @@ public class MicroJitterSampler {
         totalTime += intervalNS;
     }
 
-    public void print(PrintStream ps) {
+    public void print(@NotNull PrintStream ps) {
         ps.println("After " + totalTime / 1000000000 + " seconds, the average per hour was");
         for (int i = 0; i < DELAY.length; i++) {
             if (count[i] < 1) continue;
@@ -108,6 +109,7 @@ public class MicroJitterSampler {
         ps.println();
     }
 
+    @NotNull
     private static String asString(long timeNS) {
         return timeNS < 1000 ? timeNS + "ns" :
                 timeNS < 1000000 ? timeNS / 1000 + "us" :

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,8 @@ import net.openhft.lang.io.ByteStringAppender;
 import net.openhft.lang.io.BytesMarshallerFactory;
 import net.openhft.lang.io.MutableDecimal;
 import net.openhft.lang.io.StopCharTester;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,9 +36,12 @@ import java.util.Map;
  * @author peter.lawrey
  */
 public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
+    @NotNull
     private final ExcerptTailer tailer;
+    @NotNull
     private final ExcerptAppender appender;
     private final ExcerptCommon common;
+    @NotNull
     private final Excerpt excerpt;
 
     public WrappedExcerpt(ExcerptCommon excerptCommon) {
@@ -92,7 +97,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void readFully(byte[] bytes) {
+    public void readFully(@NotNull byte[] bytes) {
         common.readFully(bytes);
     }
 
@@ -102,7 +107,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void readFully(byte[] b, int off, int len) {
+    public void readFully(@NotNull byte[] b, int off, int len) {
         common.readFully(b, off, len);
     }
 
@@ -141,11 +146,13 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.readLine();
     }
 
+    @NotNull
     @Override
     public String readUTF() {
         return common.readUTF();
     }
 
+    @Nullable
     @Override
     public String readUTFΔ() {
         return common.readUTFΔ();
@@ -157,17 +164,18 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public boolean readUTFΔ(StringBuilder stringBuilder) {
+    public boolean readUTFΔ(@NotNull StringBuilder stringBuilder) {
         return common.readUTFΔ(stringBuilder);
     }
 
+    @NotNull
     @Override
-    public String parseUTF(StopCharTester tester) {
+    public String parseUTF(@NotNull StopCharTester tester) {
         return common.parseUTF(tester);
     }
 
     @Override
-    public void parseUTF(Appendable builder, StopCharTester tester) {
+    public void parseUTF(@NotNull Appendable builder, @NotNull StopCharTester tester) {
         common.parseUTF(builder, tester);
     }
 
@@ -237,17 +245,17 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void readBytesΔ(StringBuilder sb) {
+    public void readBytesΔ(@NotNull StringBuilder sb) {
         common.readBytesΔ(sb);
     }
 
     @Override
-    public void readCharsΔ(StringBuilder sb) {
+    public void readCharsΔ(@NotNull StringBuilder sb) {
         common.readCharsΔ(sb);
     }
 
     @Override
-    public void read(ByteBuffer bb) {
+    public void read(@NotNull ByteBuffer bb) {
         common.read(bb);
     }
 
@@ -268,17 +276,17 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @Override
 
-    public void writeBytes(String s) {
+    public void writeBytes(@NotNull String s) {
         common.writeBytes(s);
     }
 
     @Override
-    public void writeChars(String s) {
+    public void writeChars(@NotNull String s) {
         common.writeChars(s);
     }
 
     @Override
-    public void writeUTF(String s) {
+    public void writeUTF(@NotNull String s) {
         common.writeUTF(s);
     }
 
@@ -383,80 +391,92 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void write(ByteBuffer bb) {
+    public void write(@NotNull ByteBuffer bb) {
         common.write(bb);
     }
 
+    @NotNull
     @Override
-    public ByteStringAppender append(CharSequence s) {
+    public ByteStringAppender append(@NotNull CharSequence s) {
         common.append(s);
         return this;
     }
 
+    @NotNull
     @Override
-    public ByteStringAppender append(CharSequence s, int start, int end) {
+    public ByteStringAppender append(@NotNull CharSequence s, int start, int end) {
         common.append(s, start, end);
         return this;
     }
 
+    @NotNull
     @Override
-    public ByteStringAppender append(Enum value) {
+    public ByteStringAppender append(@NotNull Enum value) {
         common.append(value);
         return this;
     }
 
+    @NotNull
     @Override
 
-    public ByteStringAppender append(byte[] str) {
+    public ByteStringAppender append(@NotNull byte[] str) {
         common.append(str);
         return this;
     }
 
+    @NotNull
     @Override
-    public ByteStringAppender append(byte[] str, int offset, int len) {
+    public ByteStringAppender append(@NotNull byte[] str, int offset, int len) {
         common.append(str, offset, len);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(boolean b) {
         common.append(b);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(char c) {
         common.append(c);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(int num) {
         common.append(num);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(long num) {
         common.append(num);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(double d) {
         common.append(d);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender append(double d, int precision) {
         common.append(d, precision);
         return this;
     }
 
+    @NotNull
     @Override
-    public ByteStringAppender append(MutableDecimal md) {
-        append(md);
+    public ByteStringAppender append(@NotNull MutableDecimal md) {
+        common.append(md);
         return this;
     }
 
@@ -470,11 +490,13 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.parseLong();
     }
 
+    @NotNull
     @Override
     public InputStream inputStream() {
         return common.inputStream();
     }
 
+    @NotNull
     @Override
     public OutputStream outputStream() {
         return common.outputStream();
@@ -486,22 +508,22 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public <E> E readEnum(Class<E> aClass) {
+    public <E> E readEnum(@NotNull Class<E> aClass) {
         return common.readEnum(aClass);
     }
 
     @Override
-    public <E> E parseEnum(Class<E> aClass, StopCharTester tester) {
+    public <E> E parseEnum(@NotNull Class<E> aClass, @NotNull StopCharTester tester) {
         return common.parseEnum(aClass, tester);
     }
 
     @Override
-    public <K, V> void writeMap(Map<K, V> map) {
+    public <K, V> void writeMap(@NotNull Map<K, V> map) {
         common.writeMap(map);
     }
 
     @Override
-    public <K, V> void readMap(Map<K, V> map, Class<K> kClass, Class<V> vClass) {
+    public <K, V> void readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
         common.readMap(map, kClass, vClass);
     }
 
@@ -650,6 +672,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         common.writeDouble(offset, v);
     }
 
+    @Nullable
     @Override
     public Object readObject() {
         return common.readObject();
@@ -661,12 +684,12 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public int read(byte[] bytes) {
+    public int read(@NotNull byte[] bytes) {
         return common.read(bytes);
     }
 
     @Override
-    public int read(byte[] bytes, int off, int len) {
+    public int read(@NotNull byte[] bytes, int off, int len) {
         return common.read(bytes, off, len);
     }
 
@@ -684,7 +707,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     public void close() {
         try {
             common.close();
-        } catch (Exception keepIntelliJHappy) {
+        } catch (Exception ignored) {
         }
     }
 
@@ -699,12 +722,12 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public <E> void writeList(Collection<E> list) {
+    public <E> void writeList(@NotNull Collection<E> list) {
         common.writeList(list);
     }
 
     @Override
-    public <E> void readList(Collection<E> list, Class<E> eClass) {
+    public <E> void readList(@NotNull Collection<E> list, @NotNull Class<E> eClass) {
         common.readList(list, eClass);
     }
 
@@ -714,26 +737,29 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public boolean stepBackAndSkipTo(StopCharTester tester) {
+    public boolean stepBackAndSkipTo(@NotNull StopCharTester tester) {
         return common.stepBackAndSkipTo(tester);
     }
 
     @Override
-    public boolean skipTo(StopCharTester tester) {
+    public boolean skipTo(@NotNull StopCharTester tester) {
         return common.skipTo(tester);
     }
 
+    @NotNull
     @Override
-    public MutableDecimal parseDecimal(MutableDecimal decimal) {
+    public MutableDecimal parseDecimal(@NotNull MutableDecimal decimal) {
         return common.parseDecimal(decimal);
     }
 
+    @NotNull
     @Override
     public Excerpt toStart() {
         excerpt.toStart();
         return this;
     }
 
+    @NotNull
     @Override
     public WrappedExcerpt toEnd() {
         common.toEnd();
@@ -755,38 +781,44 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         appender.roll();
     }
 
+    @NotNull
     @Override
     public ByteStringAppender appendTimeMillis(long timeInMS) {
         common.appendTimeMillis(timeInMS);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender appendDateMillis(long timeInMS) {
         common.appendDateMillis(timeInMS);
         return this;
     }
 
+    @NotNull
     @Override
     public ByteStringAppender appendDateTimeMillis(long timeInMS) {
         common.appendDateTimeMillis(timeInMS);
         return this;
     }
 
+    @NotNull
     @Override
-    public <E> ByteStringAppender append(E object) {
+    public <E> ByteStringAppender append(@NotNull E object) {
         common.append(object);
         return this;
     }
 
+    @NotNull
     @Override
-    public <E> ByteStringAppender append(Iterable<E> list, CharSequence seperator) {
+    public <E> ByteStringAppender append(@NotNull Iterable<E> list, @NotNull CharSequence seperator) {
         common.append(list, seperator);
         return this;
     }
 
+    @NotNull
     @Override
-    public <E> ByteStringAppender append(List<E> list, CharSequence seperator) {
+    public <E> ByteStringAppender append(@NotNull List<E> list, @NotNull CharSequence seperator) {
         common.append(list, seperator);
         return this;
     }
@@ -856,11 +888,13 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         common.position(position);
     }
 
+    @NotNull
     @Override
     public ByteOrder byteOrder() {
         return common.byteOrder();
     }
 
+    @NotNull
     @Override
     public BytesMarshallerFactory bytesMarshallerFactory() {
         return common.bytesMarshallerFactory();

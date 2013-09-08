@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.thread.NamedThreadFactory;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -34,10 +35,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up to.
+ * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up
+ * to.
  * <p/>
- * Can be used an in process component which wraps the underlying Chronicle
- * and offers lower overhead than using ChronicleSource
+ * Can be used an in process component which wraps the underlying Chronicle and offers lower overhead than using
+ * ChronicleSource
  *
  * @author peter.lawrey
  */
@@ -45,9 +47,12 @@ public class InProcessChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
     static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
+    @NotNull
     private final Chronicle chronicle;
     private final ServerSocketChannel server;
+    @NotNull
     private final String name;
+    @NotNull
     private final ExecutorService service;
     private final Logger logger;
     private final Object notifier = new Object();
@@ -55,7 +60,7 @@ public class InProcessChronicleSource implements Chronicle {
     private volatile boolean closed = false;
     private long lastUnpausedNS = 0;
 
-    public InProcessChronicleSource(Chronicle chronicle, int port) throws IOException {
+    public InProcessChronicleSource(@NotNull Chronicle chronicle, int port) throws IOException {
         this.chronicle = chronicle;
         server = ServerSocketChannel.open();
         server.socket().setReuseAddress(true);
@@ -93,16 +98,19 @@ public class InProcessChronicleSource implements Chronicle {
         return chronicle.name();
     }
 
+    @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
         return new SourceExcerpt(chronicle.createExcerpt());
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new SourceExcerpt(chronicle.createTailer());
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         return new SourceExcerpt(chronicle.createAppender());
@@ -143,9 +151,10 @@ public class InProcessChronicleSource implements Chronicle {
     }
 
     class Handler implements Runnable {
+        @NotNull
         private final SocketChannel socket;
 
-        public Handler(SocketChannel socket) throws SocketException {
+        public Handler(@NotNull SocketChannel socket) throws SocketException {
             this.socket = socket;
             socket.socket().setSendBufferSize(256 * 1024);
             socket.socket().setTcpNoDelay(true);
@@ -248,7 +257,7 @@ public class InProcessChronicleSource implements Chronicle {
             }
         }
 
-        private long readIndex(SocketChannel socket) throws IOException {
+        private long readIndex(@NotNull SocketChannel socket) throws IOException {
             ByteBuffer bb = ByteBuffer.allocate(8);
             TcpUtil.readFullyOrEOF(socket, bb);
             return bb.getLong(0);

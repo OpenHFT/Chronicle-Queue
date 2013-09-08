@@ -18,6 +18,7 @@ package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.lang.io.RandomDataOutput;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * @author peter.lawrey
@@ -41,13 +42,13 @@ public class MetaData {
         return System.nanoTime();
     }
 
-    public static void writeForGateway(RandomDataOutput out) {
+    public static void writeForGateway(@NotNull RandomDataOutput out) {
         out.writeLong(System.currentTimeMillis());
         out.writeLong(fastTime());
         out.writeLong(0);
     }
 
-    public void readFromGateway(ExcerptCommon in) {
+    public void readFromGateway(@NotNull ExcerptCommon in) {
         excerptId = in.index();
         writeTimestampMillis = in.readLong();
         inWriteTimestamp = in.readLong();
@@ -57,7 +58,7 @@ public class MetaData {
                     inReadTimestamp = fastTime());
     }
 
-    public void writeForEngine(RandomDataOutput out) {
+    public void writeForEngine(@NotNull RandomDataOutput out) {
         out.writeInt(sourceId);
         out.writeLong(excerptId);
         out.writeLong(writeTimestampMillis);
@@ -67,7 +68,7 @@ public class MetaData {
         out.writeLong(0L);
     }
 
-    public void readFromEngine(ExcerptCommon in, int sourceId) {
+    public void readFromEngine(@NotNull ExcerptCommon in, int sourceId) {
         this.sourceId = in.readInt();
         excerptId = in.readLong();
         targetReader = sourceId == this.sourceId;

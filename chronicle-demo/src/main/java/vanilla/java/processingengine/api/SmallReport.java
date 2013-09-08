@@ -18,12 +18,15 @@ package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptMarshallable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * @author peter.lawrey
  */
 public class SmallReport implements ExcerptMarshallable {
     public CharSequence clientOrderId = new StringBuilder();
+    @Nullable
     public ReportStatus status;
     public CharSequence rejectedReason = new StringBuilder();
 
@@ -40,7 +43,7 @@ public class SmallReport implements ExcerptMarshallable {
     }
 
     @Override
-    public void readMarshallable(ExcerptCommon in) throws IllegalStateException {
+    public void readMarshallable(@NotNull ExcerptCommon in) throws IllegalStateException {
         StringBuilder clientOrderId = (StringBuilder) this.clientOrderId;
         in.readUTFΔ(clientOrderId);
         status = in.readEnum(ReportStatus.class);
@@ -49,7 +52,7 @@ public class SmallReport implements ExcerptMarshallable {
     }
 
     @Override
-    public void writeMarshallable(ExcerptCommon out) {
+    public void writeMarshallable(@NotNull ExcerptCommon out) {
         out.writeUTFΔ(clientOrderId);
         out.writeEnum(status);
         out.writeUTFΔ(rejectedReason);

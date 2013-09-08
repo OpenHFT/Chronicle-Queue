@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -25,10 +27,13 @@ import java.io.IOException;
 public interface Chronicle extends Closeable {
     String name();
 
+    @NotNull
     Excerpt createExcerpt() throws IOException;
 
+    @NotNull
     ExcerptTailer createTailer() throws IOException;
 
+    @NotNull
     ExcerptAppender createAppender() throws IOException;
 
     long size();

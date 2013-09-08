@@ -17,6 +17,7 @@
 package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptAppender;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Gateway to Processing Engine writer
@@ -31,7 +32,7 @@ public class Gw2PeWriter implements Gw2PeEvents {
     }
 
     @Override
-    public void small(MetaData ignored, SmallCommand command) {
+    public void small(MetaData ignored, @NotNull SmallCommand command) {
         excerpt.startExcerpt(200); // guess the maximum size (or calculate it)
         excerpt.writeEnum(MessageType.small);
         MetaData.writeForGateway(excerpt);

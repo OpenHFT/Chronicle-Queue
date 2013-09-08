@@ -17,6 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteOrder;
 
@@ -127,6 +128,7 @@ public class ChronicleConfig implements Cloneable {
         return indexBlockSize;
     }
 
+    @NotNull
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override
     public ChronicleConfig clone() {

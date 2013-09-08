@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,8 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedExcerpt;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -39,13 +41,15 @@ import java.util.logging.Logger;
  * @author peter.lawrey
  */
 public class InProcessChronicleSink implements Chronicle {
+    @NotNull
     private final Chronicle chronicle;
+    @NotNull
     private final SocketAddress address;
     private final ExcerptAppender excerpt;
     private final Logger logger;
     private volatile boolean closed = false;
 
-    public InProcessChronicleSink(Chronicle chronicle, String hostname, int port) throws IOException {
+    public InProcessChronicleSink(@NotNull Chronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
         this.address = new InetSocketAddress(hostname, port);
         logger = Logger.getLogger(getClass().getName() + '.' + chronicle);
@@ -58,16 +62,19 @@ public class InProcessChronicleSink implements Chronicle {
         return chronicle.name();
     }
 
+    @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
         return new SinkExcerpt(chronicle.createExcerpt());
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new SinkExcerpt(chronicle.createTailer());
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         throw new UnsupportedOperationException();
@@ -96,6 +103,7 @@ public class InProcessChronicleSink implements Chronicle {
         }
     }
 
+    @Nullable
     private SocketChannel sc = null;
     private boolean scFirst = true;
 
@@ -107,6 +115,7 @@ public class InProcessChronicleSink implements Chronicle {
         return sc != null && readNextExcerpt(sc);
     }
 
+    @Nullable
     private SocketChannel createConnection() {
         while (!closed) {
             try {
@@ -139,7 +148,7 @@ public class InProcessChronicleSink implements Chronicle {
 
     private final ByteBuffer readBuffer; // minimum size
 
-    private boolean readNextExcerpt(SocketChannel sc) {
+    private boolean readNextExcerpt(@NotNull SocketChannel sc) {
         try {
             if (closed) return false;
 
@@ -217,7 +226,7 @@ public class InProcessChronicleSink implements Chronicle {
         return true;
     }
 
-    void closeSocket(SocketChannel sc) {
+    void closeSocket(@Nullable SocketChannel sc) {
         if (sc != null)
             try {
                 sc.close();

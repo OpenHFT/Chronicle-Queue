@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
@@ -24,6 +26,7 @@ import java.nio.MappedByteBuffer;
  * @author peter.lawrey
  */
 public interface MappedFileCache extends Closeable {
+    @Nullable
     MappedByteBuffer acquireBuffer(long index);
 
     long findLast() throws IOException;

@@ -16,11 +16,14 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon {
     boolean nextIndex();
 
+    @NotNull
     ExcerptTailer toEnd();
 }

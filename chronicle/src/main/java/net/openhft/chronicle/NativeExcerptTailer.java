@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 
 /**
@@ -25,10 +27,11 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     public static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
 
-    public NativeExcerptTailer(IndexedChronicle chronicle) throws IOException {
+    public NativeExcerptTailer(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
     }
 
+    @NotNull
     @Override
     public ExcerptTailer toEnd() {
         super.toEnd();

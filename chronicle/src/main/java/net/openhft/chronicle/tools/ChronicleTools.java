@@ -17,6 +17,7 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +49,8 @@ public enum ChronicleTools {
         DeleteStatic.INSTANCE.add(dirPath);
     }
 
-    public static String asString(ByteBuffer bb) {
+    @NotNull
+    public static String asString(@NotNull ByteBuffer bb) {
         StringBuilder sb = new StringBuilder();
         for (int i = bb.position(); i < bb.limit(); i++) {
             byte b = bb.get(i);
@@ -70,7 +72,8 @@ public enum ChronicleTools {
      * @param excerpt to get text from
      * @return 256 bytes as text with `.` replacing special bytes.
      */
-    public static String asString(ExcerptCommon excerpt) {
+    @NotNull
+    public static String asString(@NotNull ExcerptCommon excerpt) {
         return asString(excerpt, excerpt.position());
     }
 
@@ -81,7 +84,8 @@ public enum ChronicleTools {
      * @param position the position to get text from
      * @return up to 1024 bytes as text with `.` replacing special bytes.
      */
-    public static String asString(ExcerptCommon excerpt, long position) {
+    @NotNull
+    public static String asString(@NotNull ExcerptCommon excerpt, long position) {
         return asString(excerpt, position, 1024);
     }
 
@@ -93,7 +97,8 @@ public enum ChronicleTools {
      * @param length   the maximum length
      * @return length bytes as text with `.` replacing special bytes.
      */
-    public static String asString(ExcerptCommon excerpt, long position, long length) {
+    @NotNull
+    public static String asString(@NotNull ExcerptCommon excerpt, long position, long length) {
         long limit = Math.min(position + length, excerpt.capacity());
         StringBuilder sb = new StringBuilder((int) (limit - position));
         for (long i = position; i < limit; i++) {

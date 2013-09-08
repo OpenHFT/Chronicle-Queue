@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
@@ -27,7 +28,7 @@ import java.nio.MappedByteBuffer;
 public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     private boolean padding = true;
 
-    public NativeExcerpt(IndexedChronicle chronicle) throws IOException {
+    public NativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
     }
 
@@ -71,6 +72,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         }
     }
 
+    @NotNull
     @Override
     public Excerpt toEnd() {
         super.toEnd();
@@ -130,6 +132,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         return true;
     }
 
+    @NotNull
     @Override
     public Excerpt toStart() {
         this.index(0);

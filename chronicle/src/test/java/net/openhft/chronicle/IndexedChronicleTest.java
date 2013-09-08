@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -36,7 +37,7 @@ public class IndexedChronicleTest {
     public static final String TMP = System.getProperty("java.io.tmpdir");
     private static final long WARMUP = 20000;
 
-    private static void validateExcerpt(ExcerptCommon r, int i, int expected) {
+    private static void validateExcerpt(@NotNull ExcerptCommon r, int i, int expected) {
         if (expected > r.remaining() || 8 * expected < r.remaining())
             assertEquals("index: " + r.index(), expected, r.remaining());
         if (expected > r.capacity() || 8 * expected < r.capacity())

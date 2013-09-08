@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author peter.lawrey
  */
@@ -24,5 +26,6 @@ public interface ExcerptAppender extends ExcerptCommon {
 
     void roll();
 
+    @NotNull
     ExcerptAppender toEnd();
 }

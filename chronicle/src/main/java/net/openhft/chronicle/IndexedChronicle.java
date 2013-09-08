@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,8 +27,11 @@ import java.io.IOException;
  */
 public class IndexedChronicle implements Chronicle {
     private final String basePath;
+    @NotNull
     final MappedFileCache indexFileCache;
+    @NotNull
     final MappedFileCache dataFileCache;
+    @NotNull
     final ChronicleConfig config;
     private long size = 0;
 
@@ -34,7 +39,7 @@ public class IndexedChronicle implements Chronicle {
         this(basePath, ChronicleConfig.DEFAULT);
     }
 
-    public IndexedChronicle(String basePath, ChronicleConfig config) throws FileNotFoundException {
+    public IndexedChronicle(String basePath, @NotNull ChronicleConfig config) throws FileNotFoundException {
         this.basePath = basePath;
         this.config = config.clone();
         File parentFile = new File(basePath).getParentFile();
@@ -55,16 +60,19 @@ public class IndexedChronicle implements Chronicle {
         this.dataFileCache.close();
     }
 
+    @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
         return new NativeExcerpt(this);
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new NativeExcerptTailer(this);
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         return new NativeExcerptAppender(this);

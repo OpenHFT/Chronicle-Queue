@@ -21,6 +21,7 @@ import gnu.trove.map.hash.TObjectLongHashMap;
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -34,9 +35,13 @@ import static junit.framework.Assert.assertEquals;
  */
 public class ExampleKeyedExcerptMain {
     private static final String TMP = System.getProperty("java.io.tmpdir");
+    @NotNull
     private final Chronicle chronicle;
+    @NotNull
     private final Excerpt reader;
+    @NotNull
     private final ExcerptTailer tailer;
+    @NotNull
     private final ExcerptAppender appender;
     private final TObjectLongMap<String> keyToExcerpt = new TObjectLongHashMap<String>() {
         @Override
@@ -92,13 +97,14 @@ public class ExampleKeyedExcerptMain {
         }
     }
 
-    public void putMapFor(String key, Map<String, String> map) {
+    public void putMapFor(String key, @NotNull Map<String, String> map) {
         appender.startExcerpt(4096); // a guess
         appender.writeUTFΔ(key);
         appender.writeMap(map);
         appender.finish();
     }
 
+    @NotNull
     public Map<String, String> getMapFor(String key) {
         long value = keyToExcerpt.get(key);
         if (value < 0) return Collections.emptyMap();

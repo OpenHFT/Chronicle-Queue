@@ -19,6 +19,7 @@ package vanilla.java.processingengine;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
+import org.jetbrains.annotations.NotNull;
 import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
@@ -98,7 +99,7 @@ public class GWMain {
     public static final long EVENT_SPACING = Integer.getInteger("event-spacing", 10000);
     public static final int ORDERS = Integer.getInteger("orders", 10 * 1000 * 1000);
 
-    public static void main(String... args) throws IOException, InterruptedException {
+    public static void main(@NotNull String... args) throws IOException, InterruptedException {
         if (args.length < 2) {
             System.err.print("java " + GWMain.class.getName() + " [1 or 2] {throughput}");
             System.exit(-1);
@@ -124,7 +125,7 @@ public class GWMain {
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {
             @Override
-            public void report(MetaData metaData, SmallReport smallReport) {
+            public void report(@NotNull MetaData metaData, SmallReport smallReport) {
                 if (metaData.sourceId != gwId) return;
 
                 int count = reportCount.getAndIncrement();
@@ -182,11 +183,8 @@ public class GWMain {
             command.price = 1209.41;
             command.quantity = 1000;
             command.side = (i & 1) == 0 ? Side.BUY : Side.SELL;
-            long expectedTime;
-            if (throughputTest) {
-                expectedTime = System.nanoTime();
-            } else {
-                expectedTime = start + i * EVENT_SPACING;
+            if (!throughputTest) {
+                long expectedTime = start + i * EVENT_SPACING;
                 while (System.nanoTime() < expectedTime) {
                     //
                 }

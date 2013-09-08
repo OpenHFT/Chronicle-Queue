@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author peter.lawrey
  */
@@ -25,7 +27,9 @@ public interface Excerpt extends ExcerptTailer {
 
     boolean wasPadding();
 
+    @NotNull
     Excerpt toStart();
 
+    @NotNull
     Excerpt toEnd();
 }

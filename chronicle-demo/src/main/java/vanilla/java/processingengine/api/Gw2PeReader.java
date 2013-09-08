@@ -17,6 +17,7 @@
 package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptTailer;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * @author peter.lawrey
@@ -25,6 +26,7 @@ public class Gw2PeReader {
     private final int sourceId;
     private final ExcerptTailer excerpt;
     private final Gw2PeEvents peEvents;
+    @NotNull
     private final MetaData metaData;
     private final SmallCommand smallCommand = new SmallCommand();
 

@@ -24,16 +24,14 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 /**
- * User: peter
- * Date: 16/08/13
- * Time: 12:30
+ * User: peter Date: 16/08/13 Time: 12:30
  */
 public class ChronicleIndexReader {
     static final boolean HEX = Boolean.getBoolean("hex");
 
     public static void main(String... args) throws IOException {
         int zeros = 0;
-        FileChannel fc = null;
+        FileChannel fc;
         try {
             fc = new FileInputStream(args[0]).getChannel();
         } catch (FileNotFoundException e) {

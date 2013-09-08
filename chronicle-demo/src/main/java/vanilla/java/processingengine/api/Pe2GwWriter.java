@@ -17,6 +17,7 @@
 package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptAppender;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * @author peter.lawrey
@@ -29,7 +30,7 @@ public class Pe2GwWriter implements Pe2GwEvents {
     }
 
     @Override
-    public void report(MetaData metaData, SmallReport smallReport) {
+    public void report(@NotNull MetaData metaData, @NotNull SmallReport smallReport) {
         excerpt.startExcerpt(200); // a guess to be lazy.
         excerpt.writeEnum(MessageType.report);
         metaData.writeForEngine(excerpt);

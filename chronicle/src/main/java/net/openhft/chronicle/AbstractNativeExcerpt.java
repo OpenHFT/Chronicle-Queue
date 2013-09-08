@@ -17,6 +17,8 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
@@ -26,12 +28,15 @@ import java.nio.MappedByteBuffer;
  * @author peter.lawrey
  */
 public abstract class AbstractNativeExcerpt extends NativeBytes implements ExcerptCommon {
+    @NotNull
     protected final IndexedChronicle chronicle;
     final int cacheLineMask;
     final int dataBlockSize;
     final int indexBlockSize;
+    @Nullable
     @SuppressWarnings("FieldCanBeLocal")
     MappedByteBuffer indexBuffer;
+    @Nullable
     @SuppressWarnings("FieldCanBeLocal")
     MappedByteBuffer dataBuffer;
     long index = -1;
@@ -53,12 +58,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     long indexPositionAddr;
 
     // the start of this entry
-    // iherited - long startAddr;
-    // iherited - long positionAddr;
-    // iherited - long limitAddr;
+    // inherited - long startAddr;
+    // inherited - long positionAddr;
+    // inherited - long limitAddr;
 
 
-    public AbstractNativeExcerpt(IndexedChronicle chronicle) throws IOException {
+    public AbstractNativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
         super(0, 0, 0);
         this.chronicle = chronicle;
         cacheLineMask = (chronicle.config.cacheLineSize() - 1);
@@ -76,6 +81,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return index;
     }
 
+    @NotNull
     @Override
     public ExcerptCommon toEnd() {
         index = chronicle().size() - 1;
@@ -91,6 +97,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return chronicle.size();
     }
 
+    @NotNull
     @Override
     public Chronicle chronicle() {
         return chronicle;

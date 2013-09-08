@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,8 @@
  */
 
 package net.openhft.chronicle.tcp;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -36,24 +38,24 @@ enum TcpUtil {
     }
 
 
-    public static void writeAllOrEOF(SocketChannel sc, ByteBuffer bb) throws IOException {
+    public static void writeAllOrEOF(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
         writeAll(sc, bb);
 
         if (bb.remaining() > 0) throw new EOFException();
     }
 
-    public static void writeAll(SocketChannel sc, ByteBuffer bb) throws IOException {
+    public static void writeAll(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
         while (bb.remaining() > 0)
             if (sc.write(bb) < 0)
                 break;
     }
 
-    public static void readFullyOrEOF(SocketChannel socket, ByteBuffer bb) throws IOException {
+    public static void readFullyOrEOF(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
         readAvailable(socket, bb);
         if (bb.remaining() > 0) throw new EOFException();
     }
 
-    public static void readAvailable(SocketChannel socket, ByteBuffer bb) throws IOException {
+    public static void readAvailable(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
         while (bb.remaining() > 0)
             if (socket.read(bb) < 0)
                 break;

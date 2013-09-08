@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -41,7 +42,7 @@ public class IndexedChronicle1Test {
             Assert.assertEquals(a, b);
     }
 
-    static <T> void assertEquals(T a, T b) {
+    static <T> void assertEquals(@Nullable T a, @Nullable T b) {
         if (a == null) {
             if (b == null) return;
         } else if (a.equals(b)) {
@@ -131,8 +132,8 @@ public class IndexedChronicle1Test {
     }
 
     /**
-     * Tests that <code>IndexedChronicle.close()</code> does not blow up (anymore) when you
-     * reopen an existing chronicle due to the null data buffers created internally.
+     * Tests that <code>IndexedChronicle.close()</code> does not blow up (anymore) when you reopen an existing chronicle
+     * due to the null data buffers created internally.
      *
      * @throws IOException if opening chronicle fails
      */

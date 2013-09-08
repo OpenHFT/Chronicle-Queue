@@ -16,13 +16,15 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
-    public NativeExcerptAppender(IndexedChronicle chronicle) throws IOException {
+    public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
     }
 
@@ -78,6 +80,7 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         }
     }
 
+    @NotNull
     @Override
     public ExcerptAppender toEnd() {
         super.toEnd();

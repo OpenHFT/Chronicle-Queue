@@ -20,6 +20,7 @@ import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
+import org.jetbrains.annotations.NotNull;
 import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
@@ -86,7 +87,7 @@ public class PEMain {
         }
 
         @Override
-        public void small(MetaData metaData, SmallCommand command) {
+        public void small(@NotNull MetaData metaData, @NotNull SmallCommand command) {
             smallReport.orderOkay(command.clientOrderId);
 //            System.out.println(++count);
             pe2GwWriter.report(metaData, smallReport);
