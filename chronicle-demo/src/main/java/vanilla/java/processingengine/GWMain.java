@@ -52,6 +52,33 @@ Processed 10,000,000 events in and out in 10.1 seconds
 The latency distribution was 31386.8, 80422.8/97564.0, 99054/99780 (100,282) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
 The latency distribution was 0.5, 40561.4/54889.5, 56752/56876 (56,902) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
 
+on a hex core i7 using isolated CPUs (all runs, good and bad)
+Processed 10,000,000 events in and out in 100.2 seconds
+The latency distribution was 0.3, 0.3/1.5, 2/13 (6,312) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 1001.0 seconds
+The latency distribution was 0.3, 0.3/1.6, 2/13 (4,072) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 10,000,000 events in and out in 50.1 seconds
+The latency distribution was 0.3, 0.3/1.5, 2/11 (91) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 10,000,000 events in and out in 20.0 seconds
+The latency distribution was 0.3, 0.3/1.6, 2/12 (77) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 200.2 seconds
+The latency distribution was 0.3, 0.3/1.5, 3/11 (84) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 100.1 seconds
+The latency distribution was 0.3, 0.9/2.9, 6/25 (2,571) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 50.1 seconds
+The latency distribution was 27.7, 185.4/598.6, 1815/3830 (4,014) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 50.1 seconds
+The latency distribution was 1.9, 14.4/38.9, 69/376 (528) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+
+Processed 100,000,000 events in and out in 50.1 seconds
+The latency distribution was 16.5, 81.7/199.2, 379/581 (623) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
  */
 public class GWMain {
     public static final boolean WITH_BINDING;
@@ -70,8 +97,9 @@ public class GWMain {
         WITH_BINDING = binding;
     }
 
-    public static final int WARMUP = 20000; // number of events
-    public static final long EVENT_SPACING = 10000L;
+    public static final int WARMUP = Integer.getInteger("warmup", 100 * 1000); // number of events
+    public static final long EVENT_SPACING = Integer.getInteger("event-spacing", 10000);
+    public static final int ORDERS = Integer.getInteger("orders", 10 * 1000 * 1000);
 
     public static void main(String... args) throws IOException, InterruptedException {
         if (args.length < 2) {
@@ -81,8 +109,6 @@ public class GWMain {
         ChronicleTools.warmup();
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
-
-        final int orders = 10 * 1000 * 1000;
 
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
@@ -97,7 +123,7 @@ public class GWMain {
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
         IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
-        final long[] times = new long[orders];
+        final long[] times = new long[ORDERS];
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {
             @Override
@@ -131,7 +157,7 @@ public class GWMain {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
-                while (reportCount.get() < orders) {
+                while (reportCount.get() < ORDERS) {
                     if (pe2GwReader.readOne() && reportCount.get() % 1000000 == 0)
                         System.out.println("processed " + reportCount.get());
                 }
@@ -147,7 +173,7 @@ public class GWMain {
 
         System.out.println("Started");
         long start = System.nanoTime();
-        for (int i = 0; i < orders + WARMUP; i++) {
+        for (int i = 0; i < ORDERS + WARMUP; i++) {
             if (i == WARMUP)
                 start = System.nanoTime();
             clientOrderId.setLength(0);
@@ -174,15 +200,15 @@ public class GWMain {
         t.join();
         long time = System.nanoTime() - start;
         Arrays.sort(times);
-        System.out.printf("Processed %,d events in and out in %.1f seconds%n", orders, time / 1e9);
+        System.out.printf("Processed %,d events in and out in %.1f seconds%n", ORDERS, time / 1e9);
         if (!throughputTest) {
             System.out.printf("The latency distribution was %.1f, %.1f/%.1f, %d/%d (%,d) us for the 50, 90/99, 99.9/99.99 %%tile, (worst)%n",
-                    times[orders / 2] / 1e3,
-                    times[orders * 9 / 10] / 1e3,
-                    times[orders - orders / 100] / 1e3,
-                    times[orders - orders / 1000] / 1000,
-                    times[orders - orders / 10000] / 1000,
-                    times[orders - 1] / 1000
+                    times[ORDERS / 2] / 1e3,
+                    times[ORDERS * 9 / 10] / 1e3,
+                    times[ORDERS - ORDERS / 100] / 1e3,
+                    times[ORDERS - ORDERS / 1000] / 1000,
+                    times[ORDERS - ORDERS / 10000] / 1000,
+                    times[ORDERS - 1] / 1000
             );
         }
         gw2pe.close();
