@@ -36,5 +36,7 @@ public interface Chronicle extends Closeable {
     @NotNull
     ExcerptAppender createAppender() throws IOException;
 
+    long lastWrittenIndex();
+
     long size();
 }

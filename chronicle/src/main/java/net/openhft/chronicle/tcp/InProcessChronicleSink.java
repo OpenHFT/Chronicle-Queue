@@ -81,6 +81,11 @@ public class InProcessChronicleSink implements Chronicle {
     }
 
     @Override
+    public long lastWrittenIndex() {
+        return chronicle.lastWrittenIndex();
+    }
+
+    @Override
     public long size() {
         return chronicle.size();
     }
@@ -126,7 +131,7 @@ public class InProcessChronicleSink implements Chronicle {
                 sc.socket().setReceiveBufferSize(256 * 1024);
                 logger.info("Connected to " + address);
                 ByteBuffer bb = ByteBuffer.allocate(8);
-                bb.putLong(0, chronicle.size());
+                bb.putLong(0, chronicle.lastWrittenIndex());
                 TcpUtil.writeAllOrEOF(sc, bb);
                 return sc;
 
@@ -171,8 +176,8 @@ public class InProcessChronicleSink implements Chronicle {
             if (scFirst) {
                 long scIndex = readBuffer.getLong();
 //                System.out.println("ri " + scIndex);
-                if (scIndex != chronicle.size())
-                    throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
+                if (scIndex != chronicle.lastWrittenIndex())
+                    throw new StreamCorruptedException("Expected index " + chronicle.lastWrittenIndex() + " but got " + scIndex);
                 scFirst = false;
             }
             long size = readBuffer.getInt();

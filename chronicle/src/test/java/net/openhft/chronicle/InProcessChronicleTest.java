@@ -21,6 +21,7 @@ import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -33,6 +34,7 @@ import static junit.framework.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
+@Ignore
 public class InProcessChronicleTest {
 
     public static final int PORT = 12345;

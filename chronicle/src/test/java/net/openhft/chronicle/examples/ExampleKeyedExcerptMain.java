@@ -51,7 +51,10 @@ public class ExampleKeyedExcerptMain {
     };
 
     public ExampleKeyedExcerptMain(String basePath) throws IOException {
-        chronicle = new IndexedChronicle(basePath);
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//        config.indexBlockSize(4*1024);
+//        config.dataBlockSize(4*1024);
+        chronicle = new IndexedChronicle(basePath, config);
         tailer = chronicle.createTailer();
         appender = chronicle.createAppender();
         reader = chronicle.createExcerpt();
@@ -63,7 +66,7 @@ public class ExampleKeyedExcerptMain {
         ExampleKeyedExcerptMain map = new ExampleKeyedExcerptMain(basePath);
         map.load();
         long start = System.nanoTime();
-        int keys = 10000000;
+        int keys = 1000000;
         for (int i = 0; i < keys; i++) {
             Map<String, String> props = new LinkedHashMap<String, String>();
             props.put("a", Integer.toString(i)); // an int.
@@ -82,7 +85,7 @@ public class ExampleKeyedExcerptMain {
             props.put("b", "value-" + i); // String
             props.put("c", Double.toString(i / 1000.0)); // a double
             Map<String, String> props2 = map2.getMapFor(Integer.toHexString(i));
-            assertEquals(props, props2);
+            assertEquals("i: " + i, props, props2);
         }
         map2.close();
         long time = System.nanoTime() - start;
@@ -94,11 +97,14 @@ public class ExampleKeyedExcerptMain {
         while (tailer.nextIndex()) {
             String key = tailer.readUTFΔ();
             keyToExcerpt.put(key, tailer.index());
+            tailer.finish();
+//            if (tailer.index() == 110)
+//                Thread.yield();
         }
     }
 
     public void putMapFor(String key, @NotNull Map<String, String> map) {
-        appender.startExcerpt(4096); // a guess
+        appender.startExcerpt(1024); // a guess
         appender.writeUTFΔ(key);
         appender.writeMap(map);
         appender.finish();
@@ -113,6 +119,7 @@ public class ExampleKeyedExcerptMain {
         reader.skip(reader.readStopBit());
         Map<String, String> map = new LinkedHashMap<String, String>();
         reader.readMap(map, String.class, String.class);
+        reader.finish();
         return map;
     }
 

@@ -46,7 +46,7 @@ public class SingleMappedFileCache implements MappedFileCache {
 
     @Nullable
     @Override
-    public MappedByteBuffer acquireBuffer(long index) {
+    public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {
         if (index == lastIndex)
             return lastMBB;
         long start = System.nanoTime();
@@ -66,9 +66,14 @@ public class SingleMappedFileCache implements MappedFileCache {
         return mappedByteBuffer;
     }
 
+
     @Override
-    public long findLast() throws IOException {
-        return fileChannel.size() / blockSize - 1;
+    public long size() {
+        try {
+            return fileChannel.size();
+        } catch (IOException e) {
+            return 0;
+        }
     }
 
     @Override

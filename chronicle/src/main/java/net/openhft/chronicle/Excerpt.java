@@ -23,10 +23,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface Excerpt extends ExcerptTailer {
 
-    boolean index(long l);
-
-    boolean wasPadding();
-
     @NotNull
     Excerpt toStart();
 

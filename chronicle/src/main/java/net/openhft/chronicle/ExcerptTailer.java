@@ -22,8 +22,19 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon {
+    /**
+     * Wind to the next entry, no matter how many padded index entries you need to skip. If there is padding, the
+     * index() can change even though this method might return false
+     *
+     * @return Is there a valid entry to be read.
+     */
     boolean nextIndex();
 
+    /**
+     * Wind to the end.
+     *
+     * @return this Excerpt
+     */
     @NotNull
     ExcerptTailer toEnd();
 }

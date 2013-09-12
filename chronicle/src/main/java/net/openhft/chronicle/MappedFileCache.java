@@ -16,20 +16,19 @@
 
 package net.openhft.chronicle;
 
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
  */
 public interface MappedFileCache extends Closeable {
-    @Nullable
-    MappedByteBuffer acquireBuffer(long index);
+    @NotNull
+    MappedByteBuffer acquireBuffer(long index, boolean prefetch);
 
-    long findLast() throws IOException;
+    long size();
 
     void close();
 }

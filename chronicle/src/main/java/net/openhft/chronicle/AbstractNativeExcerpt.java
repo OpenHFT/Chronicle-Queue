@@ -40,7 +40,6 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     @SuppressWarnings("FieldCanBeLocal")
     MappedByteBuffer dataBuffer;
     long index = -1;
-
     // relatively static
     // the start of the index block, as an address
     long indexStartAddr;
@@ -48,14 +47,13 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     long indexStartOffset;
     // the offset in data referred to the start of the line
     long indexBaseForLine;
-
     // the start of the data block, as an address
     long dataStartAddr;
     // which offset does this refer to.
     long dataStartOffset;
-
     // the position currently writing to in the index.
     long indexPositionAddr;
+    boolean padding = true;
 
     // the start of this entry
     // inherited - long startAddr;
@@ -84,12 +82,45 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     @NotNull
     @Override
     public ExcerptCommon toEnd() {
-        index = chronicle().size() - 1;
+        index = chronicle().lastWrittenIndex();
         return this;
     }
 
-    public void roll() {
-        // nothing to do
+    @Override
+    public boolean index(long l) {
+        long lineNo = l / 14;
+        int inLine = (int) (l % 14);
+        long lineOffset = lineNo << 4;
+        long indexLookup = lineOffset / (indexBlockSize / 4);
+        long indexLookupMod = lineOffset % (indexBlockSize / 4);
+        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup, true);
+        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        indexPositionAddr = indexStartAddr + (indexLookupMod << 2);
+        int dataOffsetEnd = UNSAFE.getInt(indexPositionAddr + 8 + (inLine << 2));
+        if (dataOffsetEnd <= 0) {
+            padding = dataOffsetEnd < 0;
+            return false;
+        }
+        indexBaseForLine = UNSAFE.getLong(indexPositionAddr);
+        int startOffset = UNSAFE.getInt(indexPositionAddr + 4 + (inLine << 2));
+        long dataOffsetStart = inLine == 0 ? indexBaseForLine : (indexBaseForLine + Math.abs(startOffset));
+        long dataLookup = dataOffsetStart / dataBlockSize;
+        long dataLookupMod = dataOffsetStart % dataBlockSize;
+        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup, true);
+        startAddr = positionAddr = ((DirectBuffer) dataMBB).address() + dataLookupMod;
+        limitAddr = ((DirectBuffer) dataMBB).address() + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
+        padding = false;
+        return true;
+    }
+
+    @Override
+    public boolean wasPadding() {
+        return padding;
+    }
+
+    @Override
+    public long lastWrittenIndex() {
+        return chronicle.lastWrittenIndex();
     }
 
     @Override
@@ -122,12 +153,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     }
 
     void loadDataBuffer() throws IOException {
-        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize);
+        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize, true);
         dataStartAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
     }
 
     void loadIndexBuffer() throws IOException {
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexStartOffset / indexBlockSize);
+        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexStartOffset / indexBlockSize, true);
         indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
     }
 

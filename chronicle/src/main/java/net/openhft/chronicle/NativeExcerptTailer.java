@@ -39,6 +39,10 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
     }
 
     public boolean nextIndex() {
+        return nextIndex0() || nextIndex0();
+    }
+
+    private boolean nextIndex0() {
         checkNextLine();
         long offset = UNSAFE.getInt(null, indexPositionAddr);
         if (offset == 0)
@@ -77,7 +81,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
         }
         checkNewIndexLine2();
         checkNewDataBlock();
-        startAddr = limitAddr;
+        startAddr = positionAddr = limitAddr;
         setLmitAddr(offset);
         assert limitAddr > startAddr || (!present && limitAddr == startAddr);
         indexPositionAddr += 4;

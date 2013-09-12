@@ -21,19 +21,20 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {
-    private final String basePath;
     @NotNull
     final MappedFileCache indexFileCache;
     @NotNull
     final MappedFileCache dataFileCache;
     @NotNull
     final ChronicleConfig config;
-    private long size = 0;
+    private final String basePath;
+    private long lastWrittenIndex = 0;
 
     public IndexedChronicle(String basePath) throws FileNotFoundException {
         this(basePath, ChronicleConfig.DEFAULT);
@@ -47,6 +48,45 @@ public class IndexedChronicle implements Chronicle {
             parentFile.mkdirs();
         this.indexFileCache = new PrefetchingMappedFileCache(basePath + ".index", config.indexBlockSize());
         this.dataFileCache = new PrefetchingMappedFileCache(basePath + ".data", config.dataBlockSize());
+
+        findTheLastIndex();
+    }
+
+    public long findTheLastIndex() {
+        return lastWrittenIndex = findTheLastIndex0();
+    }
+
+    private long findTheLastIndex0() {
+        long size = indexFileCache.size();
+        if (size <= 0) {
+            return -1;
+        }
+        int indexBlockSize = config.indexBlockSize();
+        for (long block = size / indexBlockSize; block >= 0; block--) {
+            MappedByteBuffer mbb = indexFileCache.acquireBuffer(block, false);
+            if (block > 0 && mbb.getLong(0) == 0) {
+                continue;
+            }
+            int cacheLineSize = config.cacheLineSize();
+            for (int pos = 0; pos < indexBlockSize; pos += cacheLineSize) {
+                if (mbb.getLong(pos + cacheLineSize) == 0) {
+                    // last cache line.
+                    int pos2 = 8;
+                    for (pos2 = 8; pos2 < cacheLineSize - 4; pos += 4) {
+                        if (mbb.getInt(pos + pos2) == 0)
+                            break;
+                    }
+                    return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos / 4;
+                }
+            }
+            return (block + 1) * indexBlockSize / cacheLineSize * (cacheLineSize / 4 - 2);
+        }
+        return -1;
+    }
+
+    @Override
+    public long size() {
+        return lastWrittenIndex + 1;
     }
 
     @Override
@@ -79,11 +119,11 @@ public class IndexedChronicle implements Chronicle {
     }
 
     @Override
-    public long size() {
-        return size;
+    public long lastWrittenIndex() {
+        return lastWrittenIndex;
     }
 
     void incrSize() {
-        size++;
+        lastWrittenIndex++;
     }
 }

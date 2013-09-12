@@ -36,12 +36,9 @@ import java.util.Map;
  * @author peter.lawrey
  */
 public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
-    @NotNull
     private final ExcerptTailer tailer;
-    @NotNull
     private final ExcerptAppender appender;
     private final ExcerptCommon common;
-    @NotNull
     private final Excerpt excerpt;
 
     public WrappedExcerpt(ExcerptCommon excerptCommon) {
@@ -57,13 +54,18 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public long size() {
+        return common.size();
+    }
+
+    @Override
     public boolean nextIndex() {
         return tailer.nextIndex();
     }
 
     @Override
     public boolean index(long index) throws IndexOutOfBoundsException {
-        return excerpt.index(index);
+        return common.index(index);
     }
 
     @Override
@@ -732,8 +734,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public long size() {
-        return common.size();
+    public long lastWrittenIndex() {
+        return common.lastWrittenIndex();
     }
 
     @Override
@@ -773,12 +775,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @Override
     public boolean wasPadding() {
-        return excerpt.wasPadding();
-    }
-
-    @Override
-    public void roll() {
-        appender.roll();
+        return common.wasPadding();
     }
 
     @NotNull

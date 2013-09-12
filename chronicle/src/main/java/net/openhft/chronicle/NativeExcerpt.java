@@ -17,10 +17,8 @@
 package net.openhft.chronicle;
 
 import org.jetbrains.annotations.NotNull;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
@@ -105,33 +103,6 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         indexPositionAddr += 8;
     }
 
-    @Override
-    public boolean index(long l) {
-        long lineNo = l / 14;
-        int inLine = (int) (l % 14);
-        long lineOffset = lineNo << 4;
-        long indexLookup = lineOffset / (indexBlockSize / 4);
-        long indexLookupMod = lineOffset % (indexBlockSize / 4);
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup);
-        indexStartAddr = ((DirectBuffer) indexBuffer).address();
-        indexPositionAddr = indexStartAddr + (indexLookupMod << 2);
-        int dataOffsetEnd = UNSAFE.getInt(indexPositionAddr + 8 + (inLine << 2));
-        if (dataOffsetEnd <= 0) {
-            padding = dataOffsetEnd < 0;
-            return false;
-        }
-        indexBaseForLine = UNSAFE.getLong(indexPositionAddr);
-        int startOffset = UNSAFE.getInt(indexPositionAddr + 4 + (inLine << 2));
-        long dataOffsetStart = inLine == 0 ? indexBaseForLine : (indexBaseForLine + Math.abs(startOffset));
-        long dataLookup = dataOffsetStart / dataBlockSize;
-        long dataLookupMod = dataOffsetStart % dataBlockSize;
-        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup);
-        startAddr = positionAddr = ((DirectBuffer) dataMBB).address() + dataLookupMod;
-        limitAddr = ((DirectBuffer) dataMBB).address() + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
-        padding = false;
-        return true;
-    }
-
     @NotNull
     @Override
     public Excerpt toStart() {
@@ -150,10 +121,5 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
             return index(index() + 1);
         }
         return false;
-    }
-
-    @Override
-    public boolean wasPadding() {
-        return padding;
     }
 }

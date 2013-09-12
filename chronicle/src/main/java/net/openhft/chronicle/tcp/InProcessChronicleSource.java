@@ -117,6 +117,11 @@ public class InProcessChronicleSource implements Chronicle {
     }
 
     @Override
+    public long lastWrittenIndex() {
+        return chronicle.lastWrittenIndex();
+    }
+
+    @Override
     public long size() {
         return chronicle.size();
     }

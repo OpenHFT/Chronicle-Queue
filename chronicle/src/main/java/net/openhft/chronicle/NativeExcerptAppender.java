@@ -26,9 +26,16 @@ import java.io.IOException;
 public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
     public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
+        toEnd();
     }
 
     public void startExcerpt(long capacity) {
+        // in case there is more than one appender :P
+        if (index != lastWrittenIndex()) {
+            toEnd();
+        }
+        if (capacity >= chronicle.config.dataBlockSize())
+            throw new IllegalArgumentException("Capacity too large " + capacity + " >= " + chronicle.config.dataBlockSize());
         // if the capacity is to large, roll the previous entry, and there was one
         if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
             // check we are the start of a block.

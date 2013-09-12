@@ -22,10 +22,21 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface ExcerptAppender extends ExcerptCommon {
+    /**
+     * Ensure there is enough capacity for a new entry of up to the size given.  If there is not enough space left in
+     * the chunk of memory mapped file, a padded entry is added and a new entry at the start of a new chunk is
+     * commenced.  The capacity can be more than you need as finish() will shrink wrap the entry.  It is onl a waste if
+     * you trigger a padded entry when none was required.
+     *
+     * @param capacity to allow for, but not exceed.
+     */
     void startExcerpt(long capacity);
 
-    void roll();
-
+    /**
+     * Skip to the last index.
+     *
+     * @return this Excerpt
+     */
     @NotNull
     ExcerptAppender toEnd();
 }

@@ -43,7 +43,7 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     long lastIndex = Long.MIN_VALUE;
     @Nullable
     MappedByteBuffer lastMBB = null;
-    @Nullable
+    @NotNull
     volatile IndexedMBB imbb = NULL_IMBB;
 
     public PrefetchingMappedFileCache(String basePath, int blockSize) throws FileNotFoundException {
@@ -52,11 +52,13 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
         fileChannel = new RandomAccessFile(basePath, "rw").getChannel();
     }
 
-    @Nullable
+    @NotNull
     @Override
-    public MappedByteBuffer acquireBuffer(long index) {
-        if (index == lastIndex)
+    public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {
+        if (index == lastIndex) {
+            assert lastMBB != null;
             return lastMBB;
+        }
 //        TreeMap<Long, String> timeMap = new TreeMap<Long, String>();
         long start = System.nanoTime();
 //        timeMap.put(start / 1024, "start");
@@ -118,8 +120,12 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     }
 
     @Override
-    public long findLast() throws IOException {
-        return fileChannel.size() / blockSize - 1;
+    public long size() {
+        try {
+            return fileChannel.size();
+        } catch (IOException e) {
+            return 0;
+        }
     }
 
     @Override
