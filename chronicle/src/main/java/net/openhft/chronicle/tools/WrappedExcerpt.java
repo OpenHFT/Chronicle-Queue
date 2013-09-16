@@ -74,6 +74,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public void addPaddedEntry() {
+        appender.addPaddedEntry();
+    }
+
+    @Override
     public void finish() {
         common.finish();
     }

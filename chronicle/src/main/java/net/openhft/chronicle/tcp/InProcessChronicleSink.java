@@ -180,17 +180,24 @@ public class InProcessChronicleSink implements Chronicle {
                     throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
                 scFirst = false;
             }
-            long size = readBuffer.getInt();
-            if (size == InProcessChronicleSource.IN_SYNC_LEN) {
+            int size = readBuffer.getInt();
+            switch (size) {
+                case InProcessChronicleSource.IN_SYNC_LEN:
 //                System.out.println("... received inSync");
-                return false;
+                    return false;
+                case InProcessChronicleSource.PADDED_LEN:
+//                System.out.println("... received padded");
+                    excerpt.addPaddedEntry();
+                    return true;
+                default:
+                    break;
             }
 
 //            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
                 throw new StreamCorruptedException("size was " + size);
 
-            excerpt.startExcerpt((int) size);
+            excerpt.startExcerpt(size);
             // perform a progressive copy of data.
             long remaining = size;
             int limit = readBuffer.limit();
@@ -218,6 +225,7 @@ public class InProcessChronicleSink implements Chronicle {
             }
 
             excerpt.finish();
+//            System.out.println(" ri: " + excerpt.index());
         } catch (IOException e) {
             if (logger.isLoggable(Level.FINE))
                 logger.log(Level.FINE, "Lost connection to " + address + " retrying", e);

@@ -39,4 +39,9 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     @NotNull
     ExcerptAppender toEnd();
+
+    /**
+     * Add a padded entry to keep the index in sync with a master source.
+     */
+    void addPaddedEntry();
 }

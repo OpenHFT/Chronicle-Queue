@@ -124,16 +124,17 @@ public class InProcessChronicleTest {
     }
 
     static class PriceReader {
-        private final Excerpt excerpt;
+        private final ExcerptTailer excerpt;
         private final PriceListener listener;
 
-        PriceReader(Excerpt excerpt, PriceListener listener) {
+        PriceReader(ExcerptTailer excerpt, PriceListener listener) {
             this.excerpt = excerpt;
             this.listener = listener;
         }
 
         public boolean read() {
             if (!excerpt.nextIndex()) return false;
+//            System.out.println("ei: "+excerpt.index());
             char ch = (char) excerpt.readByte();
             switch (ch) {
                 case 'P': {
@@ -157,8 +158,49 @@ public class InProcessChronicleTest {
     // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
 
     @Test
-    @Ignore
     public void testPricePublishing() throws IOException, InterruptedException {
+        String baseDir = System.getProperty("java.io.tmpdir");
+        String sourceName = baseDir + "/price.source";
+        ChronicleTools.deleteOnExit(sourceName);
+        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
+        PriceWriter pw = new PriceWriter(source.createAppender());
+
+        String sinkName = baseDir + "/price.sink";
+        ChronicleTools.deleteOnExit(sinkName);
+        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
+
+        final AtomicInteger count = new AtomicInteger();
+        PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
+            @Override
+            public void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
+                count.incrementAndGet();
+            }
+        });
+        pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
+        reader.read();
+
+        long start = System.nanoTime();
+        int prices = 12000000;
+        for (int i = 1; i <= prices; i++) {
+            pw.onPrice(i, "symbol", 99.9, i, 100.1, i + 1);
+        }
+
+        long mid = System.nanoTime();
+        while (count.get() < prices)
+            reader.read();
+
+        long end = System.nanoTime();
+        System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+
+
+        source.close();
+        sink.close();
+    }
+
+    @Test
+    @Ignore
+    public void testPricePublishing2() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
         String sourceName = baseDir + "/price.source";
         ChronicleTools.deleteOnExit(sourceName);
@@ -180,7 +222,7 @@ public class InProcessChronicleTest {
         reader.read();
 
         long start = System.nanoTime();
-        int prices = 12000000;
+        int prices = 3;
         for (int i = 1; i <= prices; i++) {
             pw.onPrice(i, "symbol", 99.9, i, 100.1, i + 1);
         }

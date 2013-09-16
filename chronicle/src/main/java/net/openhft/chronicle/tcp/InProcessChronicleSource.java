@@ -45,6 +45,7 @@ import java.util.logging.Logger;
  */
 public class InProcessChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
+    static final int PADDED_LEN = -127;
     static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
     @NotNull
@@ -176,12 +177,23 @@ public class InProcessChronicleSource implements Chronicle {
                 OUTER:
                 while (!closed) {
                     while (!excerpt.index(index)) {
+                        long now = System.currentTimeMillis();
                         if (excerpt.wasPadding()) {
+                            if (index >= 0) {
+                                bb.clear();
+                                if (first) {
+                                    bb.putLong(excerpt.index());
+                                    first = false;
+                                }
+                                bb.putInt(PADDED_LEN);
+                                bb.flip();
+                                TcpUtil.writeAll(socket, bb);
+                                sendInSync = now + HEARTBEAT_INTERVAL_MS;
+                            }
                             index++;
                             continue;
                         }
 //                        System.out.println("Waiting for " + index);
-                        long now = System.currentTimeMillis();
                         if (sendInSync <= now && !first) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
@@ -200,7 +212,7 @@ public class InProcessChronicleSource implements Chronicle {
                     bb.clear();
                     if (first) {
 //                        System.out.println("wi " + index);
-                        bb.putLong(index);
+                        bb.putLong(excerpt.index());
                         first = false;
                         remaining = size + TcpUtil.HEADER_SIZE;
                     } else {

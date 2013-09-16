@@ -19,7 +19,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -27,7 +26,6 @@ import java.io.IOException;
 /**
  * @author peter.lawrey
  */
-@Ignore
 public class ChainedInProcessChronicleTest {
     private static final String TMP = System.getProperty("java.io.tmpdir");
 
@@ -47,8 +45,8 @@ public class ChainedInProcessChronicleTest {
         InProcessChronicleSink sink3 = new InProcessChronicleSink(chronicle3, "localhost", 62222);
 
         ExcerptAppender excerpt1 = source1.createAppender();
-        Excerpt excerpt2 = sink2.createExcerpt();
-        Excerpt excerpt3 = sink3.createExcerpt();
+        ExcerptTailer excerpt2 = sink2.createTailer();
+        ExcerptTailer excerpt3 = sink3.createTailer();
 
         for (int i = 1; i < 20; i++) {
             excerpt1.startExcerpt(8);

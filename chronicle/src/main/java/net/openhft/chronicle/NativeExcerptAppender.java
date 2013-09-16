@@ -55,6 +55,26 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         finished = false;
     }
 
+    @Override
+    public void addPaddedEntry() {
+        // in case there is more than one appender :P
+        if (index != lastWrittenIndex()) {
+            toEnd();
+        }
+
+        // check we are the start of a block.
+        checkNewIndexLine();
+
+        writePaddedEntry();
+
+        loadNextDataBuffer();
+
+        // check we are the start of a block.
+        checkNewIndexLine();
+
+        finished = true;
+    }
+
     private void writePaddedEntry() {
         int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
         assert size >= 0;
