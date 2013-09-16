@@ -38,6 +38,11 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
         return this;
     }
 
+    @Override
+    public boolean index(long l) {
+        return super.index(l);
+    }
+
     public boolean nextIndex() {
         return nextIndex0() || nextIndex0();
     }
@@ -75,7 +80,8 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     private boolean nextIndex0(long offset) {
         boolean present = true;
-        if (offset < 0) {
+        padding = (offset < 0);
+        if (padding) {
             present = false;
             offset = -offset;
         }

@@ -34,7 +34,6 @@ import static junit.framework.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
-@Ignore
 public class InProcessChronicleTest {
 
     public static final int PORT = 12345;
@@ -46,7 +45,7 @@ public class InProcessChronicleTest {
         ChronicleTools.deleteOnExit(srcBasePath);
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
-        final int messages = 50000;
+        final int messages = 5;
         ChronicleConfig config = ChronicleConfig.TEST.clone();
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
@@ -158,6 +157,7 @@ public class InProcessChronicleTest {
     // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
 
     @Test
+    @Ignore
     public void testPricePublishing() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
         String sourceName = baseDir + "/price.source";

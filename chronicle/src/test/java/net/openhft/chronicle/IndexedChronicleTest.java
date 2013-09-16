@@ -65,6 +65,91 @@ public class IndexedChronicleTest {
     }
 
     @Test
+    public void testWasPadding() throws IOException {
+        final String basePath = TMP + "/singleThreaded";
+        ChronicleTools.deleteOnExit(basePath);
+
+        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        config.dataBlockSize(128);
+        config.indexBlockSize(128);
+        IndexedChronicle chronicle1 = new IndexedChronicle(basePath, config);
+        ExcerptAppender appender = chronicle1.createAppender();
+
+        IndexedChronicle chronicle2 = new IndexedChronicle(basePath, config);
+        ExcerptTailer tailer = chronicle2.createTailer();
+
+        assertEquals(-1, tailer.index());
+        assertTrue(tailer.wasPadding());
+        assertFalse(tailer.index(-1));
+        assertTrue(tailer.wasPadding());
+
+        appender.startExcerpt(48);
+        appender.position(48);
+        appender.finish();
+
+        assertTrue(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(0, tailer.index());
+        assertTrue(tailer.index(0));
+        assertFalse(tailer.wasPadding());
+
+        assertFalse(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(0, tailer.index());
+        assertFalse(tailer.index(1));
+        assertFalse(tailer.wasPadding());
+
+        appender.startExcerpt(48);
+        appender.position(48);
+        appender.finish();
+
+        assertTrue(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(1, tailer.index());
+        assertTrue(tailer.index(1));
+        assertFalse(tailer.wasPadding());
+        assertEquals(1, tailer.index());
+
+        assertFalse(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(1, tailer.index());
+        assertFalse(tailer.index(2));
+        assertFalse(tailer.wasPadding());
+        assertEquals(1, tailer.index());
+
+        // doesn't fit.
+        appender.startExcerpt(48);
+        appender.position(48);
+        appender.finish();
+
+        assertFalse(tailer.index(2));
+        assertTrue(tailer.wasPadding());
+        assertEquals(1, tailer.index());
+
+        assertTrue(tailer.index(1));
+
+        assertTrue(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(3, tailer.index());
+
+        assertFalse(tailer.index(2));
+        assertTrue(tailer.wasPadding());
+        assertEquals(3, tailer.index());
+
+        assertTrue(tailer.index(3));
+        assertFalse(tailer.wasPadding());
+        assertEquals(3, tailer.index());
+
+        assertFalse(tailer.index(4));
+        assertFalse(tailer.wasPadding());
+        assertEquals(3, tailer.index());
+
+        chronicle1.close();
+        chronicle2.close();
+
+    }
+
+    @Test
     public void singleThreaded() throws IOException {
         final String basePath = TMP + "/singleThreaded";
         ChronicleTools.deleteOnExit(basePath);
@@ -87,8 +172,9 @@ public class IndexedChronicleTest {
 //                if (i == 28)
 //                    ChronicleIndexReader.main(basePath + ".index");
 
-                assertFalse(r.nextIndex());
-                assertFalse(e.index(idx));
+                assertFalse("i: " + i, r.nextIndex());
+
+                assertFalse("i: " + i, e.index(idx));
                 int capacity = 16 * (1 + rand.nextInt(7));
 
                 w.startExcerpt(capacity);
@@ -112,6 +198,8 @@ public class IndexedChronicleTest {
 
 //                if (i >= 111)
 //                    ChronicleIndexReader.main(basePath + ".index");
+                if (i == 28)
+                    Thread.yield();
                 if (!e.index(idx++)) {
                     assertTrue(e.wasPadding());
                     assertTrue(e.index(idx++));

@@ -169,7 +169,7 @@ public class InProcessChronicleSource implements Chronicle {
         public void run() {
             try {
                 long index = readIndex(socket);
-                Excerpt excerpt = chronicle.createExcerpt();
+                ExcerptTailer excerpt = chronicle.createTailer();
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
                 boolean first = true;

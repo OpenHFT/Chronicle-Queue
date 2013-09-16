@@ -176,8 +176,8 @@ public class InProcessChronicleSink implements Chronicle {
             if (scFirst) {
                 long scIndex = readBuffer.getLong();
 //                System.out.println("ri " + scIndex);
-                if (scIndex != chronicle.lastWrittenIndex())
-                    throw new StreamCorruptedException("Expected index " + chronicle.lastWrittenIndex() + " but got " + scIndex);
+                if (scIndex != chronicle.size())
+                    throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
                 scFirst = false;
             }
             long size = readBuffer.getInt();
