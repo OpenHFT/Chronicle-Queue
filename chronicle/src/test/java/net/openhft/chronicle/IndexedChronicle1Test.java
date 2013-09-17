@@ -28,8 +28,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import static junit.framework.Assert.assertSame;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author peter.lawrey

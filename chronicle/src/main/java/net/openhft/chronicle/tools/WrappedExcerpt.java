@@ -182,7 +182,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void parseUTF(@NotNull Appendable builder, @NotNull StopCharTester tester) {
+    public void parseUTF(@NotNull StringBuilder builder, @NotNull StopCharTester tester) {
         common.parseUTF(builder, tester);
     }
 
@@ -683,6 +683,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public Object readObject() {
         return common.readObject();
+    }
+
+    @Override
+    public <T> T readObject(Class<T> tClass) throws IllegalStateException {
+        return common.readObject(tClass);
     }
 
     @Override
