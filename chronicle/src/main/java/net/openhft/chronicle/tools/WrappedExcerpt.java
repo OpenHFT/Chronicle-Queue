@@ -94,6 +94,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public Boolean parseBoolean(@NotNull StopCharTester tester) {
+        return common.parseBoolean(tester);
+    }
+
+    @Override
     public long capacity() {
         return common.capacity();
     }
@@ -420,21 +425,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public ByteStringAppender append(@NotNull Enum value) {
         common.append(value);
-        return this;
-    }
-
-    @NotNull
-    @Override
-
-    public ByteStringAppender append(@NotNull byte[] str) {
-        common.append(str);
-        return this;
-    }
-
-    @NotNull
-    @Override
-    public ByteStringAppender append(@NotNull byte[] str, int offset, int len) {
-        common.append(str, offset, len);
         return this;
     }
 

@@ -34,6 +34,7 @@ public class IndexedChronicle implements Chronicle {
     @NotNull
     final ChronicleConfig config;
     private final String basePath;
+    // todo consider making volatile to help detect bugs in calling code.
     private long lastWrittenIndex = 0;
 
     public IndexedChronicle(String basePath) throws FileNotFoundException {
