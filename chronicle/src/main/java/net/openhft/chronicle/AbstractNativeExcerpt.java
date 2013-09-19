@@ -87,7 +87,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     @NotNull
     @Override
     public ExcerptCommon toEnd() {
-        index = chronicle().lastWrittenIndex();
+        index = chronicle().size();
         index(index);
         return this;
     }
@@ -120,15 +120,18 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         long dataAddr = ((DirectBuffer) dataMBB).address();
 
         startAddr = positionAddr = dataAddr + dataLookupMod;
-        indexPositionAddr = indexStartAddr + indexLineStart + inLine + 4;
         index = l;
-        if (dataOffsetEnd <= 0) {
-            padding = dataOffsetEnd < 0;
-            return false;
-        } else {
+        if (dataOffsetEnd > 0) {
             limitAddr = dataAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
             padding = false;
             return true;
+        } else if (dataOffsetEnd == 0) {
+            indexPositionAddr = indexStartAddr + indexLineStart + inLine;
+            padding = false;
+            return false;
+        } else /*if (dataOffsetEnd < 0)*/ {
+            padding = true;
+            return false;
         }
     }
 

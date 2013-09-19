@@ -105,7 +105,7 @@ public class IndexedChronicleTest {
 
         assertTrue(tailer.nextIndex());
         assertFalse(tailer.wasPadding());
-        assertEquals(1, tailer.index());
+        assertEquals(2, tailer.index());
         assertTrue(tailer.index(1));
         assertFalse(tailer.wasPadding());
         assertEquals(1, tailer.index());
@@ -115,7 +115,7 @@ public class IndexedChronicleTest {
         assertEquals(1, tailer.index());
         assertFalse(tailer.index(2));
         assertFalse(tailer.wasPadding());
-        assertEquals(1, tailer.index());
+        assertEquals(2, tailer.index());
 
         // doesn't fit.
         appender.startExcerpt(48);
@@ -124,7 +124,7 @@ public class IndexedChronicleTest {
 
         assertFalse(tailer.index(2));
         assertTrue(tailer.wasPadding());
-        assertEquals(1, tailer.index());
+        assertEquals(2, tailer.index());
 
         assertTrue(tailer.index(1));
 
@@ -134,7 +134,7 @@ public class IndexedChronicleTest {
 
         assertFalse(tailer.index(2));
         assertTrue(tailer.wasPadding());
-        assertEquals(3, tailer.index());
+        assertEquals(2, tailer.index());
 
         assertTrue(tailer.index(3));
         assertFalse(tailer.wasPadding());
@@ -142,7 +142,7 @@ public class IndexedChronicleTest {
 
         assertFalse(tailer.index(4));
         assertFalse(tailer.wasPadding());
-        assertEquals(3, tailer.index());
+        assertEquals(4, tailer.index());
 
         chronicle1.close();
         chronicle2.close();
@@ -249,11 +249,12 @@ public class IndexedChronicleTest {
                             w.writeInt(1 + i);
 //                        w.position(4L * size);
                         w.finish();
+//                        System.out.println(i);
                     }
                     w.close();
 
 //                    chronicle.close();
-                } catch (IOException e) {
+                } catch (Throwable e) {
                     e.printStackTrace();
                 }
             }

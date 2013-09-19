@@ -19,6 +19,7 @@ package net.openhft.chronicle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.ConcurrentModificationException;
 
 /**
  * @author peter.lawrey
@@ -31,7 +32,7 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
 
     public void startExcerpt(long capacity) {
         // in case there is more than one appender :P
-        if (index != lastWrittenIndex()) {
+        if (index != size()) {
             toEnd();
         }
         if (capacity >= chronicle.config.dataBlockSize())
@@ -84,11 +85,14 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         UNSAFE.putInt(indexPositionAddr, -size);
         indexPositionAddr += 4;
         index++;
+        chronicle.incrSize();
     }
 
     @Override
     public void finish() {
         super.finish();
+        if (index != chronicle.size())
+            throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size=" + chronicle().size());
 
         // push out the entry is available.  This is what the reader polls.
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));

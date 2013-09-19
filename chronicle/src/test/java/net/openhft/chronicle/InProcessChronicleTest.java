@@ -34,18 +34,20 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
+
 public class InProcessChronicleTest {
 
     public static final int PORT = 12345;
 
     @Test
+    @Ignore
     public void testOverTCP() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
         String srcBasePath = baseDir + "/IPCT.testOverTCP.source";
         ChronicleTools.deleteOnExit(srcBasePath);
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
-        final int messages = 5;
+        final int messages = 2000;
         ChronicleConfig config = ChronicleConfig.TEST.clone();
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
@@ -87,7 +89,7 @@ public class InProcessChronicleTest {
             long n = excerpt.readLong();
             String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
             if (i != n)
-                assertEquals("'" + text + "'", i, n);
+                assertEquals('\'' + text + '\'', i, n);
             excerpt.finish();
         }
         sink.close();
@@ -97,65 +99,6 @@ public class InProcessChronicleTest {
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
     }
-
-    interface PriceListener {
-        void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);
-    }
-
-    static class PriceWriter implements PriceListener {
-        private final ExcerptAppender excerpt;
-
-        PriceWriter(ExcerptAppender excerpt) {
-            this.excerpt = excerpt;
-        }
-
-        @Override
-        public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
-            excerpt.startExcerpt(1 + 8 + (2 + symbol.length()) + 8 + 4 + 8 + 4);
-            excerpt.writeByte('P'); // code for a price
-            excerpt.writeLong(timeInMicros);
-            excerpt.writeEnum(symbol);
-            excerpt.writeDouble(bp);
-            excerpt.writeInt(bq);
-            excerpt.writeDouble(ap);
-            excerpt.writeInt(aq);
-            excerpt.finish();
-        }
-    }
-
-    static class PriceReader {
-        private final ExcerptTailer excerpt;
-        private final PriceListener listener;
-
-        PriceReader(ExcerptTailer excerpt, PriceListener listener) {
-            this.excerpt = excerpt;
-            this.listener = listener;
-        }
-
-        public boolean read() {
-            if (!excerpt.nextIndex()) return false;
-//            System.out.println("ei: "+excerpt.index());
-            char ch = (char) excerpt.readByte();
-            switch (ch) {
-                case 'P': {
-                    long timeInMicros = excerpt.readLong();
-                    String symbol = excerpt.readEnum(String.class);
-                    double bp = excerpt.readDouble();
-                    int bq = excerpt.readInt();
-                    double ap = excerpt.readDouble();
-                    int aq = excerpt.readInt();
-                    listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
-                    break;
-                }
-                default:
-                    throw new AssertionError("Unexpected code " + ch);
-            }
-            return true;
-        }
-    }
-
-    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
-    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
 
     @Test
     public void testPricePublishing() throws IOException, InterruptedException {
@@ -240,6 +183,91 @@ public class InProcessChronicleTest {
         sink.close();
     }
 
+    // Took an average of 2.8 us to write and 7.6 us to read (Java 7)
+    @Test
+    public void testSerializationPerformance() throws IOException, ClassNotFoundException {
+        List<byte[]> bytes = new ArrayList<byte[]>();
+        long start = System.nanoTime();
+        int prices = 1000000;
+        for (int i = 0; i < prices; i++) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            PriceUpdate pu = new PriceUpdate(1 + i, "symbol", 99.9, i + 1, 100.1, i + 2);
+            oos.writeObject(pu);
+            oos.close();
+            bytes.add(baos.toByteArray());
+        }
+
+        long mid = System.nanoTime();
+        for (byte[] bs : bytes) {
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bs));
+            PriceUpdate pu = (PriceUpdate) ois.readObject();
+        }
+
+        long end = System.nanoTime();
+        System.out.printf("Took an average of %.1f us to write and %.1f us to read%n",
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+    }
+
+    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
+    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
+
+    interface PriceListener {
+        void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);
+    }
+
+    static class PriceWriter implements PriceListener {
+        private final ExcerptAppender excerpt;
+
+        PriceWriter(ExcerptAppender excerpt) {
+            this.excerpt = excerpt;
+        }
+
+        @Override
+        public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
+            excerpt.startExcerpt(1 + 8 + (2 + symbol.length()) + 8 + 4 + 8 + 4);
+            excerpt.writeByte('P'); // code for a price
+            excerpt.writeLong(timeInMicros);
+            excerpt.writeEnum(symbol);
+            excerpt.writeDouble(bp);
+            excerpt.writeInt(bq);
+            excerpt.writeDouble(ap);
+            excerpt.writeInt(aq);
+            excerpt.finish();
+        }
+    }
+
+    static class PriceReader {
+        private final ExcerptTailer excerpt;
+        private final PriceListener listener;
+
+        PriceReader(ExcerptTailer excerpt, PriceListener listener) {
+            this.excerpt = excerpt;
+            this.listener = listener;
+        }
+
+        public boolean read() {
+            if (!excerpt.nextIndex()) return false;
+//            System.out.println("ei: "+excerpt.index());
+            char ch = (char) excerpt.readByte();
+            switch (ch) {
+                case 'P': {
+                    long timeInMicros = excerpt.readLong();
+                    String symbol = excerpt.readEnum(String.class);
+                    double bp = excerpt.readDouble();
+                    int bq = excerpt.readInt();
+                    double ap = excerpt.readDouble();
+                    int aq = excerpt.readInt();
+                    listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
+                    break;
+                }
+                default:
+                    throw new AssertionError("Unexpected code " + ch);
+            }
+            return true;
+        }
+    }
+
     static class PriceUpdate implements Externalizable, Serializable {
         private long timeInMicros;
         private String symbol;
@@ -279,31 +307,5 @@ public class InProcessChronicleTest {
             ap = in.readDouble();
             aq = in.readInt();
         }
-    }
-
-    // Took an average of 2.8 us to write and 7.6 us to read (Java 7)
-    @Test
-    public void testSerializationPerformance() throws IOException, ClassNotFoundException {
-        List<byte[]> bytes = new ArrayList<byte[]>();
-        long start = System.nanoTime();
-        int prices = 1000000;
-        for (int i = 0; i < prices; i++) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            PriceUpdate pu = new PriceUpdate(1 + i, "symbol", 99.9, i + 1, 100.1, i + 2);
-            oos.writeObject(pu);
-            oos.close();
-            bytes.add(baos.toByteArray());
-        }
-
-        long mid = System.nanoTime();
-        for (byte[] bs : bytes) {
-            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bs));
-            PriceUpdate pu = (PriceUpdate) ois.readObject();
-        }
-
-        long end = System.nanoTime();
-        System.out.printf("Took an average of %.1f us to write and %.1f us to read%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 }

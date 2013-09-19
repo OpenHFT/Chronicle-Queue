@@ -35,7 +35,7 @@ public class IndexedChronicle implements Chronicle {
     final ChronicleConfig config;
     private final String basePath;
     // todo consider making volatile to help detect bugs in calling code.
-    private long lastWrittenIndex = 0;
+    private long lastWrittenIndex = -1;
 
     public IndexedChronicle(String basePath) throws FileNotFoundException {
         this(basePath, ChronicleConfig.DEFAULT);
@@ -77,7 +77,7 @@ public class IndexedChronicle implements Chronicle {
                         if (mbb.getInt(pos + pos2) == 0)
                             break;
                     }
-                    return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos / 4;
+                    return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos / 4 - 1;
                 }
             }
             return (block + 1) * indexBlockSize / cacheLineSize * (cacheLineSize / 4 - 2);

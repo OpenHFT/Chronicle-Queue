@@ -43,30 +43,6 @@ public class NewNumberAppendTest {
     private static final double[][] RANDOM_DOUBLES = new double[TOTAL_RECORDS][NUM_ENTRIES_PER_RECORD];
     private static final int MAX_PRECISION = 8;
 
-    @Before
-    public void fillRandoms() {
-        Random random = new Random();
-        for (int i = 0; i < TOTAL_RECORDS; i++) {
-            for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
-                RANDOM_LONGS[i][j] = random.nextLong();
-                RANDOM_DOUBLES[i][j] = random.nextDouble() * 1e10;
-            }
-            RANDOM_LONGS[i][0] = Long.MIN_VALUE;
-            RANDOM_LONGS[i][1] = Long.MAX_VALUE;
-            RANDOM_LONGS[i][2] = 0;
-            RANDOM_DOUBLES[i][0] = 0;
-        }
-    }
-
-    @Test
-    public void testNumberAppends() throws IOException {
-//        for (int i = 0; i < 3; i++) {
-        for (Class type : NUMBER_TYPES)
-            for (Class excerptType : EXCERPT_TYPES)
-                timeAppends(excerptType, type);
-//        }
-    }
-
     private static void timeAppends(
             @NotNull Class excerptType,
             Class numType) throws IOException {
@@ -106,6 +82,30 @@ public class NewNumberAppendTest {
 
         long time = System.nanoTime() - start;
         System.out.printf("%s %s average time taken %d ns%n", numType, excerptType, time / TOTAL_RECORDS / NUM_ENTRIES_PER_RECORD);
+    }
+
+    @Before
+    public void fillRandoms() {
+        Random random = new Random();
+        for (int i = 0; i < TOTAL_RECORDS; i++) {
+            for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
+                RANDOM_LONGS[i][j] = random.nextLong();
+                RANDOM_DOUBLES[i][j] = random.nextDouble() * 1e10;
+            }
+            RANDOM_LONGS[i][0] = Long.MIN_VALUE;
+            RANDOM_LONGS[i][1] = Long.MAX_VALUE;
+            RANDOM_LONGS[i][2] = 0;
+            RANDOM_DOUBLES[i][0] = 0;
+        }
+    }
+
+    @Test
+    public void testNumberAppends() throws IOException {
+//        for (int i = 0; i < 3; i++) {
+        for (Class type : NUMBER_TYPES)
+            for (Class excerptType : EXCERPT_TYPES)
+                timeAppends(excerptType, type);
+//        }
     }
 }
 
