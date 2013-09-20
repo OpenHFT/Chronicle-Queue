@@ -21,7 +21,6 @@ import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -141,7 +140,6 @@ public class InProcessChronicleTest {
     }
 
     @Test
-    @Ignore
     public void testPricePublishing2() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
         String sourceName = baseDir + "/price.source";
@@ -154,7 +152,7 @@ public class InProcessChronicleTest {
         Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
 
         final AtomicInteger count = new AtomicInteger();
-        PriceReader reader = new PriceReader(sink.createExcerpt(), new PriceListener() {
+        PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
             @Override
             public void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
                 count.incrementAndGet();
@@ -164,7 +162,7 @@ public class InProcessChronicleTest {
         reader.read();
 
         long start = System.nanoTime();
-        int prices = 3;
+        int prices = 2 * 1000 * 1000;
         for (int i = 1; i <= prices; i++) {
             pw.onPrice(i, "symbol", 99.9, i, 100.1, i + 1);
         }

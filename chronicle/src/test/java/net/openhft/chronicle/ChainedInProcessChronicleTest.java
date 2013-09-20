@@ -19,7 +19,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -31,7 +30,6 @@ public class ChainedInProcessChronicleTest {
     private static final String TMP = System.getProperty("java.io.tmpdir");
 
     @Test
-    @Ignore
     public void testChained() throws IOException {
         ChronicleTools.deleteOnExit(TMP + "/chronicle1");
         Chronicle chronicle1 = new IndexedChronicle(TMP + "/chronicle1");
@@ -55,10 +53,10 @@ public class ChainedInProcessChronicleTest {
             excerpt1.writeLong(System.nanoTime());
             excerpt1.finish();
 
-            while (excerpt2.lastWrittenIndex() < i)
+            while (excerpt2.size() < i)
                 excerpt2.nextIndex();
 
-            while (excerpt3.lastWrittenIndex() < i)
+            while (excerpt3.size() < i)
                 excerpt3.nextIndex();
         }
 
