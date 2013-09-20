@@ -20,7 +20,6 @@ import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -160,7 +159,6 @@ public class IndexedChronicle1Test {
     }
 
     @Test
-    @Ignore
     public void testTimeTenMillion() throws IOException {
         int repeats = 3;
         for (int j = 0; j < repeats; j++) {
