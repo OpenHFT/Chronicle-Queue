@@ -120,9 +120,12 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
     @Override
     public boolean nextIndex() {
+        long index2 = index;
         if (index(index() + 1)) {
-            index++;
             return true;
+        } else {
+            // rewind on a failure
+            index = index2;
         }
         if (wasPadding()) {
             index++;

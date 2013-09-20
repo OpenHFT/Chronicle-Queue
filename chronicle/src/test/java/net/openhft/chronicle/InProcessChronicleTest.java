@@ -142,12 +142,12 @@ public class InProcessChronicleTest {
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
-        String sourceName = baseDir + "/price.source";
+        String sourceName = baseDir + "/price3.source";
         ChronicleTools.deleteOnExit(sourceName);
         Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
         PriceWriter pw = new PriceWriter(source.createAppender());
 
-        String sinkName = baseDir + "/price.sink";
+        String sinkName = baseDir + "/price3.sink";
         ChronicleTools.deleteOnExit(sinkName);
         Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
 
@@ -159,7 +159,9 @@ public class InProcessChronicleTest {
             }
         });
         pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
+        assertEquals(-1, reader.excerpt.index());
         reader.read();
+        assertEquals(0, reader.excerpt.index());
 
         long start = System.nanoTime();
         int prices = 2 * 1000 * 1000;
@@ -172,7 +174,50 @@ public class InProcessChronicleTest {
             reader.read();
 
         long end = System.nanoTime();
-        System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
+        System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+
+
+        source.close();
+        sink.close();
+    }
+
+    @Test
+    public void testPricePublishing3() throws IOException, InterruptedException {
+        String baseDir = System.getProperty("java.io.tmpdir");
+        String sourceName = baseDir + "/price2.source";
+        ChronicleTools.deleteOnExit(sourceName);
+        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
+        PriceWriter pw = new PriceWriter(source.createAppender());
+
+        String sinkName = baseDir + "/price2.sink";
+        ChronicleTools.deleteOnExit(sinkName);
+        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
+
+        final AtomicInteger count = new AtomicInteger();
+        PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
+            @Override
+            public void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
+                count.incrementAndGet();
+            }
+        });
+        pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
+        assertEquals(-1, reader.excerpt.index());
+        reader.read();
+        assertEquals(0, reader.excerpt.index());
+
+        long start = System.nanoTime();
+        int prices = 2 * 1000 * 1000;
+        for (int i = 1; i <= prices; i++) {
+            pw.onPrice(i, "symbol", 99.9, i, 100.1, i + 1);
+        }
+
+        long mid = System.nanoTime();
+        while (count.get() < prices)
+            reader.read();
+
+        long end = System.nanoTime();
+        System.out.printf("Took an average of %.2f us to write and %.2f us to read using Tailer%n",
                 (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
 
@@ -185,7 +230,7 @@ public class InProcessChronicleTest {
     public void testSerializationPerformance() throws IOException, ClassNotFoundException {
         List<byte[]> bytes = new ArrayList<byte[]>();
         long start = System.nanoTime();
-        int prices = 1000000;
+        int prices = 200 * 1000;
         for (int i = 0; i < prices; i++) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
