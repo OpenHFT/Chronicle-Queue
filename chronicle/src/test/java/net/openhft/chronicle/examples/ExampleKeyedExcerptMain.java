@@ -98,8 +98,6 @@ public class ExampleKeyedExcerptMain {
             String key = tailer.readUTFΔ();
             keyToExcerpt.put(key, tailer.index());
             tailer.finish();
-//            if (tailer.index() == 110)
-//                Thread.yield();
         }
     }
 

@@ -200,8 +200,7 @@ public class IndexedChronicleTest {
 
 //                if (i >= 111)
 //                    ChronicleIndexReader.main(basePath + ".index");
-//                if (i == 28)
-//                    Thread.yield();
+
                 if (!e.index(idx++)) {
                     assertTrue(e.wasPadding());
                     assertTrue(e.index(idx++));

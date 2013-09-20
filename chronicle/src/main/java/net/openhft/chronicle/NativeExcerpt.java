@@ -56,8 +56,12 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         if (size == 0)
             return;
         checkNewIndexLine();
-        UNSAFE.putInt(indexPositionAddr, -size);
+        writePaddingIndexEntry(size);
         indexPositionAddr += 4;
+    }
+
+    private void writePaddingIndexEntry(int size) {
+        UNSAFE.putInt(indexPositionAddr, -size);
     }
 
     @Override
@@ -98,9 +102,13 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         assert indexBaseForLine >= 0 && indexBaseForLine < 1L << 48 :
                 "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
-        UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
+        appendToIndex();
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
         indexPositionAddr += 8;
+    }
+
+    private void appendToIndex() {
+        UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
     }
 
     @NotNull

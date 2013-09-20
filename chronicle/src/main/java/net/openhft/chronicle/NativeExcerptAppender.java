@@ -35,11 +35,13 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         if (index != size()) {
             toEnd();
         }
+
         if (capacity >= chronicle.config.dataBlockSize())
             throw new IllegalArgumentException("Capacity too large " + capacity + " >= " + chronicle.config.dataBlockSize());
         // if the capacity is to large, roll the previous entry, and there was one
         if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
             // check we are the start of a block.
+
             checkNewIndexLine();
 
             writePaddedEntry();
@@ -62,6 +64,8 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         if (index != lastWrittenIndex()) {
             toEnd();
         }
+        if (index == 322)
+            Thread.yield();
 
         // check we are the start of a block.
         checkNewIndexLine();
@@ -81,11 +85,15 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         assert size >= 0;
         if (size == 0)
             return;
-        checkNewIndexLine();
-        UNSAFE.putInt(indexPositionAddr, -size);
+        appendIndexPaddingEntry(size);
         indexPositionAddr += 4;
         index++;
         chronicle.incrSize();
+    }
+
+    private void appendIndexPaddingEntry(int size) {
+        assert index < this.indexEntriesPerLine || UNSAFE.getLong(indexPositionAddr & ~cacheLineMask) != 0 : "index: " + index + ", no start of line set.";
+        UNSAFE.putInt(indexPositionAddr, -size);
     }
 
     @Override
@@ -100,7 +108,7 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
         int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
         assert relativeOffset > 0;
-        UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
+        writeIndexEntry(relativeOffset);
         indexPositionAddr += 4;
         index++;
         chronicle.incrSize();
@@ -109,6 +117,10 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
             dataBuffer.force();
             indexBuffer.force();
         }
+    }
+
+    private void writeIndexEntry(int relativeOffset) {
+        UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
     }
 
     @NotNull
@@ -136,9 +148,14 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         // sets the base address
         indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
 
-        assert indexBaseForLine >= 0 && indexBaseForLine < 1L << 48 :
+        assert (index == 0 || indexBaseForLine > 0) && indexBaseForLine < 1L << 48 :
                 "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
+        appendStartOfLine();
+
+    }
+
+    private void appendStartOfLine() {
         UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
         indexPositionAddr += 8;

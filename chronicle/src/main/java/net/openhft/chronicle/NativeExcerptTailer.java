@@ -44,12 +44,22 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
     }
 
     public boolean nextIndex() {
-        return nextIndex0() || nextIndex0();
-    }
-
-    private boolean nextIndex0() {
         checkNextLine();
         long offset = UNSAFE.getInt(null, indexPositionAddr);
+        if (offset == 0)
+            offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
+        if (offset == 0) {
+            return false;
+        }
+        index++;
+        return nextIndex0(offset) || nextIndex1();
+    }
+
+    private boolean nextIndex1() {
+        long offset;
+        checkNextLine();
+        offset = UNSAFE.getInt(null, indexPositionAddr);
         if (offset == 0)
             offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
         // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
@@ -85,6 +95,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
             present = false;
             offset = -offset;
         }
+
         checkNewIndexLine2();
         checkNewDataBlock();
         startAddr = positionAddr = limitAddr;
@@ -101,13 +112,14 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     private void setLmitAddr(long offset) {
         long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
-        assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "offsetInThisBuffer: " + offsetInThisBuffer;
+        assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "index: " + index + ", offsetInThisBuffer: " + offsetInThisBuffer;
         limitAddr = dataStartAddr + offsetInThisBuffer;
     }
 
     void checkNewIndexLine2() {
         if ((indexPositionAddr & cacheLineMask) == 8) {
             indexBaseForLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
+            assert index <= 0 || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
             setLmitAddr(0);
         }
     }

@@ -187,7 +187,7 @@ public class InProcessChronicleSink implements Chronicle {
                     return false;
                 case InProcessChronicleSource.PADDED_LEN:
 //                System.out.println("... received padded");
-                    excerpt.addPaddedEntry();
+                    excerpt.startExcerpt(chronicle.config().dataBlockSize() - 1);
                     return true;
                 default:
                     break;
@@ -255,4 +255,8 @@ public class InProcessChronicleSink implements Chronicle {
 //        chronicle.close();
     }
 
+    @Override
+    public ChronicleConfig config() {
+        return chronicle.config();
+    }
 }

@@ -53,6 +53,11 @@ public class IndexedChronicle implements Chronicle {
         findTheLastIndex();
     }
 
+    @Override
+    public ChronicleConfig config() {
+        return config;
+    }
+
     public long findTheLastIndex() {
         return lastWrittenIndex = findTheLastIndex0();
     }

@@ -40,15 +40,14 @@ public class InProcessChronicleTest {
     public static final int PORT = 12345;
 
     @Test
-    @Ignore
     public void testOverTCP() throws IOException, InterruptedException {
         String baseDir = System.getProperty("java.io.tmpdir");
         String srcBasePath = baseDir + "/IPCT.testOverTCP.source";
         ChronicleTools.deleteOnExit(srcBasePath);
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
-        final int messages = 2000;
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        final int messages = 2 * 1000 * 1000;
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
         final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(srcBasePath, config), PORT + 1);
@@ -77,7 +76,7 @@ public class InProcessChronicleTest {
 //        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
         String snkBasePath = baseDir + "/IPCT.testOverTCP.sink";
         ChronicleTools.deleteOnExit(snkBasePath);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(snkBasePath), "localhost", PORT + 1);
+        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(snkBasePath, config), "localhost", PORT + 1);
 
         long start = System.nanoTime();
         t.start();
