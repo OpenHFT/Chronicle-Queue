@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -46,6 +45,16 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         appender = excerptCommon instanceof ExcerptAppender ? (ExcerptAppender) excerptCommon : null;
         excerpt = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
         common = excerptCommon;
+    }
+
+    @Override
+    public <E extends Enum<E>> E parseEnum(@NotNull Class<E> eClass, @NotNull StopCharTester tester) {
+        return common.parseEnum(eClass, tester);
+    }
+
+    @Override
+    public void reset() {
+        common.reset();
     }
 
     @Override
@@ -171,11 +180,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void writeBytesΔ(CharSequence s) {
-        common.writeBytesΔ(s);
-    }
-
-    @Override
     public boolean readUTFΔ(@NotNull StringBuilder stringBuilder) {
         return common.readUTFΔ(stringBuilder);
     }
@@ -254,16 +258,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public double readCompactDouble() {
         return common.readCompactDouble();
-    }
-
-    @Override
-    public void readBytesΔ(@NotNull StringBuilder sb) {
-        common.readBytesΔ(sb);
-    }
-
-    @Override
-    public void readCharsΔ(@NotNull StringBuilder sb) {
-        common.readCharsΔ(sb);
     }
 
     @Override
@@ -507,11 +501,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public <E> E readEnum(@NotNull Class<E> aClass) {
         return common.readEnum(aClass);
-    }
-
-    @Override
-    public <E> E parseEnum(@NotNull Class<E> aClass, @NotNull StopCharTester tester) {
-        return common.parseEnum(aClass, tester);
     }
 
     @Override
@@ -801,21 +790,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @NotNull
     @Override
-    public <E> ByteStringAppender append(@NotNull E object) {
-        common.append(object);
-        return this;
-    }
-
-    @NotNull
-    @Override
     public <E> ByteStringAppender append(@NotNull Iterable<E> list, @NotNull CharSequence seperator) {
-        common.append(list, seperator);
-        return this;
-    }
-
-    @NotNull
-    @Override
-    public <E> ByteStringAppender append(@NotNull List<E> list, @NotNull CharSequence seperator) {
         common.append(list, seperator);
         return this;
     }

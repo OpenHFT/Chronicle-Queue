@@ -21,7 +21,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -33,6 +32,9 @@ import static org.junit.Assert.*;
  * @author peter.lawrey
  */
 public class IndexedChronicleTest {
+    static {
+        ChronicleTools.warmup();
+    }
 
     public static final String TMP = System.getProperty("java.io.tmpdir");
     private static final long WARMUP = 20000;
@@ -272,7 +274,7 @@ public class IndexedChronicleTest {
                     if (i > WARMUP && maxJitter < jitter)
                         maxJitter = jitter;
                     long delay0 = now - start0;
-                    if (delay0 > 20e6)
+                    if (delay0 > 50e6)
                         throw new AssertionError("index: " + r.index());
                     if (i > WARMUP && maxDelay < delay0)
                         maxDelay = delay0;
@@ -398,30 +400,5 @@ public class IndexedChronicleTest {
         Thread.sleep(200);
         ChronicleTools.deleteOnExit(basePath);
         ChronicleTools.deleteOnExit(basePath2);
-    }
-
-    @Test
-    @Ignore
-    public void testWarmup() throws IOException {
-        ChronicleConfig cc = ChronicleConfig.DEFAULT;
-        cc.dataBlockSize(64);
-        cc.indexBlockSize(64);
-        String basePath = TMP + "/warmup";
-        ChronicleTools.deleteOnExit(basePath);
-        IndexedChronicle ic = new IndexedChronicle(basePath, cc);
-        ExcerptAppender appender = ic.createAppender();
-        ExcerptTailer tailer = ic.createTailer();
-        for (int i = 0; i < 200000; i++) {
-            if (i % 1000 == 0)
-                System.out.println(i);
-            appender.startExcerpt(4);
-            appender.writeInt(i);
-            appender.finish();
-            boolean b = tailer.nextIndex() || tailer.nextIndex();
-            tailer.readInt();
-            tailer.finish();
-        }
-        ic.close();
-
     }
 }
