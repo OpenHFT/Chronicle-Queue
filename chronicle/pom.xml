@@ -22,7 +22,7 @@
 
     <groupId>net.openhft</groupId>
     <artifactId>chronicle</artifactId>
-    <version>2.0.1</version>
+    <version>2.0.2-SNAPSHOT</version>
 
     <name>OpenHTF/Java-Chronicle</name>
     <description>Java library for persisted low latency messaging (Java 6+)</description>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
-            <version>6.0.1</version>
+            <version>6.0.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.kohsuke.jetbrains</groupId>
