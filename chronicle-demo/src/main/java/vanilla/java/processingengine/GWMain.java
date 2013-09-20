@@ -43,8 +43,8 @@ The latency distribution was 0.6, 0.7/4.0, 132/3563 (6,319) us for the 50, 90/99
 The latency distribution was 0.5, 0.6/3.2, 58/1557 (4,031) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
 
 Processed 10,000,000 events in and out in 20.0 seconds
-The latency distribution was 0.5, 0.6/5.7, 74784/83000 (83,250) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
-The latency distribution was 0.5, 0.7/3.7, 1494/5587 (7,428) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.4, 1.5/32.5, 2420/6440 (9,733) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
+The latency distribution was 0.6, 0.7/3.3, 17/380 (537) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
 
 Processed 10,000,000 events in and out in 10.1 seconds
 The latency distribution was 31386.8, 80422.8/97564.0, 99054/99780 (100,282) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
