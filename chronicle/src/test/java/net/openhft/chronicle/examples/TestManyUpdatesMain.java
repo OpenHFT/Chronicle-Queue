@@ -31,10 +31,12 @@ public class TestManyUpdatesMain {
         ChronicleTools.deleteOnExit(basePath);
         long start = System.nanoTime();
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
-        int count = 1000 * 1000;
+        int count = 10 * 1000 * 1000;
         for (ExcerptAppender e = chronicle.createAppender(); e.index() < count; ) {
             e.startExcerpt(100);
-            e.append("id=").append(e.index()).append(",name=lyj").append(e.index());
+            e.appendTimeMillis(System.currentTimeMillis());
+            e.append(", id=").append(e.index());
+            e.append(", name=lyj").append(e.index());
             e.finish();
         }
         chronicle.close();

@@ -16,6 +16,8 @@
 
 package net.openhft.chronicle.examples;
 
+import net.openhft.affinity.AffinityLock;
+import net.openhft.affinity.AffinityStrategies;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
@@ -34,22 +36,30 @@ import java.util.Arrays;
  */
 public class ExampleRewriteMain {
     public static void main(String... ignored) throws IOException {
+        ChronicleTools.warmup();
+
         final String basePath = System.getProperty("java.io.tmpdir") + File.separator + "test";
         ChronicleTools.deleteOnExit(basePath);
         final int[] consolidates = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-        final int warmup = 1000000;
-        final int repeats = 10000000;
+        final int warmup = 50000;
+        final int repeats = 5 * 1000 * 1000;
+        final int rate = 1 * 1000 * 1000;
 
+        final AffinityLock al = AffinityLock.acquireLock();
         //Write
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
+                    al.acquireLock(AffinityStrategies.DIFFERENT_CORE).bind();
+
                     final IndexedChronicle chronicle = new IndexedChronicle(basePath);
 //                    chronicle.useUnsafe(true); // for benchmarks.
                     final ExcerptAppender excerpt = chronicle.createAppender();
                     for (int i = -warmup; i < repeats; i++) {
                         doSomeThinking();
+
+                        // start writing an new entry
                         excerpt.startExcerpt(8 + 4 + 4 * consolidates.length);
                         excerpt.writeLong(System.nanoTime());
                         excerpt.writeUnsignedShort(consolidates.length);
@@ -64,11 +74,13 @@ public class ExampleRewriteMain {
                 }
             }
 
+            long last = System.nanoTime();
+
             private void doSomeThinking() {
                 // real programs do some work between messages
                 // this has an impact on the worst case latencies.
-                //noinspection CallToThreadYield
-                Thread.yield();
+                while (System.nanoTime() - last < 1e9 / rate) ;
+                last = System.nanoTime();
             }
         });
         t.start();
@@ -94,6 +106,7 @@ public class ExampleRewriteMain {
             excerpt.finish();
         }
         Arrays.sort(times);
+        System.out.printf("After writing %,d excerpts, ", repeats);
         for (double perc : new double[]{50, 90, 99, 99.9, 99.99}) {
             System.out.printf("%s%% took %.2f µs, ", perc, times[((int) (repeats * perc / 100))] / 1000.0);
         }
