@@ -21,7 +21,6 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
-import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
 import java.io.IOException;
@@ -32,8 +31,7 @@ import java.io.IOException;
 public class PEMain {
     public static void main(String... ignored) throws IOException {
         ChronicleTools.warmup();
-        if (GWMain.WITH_BINDING)
-            PosixJNAAffinity.INSTANCE.setAffinity(1L << 5);
+
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
 

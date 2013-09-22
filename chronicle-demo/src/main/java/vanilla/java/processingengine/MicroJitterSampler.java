@@ -16,8 +16,8 @@
 
 package vanilla.java.processingengine;
 
+import net.openhft.affinity.AffinityLock;
 import org.jetbrains.annotations.NotNull;
-import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 
 import java.io.PrintStream;
 
@@ -25,19 +25,6 @@ import java.io.PrintStream;
  * User: peter Date: 30/06/13 Time: 13:13
  */
 public class MicroJitterSampler {
-    static final boolean BINDING;
-
-    static {
-        boolean binding = false;
-        try {
-            PosixJNAAffinity.INSTANCE.getcpu();
-            binding = true;
-        } catch (Throwable ignored) {
-        }
-        System.out.println("Binding: " + binding);
-        BINDING = binding;
-
-    }
 
     static final long[] DELAY = {
             2 * 1000, 3 * 1000, 4 * 1000, 6 * 1000, 8 * 1000, 10 * 1000, 14 * 1000,
@@ -52,13 +39,8 @@ public class MicroJitterSampler {
     long totalTime = 0;
 
     public static void main(String... ignored) throws InterruptedException {
-        if (BINDING)
-            if (CPU > 0) {
-                PosixJNAAffinity.INSTANCE.setAffinity(1L << CPU);
-            } else {
-                // anything but cpu 0
-                PosixJNAAffinity.INSTANCE.setAffinity(PosixJNAAffinity.INSTANCE.getAffinity() & ~1);
-            }
+        AffinityLock al = AffinityLock.acquireLock();
+
         // warmup.
         new MicroJitterSampler().sample(1000 * 1000 * 1000);
 
@@ -74,10 +56,17 @@ public class MicroJitterSampler {
                     Thread.sleep(1);
                 }
             }
-            if (BINDING)
-                System.out.println("On cpu " + PosixJNAAffinity.INSTANCE.getcpu());
+
             microJitterSampler.print(System.out);
         }
+    }
+
+    @NotNull
+    private static String asString(long timeNS) {
+        return timeNS < 1000 ? timeNS + "ns" :
+                timeNS < 1000000 ? timeNS / 1000 + "us" :
+                        timeNS < 1000000000 ? timeNS / 1000000 + "ms" :
+                                timeNS / 1000000000 + "sec";
     }
 
     public void sample(long intervalNS) {
@@ -107,13 +96,5 @@ public class MicroJitterSampler {
             ps.println(asString(DELAY[i]) + '\t' + countPerHour);
         }
         ps.println();
-    }
-
-    @NotNull
-    private static String asString(long timeNS) {
-        return timeNS < 1000 ? timeNS + "ns" :
-                timeNS < 1000000 ? timeNS / 1000 + "us" :
-                        timeNS < 1000000000 ? timeNS / 1000000 + "ms" :
-                                timeNS / 1000000000 + "sec";
     }
 }

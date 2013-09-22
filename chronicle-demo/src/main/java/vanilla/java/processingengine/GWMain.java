@@ -20,7 +20,6 @@ import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
-import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 import vanilla.java.processingengine.api.*;
 
 import java.io.IOException;
@@ -80,24 +79,9 @@ Processed 100,000,000 events in and out in 50.1 seconds
 The latency distribution was 16.5, 81.7/199.2, 379/581 (623) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
  */
 public class GWMain {
-    public static final boolean WITH_BINDING;
-
-    static {
-        boolean binding = false;
-
-        if (Runtime.getRuntime().availableProcessors() > 10) {
-            try {
-                PosixJNAAffinity.INSTANCE.getcpu();
-                binding = true;
-                System.out.println("binding: true");
-            } catch (Throwable ignored) {
-            }
-        }
-        WITH_BINDING = binding;
-    }
 
     public static final int WARMUP = Integer.getInteger("warmup", 100 * 1000); // number of events
-    public static final long EVENT_SPACING = Integer.getInteger("event-spacing", 10000);
+    public static final long EVENT_SPACING = Integer.getInteger("event-spacing", 5 * 1000);
     public static final int ORDERS = Integer.getInteger("orders", 10 * 1000 * 1000);
 
     public static void main(@NotNull String... args) throws IOException, InterruptedException {
@@ -106,6 +90,7 @@ public class GWMain {
             System.exit(-1);
         }
         ChronicleTools.warmup();
+
         final int gwId = Integer.parseInt(args[0]);
         final boolean throughputTest = Boolean.parseBoolean(args[1]);
 
@@ -163,8 +148,7 @@ public class GWMain {
             }
         });
         t.start();
-        if (WITH_BINDING)
-            PosixJNAAffinity.INSTANCE.setAffinity(1L << 2);
+
         // run loop
         SmallCommand command = new SmallCommand();
         @SuppressWarnings("MismatchedQueryAndUpdateOfStringBuilder")
@@ -185,7 +169,7 @@ public class GWMain {
             command.quantity = 1000;
             command.side = (i & 1) == 0 ? Side.BUY : Side.SELL;
             if (!throughputTest) {
-                long expectedTime = start + i * EVENT_SPACING;
+                long expectedTime = start + i * EVENT_SPACING - 30;
                 while (System.nanoTime() < expectedTime) {
                     //
                 }
