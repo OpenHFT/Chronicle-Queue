@@ -29,32 +29,32 @@ public class MetaData {
     public int sourceId;
     public long excerptId;
     public long writeTimestampMillis;
-    public long inWriteTimestamp;
-    public long inReadTimestamp;
-    public long outWriteTimestamp;
-    public long outReadTimestamp;
+    public int inWriteTimestamp;
+    public int inReadTimestamp;
+    public int outWriteTimestamp;
+    public int outReadTimestamp;
 
     public MetaData(boolean targetReader) {
         this.targetReader = targetReader;
     }
 
-    private static long fastTime() {
-        return System.nanoTime();
+    private static int fastTime() {
+        return (int) System.nanoTime();
     }
 
     public static void writeForGateway(@NotNull RandomDataOutput out) {
         out.writeLong(System.currentTimeMillis());
-        out.writeLong(fastTime());
-        out.writeLong(0);
+        out.writeInt(fastTime());
+        out.writeInt(0);
     }
 
     public void readFromGateway(@NotNull ExcerptCommon in) {
         excerptId = in.index();
         writeTimestampMillis = in.readLong();
-        inWriteTimestamp = in.readLong();
-        inReadTimestamp = in.readLong();
+        inWriteTimestamp = in.readInt();
+        inReadTimestamp = in.readInt();
         if (inReadTimestamp == 0 && targetReader)
-            in.writeLong(in.position() - 8,
+            in.writeInt(in.position() - 4,
                     inReadTimestamp = fastTime());
     }
 
@@ -62,10 +62,10 @@ public class MetaData {
         out.writeInt(sourceId);
         out.writeLong(excerptId);
         out.writeLong(writeTimestampMillis);
-        out.writeLong(inWriteTimestamp);
-        out.writeLong(inReadTimestamp);
-        out.writeLong(fastTime());
-        out.writeLong(0L);
+        out.writeInt(inWriteTimestamp);
+        out.writeInt(inReadTimestamp);
+        out.writeInt(fastTime());
+        out.writeInt(0);
     }
 
     public void readFromEngine(@NotNull ExcerptCommon in, int sourceId) {
@@ -73,12 +73,12 @@ public class MetaData {
         excerptId = in.readLong();
         targetReader = sourceId == this.sourceId;
         writeTimestampMillis = in.readLong();
-        inWriteTimestamp = in.readLong();
-        inReadTimestamp = in.readLong();
-        outWriteTimestamp = in.readLong();
-        outReadTimestamp = in.readLong();
+        inWriteTimestamp = in.readInt();
+        inReadTimestamp = in.readInt();
+        outWriteTimestamp = in.readInt();
+        outReadTimestamp = in.readInt();
         if (outReadTimestamp == 0 && targetReader)
-            in.writeLong(in.position() - 8,
+            in.writeInt(in.position() - 4,
                     outReadTimestamp = fastTime());
     }
 }

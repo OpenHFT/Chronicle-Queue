@@ -16,6 +16,7 @@
 
 package vanilla.java.processingengine;
 
+import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -141,13 +142,18 @@ public class GWMain {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
+                AffinitySupport.setAffinity(1L << 3);
                 while (reportCount.get() < ORDERS) {
-                    if (pe2GwReader.readOne() && reportCount.get() % 1000000 == 0)
-                        System.out.println("processed " + reportCount.get());
+                    if (pe2GwReader.readOne()) {
+                        int count = reportCount.get();
+                        if ((count & 63) == 0 && count % 1000000 == 0)
+                            System.out.println("processed " + count);
+                    }
                 }
             }
         });
         t.start();
+        AffinitySupport.setAffinity(1L << 1);
 
         // run loop
         SmallCommand command = new SmallCommand();

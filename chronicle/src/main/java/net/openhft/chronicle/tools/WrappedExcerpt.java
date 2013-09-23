@@ -58,6 +58,16 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public void readObject(Object object, int start, int end) {
+        common.readObject(object, start, end);
+    }
+
+    @Override
+    public void writeObject(Object object, int start, int end) {
+        common.writeObject(object, start, end);
+    }
+
+    @Override
     public Chronicle chronicle() {
         return common.chronicle();
     }

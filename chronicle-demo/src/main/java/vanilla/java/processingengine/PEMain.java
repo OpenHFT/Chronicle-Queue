@@ -16,6 +16,7 @@
 
 package vanilla.java.processingengine;
 
+import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
@@ -32,6 +33,7 @@ public class PEMain {
     public static void main(String... ignored) throws IOException {
         ChronicleTools.warmup();
 
+        AffinitySupport.setAffinity(1L << 2);
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
 
