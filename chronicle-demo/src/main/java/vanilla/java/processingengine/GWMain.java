@@ -144,15 +144,30 @@ public class GWMain {
             public void run() {
                 AffinitySupport.setAffinity(1L << 3);
                 while (reportCount.get() < ORDERS) {
-                    if (pe2GwReader.readOne()) {
-                        int count = reportCount.get();
-                        if ((count & 63) == 0 && count % 1000000 == 0)
-                            System.out.println("processed " + count);
-                    }
+                    pe2GwReader.readOne();
                 }
             }
         });
         t.start();
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int n = 0;
+                while (reportCount.get() < ORDERS) {
+                    while (reportCount.get() < n)
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            throw new AssertionError(e);
+                        }
+                    int count = reportCount.get();
+                    System.out.println("processed " + count);
+                    n += 1000000;
+                }
+            }
+        });
+        t2.start();
         AffinitySupport.setAffinity(1L << 1);
 
         // run loop
