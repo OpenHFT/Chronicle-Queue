@@ -5,8 +5,10 @@ Persisted low latency messaging
 
 It is available on maven central as
 
-<dependency>
-    <groupId>net.openhft</groupId>
-    <artifactId>chronicle</artifactId>
-    <version>2.0.1</version>
-</dependency>
+<pre>
+&lt;dependency>
+    &lt;groupId>net.openhft&lt;/groupId>
+    &lt;artifactId>chronicle&lt;/artifactId>
+    &lt;version>2.0.1&lt;/version>
+&lt;/dependency>
+</pre>
