@@ -12,3 +12,5 @@ It is available on maven central as
     &lt;version>2.0.1&lt;/version>
 &lt;/dependency>
 </pre>
+
+For working examples, have a look at the unit tests and demo module.
