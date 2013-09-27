@@ -23,6 +23,8 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import java.io.IOException;
 
 /**
+ * 68,000,000 inserts took 7.710 seconds on i7-4500 laptop with SSD.
+ *
  * @author peter.lawrey
  */
 public class TestManyUpdates2Main {
