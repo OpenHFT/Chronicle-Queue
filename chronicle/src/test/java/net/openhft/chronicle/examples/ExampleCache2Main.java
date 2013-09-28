@@ -20,13 +20,12 @@ import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.BytesMarshallable;
 import net.openhft.lang.io.IOTools;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 
 /**
  * @author ygokirmak
@@ -36,7 +35,7 @@ import java.io.ObjectOutput;
  *         1- Test multiple writer concurrency and performance
  *         2- Support variable size objects.
  */
-public class ExampleCacheMain {
+public class ExampleCache2Main {
     private static final String TMP = System.getProperty("java.io.tmpdir");
     @NotNull
     private final Chronicle chronicle;
@@ -52,7 +51,7 @@ public class ExampleCacheMain {
     };
     private int _maxObjSize;
 
-    public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
+    public ExampleCache2Main(String basePath, int maxObjSize) throws IOException {
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
         chronicle = new IndexedChronicle(basePath, config);
 
@@ -65,15 +64,29 @@ public class ExampleCacheMain {
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
-        ExampleCacheMain map = new ExampleCacheMain(basePath, 200);
+        ExampleCache2Main map = new ExampleCache2Main(basePath, 200);
         long start = System.nanoTime();
         int keys = 1000000;
+        StringBuilder name = new StringBuilder();
+        StringBuilder surname = new StringBuilder();
+        Person person = new Person(name, surname, 0);
         for (int i = 0; i < keys; i++) {
-            map.put(i, new Person("name" + i, "surname" + i, i));
+            name.setLength(0);
+            name.append("name");
+            name.append(i);
+
+            surname.setLength(0);
+            surname.append("surname");
+            surname.append(i);
+
+            person.set_age(i);
+
+            map.put(i, person);
         }
 
+        Person person2 = new Person();
         for (int i = 0; i < keys; i++) {
-            Person p = (Person) map.get(i);
+            map.get(i, person);
 //			System.out.println(p.get_name() + " " + p.get_surname() + " "
 //					+ p.get_age());
         }
@@ -81,7 +94,7 @@ public class ExampleCacheMain {
         System.out.printf("Took %.3f secs to add %,d entries%n", time / 1e9, keys);
     }
 
-    public Object get(long key) {
+    public void get(long key, Person person) {
         // Get the excerpt position for the given key from keyIndex map
         long position = keyIndex.get(key);
 
@@ -89,20 +102,18 @@ public class ExampleCacheMain {
         reader.index(position);
 
         // Read contents into byte buffer
-        Object ret = reader.readObject();
+        person.readMarshallable(reader);
 
         // validate reading was correct
         reader.finish();
-
-        return ret;
     }
 
-    public void put(long key, Object value) {
+    public void put(long key, Person person) {
         // Start an excerpt with given chunksize
         appender.startExcerpt(_maxObjSize);
 
         // Write the object bytes
-        appender.writeObject(value);
+        person.writeMarshallable(appender);
 
         // pad it for later.
         appender.position(_maxObjSize);
@@ -123,26 +134,27 @@ public class ExampleCacheMain {
         IOTools.close(chronicle);
     }
 
-    // Took 7.727 secs to add 1,000,000 entries with Serializable
-    // Took 2.599  secs to add 1,000,000 entries with Externalizable
-    static class Person implements Externalizable {
-        private static final long serialVersionUID = 1L;
-
-        private String _name;
-        private String _surname;
+    // Took 0.654 secs to add 1,000,000 entries
+    static class Person implements BytesMarshallable {
+        private StringBuilder _name;
+        private StringBuilder _surname;
         private int _age;
 
-        public Person(String name, String surname, int age) {
+        public Person() {
+            this(new StringBuilder(), new StringBuilder(), 0);
+        }
+
+        public Person(StringBuilder name, StringBuilder surname, int age) {
             _name = name;
-            _surname = name;
+            _surname = surname;
             _age = age;
         }
 
-        public String get_name() {
+        public StringBuilder get_name() {
             return _name;
         }
 
-        public String get_surname() {
+        public StringBuilder get_surname() {
             return _surname;
         }
 
@@ -150,15 +162,21 @@ public class ExampleCacheMain {
             return _age;
         }
 
-        public void writeExternal(ObjectOutput out) throws IOException {
-            out.writeUTF(_name);
-            out.writeUTF(_surname);
+        public void set_age(int age) {
+            _age = age;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull Bytes out) {
+            out.writeUTFΔ(_name);
+            out.writeUTFΔ(_surname);
             out.writeInt(_age);
         }
 
-        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            _name = in.readUTF();
-            _surname = in.readUTF();
+        @Override
+        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+            in.readUTFΔ(_name);
+            in.readUTFΔ(_surname);
             _age = in.readInt();
         }
     }
