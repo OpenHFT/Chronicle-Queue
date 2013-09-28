@@ -66,7 +66,7 @@ public class ExampleCache2Main {
         ChronicleTools.deleteOnExit(basePath);
         ExampleCache2Main map = new ExampleCache2Main(basePath, 200);
         long start = System.nanoTime();
-        int keys = 1000000;
+        int keys = 10000000;
         StringBuilder name = new StringBuilder();
         StringBuilder surname = new StringBuilder();
         Person person = new Person(name, surname, 0);
@@ -134,7 +134,7 @@ public class ExampleCache2Main {
         IOTools.close(chronicle);
     }
 
-    // Took 0.654 secs to add 1,000,000 entries
+    // Took 5.239 secs to add 10,000,000 entries
     static class Person implements BytesMarshallable {
         private StringBuilder _name;
         private StringBuilder _surname;
