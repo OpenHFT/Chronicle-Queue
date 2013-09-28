@@ -16,142 +16,150 @@
 
 package net.openhft.chronicle.examples;
 
-import gnu.trove.map.TObjectLongMap;
-import gnu.trove.map.hash.TObjectLongHashMap;
-
-import java.io.IOException;
-import java.io.Serializable;
-
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import gnu.trove.map.TLongLongMap;
+import gnu.trove.map.hash.TLongLongHashMap;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-
 import org.jetbrains.annotations.NotNull;
+
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
 /**
  * @author ygokirmak
- * 
- *         This is just a simple try for a cache implementation 
- *         Future Improvements 
- *         	1- Test multiple writer concurrency and performance 
- *         	2- Support variable size objects.
- *         
+ *         <p/>
+ *         This is just a simple try for a cache implementation
+ *         Future Improvements
+ *         1- Test multiple writer concurrency and performance
+ *         2- Support variable size objects.
  */
 public class ExampleCacheMain {
-	private static final String TMP = System.getProperty("java.io.tmpdir");
-	@NotNull
-	private final Chronicle chronicle;
-	@NotNull
-	private final Excerpt reader;
-	@NotNull
-	private final ExcerptTailer tailer;
-	@NotNull
-	private final ExcerptAppender appender;
-	private final TObjectLongMap<Long> keyIndex = new TObjectLongHashMap<Long>() {
-		@Override
-		public long getNoEntryValue() {
-			return -1;
-		}
-	};
-	private int _maxObjSize;
+    private static final String TMP = System.getProperty("java.io.tmpdir");
+    @NotNull
+    private final Chronicle chronicle;
+    @NotNull
+    private final Excerpt reader;
+    @NotNull
+    private final ExcerptAppender appender;
+    private final TLongLongMap keyIndex = new TLongLongHashMap() {
+        @Override
+        public long getNoEntryValue() {
+            return -1L;
+        }
+    };
+    private int _maxObjSize;
 
-	public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
-		ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-		chronicle = new IndexedChronicle(basePath, config);
-		tailer = chronicle.createTailer();
-		appender = chronicle.createAppender();
-		reader = chronicle.createExcerpt();
-		_maxObjSize = maxObjSize;
+    public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+        chronicle = new IndexedChronicle(basePath, config);
 
-	}
+        appender = chronicle.createAppender();
+        reader = chronicle.createExcerpt();
+        _maxObjSize = maxObjSize;
 
-	public static void main(String... ignored) throws IOException {
-		String basePath = TMP + "/ExampleCacheMain";
-		ChronicleTools.deleteOnExit(basePath);
-		ExampleCacheMain map = new ExampleCacheMain(basePath, 1024);
-		int keys = 100;
-		for (int i = 0; i < keys; i++) {
-			map.put(Long.valueOf(i), new Person("name" + i, "surname" + i, i));
-		}
+    }
 
-		for (int i = 0; i < keys; i++) {
-			Person p = (Person) map.get(Long.valueOf(i));
-			System.out.println(p.get_name() + " " + p.get_surname() + " "
-					+ p.get_age());
-		}
+    public static void main(String... ignored) throws IOException {
+        String basePath = TMP + "/ExampleCacheMain";
+        ChronicleTools.deleteOnExit(basePath);
+        ExampleCacheMain map = new ExampleCacheMain(basePath, 200);
+        long start = System.nanoTime();
+        int keys = 1000000;
+        for (int i = 0; i < keys; i++) {
+            map.put(Long.valueOf(i), new Person("name" + i, "surname" + i, i));
+        }
 
-	}
+        for (int i = 0; i < keys; i++) {
+            Person p = (Person) map.get(Long.valueOf(i));
+//			System.out.println(p.get_name() + " " + p.get_surname() + " "
+//					+ p.get_age());
+        }
+        long time = System.nanoTime() - start;
+        System.out.printf("Took %.3f secs to add %,d entries%n", time / 1e9, keys);
+    }
 
-	public Object get(Long key) {
-		// Get the excerpt position for the given key from keyIndex map
-		long position = keyIndex.get(key);
+    public Object get(Long key) {
+        // Get the excerpt position for the given key from keyIndex map
+        long position = keyIndex.get(key);
 
-		// Change reader position
-		reader.index(position);
+        // Change reader position
+        reader.index(position);
 
-		// Read contents into byte buffer
-		Object ret = reader.readObject();
+        // Read contents into byte buffer
+        Object ret = reader.readObject();
 
-		// TODO really understand what reader.finish does
-		reader.finish();
+        // TODO really understand what reader.finish does
+        reader.finish();
 
-		return ret;
-	}
+        return ret;
+    }
 
-	public void put(Long key, Object value) {
-		long position = -1;
+    public void put(Long key, Object value) {
+        // Start an excerpt with given chunksize
+        appender.startExcerpt(_maxObjSize);
 
-		// Start an excerpt with given chunksize
-		appender.startExcerpt(_maxObjSize);
+        // Write the object bytes
+        appender.writeObject(value);
 
-		// Write the object bytes
-		appender.writeObject(value);
+        // pad it for later.
+        appender.position(_maxObjSize);
 
-		// Get the position of the excerpt for further access.
-		position = appender.index();
+        // Get the position of the excerpt for further access.
+        long index = appender.index();
 
-		// Put the position of the excerpt with its key to a map.
-		keyIndex.put(key, position);
+        // TODO Does finish works as "commit" consider transactional
+        // consistency between putting key to map and putting object to
+        // chronicle
+        appender.finish();
 
-		// TODO Does finish works as "commit" consider transactional
-		// consistency between putting key to map and putting object to
-		// chronicle
-		appender.finish();
+        // Put the position of the excerpt with its key to a map.
+        keyIndex.put(key, index);
+    }
 
-	}
+    public void close() {
+        IOTools.close(chronicle);
+    }
 
-	public void close() {
-		IOTools.close(chronicle);
-	}
+    // Took 7.727 secs to add 1,000,000 entries with Serializable
+    // Took 2.693  secs to add 1,000,000 entries with Externalizable
+    static class Person implements Externalizable {
+        private static final long serialVersionUID = 1L;
 
-	static class Person implements Serializable {
-		private static final long serialVersionUID = 1L;
+        private String _name;
+        private String _surname;
+        private int _age;
 
-		private String _name;
-		private String _surname;
-		private int _age;
+        public Person(String name, String surname, int age) {
+            _name = name;
+            _surname = name;
+            _age = age;
+        }
 
-		public Person(String name, String surname, int age) {
-			_name = name;
-			_surname = name;
-			_age = age;
-		}
+        public String get_name() {
+            return _name;
+        }
 
-		public String get_name() {
-			return _name;
-		}
+        public String get_surname() {
+            return _surname;
+        }
 
-		public String get_surname() {
-			return _surname;
-		}
+        public int get_age() {
+            return _age;
+        }
 
-		public int get_age() {
-			return _age;
-		}
-	}
+        public void writeExternal(ObjectOutput out) throws IOException {
+            out.writeUTF(_name);
+            out.writeUTF(_surname);
+            out.writeInt(_age);
+        }
+
+        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            _name = in.readUTF();
+            _surname = in.readUTF();
+            _age = in.readInt();
+        }
+    }
 }
