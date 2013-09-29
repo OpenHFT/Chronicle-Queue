@@ -25,4 +25,82 @@ Appender is something like Iterator in Chronicle environment. You add data appen
 ## How it Really Works
 Lets see Chronicle in action with an example. In this example we simply will: Create a Chronicle, Put a record to chronicle and Read the record from chronicle.
 
-### 1. Create a Chronicle
+
+	package net.openhft.chronicle.examples;
+	import java.io.IOException;
+	import net.openhft.chronicle.ChronicleConfig;
+    import net.openhft.chronicle.Excerpt;
+    import net.openhft.chronicle.ExcerptAppender;
+    import net.openhft.chronicle.IndexedChronicle;
+    import net.openhft.chronicle.tools.ChronicleTools;
+
+    public class ExampleCacheMain {
+        public static void main(String... ignored) throws IOException {
+            
+            String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
+            ChronicleTools.deleteOnExit(basePath);
+            
+            ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+            IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+    
+            ExcerptAppender appender = chronicle.createAppender();
+            Excerpt reader = chronicle.createExcerpt();
+    
+            appender.startExcerpt(100);
+            appender.writeObject("TestMessage");
+            appender.position(100);
+            appender.finish();
+            
+            reader.index(0);
+            Object ret = reader.readObject();
+            reader.finish();
+    
+            System.out.println(ret);
+            
+        }
+    
+    }
+
+
+Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder. 
+	String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
+	ChronicleTools.deleteOnExit(basePath);
+            
+	ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+	IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+
+IndexedChronicle creates two RandomAccessFile one for indexes and one for data having names relatively: 
+
+	Java_temp_directory/SimpleChronicle.index
+    Java_temp_directory/SimpleChronicle.data
+
+Create appender and reader
+
+	ExcerptAppender appender = chronicle.createAppender();
+	Excerpt reader = chronicle.createExcerpt();
+
+NativeExcerptAppender.startExcerpt method does some checks and calculates startAddr and limitAddr(startAddr+100) for this excerpt
+
+	appender.startExcerpt(100);
+
+writeObject method copies the contents of the object int excerpt
+
+	appender.writeObject("TestMessage");
+
+we set appender position to startAddr+100 whatever the objectsize is. 
+
+	appender.position(100);
+
+in finish method object offset is written to index cache. This method acts like a commit, without writing this offset to cache you put data to datacache but not persist it. 
+
+	appender.finish();
+
+In order to read data from data cache, you first need to get physical start address of the data from index cache. Reader.index(0) method does the calculation for you. You read the data and finish reading operation.
+
+	reader.index(0);
+	Object ret = reader.readObject();
+    reader.finish();
+
+End of simple put/get example. 
+
+
