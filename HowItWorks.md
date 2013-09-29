@@ -16,18 +16,13 @@ Chronicle has three main concepts; Chronicle, Excerpt and Appender.
 
 Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface. Current version of Chronicle contains IndexedChronicle implementation. IndexedChronicle is a single writer multiple(?) reader Chronicle that you can put huge numbers of objects having different sizes. For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... If you want to access objects with other logical keys ( i.e via some value of object ) you have to manage your own mapping from logical key to index. 
 
-( TODO: In examples TLongLongMap is used for key mapping. What if we use a performant b+tree implementation like <https://github.com/jankotek/MapDB/blob/master/src/main/java/org/mapdb/BTreeMap.java> ) 
+( TODO: In examples TLongLongMap is used for key mapping. What if we use a performant b+tree implementation like [BTreeMap](https://github.com/jankotek/MapDB/blob/master/src/main/java/org/mapdb/BTreeMap.java) ) 
 
 Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing Excerpt at the end. 
 
 Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle. 
 
-How it Really Works
+## How it Really Works
+Lets see Chronicle in action with an example. In this example we simply will: Create a Chronicle, Put a record to chronicle and Read the record from chronicle.
 
-Lets see Chronicle in action with an example. In this example we simply: 
-	1- Create a Chronicle
-	2- Put a record to chronicle
-	3- Read the record from chronicle
-
-	
-1. Create a Chronicle
+### 1. Create a Chronicle
