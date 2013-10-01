@@ -22,10 +22,28 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface Excerpt extends ExcerptTailer {
+	/**
+	 * Randomly select an Excerpt.
+	 * 
+	 * @param l
+	 *            index to look up
+	 * @return true if this is a valid entries and not padding.
+	 */
+	boolean index(long l);
 
-    @NotNull
-    Excerpt toStart();
+	/**
+	 * Replay from the start.
+	 * 
+	 * @return this Excerpt
+	 */
+	@NotNull
+	Excerpt toStart();
 
-    @NotNull
-    Excerpt toEnd();
+	/**
+	 * Wind to the end.
+	 * 
+	 * @return this Excerpt
+	 */
+	@NotNull
+	Excerpt toEnd();
 }
