@@ -38,9 +38,6 @@ public class RollingChronicleTest {
         String basePath = System.getProperty("java.io.tmpdir") + "/testAppending";
         ChronicleTools.deleteDirOnExit(basePath);
         for (int k = 0; k < 15; k++) {
-            if (k == 14)
-                Thread.yield();
-            ;
             RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
             ExcerptAppender appender = rc.createAppender();
             assertEquals("k: " + k, (long) counter, appender.size());
