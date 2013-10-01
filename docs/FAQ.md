@@ -7,6 +7,21 @@ A key requirement of low latency systems is transparency and you should be able 
 that a monitoring system can recreate the state of the system monitored.  This allows downstream systems to record any information
 they need and perform queries without needed to touch the critical system as they can record anything they might need later.
 
+Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
+
+## What was the library originally designed for?
+
+The original design was for a low latency trading system which required persistence of everything in and out for a complete record of
+what happened, when and for deterministic testing. The target round trip time for persisting the request, processing and persisting the response was a micro-second.
+
+Key principles are; ultra-low GC (less than one object per event), lock-less, cache friendly data structures.
+
+## What was not in the originally design?
+
+The marshalling, de-marshalling and handling of thread safe off heap memory has been added more recently and moving into the Java-Lang module.
+
+This library now supports low latency/GC-less writing ang reading/parsing or text as well as binary.
+
 ##  How fast is fast?
 
 Chronicle is design to persist messages and replay them in micro-second time.  Simple messages are as low as 0.1 micro-seconds.
@@ -16,6 +31,7 @@ Chronicle is designed to sustain millions of inserts and updates per second. For
 e.g. A laptop with 8 GB of memory might handle bursts of 800 MB at a rate of 1 GB per second.
 A server with 64 GB of memory might handle a burst of 6.5 GB at a rate of 3 GB per second.
 
+If your key system is not measuring latency in micro-seconds and throughput in thousands per second, it is not that fast.  It may well be fast enough however. ;)
 
 ## How does it scale?
 
@@ -25,6 +41,17 @@ Chronicle is design to handle more transaction per node, in the order of 100K to
 Vertical scalability is essential for low latency as having more nodes usually increases latency.
 
 Having one node which can handle the load of data centre also save money and power consumption.
+
+## What if I have a slow consumer?
+
+Chronicle has an advantage over other queuing systems that the consumer can be any amount behind the producer (up to the free space on your disk)
+Chronicle has been tested where the consumer was more than main memory behind the producer.  This reduced the maximum throughput by about half.
+Most systems, in Java, where the queue exceed the main memory cause the machine to become unusable.
+
+Note: the Consumer can stop, restart and continue with minimal impact to the producer, if the data is still in main memory.
+
+Having a faster disk sub-system helps in extreme conditions like these.
+Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card which sustained write speed of 900 MB/s.
 
 ## What types of Excerpt are there?
 
@@ -68,6 +95,14 @@ To finish writing (or reading) call finish();
 
 When finish() returns, the data will be written to disk even if the program crashes. By crash I mean a JVM crash not just an Error or Exception thrown.
 
+## What do I do if I really don't know the size?
+
+If you have no control of the size you have a concern that you don't control the system.
+If this is a rare event, and you have to, you can create a large NativeBytes off heap buffer of any size (even > 2 GB)
+You can serialize into this off heap memory and write the Bytes produced with the actual size.
+
+Note: huge memory to memory copies do not have safe points, which means a 1 GB raw memory copy can prevent a GC from starting until it is finished.
+
 ## How does reading work?
 
 When you read an excerpt, it first checks that index entry is there (the last thing written)
@@ -88,11 +123,79 @@ The organizational cost of disk is often 10-100x the real cost, but so is your c
 
 In essence, disk should be cheap and you can record a week to a month of continuous data on one cheap drive.
 
-Never the less, there is less maintenance overhead if the chronicle logs rote themselves and there is work being done to implement this for Chronicle 2.1.
+Never the less, there is less maintenance overhead if the chronicle logs rotate themselves and there is work being done to implement this for Chronicle 2.1.
  Initially, chronicle files will be rotated when they reach a specific number of entries.
+
+## I want to use Chronicle as an off heap cache.  What do I do?
+
+Chronicle is designed for replay.  WHat it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
+An old library called HugeCollections will be resurrected to handle collections more cleanly.
+
+# Thread safety
+
+## Can I have multiple readers?
+
+You can have multiple independent readers by having a Chronicle per reader.
+An alternative to this is to lock the Chronicle and share it between threads in the same process.
+
+Between processes, you have to have at least one Chronicle for each one you want to read.
+
+## Can I have multiple writers?
+To have multiple writers you need some form of locking.  Either synchronized or ReentrantLock may be suitable.
+
+Between processes, you cannot share a chronicle safely.  It is suggested that each process has its own Chronicles.
+
+# Replication
+
+## Does Chronicle support replication?
+
+Yes, you can wrap the source (single master) with InProcessChronicleSource and the copies with InProcessChronicleSink.
+This supports TCP replication and means a copy is stored on each client. When file rolling is supported, this will make it easier to delete old files.
+
+## Does Chronicle support UDP replication?
+
+No, Chronicle is designed to be both reliable and deterministic.  UDP is not designed for this.  A hybrid UDP/TCP system is possible is the future.
+
+## How do I know the consumer is up to date?
+
+For the tailer, either replicated or not, you can assume you are up to date when nextIndex() returns false for the first time.
+
+# Infrequently Asked Questions
+
+## Can records be updated?
+
+They can be updated at any time, but you lose any event driven notification to readers at this point.
+It might be practical to have multiple chronicles, one which stores large updated records, and another for small notifications.
 
 ## I want to store large messages, what is the limit.
 
 The theoretic limit is about 1 GB as Chronicle 2.x still uses Java's memory mappings.
 The practical limit without tuning the configuration is about 64 MB.
 At this point you get significant inefficiencies unless you increase the data allocation chunk size.
+
+## I get an Exception writing or finish()ing an excerpt. What does this mean?
+
+Most often this means you wrote more than the capcity allowed.  The quaility of the messages is improving?
+
+## I get an Exception attempting to read an Excerpt. What does this mean?
+
+Most likely your read code doesn't match your write code.  I suggest making your reader and writer separate, stand alone and well tested so you can pick up such errors.
+
+## How does the byte order work with replication?
+
+The byte order doesn't change in replication.  This means it will work best in a byte endian homogeneous systems. e.g. Windows/Linux x86/x64/ARM.
+Chronicle may support changing the byte order in future.
+
+## Does chronicle support other serialization libraries?
+
+Chronicle supports ObjectInput, ObjectOutput, Appendable, OutputStream and InputStream APIs.  It also has a fast copy to/from a byte[].
+
+Chronicle is designed to be faster with persistence than other serialization libraries are without persistence.
+To date, I haven't found a faster library for serialization without a standardized format. e.g. Chronicle doesn't support JSON or XML yet.
+
+Where XML or JSon is neede down stream, I suggest writing in binary format and have the reader incur the overhead of the conversion rather than slow the producer.
+
+## Does Chronicle support a synchronous mode?
+
+It does, clone() a ChronicleConfig you like, e.g. DEFAULT and set synchronousMode(true).
+This will force() a persistence for every finish().  What this does is likely to be OS platform dependant.
