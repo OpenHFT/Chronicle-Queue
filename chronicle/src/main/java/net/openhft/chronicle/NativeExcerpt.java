@@ -16,126 +16,126 @@
 
 package net.openhft.chronicle;
 
-import java.io.IOException;
-
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
-	private boolean padding = true;
+    private boolean padding = true;
 
-	public NativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
-		super(chronicle);
-	}
+    public NativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
+        super(chronicle);
+    }
 
-	public void startExcerpt(long capacity) {
-		// if the capacity is to large, roll the previous entry, and there was one
-		if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
-			// check we are the start of a block.
-			checkNewIndexLine();
+    public void startExcerpt(long capacity) {
+        // if the capacity is to large, roll the previous entry, and there was one
+        if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
+            // check we are the start of a block.
+            checkNewIndexLine();
 
-			writePaddedEntry();
+            writePaddedEntry();
 
-			loadNextDataBuffer();
-		}
+            loadNextDataBuffer();
+        }
 
-		// check we are the start of a block.
-		checkNewIndexLine();
+        // check we are the start of a block.
+        checkNewIndexLine();
 
-		// update the soft limitAddr
-		startAddr = positionAddr;
-		limitAddr = positionAddr + capacity;
-		finished = false;
-	}
+        // update the soft limitAddr
+        startAddr = positionAddr;
+        limitAddr = positionAddr + capacity;
+        finished = false;
+    }
 
-	private void writePaddedEntry() {
-		int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
-		assert size >= 0;
-		if (size == 0)
-			return;
-		checkNewIndexLine();
-		writePaddingIndexEntry(size);
-		indexPositionAddr += 4;
-	}
+    private void writePaddedEntry() {
+        int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
+        assert size >= 0;
+        if (size == 0)
+            return;
+        checkNewIndexLine();
+        writePaddingIndexEntry(size);
+        indexPositionAddr += 4;
+    }
 
-	private void writePaddingIndexEntry(int size) {
-		UNSAFE.putInt(indexPositionAddr, -size);
-	}
+    private void writePaddingIndexEntry(int size) {
+        UNSAFE.putInt(indexPositionAddr, -size);
+    }
 
-	@Override
-	public boolean index(long l) {
-		return indexForRead(l);
-	}
+    @Override
+    public boolean index(long l) {
+        return indexForRead(l);
+    }
 
-	@Override
-	public void finish() {
-		super.finish();
+    @Override
+    public void finish() {
+        super.finish();
 
-		if (chronicle.config.synchronousMode()) {
-			dataBuffer.force();
-			indexBuffer.force();
-		}
-	}
+        if (chronicle.config.synchronousMode()) {
+            dataBuffer.force();
+            indexBuffer.force();
+        }
+    }
 
-	void checkNewIndexLine() {
-		switch ((int) (indexPositionAddr & cacheLineMask)) {
-		case 0:
-			newIndexLine();
-			break;
-		case 4:
-			throw new AssertionError();
-		}
-	}
+    void checkNewIndexLine() {
+        switch ((int) (indexPositionAddr & cacheLineMask)) {
+            case 0:
+                newIndexLine();
+                break;
+            case 4:
+                throw new AssertionError();
+        }
+    }
 
-	void newIndexLine() {
-		// check we have a valid index
-		if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-			loadNextIndexBuffer();
-		}
-		// sets the base address
-		indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
+    void newIndexLine() {
+        // check we have a valid index
+        if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
+            loadNextIndexBuffer();
+        }
+        // sets the base address
+        indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
 
-		assert indexBaseForLine >= 0 && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
+        assert indexBaseForLine >= 0 && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
-		appendToIndex();
-		// System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
-		indexPositionAddr += 8;
-	}
+        appendToIndex();
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
+        indexPositionAddr += 8;
+    }
 
-	private void appendToIndex() {
-		UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
-	}
+    private void appendToIndex() {
+        UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
+    }
 
-	@NotNull
-	@Override
-	public Excerpt toStart() {
-		index = -1;
-		return this;
-	}
+    @NotNull
+    @Override
+    public Excerpt toStart() {
+        index = -1;
+        return this;
+    }
 
-	@NotNull
-	@Override
-	public Excerpt toEnd() {
-		index = chronicle().size();
-		indexForRead(index);
-		return this;
-	}
+    @NotNull
+    @Override
+    public Excerpt toEnd() {
+        index = chronicle().size();
+        indexForRead(index);
+        return this;
+    }
 
-	@Override
-	public boolean nextIndex() {
-		long index2 = index;
-		if (indexForRead(index() + 1)) {
-			return true;
-		} else {
-			// rewind on a failure
-			index = index2;
-		}
-		if (wasPadding()) {
-			index++;
-			return indexForRead(index() + 1);
-		}
-		return false;
-	}
+    @Override
+    public boolean nextIndex() {
+        long index2 = index;
+        if (indexForRead(index() + 1)) {
+            return true;
+        } else {
+            // rewind on a failure
+            index = index2;
+        }
+        if (wasPadding()) {
+            index++;
+            return indexForRead(index() + 1);
+        }
+        return false;
+    }
 }

@@ -16,15 +16,14 @@
 
 package net.openhft.chronicle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import net.openhft.chronicle.tools.ChronicleTools;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.io.IOException;
 
-import net.openhft.chronicle.tools.ChronicleTools;
-
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * User: plawrey
@@ -32,38 +31,38 @@ import org.junit.Test;
  * Time: 17:48
  */
 public class RollingChronicleTest {
-	@Test
-	@Ignore
-	public void testAppending() throws IOException {
-		int counter = 0;
-		String basePath = System.getProperty("java.io.tmpdir") + "/testAppending";
-		ChronicleTools.deleteDirOnExit(basePath);
-		for (int k = 0; k < 15; k++) {
-			if (k == 14)
-				Thread.yield();
-			;
-			RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
-			ExcerptAppender appender = rc.createAppender();
-			assertEquals("k: " + k, (long) counter, appender.size());
-			for (int i = 0; i < 1/* ChronicleConfig.TEST.indexFileExcerpts()/3 */; i++) {
-				appender.startExcerpt(4);
-				appender.writeInt(counter++);
-				appender.finish();
-				assertEquals("k: " + k + ", i: " + i, (long) counter, appender.size());
-			}
-			appender.close();
-			rc.close();
-		}
-		// counter = 8192*2;
+    @Test
+    @Ignore
+    public void testAppending() throws IOException {
+        int counter = 0;
+        String basePath = System.getProperty("java.io.tmpdir") + "/testAppending";
+        ChronicleTools.deleteDirOnExit(basePath);
+        for (int k = 0; k < 15; k++) {
+            if (k == 14)
+                Thread.yield();
+            ;
+            RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
+            ExcerptAppender appender = rc.createAppender();
+            assertEquals("k: " + k, (long) counter, appender.size());
+            for (int i = 0; i < 1/* ChronicleConfig.TEST.indexFileExcerpts()/3 */; i++) {
+                appender.startExcerpt(4);
+                appender.writeInt(counter++);
+                appender.finish();
+                assertEquals("k: " + k + ", i: " + i, (long) counter, appender.size());
+            }
+            appender.close();
+            rc.close();
+        }
+        // counter = 8192*2;
 
-		RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
-		ExcerptTailer tailer = rc.createTailer();
-		for (int i = 0; i < counter; i++) {
-			assertTrue("i: " + i, tailer.nextIndex());
-			assertEquals(i, tailer.readInt());
-			tailer.finish();
-		}
-		rc.close();
+        RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
+        ExcerptTailer tailer = rc.createTailer();
+        for (int i = 0; i < counter; i++) {
+            assertTrue("i: " + i, tailer.nextIndex());
+            assertEquals(i, tailer.readInt());
+            tailer.finish();
+        }
+        rc.close();
 
-	}
+    }
 }

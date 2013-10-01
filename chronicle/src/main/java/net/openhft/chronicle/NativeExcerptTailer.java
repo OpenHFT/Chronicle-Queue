@@ -16,119 +16,119 @@
 
 package net.openhft.chronicle;
 
-import java.io.IOException;
-
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerptTailer extends AbstractNativeExcerpt implements ExcerptTailer {
 
-	public static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
+    public static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
 
-	public NativeExcerptTailer(@NotNull IndexedChronicle chronicle) throws IOException {
-		super(chronicle);
-	}
+    public NativeExcerptTailer(@NotNull IndexedChronicle chronicle) throws IOException {
+        super(chronicle);
+    }
 
-	@Override
-	public boolean index(long l) {
-		return indexForRead(l);
-	}
+    @Override
+    public boolean index(long l) {
+        return indexForRead(l);
+    }
 
-	@NotNull
-	@Override
-	public ExcerptTailer toEnd() {
-		index = chronicle().size();
-		indexForRead(index);
-		return this;
-	}
+    @NotNull
+    @Override
+    public ExcerptTailer toEnd() {
+        index = chronicle().size();
+        indexForRead(index);
+        return this;
+    }
 
-	@NotNull
-	@Override
-	public ExcerptTailer toStart() {
-		super.toStart();
-		return this;
-	}
+    @NotNull
+    @Override
+    public ExcerptTailer toStart() {
+        super.toStart();
+        return this;
+    }
 
-	public boolean nextIndex() {
-		checkNextLine();
-		long offset = UNSAFE.getInt(null, indexPositionAddr);
-		if (offset == 0)
-			offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
-		// System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
-		if (offset == 0) {
-			return false;
-		}
-		index++;
-		return nextIndex0(offset) || nextIndex1();
-	}
+    public boolean nextIndex() {
+        checkNextLine();
+        long offset = UNSAFE.getInt(null, indexPositionAddr);
+        if (offset == 0)
+            offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
+        if (offset == 0) {
+            return false;
+        }
+        index++;
+        return nextIndex0(offset) || nextIndex1();
+    }
 
-	private boolean nextIndex1() {
-		long offset;
-		checkNextLine();
-		offset = UNSAFE.getInt(null, indexPositionAddr);
-		if (offset == 0)
-			offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
-		// System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
-		if (offset == 0) {
-			return false;
-		}
-		index++;
-		return nextIndex0(offset);
-	}
+    private boolean nextIndex1() {
+        long offset;
+        checkNextLine();
+        offset = UNSAFE.getInt(null, indexPositionAddr);
+        if (offset == 0)
+            offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
+        if (offset == 0) {
+            return false;
+        }
+        index++;
+        return nextIndex0(offset);
+    }
 
-	private void checkNextLine() {
-		switch ((int) (indexPositionAddr & cacheLineMask)) {
-		case 0:
-			newIndexLine();
-			// skip the base until we have the offset.
-			indexPositionAddr += 8;
-			break;
-		case 4:
-			throw new AssertionError();
-		}
-	}
+    private void checkNextLine() {
+        switch ((int) (indexPositionAddr & cacheLineMask)) {
+            case 0:
+                newIndexLine();
+                // skip the base until we have the offset.
+                indexPositionAddr += 8;
+                break;
+            case 4:
+                throw new AssertionError();
+        }
+    }
 
-	private void newIndexLine() {
-		if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-			loadNextIndexBuffer();
-		}
-	}
+    private void newIndexLine() {
+        if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
+            loadNextIndexBuffer();
+        }
+    }
 
-	private boolean nextIndex0(long offset) {
-		boolean present = true;
-		padding = (offset < 0);
-		if (padding) {
-			present = false;
-			offset = -offset;
-		}
+    private boolean nextIndex0(long offset) {
+        boolean present = true;
+        padding = (offset < 0);
+        if (padding) {
+            present = false;
+            offset = -offset;
+        }
 
-		checkNewIndexLine2();
-		checkNewDataBlock();
-		startAddr = positionAddr = limitAddr;
-		setLmitAddr(offset);
-		assert limitAddr > startAddr || (!present && limitAddr == startAddr);
-		indexPositionAddr += 4;
-		return present;
-	}
+        checkNewIndexLine2();
+        checkNewDataBlock();
+        startAddr = positionAddr = limitAddr;
+        setLmitAddr(offset);
+        assert limitAddr > startAddr || (!present && limitAddr == startAddr);
+        indexPositionAddr += 4;
+        return present;
+    }
 
-	private void checkNewDataBlock() {
-		if (limitAddr >= dataStartAddr + dataBlockSize)
-			loadNextDataBuffer();
-	}
+    private void checkNewDataBlock() {
+        if (limitAddr >= dataStartAddr + dataBlockSize)
+            loadNextDataBuffer();
+    }
 
-	private void setLmitAddr(long offset) {
-		long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
-		assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "index: " + index + ", offsetInThisBuffer: " + offsetInThisBuffer;
-		limitAddr = dataStartAddr + offsetInThisBuffer;
-	}
+    private void setLmitAddr(long offset) {
+        long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
+        assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "index: " + index + ", offsetInThisBuffer: " + offsetInThisBuffer;
+        limitAddr = dataStartAddr + offsetInThisBuffer;
+    }
 
-	void checkNewIndexLine2() {
-		if ((indexPositionAddr & cacheLineMask) == 8) {
-			indexBaseForLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
-			assert index <= 0 || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
-			setLmitAddr(0);
-		}
-	}
+    void checkNewIndexLine2() {
+        if ((indexPositionAddr & cacheLineMask) == 8) {
+            indexBaseForLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
+            assert index <= 0 || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
+            setLmitAddr(0);
+        }
+    }
 }

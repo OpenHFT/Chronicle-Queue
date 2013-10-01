@@ -22,36 +22,35 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon {
-	/**
-	 * Randomly select an Excerpt.
-	 * 
-	 * @param l
-	 *            index to look up
-	 * @return true if this is a valid entries and not padding.
-	 */
-	boolean index(long l);
+    /**
+     * Randomly select an Excerpt.
+     *
+     * @param l index to look up
+     * @return true if this is a valid entries and not padding.
+     */
+    boolean index(long l);
 
-	/**
-	 * Wind to the next entry, no matter how many padded index entries you need to skip. If there is padding, the
-	 * index() can change even though this method might return false
-	 * 
-	 * @return Is there a valid entry to be read.
-	 */
-	boolean nextIndex();
+    /**
+     * Wind to the next entry, no matter how many padded index entries you need to skip. If there is padding, the
+     * index() can change even though this method might return false
+     *
+     * @return Is there a valid entry to be read.
+     */
+    boolean nextIndex();
 
-	/**
-	 * Replay from the start.
-	 * 
-	 * @return this Excerpt
-	 */
-	@NotNull
-	ExcerptTailer toStart();
+    /**
+     * Replay from the start.
+     *
+     * @return this Excerpt
+     */
+    @NotNull
+    ExcerptTailer toStart();
 
-	/**
-	 * Wind to the end.
-	 * 
-	 * @return this Excerpt
-	 */
-	@NotNull
-	ExcerptTailer toEnd();
+    /**
+     * Wind to the end.
+     *
+     * @return this Excerpt
+     */
+    @NotNull
+    ExcerptTailer toEnd();
 }

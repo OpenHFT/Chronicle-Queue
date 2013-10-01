@@ -16,147 +16,147 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
-
-import org.jetbrains.annotations.NotNull;
 
 /**
  * @author peter.lawrey
  */
 public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
-	public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
-		super(chronicle);
-		toEnd();
-	}
+    public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
+        super(chronicle);
+        toEnd();
+    }
 
-	public void startExcerpt(long capacity) {
-		// in case there is more than one appender :P
-		if (index != size()) {
-			toEnd();
-		}
+    public void startExcerpt(long capacity) {
+        // in case there is more than one appender :P
+        if (index != size()) {
+            toEnd();
+        }
 
-		if (capacity >= chronicle.config.dataBlockSize())
-			throw new IllegalArgumentException("Capacity too large " + capacity + " >= " + chronicle.config.dataBlockSize());
-		// if the capacity is to large, roll the previous entry, and there was one
-		if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
-			// check we are the start of a block.
+        if (capacity >= chronicle.config.dataBlockSize())
+            throw new IllegalArgumentException("Capacity too large " + capacity + " >= " + chronicle.config.dataBlockSize());
+        // if the capacity is to large, roll the previous entry, and there was one
+        if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
+            // check we are the start of a block.
 
-			checkNewIndexLine();
+            checkNewIndexLine();
 
-			writePaddedEntry();
+            writePaddedEntry();
 
-			loadNextDataBuffer();
-		}
+            loadNextDataBuffer();
+        }
 
-		// check we are the start of a block.
-		checkNewIndexLine();
+        // check we are the start of a block.
+        checkNewIndexLine();
 
-		// update the soft limitAddr
-		startAddr = positionAddr;
-		limitAddr = positionAddr + capacity;
-		finished = false;
-	}
+        // update the soft limitAddr
+        startAddr = positionAddr;
+        limitAddr = positionAddr + capacity;
+        finished = false;
+    }
 
-	@Override
-	public void addPaddedEntry() {
-		// in case there is more than one appender :P
-		if (index != lastWrittenIndex()) {
-			toEnd();
-		}
+    @Override
+    public void addPaddedEntry() {
+        // in case there is more than one appender :P
+        if (index != lastWrittenIndex()) {
+            toEnd();
+        }
 
-		// check we are the start of a block.
-		checkNewIndexLine();
+        // check we are the start of a block.
+        checkNewIndexLine();
 
-		writePaddedEntry();
+        writePaddedEntry();
 
-		loadNextDataBuffer();
+        loadNextDataBuffer();
 
-		// check we are the start of a block.
-		checkNewIndexLine();
+        // check we are the start of a block.
+        checkNewIndexLine();
 
-		finished = true;
-	}
+        finished = true;
+    }
 
-	private void writePaddedEntry() {
-		int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
-		assert size >= 0;
-		if (size == 0)
-			return;
-		appendIndexPaddingEntry(size);
-		indexPositionAddr += 4;
-		index++;
-		chronicle.incrSize();
-	}
+    private void writePaddedEntry() {
+        int size = (int) (dataBlockSize + dataStartOffset - indexBaseForLine);
+        assert size >= 0;
+        if (size == 0)
+            return;
+        appendIndexPaddingEntry(size);
+        indexPositionAddr += 4;
+        index++;
+        chronicle.incrSize();
+    }
 
-	private void appendIndexPaddingEntry(int size) {
-		assert index < this.indexEntriesPerLine || UNSAFE.getLong(indexPositionAddr & ~cacheLineMask) != 0 : "index: " + index + ", no start of line set.";
-		UNSAFE.putInt(indexPositionAddr, -size);
-	}
+    private void appendIndexPaddingEntry(int size) {
+        assert index < this.indexEntriesPerLine || UNSAFE.getLong(indexPositionAddr & ~cacheLineMask) != 0 : "index: " + index + ", no start of line set.";
+        UNSAFE.putInt(indexPositionAddr, -size);
+    }
 
-	@Override
-	public void finish() {
-		super.finish();
-		if (index != chronicle.size())
-			throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
-					+ chronicle().size());
+    @Override
+    public void finish() {
+        super.finish();
+        if (index != chronicle.size())
+            throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
+                    + chronicle().size());
 
-		// push out the entry is available. This is what the reader polls.
-		// System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
-		long offsetInBlock = positionAddr - dataStartAddr;
-		assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
-		int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
-		assert relativeOffset > 0;
-		writeIndexEntry(relativeOffset);
-		indexPositionAddr += 4;
-		index++;
-		chronicle.incrSize();
+        // push out the entry is available. This is what the reader polls.
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
+        long offsetInBlock = positionAddr - dataStartAddr;
+        assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
+        int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
+        assert relativeOffset > 0;
+        writeIndexEntry(relativeOffset);
+        indexPositionAddr += 4;
+        index++;
+        chronicle.incrSize();
 
-		if (chronicle.config.synchronousMode()) {
-			dataBuffer.force();
-			indexBuffer.force();
-		}
-	}
+        if (chronicle.config.synchronousMode()) {
+            dataBuffer.force();
+            indexBuffer.force();
+        }
+    }
 
-	private void writeIndexEntry(int relativeOffset) {
-		UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
-	}
+    private void writeIndexEntry(int relativeOffset) {
+        UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
+    }
 
-	@NotNull
-	@Override
-	public ExcerptAppender toEnd() {
-		index = chronicle().size();
-		indexForAppender(index);
-		return this;
-	}
+    @NotNull
+    @Override
+    public ExcerptAppender toEnd() {
+        index = chronicle().size();
+        indexForAppender(index);
+        return this;
+    }
 
-	void checkNewIndexLine() {
-		switch ((int) (indexPositionAddr & cacheLineMask)) {
-		case 0:
-			newIndexLine();
-			break;
-		case 4:
-			throw new AssertionError();
-		}
-	}
+    void checkNewIndexLine() {
+        switch ((int) (indexPositionAddr & cacheLineMask)) {
+            case 0:
+                newIndexLine();
+                break;
+            case 4:
+                throw new AssertionError();
+        }
+    }
 
-	void newIndexLine() {
-		// check we have a valid index
-		if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-			loadNextIndexBuffer();
-		}
-		// sets the base address
-		indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
+    void newIndexLine() {
+        // check we have a valid index
+        if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
+            loadNextIndexBuffer();
+        }
+        // sets the base address
+        indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
 
-		assert (index == 0 || indexBaseForLine > 0) && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
+        assert (index == 0 || indexBaseForLine > 0) && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
-		appendStartOfLine();
+        appendStartOfLine();
 
-	}
+    }
 
-	private void appendStartOfLine() {
-		UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
-		// System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
-		indexPositionAddr += 8;
-	}
+    private void appendStartOfLine() {
+        UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
+        // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
+        indexPositionAddr += 8;
+    }
 }

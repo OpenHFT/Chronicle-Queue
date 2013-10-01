@@ -25,25 +25,25 @@ import java.io.IOException;
  * Time: 18:08
  */
 public class IndexedChronicleCache {
-	private final String basePath;
-	private IndexedChronicle chronicle;
-	private int chronicleIndex = -1;
+    private final String basePath;
+    private IndexedChronicle chronicle;
+    private int chronicleIndex = -1;
 
-	public IndexedChronicleCache(String basePath) {
-		this.basePath = basePath;
-	}
+    public IndexedChronicleCache(String basePath) {
+        this.basePath = basePath;
+    }
 
-	public IndexedChronicle acquireChronicle(int index) throws FileNotFoundException {
-		if (index == chronicleIndex)
-			return chronicle;
-		chronicleIndex = index;
-		String basePath2 = basePath + "/" + index;
-		System.out.println("Opening " + basePath2);
-		return chronicle = new IndexedChronicle(basePath2);
-	}
+    public IndexedChronicle acquireChronicle(int index) throws FileNotFoundException {
+        if (index == chronicleIndex)
+            return chronicle;
+        chronicleIndex = index;
+        String basePath2 = basePath + "/" + index;
+        System.out.println("Opening " + basePath2);
+        return chronicle = new IndexedChronicle(basePath2);
+    }
 
-	public void close() throws IOException {
-		if (chronicle != null)
-			chronicle.close();
-	}
+    public void close() throws IOException {
+        if (chronicle != null)
+            chronicle.close();
+    }
 }
