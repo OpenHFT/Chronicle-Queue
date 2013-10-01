@@ -16,6 +16,8 @@ For working examples, have a look at the unit tests and demo module.
 
 ---
 
+[Chronicle Wiki](https://github.com/OpenHFT/Java-Chronicle/wiki)
+
 [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 
 [Forum for those learning about OpenHFT](https://groups.google.com/forum/?hl=en-GB#!forum/open-hft)
