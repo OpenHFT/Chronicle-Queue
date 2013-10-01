@@ -12,6 +12,11 @@ they need and perform queries without needed to touch the critical system as the
 Chronicle is design to persist messages and replay them in micro-second time.  Simple messages are as low as 0.1 micro-seconds.
 Complex messages might take 10 micro-seconds to write and read.
 
+Chronicle is designed to sustain millions of inserts and updates per second. For burst of up to 10% of your main memory, you can sustain rates of 1 - 3 GB/second written.
+e.g. A laptop with 8 GB of memory might handle bursts of 800 MB at a rate of 1 GB per second.
+A server with 64 GB of memory might handle a burst of 6.5 GB at a rate of 3 GB per second.
+
+
 ## How does it scale?
 
 It scales vertically.  Many distributed systems can scale by adding more boxes.  They are designed to handle between 100 and 1000 transactions per second per node.
@@ -75,6 +80,16 @@ When you read an excerpt, it first checks that index entry is there (the last th
 Finally you must call finish() to perform bounds check.  Chronicle doesn't bounds check every access to reduce runtime overhead.
 
     tailer.finish();
+
+## How is disk space managed?
+A key assumption is that disk space is cheap, or at least it should be.  Some organizations have amazing unrealistic (almost unprofessional) internal charging rates,
+but you should be able to get 100 GB for about one hour of your time.  This assumes retail costs for disk compares with minimum wage.
+The organizational cost of disk is often 10-100x the real cost, but so is your cost to the business.
+
+In essence, disk should be cheap and you can record a week to a month of continuous data on one cheap drive.
+
+Never the less, there is less maintenance overhead if the chronicle logs rote themselves and there is work being done to implement this for Chronicle 2.1.
+ Initially, chronicle files will be rotated when they reach a specific number of entries.
 
 ## I want to store large messages, what is the limit.
 
