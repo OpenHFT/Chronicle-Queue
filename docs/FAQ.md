@@ -135,15 +135,18 @@ An old library called HugeCollections will be resurrected to handle collections 
 
 ## Can I have multiple readers?
 
-You can have multiple independent readers by having a Chronicle per reader.
-An alternative to this is to lock the Chronicle and share it between threads in the same process.
+A given Chronicle can safely have many readers, both inside and outside of the process creating it.
 
-Between processes, you have to have at least one Chronicle for each one you want to read.
+To have multiple readers of a Chronicle, you should generally create a new Chronicle per reader pointing at the same underlying Journal. On each of these Chronicles, you will call createTailer and get a new tailer that can be used to read it. These Tailers should never be shared.
+A less performant option to this is to share a single Chronicle and Tailer and lock access with synchronized or ReentrantLock. Only one Tailer should ever be active at the same time.
+
 
 ## Can I have multiple writers?
-To have multiple writers you need some form of locking.  Either synchronized or ReentrantLock may be suitable.
 
-Between processes, you cannot share a chronicle safely.  It is suggested that each process has its own Chronicles.
+A given Chronicle should only have a single writer. It is not threadsafe for multiple threads to write to the same Chronicle.
+Multiple writers in the same process will cause a performance degradation. If you still want to, you need to use some form of external locking.  Either synchronized or ReentrantLock may be suitable.
+
+You cannot safely write to the same Chronicle from multiple processes.
 
 # Replication
 
