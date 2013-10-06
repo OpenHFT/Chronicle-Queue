@@ -400,4 +400,71 @@ public class IndexedChronicleTest {
         ChronicleTools.deleteOnExit(basePath);
         ChronicleTools.deleteOnExit(basePath2);
     }
+
+    @Test
+    public void testOneAtATime() throws IOException {
+        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        config.indexBlockSize(128); // very small
+        config.dataBlockSize(128);  // very small
+        final String basePath = TMP + "/testOneAtATime";
+        ChronicleTools.deleteOnExit(basePath);
+
+        for (int i = 0; i < 100; i++) {
+            if (i % 10 == 0)
+                System.out.println("i: " + i);
+            IndexedChronicle chronicle = new IndexedChronicle(basePath);
+            if (i == 0) {
+                ExcerptTailer tailer = chronicle.createTailer();
+                assertFalse(tailer.nextIndex());
+                Excerpt excerpt = chronicle.createExcerpt();
+                assertFalse(excerpt.index(0));
+            }
+//            if (i == 13) {
+//                Thread.yield();;
+//            }
+            ExcerptAppender appender = chronicle.createAppender();
+            appender.startExcerpt(100);
+            appender.writeDouble(i);
+            appender.finish();
+//            ChronicleIndexReader.main(basePath+".index");
+
+
+/*
+            ExcerptTailer tailer = chronicle.createTailer();
+            long[] indexes = new long[i+1];
+            long lastIndex = -1;
+            for (int j = 0; j <= i; j++) {
+                assertTrue(tailer.nextIndex());
+                assertTrue(tailer.index() + " > "+lastIndex, tailer.index() > lastIndex);
+                lastIndex = tailer.index();
+                double d = tailer.readDouble();
+                assertEquals(j, d, 0.0);
+                assertEquals(0, tailer.remaining());
+                indexes[j] = tailer.index();
+                tailer.finish();
+            }
+            assertFalse(tailer.nextIndex());
+            Excerpt excerpt = chronicle.createExcerpt();
+            // forward
+            for (int j = 0; j < i; j++) {
+                assertTrue(excerpt.index(indexes[j]));
+                double d = excerpt.readDouble();
+                assertEquals(j, d, 0.0);
+                assertEquals(0, excerpt.remaining());
+                excerpt.finish();
+            }
+            assertFalse(excerpt.index(indexes[indexes.length - 1]+1));
+            // backward
+            for (int j = i - 1; j >= 0; j--) {
+                assertTrue(excerpt.index(indexes[j]));
+                double d = excerpt.readDouble();
+                assertEquals(j, d, 0.0);
+                assertEquals(0, excerpt.remaining());
+                excerpt.finish();
+            }
+            assertFalse(excerpt.index(-1));
+*/
+            chronicle.close();
+        }
+    }
 }

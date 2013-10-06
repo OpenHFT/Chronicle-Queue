@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 
 /**
@@ -70,19 +71,21 @@ public class IndexedChronicle implements Chronicle {
         int indexBlockSize = config.indexBlockSize();
         for (long block = size / indexBlockSize; block >= 0; block--) {
             MappedByteBuffer mbb = indexFileCache.acquireBuffer(block, false);
+            mbb.order(ByteOrder.nativeOrder());
             if (block > 0 && mbb.getLong(0) == 0) {
                 continue;
             }
             int cacheLineSize = config.cacheLineSize();
             for (int pos = 0; pos < indexBlockSize; pos += cacheLineSize) {
-                if (mbb.getLong(pos + cacheLineSize) == 0) {
+                // if the next line is blank
+                if (pos + cacheLineSize >= indexBlockSize || mbb.getLong(pos + cacheLineSize) == 0) {
                     // last cache line.
                     int pos2 = 8;
-                    for (pos2 = 8; pos2 < cacheLineSize - 4; pos += 4) {
+                    for (pos2 = 8; pos2 < cacheLineSize; pos2 += 4) {
                         if (mbb.getInt(pos + pos2) == 0)
                             break;
                     }
-                    return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos / 4 - 1;
+                    return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos2 / 4 - 3;
                 }
             }
             return (block + 1) * indexBlockSize / cacheLineSize * (cacheLineSize / 4 - 2);

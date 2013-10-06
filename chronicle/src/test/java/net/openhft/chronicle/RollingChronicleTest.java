@@ -41,7 +41,7 @@ public class RollingChronicleTest {
             RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
             ExcerptAppender appender = rc.createAppender();
             assertEquals("k: " + k, (long) counter, appender.size());
-            for (int i = 0; i < 1/* ChronicleConfig.TEST.indexFileExcerpts()/3 */; i++) {
+            for (int i = 0; i < ChronicleConfig.TEST.indexFileExcerpts() * 2 / 7; i++) {
                 appender.startExcerpt(4);
                 appender.writeInt(counter++);
                 appender.finish();

@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class PrefetchingMappedFileCache implements MappedFileCache {
     public static final AtomicLong totalWait = new AtomicLong();
-    static final ExecutorService PREFETCHER = Executors.newCachedThreadPool(new NamedThreadFactory("mmap-prefetch", true));
+    static final ExecutorService PREFETCHER = Executors.newSingleThreadExecutor(new NamedThreadFactory("mmap-prefetch", true));
     @Nullable
     private static final IndexedMBB NULL_IMBB = new IndexedMBB(Long.MIN_VALUE, null, -1);
     final String basePath;

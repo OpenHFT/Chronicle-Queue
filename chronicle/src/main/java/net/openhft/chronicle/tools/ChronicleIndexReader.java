@@ -45,11 +45,11 @@ public class ChronicleIndexReader {
                 if (indexStart == 0 && zeros++ > 2) {
                     continue;
                 }
-                System.out.print(HEX ? Long.toHexString(indexStart) : "" + indexStart);
+                System.out.print(HEX ? Long.toHexString(indexStart) : String.valueOf(indexStart));
                 for (int j = i + 8; j < i + 64; j += 4) {
                     System.out.print(' ');
                     int offset = buffer.getInt(j);
-                    System.out.print(HEX ? Integer.toHexString(offset) : "" + offset);
+                    System.out.print(HEX ? Integer.toHexString(offset) : String.valueOf(offset));
                 }
                 System.out.println();
             }

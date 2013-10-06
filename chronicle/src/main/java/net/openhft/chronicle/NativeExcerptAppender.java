@@ -112,6 +112,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         index++;
         chronicle.incrSize();
 
+        if ((indexPositionAddr & cacheLineMask) == 0 && indexPositionAddr - indexStartAddr < indexBlockSize) {
+            indexBaseForLine += relativeOffset;
+            appendStartOfLine();
+        }
+
         if (chronicle.config.synchronousMode()) {
             dataBuffer.force();
             indexBuffer.force();
