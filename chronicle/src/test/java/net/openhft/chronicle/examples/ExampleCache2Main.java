@@ -18,11 +18,15 @@ package net.openhft.chronicle.examples;
 
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.BytesMarshallable;
 import net.openhft.lang.io.IOTools;
+import net.openhft.lang.io.serialization.BytesMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

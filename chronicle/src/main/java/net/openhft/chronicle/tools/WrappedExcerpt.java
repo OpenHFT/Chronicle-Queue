@@ -16,11 +16,15 @@
 
 package net.openhft.chronicle.tools;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.io.ByteStringAppender;
-import net.openhft.lang.io.BytesMarshallerFactory;
 import net.openhft.lang.io.MutableDecimal;
 import net.openhft.lang.io.StopCharTester;
+import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
