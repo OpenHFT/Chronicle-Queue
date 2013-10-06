@@ -274,7 +274,7 @@ public class IndexedChronicleTest {
                         maxJitter = jitter;
                     long delay0 = now - start0;
                     if (delay0 > 100e6)
-                        throw new AssertionError("index: " + r.index());
+                        throw new AssertionError("delay: " + delay0 / 1000000 + ", index: " + r.index());
                     if (i > WARMUP && maxDelay < delay0)
                         maxDelay = delay0;
                     last = now;
