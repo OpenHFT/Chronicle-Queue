@@ -235,7 +235,8 @@ public class IndexedChronicleTest {
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
-        final long words = 500L * 1000 * 1000;
+        // shorten the test for a build server.
+        final long words = 50L * 1000 * 1000;
         final int size = 4;
         long start = System.nanoTime();
         Thread t = new Thread(new Runnable() {
