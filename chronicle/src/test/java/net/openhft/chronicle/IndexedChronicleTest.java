@@ -419,23 +419,19 @@ public class IndexedChronicleTest {
                 Excerpt excerpt = chronicle.createExcerpt();
                 assertFalse(excerpt.index(0));
             }
-//            if (i == 13) {
-//                Thread.yield();;
-//            }
+
             ExcerptAppender appender = chronicle.createAppender();
             appender.startExcerpt(100);
             appender.writeDouble(i);
             appender.finish();
 //            ChronicleIndexReader.main(basePath+".index");
 
-
-/*
             ExcerptTailer tailer = chronicle.createTailer();
-            long[] indexes = new long[i+1];
+            long[] indexes = new long[i + 1];
             long lastIndex = -1;
             for (int j = 0; j <= i; j++) {
                 assertTrue(tailer.nextIndex());
-                assertTrue(tailer.index() + " > "+lastIndex, tailer.index() > lastIndex);
+                assertTrue(tailer.index() + " > " + lastIndex, tailer.index() > lastIndex);
                 lastIndex = tailer.index();
                 double d = tailer.readDouble();
                 assertEquals(j, d, 0.0);
@@ -453,7 +449,7 @@ public class IndexedChronicleTest {
                 assertEquals(0, excerpt.remaining());
                 excerpt.finish();
             }
-            assertFalse(excerpt.index(indexes[indexes.length - 1]+1));
+            assertFalse(excerpt.index(indexes[indexes.length - 1] + 1));
             // backward
             for (int j = i - 1; j >= 0; j--) {
                 assertTrue(excerpt.index(indexes[j]));
@@ -463,7 +459,6 @@ public class IndexedChronicleTest {
                 excerpt.finish();
             }
             assertFalse(excerpt.index(-1));
-*/
             chronicle.close();
         }
     }
