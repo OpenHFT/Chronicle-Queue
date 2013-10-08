@@ -17,7 +17,6 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,16 +31,19 @@ import static net.openhft.lang.Assert.assertTrue;
  */
 public class RollingChronicleTest {
     @Test
-    @Ignore
     public void testAppending() throws IOException {
         int counter = 0;
         String basePath = System.getProperty("java.io.tmpdir") + "/testAppending";
         ChronicleTools.deleteDirOnExit(basePath);
-        for (int k = 0; k < 15; k++) {
-            RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
+        ChronicleConfig test = ChronicleConfig.TEST.clone();
+        test.indexFileExcerpts(256);
+        for (int k = 0; k < 1000; k++) {
+            if (k == 1)
+                Thread.yield();
+            RollingChronicle rc = new RollingChronicle(basePath, test);
             ExcerptAppender appender = rc.createAppender();
             assertEquals("k: " + k, (long) counter, appender.size());
-            for (int i = 0; i < ChronicleConfig.TEST.indexFileExcerpts() * 2 / 7; i++) {
+            for (int i = 0; i < 255 /* ChronicleConfig.TEST.indexFileExcerpts() * 2 / 7 */; i++) {
                 appender.startExcerpt(4);
                 appender.writeInt(counter++);
                 appender.finish();
@@ -49,10 +51,11 @@ public class RollingChronicleTest {
             }
             appender.close();
             rc.close();
+//            ChronicleMasterReader.main(basePath + "/master");
         }
         // counter = 8192*2;
 
-        RollingChronicle rc = new RollingChronicle(basePath, ChronicleConfig.TEST);
+        RollingChronicle rc = new RollingChronicle(basePath, test);
         ExcerptTailer tailer = rc.createTailer();
         for (int i = 0; i < counter; i++) {
             assertTrue("i: " + i, tailer.nextIndex());

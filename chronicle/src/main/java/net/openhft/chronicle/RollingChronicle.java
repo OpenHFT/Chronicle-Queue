@@ -40,13 +40,14 @@ public class RollingChronicle implements Chronicle {
     private final SingleMappedFileCache masterFileCache;
     @NotNull
     private final ByteBuffer masterMBB;
-    private int nextIndex = 0;
+    private int nextIndex;
     private IndexedChronicleCache chronicleCache;
     private long lastWriitenIndex;
 
     public RollingChronicle(@NotNull String basePath, @NotNull ChronicleConfig config) throws FileNotFoundException {
         this.basePath = basePath;
         this.config = config;
+        nextIndex = 0;
         new File(basePath).mkdirs();
 
         masterFileCache = new SingleMappedFileCache(basePath + "/master", config.indexFileCapacity() * 4);
@@ -61,8 +62,8 @@ public class RollingChronicle implements Chronicle {
         for (int i = 0; i < masterMBB.capacity() - 3; i += 4) {
             int used = masterMBB.getInt(i);
             if (used < indexFileExcerpts) {
-                nextIndex = i;
-                lastWriitenIndex = i * indexFileExcerpts + used - 1;
+                nextIndex = i / 4;
+                lastWriitenIndex = (i / 4) * indexFileExcerpts + used - 1;
                 return;
             }
         }
@@ -156,6 +157,7 @@ public class RollingChronicle implements Chronicle {
                 if (newBase != chronicleIndexBase) {
                     chronicleIndexBase = newBase;
                     chronicle = chronicleCache.acquireChronicle(chronicleIndex0);
+                    nextIndex = chronicleIndex0;
                     switch (type) {
                         case Tailer:
                             setExcerpt(chronicle.createTailer());

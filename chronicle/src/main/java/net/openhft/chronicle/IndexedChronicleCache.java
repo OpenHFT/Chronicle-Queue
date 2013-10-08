@@ -38,7 +38,7 @@ public class IndexedChronicleCache {
             return chronicle;
         chronicleIndex = index;
         String basePath2 = basePath + "/" + index;
-        System.out.println("Opening " + basePath2);
+//        System.out.println("Opening " + basePath2);
         return chronicle = new IndexedChronicle(basePath2);
     }
 
