@@ -21,6 +21,7 @@ import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -309,6 +310,70 @@ public class InProcessChronicleTest {
             return true;
         }
     }
+
+    @Test
+    @Ignore
+    public void testOverTCPRolling() throws IOException, InterruptedException {
+        String baseDir = System.getProperty("java.io.tmpdir");
+        String srcBasePath = baseDir + "/IPCTR.testOverTCP.source";
+        ChronicleTools.deleteDirOnExit(srcBasePath);
+        // NOTE: the sink and source must have different chronicle files.
+        // TODO, make more robust.
+        final int messages = 2 * 1000 * 1000;
+        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        config.indexFileExcerpts(512);
+//        config.dataBlockSize(4096);
+//        config.indexBlockSize(4096);
+        final Chronicle source = new InProcessChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+//                    PosixJNAAffinity.INSTANCE.setAffinity(1 << 1);
+                    ExcerptAppender excerpt = source.createAppender();
+                    for (int i = 1; i <= messages; i++) {
+                        // use a size which will cause mis-alignment.
+                        excerpt.startExcerpt(19);
+                        excerpt.writeLong(i);
+                        excerpt.append(' ');
+                        excerpt.append(i);
+                        excerpt.append('\n');
+                        excerpt.finish();
+                    }
+                    System.out.println(System.currentTimeMillis() + ": Finished writing messages");
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            }
+        });
+
+//        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
+        String snkBasePath = baseDir + "/IPCTR.testOverTCP.sink";
+        ChronicleTools.deleteDirOnExit(snkBasePath);
+        Chronicle sink = new InProcessChronicleSink(new RollingChronicle(snkBasePath, config), "localhost", PORT + 1);
+
+        long start = System.nanoTime();
+        t.start();
+        ExcerptTailer excerpt = sink.createTailer();
+        int count = 0;
+        for (int i = 1; i <= messages; i++) {
+            while (!excerpt.nextIndex())
+                count++;
+            long n = excerpt.readLong();
+            String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
+            if (i != n)
+                assertEquals('\'' + text + '\'', i, n);
+            excerpt.finish();
+            System.out.println(i);
+        }
+        sink.close();
+        System.out.println("There were " + count + " isSync messages");
+        t.join();
+        source.close();
+        long time = System.nanoTime() - start;
+        System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+    }
+
 
     static class PriceUpdate implements Externalizable, Serializable {
         private long timeInMicros;

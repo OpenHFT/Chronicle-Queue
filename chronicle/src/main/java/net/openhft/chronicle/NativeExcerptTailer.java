@@ -127,7 +127,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
     void checkNewIndexLine2() {
         if ((indexPositionAddr & cacheLineMask) == 8) {
             indexBaseForLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
-            assert index <= 0 || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
+            assert index <= indexEntriesPerLine || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
             setLmitAddr(0);
         }
     }
