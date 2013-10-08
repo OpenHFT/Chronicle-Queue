@@ -26,7 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.fail;
+import static net.openhft.lang.Assert.fail;
 
 /**
  * @author andrew.bissell
