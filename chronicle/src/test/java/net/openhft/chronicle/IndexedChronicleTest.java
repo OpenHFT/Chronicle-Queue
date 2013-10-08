@@ -95,6 +95,14 @@ public class IndexedChronicleTest {
         assertTrue(tailer.index(0));
         assertFalse(tailer.wasPadding());
 
+        // rewind it to the start - issue # 12
+        assertFalse(tailer.index(-1));
+        assertEquals(-1, tailer.index());
+        assertTrue(tailer.nextIndex());
+        assertFalse(tailer.wasPadding());
+        assertEquals(0, tailer.index());
+        // end of issue # 12;
+
         assertFalse(tailer.nextIndex());
         assertFalse(tailer.wasPadding());
         assertEquals(0, tailer.index());

@@ -90,6 +90,10 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
 
     protected boolean indexForRead(long l) {
         if (l < 0) {
+            indexBuffer = chronicle.indexFileCache.acquireBuffer(0, true);
+            indexStartAddr = ((DirectBuffer) indexBuffer).address();
+            indexPositionAddr = indexStartAddr;
+            index = -1;
             padding = true;
             return false;
         }
