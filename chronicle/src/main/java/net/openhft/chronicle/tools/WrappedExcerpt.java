@@ -16,11 +16,7 @@
 
 package net.openhft.chronicle.tools;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.*;
 import net.openhft.lang.io.ByteStringAppender;
 import net.openhft.lang.io.MutableDecimal;
 import net.openhft.lang.io.StopCharTester;
@@ -197,6 +193,12 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.readUTFΔ();
     }
 
+    @Nullable
+    @Override
+    public String readUTFΔ(long offset) throws IllegalStateException {
+        return common.readUTFΔ(offset);
+    }
+
     @Override
     public boolean readUTFΔ(@NotNull StringBuilder stringBuilder) {
         return common.readUTFΔ(stringBuilder);
@@ -316,6 +318,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public void writeUTFΔ(CharSequence str) {
         common.writeUTFΔ(str);
+    }
+
+    @Override
+    public void writeUTFΔ(long offset, int maxSize, @Nullable CharSequence s) throws IllegalStateException {
+        common.writeUTFΔ(offset, maxSize, s);
     }
 
     @Override
