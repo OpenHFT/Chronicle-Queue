@@ -24,6 +24,9 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
+import org.slf4j.LoggerFactory;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 
 import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -41,10 +44,13 @@ public class ChronicleBundleTest {
 
     @Configuration
     public Option[] config() {
+        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(Level.INFO);
+
         return options(
             //systemProperty("org.osgi.framework.storage").value("/tmp/felix-cache"),
             systemProperty("org.osgi.framework.storage.clean").value("true"),
-            systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("INFO"),
+            systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
             mavenBundle("net.openhft","lang","6.1"),
             mavenBundle("net.openhft","chronicle","2.0.2-SNAPSHOT"),
             junitBundles(),
