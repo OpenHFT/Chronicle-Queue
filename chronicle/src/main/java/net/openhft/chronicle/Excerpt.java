@@ -31,7 +31,8 @@ public interface Excerpt extends ExcerptTailer {
     long findMatch(ExcerptComparator comparator);
 
     /**
-     * Find entries which return a match
+     * Find entries which return a match.  This is a combined search which is usually faster than two binary search.
+     * This doesn't access the same index two. The best case is one additional comparison and the worst case is the same.
      *
      * @param startEnd   start (inclusive) to end (enclusive). Will be equal if no exact match is found.
      * @param comparator to use for comparison.
