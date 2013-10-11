@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle.osgi;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -22,21 +25,19 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import org.slf4j.LoggerFactory;
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 
 import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.ops4j.pax.exam.CoreOptions.cleanCaches;
-import static org.ops4j.pax.exam.CoreOptions.junitBundles;
-import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
-import static org.ops4j.pax.exam.CoreOptions.options;
-import static org.ops4j.pax.exam.CoreOptions.systemPackage;
-import static org.ops4j.pax.exam.CoreOptions.systemProperty;
+import static org.ops4j.pax.exam.CoreOptions.*;
 
+/**
+ * @author lburgazzoli
+ *         <p/>
+ *         Thank for adding OSGi testing to Chronicle.
+ */
 @RunWith(PaxExam.class)
 public class ChronicleBundleTest {
     @Inject
@@ -48,15 +49,15 @@ public class ChronicleBundleTest {
         root.setLevel(Level.INFO);
 
         return options(
-            //systemProperty("org.osgi.framework.storage").value("/tmp/felix-cache"),
-            systemProperty("org.osgi.framework.storage.clean").value("true"),
-            systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
-            mavenBundle("net.openhft","lang","6.1"),
-            mavenBundle("net.openhft","chronicle","2.0.2-SNAPSHOT"),
-            junitBundles(),
-            systemPackage("sun.misc"),
-            systemPackage("sun.nio.ch"),
-            cleanCaches()
+                //systemProperty("org.osgi.framework.storage").value("/tmp/felix-cache"),
+                systemProperty("org.osgi.framework.storage.clean").value("true"),
+                systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
+                mavenBundle("net.openhft", "lang", "6.1"),
+                mavenBundle("net.openhft", "chronicle", "2.0.2-SNAPSHOT"),
+                junitBundles(),
+                systemPackage("sun.misc"),
+                systemPackage("sun.nio.ch"),
+                cleanCaches()
         );
     }
 
