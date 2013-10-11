@@ -8,3 +8,6 @@
 # IntelliJ
 *.iml
 .idea
+
+# maven
+target
