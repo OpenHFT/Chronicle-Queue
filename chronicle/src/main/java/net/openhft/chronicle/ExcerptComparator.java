@@ -16,31 +16,16 @@
 
 package net.openhft.chronicle;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.io.Closeable;
-import java.io.IOException;
-
 /**
- * @author peter.lawrey
+ * For a binary search, provide a comparison of Excerpts
  */
-public interface Chronicle extends Closeable {
-    String name();
-
-    @NotNull
-    Excerpt createExcerpt() throws IOException;
-
-    @NotNull
-    ExcerptTailer createTailer() throws IOException;
-
-    @NotNull
-    ExcerptAppender createAppender() throws IOException;
-
-    long lastWrittenIndex();
-
-    long size();
-
-    ChronicleConfig config();
-
-
+public interface ExcerptComparator {
+    /**
+     * Given some criteria, deterime if the entry is -1 = below range, +1 = above range and 0 in range
+     * Can be used for exact matches or a range of values.
+     *
+     * @param excerpt to check
+     * @return -1 below, 0 = in range, +1 above range.
+     */
+    int compare(Excerpt excerpt);
 }

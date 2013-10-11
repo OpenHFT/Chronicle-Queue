@@ -222,4 +222,5 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
     }
 
+
 }

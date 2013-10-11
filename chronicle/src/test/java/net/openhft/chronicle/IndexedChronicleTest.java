@@ -23,8 +23,9 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -64,6 +65,19 @@ public class IndexedChronicleTest {
         r.position(expected);
 
         r.finish();
+    }
+
+    private static void testSearchRange(List<Integer> ints, Excerpt excerpt, MyExcerptComparator mec, long[] startEnd) {
+        int elo = Collections.binarySearch(ints, mec.lo);
+        if (elo < 0) elo = ~elo;
+        int ehi = Collections.binarySearch(ints, mec.hi);
+        if (ehi < 0)
+            ehi = ~ehi;
+        else ehi++;
+        excerpt.findRange(startEnd, mec);
+        assertEquals("lo: " + mec.lo + ", hi: " + mec.hi,
+                "[" + elo + ", " + ehi + "]",
+                Arrays.toString(startEnd));
     }
 
     @Test
@@ -360,7 +374,12 @@ public class IndexedChronicleTest {
                 try {
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptTailer r = chronicle.createTailer();
-                    IndexedChronicle chronicle2 = new IndexedChronicle(basePath2, config);
+                    IndexedChronicle chronicle2 = null;
+                    try {
+                        chronicle2 = new IndexedChronicle(basePath2, config);
+                    } catch (FileNotFoundException e) {
+                        System.in.read();
+                    }
                     final ExcerptAppender w = chronicle2.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         do {
@@ -469,6 +488,85 @@ public class IndexedChronicleTest {
             }
             assertFalse(excerpt.index(-1));
             chronicle.close();
+        }
+    }
+
+    @Test
+    public void testFindRange() throws IOException {
+        final String basePath = TMP + "/testFindRange";
+        ChronicleTools.deleteOnExit(basePath);
+
+        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        ExcerptAppender appender = chronicle.createAppender();
+        List<Integer> ints = new ArrayList<Integer>();
+        for (int i = 0; i < 1000; i += 10) {
+            appender.startExcerpt(4);
+            appender.writeInt(i);
+            appender.finish();
+            ints.add(i);
+        }
+        Excerpt excerpt = chronicle.createExcerpt();
+        final MyExcerptComparator mec = new MyExcerptComparator();
+        // exact matches at a the start
+
+        mec.lo = mec.hi = -1;
+        assertEquals(~0, excerpt.findExact(mec));
+        mec.lo = mec.hi = 0;
+        assertEquals(0, excerpt.findExact(mec));
+        mec.lo = mec.hi = 9;
+        assertEquals(~1, excerpt.findExact(mec));
+        mec.lo = mec.hi = 10;
+        assertEquals(1, excerpt.findExact(mec));
+
+        // exact matches at a the end
+        mec.lo = mec.hi = 980;
+        assertEquals(98, excerpt.findExact(mec));
+        mec.lo = mec.hi = 981;
+        assertEquals(~99, excerpt.findExact(mec));
+        mec.lo = mec.hi = 990;
+        assertEquals(99, excerpt.findExact(mec));
+        mec.lo = mec.hi = 1000;
+        assertEquals(~100, excerpt.findExact(mec));
+
+
+        // range match near the start
+        long[] startEnd = new long[2];
+
+        mec.lo = 0;
+        mec.hi = 3;
+        excerpt.findRange(startEnd, mec);
+        assertEquals("[0, 1]", Arrays.toString(startEnd));
+
+        mec.lo = 21;
+        mec.hi = 29;
+        excerpt.findRange(startEnd, mec);
+        assertEquals("[3, 3]", Arrays.toString(startEnd));
+
+        /*
+        mec.lo = 129;
+        mec.hi = 631;
+        testSearchRange(ints, excerpt, mec, startEnd);
+*/
+        Random rand = new Random(1);
+        for (int i = 0; i < 1000; i++) {
+            int x = rand.nextInt(1010) - 5;
+            int y = rand.nextInt(1010) - 5;
+            mec.lo = Math.min(x, y);
+            mec.hi = Math.max(x, y);
+            testSearchRange(ints, excerpt, mec, startEnd);
+        }
+
+        chronicle.close();
+
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
         }
     }
 }

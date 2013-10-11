@@ -37,7 +37,7 @@ public class RollingChronicleTest {
         ChronicleTools.deleteDirOnExit(basePath);
         ChronicleConfig test = ChronicleConfig.TEST.clone();
         test.indexFileExcerpts(256);
-        for (int k = 0; k < 1000; k++) {
+        for (int k = 0; k < 10000; k++) {
             if (k == 1)
                 Thread.yield();
             RollingChronicle rc = new RollingChronicle(basePath, test);

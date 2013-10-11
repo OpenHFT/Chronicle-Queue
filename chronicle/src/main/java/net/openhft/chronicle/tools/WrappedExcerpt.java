@@ -1008,4 +1008,14 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     public double addAtomicDouble(long offset, double d) {
         return common.addAtomicDouble(offset, d);
     }
+
+    @Override
+    public long findExact(ExcerptComparator comparator) {
+        return excerpt.findExact(comparator);
+    }
+
+    @Override
+    public void findRange(long[] startEnd, ExcerptComparator comparator) {
+        excerpt.findRange(startEnd, comparator);
+    }
 }

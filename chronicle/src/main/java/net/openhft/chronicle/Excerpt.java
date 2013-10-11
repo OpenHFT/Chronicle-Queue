@@ -23,6 +23,23 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface Excerpt extends ExcerptTailer {
     /**
+     * Find an entry which return a match, or a negative value which is the boundary between -1 and +1
+     *
+     * @param comparator to use for comparison.
+     * @return 0 to size()-1 for a match, -1 to -size()-1 for index of closest match
+     */
+    long findExact(ExcerptComparator comparator);
+
+
+    /**
+     * Find entries which return a match
+     *
+     * @param startEnd   start (inclusive) to end (enclusive). Will be equal if no exact match is found.
+     * @param comparator to use for comparison.
+     */
+    void findRange(long[] startEnd, ExcerptComparator comparator);
+
+    /**
      * Randomly select an Excerpt.
      *
      * @param l index to look up
