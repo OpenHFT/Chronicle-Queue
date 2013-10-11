@@ -26,7 +26,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Random;
 
-import static net.openhft.lang.Assert.*;
+import static org.junit.Assert.*;
 
 /**
  * @author peter.lawrey

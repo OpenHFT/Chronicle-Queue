@@ -853,8 +853,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public boolean compareAndSetInt(long offset, int expected, int x) {
-        return common.compareAndSetInt(offset, expected, x);
+    public boolean compareAndSwapInt(long offset, int expected, int x) {
+        return common.compareAndSwapInt(offset, expected, x);
     }
 
     @Override
@@ -878,8 +878,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public boolean compareAndSetLong(long offset, long expected, long x) {
-        return common.compareAndSetLong(offset, expected, x);
+    public boolean compareAndSwapLong(long offset, long expected, long x) {
+        return common.compareAndSwapLong(offset, expected, x);
     }
 
     @Override
@@ -922,5 +922,90 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public void unlockInt(long offset) throws IllegalStateException {
         common.unlockInt(offset);
+    }
+
+    @Override
+    public float readVolatileFloat(long offset) {
+        return common.readVolatileFloat(offset);
+    }
+
+    @Override
+    public double readVolatileDouble(long offset) {
+        return common.readVolatileDouble(offset);
+    }
+
+    @Override
+    public void writeOrderedFloat(long offset, float v) {
+        common.writeOrderedFloat(offset, v);
+    }
+
+    @Override
+    public void writeOrderedDouble(long offset, double v) {
+        common.writeOrderedDouble(offset, v);
+    }
+
+    @Override
+    public byte addByte(long offset, byte b) {
+        return common.addByte(offset, b);
+    }
+
+    @Override
+    public int addUnsignedByte(long offset, int i) {
+        return common.addUnsignedByte(offset, i);
+    }
+
+    @Override
+    public short addShort(long offset, short s) {
+        return common.addShort(offset, s);
+    }
+
+    @Override
+    public int addUnsignedShort(long offset, int i) {
+        return common.addUnsignedShort(offset, i);
+    }
+
+    @Override
+    public int addInt(long offset, int i) {
+        return common.addInt(offset, i);
+    }
+
+    @Override
+    public long addUnsignedInt(long offset, long i) {
+        return common.addUnsignedInt(offset, i);
+    }
+
+    @Override
+    public long addLong(long offset, long i) {
+        return common.addLong(offset, i);
+    }
+
+    @Override
+    public float addFloat(long offset, float f) {
+        return addFloat(offset, f);
+    }
+
+    @Override
+    public double addDouble(long offset, double d) {
+        return common.addDouble(offset, d);
+    }
+
+    @Override
+    public int addAtomicInt(long offset, int i) {
+        return common.addAtomicInt(offset, i);
+    }
+
+    @Override
+    public long addAtomicLong(long offset, long l) {
+        return common.addAtomicLong(offset, l);
+    }
+
+    @Override
+    public float addAtomicFloat(long offset, float f) {
+        return common.addAtomicFloat(offset, f);
+    }
+
+    @Override
+    public double addAtomicDouble(long offset, double d) {
+        return common.addAtomicDouble(offset, d);
     }
 }

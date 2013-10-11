@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static net.openhft.lang.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author peter.lawrey
