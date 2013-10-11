@@ -40,7 +40,7 @@ public class IndexedChronicleTest {
     public static final String TMP = System.getProperty("java.io.tmpdir");
     private static final long WARMUP = 20000;
 
-    private static void validateExcerpt(@NotNull ExcerptCommon r, int i, int expected) {
+    static void validateExcerpt(@NotNull ExcerptCommon r, int i, int expected) {
         if (expected > r.remaining() || 8 * expected < r.remaining())
             assertEquals("index: " + r.index(), expected, r.remaining());
         if (expected > r.capacity() || 8 * expected < r.capacity())
@@ -67,7 +67,7 @@ public class IndexedChronicleTest {
         r.finish();
     }
 
-    private static void testSearchRange(List<Integer> ints, Excerpt excerpt, MyExcerptComparator mec, long[] startEnd) {
+    static void testSearchRange(List<Integer> ints, Excerpt excerpt, MyExcerptComparator mec, long[] startEnd) {
         int elo = Collections.binarySearch(ints, mec.lo);
         if (elo < 0) elo = ~elo;
         int ehi = Collections.binarySearch(ints, mec.hi);
@@ -510,23 +510,23 @@ public class IndexedChronicleTest {
         // exact matches at a the start
 
         mec.lo = mec.hi = -1;
-        assertEquals(~0, excerpt.findExact(mec));
+        assertEquals(~0, excerpt.findMatch(mec));
         mec.lo = mec.hi = 0;
-        assertEquals(0, excerpt.findExact(mec));
+        assertEquals(0, excerpt.findMatch(mec));
         mec.lo = mec.hi = 9;
-        assertEquals(~1, excerpt.findExact(mec));
+        assertEquals(~1, excerpt.findMatch(mec));
         mec.lo = mec.hi = 10;
-        assertEquals(1, excerpt.findExact(mec));
+        assertEquals(1, excerpt.findMatch(mec));
 
         // exact matches at a the end
         mec.lo = mec.hi = 980;
-        assertEquals(98, excerpt.findExact(mec));
+        assertEquals(98, excerpt.findMatch(mec));
         mec.lo = mec.hi = 981;
-        assertEquals(~99, excerpt.findExact(mec));
+        assertEquals(~99, excerpt.findMatch(mec));
         mec.lo = mec.hi = 990;
-        assertEquals(99, excerpt.findExact(mec));
+        assertEquals(99, excerpt.findMatch(mec));
         mec.lo = mec.hi = 1000;
-        assertEquals(~100, excerpt.findExact(mec));
+        assertEquals(~100, excerpt.findMatch(mec));
 
 
         // range match near the start
@@ -561,6 +561,7 @@ public class IndexedChronicleTest {
     }
 
     static class MyExcerptComparator implements ExcerptComparator {
+
         int lo, hi;
 
         @Override
@@ -568,5 +569,6 @@ public class IndexedChronicleTest {
             final int x = excerpt.readInt();
             return x < lo ? -1 : x > hi ? +1 : 0;
         }
+
     }
 }

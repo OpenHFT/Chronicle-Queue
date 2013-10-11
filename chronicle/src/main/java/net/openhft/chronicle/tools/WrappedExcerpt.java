@@ -1010,8 +1010,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public long findExact(ExcerptComparator comparator) {
-        return excerpt.findExact(comparator);
+    public long findMatch(ExcerptComparator comparator) {
+        return excerpt.findMatch(comparator);
     }
 
     @Override

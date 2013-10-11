@@ -140,7 +140,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     }
 
     @Override
-    public long findExact(ExcerptComparator comparator) {
+    public long findMatch(ExcerptComparator comparator) {
         long lo = 0, hi = lastWrittenIndex();
         while (lo <= hi) {
             long mid = (hi + lo) >>> 1;
