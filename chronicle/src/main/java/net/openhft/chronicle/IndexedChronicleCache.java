@@ -20,7 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
- * User: plawrey
+ * User: peter.lawrey
  * Date: 26/09/13
  * Time: 18:08
  */

@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * User: peter Date: 17/08/13 Time: 14:58
+ * User: peter.lawrey Date: 17/08/13 Time: 14:58
  */
 public class PrefetchingMappedFileCache implements MappedFileCache {
     public static final AtomicLong totalWait = new AtomicLong();

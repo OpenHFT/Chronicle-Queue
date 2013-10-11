@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * User: plawrey
+ * User: peter.lawrey
  * Date: 26/09/13
  * Time: 17:19
  */

@@ -25,7 +25,7 @@ import java.io.IOException;
 /**
  * Display records in a Chronicle in a text form.
  *
- * @author peterlawrey
+ * @author peter.lawrey
  */
 public enum ChronicleReader {
     ;

@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.PrintStream;
 
 /**
- * User: peter Date: 30/06/13 Time: 13:13
+ * User: peter.lawrey Date: 30/06/13 Time: 13:13
  */
 public class MicroJitterSampler {
 

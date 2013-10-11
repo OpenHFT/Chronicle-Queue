@@ -24,7 +24,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 /**
- * User: peter Date: 16/08/13 Time: 12:30
+ * User: peter.lawrey Date: 16/08/13 Time: 12:30
  */
 public class ChronicleMasterReader {
     static final boolean HEX = Boolean.getBoolean("hex");
