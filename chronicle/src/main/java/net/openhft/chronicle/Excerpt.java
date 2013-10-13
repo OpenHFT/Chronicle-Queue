@@ -28,7 +28,7 @@ public interface Excerpt extends ExcerptTailer {
      * @param comparator to use for comparison.
      * @return 0 to size()-1 for a match, -1 to -size()-1 for index of closest match
      */
-    long findMatch(ExcerptComparator comparator);
+    long findMatch(@NotNull ExcerptComparator comparator);
 
     /**
      * Find entries which return a match.  This is a combined search which is usually faster than two binary search.
@@ -37,7 +37,7 @@ public interface Excerpt extends ExcerptTailer {
      * @param startEnd   start (inclusive) to end (enclusive). Will be equal if no exact match is found.
      * @param comparator to use for comparison.
      */
-    void findRange(long[] startEnd, ExcerptComparator comparator);
+    void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator);
 
     /**
      * Randomly select an Excerpt.

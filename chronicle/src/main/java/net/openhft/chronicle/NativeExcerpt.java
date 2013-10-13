@@ -140,7 +140,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     }
 
     @Override
-    public long findMatch(ExcerptComparator comparator) {
+    public long findMatch(@NotNull ExcerptComparator comparator) {
         long lo = 0, hi = lastWrittenIndex();
         while (lo <= hi) {
             long mid = (hi + lo) >>> 1;
@@ -163,7 +163,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     }
 
     @Override
-    public void findRange(long[] startEnd, ExcerptComparator comparator) {
+    public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         // lower search range
         long lo1 = 0, hi1 = lastWrittenIndex();
         // upper search range

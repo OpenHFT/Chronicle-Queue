@@ -1010,12 +1010,12 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public long findMatch(ExcerptComparator comparator) {
+    public long findMatch(@NotNull ExcerptComparator comparator) {
         return excerpt.findMatch(comparator);
     }
 
     @Override
-    public void findRange(long[] startEnd, ExcerptComparator comparator) {
+    public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         excerpt.findRange(startEnd, comparator);
     }
 }
