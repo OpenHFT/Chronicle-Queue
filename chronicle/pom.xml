@@ -22,7 +22,7 @@
 
     <groupId>net.openhft</groupId>
     <artifactId>chronicle</artifactId>
-    <version>2.0.2-SNAPSHOT</version>
+    <version>2.0.2</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle</name>
@@ -39,7 +39,7 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
-            <version>6.1.1-SNAPSHOT</version>
+            <version>6.1.1</version>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -111,7 +111,7 @@
             <version>0.9.6</version>
             <scope>test</scope>
         </dependency>
-                
+
         <!-- on linux install with sudo apt-get install libjna-java -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
