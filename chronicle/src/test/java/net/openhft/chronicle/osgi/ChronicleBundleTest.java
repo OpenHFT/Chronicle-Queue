@@ -53,7 +53,7 @@ public class ChronicleBundleTest {
                 systemProperty("org.osgi.framework.storage.clean").value("true"),
                 systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
                 mavenBundle("net.openhft", "lang", "6.1"),
-                mavenBundle("net.openhft", "chronicle", "2.0.2-SNAPSHOT"),
+                mavenBundle("net.openhft", "chronicle", "2.1-SNAPSHOT"),
                 junitBundles(),
                 systemPackage("sun.misc"),
                 systemPackage("sun.nio.ch"),
