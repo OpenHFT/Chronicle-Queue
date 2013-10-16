@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -170,7 +171,6 @@ public class IndexedChronicleTest {
 
         chronicle1.close();
         chronicle2.close();
-
     }
 
     @Test
@@ -571,4 +571,31 @@ public class IndexedChronicleTest {
         }
 
     }
+
+    @Test
+    public void testParseLines() throws IOException {
+        final String basePath = TMP + "/testParseLines";
+        ChronicleTools.deleteOnExit(basePath);
+
+        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        ExcerptAppender appender = chronicle.createAppender();
+
+        int runs = 10000;
+        for (int i = 0; i < runs; i++) {
+            appender.startExcerpt();
+            appender.append("Hello world ").append(i).append("\n");
+            appender.finish();
+        }
+
+        ExcerptTailer tailer = chronicle.createTailer();
+        for (int i = 0; i < runs; i++) {
+            assertTrue(tailer.nextIndex());
+            String s = tailer.parseUTF(StopCharTesters.CONTROL_STOP);
+//            System.out.println(s);
+            assertEquals("Hello world " + i, s);
+            tailer.finish();
+        }
+        chronicle.close();
+    }
+
 }
