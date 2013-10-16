@@ -30,6 +30,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         toEnd();
     }
 
+    @Override
+    public void startExcerpt() {
+        startExcerpt(chronicle.config().messageCapacity());
+    }
+
     public void startExcerpt(long capacity) {
         // in case there is more than one appender :P
         if (index != size()) {

@@ -92,6 +92,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public void startExcerpt() {
+        appender.startExcerpt();
+    }
+
+    @Override
     public void startExcerpt(long capacity) {
         appender.startExcerpt(capacity);
     }

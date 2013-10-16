@@ -33,7 +33,7 @@ public class TestManyUpdatesMain {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         int count = 10 * 1000 * 1000;
         for (ExcerptAppender e = chronicle.createAppender(); e.index() < count; ) {
-            e.startExcerpt(100);
+            e.startExcerpt();
             e.appendTimeMillis(System.currentTimeMillis());
             e.append(", id=").append(e.index());
             e.append(", name=lyj").append(e.index());

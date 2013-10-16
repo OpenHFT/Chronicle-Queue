@@ -33,7 +33,7 @@ public class Gw2PeWriter implements Gw2PeEvents {
 
     @Override
     public void small(MetaData ignored, @NotNull SmallCommand command) {
-        excerpt.startExcerpt(200); // guess the maximum size (or calculate it)
+        excerpt.startExcerpt();
         excerpt.writeEnum(MessageType.small);
         MetaData.writeForGateway(excerpt);
         command.writeMarshallable(excerpt);

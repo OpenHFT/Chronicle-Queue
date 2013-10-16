@@ -49,7 +49,7 @@ public class ChainedInProcessChronicleTest {
         ExcerptTailer excerpt3 = sink3.createTailer();
 
         for (int i = 1; i < 20; i++) {
-            excerpt1.startExcerpt(8);
+            excerpt1.startExcerpt();
             excerpt1.writeLong(System.nanoTime());
             excerpt1.finish();
 

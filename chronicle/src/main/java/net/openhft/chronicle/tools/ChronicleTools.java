@@ -167,7 +167,7 @@ class ChronicleWarmup {
             ExcerptAppender appender = ic.createAppender();
             ExcerptTailer tailer = ic.createTailer();
             for (int i = 0; i < WARMUP_ITER; i++) {
-                appender.startExcerpt(4);
+                appender.startExcerpt();
                 appender.writeInt(i);
                 appender.finish();
                 boolean b = tailer.nextIndex() || tailer.nextIndex();

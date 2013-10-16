@@ -59,7 +59,7 @@ public class InProcessChronicleTest {
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
-                        excerpt.startExcerpt(19);
+                        excerpt.startExcerpt();
                         excerpt.writeLong(i);
                         excerpt.append(' ');
                         excerpt.append(i);
@@ -268,7 +268,7 @@ public class InProcessChronicleTest {
 
         @Override
         public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
-            excerpt.startExcerpt(1 + 8 + (2 + symbol.length()) + 8 + 4 + 8 + 4);
+            excerpt.startExcerpt();
             excerpt.writeByte('P'); // code for a price
             excerpt.writeLong(timeInMicros);
             excerpt.writeEnum(symbol);
@@ -333,7 +333,7 @@ public class InProcessChronicleTest {
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
-                        excerpt.startExcerpt(19);
+                        excerpt.startExcerpt();
                         excerpt.writeLong(i);
                         excerpt.append(' ');
                         excerpt.append(i);

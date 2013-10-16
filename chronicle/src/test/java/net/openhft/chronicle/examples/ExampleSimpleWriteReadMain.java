@@ -53,7 +53,7 @@ public class ExampleSimpleWriteReadMain {
                     long next = System.nanoTime();
                     for (int i = 1; i <= runs; i++) {
                         double v = random.nextDouble();
-                        excerpt.startExcerpt(25);
+                        excerpt.startExcerpt();
                         excerpt.writeUnsignedByte('M'); // message type
                         excerpt.writeLong(next); // write time stamp
                         excerpt.writeLong(0L); // read time stamp

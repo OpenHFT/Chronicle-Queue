@@ -20,6 +20,7 @@ import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -61,7 +62,7 @@ public class IndexedChronicle1Test {
         int objects = 1000000;
         long start = System.nanoTime();
         for (int i = 0; i < objects; i++) {
-            appender.startExcerpt(28);
+            appender.startExcerpt();
             appender.writeObject(BigDecimal.valueOf(i % 1000));
             appender.finish();
         }
@@ -106,7 +107,7 @@ public class IndexedChronicle1Test {
 
         int counter = 1;
         for (int i = 0; i < 1024; i++) {
-            excerpt.startExcerpt(129);
+            excerpt.startExcerpt();
             for (int j = 0; j < 128; j += 8)
                 excerpt.writeLong(counter++);
             excerpt.write(-1);
@@ -145,7 +146,7 @@ public class IndexedChronicle1Test {
 //        tsc.clear();
         ExcerptAppender excerpt = tsc.createAppender();
         for (int i = 0; i < 512; i++) {
-            excerpt.startExcerpt(1);
+            excerpt.startExcerpt();
             excerpt.writeByte(1);
             excerpt.finish();
         }
@@ -159,6 +160,7 @@ public class IndexedChronicle1Test {
     }
 
     @Test
+    @Ignore
     public void testTimeTenMillion() throws IOException {
         int repeats = 3;
         for (int j = 0; j < repeats; j++) {
@@ -172,7 +174,7 @@ public class IndexedChronicle1Test {
 //                ic.clear();
                 ExcerptAppender excerpt = ic.createAppender();
                 for (int i = 1; i <= records; i++) {
-                    excerpt.startExcerpt(16);
+                    excerpt.startExcerpt();
                     excerpt.writeLong(i);
                     excerpt.writeDouble(i);
                     excerpt.finish();
@@ -215,7 +217,7 @@ public class IndexedChronicle1Test {
 //        tsc.useUnsafe(false);
 
         ExcerptAppender excerpt = tsc.createAppender();
-        excerpt.startExcerpt(2);
+        excerpt.startExcerpt();
         excerpt.writeBoolean(false);
         excerpt.writeBoolean(true);
         excerpt.finish();
@@ -244,7 +246,7 @@ public class IndexedChronicle1Test {
             long[] longs = {Long.MIN_VALUE, Integer.MIN_VALUE, Short.MIN_VALUE, Character.MIN_VALUE, Byte.MIN_VALUE,
                     Long.MAX_VALUE, Integer.MAX_VALUE, Short.MAX_VALUE, Character.MAX_CODE_POINT, Character.MAX_VALUE, Byte.MAX_VALUE};
             for (long l : longs) {
-                writer.startExcerpt(12);
+                writer.startExcerpt();
                 writer.writeChar('T');
                 writer.writeStopBit(l);
                 writer.finish();
@@ -288,7 +290,7 @@ public class IndexedChronicle1Test {
 //        tsc.clear();
 
         ExcerptAppender excerpt = tsc.createAppender();
-        excerpt.startExcerpt(42);
+        excerpt.startExcerpt();
         excerpt.writeEnum(AccessMode.EXECUTE);
         excerpt.writeEnum(AccessMode.READ);
         excerpt.writeEnum(AccessMode.WRITE);

@@ -31,7 +31,7 @@ public class Pe2GwWriter implements Pe2GwEvents {
 
     @Override
     public void report(@NotNull MetaData metaData, @NotNull SmallReport smallReport) {
-        excerpt.startExcerpt(200); // a guess to be lazy.
+        excerpt.startExcerpt();
         excerpt.writeEnum(MessageType.report);
         metaData.writeForEngine(excerpt);
         smallReport.writeMarshallable(excerpt);

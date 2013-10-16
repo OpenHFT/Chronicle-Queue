@@ -201,7 +201,7 @@ public class IndexedChronicleTest {
                 assertFalse("i: " + i, e.index(idx));
                 int capacity = 16 * (1 + rand.nextInt(7));
 
-                w.startExcerpt(capacity);
+                w.startExcerpt();
                 assertEquals(0, w.position());
                 w.writeLong(i);
                 assertEquals(8, w.position());
@@ -268,7 +268,7 @@ public class IndexedChronicleTest {
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < words; i += size) {
-                        w.startExcerpt(4L * size);
+                        w.startExcerpt();
                         for (int s = 0; s < size; s++)
                             w.writeInt(1 + i);
 //                        w.position(4L * size);
@@ -354,7 +354,7 @@ public class IndexedChronicleTest {
                     IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
-                        w.startExcerpt(4 * size);
+                        w.startExcerpt();
                         for (int s = 0; s < size; s++)
                             w.writeInt(1 + i);
                         w.finish();
@@ -385,7 +385,7 @@ public class IndexedChronicleTest {
                         do {
                         } while (!r.nextIndex());
 
-                        w.startExcerpt(r.remaining());
+                        w.startExcerpt();
                         for (int s = 0; s < size; s++)
                             w.writeInt(r.readInt());
                         r.finish();
@@ -449,7 +449,7 @@ public class IndexedChronicleTest {
             }
 
             ExcerptAppender appender = chronicle.createAppender();
-            appender.startExcerpt(100);
+            appender.startExcerpt();
             appender.writeDouble(i);
             appender.finish();
 //            ChronicleIndexReader.main(basePath+".index");
@@ -500,7 +500,7 @@ public class IndexedChronicleTest {
         ExcerptAppender appender = chronicle.createAppender();
         List<Integer> ints = new ArrayList<Integer>();
         for (int i = 0; i < 1000; i += 10) {
-            appender.startExcerpt(4);
+            appender.startExcerpt();
             appender.writeInt(i);
             appender.finish();
             ints.add(i);

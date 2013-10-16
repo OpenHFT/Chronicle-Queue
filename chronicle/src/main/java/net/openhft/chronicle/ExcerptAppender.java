@@ -23,6 +23,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface ExcerptAppender extends ExcerptCommon {
     /**
+     * Start an excerpt with the default message capacity of 128K (can be configured)
+     * This can waste up to 0.1% of disk space, unless you have sparse file support like Linux, when you will waste far less.
+     */
+    void startExcerpt();
+
+    /**
      * Ensure there is enough capacity for a new entry of up to the size given.  If there is not enough space left in
      * the chunk of memory mapped file, a padded entry is added and a new entry at the start of a new chunk is
      * commenced.  The capacity can be more than you need as finish() will shrink wrap the entry.  It is onl a waste if

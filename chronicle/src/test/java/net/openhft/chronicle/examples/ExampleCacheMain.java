@@ -50,7 +50,11 @@ public class ExampleCacheMain {
             return -1L;
         }
     };
-    private int _maxObjSize;
+    private final int _maxObjSize;
+
+    public ExampleCacheMain(String basePath) throws IOException {
+        this(basePath, 128 * 1024);
+    }
 
     public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
