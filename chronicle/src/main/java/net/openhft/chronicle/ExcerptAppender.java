@@ -50,4 +50,16 @@ public interface ExcerptAppender extends ExcerptCommon {
      * Add a padded entry to keep the index in sync with a master source.
      */
     void addPaddedEntry();
+
+    /**
+     * The default value is ChronicleConfig.synchronousMode()
+     *
+     * @return will the next write be synchronous
+     */
+    boolean nextSynchronous();
+
+    /**
+     * @param nextSynchronous make the next write synchronous or not.
+     */
+    void nextSynchronous(boolean nextSynchronous);
 }

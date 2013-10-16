@@ -25,6 +25,8 @@ import java.util.ConcurrentModificationException;
  * @author peter.lawrey
  */
 public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
+    private boolean nextSynchronous;
+
     public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
         toEnd();
@@ -61,6 +63,15 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         startAddr = positionAddr;
         limitAddr = positionAddr + capacity;
         finished = false;
+        nextSynchronous = chronicle.config.synchronousMode();
+    }
+
+    public void nextSynchronous(boolean nextSynchronous) {
+        this.nextSynchronous = nextSynchronous;
+    }
+
+    public boolean nextSynchronous() {
+        return nextSynchronous;
     }
 
     @Override
@@ -122,8 +133,10 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
             appendStartOfLine();
         }
 
-        if (chronicle.config.synchronousMode()) {
+        if (nextSynchronous) {
+            assert dataBuffer != null;
             dataBuffer.force();
+            assert indexBuffer != null;
             indexBuffer.force();
         }
     }
