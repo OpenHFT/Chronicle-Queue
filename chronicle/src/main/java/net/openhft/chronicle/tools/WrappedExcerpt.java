@@ -107,6 +107,16 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public boolean nextSynchronous() {
+        return appender.nextSynchronous();
+    }
+
+    @Override
+    public void nextSynchronous(boolean nextSynchronous) {
+        appender.nextSynchronous();
+    }
+
+    @Override
     public void finish() {
         common.finish();
     }
