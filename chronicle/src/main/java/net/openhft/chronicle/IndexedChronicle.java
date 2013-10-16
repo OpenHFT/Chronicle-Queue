@@ -112,6 +112,8 @@ public class IndexedChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
+        indexFileCache.excerptUsed();
+        dataFileCache.excerptUsed();
         return new NativeExcerpt(this);
     }
 

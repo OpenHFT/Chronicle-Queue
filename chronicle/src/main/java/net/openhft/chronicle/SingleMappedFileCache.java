@@ -44,6 +44,11 @@ public class SingleMappedFileCache implements MappedFileCache {
         fileChannel = new RandomAccessFile(basePath, "rw").getChannel();
     }
 
+    @Override
+    public void excerptUsed() {
+        // ignored.
+    }
+
     @Nullable
     @Override
     public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {

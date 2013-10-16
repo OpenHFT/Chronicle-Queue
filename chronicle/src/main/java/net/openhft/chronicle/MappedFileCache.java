@@ -28,6 +28,8 @@ public interface MappedFileCache extends Closeable {
     @NotNull
     MappedByteBuffer acquireBuffer(long index, boolean prefetch);
 
+    void excerptUsed();
+
     long size();
 
     void close();

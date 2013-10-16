@@ -16,8 +16,8 @@
 
 package net.openhft.chronicle.examples;
 
-import gnu.trove.map.TLongLongMap;
-import gnu.trove.map.hash.TLongLongHashMap;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
@@ -43,10 +43,10 @@ public class CachePerfMain {
     private final Excerpt reader;
     @NotNull
     private final ExcerptAppender appender;
-    private final TLongLongMap keyIndex = new TLongLongHashMap() {
+    private final TIntIntMap keyIndex = new TIntIntHashMap() {
         @Override
-        public long getNoEntryValue() {
-            return -1L;
+        public int getNoEntryValue() {
+            return -1;
         }
     };
     private final int _maxObjSize;
@@ -65,7 +65,7 @@ public class CachePerfMain {
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
-        CachePerfMain map = new CachePerfMain(basePath, 32);
+        CachePerfMain map = new CachePerfMain(basePath, 36);
         long start = System.nanoTime();
         buildkeylist(keys);
 
@@ -104,6 +104,7 @@ public class CachePerfMain {
         System.out.println("after shuffle");
 
         for (int i = 0; i < 2; i++) {
+            System.gc();
             duration = randomGet(keys, map);
             System.out.printf(i
                     + "th iter: Took %.3f secs to get random %,d entries%n",
@@ -142,7 +143,7 @@ public class CachePerfMain {
         return System.nanoTime() - start;
     }
 
-    public void get(long key, Person person) {
+    public void get(int key, Person person) {
         // Get the excerpt position for the given key from keyIndex map
 // long position = keyIndex.get(key);
 
@@ -156,7 +157,7 @@ public class CachePerfMain {
 
     }
 
-    public void put(long key, Person person) {
+    public void put(int key, Person person) {
         // Start an excerpt with given chunksize
         appender.startExcerpt(_maxObjSize);
 
@@ -169,13 +170,12 @@ public class CachePerfMain {
         // Get the position of the excerpt for further access.
         long index = appender.index();
 
-        // TODO Does finish works as "commit" consider transactional
-        // consistency between putting key to map and putting object to
-        // chronicle
+        // finish works as "commit" consider transactional
+        // consistency between putting key to map and putting object to chronicle
         appender.finish();
 
         // Put the position of the excerpt with its key to a map.
-        keyIndex.put(key, index);
+        keyIndex.put(key, (int) index);
     }
 
     public void close() {

@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,9 +42,13 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     final String basePath;
     final FileChannel fileChannel;
     final int blockSize;
+    long maxIndex = Long.MIN_VALUE;
     long lastIndex = Long.MIN_VALUE;
     @Nullable
     MappedByteBuffer lastMBB = null;
+
+    @Nullable
+    List<MappedByteBuffer> allBuffers = null;
     @NotNull
     volatile IndexedMBB imbb = NULL_IMBB;
 
@@ -52,13 +58,36 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
         fileChannel = new RandomAccessFile(basePath, "rw").getChannel();
     }
 
+    public void excerptUsed() {
+        if (allBuffers == null) {
+            allBuffers = new ArrayList<MappedByteBuffer>(1000);
+            addBuffer(lastIndex, lastMBB);
+        }
+    }
+
+    private void addBuffer(long index2, MappedByteBuffer mbb) {
+        if (index2 < 0) return;
+        if (index2 >= Integer.MAX_VALUE) throw new AssertionError();
+        while (allBuffers.size() <= index2) allBuffers.add(null);
+        allBuffers.set((int) index2, mbb);
+    }
+
     @NotNull
     @Override
     public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {
-        if (index == lastIndex) {
-            assert lastMBB != null;
-            return lastMBB;
+        if (allBuffers == null) {
+            if (index == lastIndex) {
+                assert lastMBB != null;
+                return lastMBB;
+            }
+        } else {
+            if (index < allBuffers.size()) {
+                final MappedByteBuffer mbb = allBuffers.get((int) index);
+                if (mbb != null)
+                    return mbb;
+            }
         }
+//        System.out.println(index);
 //        TreeMap<Long, String> timeMap = new TreeMap<Long, String>();
         long start = System.nanoTime();
 //        timeMap.put(start / 1024, "start");
@@ -88,19 +117,26 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
             throw new IllegalStateException(e);
         }
 //        timeMap.put(System.nanoTime() / 1024, "got");
-        lastIndex = index;
-        lastMBB = mappedByteBuffer;
-        IndexedMBB imbb2 = new IndexedMBB(index + 1, fileChannel, blockSize);
-        this.imbb = imbb2;
-        PREFETCHER.submit(imbb2);
-        long end = System.nanoTime();
-        long time = (end - start);
+        if (allBuffers == null) {
+            lastIndex = index;
+            lastMBB = mappedByteBuffer;
+        } else {
+            addBuffer(index, mappedByteBuffer);
+        }
+        boolean ascending = index > maxIndex;
+        if (ascending) {
+            IndexedMBB imbb2 = new IndexedMBB(index + 1, fileChannel, blockSize);
+            this.imbb = imbb2;
+            PREFETCHER.submit(imbb2);
+            maxIndex = index;
+        }
+        long time = (System.nanoTime() - start);
 //        timeMap.put(end / 1024, "end");
         if (index > 0)
             totalWait.addAndGet(time);
-        if (prefetched) {
+//        if (prefetched) {
 //            System.out.println(indexedMBB.report());
-        }
+//        }
 //        System.out.println("Took " + time / 1000 + " us to obtain a data chunk, prefetched: " + prefetched + " index0: " + index0 + " index: " + index);
 /*
         if (time > 50e3) {
