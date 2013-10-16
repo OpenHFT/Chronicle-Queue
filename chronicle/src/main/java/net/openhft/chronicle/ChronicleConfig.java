@@ -115,6 +115,8 @@ public class ChronicleConfig implements Cloneable {
 
     public void dataBlockSize(int dataBlockSize) {
         this.dataBlockSize = dataBlockSize;
+        if (messageCapacity > dataBlockSize / 2)
+            messageCapacity = dataBlockSize / 2;
     }
 
     public int dataBlockSize() {

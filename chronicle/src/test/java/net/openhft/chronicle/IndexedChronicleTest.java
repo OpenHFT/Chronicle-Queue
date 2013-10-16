@@ -201,7 +201,7 @@ public class IndexedChronicleTest {
                 assertFalse("i: " + i, e.index(idx));
                 int capacity = 16 * (1 + rand.nextInt(7));
 
-                w.startExcerpt();
+                w.startExcerpt(capacity);
                 assertEquals(0, w.position());
                 w.writeLong(i);
                 assertEquals(8, w.position());
