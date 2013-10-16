@@ -65,7 +65,7 @@ public class CachePerfMain {
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
-        CachePerfMain map = new CachePerfMain(basePath, 36);
+        CachePerfMain map = new CachePerfMain(basePath, 32);
         long start = System.nanoTime();
         buildkeylist(keys);
 
@@ -81,7 +81,7 @@ public class CachePerfMain {
             surname.append("surname");
             surname.append(i);
 
-            person.set_age(i);
+            person.set_age(i % 100);
 
             map.put(i, person);
         }
@@ -218,7 +218,7 @@ public class CachePerfMain {
         public void writeMarshallable(@NotNull Bytes out) {
             out.writeUTFΔ(_name);
             out.writeUTFΔ(_surname);
-            out.writeInt(_age);
+            out.writeStopBit(_age);
         }
 
         @Override
@@ -226,7 +226,7 @@ public class CachePerfMain {
                 throws IllegalStateException {
             in.readUTFΔ(_name);
             in.readUTFΔ(_surname);
-            _age = in.readInt();
+            _age = (int) in.readStopBit();
         }
     }
 }
