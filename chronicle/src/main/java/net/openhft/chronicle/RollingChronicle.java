@@ -119,7 +119,7 @@ public class RollingChronicle implements Chronicle {
     }
 
     enum Type {
-        Appender, Tailer, Excerpt;
+        Appender, Tailer, Excerpt
     }
 
     class RollingExcerpt extends WrappedExcerpt {
@@ -174,6 +174,11 @@ public class RollingChronicle implements Chronicle {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+        }
+
+        @Override
+        public void startExcerpt() {
+            startExcerpt(config().messageCapacity());
         }
 
         @Override
