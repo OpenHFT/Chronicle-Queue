@@ -35,198 +35,224 @@ import java.util.Random;
  * @author ygokirmak
  */
 public class CachePerfMain {
-    private static final String TMP = System.getProperty("java.io.tmpdir");
-    private static int[] keyArray;
-    @NotNull
-    private final Chronicle chronicle;
-    @NotNull
-    private final Excerpt reader;
-    @NotNull
-    private final ExcerptAppender appender;
-    private final TIntIntMap keyIndex = new TIntIntHashMap() {
-        @Override
-        public int getNoEntryValue() {
-            return -1;
-        }
-    };
-    private final int _maxObjSize;
+	private static final String TMP = System.getProperty("java.io.tmpdir");
+	private static int[] keyArray;
+	@NotNull
+	private final Chronicle chronicle;
+	@NotNull
+	private final Excerpt randomAccessor;
+	@NotNull
+	private final ExcerptAppender appender;
+	private final TIntIntMap keyIndex = new TIntIntHashMap() {
+		@Override
+		public int getNoEntryValue() {
+			return -1;
+		}
+	};
+	private final int _maxObjSize;
 
-    public CachePerfMain(String basePath, int maxObjSize)
-            throws IOException {
-        chronicle = new IndexedChronicle(basePath);
+	public CachePerfMain(String basePath, int maxObjSize) throws IOException {
+		chronicle = new IndexedChronicle(basePath);
 
-        appender = chronicle.createAppender();
-        reader = chronicle.createExcerpt();
-        _maxObjSize = maxObjSize;
-    }
+		appender = chronicle.createAppender();
+		randomAccessor = chronicle.createExcerpt();
+		_maxObjSize = maxObjSize;
+	}
 
-    static final int keys = Integer.getInteger("keys", 1000000);
+	static final int keys = Integer.getInteger("keys", 50000000);
 
-    public static void main(String... ignored) throws IOException {
-        String basePath = TMP + "/ExampleCacheMain";
-        ChronicleTools.deleteOnExit(basePath);
-        CachePerfMain map = new CachePerfMain(basePath, 32);
-        long start = System.nanoTime();
-        buildkeylist(keys);
+	public static void main(String... ignored) throws IOException {
+		String basePath = TMP + "/ExampleCacheMain";
+		ChronicleTools.deleteOnExit(basePath);
+		CachePerfMain map = new CachePerfMain(basePath, 64);
+		buildkeylist(keys);
 
-        StringBuilder name = new StringBuilder();
-        StringBuilder surname = new StringBuilder();
-        Person person = new Person(name, surname, 0);
-        for (int i = 0; i < keys; i++) {
-            name.setLength(0);
-            name.append("name");
-            name.append(i);
+		long duration;
 
-            surname.setLength(0);
-            surname.append("surname");
-            surname.append(i);
+		for (int i = 0; i < 2; i++) {
+			duration = putTest(keys, "base", map);
+			System.out.printf(i
+					+ "th iter: Took %.3f secs to put seq %,d entries%n",
+					duration / 1e9, keys);
+		}
 
-            person.set_age(i % 100);
+		for (int i = 0; i < 2; i++) {
+			duration = getTest(keys, map);
+			System.out.printf(i
+					+ "th iter: Took %.3f secs to get seq %,d entries%n",
+					duration / 1e9, keys);
+		}
 
-            map.put(i, person);
-        }
+		shufflelist();
 
-        long end = System.nanoTime();
+		for (int i = 0; i < 2; i++) {
+			System.gc();
+			duration = getTest(keys, map);
+			System.out.printf(i
+					+ "th iter: Took %.3f secs to get random %,d entries%n",
+					duration / 1e9, keys);
+		}
 
-        System.out.printf("Took %.3f secs to add %,d entries%n",
-                (end - start) / 1e9, keys);
+		for (int i = 0; i < 2; i++) {
+			duration = putTest(keys, "modif", map);
+			System.out
+					.printf(i
+							+ "th iter: Took %.3f secs to update random %,d entries%n",
+							duration / 1e9, keys);
+		}
 
-        long duration;
-        for (int i = 0; i < 2; i++) {
-            duration = randomGet(keys, map);
-            System.out.printf(i
-                    + "th iter: Took %.3f secs to get seq %,d entries%n",
-                    duration / 1e9, keys);
-        }
+	}
 
-        System.out.println("before shuffle");
-        shufflelist();
-        System.out.println("after shuffle");
+	static void shufflelist() {
+		Random rnd = new Random();
+		int size = keyArray.length;
+		for (int i = size; i > 1; i--)
+			swap(keyArray, i - 1, rnd.nextInt(i));
+	}
 
-        for (int i = 0; i < 2; i++) {
-            System.gc();
-            duration = randomGet(keys, map);
-            System.out.printf(i
-                    + "th iter: Took %.3f secs to get random %,d entries%n",
-                    duration / 1e9, keys);
-        }
+	private static void swap(int[] ints, int x, int y) {
+		int t = ints[x];
+		ints[x] = ints[y];
+		ints[y] = t;
+	}
 
+	static void buildkeylist(int keycount) {
+		keyArray = new int[keycount];
+		for (int i = 0; i < keycount; i++) {
+			keyArray[i] = i;
+		}
+	}
 
-    }
+	static long putTest(int keycount, String prefix, CachePerfMain map) {
+		long start = System.nanoTime();
 
-    static void shufflelist() {
-        Random rnd = new Random();
-        int size = keyArray.length;
-        for (int i = size; i > 1; i--)
-            swap(keyArray, i - 1, rnd.nextInt(i));
-    }
+		StringBuilder name = new StringBuilder();
+		StringBuilder surname = new StringBuilder();
+		Person person = new Person(name, surname, 0);
+		for (int i = 0; i < keys; i++) {
+			name.setLength(0);
+			name.append(prefix);
+			name.append("name");
+			name.append(i);
 
-    private static void swap(int[] ints, int x, int y) {
-        int t = ints[x];
-        ints[x] = ints[y];
-        ints[y] = t;
-    }
+			surname.setLength(0);
+			surname.append(prefix);
+			surname.append("surname");
+			surname.append(i);
 
-    static void buildkeylist(int keycount) {
-        keyArray = new int[keycount];
-        for (int i = 0; i < keycount; i++) {
-            keyArray[i] = i;
-        }
-    }
+			person.set_age(i % 100);
 
-    static long randomGet(int keycount, CachePerfMain map) {
-        long start = System.nanoTime();
-        Person person = new Person();
-        for (int i = 0; i < keycount; i++) {
-            map.get(keyArray[i], person);
-        }
-        return System.nanoTime() - start;
-    }
+			map.put(i, person);
+		}
+		return System.nanoTime() - start;
 
-    public void get(int key, Person person) {
-        // Get the excerpt position for the given key from keyIndex map
-// long position = keyIndex.get(key);
+	}
 
-        // Change reader position
-        reader.index(keyIndex.get(key));
-        // Read contents into byte buffer
-        person.readMarshallable(reader);
+	static long getTest(int keycount, CachePerfMain map) {
+		long start = System.nanoTime();
+		Person person = new Person();
+		for (int i = 0; i < keycount; i++) {
+			map.get(keyArray[i], person);
+		}
+		return System.nanoTime() - start;
+	}
 
-        // validate reading was correct
-        reader.finish();
+	public void get(int key, Person person) {
 
-    }
+		// Change reader position
+		randomAccessor.index(keyIndex.get(key));
+		// Read contents into byte buffer
+		person.readMarshallable(randomAccessor);
 
-    public void put(int key, Person person) {
-        // Start an excerpt with given chunksize
-        appender.startExcerpt(_maxObjSize);
+		// validate reading was correct
+		randomAccessor.finish();
 
-        // Write the object bytes
-        person.writeMarshallable(appender);
+	}
 
-        // pad it for later.
-        appender.position(_maxObjSize);
+	public void put(int key, Person person) {
 
-        // Get the position of the excerpt for further access.
-        long index = appender.index();
+		if (keyIndex.containsKey(key)) {
+			// update existing record
+			// Change accessor index to record.
+			randomAccessor.index(keyIndex.get(key));
+			// Override existing
+			person.writeMarshallable(randomAccessor);
+			
+		} else {
+			// append new record
 
-        // finish works as "commit" consider transactional
-        // consistency between putting key to map and putting object to chronicle
-        appender.finish();
+			// Start an excerpt with given chunksize
+			appender.startExcerpt(_maxObjSize);
 
-        // Put the position of the excerpt with its key to a map.
-        keyIndex.put(key, (int) index);
-    }
+			// Write the object bytes
+			person.writeMarshallable(appender);
 
-    public void close() {
-        IOTools.close(chronicle);
-    }
+			// pad it for later.
+			appender.position(_maxObjSize);
 
-    // Took 5.239 secs to add 10,000,000 entries
-    static class Person implements BytesMarshallable {
-        private StringBuilder _name;
-        private StringBuilder _surname;
-        private int _age;
+			// Get the position of the excerpt for further access.
+			long index = appender.index();
 
-        public Person() {
-            this(new StringBuilder(), new StringBuilder(), 0);
-        }
+			// finish works as "commit" consider transactional
+			// consistency between putting key to map and putting object to
+			// chronicle
+			appender.finish();
 
-        public Person(StringBuilder name, StringBuilder surname, int age) {
-            _name = name;
-            _surname = surname;
-            _age = age;
-        }
+			// Put the position of the excerpt with its key to a map.
+			keyIndex.put(key, (int) index);
+		}
+	}
 
-        public StringBuilder get_name() {
-            return _name;
-        }
+	public void close() {
+		IOTools.close(chronicle);
+	}
 
-        public StringBuilder get_surname() {
-            return _surname;
-        }
+	// Took 5.239 secs to add 10,000,000 entries
+	static class Person implements BytesMarshallable {
+		private StringBuilder _name;
+		private StringBuilder _surname;
+		private int _age;
 
-        public int get_age() {
-            return _age;
-        }
+		public Person() {
+			this(new StringBuilder(), new StringBuilder(), 0);
+		}
 
-        public void set_age(int age) {
-            _age = age;
-        }
+		public Person(StringBuilder name, StringBuilder surname, int age) {
+			_name = name;
+			_surname = surname;
+			_age = age;
+		}
 
-        @Override
-        public void writeMarshallable(@NotNull Bytes out) {
-            out.writeUTFΔ(_name);
-            out.writeUTFΔ(_surname);
-            out.writeStopBit(_age);
-        }
+		public StringBuilder get_name() {
+			return _name;
+		}
 
-        @Override
-        public void readMarshallable(@NotNull Bytes in)
-                throws IllegalStateException {
-            in.readUTFΔ(_name);
-            in.readUTFΔ(_surname);
-            _age = (int) in.readStopBit();
-        }
-    }
+		public StringBuilder get_surname() {
+			return _surname;
+		}
+
+		public int get_age() {
+			return _age;
+		}
+
+		public void set_age(int age) {
+			_age = age;
+		}
+
+		@Override
+		public void writeMarshallable(@NotNull Bytes out) {
+			out.writeUTFΔ(_name);
+			out.writeUTFΔ(_surname);
+			out.writeStopBit(_age);
+		}
+
+		@Override
+		public void readMarshallable(@NotNull Bytes in)
+				throws IllegalStateException {
+			in.readUTFΔ(_name);
+			in.readUTFΔ(_surname);
+			_age = (int) in.readStopBit();
+		}
+
+	}
 }
