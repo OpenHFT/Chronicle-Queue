@@ -38,6 +38,7 @@ public class ChronicleIndexReader {
             System.err.println(e);
             return;
         }
+        int count = 0;
         ByteBuffer buffer = ByteBuffer.allocateDirect(4096).order(ByteOrder.nativeOrder());
         while (fc.read(buffer) > 0) {
             for (int i = 0; i < buffer.capacity(); i += 4 * 16) {
@@ -45,6 +46,8 @@ public class ChronicleIndexReader {
                 if (indexStart == 0 && zeros++ > 2) {
                     continue;
                 }
+                System.out.print(count + ": ");
+                count += 14;
                 System.out.print(HEX ? Long.toHexString(indexStart) : String.valueOf(indexStart));
                 for (int j = i + 8; j < i + 64; j += 4) {
                     System.out.print(' ');
