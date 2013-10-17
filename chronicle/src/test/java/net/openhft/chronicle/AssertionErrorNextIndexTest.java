@@ -23,6 +23,10 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Random;
 
+/**
+ * @author Alex Koon
+ */
+
 public class AssertionErrorNextIndexTest {
     private static final String CHRONICLE
             = System.getProperty("java.io.tmpdir")
