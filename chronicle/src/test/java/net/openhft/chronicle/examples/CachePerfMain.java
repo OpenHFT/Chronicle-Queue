@@ -40,7 +40,7 @@ public class CachePerfMain {
     @NotNull
     private final Chronicle chronicle;
     @NotNull
-    private final Excerpt reader;
+    private final Excerpt randomAccessor;
     @NotNull
     private final ExcerptAppender appender;
     private final TIntIntMap keyIndex = new TIntIntHashMap() {
@@ -56,44 +56,33 @@ public class CachePerfMain {
         chronicle = new IndexedChronicle(basePath);
 
         appender = chronicle.createAppender();
-        reader = chronicle.createExcerpt();
+        randomAccessor = chronicle.createExcerpt();
         _maxObjSize = maxObjSize;
     }
 
-    static final int keys = Integer.getInteger("keys", 1000000);
+    static final int keys = Integer.getInteger("keys", 10000000);
 
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
-        CachePerfMain map = new CachePerfMain(basePath, 32);
-        long start = System.nanoTime();
+        CachePerfMain map = new CachePerfMain(basePath, 64);
+        long duration;
+
         buildkeylist(keys);
 
         StringBuilder name = new StringBuilder();
         StringBuilder surname = new StringBuilder();
         Person person = new Person(name, surname, 0);
-        for (int i = 0; i < keys; i++) {
-            name.setLength(0);
-            name.append("name");
-            name.append(i);
-
-            surname.setLength(0);
-            surname.append("surname");
-            surname.append(i);
-
-            person.set_age(i % 100);
-
-            map.put(i, person);
+        for (int i = 0; i < 2; i++) {
+        	duration = putTest(keys, "base", map);
+        		System.out.printf(i
+        				+ "th iter: Took %.3f secs to put seq %,d entries%n",
+        				duration / 1e9, keys); 
         }
 
-        long end = System.nanoTime();
 
-        System.out.printf("Took %.3f secs to add %,d entries%n",
-                (end - start) / 1e9, keys);
-
-        long duration;
         for (int i = 0; i < 2; i++) {
-            duration = randomGet(keys, map);
+            duration = getTest(keys, map);
             System.out.printf(i
                     + "th iter: Took %.3f secs to get seq %,d entries%n",
                     duration / 1e9, keys);
@@ -105,15 +94,48 @@ public class CachePerfMain {
 
         for (int i = 0; i < 2; i++) {
             System.gc();
-            duration = randomGet(keys, map);
+            duration = getTest(keys, map);
             System.out.printf(i
                     + "th iter: Took %.3f secs to get random %,d entries%n",
                     duration / 1e9, keys);
         }
+        
+        for (int i = 0; i < 2; i++) {
+        	      duration = putTest(keys, "modif", map);
+        	      System.out
+        	          .printf(i
+        	              + "th iter: Took %.3f secs to update random %,d entries%n",
+        	              duration / 1e9, keys);
+        } 
 
 
     }
 
+  static long putTest(int keycount, String prefix, CachePerfMain map) {
+      long start = System.nanoTime();
+  
+      StringBuilder name = new StringBuilder();
+      StringBuilder surname = new StringBuilder();
+      Person person = new Person(name, surname, 0);
+      for (int i = 0; i < keys; i++) {
+        name.setLength(0);
+        name.append(prefix);
+        name.append("name");
+        name.append(i);
+  
+        surname.setLength(0);
+        surname.append(prefix);
+        surname.append("surname");
+        surname.append(i);
+  
+        person.set_age(i % 100);
+  
+        map.put(i, person);
+      }
+      return System.nanoTime() - start;
+  
+    } 
+    
     static void shufflelist() {
         Random rnd = new Random();
         int size = keyArray.length;
@@ -134,7 +156,7 @@ public class CachePerfMain {
         }
     }
 
-    static long randomGet(int keycount, CachePerfMain map) {
+    static long getTest(int keycount, CachePerfMain map) {
         long start = System.nanoTime();
         Person person = new Person();
         for (int i = 0; i < keycount; i++) {
@@ -144,38 +166,47 @@ public class CachePerfMain {
     }
 
     public void get(int key, Person person) {
-        // Get the excerpt position for the given key from keyIndex map
-// long position = keyIndex.get(key);
 
         // Change reader position
-        reader.index(keyIndex.get(key));
+    	randomAccessor.index(keyIndex.get(key));
         // Read contents into byte buffer
-        person.readMarshallable(reader);
+        person.readMarshallable(randomAccessor);
 
         // validate reading was correct
-        reader.finish();
+        randomAccessor.finish();
 
     }
 
     public void put(int key, Person person) {
-        // Start an excerpt with given chunksize
-        appender.startExcerpt(_maxObjSize);
+    	if (keyIndex.containsKey(key)) {
+    		// update existing record
+    		// Change accessor index to record.
+    		randomAccessor.index(keyIndex.get(key));
+    		// Override existing
+    		person.writeMarshallable(randomAccessor);
+    		
+    	} else { 
+    			
+		        // Start an excerpt with given chunksize
+		        appender.startExcerpt(_maxObjSize);
+		
+		        // Write the object bytes
+		        person.writeMarshallable(appender);
+		
+		        // pad it for later.
+		        appender.position(_maxObjSize);
+		
+		        // Get the position of the excerpt for further access.
+		        long index = appender.index();
+		
+		        // finish works as "commit" consider transactional
+		        // consistency between putting key to map and putting object to chronicle
+		        appender.finish();
+		
+		        // Put the position of the excerpt with its key to a map.
+		        keyIndex.put(key, (int) index);
+    		}
 
-        // Write the object bytes
-        person.writeMarshallable(appender);
-
-        // pad it for later.
-        appender.position(_maxObjSize);
-
-        // Get the position of the excerpt for further access.
-        long index = appender.index();
-
-        // finish works as "commit" consider transactional
-        // consistency between putting key to map and putting object to chronicle
-        appender.finish();
-
-        // Put the position of the excerpt with its key to a map.
-        keyIndex.put(key, (int) index);
     }
 
     public void close() {
