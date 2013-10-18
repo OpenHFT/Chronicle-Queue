@@ -212,6 +212,15 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         }
     }
 
+    void loadNextDataBuffer(long offsetInThisBuffer) {
+        dataStartOffset += offsetInThisBuffer / dataBlockSize * dataBlockSize;
+        try {
+            loadDataBuffer();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     void loadDataBuffer() throws IOException {
         dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize, true);
         dataStartAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();

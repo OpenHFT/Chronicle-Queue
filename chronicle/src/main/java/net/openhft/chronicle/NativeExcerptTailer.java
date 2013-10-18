@@ -105,21 +105,19 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
         }
 
         checkNewIndexLine2();
-        checkNewDataBlock();
         startAddr = positionAddr = limitAddr;
         setLmitAddr(offset);
-        assert limitAddr > startAddr || (!present && limitAddr == startAddr);
+        assert limitAddr >= startAddr || (!present && limitAddr == startAddr);
         indexPositionAddr += 4;
         return present;
     }
 
-    private void checkNewDataBlock() {
-        if (limitAddr >= dataStartAddr + dataBlockSize)
-            loadNextDataBuffer();
-    }
-
     private void setLmitAddr(long offset) {
         long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
+        if (offsetInThisBuffer > dataBlockSize) {
+            loadNextDataBuffer(offsetInThisBuffer);
+            offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
+        }
         assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "index: " + index + ", offsetInThisBuffer: " + offsetInThisBuffer;
         limitAddr = dataStartAddr + offsetInThisBuffer;
     }

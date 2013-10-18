@@ -179,9 +179,10 @@ public class IndexedChronicleTest {
         ChronicleTools.deleteOnExit(basePath);
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
-        int dataBlockSize = 4096;
+        // TODO fix for 4096 !!!
+        int dataBlockSize = 4 * 1024;
         config.dataBlockSize(dataBlockSize);
-        config.indexBlockSize(128);
+        config.indexBlockSize(128 * 1024);
         IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
         int i = 0;
         try {
@@ -215,13 +216,13 @@ public class IndexedChronicleTest {
 
 //                ChronicleIndexReader.main(basePath + ".index");
 
+//                if (i >= 5542)
+//                    ChronicleIndexReader.main(basePath + ".index");
+
                 if (!r.nextIndex()) {
                     assertTrue(r.nextIndex());
                 }
                 validateExcerpt(r, i, expected);
-
-//                if (i >= 111)
-//                    ChronicleIndexReader.main(basePath + ".index");
 
                 if (!e.index(idx++)) {
                     assertTrue(e.wasPadding());
@@ -236,7 +237,7 @@ public class IndexedChronicleTest {
             chronicle.close();
             System.out.println("i: " + i);
 //            ChronicleIndexReader.main(basePath + ".index");
-            ChronicleTools.deleteOnExit(basePath);
+//            ChronicleTools.deleteOnExit(basePath);
         }
     }
 
@@ -560,18 +561,6 @@ public class IndexedChronicleTest {
 
     }
 
-    static class MyExcerptComparator implements ExcerptComparator {
-
-        int lo, hi;
-
-        @Override
-        public int compare(Excerpt excerpt) {
-            final int x = excerpt.readInt();
-            return x < lo ? -1 : x > hi ? +1 : 0;
-        }
-
-    }
-
     @Test
     public void testParseLines() throws IOException {
         final String basePath = TMP + "/testParseLines";
@@ -596,6 +585,18 @@ public class IndexedChronicleTest {
             tailer.finish();
         }
         chronicle.close();
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
+        }
+
     }
 
 }

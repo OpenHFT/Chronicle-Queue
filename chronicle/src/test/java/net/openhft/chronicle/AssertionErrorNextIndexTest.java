@@ -23,6 +23,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Random;
 
+import static net.openhft.chronicle.IndexedChronicle1Test.assertEquals;
+
 /**
  * @author Alex Koon
  */
@@ -34,14 +36,17 @@ public class AssertionErrorNextIndexTest {
             + "AssertionErrorNextIndexTest";
     private static final Random R = new Random(1);
 
-    private static void writeToChronicle(ExcerptAppender a) {
+    private static void writeToChronicle(ExcerptAppender a, int i) {
         a.startExcerpt(1024);
-        a.position(R.nextInt((int) a.capacity()) + 1);
+        a.writeInt(i);
+        a.position(R.nextInt((int) a.remaining()) + 1);
         a.finish();
     }
 
-    private static void readFromChronicle(ExcerptTailer t) {
+    private static int readFromChronicle(ExcerptTailer t) {
+        int n = t.readInt();
         t.finish();
+        return n;
     }
 
     @Test
@@ -57,12 +62,12 @@ public class AssertionErrorNextIndexTest {
         Chronicle chronicle1 = new IndexedChronicle(CHRONICLE, config);
         ExcerptAppender appender = chronicle1.createAppender();
         for (int i = 0; i < 100; i++) {
-            writeToChronicle(appender);
+            writeToChronicle(appender, i);
         }
         chronicle1.close();
 
         // Let the writer start writing first
-        long lastIndex = 0;
+        long lastIndex = -1;
         long counter = 0;
 
         while (counter < 100) {
@@ -70,9 +75,10 @@ public class AssertionErrorNextIndexTest {
             ExcerptTailer tailer = chronicle.createTailer();
             boolean ok = tailer.index(lastIndex);
             int count = 10;
-            while (tailer.nextIndex() && count-- > 0) {
+            while (tailer.nextIndex() && count-- > 0 && counter < 100) {
                 System.out.println(tailer.index());
-                readFromChronicle(tailer);
+                int i = readFromChronicle(tailer);
+                assertEquals(counter, i);
                 counter++;
             }
             lastIndex = tailer.index();
