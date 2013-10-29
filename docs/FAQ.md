@@ -20,7 +20,7 @@ Key principles are; ultra-low GC (less than one object per event), lock-less, ca
 
 The marshalling, de-marshalling and handling of thread safe off heap memory has been added more recently and moving into the Java-Lang module.
 
-This library now supports low latency/GC-less writing ang reading/parsing or text as well as binary.
+This library now supports low latency/GC-less writing and reading/parsing or text as well as binary.
 
 ##  How fast is fast?
 
