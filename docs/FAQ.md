@@ -128,7 +128,7 @@ Never the less, there is less maintenance overhead if the chronicle logs rotate 
 
 ## I want to use Chronicle as an off heap cache.  What do I do?
 
-Chronicle is designed for replay.  WHat it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
+Chronicle is designed for replay.  While it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
 An old library called HugeCollections will be resurrected to handle collections more cleanly.
 
 # Thread safety
