@@ -20,7 +20,7 @@ Key principles are; ultra-low GC (less than one object per event), lock-less, ca
 
 The marshalling, de-marshalling and handling of thread safe off heap memory has been added more recently and moving into the Java-Lang module.
 
-This library now supports low latency/GC-less writing ang reading/parsing or text as well as binary.
+This library now supports low latency/GC-less writing and reading/parsing or text as well as binary.
 
 ##  How fast is fast?
 
@@ -128,7 +128,7 @@ Never the less, there is less maintenance overhead if the chronicle logs rotate 
 
 ## I want to use Chronicle as an off heap cache.  What do I do?
 
-Chronicle is designed for replay.  WHat it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
+Chronicle is designed for replay.  While it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
 An old library called HugeCollections will be resurrected to handle collections more cleanly.
 
 # Thread safety
