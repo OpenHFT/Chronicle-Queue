@@ -117,7 +117,7 @@ public class GWMain {
 
                 int count = reportCount.getAndIncrement();
                 if (!throughputTest) {
-                    times[Math.abs(count)] = (metaData.inReadTimestamp - metaData.inWriteTimestamp);
+                    times[Math.abs(count)] = (metaData.outReadTimestamp - metaData.inWriteTimestamp);
                 }
 //                System.out.println(reportCount);
             }
