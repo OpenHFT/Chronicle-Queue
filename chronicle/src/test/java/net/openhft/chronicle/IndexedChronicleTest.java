@@ -441,12 +441,12 @@ public class IndexedChronicleTest {
 
         File indexFile = new File(basePath + ".index");
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             if (i % 10 == 0)
                 System.out.println("i: " + i);
 
             long indexFileSize = indexFile.length();
-            IndexedChronicle chronicle = new IndexedChronicle(basePath);
+            IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
             assertEquals("Index should not grow on open (i=" + i + ")", indexFileSize, indexFile.length());
 
             if (i == 0) {
