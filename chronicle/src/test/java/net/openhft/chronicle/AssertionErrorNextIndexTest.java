@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import static net.openhft.chronicle.IndexedChronicle1Test.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Alex Koon
@@ -38,13 +40,17 @@ public class AssertionErrorNextIndexTest {
 
     private static void writeToChronicle(ExcerptAppender a, int i) {
         a.startExcerpt(1024);
+        final int size = R.nextInt((int) a.remaining() - 8) + 8;
         a.writeInt(i);
-        a.position(R.nextInt((int) a.remaining()) + 1);
+        a.writeInt(size);
+        a.position(size);
         a.finish();
     }
 
     private static int readFromChronicle(ExcerptTailer t) {
         int n = t.readInt();
+        int size = t.readInt();
+        assertEquals(size, t.capacity());
         t.finish();
         return n;
     }
@@ -65,24 +71,44 @@ public class AssertionErrorNextIndexTest {
             writeToChronicle(appender, i);
         }
         chronicle1.close();
+        {
+            Chronicle chronicle = new IndexedChronicle(CHRONICLE, config);
+            ExcerptTailer tailer = chronicle.createTailer();
+            int counter = 0;
+            while (tailer.nextIndex()) {
+//                System.out.println(counter+": " +tailer.index());
+                assertTrue("Capacity: " + tailer.capacity(), tailer.capacity() <= 1024);
+                int i = readFromChronicle(tailer);
+                assertEquals(counter, i);
+                counter++;
+            }
+            chronicle.close();
+        }
 
+        ChronicleIndexReader.main(CHRONICLE + ".index");
         // Let the writer start writing first
-        long lastIndex = -1;
+        long lastIndex = 0;
         long counter = 0;
 
         while (counter < 100) {
             Chronicle chronicle = new IndexedChronicle(CHRONICLE, config);
             ExcerptTailer tailer = chronicle.createTailer();
-            boolean ok = tailer.index(lastIndex);
+            System.out.println("index(" + (lastIndex - 1) + ")");
+            boolean ok = tailer.index(lastIndex - 1);
+            if (ok) {
+                assertTrue("Capacity: " + tailer.capacity(), tailer.capacity() <= 1024);
+                int i = readFromChronicle(tailer);
+                assertEquals(counter - 1, i);
+            }
             int count = 10;
             while (tailer.nextIndex() && count-- > 0 && counter < 100) {
-                System.out.println(tailer.index());
+                System.out.println(counter + ": " + tailer.index());
+                assertTrue("counter: " + counter + ", Capacity: " + tailer.capacity(), tailer.capacity() <= 1024);
                 int i = readFromChronicle(tailer);
                 assertEquals(counter, i);
                 counter++;
             }
             lastIndex = tailer.index();
-            tailer.close();
             chronicle.close();
         }
     }
