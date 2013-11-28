@@ -46,11 +46,12 @@ public class InProcessChronicleTest {
         ChronicleTools.deleteOnExit(srcBasePath);
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
-        final int messages = 2 * 1000 * 1000;
+        final int messages = 5 * 1000 * 1000;
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(srcBasePath, config), PORT + 1);
+        final IndexedChronicle underlying = new IndexedChronicle(srcBasePath/*, config*/);
+        final Chronicle source = new InProcessChronicleSource(underlying, PORT + 1);
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -76,7 +77,8 @@ public class InProcessChronicleTest {
 //        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
         String snkBasePath = baseDir + "/IPCT.testOverTCP.sink";
         ChronicleTools.deleteOnExit(snkBasePath);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(snkBasePath, config), "localhost", PORT + 1);
+        final IndexedChronicle underlying2 = new IndexedChronicle(snkBasePath/*, config*/);
+        Chronicle sink = new InProcessChronicleSink(underlying2, "localhost", PORT + 1);
 
         long start = System.nanoTime();
         t.start();
