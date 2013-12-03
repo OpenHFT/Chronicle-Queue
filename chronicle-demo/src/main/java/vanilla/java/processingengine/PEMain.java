@@ -83,7 +83,7 @@ public class PEMain {
     static class PEEvents implements Gw2PeEvents {
         private final Pe2GwWriter pe2GwWriter;
         private final SmallReport smallReport = new SmallReport();
-        int count = 0;
+//        int count = 0;
 
         public PEEvents(Pe2GwWriter pe2GwWriter) {
             this.pe2GwWriter = pe2GwWriter;

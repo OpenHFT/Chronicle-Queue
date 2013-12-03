@@ -18,6 +18,7 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.ByteStringAppender;
+import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.MutableDecimal;
 import net.openhft.lang.io.StopCharTester;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
@@ -548,8 +549,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public <K, V> void readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
-        common.readMap(map, kClass, vClass);
+    public <K, V> Map<K, V> readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
+        return common.readMap(map, kClass, vClass);
     }
 
     @Override
@@ -1032,5 +1033,10 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         excerpt.findRange(startEnd, comparator);
+    }
+
+    @Override
+    public void writeStartToPosition(Bytes bytes) {
+        excerpt.writeStartToPosition(bytes);
     }
 }
