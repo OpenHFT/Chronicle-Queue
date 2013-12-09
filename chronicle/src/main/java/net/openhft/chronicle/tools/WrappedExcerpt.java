@@ -1035,6 +1035,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         excerpt.findRange(startEnd, comparator);
     }
 
+    @Deprecated
     @Override
     public void writeStartToPosition(Bytes bytes) {
         excerpt.writeStartToPosition(bytes);
