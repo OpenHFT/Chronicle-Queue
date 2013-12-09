@@ -17,10 +17,7 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
-import net.openhft.lang.io.ByteStringAppender;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MutableDecimal;
-import net.openhft.lang.io.StopCharTester;
+import net.openhft.lang.io.*;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -997,7 +994,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @Override
     public float addFloat(long offset, float f) {
-        return addFloat(offset, f);
+        return common.addFloat(offset, f);
     }
 
     @Override
@@ -1038,6 +1035,48 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Deprecated
     @Override
     public void writeStartToPosition(Bytes bytes) {
-        excerpt.writeStartToPosition(bytes);
+        common.writeStartToPosition(bytes);
+    }
+
+    @NotNull
+    @Override
+    public ByteStringAppender append(long l, int base) {
+        common.append(l, base);
+        return this;
+    }
+
+    @Override
+    public long parseLong(int base) {
+        return common.parseLong(base);
+    }
+
+    @Override
+    public void write(BytesCommon bytes, long position, long length) {
+        common.write(bytes, position, length);
+    }
+
+    @Override
+    public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+        common.readMarshallable(in);
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull Bytes out) {
+        common.writeMarshallable(out);
+    }
+
+    @Override
+    public int length() {
+        return common.length();
+    }
+
+    @Override
+    public char charAt(int index) {
+        return common.charAt(index);
+    }
+
+    @Override
+    public CharSequence subSequence(int start, int end) {
+        return common.subSequence(start, end);
     }
 }
