@@ -107,7 +107,6 @@ public class RollingChronicle implements Chronicle {
         return lastWrittenIndex() + 1;
     }
 
-    @Override
     public ChronicleConfig config() {
         return config;
     }

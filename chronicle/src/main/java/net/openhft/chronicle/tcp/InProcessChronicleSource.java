@@ -138,9 +138,8 @@ public class InProcessChronicleSource implements Chronicle {
         }
     }
 
-    @Override
     public ChronicleConfig config() {
-        return chronicle.config();
+        return ((IndexedChronicle) chronicle).config();
     }
 
     private class Acceptor implements Runnable {

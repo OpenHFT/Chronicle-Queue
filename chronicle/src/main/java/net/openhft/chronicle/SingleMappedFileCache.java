@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -30,8 +31,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class SingleMappedFileCache implements MappedFileCache {
     public static final AtomicLong totalWait = new AtomicLong();
-
-    final String basePath;
     final FileChannel fileChannel;
     final int blockSize;
     long lastIndex = Long.MIN_VALUE;
@@ -39,7 +38,10 @@ public class SingleMappedFileCache implements MappedFileCache {
     MappedByteBuffer lastMBB = null;
 
     public SingleMappedFileCache(String basePath, int blockSize) throws FileNotFoundException {
-        this.basePath = basePath;
+        this(new File(basePath), blockSize);
+    }
+
+    public SingleMappedFileCache(File basePath, int blockSize) throws FileNotFoundException {
         this.blockSize = blockSize;
         fileChannel = new RandomAccessFile(basePath, "rw").getChannel();
     }
@@ -70,7 +72,6 @@ public class SingleMappedFileCache implements MappedFileCache {
 //            System.out.println("Took " + time + " us to obtain a data chunk");
         return mappedByteBuffer;
     }
-
 
     @Override
     public long size() {

@@ -19,6 +19,7 @@ package net.openhft.chronicle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -32,6 +33,7 @@ public class MapUtils {
 //                long startTime = System.nanoTime();
                 @SuppressWarnings("UnnecessaryLocalVariable")
                 MappedByteBuffer map = fileChannel.map(FileChannel.MapMode.READ_WRITE, start, size);
+                map.order(ByteOrder.nativeOrder());
 //                long time = System.nanoTime() - startTime;
 //                System.out.printf("Took %,d us to map %,d MB%n", time / 1000, size / 1024 / 1024);
 //                System.out.println("Map size: "+size);
