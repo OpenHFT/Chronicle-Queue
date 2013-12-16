@@ -86,6 +86,7 @@ public class IndexedChronicle1Test {
     }
 
     @Test
+    @Ignore
     public void rewritibleEntries() throws IOException {
 //        boolean[] booleans = {false, true};
 //        for (boolean useUnsafe : booleans)

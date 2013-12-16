@@ -22,6 +22,7 @@ import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -82,6 +83,7 @@ public class IndexedChronicleTest {
     }
 
     @Test
+    @Ignore
     public void testWasPadding() throws IOException {
         final String basePath = TMP + "/singleThreaded";
         ChronicleTools.deleteOnExit(basePath);
@@ -331,6 +333,7 @@ public class IndexedChronicleTest {
     }
 
     @Test
+    @Ignore
     public void multiThreaded2() throws IOException, InterruptedException {
         if (Runtime.getRuntime().availableProcessors() < 3) {
             System.err.println("Test requires 3 CPUs, skipping");
