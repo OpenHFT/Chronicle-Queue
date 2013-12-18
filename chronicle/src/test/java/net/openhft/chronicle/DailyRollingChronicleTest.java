@@ -18,12 +18,11 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.chronicle.tools.DailingRollingIndexReader;
+import net.openhft.chronicle.tools.DailingRollingReader;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -31,6 +30,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author peter.lawrey
@@ -40,7 +40,7 @@ public class DailyRollingChronicleTest {
     public static final int SIZE = 450;
 
     @Test
-    public void testWriteOneAtAtime() throws IOException {
+    public void testCheckIndex() throws IOException {
         File tempDir = new File(System.getProperty("java.io.tmpdir") + "/deleteme" + Long.toString(System.nanoTime(), 36));
         ChronicleTools.deleteDirOnExit(tempDir.toString());
         tempDir.mkdirs();
@@ -79,5 +79,52 @@ public class DailyRollingChronicleTest {
             pos += (size + 3) & ~3;
         }
         fis.close();
+    }
+
+    @Test
+    @Ignore
+    public void writeOneAtATime() throws IOException {
+        File tempDir = new File(System.getProperty("java.io.tmpdir") + "/deleteme" + Long.toString(System.nanoTime(), 36));
+        ChronicleTools.deleteDirOnExit(tempDir.toString());
+        tempDir.mkdirs();
+        String yyyyMMdd = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+        DailyRollingConfig config = new DailyRollingConfig();
+        DailyRollingChronicle chronicle = new DailyRollingChronicle(tempDir.getAbsolutePath(), config);
+        ExcerptAppender appender = chronicle.createAppender();
+
+        DailyRollingChronicle chronicle2 = new DailyRollingChronicle(tempDir.getAbsolutePath(), config);
+        Excerpt excerpt = chronicle2.createExcerpt();
+        ExcerptTailer tailer = chronicle2.createTailer();
+
+        for (int index = 0; index < 100; index++) {
+            appender.startExcerpt();
+            appender.writeInt(~index);
+            for (int i = 0; i < index; i++)
+                appender.write(-1);
+            appender.finish();
+
+            DailingRollingReader.dumpData(tempDir + "/" + yyyyMMdd + ".data", new PrintWriter(System.out));
+            assertTrue(excerpt.index(index));
+            assertEquals(index + 4, excerpt.size());
+            assertEquals(~index, excerpt.readInt());
+            assertEquals(index, excerpt.remaining());
+            excerpt.finish();
+
+            assertTrue(tailer.nextIndex());
+            assertEquals(index + 4, tailer.size());
+            assertEquals(~index, tailer.readInt());
+            assertEquals(index, tailer.remaining());
+            tailer.finish();
+
+            // check we can jump to this index.
+            tailer.index(index - 1);
+            assertTrue(tailer.nextIndex());
+            assertEquals(~index, tailer.readInt());
+            assertEquals(index, tailer.remaining());
+            tailer.finish();
+        }
+        chronicle2.close();
+        chronicle.close();
     }
 }

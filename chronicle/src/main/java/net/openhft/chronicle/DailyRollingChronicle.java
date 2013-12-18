@@ -22,6 +22,7 @@ import net.openhft.lang.io.DirectBytes;
 import net.openhft.lang.io.DirectStore;
 import net.openhft.lang.io.NativeBytes;
 import org.jetbrains.annotations.NotNull;
+import sun.nio.ch.DirectBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author peter.lawrey
@@ -44,7 +46,6 @@ public class DailyRollingChronicle implements Chronicle {
     private final SimpleDateFormat dateFormat;
     private final String currentFilename;
     private final List<DRFiles> filesList;
-    private volatile DRFiles indexFiles;
     private DirectBytes bytes;
     private DRCExcerptAppender appender;
     private long lastWrittenIndex = -1;
@@ -61,10 +62,10 @@ public class DailyRollingChronicle implements Chronicle {
         dateFormat.setTimeZone(config.getTimeZone());
         currentFilename = dateFormat.format(new Date());
         int index = master.append(currentFilename);
-        filesList = new ArrayList<DRFiles>(index + 128);
+        filesList = new CopyOnWriteArrayList<DRFiles>();
         while (filesList.size() < index)
             filesList.add(null);
-        indexFiles = new DRFiles(file, currentFilename);
+        DRFiles indexFiles = new DRFiles(file, currentFilename);
         filesList.add(indexFiles);
 //        worker = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory(file.getName() + "-worker", true));
     }
@@ -102,7 +103,8 @@ public class DailyRollingChronicle implements Chronicle {
     }
 
     private void findLastIndex() {
-        throw new UnsupportedOperationException();
+        int index = filesList.size() - 1;
+        lastWrittenIndex = index * config.getMaxEntriesPerCycle() + filesList.get(index).findTheLastIndex();
     }
 
     @Override
@@ -122,6 +124,19 @@ public class DailyRollingChronicle implements Chronicle {
         }
     }
 
+    synchronized DRFiles acquireDRFile(int fileIndex) {
+        DRFiles drFiles = filesList.get(fileIndex);
+        if (drFiles == null) {
+            String filename = master.filenameFor(fileIndex);
+            try {
+                filesList.set(fileIndex, drFiles = new DRFiles(file, filename));
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return drFiles;
+    }
+
     class DRFiles {
         private final MappedFileCache indexMappedCache, dataMappedCache;
         private final List<MappedByteBuffer> indexBuffers = new ArrayList<MappedByteBuffer>();
@@ -135,7 +150,7 @@ public class DailyRollingChronicle implements Chronicle {
             findTheLastIndex();
         }
 
-        private void findTheLastIndex() throws IOException {
+        private long findTheLastIndex() {
             long lastBlock = (indexMappedCache.size() - 8) / indexBlockSize;
             MappedByteBuffer imbb = null;
             for (; lastBlock >= 0; lastBlock--) {
@@ -182,6 +197,7 @@ public class DailyRollingChronicle implements Chronicle {
                     offset -= dataBlockSize;
                 }
             }
+            return lastWrittenIndex;
         }
 
         private void addIndexEntry(long indexPosition, long dataPositon) {
@@ -195,6 +211,9 @@ public class DailyRollingChronicle implements Chronicle {
     }
 
     class AbstractDRCExcerpt extends NativeBytes implements ExcerptCommon {
+        protected long index = -1;
+        private MappedByteBuffer dataMBB;
+
         public AbstractDRCExcerpt() {
             super(bytes);
         }
@@ -211,22 +230,50 @@ public class DailyRollingChronicle implements Chronicle {
 
         @Override
         public long lastWrittenIndex() {
-            throw new UnsupportedOperationException();
+            return DailyRollingChronicle.this.lastWrittenIndex();
         }
 
         @Override
         public long size() {
-            throw new UnsupportedOperationException();
+            return capacity();
         }
 
         @Override
         public ExcerptCommon toEnd() {
-            throw new UnsupportedOperationException();
+            index(lastWrittenIndex());
+            return this;
         }
 
         @Override
         public Chronicle chronicle() {
             throw new UnsupportedOperationException();
+        }
+
+        public boolean index(long l) {
+            if (l < 0)
+                return false;
+            long fileIndex = l / config.getMaxEntriesPerCycle();
+            if (fileIndex >= filesList.size())
+                return false;
+            DRFiles drFiles = filesList.get((int) fileIndex);
+            if (drFiles == null)
+                drFiles = acquireDRFile((int) fileIndex);
+            long index2 = l % config.getMaxEntriesPerCycle() >> INDEX_SAMPLE_BITS << 3;
+            MappedByteBuffer indexMBB = drFiles.indexMappedCache.acquireBuffer(index2, false);
+            long dataOffset = indexMBB.getLong((int) index2);
+            int dataBlockSize = config.getDataBlockSize();
+            for (int indexOffset = (int) (l & (INDEX_SAMPLE - 1)); indexOffset > 0; indexOffset--) {
+                MappedByteBuffer dataMBB = drFiles.dataMappedCache.acquireBuffer(dataOffset / dataBlockSize, false);
+                int size = dataMBB.getInt((int) (dataOffset % dataBlockSize));
+                dataOffset += (size + 3) & ~3; // 4 - byte alignment.
+            }
+            dataMBB = drFiles.dataMappedCache.acquireBuffer(dataOffset / dataBlockSize, false);
+            long offsetInDataBlock = dataOffset % dataBlockSize + 4;
+            startAddr = positionAddr = ((DirectBuffer) dataMBB).address() + offsetInDataBlock;
+            int size = NativeBytes.UNSAFE.getInt(startAddr - 4);
+            assert offsetInDataBlock + size <= dataBlockSize;
+            limitAddr = startAddr + size;
+            return true;
         }
     }
 
@@ -238,11 +285,6 @@ public class DailyRollingChronicle implements Chronicle {
 
         @Override
         public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean index(long l) {
             throw new UnsupportedOperationException();
         }
 
@@ -259,35 +301,42 @@ public class DailyRollingChronicle implements Chronicle {
 
         @Override
         public Excerpt toEnd() {
+            super.toEnd();
             return this;
         }
     }
 
     class DRCExcerptTailer extends AbstractDRCExcerpt implements ExcerptTailer {
         @Override
-        public boolean index(long l) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public boolean nextIndex() {
-            throw new UnsupportedOperationException();
+            startAddr = (limitAddr + 3) & ~3;
+            int size = NativeBytes.UNSAFE.getInt(startAddr);
+            startAddr = positionAddr = startAddr + 4;
+            limitAddr = startAddr + size;
+            index++;
+            return true;
         }
 
         @NotNull
         @Override
         public ExcerptTailer toStart() {
-            throw new UnsupportedOperationException();
+            index = -1;
+            return this;
         }
 
         @Override
         public ExcerptTailer toEnd() {
+            super.toEnd();
             return this;
         }
     }
 
     class DRCExcerptAppender extends AbstractDRCExcerpt implements ExcerptAppender {
         private boolean nextSynchronous = config.isSynchronousWriter();
+
+        DRCExcerptAppender() {
+            toEnd();
+        }
 
         @Override
         public void startExcerpt() {
@@ -296,7 +345,8 @@ public class DailyRollingChronicle implements Chronicle {
 
         @Override
         public void startExcerpt(long capacity) {
-            // TODO !!!
+            startAddr = positionAddr = ((limitAddr + 3) & ~3) + 4;
+            limitAddr = startAddr + capacity;
         }
 
         @Override
@@ -318,11 +368,14 @@ public class DailyRollingChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
+            long size = positionAddr - startAddr;
+            NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, (int) size);
             nextSynchronous = config.isSynchronousWriter();
         }
 
         @Override
         public ExcerptAppender toEnd() {
+            super.toEnd();
             return this;
         }
     }

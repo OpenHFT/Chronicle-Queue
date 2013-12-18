@@ -27,7 +27,7 @@ import java.util.TimeZone;
 public class DailyRollingConfig implements Cloneable {
     private TimeZone timeZone;
     // 128,000 trillion, more than 170 years worth
-    private long maxEntriesPerDay = 1L << 47;
+    private long maxEntriesPerCycle = 1L << 47;
     // the default maximum entry size
     private long maxEntrySize = 1024 * 1024;
     private BytesMarshallerFactory bytesMarshallerFactory;
@@ -37,6 +37,9 @@ public class DailyRollingConfig implements Cloneable {
     private boolean synchronousReader = false;
     // file format to use for each rolled file.
     private String fileFormat = "yyyyMMdd";
+    // rolling period
+    private int rollingPeriod = 24 * 60 * 60 * 1000;
+
     private int indexBlockSize = 1024 * 1024, dataBlockSize = 32 * 1024 * 1024;
 
     public DailyRollingConfig() {
@@ -53,12 +56,12 @@ public class DailyRollingConfig implements Cloneable {
         return this;
     }
 
-    public long getMaxEntriesPerDay() {
-        return maxEntriesPerDay;
+    public long getMaxEntriesPerCycle() {
+        return maxEntriesPerCycle;
     }
 
-    public DailyRollingConfig setMaxEntriesPerDay(long maxEntriesPerDay) {
-        this.maxEntriesPerDay = maxEntriesPerDay;
+    public DailyRollingConfig setMaxEntriesPerCycle(long maxEntriesPerCycle) {
+        this.maxEntriesPerCycle = maxEntriesPerCycle;
         return this;
     }
 
@@ -131,6 +134,15 @@ public class DailyRollingConfig implements Cloneable {
 
     public DailyRollingConfig setDataBlockSize(int dataBlockSize) {
         this.dataBlockSize = dataBlockSize;
+        return this;
+    }
+
+    public int getRollingPeriod() {
+        return rollingPeriod;
+    }
+
+    public DailyRollingConfig setRollingPeriod(int rollingPeriod) {
+        this.rollingPeriod = rollingPeriod;
         return this;
     }
 }
