@@ -938,6 +938,26 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public boolean tryLockLong(long offset) {
+        return common.tryLockLong(offset);
+    }
+
+    @Override
+    public boolean tryLockNanosLong(long offset, long nanos) {
+        return common.tryLockNanosLong(offset, nanos);
+    }
+
+    @Override
+    public void busyLockLong(long offset) throws InterruptedException, IllegalStateException {
+        common.busyLockLong(offset);
+    }
+
+    @Override
+    public void unlockLong(long offset) throws IllegalStateException {
+        common.unlockLong(offset);
+    }
+
+    @Override
     public float readVolatileFloat(long offset) {
         return common.readVolatileFloat(offset);
     }
