@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
@@ -441,10 +442,16 @@ public class IndexedChronicleTest {
         final String basePath = TMP + "/testOneAtATime";
         ChronicleTools.deleteOnExit(basePath);
 
-        for (int i = 0; i < 100; i++) {
+        File indexFile = new File(basePath + ".index");
+
+        for (int i = 0; i < 1000; i++) {
             if (i % 10 == 0)
                 System.out.println("i: " + i);
-            IndexedChronicle chronicle = new IndexedChronicle(basePath);
+
+            long indexFileSize = indexFile.length();
+            IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+            assertEquals("Index should not grow on open (i=" + i + ")", indexFileSize, indexFile.length());
+
             if (i == 0) {
                 ExcerptTailer tailer = chronicle.createTailer();
                 assertFalse(tailer.nextIndex());

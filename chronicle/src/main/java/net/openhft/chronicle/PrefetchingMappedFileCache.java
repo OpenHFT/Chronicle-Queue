@@ -77,6 +77,9 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {
         if (allBuffers == null) {
             if (index == lastIndex) {
+                if (prefetch && index > maxIndex) {
+                    prefetch(index);
+                }
                 assert lastMBB != null;
                 return lastMBB;
             }
@@ -124,11 +127,8 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
             addBuffer(index, mappedByteBuffer);
         }
         boolean ascending = index > maxIndex;
-        if (ascending) {
-            IndexedMBB imbb2 = new IndexedMBB(index + 1, fileChannel, blockSize);
-            this.imbb = imbb2;
-            PREFETCHER.submit(imbb2);
-            maxIndex = index;
+        if (prefetch && ascending) {
+            prefetch(index);
         }
         long time = (System.nanoTime() - start);
 //        timeMap.put(end / 1024, "end");
@@ -153,6 +153,13 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
         }
 */
         return mappedByteBuffer;
+    }
+
+    private void prefetch(long index) {
+        IndexedMBB imbb2 = new IndexedMBB(index + 1, fileChannel, blockSize);
+        this.imbb = imbb2;
+        PREFETCHER.submit(imbb2);
+        maxIndex = index;
     }
 
     @Override
