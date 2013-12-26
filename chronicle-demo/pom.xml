@@ -46,7 +46,7 @@
             <groupId>org.kohsuke.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>9.0</version>
-            <optional>true</optional>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
