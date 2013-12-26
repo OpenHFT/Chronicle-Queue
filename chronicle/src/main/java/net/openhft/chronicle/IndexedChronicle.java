@@ -68,7 +68,7 @@ public class IndexedChronicle implements Chronicle {
             return -1;
         }
         int indexBlockSize = config.indexBlockSize();
-        for (long block = size / indexBlockSize; block >= 0; block--) {
+        for (long block = size / indexBlockSize - 1; block >= 0; block--) {
             MappedByteBuffer mbb = indexFileCache.acquireBuffer(block, false);
             mbb.order(ByteOrder.nativeOrder());
             if (block > 0 && mbb.getLong(0) == 0) {
