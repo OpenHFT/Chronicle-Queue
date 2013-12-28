@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;

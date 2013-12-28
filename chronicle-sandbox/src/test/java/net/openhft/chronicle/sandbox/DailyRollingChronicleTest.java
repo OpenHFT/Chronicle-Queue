@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.chronicle.tools.DailingRollingIndexReader;
@@ -60,7 +60,7 @@ public class DailyRollingChronicleTest {
 
         DailyRollingConfig config = new DailyRollingConfig();
         DailyRollingChronicle chronicle = new DailyRollingChronicle(tempDir.getAbsolutePath(), config);
-        assertEquals(tempDir.getName() + ": 1\n"
+        Assert.assertEquals(tempDir.getName() + ": 1\n"
                 + "\t0\t" + yyyyMMdd + "\n",
                 DailingRollingIndexReader.masterToString(tempDir).replace("\r", ""));
         assertEquals(SIZE, chronicle.size());
@@ -73,7 +73,7 @@ public class DailyRollingChronicleTest {
         for (int i = 0; i < SIZE; i++) {
             if ((i & 7) == 0) {
                 long pos3 = bb2.getLong();
-                assertEquals(pos2, pos3);
+                Assert.assertEquals(pos2, pos3);
             }
             int size = 16 + i % 5;
             pos += (size + 3) & ~3;
@@ -105,23 +105,23 @@ public class DailyRollingChronicleTest {
             appender.finish();
 
             DailingRollingReader.dumpData(tempDir + "/" + yyyyMMdd + ".data", new PrintWriter(System.out));
-            assertTrue(excerpt.index(index));
-            assertEquals(index + 4, excerpt.size());
-            assertEquals(~index, excerpt.readInt());
-            assertEquals(index, excerpt.remaining());
+            Assert.assertTrue(excerpt.index(index));
+            Assert.assertEquals(index + 4, excerpt.size());
+            Assert.assertEquals(~index, excerpt.readInt());
+            Assert.assertEquals(index, excerpt.remaining());
             excerpt.finish();
 
-            assertTrue(tailer.nextIndex());
-            assertEquals(index + 4, tailer.size());
-            assertEquals(~index, tailer.readInt());
-            assertEquals(index, tailer.remaining());
+            Assert.assertTrue(tailer.nextIndex());
+            Assert.assertEquals(index + 4, tailer.size());
+            Assert.assertEquals(~index, tailer.readInt());
+            Assert.assertEquals(index, tailer.remaining());
             tailer.finish();
 
             // check we can jump to this index.
             tailer.index(index - 1);
-            assertTrue(tailer.nextIndex());
-            assertEquals(~index, tailer.readInt());
-            assertEquals(index, tailer.remaining());
+            Assert.assertTrue(tailer.nextIndex());
+            Assert.assertEquals(~index, tailer.readInt());
+            Assert.assertEquals(index, tailer.remaining());
             tailer.finish();
         }
         chronicle2.close();
