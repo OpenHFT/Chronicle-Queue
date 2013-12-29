@@ -116,8 +116,8 @@ public class VanillaDataCache implements Closeable {
 
     public synchronized void checkCounts() {
         for (VanillaFile file : dataKeyVanillaFileMap.values()) {
-            if (file.indexCount() > 1)
-                throw new IllegalStateException(file.file() + " has a count of " + file.indexCount());
+            if (file.usage() != 1)
+                throw new IllegalStateException(file.file() + " has a count of " + file.usage());
         }
     }
 

@@ -42,9 +42,13 @@ public class VanillaChronicleTest {
         chronicle.clear();
         ExcerptAppender appender = chronicle.createAppender();
         for (int i = 0; i < RUNS; i++) {
+//            System.err.println("i: " + i);
+//            if (i == 256)
+//                Thread.yield();
             appender.startExcerpt();
             appender.append(1000000000 + i);
             appender.finish();
+            chronicle.checkCounts();
         }
         chronicle.close();
         chronicle.clear();
@@ -100,26 +104,32 @@ public class VanillaChronicleTest {
         VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
         VanillaChronicle chronicle2 = new VanillaChronicle(baseDir, config);
-        ExcerptAppender appender = chronicle.createAppender();
-        ExcerptTailer tailer = chronicle2.createTailer();
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle2.createTailer();
 
-        assertEquals(-1L, tailer.index());
-        for (int i = 0; i < RUNS; i++) {
-            assertFalse(tailer.nextIndex());
-            appender.startExcerpt();
-            int value = 1000000000 + i;
-            appender.append(value).append(' ');
-            appender.finish();
-            assertTrue("i: " + i, tailer.nextIndex());
-            assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
-            assertEquals("i: " + i, value, tailer.parseLong());
-            assertEquals("i: " + i, 0, tailer.remaining());
-            tailer.finish();
-            chronicle.checkCounts();
-            chronicle2.checkCounts();
+            assertEquals(-1L, tailer.index());
+            for (int i = 0; i < RUNS; i++) {
+//                if (i == 128)
+//                    Thread.yield();
+//                System.err.println("i: " + i);
+                assertFalse(tailer.nextIndex());
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                chronicle.checkCounts();
+                assertTrue("i: " + i, tailer.nextIndex());
+                assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+                chronicle2.checkCounts();
+            }
+        } finally {
+            chronicle2.close();
+            chronicle.clear();
         }
-        chronicle2.close();
-        chronicle.clear();
     }
 
 
@@ -129,23 +139,26 @@ public class VanillaChronicleTest {
         String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
         VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
-        ExcerptAppender appender = chronicle.createAppender();
-        ExcerptTailer tailer = chronicle.createTailer();
-        long start = System.nanoTime();
-        assertEquals(-1L, tailer.index());
-        for (int i = 0; i < RUNS; i++) {
-            assertFalse(tailer.nextIndex());
-            appender.startExcerpt();
-            int value = 1000000000 + i;
-            appender.append(value).append(' ');
-            appender.finish();
-            assertTrue("i: " + i, tailer.nextIndex());
-            assertEquals("i: " + i, value, tailer.parseLong(), 0.0);
-            tailer.finish();
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle.createTailer();
+            long start = System.nanoTime();
+            assertEquals(-1L, tailer.index());
+            for (int i = 0; i < RUNS; i++) {
+                assertFalse(tailer.nextIndex());
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                assertTrue("i: " + i, tailer.nextIndex());
+                assertEquals("i: " + i, value, tailer.parseLong(), 0.0);
+                tailer.finish();
+            }
+            long time = System.nanoTime() - start;
+            System.out.printf("Average write/read times was %.1f us%n", time / RUNS / 1e3);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
         }
-        long time = System.nanoTime() - start;
-        System.out.printf("Average write/read times was %.1f us%n", time / RUNS / 1e3);
-        chronicle.close();
-        chronicle.clear();
     }
 }

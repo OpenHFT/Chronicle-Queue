@@ -70,7 +70,7 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        throw new UnsupportedOperationException();
+        return new VanillaExcerpt();
     }
 
     protected BytesMarshallerFactory acquireBMF() {
@@ -154,6 +154,7 @@ public class VanillaChronicle implements Chronicle {
 
     abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
         protected long index = -1;
+        protected VanillaFile dataFile;
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_BYTES.startAddr(), NO_BYTES.startAddr(), NO_BYTES.startAddr());
@@ -181,7 +182,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public ExcerptCommon toEnd() {
-            return null;
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -192,33 +193,159 @@ public class VanillaChronicle implements Chronicle {
         public int cycle() {
             return (int) (System.currentTimeMillis() / config.cycleLength());
         }
+
+        public boolean index(long nextIndex) {
+            try {
+                int cycle = (int) (nextIndex / config.entriesPerCycle());
+                long indexBlockLongs = config.indexBlockSize() >> 3;
+                int dailyCount = (int) (nextIndex % config.entriesPerCycle() / indexBlockLongs);
+                int dailyOffset = (int) (nextIndex % indexBlockLongs);
+                long indexValue;
+                try {
+                    VanillaFile file = indexCache.indexFor(cycle, dailyCount, false);
+                    indexValue = file.bytes().readVolatileLong(dailyOffset << 3);
+                    file.decrementUsage();
+                } catch (FileNotFoundException e) {
+                    return false;
+                }
+                if (indexValue == 0) {
+                    return false;
+                }
+                int threadId = (int) (indexValue >>> 48);
+                long dataOffset0 = indexValue & (-1L >>> -48);
+                int dataCount = (int) (dataOffset0 / config.dataBlockSize());
+                int dataOffset = (int) (dataOffset0 % config.dataBlockSize());
+                dataFile = dataCache.dataFor(cycle, threadId, dataCount, false);
+                NativeBytes bytes = dataFile.bytes();
+                int len = bytes.readVolatileInt(dataOffset - 4);
+                if (len == 0)
+                    return false;
+                int len2 = ~len;
+                // invalid if either the top two bits are set,
+                if ((len2 >>> 30) != 0)
+                    throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
+                startAddr = positionAddr = bytes.startAddr() + dataOffset;
+                limitAddr = startAddr + ~len;
+                index = nextIndex;
+                finished = false;
+                return true;
+            } catch (IOException ioe) {
+                throw new AssertionError(ioe);
+            }
+        }
+
+        public boolean nextIndex() {
+            if (index < 0) {
+                toStart();
+                if (index < 0)
+                    return false;
+                index--;
+            }
+            long nextIndex = index + 1;
+            while (true) {
+                boolean found = index(nextIndex);
+                if (found)
+                    return found;
+                int cycle = (int) (nextIndex / config.entriesPerCycle());
+                if (cycle >= cycle())
+                    return false;
+                nextIndex = (cycle + 1) * config.entriesPerCycle();
+            }
+        }
+
+        @NotNull
+        public ExcerptCommon toStart() {
+            long indexCount = indexCache.firstIndex();
+            if (indexCount >= 0) {
+                index = indexCount * config.entriesPerCycle();
+            }
+            return this;
+        }
     }
 
     class VanillaExcerpt extends AbstractVanillaExcerpt implements Excerpt {
-        @Override
         public long findMatch(@NotNull ExcerptComparator comparator) {
-            throw new UnsupportedOperationException();
+            long lo = 0, hi = lastWrittenIndex();
+            while (lo <= hi) {
+                long mid = (hi + lo) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare((Excerpt) this);
+                finish();
+                if (cmp < 0)
+                    lo = mid + 1;
+                else if (cmp > 0)
+                    hi = mid - 1;
+                else
+                    return mid; // key found
+            }
+            return ~lo; // -(lo + 1)
         }
 
-        @Override
         public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
-            throw new UnsupportedOperationException();
-        }
+            // lower search range
+            long lo1 = 0, hi1 = lastWrittenIndex();
+            // upper search range
+            long lo2 = 0, hi2 = hi1;
+            boolean both = true;
+            // search for the low values.
+            while (lo1 <= hi1) {
+                long mid = (hi1 + lo1) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo1)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare((Excerpt) this);
+                finish();
 
-        @Override
-        public boolean index(long l) {
-            throw new UnsupportedOperationException();
-        }
+                if (cmp < 0) {
+                    lo1 = mid + 1;
+                    if (both)
+                        lo2 = lo1;
+                } else if (cmp > 0) {
+                    hi1 = mid - 1;
+                    if (both)
+                        hi2 = hi1;
+                } else {
+                    hi1 = mid - 1;
+                    if (both)
+                        lo2 = mid + 1;
+                    both = false;
+                }
+            }
+            // search for the high values.
+            while (lo2 <= hi2) {
+                long mid = (hi2 + lo2) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo2)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare((Excerpt) this);
+                finish();
 
-        @Override
-        public boolean nextIndex() {
-            throw new UnsupportedOperationException();
+                if (cmp <= 0) {
+                    lo2 = mid + 1;
+                } else {
+                    hi2 = mid - 1;
+                }
+            }
+            startEnd[0] = lo1; // inclusive
+            startEnd[1] = lo2; // exclusive
         }
 
         @NotNull
         @Override
         public Excerpt toStart() {
-            throw new UnsupportedOperationException();
+            super.toStart();
+            return this;
         }
 
         @Override
@@ -237,12 +364,8 @@ public class VanillaChronicle implements Chronicle {
         private int appenderCycle, appenderThreadId;
         private boolean nextSynchronous;
         private VanillaFile appenderFile;
-//        int indexFile;
-//        int lastCycle;
-//        int idInIndex;
 
         VanillaAppender() {
-//            indexFile = indexCache.lastIndexFile(cycle);
         }
 
         @Override
@@ -264,6 +387,7 @@ public class VanillaChronicle implements Chronicle {
                 startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
                 limitAddr = startAddr + capacity;
                 nextSynchronous = config.synchronous();
+                finished = false;
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
@@ -292,11 +416,13 @@ public class VanillaChronicle implements Chronicle {
             // position of the start not the end.
             int offset = (int) (startAddr - appenderFile.baseAddr());
             try {
-                indexCache.append(appenderCycle, appenderThreadId, appenderFile.indexCount() * config.dataBlockSize() + offset);
+                indexCache.append(appenderCycle, appenderThreadId, appenderFile.indexCount() * config.dataBlockSize() + offset, nextSynchronous);
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
             appenderFile.bytes().positionAddr((positionAddr + 3) & ~3L);
+            if (nextSynchronous)
+                appenderFile.force();
             appenderFile.decrementUsage();
         }
 
@@ -308,65 +434,9 @@ public class VanillaChronicle implements Chronicle {
     }
 
     class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {
-        private VanillaFile dataFile;
-
-        @Override
-        public boolean index(long l) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean nextIndex() {
-            if (index < 0) {
-                toStart();
-                if (index < 0)
-                    return false;
-                index--;
-            }
-            try {
-                long nextIndex = index + 1;
-                int cycle = (int) (nextIndex / config.entriesPerCycle());
-                int dailyCount = (int) (nextIndex % config.entriesPerCycle() / config.indexBlockSize());
-                int dailyOffset = (int) (nextIndex % config.indexBlockSize());
-                long indexValue = 0;
-                try {
-                    VanillaFile file = indexCache.indexFor(cycle, dailyCount, false);
-                    indexValue = file.bytes().readVolatileLong(dailyOffset << 3);
-                    file.decrementUsage();
-                } catch (FileNotFoundException e) {
-                    return false;
-                }
-                if (indexValue == 0)
-                    return false;
-                int threadId = (int) (indexValue >>> 48);
-                long dataOffset0 = indexValue & (-1L >>> -48);
-                int dataCount = (int) (dataOffset0 / config.dataBlockSize());
-                int dataOffset = (int) (dataOffset0 % config.dataBlockSize());
-                dataFile = dataCache.dataFor(cycle, threadId, dataCount, false);
-                NativeBytes bytes = dataFile.bytes();
-                int len = bytes.readVolatileInt(dataOffset - 4);
-                if (len == 0)
-                    return false;
-                int len2 = ~len;
-                // invalid if either the top two bits are set,
-                if ((len2 >>> 30) != 0)
-                    throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
-                startAddr = positionAddr = bytes.startAddr() + dataOffset;
-                limitAddr = startAddr + ~len;
-                index = nextIndex;
-                return true;
-            } catch (IOException ioe) {
-                throw new AssertionError(ioe);
-            }
-        }
-
-        @NotNull
         @Override
         public ExcerptTailer toStart() {
-            long indexCount = indexCache.firstIndex();
-            if (indexCount >= 0) {
-                index = indexCount * config.entriesPerCycle();
-            }
+            super.toStart();
             return this;
         }
 

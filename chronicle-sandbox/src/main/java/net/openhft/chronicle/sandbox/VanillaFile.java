@@ -24,6 +24,7 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class VanillaFile implements Closeable {
@@ -37,19 +38,22 @@ public class VanillaFile implements Closeable {
     private final int indexCount;
     private volatile boolean closed = false;
 
-    public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size, boolean forWrite) throws IOException {
+    public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size, boolean forAppend) throws IOException {
         logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
         File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
         if (!dir.isDirectory()) {
             boolean created = dir.mkdirs();
-            logger.info("Created " + dir + " is " + created);
+            if (logger.isLoggable(Level.FINE))
+                logger.fine("Created " + dir + " is " + created);
         }
         file = new File(dir, name);
         if (file.exists()) {
-            logger.info("Opening " + file);
-        } else if (forWrite) {
-            logger.info("Creating " + file);
+            if (logger.isLoggable(Level.FINE))
+                logger.fine("Opening " + file);
+        } else if (forAppend) {
+            if (logger.isLoggable(Level.FINE))
+                logger.fine("Creating " + file);
         } else {
             throw new FileNotFoundException();
         }
@@ -90,7 +94,9 @@ public class VanillaFile implements Closeable {
     }
 
     private void close0() {
-        Logger.getLogger(VanillaFile.class.getName()).info("... Closing " + file);
+        Logger logger = Logger.getLogger(getClass().getName());
+        if (logger.isLoggable(Level.FINE))
+            logger.fine("... Closing " + file);
         try {
             fc.close();
         } catch (IOException e) {
@@ -102,5 +108,9 @@ public class VanillaFile implements Closeable {
     public void close() {
         closed = true;
         decrementUsage();
+    }
+
+    public void force() {
+        map.force();
     }
 }

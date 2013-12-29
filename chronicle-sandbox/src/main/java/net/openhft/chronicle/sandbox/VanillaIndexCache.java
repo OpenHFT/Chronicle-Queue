@@ -52,13 +52,13 @@ public class VanillaIndexCache implements Closeable {
         this.dateCache = dateCache;
     }
 
-    public synchronized VanillaFile indexFor(int cycle, int indexCount, boolean forWrite) throws IOException {
+    public synchronized VanillaFile indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle = cycle;
         key.indexCount = indexCount << blockBits;
         VanillaFile vanillaFile = indexKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits, forWrite));
+            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits, forAppend));
         }
         vanillaFile.incrementUsage();
         return vanillaFile;
@@ -87,7 +87,7 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex;
     }
 
-    public void append(int cycle, int threadId, long dataOffset) throws IOException {
+    public void append(int cycle, int threadId, long dataOffset, boolean synchronous) throws IOException {
         long index = ((long) threadId << 48) + dataOffset;
         for (int indexCount = lastIndexFile(cycle); indexCount < 10000; indexCount++) {
             VanillaFile file = indexFor(cycle, indexCount, true);
@@ -95,6 +95,8 @@ public class VanillaIndexCache implements Closeable {
             while (bytes.remaining() >= 8) {
                 if (bytes.compareAndSwapLong(bytes.position(), 0L, index)) {
                     file.decrementUsage();
+                    if (synchronous)
+                        file.force();
                     return;
                 }
                 bytes.position(bytes.position() + 8);
@@ -122,8 +124,8 @@ public class VanillaIndexCache implements Closeable {
 
     public synchronized void checkCounts() {
         for (VanillaFile file : indexKeyVanillaFileMap.values()) {
-            if (file.indexCount() > 1)
-                throw new IllegalStateException(file.file() + " has a count of " + file.indexCount());
+            if (file.usage() != 1)
+                throw new IllegalStateException(file.file() + " has a count of " + file.usage());
         }
     }
 
