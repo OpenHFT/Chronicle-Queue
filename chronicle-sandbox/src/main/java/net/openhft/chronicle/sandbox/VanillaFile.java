@@ -19,10 +19,7 @@ package net.openhft.chronicle.sandbox;
 import net.openhft.lang.io.NativeBytes;
 import sun.nio.ch.DirectBuffer;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -31,7 +28,7 @@ import java.util.logging.Logger;
 
 public class VanillaFile implements Closeable {
     private final Logger logger;
-    private final String filename;
+    private final File file;
     private final FileChannel fc;
     private final MappedByteBuffer map;
     private final long baseAddr;
@@ -40,26 +37,31 @@ public class VanillaFile implements Closeable {
     private final int indexCount;
     private volatile boolean closed = false;
 
-    public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size) throws IOException {
+    public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size, boolean forWrite) throws IOException {
         logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
-        String dir = basePath + File.separatorChar + cycleStr;
-        File dirFile = new File(dir);
+        File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
-        if (!dirFile.isDirectory()) {
-            boolean created = dirFile.mkdirs();
-            logger.info("Created " + dirFile + " is " + created);
+        if (!dir.isDirectory()) {
+            boolean created = dir.mkdirs();
+            logger.info("Created " + dir + " is " + created);
         }
-        filename = dir + File.separatorChar + name;
-        logger.info((new File(filename).exists() ? "Creating " : "Opening ") + filename);
-        fc = new RandomAccessFile(filename, "rw").getChannel();
+        file = new File(dir, name);
+        if (file.exists()) {
+            logger.info("Opening " + file);
+        } else if (forWrite) {
+            logger.info("Creating " + file);
+        } else {
+            throw new FileNotFoundException();
+        }
+        fc = new RandomAccessFile(file, "rw").getChannel();
         map = fc.map(FileChannel.MapMode.READ_WRITE, 0, size);
         map.order(ByteOrder.nativeOrder());
         baseAddr = ((DirectBuffer) map).address();
         bytes = new NativeBytes(null, baseAddr, baseAddr, baseAddr + size);
     }
 
-    public String filename() {
-        return filename;
+    public File file() {
+        return file;
     }
 
     public NativeBytes bytes() {
@@ -88,6 +90,7 @@ public class VanillaFile implements Closeable {
     }
 
     private void close0() {
+        Logger.getLogger(VanillaFile.class.getName()).info("... Closing " + file);
         try {
             fc.close();
         } catch (IOException e) {
@@ -97,8 +100,7 @@ public class VanillaFile implements Closeable {
 
     @Override
     public void close() {
-        if (usage.get() <= 0)
-            close0();
         closed = true;
+        decrementUsage();
     }
 }

@@ -21,6 +21,7 @@ import net.openhft.lang.io.NativeBytes;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -51,22 +52,22 @@ public class VanillaIndexCache implements Closeable {
         this.dateCache = dateCache;
     }
 
-    public synchronized VanillaFile indexFor(int cycle, int indexCount) throws IOException {
+    public synchronized VanillaFile indexFor(int cycle, int indexCount, boolean forWrite) throws IOException {
         key.cycle = cycle;
         key.indexCount = indexCount << blockBits;
         VanillaFile vanillaFile = indexKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits));
+            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits, forWrite));
         }
         vanillaFile.incrementUsage();
         return vanillaFile;
     }
 
     @Override
-    public synchronized void close() throws IOException {
+    public synchronized void close() {
         for (VanillaFile vanillaFile : indexKeyVanillaFileMap.values()) {
-            vanillaFile.decrementUsage();
+            vanillaFile.close();
         }
         indexKeyVanillaFileMap.clear();
     }
@@ -89,13 +90,40 @@ public class VanillaIndexCache implements Closeable {
     public void append(int cycle, int threadId, long dataOffset) throws IOException {
         long index = ((long) threadId << 48) + dataOffset;
         for (int indexCount = lastIndexFile(cycle); indexCount < 10000; indexCount++) {
-            VanillaFile file = indexFor(cycle, indexCount);
+            VanillaFile file = indexFor(cycle, indexCount, true);
             NativeBytes bytes = file.bytes();
             while (bytes.remaining() >= 8) {
-                if (bytes.compareAndSwapLong(bytes.position(), 0L, index))
+                if (bytes.compareAndSwapLong(bytes.position(), 0L, index)) {
+                    file.decrementUsage();
                     return;
+                }
                 bytes.position(bytes.position() + 8);
             }
+            file.decrementUsage();
+        }
+    }
+
+    public long firstIndex() {
+        File[] files = new File(basePath).listFiles();
+        if (files == null)
+            return -1;
+        long firstDate = Long.MAX_VALUE;
+        for (File file : files) {
+            try {
+                long date = dateCache.parseCount(file.getName());
+                if (firstDate > date)
+                    firstDate = date;
+            } catch (ParseException ignored) {
+                // ignored
+            }
+        }
+        return firstDate;
+    }
+
+    public synchronized void checkCounts() {
+        for (VanillaFile file : indexKeyVanillaFileMap.values()) {
+            if (file.indexCount() > 1)
+                throw new IllegalStateException(file.file() + " has a count of " + file.indexCount());
         }
     }
 

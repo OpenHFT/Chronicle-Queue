@@ -17,6 +17,7 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
+import net.openhft.lang.io.IOTools;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -122,28 +123,17 @@ public enum ChronicleTools {
                     for (String dir : toDeleteList) {
                         // TODO no idea why the // is needed. Appears to be a bug in the JVM.
                         System.out.println("Deleting " + dir.replaceAll("/", "//"));
-                        deleteDir(dir);
+                        IOTools.deleteDir(dir);
                     }
                 }
             }));
         }
 
         synchronized void add(String dirPath) {
-            deleteDir(dirPath);
+            IOTools.deleteDir(dirPath);
             toDeleteList.add(dirPath);
         }
 
-        private void deleteDir(String dirPath) {
-            File dir = new File(dirPath);
-            // delete one level.
-            if (dir.isDirectory()) {
-                File[] files = dir.listFiles();
-                if (files != null)
-                    for (File file : files)
-                        file.delete();
-            }
-            dir.delete();
-        }
     }
 
     public static void warmup() {

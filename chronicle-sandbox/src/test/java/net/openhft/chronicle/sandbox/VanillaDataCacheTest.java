@@ -31,26 +31,26 @@ public class VanillaDataCacheTest {
         VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
 
         int cycle = (int) (System.currentTimeMillis() / 1000);
-        VanillaFile vanillaFile0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0);
+        VanillaFile vanillaFile0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
         vanillaFile0.bytes().writeLong(0, 0x12345678);
-        File file0 = new File(vanillaFile0.filename());
+        File file0 = vanillaFile0.file();
         assertEquals(64 << 10, file0.length());
         assertEquals(0x12345678L, vanillaFile0.bytes().readLong(0));
         vanillaFile0.decrementUsage();
 
-        VanillaFile vanillaFile1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1);
-        File file1 = new File(vanillaFile1.filename());
+        VanillaFile vanillaFile1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
+        File file1 = vanillaFile1.file();
         assertEquals(64 << 10, file1.length());
         vanillaFile1.decrementUsage();
-        assertNotEquals(vanillaFile1.filename(), vanillaFile0.filename());
+        assertNotEquals(vanillaFile1.file(), vanillaFile0.file());
 
-        VanillaFile vanillaFile2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2);
-        File file2 = new File(vanillaFile2.filename());
+        VanillaFile vanillaFile2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
+        File file2 = vanillaFile2.file();
         assertEquals(64 << 10, file2.length());
         vanillaFile2.decrementUsage();
 
-        assertNotEquals(vanillaFile2.filename(), vanillaFile0.filename());
-        assertNotEquals(vanillaFile2.filename(), vanillaFile1.filename());
+        assertNotEquals(vanillaFile2.file(), vanillaFile0.file());
+        assertNotEquals(vanillaFile2.file(), vanillaFile1.file());
         cache.close();
         assertEquals(0, vanillaFile0.usage());
         assertEquals(0, vanillaFile1.usage());
@@ -75,9 +75,9 @@ public class VanillaDataCacheTest {
             long start = System.nanoTime();
             int runs = 10000;
             for (int i = 0; i < runs; i++) {
-                VanillaFile vanillaFile0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), i);
+                VanillaFile vanillaFile0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
                 vanillaFile0.bytes().writeLong(0, 0x12345678);
-                file0 = new File(vanillaFile0.filename());
+                file0 = vanillaFile0.file();
                 assertEquals(128 << 10, file0.length());
                 assertEquals(0x12345678L, vanillaFile0.bytes().readLong(0));
                 vanillaFile0.decrementUsage();

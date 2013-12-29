@@ -18,6 +18,7 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.lang.Maths;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -48,6 +49,10 @@ public class DateCache {
             }
         }
         return dv.text;
+    }
+
+    public long parseCount(String name) throws ParseException {
+        return format.parse(name).getTime() / cycleLength;
     }
 
     static class DateValue {

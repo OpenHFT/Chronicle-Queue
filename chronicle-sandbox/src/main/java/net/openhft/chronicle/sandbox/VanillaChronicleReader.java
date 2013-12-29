@@ -118,7 +118,7 @@ public class VanillaChronicleReader {
                         fileMap.put(fileKey, readerFile = new ReaderFile(new FileInputStream(new File(dir, "data-" + threadId + "-" + (offset / dataSize))).getChannel()));
                     }
                     MappedByteBuffer mbb = readerFile.mbb;
-                    int length = mbb.getInt(fileOffset - 4);
+                    int length = ~mbb.getInt(fileOffset - 4);
                     for (int j = 0; j < length; j++) {
                         byte b = mbb.get(fileOffset + j);
                         if (b < ' ' || b >= 127) {

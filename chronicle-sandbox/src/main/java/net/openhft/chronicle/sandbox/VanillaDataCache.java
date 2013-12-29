@@ -44,16 +44,17 @@ public class VanillaDataCache implements Closeable {
         this.dateCache = dateCache;
     }
 
-    public synchronized VanillaFile dataFor(int cycle, int threadId, int dataCount) throws IOException {
+    public synchronized VanillaFile dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
         key.cycle = cycle;
         key.threadId = threadId;
         key.dataCount = dataCount;
         VanillaFile vanillaFile = dataKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + threadId + "-" + dataCount, dataCount, 1L << blockBits));
+            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + threadId + "-" + dataCount, dataCount, 1L << blockBits, forWrite));
             findEndOfData(vanillaFile);
         }
+        vanillaFile.incrementUsage();
         return vanillaFile;
     }
 
@@ -64,11 +65,11 @@ public class VanillaDataCache implements Closeable {
             if (len == 0) {
                 return;
             }
-            len = nextWordAlignment(len);
-            if (len < 0) {
-                throw new IllegalStateException("Corrupted length in " + vanillaFile.filename());
+            int len2 = nextWordAlignment(~len);
+            if (len2 < 0) {
+                throw new IllegalStateException("Corrupted length in " + vanillaFile.file() + " " + Integer.toHexString(len));
             }
-            bytes.position(bytes.position() + len);
+            bytes.position(bytes.position() + len2 + 4);
         }
         throw new AssertionError();
     }
@@ -78,7 +79,7 @@ public class VanillaDataCache implements Closeable {
     }
 
     @Override
-    public synchronized void close() throws IOException {
+    public synchronized void close() {
         for (VanillaFile vanillaFile : dataKeyVanillaFileMap.values()) {
             vanillaFile.close();
         }
@@ -106,12 +107,20 @@ public class VanillaDataCache implements Closeable {
             lastCount = maxCount;
         }
 
-        return dataFor(cycle, threadId, lastCount);
+        return dataFor(cycle, threadId, lastCount, true);
     }
 
     public void incrementLastCount() {
         lastCount++;
     }
+
+    public synchronized void checkCounts() {
+        for (VanillaFile file : dataKeyVanillaFileMap.values()) {
+            if (file.indexCount() > 1)
+                throw new IllegalStateException(file.file() + " has a count of " + file.indexCount());
+        }
+    }
+
 
     static class DataKey implements Cloneable {
         int cycle;

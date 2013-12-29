@@ -21,9 +21,10 @@ public class VanillaChronicleConfig {
 
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
-    private long indexBlockSize = 16 << 20; // 16 MB
-    private long dataBlockSize = 64 << 20; // 16 MB
+    private long indexBlockSize = 16L << 20; // 16 MB
+    private long dataBlockSize = 64L << 20; // 16 MB
     private int defaultMessageSize = 128 << 10; // 128 KB.
+    private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
     private boolean synchronous = false;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
@@ -62,6 +63,15 @@ public class VanillaChronicleConfig {
         return this;
     }
 
+    public VanillaChronicleConfig entriesPerCycle(long entriesPerCycle) {
+        this.entriesPerCycle = entriesPerCycle;
+        return this;
+    }
+
+    public long entriesPerCycle() {
+        return entriesPerCycle;
+    }
+
     public VanillaChronicleConfig defaultMessageSize(int defaultMessageSize) {
         this.defaultMessageSize = defaultMessageSize;
         return this;
@@ -79,4 +89,6 @@ public class VanillaChronicleConfig {
     public boolean synchronous() {
         return synchronous;
     }
+
+
 }
