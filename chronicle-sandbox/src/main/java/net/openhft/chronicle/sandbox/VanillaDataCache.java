@@ -16,7 +16,10 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.lang.io.NativeBytes;
+
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,16 +44,37 @@ public class VanillaDataCache implements Closeable {
         this.dateCache = dateCache;
     }
 
-    public VanillaFile dataFor(int cycle, int threadId, int dataCount) throws IOException {
+    public synchronized VanillaFile dataFor(int cycle, int threadId, int dataCount) throws IOException {
         key.cycle = cycle;
         key.threadId = threadId;
         key.dataCount = dataCount;
         VanillaFile vanillaFile = dataKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + threadId + "-" + dataCount, 1L << blockBits));
+            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + threadId + "-" + dataCount, dataCount, 1L << blockBits));
+            findEndOfData(vanillaFile);
         }
         return vanillaFile;
+    }
+
+    private void findEndOfData(VanillaFile vanillaFile) {
+        NativeBytes bytes = vanillaFile.bytes();
+        for (int i = 0, max = 1 << blockBits; i < max; i += 4) {
+            int len = bytes.readInt(bytes.position());
+            if (len == 0) {
+                return;
+            }
+            len = nextWordAlignment(len);
+            if (len < 0) {
+                throw new IllegalStateException("Corrupted length in " + vanillaFile.filename());
+            }
+            bytes.position(bytes.position() + len);
+        }
+        throw new AssertionError();
+    }
+
+    public int nextWordAlignment(int len) {
+        return (len + 3) & ~3;
     }
 
     @Override
@@ -59,6 +83,34 @@ public class VanillaDataCache implements Closeable {
             vanillaFile.close();
         }
         dataKeyVanillaFileMap.clear();
+    }
+
+    int lastCycle = -1;
+    int lastCount = -1;
+
+    public VanillaFile dataForLast(int cycle, int threadId) throws IOException {
+        String cycleStr = dateCache.formatFor(cycle);
+        String dataPrefix = basePath + "/" + cycleStr + "/data-" + threadId + "-";
+        if (lastCycle != cycle) {
+            int maxCount = 0;
+            File[] files = new File(dataPrefix).listFiles();
+            if (files != null)
+                for (File file : files) {
+                    if (file.getName().startsWith(dataPrefix)) {
+                        int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
+                        if (maxCount < count)
+                            maxCount = count;
+                    }
+                }
+            lastCycle = cycle;
+            lastCount = maxCount;
+        }
+
+        return dataFor(cycle, threadId, lastCount);
+    }
+
+    public void incrementLastCount() {
+        lastCount++;
     }
 
     static class DataKey implements Cloneable {

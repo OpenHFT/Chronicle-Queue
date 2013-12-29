@@ -17,10 +17,14 @@
 package net.openhft.chronicle.sandbox;
 
 public class VanillaChronicleConfig {
+    public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();
+
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
     private long indexBlockSize = 16 << 20; // 16 MB
     private long dataBlockSize = 64 << 20; // 16 MB
+    private int defaultMessageSize = 128 << 10; // 128 KB.
+    private boolean synchronous = false;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
         this.cycleFormat = cycleFormat;
@@ -49,12 +53,30 @@ public class VanillaChronicleConfig {
         return indexBlockSize;
     }
 
+    public long dataBlockSize() {
+        return dataBlockSize;
+    }
+
     public VanillaChronicleConfig dataBlockSize(int dataBlockSize) {
         this.dataBlockSize = dataBlockSize;
         return this;
     }
 
-    public long dataBlockSize() {
-        return dataBlockSize;
+    public VanillaChronicleConfig defaultMessageSize(int defaultMessageSize) {
+        this.defaultMessageSize = defaultMessageSize;
+        return this;
+    }
+
+    public int defaultMessageSize() {
+        return defaultMessageSize;
+    }
+
+    public VanillaChronicleConfig synchronous(boolean synchronous) {
+        this.synchronous = synchronous;
+        return this;
+    }
+
+    public boolean synchronous() {
+        return synchronous;
     }
 }

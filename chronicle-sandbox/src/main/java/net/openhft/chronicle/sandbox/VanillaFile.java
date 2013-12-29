@@ -34,25 +34,28 @@ public class VanillaFile implements Closeable {
     private final String filename;
     private final FileChannel fc;
     private final MappedByteBuffer map;
+    private final long baseAddr;
     private final NativeBytes bytes;
     private final AtomicInteger usage = new AtomicInteger(1);
+    private final int indexCount;
     private volatile boolean closed = false;
 
-    public VanillaFile(String basePath, String cycleStr, String name, long size) throws IOException {
+    public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size) throws IOException {
         logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
         String dir = basePath + File.separatorChar + cycleStr;
         File dirFile = new File(dir);
+        this.indexCount = indexCount;
         if (!dirFile.isDirectory()) {
             boolean created = dirFile.mkdirs();
             logger.info("Created " + dirFile + " is " + created);
         }
         filename = dir + File.separatorChar + name;
-//        logger.info((new File(filename).exists() ? "Creating " : "Opening ") + filename);
+        logger.info((new File(filename).exists() ? "Creating " : "Opening ") + filename);
         fc = new RandomAccessFile(filename, "rw").getChannel();
         map = fc.map(FileChannel.MapMode.READ_WRITE, 0, size);
         map.order(ByteOrder.nativeOrder());
-        long address = ((DirectBuffer) map).address();
-        bytes = new NativeBytes(null, address, address, address + size);
+        baseAddr = ((DirectBuffer) map).address();
+        bytes = new NativeBytes(null, baseAddr, baseAddr, baseAddr + size);
     }
 
     public String filename() {
@@ -72,8 +75,16 @@ public class VanillaFile implements Closeable {
             close0();
     }
 
+    public int indexCount() {
+        return indexCount;
+    }
+
     public int usage() {
         return usage.get();
+    }
+
+    public long baseAddr() {
+        return baseAddr;
     }
 
     private void close0() {

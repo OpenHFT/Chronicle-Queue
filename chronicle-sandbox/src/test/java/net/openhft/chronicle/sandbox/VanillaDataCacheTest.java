@@ -67,7 +67,7 @@ public class VanillaDataCacheTest {
     public void testDataForPerf() throws Exception {
         File dir = new File(System.getProperty("java.io.tmpdir"), "testDataForPerf");
         DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 7, dateCache);
 
         int cycle = (int) (System.currentTimeMillis() / 1000);
         File file0 = null;
@@ -78,7 +78,7 @@ public class VanillaDataCacheTest {
                 VanillaFile vanillaFile0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), i);
                 vanillaFile0.bytes().writeLong(0, 0x12345678);
                 file0 = new File(vanillaFile0.filename());
-                assertEquals(64 << 10, file0.length());
+                assertEquals(128 << 10, file0.length());
                 assertEquals(0x12345678L, vanillaFile0.bytes().readLong(0));
                 vanillaFile0.decrementUsage();
                 vanillaFile0.close();

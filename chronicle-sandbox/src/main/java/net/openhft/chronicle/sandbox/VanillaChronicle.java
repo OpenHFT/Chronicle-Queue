@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.*;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.DirectBytes;
@@ -35,20 +36,28 @@ import java.lang.ref.WeakReference;
 public class VanillaChronicle implements Chronicle {
     private final String name;
     private final String basePath;
+    private final VanillaChronicleConfig config;
     private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
     private final ThreadLocal<WeakReference<ExcerptTailer>> tailerCache = new ThreadLocal<WeakReference<ExcerptTailer>>();
     private final ThreadLocal<WeakReference<ExcerptAppender>> appenderCache = new ThreadLocal<WeakReference<ExcerptAppender>>();
     private final DirectBytes NO_BYTES = DirectStore.allocateLazy(4096).createSlice();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
+    //    private volatile int cycle;
     private volatile long lastWrittenIndex;
+
+    public VanillaChronicle(String basePath) {
+        this(basePath, VanillaChronicleConfig.DEFAULT);
+    }
 
     public VanillaChronicle(String basePath, VanillaChronicleConfig config) {
         this.basePath = basePath;
+        this.config = config;
         name = new File(basePath).getName();
         DateCache dateCache = new DateCache(config.cycleFormat(), config.cycleLength());
         indexCache = new VanillaIndexCache(basePath, Maths.intLog2(config.indexBlockSize()), dateCache);
         dataCache = new VanillaDataCache(basePath, Maths.intLog2(config.dataBlockSize()), dateCache);
+//        cycle = (int) (System.currentTimeMillis() / config.cycleLength());
     }
 
     @Override
@@ -163,6 +172,10 @@ public class VanillaChronicle implements Chronicle {
         public Chronicle chronicle() {
             return VanillaChronicle.this;
         }
+
+        public int cycle() {
+            return (int) (System.currentTimeMillis() / config.cycleLength());
+        }
     }
 
     class VanillaExcerpt extends AbstractVanillaExcerpt implements Excerpt {
@@ -197,18 +210,46 @@ public class VanillaChronicle implements Chronicle {
             super.toEnd();
             return this;
         }
+
+        @Override
+        public void finish() {
+            super.finish();
+        }
     }
 
     class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
+        private int appenderCycle, appenderThreadId;
+        private boolean nextSynchronous;
+        private VanillaFile appenderFile;
+//        int indexFile;
+//        int lastCycle;
+//        int idInIndex;
+
+        VanillaAppender() {
+//            indexFile = indexCache.lastIndexFile(cycle);
+        }
 
         @Override
         public void startExcerpt() {
-            throw new UnsupportedOperationException();
+            startExcerpt(config.defaultMessageSize());
         }
 
         @Override
         public void startExcerpt(long capacity) {
-            throw new UnsupportedOperationException();
+            try {
+                appenderCycle = cycle();
+                appenderThreadId = AffinitySupport.getThreadId();
+                appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                if (appenderFile.bytes().remaining() < capacity + 4) {
+                    dataCache.incrementLastCount();
+                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                }
+                startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
+                limitAddr = startAddr + capacity;
+                nextSynchronous = config.synchronous();
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
         }
 
         @Override
@@ -218,14 +259,28 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public boolean nextSynchronous() {
-            throw new UnsupportedOperationException();
+            return nextSynchronous;
         }
 
         @Override
         public void nextSynchronous(boolean nextSynchronous) {
-            throw new UnsupportedOperationException();
+            this.nextSynchronous = nextSynchronous;
         }
 
+        @Override
+        public void finish() {
+            super.finish();
+            int length = (int) (positionAddr - startAddr);
+            NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
+            // position of the start not the end.
+            int offset = (int) (startAddr - appenderFile.baseAddr());
+            try {
+                indexCache.append(appenderCycle, appenderThreadId, appenderFile.indexCount() * config.dataBlockSize() + offset);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+            appenderFile.bytes().positionAddr((positionAddr + 3) & ~3L);
+        }
 
         @Override
         public ExcerptAppender toEnd() {
@@ -257,6 +312,11 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptTailer toEnd() {
             super.toEnd();
             return this;
+        }
+
+        @Override
+        public void finish() {
+            super.finish();
         }
     }
 }

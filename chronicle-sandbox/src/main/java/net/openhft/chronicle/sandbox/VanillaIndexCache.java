@@ -16,13 +16,17 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.lang.io.NativeBytes;
+
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class VanillaIndexCache implements Closeable {
     private static final int MAX_SIZE = 128;
+    public static final String INDEX = "index-";
 
     private final String basePath;
     private final IndexKey key = new IndexKey();
@@ -53,7 +57,7 @@ public class VanillaIndexCache implements Closeable {
         VanillaFile vanillaFile = indexKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "index-" + indexCount, 1L << blockBits));
+            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits));
         }
         vanillaFile.incrementUsage();
         return vanillaFile;
@@ -65,6 +69,34 @@ public class VanillaIndexCache implements Closeable {
             vanillaFile.decrementUsage();
         }
         indexKeyVanillaFileMap.clear();
+    }
+
+    public int lastIndexFile(int cycle) {
+        int maxIndex = 0;
+        File[] files = new File(dateCache.formatFor(cycle)).listFiles();
+        if (files != null)
+            for (File file : files) {
+                String name = file.getName();
+                if (name.startsWith(INDEX)) {
+                    int index = Integer.parseInt(name.substring(INDEX.length()));
+                    if (maxIndex < index)
+                        maxIndex = index;
+                }
+            }
+        return maxIndex;
+    }
+
+    public void append(int cycle, int threadId, long dataOffset) throws IOException {
+        long index = ((long) threadId << 48) + dataOffset;
+        for (int indexCount = lastIndexFile(cycle); indexCount < 10000; indexCount++) {
+            VanillaFile file = indexFor(cycle, indexCount);
+            NativeBytes bytes = file.bytes();
+            while (bytes.remaining() >= 8) {
+                if (bytes.compareAndSwapLong(bytes.position(), 0L, index))
+                    return;
+                bytes.position(bytes.position() + 8);
+            }
+        }
     }
 
     static class IndexKey implements Cloneable {
