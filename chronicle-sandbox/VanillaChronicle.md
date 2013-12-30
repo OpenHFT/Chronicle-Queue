@@ -18,10 +18,12 @@ File Format
 
 The directory structure is as follows.
 
-   base-directory /
-       cycle-name /
-            index-{n}          - multiple index files from 0 .. {n}
-            data-{tid}-{m}  - multiple data files for each thread id (matches the process id) from 0 .. {n}
+<pre>
+base-directory /
+   {cycle-name} /       - The default format is yyyyMMdd
+        index-{n}       - multiple index files from 0 .. {n}
+        data-{tid}-{m}  - multiple data files for each thread id (matches the process id) from 0 .. {n}
+</pre>
 
 The index file format is an sequence of 8-byte values which consist of a 16-bit {tid} and the offset in bytes of the start of the record.
 
@@ -30,4 +32,16 @@ This is used to avoid seeing regular data as a length and detect corruption.  Th
 
 TCP Replication
 ---------------
+
+Each *source* can have any number of down stream *sinks*.  With TCP replication this works well up to 10 consumers, above this you may get scalability issues.
+
+When a *sink* connects to a *source*, it sends the last entry it had and the source will send entries from there.
+
+The source sends a message for;
+
+ - each entry, existing or new.
+ - when there is a new cycle.
+ - when the source is in sync.
+ - a heartbeat every 2.5 seconds.
+
 
