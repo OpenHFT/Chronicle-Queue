@@ -27,7 +27,7 @@ import java.nio.channels.SocketChannel;
 /**
  * @author peter.lawrey
  */
-enum TcpUtil {
+public enum TcpUtil {
     ;
     static final int HEADER_SIZE = 12;
     static final int INITIAL_BUFFER_SIZE = 64 * 1024;

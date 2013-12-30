@@ -48,7 +48,7 @@ public class VanillaChronicleTest {
             appender.startExcerpt();
             appender.append(1000000000 + i);
             appender.finish();
-            chronicle.checkCounts();
+            chronicle.checkCounts(1, 2);
         }
         chronicle.close();
         chronicle.clear();
@@ -95,12 +95,12 @@ public class VanillaChronicleTest {
 
     @Test
     public void testTailer() throws IOException {
-        final int RUNS = 1000;
-        String baseDir = System.getProperty("java.io.tmpdir") + "/testTailer";
+        final int RUNS = 1000000; // 5000000;
+        String baseDir = System.getProperty("java.io.tmpdir") + "/" + "testTailer";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.defaultMessageSize(128);
-        config.indexBlockSize(1024);
-        config.dataBlockSize(1024);
+        config.indexBlockSize(256 << 10);
+        config.dataBlockSize(512 << 10);
         VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
         VanillaChronicle chronicle2 = new VanillaChronicle(baseDir, config);
@@ -110,21 +110,23 @@ public class VanillaChronicleTest {
 
             assertEquals(-1L, tailer.index());
             for (int i = 0; i < RUNS; i++) {
-//                if (i == 128)
+//                if ((i & 65535) == 0)
+//                    System.err.println("i: " + i);
+//                if (i == 88000)
 //                    Thread.yield();
-//                System.err.println("i: " + i);
                 assertFalse(tailer.nextIndex());
                 appender.startExcerpt();
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                chronicle.checkCounts();
+                chronicle.checkCounts(1, 2);
                 assertTrue("i: " + i, tailer.nextIndex());
+                chronicle2.checkCounts(1, 2);
                 assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
                 assertEquals("i: " + i, value, tailer.parseLong());
                 assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
-                chronicle2.checkCounts();
+                chronicle2.checkCounts(1, 2);
             }
         } finally {
             chronicle2.close();
@@ -135,27 +137,86 @@ public class VanillaChronicleTest {
 
     @Test
     public void testTailerPerf() throws IOException {
-        final int RUNS = 1000000;
+        final int WARMUP = 50000;
+        final int RUNS = 5000000;
         String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
         VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
         try {
             ExcerptAppender appender = chronicle.createAppender();
             ExcerptTailer tailer = chronicle.createTailer();
-            long start = System.nanoTime();
+            long start = 0;
             assertEquals(-1L, tailer.index());
-            for (int i = 0; i < RUNS; i++) {
-                assertFalse(tailer.nextIndex());
+            for (int i = -WARMUP; i < RUNS; i++) {
+                if (i == 0)
+                    start = System.nanoTime();
+                boolean condition0 = tailer.nextIndex();
+                if (condition0)
+                    assertFalse("i: " + i, condition0);
                 appender.startExcerpt();
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                assertTrue("i: " + i, tailer.nextIndex());
-                assertEquals("i: " + i, value, tailer.parseLong(), 0.0);
+                boolean condition = tailer.nextIndex();
+                long actual = tailer.parseLong();
+                if (i < 0) {
+                    assertTrue("i: " + i, condition);
+                    assertEquals("i: " + i, value, actual);
+                }
                 tailer.finish();
             }
             long time = System.nanoTime() - start;
-            System.out.printf("Average write/read times was %.1f us%n", time / RUNS / 1e3);
+            System.out.printf("Average write/read times was %.3f us%n", time / RUNS / 1e3);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
+
+
+    @Test
+    public void testTailerPerf2() throws IOException, InterruptedException {
+        final int WARMUP = 100000;
+        final int RUNS = 10000000;
+        String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+        chronicle.clear();
+        try {
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = -WARMUP; i < RUNS; i++) {
+                        ExcerptTailer tailer = null;
+                        try {
+                            tailer = chronicle.createTailer();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        while (!tailer.nextIndex()) ;
+                        long actual = tailer.parseLong();
+                        if (i < 0) {
+                            int value = 1000000000 + i;
+                            assertEquals("i: " + i, value, actual);
+                        }
+                        tailer.finish();
+                    }
+
+                }
+            });
+            t.start();
+            ExcerptAppender appender = chronicle.createAppender();
+            long start = 0;
+            for (int i = -WARMUP; i < RUNS; i++) {
+                if (i == 0)
+                    start = System.nanoTime();
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+            }
+            t.join();
+            long time = System.nanoTime() - start;
+            System.out.printf("Average write/read times was %.3f us%n", time / RUNS / 1e3);
         } finally {
             chronicle.close();
             chronicle.clear();

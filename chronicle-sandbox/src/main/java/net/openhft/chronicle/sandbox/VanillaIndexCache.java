@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class VanillaIndexCache implements Closeable {
-    private static final int MAX_SIZE = 128;
+    private static final int MAX_SIZE = 32;
     public static final String INDEX = "index-";
 
     private final String basePath;
@@ -61,6 +61,7 @@ public class VanillaIndexCache implements Closeable {
             indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits, forAppend));
         }
         vanillaFile.incrementUsage();
+//        new Throwable("IndexFor " + vanillaFile + " as " + vanillaFile.usage()).printStackTrace();
         return vanillaFile;
     }
 
@@ -87,22 +88,21 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex;
     }
 
-    public void append(int cycle, int threadId, long dataOffset, boolean synchronous) throws IOException {
-        long index = ((long) threadId << 48) + dataOffset;
+    public VanillaFile append(int cycle, long indexValue, boolean synchronous) throws IOException {
         for (int indexCount = lastIndexFile(cycle); indexCount < 10000; indexCount++) {
             VanillaFile file = indexFor(cycle, indexCount, true);
             NativeBytes bytes = file.bytes();
             while (bytes.remaining() >= 8) {
-                if (bytes.compareAndSwapLong(bytes.position(), 0L, index)) {
-                    file.decrementUsage();
+                if (bytes.compareAndSwapLong(bytes.position(), 0L, indexValue)) {
                     if (synchronous)
                         file.force();
-                    return;
+                    return file;
                 }
                 bytes.position(bytes.position() + 8);
             }
             file.decrementUsage();
         }
+        throw new AssertionError();
     }
 
     public long firstIndex() {
@@ -122,9 +122,9 @@ public class VanillaIndexCache implements Closeable {
         return firstDate;
     }
 
-    public synchronized void checkCounts() {
+    public synchronized void checkCounts(int min, int max) {
         for (VanillaFile file : indexKeyVanillaFileMap.values()) {
-            if (file.usage() != 1)
+            if (file.usage() < min || file.usage() > max)
                 throw new IllegalStateException(file.file() + " has a count of " + file.usage());
         }
     }

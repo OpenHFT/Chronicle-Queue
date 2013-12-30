@@ -25,7 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class VanillaDataCache implements Closeable {
-    private static final int MAX_SIZE = 128;
+    private static final int MAX_SIZE = 32;
 
     private final String basePath;
     private final DataKey key = new DataKey();
@@ -114,9 +114,9 @@ public class VanillaDataCache implements Closeable {
         lastCount++;
     }
 
-    public synchronized void checkCounts() {
+    public synchronized void checkCounts(int min, int max) {
         for (VanillaFile file : dataKeyVanillaFileMap.values()) {
-            if (file.usage() != 1)
+            if (file.usage() < min || file.usage() > max)
                 throw new IllegalStateException(file.file() + " has a count of " + file.usage());
         }
     }

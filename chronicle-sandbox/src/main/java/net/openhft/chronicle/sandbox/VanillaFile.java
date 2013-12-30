@@ -55,7 +55,7 @@ public class VanillaFile implements Closeable {
             if (logger.isLoggable(Level.FINE))
                 logger.fine("Creating " + file);
         } else {
-            throw new FileNotFoundException();
+            throw new FileNotFoundException(file.getAbsolutePath());
         }
         fc = new RandomAccessFile(file, "rw").getChannel();
         map = fc.map(FileChannel.MapMode.READ_WRITE, 0, size);
@@ -77,6 +77,7 @@ public class VanillaFile implements Closeable {
     }
 
     public void decrementUsage() {
+//        new Throwable("dec " + this +" as "+usage).printStackTrace();
         if (usage.decrementAndGet() <= 0 && closed)
             close0();
     }

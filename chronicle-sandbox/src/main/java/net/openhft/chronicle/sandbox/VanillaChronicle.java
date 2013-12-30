@@ -45,6 +45,11 @@ public class VanillaChronicle implements Chronicle {
     private final DirectBytes NO_BYTES = DirectStore.allocateLazy(4096).createSlice();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
+    private final int indexBlockSizeBits, indexBlockSizeMask;
+    private final int indexBlockLongsBits, indexBlockLongsMask;
+    private final int dataBlockSizeBits, dataBlockSizeMask;
+    private final int entriesForCycleBits;
+    private final long entriesForCycleMask;
     //    private volatile int cycle;
     private volatile long lastWrittenIndex;
 
@@ -57,8 +62,17 @@ public class VanillaChronicle implements Chronicle {
         this.config = config;
         name = new File(basePath).getName();
         DateCache dateCache = new DateCache(config.cycleFormat(), config.cycleLength());
-        indexCache = new VanillaIndexCache(basePath, Maths.intLog2(config.indexBlockSize()), dateCache);
-        dataCache = new VanillaDataCache(basePath, Maths.intLog2(config.dataBlockSize()), dateCache);
+        indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
+        indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
+        indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache);
+        indexBlockLongsBits = indexBlockSizeBits - 3;
+        indexBlockLongsMask = indexBlockSizeMask >>> 3;
+        dataBlockSizeBits = Maths.intLog2(config.dataBlockSize());
+        dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
+        dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache);
+        entriesForCycleBits = Maths.intLog2(config.entriesPerCycle());
+        entriesForCycleMask = -1L >>> -entriesForCycleBits;
+
 //        cycle = (int) (System.currentTimeMillis() / config.cycleLength());
     }
 
@@ -147,9 +161,9 @@ public class VanillaChronicle implements Chronicle {
         IOTools.deleteDir(basePath);
     }
 
-    public void checkCounts() {
-        indexCache.checkCounts();
-        dataCache.checkCounts();
+    public void checkCounts(int min, int max) {
+        indexCache.checkCounts(min, max);
+        dataCache.checkCounts(min, max);
     }
 
     abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
@@ -194,17 +208,34 @@ public class VanillaChronicle implements Chronicle {
             return (int) (System.currentTimeMillis() / config.cycleLength());
         }
 
+        private int lastCycle = Integer.MIN_VALUE,
+                lastDailyCount = Integer.MIN_VALUE,
+                lastThreadId = Integer.MIN_VALUE,
+                lastDataCount = Integer.MIN_VALUE;
+        private VanillaFile lastIndexFile = null, lastDataFile = null;
+
         public boolean index(long nextIndex) {
             try {
-                int cycle = (int) (nextIndex / config.entriesPerCycle());
-                long indexBlockLongs = config.indexBlockSize() >> 3;
-                int dailyCount = (int) (nextIndex % config.entriesPerCycle() / indexBlockLongs);
-                int dailyOffset = (int) (nextIndex % indexBlockLongs);
+                int cycle = (int) (nextIndex >>> entriesForCycleBits);
+                int dailyCount = (int) ((nextIndex & entriesForCycleMask) >>> indexBlockLongsBits);
+                int dailyOffset = (int) (nextIndex & indexBlockLongsMask);
                 long indexValue;
                 try {
-                    VanillaFile file = indexCache.indexFor(cycle, dailyCount, false);
-                    indexValue = file.bytes().readVolatileLong(dailyOffset << 3);
-                    file.decrementUsage();
+                    if (lastCycle != cycle || lastDailyCount != dailyCount) {
+                        if (lastIndexFile != null) {
+                            lastIndexFile.decrementUsage();
+                            lastIndexFile = null;
+                        }
+                        lastIndexFile = indexCache.indexFor(cycle, dailyCount, false);
+                        assert lastIndexFile.usage() > 1;
+                        lastCycle = cycle;
+                        lastDailyCount = dailyCount;
+                        if (lastDataFile != null) {
+                            lastDataFile.decrementUsage();
+                            lastDataFile = null;
+                        }
+                    }
+                    indexValue = lastIndexFile.bytes().readVolatileLong(dailyOffset << 3);
                 } catch (FileNotFoundException e) {
                     return false;
                 }
@@ -213,9 +244,19 @@ public class VanillaChronicle implements Chronicle {
                 }
                 int threadId = (int) (indexValue >>> 48);
                 long dataOffset0 = indexValue & (-1L >>> -48);
-                int dataCount = (int) (dataOffset0 / config.dataBlockSize());
-                int dataOffset = (int) (dataOffset0 % config.dataBlockSize());
-                dataFile = dataCache.dataFor(cycle, threadId, dataCount, false);
+                int dataCount = (int) (dataOffset0 >>> dataBlockSizeBits);
+                int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
+                if (lastThreadId != threadId || lastDataCount != dataCount) {
+                    if (dataFile != null) {
+                        dataFile.decrementUsage();
+                        dataFile = null;
+                    }
+                }
+                if (dataFile == null) {
+                    dataFile = dataCache.dataFor(cycle, threadId, dataCount, false);
+                    lastThreadId = threadId;
+                    lastDataCount = dataCount;
+                }
                 NativeBytes bytes = dataFile.bytes();
                 int len = bytes.readVolatileInt(dataOffset - 4);
                 if (len == 0)
@@ -361,8 +402,10 @@ public class VanillaChronicle implements Chronicle {
     }
 
     class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
+        private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
         private int appenderCycle, appenderThreadId;
         private boolean nextSynchronous;
+        private VanillaFile lastIndexFile = null;
         private VanillaFile appenderFile;
 
         VanillaAppender() {
@@ -378,10 +421,23 @@ public class VanillaChronicle implements Chronicle {
             try {
                 appenderCycle = cycle();
                 appenderThreadId = AffinitySupport.getThreadId();
-                appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
+                    if (appenderFile != null) {
+                        appenderFile.decrementUsage();
+                        appenderFile = null;
+                    }
+                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                    lastCycle = appenderCycle;
+                    lastThreadId = appenderThreadId;
+                    if (lastIndexFile != null) {
+                        lastIndexFile.decrementUsage();
+                        lastIndexFile = null;
+                    }
+                }
                 if (appenderFile.bytes().remaining() < capacity + 4) {
-                    appenderFile.decrementUsage();
                     dataCache.incrementLastCount();
+                    appenderFile.decrementUsage();
+                    appenderFile = null;
                     appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
                 }
                 startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
@@ -415,15 +471,38 @@ public class VanillaChronicle implements Chronicle {
             NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
             // position of the start not the end.
             int offset = (int) (startAddr - appenderFile.baseAddr());
+            long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
+            long indexValue = ((long) appenderThreadId << 48) + dataOffset;
             try {
-                indexCache.append(appenderCycle, appenderThreadId, appenderFile.indexCount() * config.dataBlockSize() + offset, nextSynchronous);
+                boolean done = false;
+                if (lastIndexFile != null) {
+                    NativeBytes bytes = lastIndexFile.bytes();
+                    while (bytes.remaining() >= 8) {
+                        if (bytes.compareAndSwapLong(bytes.position(), 0L, indexValue)) {
+                            if (nextSynchronous)
+                                lastIndexFile.force();
+                            done = true;
+                            break;
+                        }
+                        bytes.position(bytes.position() + 8);
+                    }
+                }
+                if (!done) {
+                    if (lastIndexFile != null) {
+                        lastIndexFile.decrementUsage();
+                        lastIndexFile = null;
+                    }
+
+                    lastIndexFile = indexCache.append(appenderCycle, indexValue, nextSynchronous);
+
+                }
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
             appenderFile.bytes().positionAddr((positionAddr + 3) & ~3L);
             if (nextSynchronous)
                 appenderFile.force();
-            appenderFile.decrementUsage();
+//            appenderFile.decrementUsage();
         }
 
         @Override
@@ -448,8 +527,6 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public void finish() {
-            if (!isFinished())
-                dataFile.decrementUsage();
             super.finish();
         }
     }
