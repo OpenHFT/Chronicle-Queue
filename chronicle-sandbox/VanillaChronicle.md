@@ -69,10 +69,12 @@ Concurrent Consumers
 Consumers can work on either a Topic basis (the default) or can be applied on a Queue basis (where only one consumer "gets" a message)
 
     ExecerptTailer tailer = chronicle.createTailer();
+    int threadId = AffinitySupport.getThreadId();
     
-    // in a busy loop
-    if (tailer.hasNext()) {
-        // binnry format
+    // in a busy loop, check there is an excerpt and this is the only consumer.
+    if (tailer.hasNext() && tailer.compareAndSwapInt(0L, 0, threadId)) {
+        tailer.position(4); // skip the lock.
+        // binary format
         long v = tailer.readXxxx();
         String text = tailer.readEnum(String.class); // read a UTF-8 String using a string pool.
         // text format
