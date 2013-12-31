@@ -7,8 +7,8 @@ Vanilla Chronicle is a designed for more features rather than just speed. It it 
  - concurrent writers on the same machine.
  - concurrent readers on the same machine or across multiple machines via TCP replication.
  - zero copy serialization and deserialization.
- - one million writes/reads per second on commodity hardware.
- - persistence as required.
+ - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
+ - synchronous persistence as required. (commit to disk before continuing)
  - reader on source can wait for replication. i.e. source reader sees excerpts after replication acknowledge.
  - data files have more information for rebuilding indexes.
  - exact length of entries
@@ -43,5 +43,44 @@ The source sends a message for;
  - when there is a new cycle.
  - when the source is in sync.
  - a heartbeat every 2.5 seconds.
+
+
+Concurrent Producer
+-------------------
+
+Any number of threads can be writing to the Chronicle at the same time provided
+
+ - you only append OR
+ - you modify records using a lock or CAS operation
+
+Example
+
+    ExcerptAppender appender = chronicle.createAppender();
+     
+    // for each record
+    appender.startExcept();    // can be called by any number of threads/processes at once
+    appender.writeXxxx( ... ); // write binary
+    appender.append( ... );    // write text
+    appender.finish();
+
+Concurrent Consumers
+--------------------
+
+Consumers can work on either a Topic basis (the default) or can be applied on a Queue basis (where only one consumer "gets" a message)
+
+    ExcerptTailer tailer = chronicle.createTailer();
+    int threadId = AffinitySupport.getThreadId();
+    
+    // in a busy loop, check there is an excerpt and this is the only consumer.
+    if (tailer.hasNext() && tailer.compareAndSwapInt(0L, 0, threadId)) {
+        tailer.position(4); // skip the lock.
+        // binary format
+        long v = tailer.readXxxx();
+        String text = tailer.readEnum(String.class); // read a UTF-8 String using a string pool.
+        // text format
+        long x = tailer.parseLong();
+        double y = tailer.parseDouble();
+        tailer.finish();
+    }
 
 
