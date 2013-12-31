@@ -8,7 +8,7 @@ Vanilla Chronicle is a designed for more features rather than just speed. It it 
  - concurrent readers on the same machine or across multiple machines via TCP replication.
  - zero copy serialization and deserialization.
  - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
- - persistence as required.
+ - synchronous persistence as required. (commit to disk before continuing)
  - reader on source can wait for replication. i.e. source reader sees excerpts after replication acknowledge.
  - data files have more information for rebuilding indexes.
  - exact length of entries
