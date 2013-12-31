@@ -177,7 +177,8 @@ public class VanillaChronicleTest {
     @Test
     public void testTailerPerf2() throws IOException, InterruptedException {
         final int WARMUP = 100000;
-        final int RUNS = 10000000;
+        final int RUNS = 4000000;
+        final int BYTES = 96;
         String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -193,7 +194,9 @@ public class VanillaChronicleTest {
                             e.printStackTrace();
                         }
                         while (!tailer.nextIndex()) ;
-                        long actual = tailer.parseLong();
+                        long actual = -1;
+                        for (int j = 0; j < BYTES; j += 8)
+                            actual = tailer.readLong();
                         if (i < 0) {
                             int value = 1000000000 + i;
                             assertEquals("i: " + i, value, actual);
@@ -211,7 +214,8 @@ public class VanillaChronicleTest {
                     start = System.nanoTime();
                 appender.startExcerpt();
                 int value = 1000000000 + i;
-                appender.append(value).append(' ');
+                for (int j = 0; j < BYTES; j += 8)
+                    appender.writeLong(value);
                 appender.finish();
             }
             t.join();
