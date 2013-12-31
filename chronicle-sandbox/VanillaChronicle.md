@@ -45,3 +45,40 @@ The source sends a message for;
  - a heartbeat every 2.5 seconds.
 
 
+Concurrent Producer
+-------------------
+
+Any number of threads can be writing to the Chronicle at the same time provided
+
+ - you only append OR
+ - you modify records using a lock or CAS operation
+
+Example
+
+    ExcerptAppender appender = chronicle.createAppender();
+     
+    // for each record
+    appender.startExcept();    // can be called by any number of threads/processes at once
+    appender.writeXxxx( ... ); // write binary
+    appender.append( ... );    // write text
+    appender.finish();
+
+Concurrent Consumers
+--------------------
+
+Consumers can work on either a Topic basis (the default) or can be applied on a Queue basis (where only one consumer "gets" a message)
+
+    ExecerptTailer tailer = chronicle.createTailer();
+    
+    // in a busy loop
+    if (tailer.hasNext()) {
+        // binnry format
+        long v = tailer.readXxxx();
+        String text = tailer.readEnum(String.class); // read a UTF-8 String using a string pool.
+        // text format
+        long x = tailer.parseLong();
+        double y = tailer.parseDouble();
+        tailer.finish();
+    }
+
+
