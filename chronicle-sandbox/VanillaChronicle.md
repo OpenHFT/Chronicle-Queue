@@ -68,7 +68,7 @@ Concurrent Consumers
 
 Consumers can work on either a Topic basis (the default) or can be applied on a Queue basis (where only one consumer "gets" a message)
 
-    ExecerptTailer tailer = chronicle.createTailer();
+    ExcerptTailer tailer = chronicle.createTailer();
     int threadId = AffinitySupport.getThreadId();
     
     // in a busy loop, check there is an excerpt and this is the only consumer.
