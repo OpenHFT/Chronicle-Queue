@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * User: peter.lawrey
@@ -40,12 +41,12 @@ public class RollingChronicleTest {
         for (int k = 0; k < 500; k++) {
             RollingChronicle rc = new RollingChronicle(basePath, test);
             ExcerptAppender appender = rc.createAppender();
-            assertEquals("k: " + k, (long) counter, appender.size());
+            Assert.assertEquals("k: " + k, (long) counter, appender.size());
             for (int i = 0; i < 255 /* ChronicleConfig.TEST.indexFileExcerpts() * 2 / 7 */; i++) {
                 appender.startExcerpt();
                 appender.writeInt(counter++);
                 appender.finish();
-                assertEquals("k: " + k + ", i: " + i, (long) counter, appender.size());
+                Assert.assertEquals("k: " + k + ", i: " + i, (long) counter, appender.size());
             }
             appender.close();
             rc.close();
@@ -56,8 +57,8 @@ public class RollingChronicleTest {
         RollingChronicle rc = new RollingChronicle(basePath, test);
         ExcerptTailer tailer = rc.createTailer();
         for (int i = 0; i < counter; i++) {
-            assertTrue("i: " + i, tailer.nextIndex());
-            assertEquals(i, tailer.readInt());
+            Assert.assertTrue("i: " + i, tailer.nextIndex());
+            Assert.assertEquals(i, tailer.readInt());
             tailer.finish();
         }
         rc.close();

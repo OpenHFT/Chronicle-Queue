@@ -16,13 +16,12 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.MappedMemory;
 import net.openhft.lang.io.NativeBytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
@@ -38,10 +37,10 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     private final int cacheLineSize;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedByteBuffer indexBuffer;
+    MappedMemory indexBuffer;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedByteBuffer dataBuffer;
+    MappedMemory dataBuffer;
     long index = -1;
     // relatively static
     // the start of the index block, as an address
@@ -88,18 +87,15 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return this;
     }
 
-    protected boolean indexForRead(long l) {
+    protected boolean indexForRead(long l) throws IOException {
         if (l < 0) {
-            indexBuffer = chronicle.indexFileCache.acquireBuffer(0, true);
-            indexStartAddr = ((DirectBuffer) indexBuffer).address();
-            indexPositionAddr = indexStartAddr;
+            setIndexBuffer(0, true);
             index = -1;
             padding = true;
             return false;
         }
         long indexLookup = l / indexEntriesPerBlock;
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup, true);
-        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        setIndexBuffer(indexLookup, true);
 
         long indexLookupMod = l % indexEntriesPerBlock;
         int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
@@ -117,13 +113,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
 
         long dataLookup = dataOffsetStart / dataBlockSize;
         long dataLookupMod = dataOffsetStart % dataBlockSize;
-        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup, true);
-        long dataAddr = ((DirectBuffer) dataMBB).address();
+        setDataBuffer(dataLookup);
 
-        startAddr = positionAddr = dataAddr + dataLookupMod;
+        startAddr = positionAddr = dataStartAddr + dataLookupMod;
         index = l;
         if (dataOffsetEnd > 0) {
-            limitAddr = dataAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
+            limitAddr = dataStartAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
             indexPositionAddr += 4;
             padding = false;
             return true;
@@ -137,7 +132,13 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         }
     }
 
-    protected void indexForAppender(long l) {
+    private void setIndexBuffer(long index, boolean prefetch) throws IOException {
+        MappedMemory.release(indexBuffer);
+        indexBuffer = chronicle.indexFileCache.acquire(index, prefetch);
+        indexPositionAddr = indexStartAddr = indexBuffer.address();
+    }
+
+    protected void indexForAppender(long l) throws IOException {
         if (l < 0) {
             throw new IndexOutOfBoundsException("index: " + l);
         } else if (l == 0) {
@@ -151,8 +152,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         // We need the end of the previous Excerpt
         l--;
         long indexLookup = l / indexEntriesPerBlock;
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup, true);
-        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        setIndexBuffer(indexLookup, true);
 
         long indexLookupMod = l % indexEntriesPerBlock;
         int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
@@ -165,12 +165,17 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
 
         long dataLookup = dataOffsetEnd / dataBlockSize;
         long dataLookupMod = dataOffsetEnd % dataBlockSize;
-        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataLookup, true);
-        dataStartAddr = ((DirectBuffer) dataBuffer).address();
+        setDataBuffer(dataLookup);
         dataStartOffset = dataLookup * dataBlockSize;
         startAddr = positionAddr = dataStartAddr + dataLookupMod;
         index = l + 1;
         indexPositionAddr = indexStartAddr + indexLineStart + inLine + 4;
+    }
+
+    private void setDataBuffer(long dataLookup) throws IOException {
+        MappedMemory.release(dataBuffer);
+        dataBuffer = chronicle.dataFileCache.acquire(dataLookup, true);
+        dataStartAddr = dataBuffer.address();
     }
 
     @Override
@@ -194,30 +199,29 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return chronicle;
     }
 
-    void loadNextIndexBuffer() {
+    void loadNextIndexBuffer() throws IOException {
         indexStartOffset += indexBlockSize;
         loadIndexBuffer();
     }
 
-    void loadNextDataBuffer() {
+    void loadNextDataBuffer() throws IOException {
         dataStartOffset += dataBlockSize;
         loadDataBuffer();
     }
 
-    void loadNextDataBuffer(long offsetInThisBuffer) {
+    void loadNextDataBuffer(long offsetInThisBuffer) throws IOException {
         dataStartOffset += offsetInThisBuffer / dataBlockSize * dataBlockSize;
         loadDataBuffer();
 
     }
 
-    void loadDataBuffer() {
-        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize, true);
-        dataStartAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
+    void loadDataBuffer() throws IOException {
+        setDataBuffer(dataStartOffset / dataBlockSize);
+        startAddr = positionAddr = limitAddr = dataStartAddr;
     }
 
-    void loadIndexBuffer() {
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexStartOffset / indexBlockSize, true);
-        indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+    void loadIndexBuffer() throws IOException {
+        setIndexBuffer(indexStartOffset / indexBlockSize, true);
     }
 
     public boolean index(long index) {

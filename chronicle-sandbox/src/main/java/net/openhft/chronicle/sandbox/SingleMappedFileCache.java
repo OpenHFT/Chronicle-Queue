@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.MapUtils;
+import net.openhft.chronicle.MappedFileCache;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;

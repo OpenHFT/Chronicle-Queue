@@ -327,8 +327,8 @@ public class IndexedChronicleTest {
         long rate = words / size * 10 * 1000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages, " +
                 "maxJitter: " + maxJitter / 1000 + " us, " +
-                "maxDelay: " + maxDelay / 1000 + " us," +
-                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
+                "maxDelay: " + maxDelay / 1000 + " us," + "");
+//                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
         Thread.sleep(200);
         ChronicleTools.deleteOnExit(basePath);
     }

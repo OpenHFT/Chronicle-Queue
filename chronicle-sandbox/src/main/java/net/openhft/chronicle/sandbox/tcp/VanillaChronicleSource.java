@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle.sandbox.tcp;
 
-import net.openhft.chronicle.*;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
@@ -134,6 +133,14 @@ public class VanillaChronicleSource implements Chronicle {
 
     public ChronicleConfig config() {
         throw new UnsupportedOperationException();
+    }
+
+    public int getLocalPort() {
+        return server.socket().getLocalPort();
+    }
+
+    public void clear() {
+        chronicle.clear();
     }
 
     private class Acceptor implements Runnable {

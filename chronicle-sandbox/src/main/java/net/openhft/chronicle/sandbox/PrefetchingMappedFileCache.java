@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.MapUtils;
+import net.openhft.chronicle.MappedFileCache;
 import net.openhft.lang.thread.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

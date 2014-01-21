@@ -30,6 +30,7 @@ public class VanillaIndexCache implements Closeable {
     public static final String INDEX = "index-";
 
     private final String basePath;
+    private final File baseFile;
     private final IndexKey key = new IndexKey();
     private final int blockBits;
     private final DateCache dateCache;
@@ -48,6 +49,7 @@ public class VanillaIndexCache implements Closeable {
 
     public VanillaIndexCache(String basePath, int blockBits, DateCache dateCache) {
         this.basePath = basePath;
+        baseFile = new File(basePath);
         this.blockBits = blockBits;
         this.dateCache = dateCache;
     }
@@ -106,7 +108,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public long firstIndex() {
-        File[] files = new File(basePath).listFiles();
+        File[] files = baseFile.listFiles();
         if (files == null)
             return -1;
         long firstDate = Long.MAX_VALUE;

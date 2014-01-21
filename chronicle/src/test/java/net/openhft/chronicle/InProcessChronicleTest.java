@@ -21,7 +21,6 @@ import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -312,6 +311,7 @@ public class InProcessChronicleTest {
             return true;
         }
     }
+/*
 
     @Test
     @Ignore
@@ -375,6 +375,7 @@ public class InProcessChronicleTest {
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
     }
+*/
 
 
     static class PriceUpdate implements Externalizable, Serializable {

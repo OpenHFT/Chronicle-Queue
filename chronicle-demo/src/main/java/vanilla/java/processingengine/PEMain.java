@@ -17,9 +17,9 @@
 package vanilla.java.processingengine;
 
 import net.openhft.affinity.AffinitySupport;
-import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.sandbox.VanillaChronicle;
+import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
 import vanilla.java.processingengine.api.*;
@@ -37,25 +37,25 @@ public class PEMain {
         String tmp = System.getProperty("java.io.tmpdir");
 //        String tmp = System.getProperty("user.home");
 
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
 
         String pePath = tmp + "/demo/pe";
         ChronicleTools.deleteDirOnExit(pePath);
-        IndexedChronicle pe2gw = new IndexedChronicle(pePath, config);
+        VanillaChronicle pe2gw = new VanillaChronicle(pePath, VanillaChronicleConfig.DEFAULT);
         ExcerptAppender excerpt = pe2gw.createAppender();
         final Pe2GwWriter pe2GwWriter = new Pe2GwWriter(excerpt);
 
         Gw2PeEvents listener = new PEEvents(pe2GwWriter);
         Gw2PeReader[] readers = new Gw2PeReader[1];
-        IndexedChronicle[] gw2pe = new IndexedChronicle[readers.length];
+        VanillaChronicle[] gw2pe = new VanillaChronicle[readers.length];
         for (int i = 0; i < readers.length; i++) {
             int sourceId = i + 1;
             String gw2pePath = tmp + "/demo/gw2pe" + sourceId;
             ChronicleTools.deleteDirOnExit(gw2pePath);
 
-            gw2pe[i] = new IndexedChronicle(gw2pePath, config);
+            gw2pe[i] = new VanillaChronicle(gw2pePath, VanillaChronicleConfig.DEFAULT);
             readers[i] = new Gw2PeReader(sourceId, gw2pe[i].createTailer(), listener);
         }
 

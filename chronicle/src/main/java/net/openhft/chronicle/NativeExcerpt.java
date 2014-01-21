@@ -38,7 +38,12 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
             writePaddedEntry();
 
-            loadNextDataBuffer();
+            try {
+                loadNextDataBuffer();
+
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         // check we are the start of a block.
@@ -66,7 +71,11 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
     @Override
     public boolean index(long l) {
-        return indexForRead(l);
+        try {
+            return indexForRead(l);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override
@@ -92,7 +101,11 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     void newIndexLine() {
         // check we have a valid index
         if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-            loadNextIndexBuffer();
+            try {
+                loadNextIndexBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         // sets the base address
         indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
@@ -119,23 +132,31 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     @Override
     public Excerpt toEnd() {
         index = chronicle().size();
-        indexForRead(index);
+        try {
+            indexForRead(index);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
         return this;
     }
 
     @Override
     public boolean nextIndex() {
-        long index2 = index;
-        if (indexForRead(index() + 1)) {
-            return true;
-        } else {
-            // rewind on a failure
-            index = index2;
+        try {
+            long index2 = index;
+            if (indexForRead(index() + 1)) {
+                return true;
+            } else {
+                // rewind on a failure
+                index = index2;
+            }
+            if (wasPadding()) {
+                index++;
+                return indexForRead(index() + 1);
+            }
+            return false;
+        } catch (IOException e) {
+            return false;
         }
-        if (wasPadding()) {
-            index++;
-            return indexForRead(index() + 1);
-        }
-        return false;
     }
 }

@@ -53,7 +53,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
 
             writePaddedEntry();
 
-            loadNextDataBuffer();
+            try {
+                loadNextDataBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         // check we are the start of a block.
@@ -86,7 +90,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
 
         writePaddedEntry();
 
-        loadNextDataBuffer();
+        try {
+            loadNextDataBuffer();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
 
         // check we are the start of a block.
         checkNewIndexLine();
@@ -149,7 +157,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     @Override
     public ExcerptAppender toEnd() {
         index = chronicle().size();
-        indexForAppender(index);
+        try {
+            indexForAppender(index);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
         return this;
     }
 
@@ -166,7 +178,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     void newIndexLine() {
         // check we have a valid index
         if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-            loadNextIndexBuffer();
+            try {
+                loadNextIndexBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         // sets the base address
         indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
