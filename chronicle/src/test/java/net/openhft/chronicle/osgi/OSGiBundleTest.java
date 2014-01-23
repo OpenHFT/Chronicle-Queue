@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 
-import static org.junit.Assert.assertNotNull;
+import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.ops4j.pax.exam.CoreOptions.*;
 
@@ -39,7 +39,7 @@ import static org.ops4j.pax.exam.CoreOptions.*;
  *         Thank for adding OSGi testing to Chronicle.
  */
 @RunWith(PaxExam.class)
-public class ChronicleBundleTest {
+public class OSGiBundleTest extends OSGiTestBase {
     @Inject
     BundleContext context;
 
@@ -49,15 +49,14 @@ public class ChronicleBundleTest {
         root.setLevel(Level.INFO);
 
         return options(
-                //systemProperty("org.osgi.framework.storage").value("/tmp/felix-cache"),
-                systemProperty("org.osgi.framework.storage.clean").value("true"),
-                systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
-                mavenBundle("net.openhft", "lang", "6.1.1"),
-                mavenBundle("net.openhft", "chronicle", "2.0.2"),
-                junitBundles(),
-                systemPackage("sun.misc"),
-                systemPackage("sun.nio.ch"),
-                cleanCaches()
+            systemProperty("org.osgi.framework.storage.clean").value("true"),
+            systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
+            mavenBundle("net.openhft", "lang",System.getProperty("openhftLang.version")),
+            openhftBundle("Java-Chronicle","chronicle"),
+            junitBundles(),
+            systemPackage("sun.misc"),
+            systemPackage("sun.nio.ch"),
+            cleanCaches()
         );
     }
 
@@ -68,22 +67,22 @@ public class ChronicleBundleTest {
 
     @Test
     public void checkHelloBundle() {
-        Boolean bundleChronicleFound = false;
-        Boolean bundleChronicleActive = false;
+        Boolean bundleFound = false;
+        Boolean bundleActive = false;
 
         Bundle[] bundles = context.getBundles();
         for (Bundle bundle : bundles) {
             if (bundle != null) {
                 if (bundle.getSymbolicName().equals("net.openhft.chronicle")) {
-                    bundleChronicleFound = true;
+                    bundleFound = true;
                     if (bundle.getState() == Bundle.ACTIVE) {
-                        bundleChronicleActive = true;
+                        bundleActive = true;
                     }
                 }
             }
         }
 
-        assertTrue(bundleChronicleFound);
-        assertTrue(bundleChronicleActive);
+        assertTrue(bundleFound);
+        assertTrue(bundleActive);
     }
 }

@@ -194,6 +194,16 @@
                     </execution>
                 </executions>
             </plugin -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <openhftLang.version>6.1.4</openhftLang.version>
+                        <logback.version>0.9.6</logback.version>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
@@ -207,6 +217,17 @@
                         <Export-Package>net.openhft.chronicle.*</Export-Package>
                     </instructions>
                 </configuration>
+                <executions>
+                    <!-- 
+                      This execution makes sure that the manifest is available 
+                      when the tests are executed 
+                    -->
+                    <execution>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
