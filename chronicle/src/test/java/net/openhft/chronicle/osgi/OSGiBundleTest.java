@@ -39,7 +39,7 @@ import static org.ops4j.pax.exam.CoreOptions.*;
  *         Thank for adding OSGi testing to Chronicle.
  */
 @RunWith(PaxExam.class)
-public class OSGiBundleTest {
+public class OSGiBundleTest extends OSGiTestBase {
     @Inject
     BundleContext context;
 
@@ -51,8 +51,8 @@ public class OSGiBundleTest {
         return options(
             systemProperty("org.osgi.framework.storage.clean").value("true"),
             systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
-            mavenBundle("net.openhft", "lang", "6.1"),
-            bundle("reference:file:target/classes"),
+            mavenBundle("net.openhft", "lang",System.getProperty("openhftLang.version")),
+            openhftBundle("Java-Chronicle","chronicle"),
             junitBundles(),
             systemPackage("sun.misc"),
             systemPackage("sun.nio.ch"),

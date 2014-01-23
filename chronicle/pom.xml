@@ -194,6 +194,16 @@
                     </execution>
                 </executions>
             </plugin -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <openhftLang.version>6.1.4</openhftLang.version>
+                        <logback.version>0.9.6</logback.version>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
