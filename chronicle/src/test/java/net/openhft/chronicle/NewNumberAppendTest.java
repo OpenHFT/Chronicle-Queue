@@ -60,7 +60,7 @@ public class NewNumberAppendTest {
                 start = System.nanoTime();
 
             int precision = Math.abs(i) % MAX_PRECISION + 1;
-            excerpt.startExcerpt(20 * NUM_ENTRIES_PER_RECORD);
+            excerpt.startExcerpt();
             if (numType == long.class) {
                 long[] longs = RANDOM_LONGS[Math.abs(i)];
                 for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {

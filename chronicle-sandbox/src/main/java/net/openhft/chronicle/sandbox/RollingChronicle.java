@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import org.jetbrains.annotations.NotNull;
@@ -107,7 +107,6 @@ public class RollingChronicle implements Chronicle {
         return lastWrittenIndex() + 1;
     }
 
-    @Override
     public ChronicleConfig config() {
         return config;
     }
@@ -119,7 +118,7 @@ public class RollingChronicle implements Chronicle {
     }
 
     enum Type {
-        Appender, Tailer, Excerpt;
+        Appender, Tailer, Excerpt
     }
 
     class RollingExcerpt extends WrappedExcerpt {
@@ -174,6 +173,11 @@ public class RollingChronicle implements Chronicle {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+        }
+
+        @Override
+        public void startExcerpt() {
+            startExcerpt(config().messageCapacity());
         }
 
         @Override

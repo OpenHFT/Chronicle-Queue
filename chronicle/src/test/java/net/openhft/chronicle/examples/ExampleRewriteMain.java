@@ -60,7 +60,7 @@ public class ExampleRewriteMain {
                         doSomeThinking();
 
                         // start writing an new entry
-                        excerpt.startExcerpt(8 + 4 + 4 * consolidates.length);
+                        excerpt.startExcerpt();
                         excerpt.writeLong(System.nanoTime());
                         excerpt.writeUnsignedShort(consolidates.length);
                         for (final int consolidate : consolidates) {

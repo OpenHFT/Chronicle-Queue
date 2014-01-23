@@ -18,11 +18,7 @@ package net.openhft.chronicle.examples;
 
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
@@ -53,7 +49,11 @@ public class ExampleCache2Main {
             return -1L;
         }
     };
-    private int _maxObjSize;
+    private final int _maxObjSize;
+
+    public ExampleCache2Main(String basePath) throws IOException {
+        this(basePath, 128 * 1024);
+    }
 
     public ExampleCache2Main(String basePath, int maxObjSize) throws IOException {
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
@@ -68,7 +68,7 @@ public class ExampleCache2Main {
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
-        ExampleCache2Main map = new ExampleCache2Main(basePath, 200);
+        ExampleCache2Main map = new ExampleCache2Main(basePath);
         long start = System.nanoTime();
         int keys = 10000000;
         StringBuilder name = new StringBuilder();

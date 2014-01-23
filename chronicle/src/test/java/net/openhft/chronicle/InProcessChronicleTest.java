@@ -21,7 +21,6 @@ import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -46,11 +45,12 @@ public class InProcessChronicleTest {
         ChronicleTools.deleteOnExit(srcBasePath);
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
-        final int messages = 2 * 1000 * 1000;
+        final int messages = 5 * 1000 * 1000;
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(srcBasePath, config), PORT + 1);
+        final IndexedChronicle underlying = new IndexedChronicle(srcBasePath/*, config*/);
+        final Chronicle source = new InProcessChronicleSource(underlying, PORT + 1);
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -59,7 +59,7 @@ public class InProcessChronicleTest {
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
-                        excerpt.startExcerpt(19);
+                        excerpt.startExcerpt();
                         excerpt.writeLong(i);
                         excerpt.append(' ');
                         excerpt.append(i);
@@ -76,7 +76,8 @@ public class InProcessChronicleTest {
 //        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
         String snkBasePath = baseDir + "/IPCT.testOverTCP.sink";
         ChronicleTools.deleteOnExit(snkBasePath);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(snkBasePath, config), "localhost", PORT + 1);
+        final IndexedChronicle underlying2 = new IndexedChronicle(snkBasePath/*, config*/);
+        Chronicle sink = new InProcessChronicleSink(underlying2, "localhost", PORT + 1);
 
         long start = System.nanoTime();
         t.start();
@@ -268,7 +269,7 @@ public class InProcessChronicleTest {
 
         @Override
         public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
-            excerpt.startExcerpt(1 + 8 + (2 + symbol.length()) + 8 + 4 + 8 + 4);
+            excerpt.startExcerpt();
             excerpt.writeByte('P'); // code for a price
             excerpt.writeLong(timeInMicros);
             excerpt.writeEnum(symbol);
@@ -310,6 +311,7 @@ public class InProcessChronicleTest {
             return true;
         }
     }
+/*
 
     @Test
     @Ignore
@@ -333,7 +335,7 @@ public class InProcessChronicleTest {
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
-                        excerpt.startExcerpt(19);
+                        excerpt.startExcerpt();
                         excerpt.writeLong(i);
                         excerpt.append(' ');
                         excerpt.append(i);
@@ -373,6 +375,7 @@ public class InProcessChronicleTest {
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
     }
+*/
 
 
     static class PriceUpdate implements Externalizable, Serializable {

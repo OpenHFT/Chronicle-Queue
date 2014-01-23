@@ -38,7 +38,12 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
             writePaddedEntry();
 
-            loadNextDataBuffer();
+            try {
+                loadNextDataBuffer();
+
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         // check we are the start of a block.
@@ -66,7 +71,11 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
     @Override
     public boolean index(long l) {
-        return indexForRead(l);
+        try {
+            return indexForRead(l);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override
@@ -92,7 +101,11 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     void newIndexLine() {
         // check we have a valid index
         if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-            loadNextIndexBuffer();
+            try {
+                loadNextIndexBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         // sets the base address
         indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;
@@ -119,102 +132,31 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     @Override
     public Excerpt toEnd() {
         index = chronicle().size();
-        indexForRead(index);
+        try {
+            indexForRead(index);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
         return this;
     }
 
     @Override
     public boolean nextIndex() {
-        long index2 = index;
-        if (indexForRead(index() + 1)) {
-            return true;
-        } else {
-            // rewind on a failure
-            index = index2;
-        }
-        if (wasPadding()) {
-            index++;
-            return indexForRead(index() + 1);
-        }
-        return false;
-    }
-
-    @Override
-    public long findMatch(ExcerptComparator comparator) {
-        long lo = 0, hi = lastWrittenIndex();
-        while (lo <= hi) {
-            long mid = (hi + lo) >>> 1;
-            if (!index(mid)) {
-                if (mid > lo)
-                    index(--mid);
-                else
-                    break;
-            }
-            int cmp = comparator.compare(this);
-            finish();
-            if (cmp < 0)
-                lo = mid + 1;
-            else if (cmp > 0)
-                hi = mid - 1;
-            else
-                return mid; // key found
-        }
-        return ~lo; // -(lo + 1)
-    }
-
-    @Override
-    public void findRange(long[] startEnd, ExcerptComparator comparator) {
-        // lower search range
-        long lo1 = 0, hi1 = lastWrittenIndex();
-        // upper search range
-        long lo2 = 0, hi2 = hi1;
-        boolean both = true;
-        // search for the low values.
-        while (lo1 <= hi1) {
-            long mid = (hi1 + lo1) >>> 1;
-            if (!index(mid)) {
-                if (mid > lo1)
-                    index(--mid);
-                else
-                    break;
-            }
-            int cmp = comparator.compare(this);
-            finish();
-
-            if (cmp < 0) {
-                lo1 = mid + 1;
-                if (both)
-                    lo2 = lo1;
-            } else if (cmp > 0) {
-                hi1 = mid - 1;
-                if (both)
-                    hi2 = hi1;
+        try {
+            long index2 = index;
+            if (indexForRead(index() + 1)) {
+                return true;
             } else {
-                hi1 = mid - 1;
-                if (both)
-                    lo2 = mid + 1;
-                both = false;
+                // rewind on a failure
+                index = index2;
             }
+            if (wasPadding()) {
+                index++;
+                return indexForRead(index() + 1);
+            }
+            return false;
+        } catch (IOException e) {
+            return false;
         }
-        // search for the high values.
-        while (lo2 <= hi2) {
-            long mid = (hi2 + lo2) >>> 1;
-            if (!index(mid)) {
-                if (mid > lo2)
-                    index(--mid);
-                else
-                    break;
-            }
-            int cmp = comparator.compare(this);
-            finish();
-
-            if (cmp <= 0) {
-                lo2 = mid + 1;
-            } else {
-                hi2 = mid - 1;
-            }
-        }
-        startEnd[0] = lo1; // inclusive
-        startEnd[1] = lo2; // exclusive
     }
 }

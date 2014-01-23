@@ -17,9 +17,7 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
-import net.openhft.lang.io.ByteStringAppender;
-import net.openhft.lang.io.MutableDecimal;
-import net.openhft.lang.io.StopCharTester;
+import net.openhft.lang.io.*;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -92,6 +90,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public void startExcerpt() {
+        appender.startExcerpt();
+    }
+
+    @Override
     public void startExcerpt(long capacity) {
         appender.startExcerpt(capacity);
     }
@@ -99,6 +102,16 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public void addPaddedEntry() {
         appender.addPaddedEntry();
+    }
+
+    @Override
+    public boolean nextSynchronous() {
+        return appender.nextSynchronous();
+    }
+
+    @Override
+    public void nextSynchronous(boolean nextSynchronous) {
+        appender.nextSynchronous();
     }
 
     @Override
@@ -533,8 +546,8 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public <K, V> void readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
-        common.readMap(map, kClass, vClass);
+    public <K, V> Map<K, V> readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
+        return common.readMap(map, kClass, vClass);
     }
 
     @Override
@@ -925,6 +938,26 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public boolean tryLockLong(long offset) {
+        return common.tryLockLong(offset);
+    }
+
+    @Override
+    public boolean tryLockNanosLong(long offset, long nanos) {
+        return common.tryLockNanosLong(offset, nanos);
+    }
+
+    @Override
+    public void busyLockLong(long offset) throws InterruptedException, IllegalStateException {
+        common.busyLockLong(offset);
+    }
+
+    @Override
+    public void unlockLong(long offset) throws IllegalStateException {
+        common.unlockLong(offset);
+    }
+
+    @Override
     public float readVolatileFloat(long offset) {
         return common.readVolatileFloat(offset);
     }
@@ -981,7 +1014,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @Override
     public float addFloat(long offset, float f) {
-        return addFloat(offset, f);
+        return common.addFloat(offset, f);
     }
 
     @Override
@@ -1010,12 +1043,60 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public long findMatch(ExcerptComparator comparator) {
+    public long findMatch(@NotNull ExcerptComparator comparator) {
         return excerpt.findMatch(comparator);
     }
 
     @Override
-    public void findRange(long[] startEnd, ExcerptComparator comparator) {
+    public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         excerpt.findRange(startEnd, comparator);
+    }
+
+    @Deprecated
+    @Override
+    public void writeStartToPosition(Bytes bytes) {
+        common.writeStartToPosition(bytes);
+    }
+
+    @NotNull
+    @Override
+    public ByteStringAppender append(long l, int base) {
+        common.append(l, base);
+        return this;
+    }
+
+    @Override
+    public long parseLong(int base) {
+        return common.parseLong(base);
+    }
+
+    @Override
+    public void write(BytesCommon bytes, long position, long length) {
+        common.write(bytes, position, length);
+    }
+
+    @Override
+    public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+        common.readMarshallable(in);
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull Bytes out) {
+        common.writeMarshallable(out);
+    }
+
+    @Override
+    public int length() {
+        return common.length();
+    }
+
+    @Override
+    public char charAt(int index) {
+        return common.charAt(index);
+    }
+
+    @Override
+    public CharSequence subSequence(int start, int end) {
+        return common.subSequence(start, end);
     }
 }

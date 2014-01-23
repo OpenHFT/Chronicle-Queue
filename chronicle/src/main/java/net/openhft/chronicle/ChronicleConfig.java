@@ -28,7 +28,7 @@ public class ChronicleConfig implements Cloneable {
     // 16 billion max, or one per day for 11 years.
     public static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true, 16 * 1024 * 1024);
     // 256 billion max
-    public static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false, 256 * 1024 * 1024);
+    public static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false, 128 * 1024 * 1024);
     // 4 trillion max
     public static final ChronicleConfig LARGE = new ChronicleConfig(64 * 1024, 64 * 1024 * 1024, false, 512 * 1024 * 1024);
     // 1 quadrillion max
@@ -47,6 +47,7 @@ public class ChronicleConfig implements Cloneable {
     private int cacheLineSize = 64;
     private int dataBlockSize;
     private int indexBlockSize;
+    private int messageCapacity = 128 * 1024;
 
     public ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint, int dataBlockSize) {
         this.indexFileCapacity = indexFileCapacity;
@@ -56,16 +57,18 @@ public class ChronicleConfig implements Cloneable {
         indexBlockSize = Math.max(4096, this.dataBlockSize / 4);
     }
 
-    public void indexFileCapacity(int indexFileCapacity) {
+    public ChronicleConfig indexFileCapacity(int indexFileCapacity) {
         this.indexFileCapacity = indexFileCapacity;
+        return this;
     }
 
     public int indexFileCapacity() {
         return indexFileCapacity;
     }
 
-    public void indexFileExcerpts(int indexFileExcerpts) {
+    public ChronicleConfig indexFileExcerpts(int indexFileExcerpts) {
         this.indexFileExcerpts = indexFileExcerpts;
+        return this;
     }
 
     public int indexFileExcerpts() {
@@ -80,52 +83,69 @@ public class ChronicleConfig implements Cloneable {
         return minimiseFootprint;
     }
 
-    public void useUnsafe(boolean useUnsafe) {
+    public ChronicleConfig useUnsafe(boolean useUnsafe) {
         this.useUnsafe = useUnsafe;
+        return this;
     }
 
     public boolean useUnsafe() {
         return useUnsafe;
     }
 
-    public void synchronousMode(boolean synchronousMode) {
+    public ChronicleConfig synchronousMode(boolean synchronousMode) {
         this.synchronousMode = synchronousMode;
+        return this;
     }
 
     public boolean synchronousMode() {
         return synchronousMode;
     }
 
-    public void byteOrder(ByteOrder byteOrder) {
+    public ChronicleConfig byteOrder(ByteOrder byteOrder) {
         this.byteOrder = byteOrder;
+        return this;
     }
 
     public ByteOrder byteOrder() {
         return byteOrder;
     }
 
-    public void cacheLineSize(int cacheLineSize) {
+    public ChronicleConfig cacheLineSize(int cacheLineSize) {
         this.cacheLineSize = cacheLineSize;
+        return this;
     }
 
     public int cacheLineSize() {
         return cacheLineSize;
     }
 
-    public void dataBlockSize(int dataBlockSize) {
+    public ChronicleConfig dataBlockSize(int dataBlockSize) {
         this.dataBlockSize = dataBlockSize;
+        if (messageCapacity > dataBlockSize / 2)
+            messageCapacity = dataBlockSize / 2;
+        return this;
     }
 
     public int dataBlockSize() {
         return dataBlockSize;
     }
 
-    public void indexBlockSize(int indexBlockSize) {
+    public ChronicleConfig indexBlockSize(int indexBlockSize) {
         this.indexBlockSize = indexBlockSize;
+        return this;
     }
 
     public int indexBlockSize() {
         return indexBlockSize;
+    }
+
+    public ChronicleConfig messageCapacity(int messageCapacity) {
+        this.messageCapacity = messageCapacity;
+        return this;
+    }
+
+    public int messageCapacity() {
+        return messageCapacity;
     }
 
     @NotNull

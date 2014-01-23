@@ -25,9 +25,16 @@ import java.util.ConcurrentModificationException;
  * @author peter.lawrey
  */
 public class NativeExcerptAppender extends AbstractNativeExcerpt implements ExcerptAppender {
+    private boolean nextSynchronous;
+
     public NativeExcerptAppender(@NotNull IndexedChronicle chronicle) throws IOException {
         super(chronicle);
         toEnd();
+    }
+
+    @Override
+    public void startExcerpt() {
+        startExcerpt(chronicle.config().messageCapacity());
     }
 
     public void startExcerpt(long capacity) {
@@ -46,7 +53,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
 
             writePaddedEntry();
 
-            loadNextDataBuffer();
+            try {
+                loadNextDataBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         // check we are the start of a block.
@@ -56,6 +67,15 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
         startAddr = positionAddr;
         limitAddr = positionAddr + capacity;
         finished = false;
+        nextSynchronous = chronicle.config.synchronousMode();
+    }
+
+    public void nextSynchronous(boolean nextSynchronous) {
+        this.nextSynchronous = nextSynchronous;
+    }
+
+    public boolean nextSynchronous() {
+        return nextSynchronous;
     }
 
     @Override
@@ -70,7 +90,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
 
         writePaddedEntry();
 
-        loadNextDataBuffer();
+        try {
+            loadNextDataBuffer();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
 
         // check we are the start of a block.
         checkNewIndexLine();
@@ -117,8 +141,10 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
             appendStartOfLine();
         }
 
-        if (chronicle.config.synchronousMode()) {
+        if (nextSynchronous) {
+            assert dataBuffer != null;
             dataBuffer.force();
+            assert indexBuffer != null;
             indexBuffer.force();
         }
     }
@@ -131,7 +157,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     @Override
     public ExcerptAppender toEnd() {
         index = chronicle().size();
-        indexForAppender(index);
+        try {
+            indexForAppender(index);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
         return this;
     }
 
@@ -148,7 +178,11 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     void newIndexLine() {
         // check we have a valid index
         if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-            loadNextIndexBuffer();
+            try {
+                loadNextIndexBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         // sets the base address
         indexBaseForLine = positionAddr - dataStartAddr + dataStartOffset;

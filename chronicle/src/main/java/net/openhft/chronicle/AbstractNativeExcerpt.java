@@ -16,13 +16,12 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.MappedMemory;
 import net.openhft.lang.io.NativeBytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 
 /**
  * @author peter.lawrey
@@ -38,10 +37,10 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     private final int cacheLineSize;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedByteBuffer indexBuffer;
+    MappedMemory indexBuffer;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedByteBuffer dataBuffer;
+    MappedMemory dataBuffer;
     long index = -1;
     // relatively static
     // the start of the index block, as an address
@@ -88,18 +87,15 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return this;
     }
 
-    protected boolean indexForRead(long l) {
+    protected boolean indexForRead(long l) throws IOException {
         if (l < 0) {
-            indexBuffer = chronicle.indexFileCache.acquireBuffer(0, true);
-            indexStartAddr = ((DirectBuffer) indexBuffer).address();
-            indexPositionAddr = indexStartAddr;
+            setIndexBuffer(0, true);
             index = -1;
             padding = true;
             return false;
         }
         long indexLookup = l / indexEntriesPerBlock;
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup, true);
-        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        setIndexBuffer(indexLookup, true);
 
         long indexLookupMod = l % indexEntriesPerBlock;
         int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
@@ -117,13 +113,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
 
         long dataLookup = dataOffsetStart / dataBlockSize;
         long dataLookupMod = dataOffsetStart % dataBlockSize;
-        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup, true);
-        long dataAddr = ((DirectBuffer) dataMBB).address();
+        setDataBuffer(dataLookup);
 
-        startAddr = positionAddr = dataAddr + dataLookupMod;
+        startAddr = positionAddr = dataStartAddr + dataLookupMod;
         index = l;
         if (dataOffsetEnd > 0) {
-            limitAddr = dataAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
+            limitAddr = dataStartAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
             indexPositionAddr += 4;
             padding = false;
             return true;
@@ -137,40 +132,50 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         }
     }
 
-    protected void indexForAppender(long l) {
+    private void setIndexBuffer(long index, boolean prefetch) throws IOException {
+        MappedMemory.release(indexBuffer);
+        indexBuffer = chronicle.indexFileCache.acquire(index, prefetch);
+        indexPositionAddr = indexStartAddr = indexBuffer.address();
+    }
+
+    protected void indexForAppender(long l) throws IOException {
         if (l < 0) {
             throw new IndexOutOfBoundsException("index: " + l);
+        } else if (l == 0) {
+            indexStartOffset = 0;
+            loadIndexBuffer();
+            dataStartOffset = 0;
+            loadDataBuffer();
+            return;
         }
+
+        // We need the end of the previous Excerpt
+        l--;
         long indexLookup = l / indexEntriesPerBlock;
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexLookup, true);
-        indexStartAddr = ((DirectBuffer) indexBuffer).address();
+        setIndexBuffer(indexLookup, true);
 
         long indexLookupMod = l % indexEntriesPerBlock;
         int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
         int indexLineStart = (int) (indexLookupMod / indexEntriesPerLine * cacheLineSize);
         int inLine = (indexLineEntry << 2) + 8;
-
-        int dataOffsetEnd = UNSAFE.getInt(indexStartAddr + indexLineStart + inLine);
+        indexStartOffset = indexLookup * indexBlockSize + indexLineStart;
 
         indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
-        long dataOffsetStart = inLine == 0
-                ? indexBaseForLine
-                : (indexBaseForLine + Math.abs(UNSAFE.getInt(indexStartAddr + indexLineStart + inLine - 4)));
+        long dataOffsetEnd = indexBaseForLine + Math.abs(UNSAFE.getInt(indexStartAddr + indexLineStart + inLine));
 
-        long dataLookup = dataOffsetStart / dataBlockSize;
-        long dataLookupMod = dataOffsetStart % dataBlockSize;
-        MappedByteBuffer dataMBB = chronicle.dataFileCache.acquireBuffer(dataLookup, true);
-        long dataAddr = ((DirectBuffer) dataMBB).address();
+        long dataLookup = dataOffsetEnd / dataBlockSize;
+        long dataLookupMod = dataOffsetEnd % dataBlockSize;
+        setDataBuffer(dataLookup);
+        dataStartOffset = dataLookup * dataBlockSize;
+        startAddr = positionAddr = dataStartAddr + dataLookupMod;
+        index = l + 1;
+        indexPositionAddr = indexStartAddr + indexLineStart + inLine + 4;
+    }
 
-        startAddr = positionAddr = dataAddr + dataLookupMod;
-        index = l;
-        if (dataOffsetEnd > 0) {
-            throw new IndexOutOfBoundsException("Index already written: " + l);
-        } else if (dataOffsetEnd == 0) {
-            indexPositionAddr = indexStartAddr + indexLineStart + inLine;
-        } else /* if (dataOffsetEnd < 0) */ {
-            throw new IndexOutOfBoundsException("Index already padding: " + l);
-        }
+    private void setDataBuffer(long dataLookup) throws IOException {
+        MappedMemory.release(dataBuffer);
+        dataBuffer = chronicle.dataFileCache.acquire(dataLookup, true);
+        dataStartAddr = dataBuffer.address();
     }
 
     @Override
@@ -194,33 +199,109 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return chronicle;
     }
 
-    void loadNextIndexBuffer() {
+    void loadNextIndexBuffer() throws IOException {
         indexStartOffset += indexBlockSize;
-        try {
-            loadIndexBuffer();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        loadIndexBuffer();
     }
 
-    void loadNextDataBuffer() {
+    void loadNextDataBuffer() throws IOException {
         dataStartOffset += dataBlockSize;
-        try {
-            loadDataBuffer();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        loadDataBuffer();
+    }
+
+    void loadNextDataBuffer(long offsetInThisBuffer) throws IOException {
+        dataStartOffset += offsetInThisBuffer / dataBlockSize * dataBlockSize;
+        loadDataBuffer();
+
     }
 
     void loadDataBuffer() throws IOException {
-        dataBuffer = chronicle.dataFileCache.acquireBuffer(dataStartOffset / dataBlockSize, true);
-        dataStartAddr = startAddr = positionAddr = limitAddr = ((DirectBuffer) dataBuffer).address();
+        setDataBuffer(dataStartOffset / dataBlockSize);
+        startAddr = positionAddr = limitAddr = dataStartAddr;
     }
 
     void loadIndexBuffer() throws IOException {
-        indexBuffer = chronicle.indexFileCache.acquireBuffer(indexStartOffset / indexBlockSize, true);
-        indexStartAddr = indexPositionAddr = ((DirectBuffer) indexBuffer).address();
+        setIndexBuffer(indexStartOffset / indexBlockSize, true);
     }
 
+    public boolean index(long index) {
+        throw new UnsupportedOperationException();
+    }
 
+    public long findMatch(@NotNull ExcerptComparator comparator) {
+        long lo = 0, hi = lastWrittenIndex();
+        while (lo <= hi) {
+            long mid = (hi + lo) >>> 1;
+            if (!index(mid)) {
+                if (mid > lo)
+                    index(--mid);
+                else
+                    break;
+            }
+            int cmp = comparator.compare((Excerpt) this);
+            finish();
+            if (cmp < 0)
+                lo = mid + 1;
+            else if (cmp > 0)
+                hi = mid - 1;
+            else
+                return mid; // key found
+        }
+        return ~lo; // -(lo + 1)
+    }
+
+    public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+        // lower search range
+        long lo1 = 0, hi1 = lastWrittenIndex();
+        // upper search range
+        long lo2 = 0, hi2 = hi1;
+        boolean both = true;
+        // search for the low values.
+        while (lo1 <= hi1) {
+            long mid = (hi1 + lo1) >>> 1;
+            if (!index(mid)) {
+                if (mid > lo1)
+                    index(--mid);
+                else
+                    break;
+            }
+            int cmp = comparator.compare((Excerpt) this);
+            finish();
+
+            if (cmp < 0) {
+                lo1 = mid + 1;
+                if (both)
+                    lo2 = lo1;
+            } else if (cmp > 0) {
+                hi1 = mid - 1;
+                if (both)
+                    hi2 = hi1;
+            } else {
+                hi1 = mid - 1;
+                if (both)
+                    lo2 = mid + 1;
+                both = false;
+            }
+        }
+        // search for the high values.
+        while (lo2 <= hi2) {
+            long mid = (hi2 + lo2) >>> 1;
+            if (!index(mid)) {
+                if (mid > lo2)
+                    index(--mid);
+                else
+                    break;
+            }
+            int cmp = comparator.compare((Excerpt) this);
+            finish();
+
+            if (cmp <= 0) {
+                lo2 = mid + 1;
+            } else {
+                hi2 = mid - 1;
+            }
+        }
+        startEnd[0] = lo1; // inclusive
+        startEnd[1] = lo2; // exclusive
+    }
 }

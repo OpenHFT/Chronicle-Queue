@@ -102,7 +102,7 @@ public class ExampleKeyedExcerptMain {
     }
 
     public void putMapFor(String key, @NotNull Map<String, String> map) {
-        appender.startExcerpt(1024); // a guess
+        appender.startExcerpt();
         appender.writeUTFΔ(key);
         appender.writeMap(map);
         appender.finish();

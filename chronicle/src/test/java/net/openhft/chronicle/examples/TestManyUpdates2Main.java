@@ -36,7 +36,7 @@ public class TestManyUpdates2Main {
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         int count = 68 * 1000 * 1000;
         for (ExcerptAppender e = chronicle.createAppender(); e.index() < count; ) {
-            e.startExcerpt(50);
+            e.startExcerpt();
             e.writeUTFΔ("Message Type.");
             e.writeLong(System.currentTimeMillis());
             for (int i = 0; i < 6; i++)

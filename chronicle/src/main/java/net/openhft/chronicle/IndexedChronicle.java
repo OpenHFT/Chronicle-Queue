@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.MappedFile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -29,9 +30,9 @@ import java.nio.MappedByteBuffer;
  */
 public class IndexedChronicle implements Chronicle {
     @NotNull
-    final MappedFileCache indexFileCache;
+    final MappedFile indexFileCache;
     @NotNull
-    final MappedFileCache dataFileCache;
+    final MappedFile dataFileCache;
     @NotNull
     final ChronicleConfig config;
     private final String basePath;
@@ -48,13 +49,12 @@ public class IndexedChronicle implements Chronicle {
         File parentFile = new File(basePath).getParentFile();
         if (parentFile != null)
             parentFile.mkdirs();
-        this.indexFileCache = new PrefetchingMappedFileCache(basePath + ".index", config.indexBlockSize());
-        this.dataFileCache = new PrefetchingMappedFileCache(basePath + ".data", config.dataBlockSize());
+        this.indexFileCache = new MappedFile(basePath + ".index", config.indexBlockSize());
+        this.dataFileCache = new MappedFile(basePath + ".data", config.dataBlockSize());
 
         findTheLastIndex();
     }
 
-    @Override
     public ChronicleConfig config() {
         return config;
     }
@@ -69,8 +69,13 @@ public class IndexedChronicle implements Chronicle {
             return -1;
         }
         int indexBlockSize = config.indexBlockSize();
-        for (long block = size / indexBlockSize; block >= 0; block--) {
-            MappedByteBuffer mbb = indexFileCache.acquireBuffer(block, false);
+        for (long block = size / indexBlockSize - 1; block >= 0; block--) {
+            MappedByteBuffer mbb = null;
+            try {
+                mbb = indexFileCache.acquire(block).buffer();
+            } catch (IOException e) {
+                continue;
+            }
             mbb.order(ByteOrder.nativeOrder());
             if (block > 0 && mbb.getLong(0) == 0) {
                 continue;

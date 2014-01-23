@@ -33,14 +33,22 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     @Override
     public boolean index(long l) {
-        return indexForRead(l);
+        try {
+            return indexForRead(l);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @NotNull
     @Override
     public ExcerptTailer toEnd() {
         index = chronicle().size();
-        indexForRead(index);
+        try {
+            indexForRead(index);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
         return this;
     }
 
@@ -92,7 +100,11 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     private void newIndexLine() {
         if (indexPositionAddr >= indexStartAddr + indexBlockSize) {
-            loadNextIndexBuffer();
+            try {
+                loadNextIndexBuffer();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 
@@ -105,21 +117,23 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
         }
 
         checkNewIndexLine2();
-        checkNewDataBlock();
         startAddr = positionAddr = limitAddr;
         setLmitAddr(offset);
-        assert limitAddr > startAddr || (!present && limitAddr == startAddr);
+        assert limitAddr >= startAddr || (!present && limitAddr == startAddr);
         indexPositionAddr += 4;
         return present;
     }
 
-    private void checkNewDataBlock() {
-        if (limitAddr >= dataStartAddr + dataBlockSize)
-            loadNextDataBuffer();
-    }
-
     private void setLmitAddr(long offset) {
         long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
+        if (offsetInThisBuffer > dataBlockSize) {
+            try {
+                loadNextDataBuffer(offsetInThisBuffer);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+            offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
+        }
         assert offsetInThisBuffer >= 0 && offsetInThisBuffer <= dataBlockSize : "index: " + index + ", offsetInThisBuffer: " + offsetInThisBuffer;
         limitAddr = dataStartAddr + offsetInThisBuffer;
     }
