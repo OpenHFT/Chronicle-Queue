@@ -18,8 +18,7 @@ package vanilla.java.processingengine;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.jetbrains.annotations.NotNull;
 import vanilla.java.processingengine.api.*;
@@ -105,10 +104,10 @@ public class GWMain {
         ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
-        VanillaChronicle gw2pe = new VanillaChronicle(gw2pePath, VanillaChronicleConfig.DEFAULT);
+        IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath, ChronicleConfig.DEFAULT);
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
-        VanillaChronicle pe2gw = new VanillaChronicle(pePath, VanillaChronicleConfig.DEFAULT);
+        IndexedChronicle pe2gw = new IndexedChronicle(pePath, ChronicleConfig.DEFAULT);
         final long[] times = new long[ORDERS];
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {

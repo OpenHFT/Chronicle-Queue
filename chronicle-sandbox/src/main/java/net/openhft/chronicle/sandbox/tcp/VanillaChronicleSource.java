@@ -17,6 +17,7 @@
 package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
@@ -24,7 +25,6 @@ import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptTailer;
 
 import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.thread.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
@@ -45,10 +45,8 @@ import java.util.logging.Logger;
 public class VanillaChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
-
     static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
-
     private final VanillaChronicle chronicle;
     private final ServerSocketChannel server;
     @NotNull
