@@ -421,6 +421,7 @@ public class VanillaChronicle implements Chronicle {
             try {
                 appenderCycle = cycle();
                 appenderThreadId = AffinitySupport.getThreadId();
+                assert (appenderThreadId & 0xFFFF) == appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
                     if (appenderFile != null) {
                         appenderFile.decrementUsage();
