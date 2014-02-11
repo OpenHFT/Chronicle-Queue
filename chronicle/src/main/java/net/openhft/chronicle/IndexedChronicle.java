@@ -38,6 +38,7 @@ public class IndexedChronicle implements Chronicle {
     private final String basePath;
     // todo consider making volatile to help detect bugs in calling code.
     private long lastWrittenIndex = -1;
+    private volatile boolean closed = false;
 
     public IndexedChronicle(@NotNull String basePath) throws FileNotFoundException {
         this(basePath, ChronicleConfig.DEFAULT);
@@ -53,6 +54,10 @@ public class IndexedChronicle implements Chronicle {
         this.dataFileCache = new MappedFile(basePath + ".data", config.dataBlockSize());
 
         findTheLastIndex();
+    }
+
+    public void checkNotClosed() {
+        if (closed) throw new IllegalStateException(basePath + " is closed");
     }
 
     public ChronicleConfig config() {
@@ -110,6 +115,7 @@ public class IndexedChronicle implements Chronicle {
 
     @Override
     public void close() throws IOException {
+        closed = true;
         this.indexFileCache.close();
         this.dataFileCache.close();
     }

@@ -33,6 +33,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
     @Override
     public boolean index(long l) {
+        chronicle.checkNotClosed();
         try {
             return indexForRead(l);
         } catch (IOException e) {
@@ -60,6 +61,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
     }
 
     public boolean nextIndex() {
+        chronicle.checkNotClosed();
         checkNextLine();
         long offset = UNSAFE.getInt(null, indexPositionAddr);
         if (offset == 0)
@@ -118,13 +120,13 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
 
         checkNewIndexLine2();
         startAddr = positionAddr = limitAddr;
-        setLmitAddr(offset);
+        setLimitAddr(offset);
         assert limitAddr >= startAddr || (!present && limitAddr == startAddr);
         indexPositionAddr += 4;
         return present;
     }
 
-    private void setLmitAddr(long offset) {
+    private void setLimitAddr(long offset) {
         long offsetInThisBuffer = indexBaseForLine + offset - dataStartOffset;
         if (offsetInThisBuffer > dataBlockSize) {
             try {
@@ -142,7 +144,7 @@ public class NativeExcerptTailer extends AbstractNativeExcerpt implements Excerp
         if ((indexPositionAddr & cacheLineMask) == 8) {
             indexBaseForLine = UNSAFE.getLongVolatile(null, indexPositionAddr - 8);
             assert index <= indexEntriesPerLine || indexBaseForLine > 0 : "index: " + index + " indexBaseForLine: " + indexBaseForLine;
-            setLmitAddr(0);
+            setLimitAddr(0);
         }
     }
 }

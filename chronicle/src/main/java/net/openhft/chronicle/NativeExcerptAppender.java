@@ -38,6 +38,7 @@ public class NativeExcerptAppender extends AbstractNativeExcerpt implements Exce
     }
 
     public void startExcerpt(long capacity) {
+        chronicle.checkNotClosed();
         // in case there is more than one appender :P
         if (index != size()) {
             toEnd();
