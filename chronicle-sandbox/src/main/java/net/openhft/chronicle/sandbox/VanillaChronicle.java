@@ -52,6 +52,7 @@ public class VanillaChronicle implements Chronicle {
     private final long entriesForCycleMask;
     //    private volatile int cycle;
     private volatile long lastWrittenIndex;
+    private volatile boolean closed = false;
 
     public VanillaChronicle(String basePath) {
         this(basePath, VanillaChronicleConfig.DEFAULT);
@@ -74,6 +75,10 @@ public class VanillaChronicle implements Chronicle {
         entriesForCycleMask = -1L >>> -entriesForCycleBits;
 
 //        cycle = (int) (System.currentTimeMillis() / config.cycleLength());
+    }
+
+    public void checkNotClosed() {
+        if (closed) throw new IllegalStateException(basePath + " is closed");
     }
 
     @Override
@@ -151,6 +156,7 @@ public class VanillaChronicle implements Chronicle {
 
     @Override
     public void close() {
+        closed = true;
         indexCache.close();
         dataCache.close();
     }
@@ -215,6 +221,7 @@ public class VanillaChronicle implements Chronicle {
         private VanillaFile lastIndexFile = null, lastDataFile = null;
 
         public boolean index(long nextIndex) {
+            checkNotClosed();
             try {
                 int cycle = (int) (nextIndex >>> entriesForCycleBits);
                 int dailyCount = (int) ((nextIndex & entriesForCycleMask) >>> indexBlockLongsBits);
@@ -276,6 +283,7 @@ public class VanillaChronicle implements Chronicle {
         }
 
         public boolean nextIndex() {
+            checkNotClosed();
             if (index < 0) {
                 toStart();
                 if (index < 0)
@@ -418,6 +426,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public void startExcerpt(long capacity) {
+            checkNotClosed();
             try {
                 appenderCycle = cycle();
                 appenderThreadId = AffinitySupport.getThreadId();
