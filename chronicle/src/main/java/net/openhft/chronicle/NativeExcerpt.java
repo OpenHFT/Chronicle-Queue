@@ -31,6 +31,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
     }
 
     public void startExcerpt(long capacity) {
+        chronicle.checkNotClosed();
         // if the capacity is to large, roll the previous entry, and there was one
         if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
             // check we are the start of a block.
@@ -71,6 +72,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
     @Override
     public boolean index(long l) {
+        chronicle.checkNotClosed();
         try {
             return indexForRead(l);
         } catch (IOException e) {
@@ -142,6 +144,7 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
 
     @Override
     public boolean nextIndex() {
+        chronicle.checkNotClosed();
         try {
             long index2 = index;
             if (indexForRead(index() + 1)) {
