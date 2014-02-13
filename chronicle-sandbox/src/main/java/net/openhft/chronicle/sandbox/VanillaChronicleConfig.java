@@ -36,7 +36,7 @@ public class VanillaChronicleConfig {
         return cycleFormat;
     }
 
-    public VanillaChronicleConfig cycleFormat(int cycleLength) {
+    public VanillaChronicleConfig cycleLength(int cycleLength) {
         this.cycleLength = cycleLength;
         return this;
     }
