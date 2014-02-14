@@ -46,6 +46,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
 
         this.level = ChronicleHelper.stringToLevel(levels);
 
+        //TODO: add support for text logging?
         if(path != null && ChronicleHelper.TYPE_BINARY.equalsIgnoreCase(type)) {
             this.writer = new BinaryChronicleWriter(path,append != null ? append : false, VanillaChronicleConfig.DEFAULT);
         } else {
