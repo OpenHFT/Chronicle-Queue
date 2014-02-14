@@ -29,22 +29,27 @@
     <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <felix.version>3.2.2</felix.version>
-        <pax.exam.version>3.3.0</pax.exam.version>
-        <pax.url.version>1.6.0</pax.url.version>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <felix.bundle.plugin.version>2.4.0</felix.bundle.plugin.version>
+      <felix.version>4.2.1</felix.version>
+      <pax.exam.version>3.4.0</pax.exam.version>
+      <pax.url.version>1.6.0</pax.url.version>
+      <osgi.version>5.0.0</osgi.version>
+      <openhft.lang.version>6.1.4</openhft.lang.version>
+      <openhft.affinity.version>2.0.1</openhft.affinity.version>
+      <logback.version>0.9.6</logback.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
-            <version>6.1.4</version>
+            <version>${openhft.lang.version}</version>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
-            <version>2.0.1</version>
+            <version>${openhft.affinity.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -69,6 +74,18 @@
         </dependency>
 
         <!-- for OSGi testing -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>${osgi.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.compendium</artifactId>
+            <version>${osgi.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.ops4j.pax.exam</groupId>
             <artifactId>pax-exam-container-native</artifactId>
@@ -102,16 +119,16 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
-            <version>0.9.6</version>
+            <version>${logback.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>0.9.6</version>
+            <version>${logback.version}</version>
             <scope>test</scope>
         </dependency>
-
+        
         <!-- on linux install with sudo apt-get install libjna-java -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
@@ -199,8 +216,9 @@
                 <version>2.16</version>
                 <configuration>
                     <systemPropertyVariables>
-                        <openhftLang.version>6.1.4</openhftLang.version>
-                        <logback.version>0.9.6</logback.version>
+                        <openhft.lang.version>${openhft.lang.version}</openhft.lang.version>
+                        <openhft.affinity.version>${openhft.affinity.version}</openhft.affinity.version>
+                        <logback.version>${logback.version}</logback.version>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -208,7 +226,7 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>2.3.7</version>
+                <version>${felix.bundle.plugin.version}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
