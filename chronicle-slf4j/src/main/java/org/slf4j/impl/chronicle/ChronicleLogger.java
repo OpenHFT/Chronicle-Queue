@@ -63,7 +63,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void trace(String s) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_TRACE)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_TRACE, s, null);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_TRACE, this.name, s, null);
         }
     }
 
@@ -85,7 +85,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void trace(String s, Throwable throwable) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_TRACE)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_TRACE,s,throwable);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_TRACE, this.name,s,throwable);
         }
     }
 
@@ -101,7 +101,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void debug(String s) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_DEBUG)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_DEBUG, s, null);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_DEBUG, this.name,s, null);
         }
     }
 
@@ -123,7 +123,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void debug(String s, Throwable throwable) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_DEBUG)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_DEBUG,s,throwable);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_DEBUG,this.name,s,throwable);
         }
     }
 
@@ -139,7 +139,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void info(String s) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_INFO)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_INFO, s, null);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_INFO, this.name,s, null);
         }
     }
 
@@ -161,7 +161,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void info(String s, Throwable throwable) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_INFO)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_INFO,s,throwable);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_INFO,this.name,s,throwable);
         }
     }
 
@@ -177,7 +177,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void warn(String s) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_WARN)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_WARN, s, null);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_WARN, this.name,s, null);
         }
     }
 
@@ -199,7 +199,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void warn(String s, Throwable throwable) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_WARN)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_WARN,s,throwable);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_WARN,this.name,s,throwable);
         }
     }
 
@@ -215,7 +215,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void error(String s) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_ERROR)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_ERROR, s, null);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_ERROR, this.name,s, null);
         }
     }
 
@@ -237,7 +237,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     @Override
     public void error(String s, Throwable throwable) {
         if(isLevelEnabled(ChronicleHelper.LOG_LEVEL_ERROR)) {
-            this.writer.log(ChronicleHelper.LOG_LEVEL_ERROR,s,throwable);
+            this.writer.log(ChronicleHelper.LOG_LEVEL_ERROR,this.name,s,throwable);
         }
     }
 
@@ -267,7 +267,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     private void formatAndLog(int level, String format, Object arg1, Object arg2) {
         if(isLevelEnabled(level)) {
             FormattingTuple tp = MessageFormatter.format(format, arg1, arg2);
-            this.writer.log(level, tp.getMessage(), tp.getThrowable());
+            this.writer.log(level, tp.getMessage(), this.name,tp.getThrowable());
         }
     }
 
@@ -281,7 +281,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     private void formatAndLog(int level, String format, Object... arguments) {
         if(isLevelEnabled(level)) {
             FormattingTuple tp = MessageFormatter.arrayFormat(format, arguments);
-            this.writer.log(level, tp.getMessage(), tp.getThrowable());
+            this.writer.log(level, tp.getMessage(), this.name, tp.getThrowable());
         }
     }
 }

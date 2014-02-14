@@ -15,28 +15,52 @@
  */
 package org.slf4j.impl.chronicle;
 
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.sandbox.VanillaChronicle;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
-import org.slf4j.impl.chronicle.ChronicleHelper;
-import org.slf4j.impl.chronicle.ChronicleLogger;
-import org.slf4j.impl.chronicle.ChronicleLoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
  */
 public class Slf4jChronicleTest {
+    private static final String BASEPATH = System.getProperty("java.io.tmpdir") + File.separator + "slf4j-chronicle";
+
+    @Before
+    public void setUp() {
+        System.setProperty("org.slf4j.logger.chronicle.path",BASEPATH);
+        System.setProperty("org.slf4j.logger.chronicle.level",ChronicleHelper.LOG_LEVEL_DEBUG_S);
+        System.setProperty("org.slf4j.logger.chronicle.append",ChronicleHelper.FALSE_S);
+    }
+
+    @After
+    public void tearDown() {
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
-    public void testLoadProperties1() {
+    public void testLoadProperties() {
         Properties properties = ChronicleHelper.loadProperties();
 
+        assertEquals(
+           BASEPATH,
+           ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_PATH));
         assertEquals(
             ChronicleHelper.LOG_LEVEL_DEBUG_S,
             ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_LEVEL));
@@ -47,34 +71,14 @@ public class Slf4jChronicleTest {
             ChronicleHelper.FALSE_S,
             ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_SHORTNAME));
         assertEquals(
+            ChronicleHelper.FALSE_S,
+            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_APPEND));
+        assertEquals(
             System.getProperty("java.io.tmpdir"),
-            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_PATH));
+            ChronicleHelper.getStringProperty(properties, "fromSys"));
         assertEquals(
             System.getenv("LOGNAME"),
             ChronicleHelper.getStringProperty(properties, "fromEnv"));
-    }
-
-    @Test
-    public void testLoadProperties2() {
-        System.setProperty("org.slf4j.logger.chronicle.path","/tmp/mychronicle");
-
-        Properties properties = ChronicleHelper.loadProperties();
-
-        assertEquals(
-           ChronicleHelper.LOG_LEVEL_DEBUG_S,
-           ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_LEVEL));
-        assertEquals(
-            ChronicleHelper.TYPE_BINARY,
-            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_TYPE));
-        assertEquals(
-           ChronicleHelper.FALSE_S,
-           ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_SHORTNAME));
-        assertEquals(
-           "/tmp/mychronicle",
-           ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_PATH));
-        assertEquals(
-           System.getenv("LOGNAME"),
-           ChronicleHelper.getStringProperty(properties, "fromEnv"));
     }
 
     @Test
@@ -90,5 +94,87 @@ public class Slf4jChronicleTest {
 
         assertNotNull(l);
         assertEquals(l.getClass(),ChronicleLogger.class);
+    }
+
+    @Test
+    public void testLogging1() throws IOException {
+        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        l.trace("trace");
+        l.debug("debug");
+        l.info("info");
+        l.warn("warn");
+        l.error("error");
+
+        VanillaChronicle reader = new VanillaChronicle(BASEPATH);
+        ExcerptTailer tailer = reader.createTailer();
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleHelper.LOG_LEVEL_DEBUG,tailer.readByte());
+        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("debug",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleHelper.LOG_LEVEL_INFO,tailer.readByte());
+        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("info",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleHelper.LOG_LEVEL_WARN,tailer.readByte());
+        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("warn",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleHelper.LOG_LEVEL_ERROR,tailer.readByte());
+        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("error",tailer.readEnum(String.class));
+
+        assertFalse(tailer.nextIndex());
+
+        tailer.close();
+        reader.close();
+    }
+
+    @Test
+    public void testLoggingPerf1() throws IOException {
+        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+
+        for(int x=0;x<10;x++) {
+            long start = System.nanoTime();
+
+            int items = 10000;
+            for (int i = 1; i <= items; i++) {
+                l.trace("something to log");
+            }
+
+            long end = System.nanoTime();
+
+            System.out.printf("Took an average of %.2f us to write %d items (level disabled)\n",
+                (end - start) / items / 1e3,
+                items);
+        }
+    }
+
+    @Test
+    public void testLoggingPerf2() throws IOException {
+        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+
+        for(int x=0;x<10;x++) {
+            long start = System.nanoTime();
+
+            int items = 10000;
+            for (int i = 1; i <= items; i++) {
+                l.debug("something to log");
+            }
+
+            long end = System.nanoTime();
+
+            System.out.printf("Took an average of %.2f us to write %d items (level enabled)\n",
+                    (end - start) / items / 1e3,
+                    items);
+        }
     }
 }

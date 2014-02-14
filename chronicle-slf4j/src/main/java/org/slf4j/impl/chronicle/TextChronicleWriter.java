@@ -51,17 +51,13 @@ public class TextChronicleWriter implements ChronicleWriter, Closeable {
      * This is the internal implementation for logging regular (non-parameterized)
      * log messages.
      *
-     * long   : timestamp
-     * int    : level
-     * String : message
-     * String : t.getMessage() or '<none>'
-     *
      * @param level   One of the LOG_LEVEL_XXX constants defining the log level
+     * @param name    The logger name
      * @param message The message itself
      * @param t       The exception whose stack trace should be logged
      */
     @Override
-    public void log(int level, String message, Throwable t) {
+    public void log(int level, String name, String message, Throwable t) {
         try {
             ExcerptAppender appender = this.chronicle.createAppender();
             appender.startExcerpt();

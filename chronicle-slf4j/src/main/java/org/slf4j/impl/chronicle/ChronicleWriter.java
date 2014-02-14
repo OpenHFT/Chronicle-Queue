@@ -22,8 +22,9 @@ public interface ChronicleWriter {
     /**
      *
      * @param level
+     * @param name
      * @param message
      * @param t
      */
-    public void log(int level, String message, Throwable t);
+    public void log(int level, String name, String message, Throwable t);
 }

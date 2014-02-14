@@ -53,20 +53,23 @@ public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
      *
      * long   : timestamp
      * int    : level
+     * String : name
      * String : message
-     * String : t.getMessage() or '<none>'
+     * String : t.getMessage() ????
      *
      * @param level   One of the LOG_LEVEL_XXX constants defining the log level
+     * @param name    The logger name
      * @param message The message itself
      * @param t       The exception whose stack trace should be logged
      */
     @Override
-    public void log(int level, String message, Throwable t) {
+    public void log(int level, String name, String message, Throwable t) {
         try {
             ExcerptAppender appender = this.chronicle.createAppender();
             appender.startExcerpt();
             appender.writeLong(System.currentTimeMillis());
             appender.writeByte(level);
+            appender.writeEnum(name);
             appender.writeEnum(message);
             //TODO: what should be persisted?
             //appender.writeEnum(t.getMessage());
