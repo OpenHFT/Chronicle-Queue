@@ -41,6 +41,9 @@ public class Slf4jChronicleTest {
             ChronicleHelper.LOG_LEVEL_DEBUG_S,
             ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_LEVEL));
         assertEquals(
+            ChronicleHelper.TYPE_BINARY,
+            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_TYPE));
+        assertEquals(
             ChronicleHelper.FALSE_S,
             ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_SHORTNAME));
         assertEquals(
@@ -60,6 +63,9 @@ public class Slf4jChronicleTest {
         assertEquals(
            ChronicleHelper.LOG_LEVEL_DEBUG_S,
            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_LEVEL));
+        assertEquals(
+            ChronicleHelper.TYPE_BINARY,
+            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_TYPE));
         assertEquals(
            ChronicleHelper.FALSE_S,
            ChronicleHelper.getStringProperty(properties, ChronicleHelper.KEY_SHORTNAME));

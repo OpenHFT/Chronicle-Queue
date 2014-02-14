@@ -15,76 +15,15 @@
  */
 package org.slf4j.impl.chronicle;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
-
-import java.io.Closeable;
-import java.io.IOException;
-
 /**
  *
  */
-public class ChronicleWriter implements Closeable {
-
-    private final String path;
-    private final boolean append;
-    private final VanillaChronicle chronicle;
-
+public interface ChronicleWriter {
     /**
      *
-     * @param path
-     * @param append
-     * @param config
+     * @param level
+     * @param message
+     * @param t
      */
-    public ChronicleWriter(String path,boolean append,VanillaChronicleConfig config) {
-        this.path = path;
-        this.append = append;
-        this.chronicle = new VanillaChronicle(path,config);
-
-        if(!append) {
-            this.chronicle.clear();
-        }
-    }
-
-    /**
-     * This is the internal implementation for logging regular (non-parameterized)
-     * log messages.
-     *
-     * long   : timestamp
-     * int    : level
-     * String : message
-     * String : t.getMessage() or '<none>'
-     *
-     * @param level   One of the LOG_LEVEL_XXX constants defining the log level
-     * @param message The message itself
-     * @param t       The exception whose stack trace should be logged
-     */
-    public void log(int level, String message, Throwable t) {
-        try {
-            ExcerptAppender appender = this.chronicle.createAppender();
-            appender.startExcerpt();
-            appender.append(System.currentTimeMillis());
-            appender.append(level);
-            appender.append(message);
-
-            //TODO: fix
-            if(t != null) {
-                appender.append(t.getMessage());
-            } else {
-                appender.append("<none>");
-            }
-            appender.finish();
-        } catch(Exception e) {
-            //TODO
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
-        if(this.chronicle != null) {
-            this.chronicle.close();
-        }
-    }
+    public void log(int level, String message, Throwable t);
 }

@@ -29,7 +29,8 @@ import java.util.concurrent.ConcurrentMap;
 public class ChronicleLoggerFactory implements ILoggerFactory {
     private final ConcurrentMap<String,Logger> loggers;
     private final Properties properties;
-    private final ChronicleWriter writer;
+    private final BinaryChronicleWriter writer;
+    private final int level;
 
     /**
      * c-tor
@@ -40,13 +41,25 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
 
         String  path   = ChronicleHelper.getStringProperty(this.properties,ChronicleHelper.KEY_PATH);
         Boolean append = ChronicleHelper.getBooleanProperty(this.properties,ChronicleHelper.KEY_APPEND);
+        String  type   = ChronicleHelper.getStringProperty(this.properties, ChronicleHelper.KEY_TYPE);
+        String  levels = ChronicleHelper.getStringProperty(this.properties, ChronicleHelper.KEY_LEVEL);
 
-        if(path != null) {
-            this.writer = new ChronicleWriter(path,append != null ? append : false, VanillaChronicleConfig.DEFAULT);
+        this.level = ChronicleHelper.stringToLevel(levels);
+
+        if(path != null && ChronicleHelper.TYPE_BINARY.equalsIgnoreCase(type)) {
+            this.writer = new BinaryChronicleWriter(path,append != null ? append : false, VanillaChronicleConfig.DEFAULT);
         } else {
             this.writer = null;
 
-            System.err.println("Unable to inzialize slf4j-chronicle, org.slf4j.logger.chronicle.path is not defined");
+            StringBuilder sb = new StringBuilder("Unable to inzialize slf4j-chronicle");
+            if(path == null) {
+                sb.append("\n  org.slf4j.logger.chronicle.path is not defined");
+            }
+            if(!ChronicleHelper.TYPE_BINARY.equalsIgnoreCase(type)) {
+                sb.append("\n  org.slf4j.logger.chronicle.type is not properly defined");
+            }
+
+            System.out.println(sb.toString());
         }
     }
 
@@ -56,9 +69,8 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     public Logger getLogger(String name) {
         Logger logger = loggers.get(name);
         if (logger == null) {
-            String level = ChronicleHelper.getStringProperty(this.properties, ChronicleHelper.KEY_LEVEL);
-            if(this.writer != null && level != null) {
-                Logger newInstance = new ChronicleLogger(this.writer,name,ChronicleHelper.stringToLevel(level));
+            if(this.writer != null) {
+                Logger newInstance = new ChronicleLogger(this.writer,name,this.level);
                 Logger oldInstance = loggers.putIfAbsent(name, newInstance);
                 logger = oldInstance == null ? newInstance : oldInstance;
             }

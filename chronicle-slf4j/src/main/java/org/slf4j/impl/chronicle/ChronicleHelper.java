@@ -43,13 +43,16 @@ public class ChronicleHelper {
 
     public static final String TRUE_S  = "true";
     public static final String FALSE_S = "false";
+    public static final String TYPE_BINARY = "binary";
+    public static final String TYPE_TEXT   = "text";
 
     public static final String KEY_PROPERTIES_FILE = "org.slf4j.logger.chronicle.properties";
     public static final String CFG_PREFIX          = "org.slf4j.logger.chronicle.";
     public static final String KEY_LEVEL           = "level";
     public static final String KEY_PATH            = "path";
     public static final String KEY_SHORTNAME       = "shortName";
-    public static final String KEY_APPEND          = "shortName";
+    public static final String KEY_APPEND          = "append";
+    public static final String KEY_TYPE            = "type";
 
     /**
      *
