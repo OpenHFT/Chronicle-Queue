@@ -25,8 +25,7 @@ import org.slf4j.helpers.MessageFormatter;
 public class ChronicleLogger extends MarkerIgnoringBase {
 
     private final ChronicleWriter writer;
-    private final String name;
-    private final int logLevel;
+    private final int level;
 
     /**
      * c-tor
@@ -34,7 +33,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
      * @param writer
      * @param name
      */
-    ChronicleLogger(final ChronicleWriter writer,final String name) {
+    public ChronicleLogger(final ChronicleWriter writer,final String name) {
         this(writer,name, ChronicleLoggingHelper.DEFAULT_LOG_LEVEL);
     }
 
@@ -43,12 +42,24 @@ public class ChronicleLogger extends MarkerIgnoringBase {
      *
      * @param writer
      * @param name
-     * @param logLevel
+     * @param level
      */
-    ChronicleLogger(final ChronicleWriter writer,final String name,int logLevel) {
+    public ChronicleLogger(final ChronicleWriter writer,final String name,int level) {
         this.writer = writer;
         this.name = name;
-        this.logLevel = logLevel;
+        this.level = level;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     *
+     * @return
+     */
+    public int getLevel() {
+        return this.level;
     }
 
     // *************************************************************************
@@ -248,12 +259,12 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     /**
      * Is the given log level enabled?
      *
-     * @param logLevel is this level enabled?
+     * @param level is this level enabled?
      */
-    private boolean isLevelEnabled(int logLevel) {
+    private boolean isLevelEnabled(int level) {
         // log level are numerically ordered so can use simple numeric
         // comparison
-        return (logLevel >= this.logLevel);
+        return (level >= this.level);
     }
 
     /**

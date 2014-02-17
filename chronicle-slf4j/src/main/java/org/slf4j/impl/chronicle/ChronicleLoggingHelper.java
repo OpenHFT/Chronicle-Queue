@@ -17,14 +17,6 @@ package org.slf4j.impl.chronicle;
 
 import org.slf4j.spi.LocationAwareLogger;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.management.ManagementFactory;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Properties;
-
 /**
  * TODO: tmp class
  */

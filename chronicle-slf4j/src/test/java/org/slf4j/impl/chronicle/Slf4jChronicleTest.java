@@ -90,14 +90,14 @@ public class Slf4jChronicleTest {
             ChronicleLoggingHelper.FALSE_S,
             cfg.getString(ChronicleLoggingConfig.KEY_SHORTNAME));
         assertEquals(
-            ChronicleLoggingHelper.TRUE_S,
+            ChronicleLoggingHelper.FALSE_S,
             cfg.getString(ChronicleLoggingConfig.KEY_APPEND));
-        //assertEquals(
-        //    new File(BASEPATH_LOGGER_1),
-        //    new File(cfg.getString("Logger1",ChronicleLoggingConfig.KEY_PATH)));
-        //assertEquals(
-        //    ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
-        //    cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
+        assertEquals(
+            new File(BASEPATH_LOGGER_1),
+            new File(cfg.getString("Logger1",ChronicleLoggingConfig.KEY_PATH)));
+        assertEquals(
+            ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
+            cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
     }
 
     @Test
@@ -111,6 +111,7 @@ public class Slf4jChronicleTest {
     public void testLogger() {
         Logger l1 = LoggerFactory.getLogger(Slf4jChronicleTest.class);
         Logger l2 = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        Logger l3 = LoggerFactory.getLogger("Logger1");
 
         assertNotNull(l1);
         assertEquals(l1.getClass(),ChronicleLogger.class);
@@ -118,7 +119,25 @@ public class Slf4jChronicleTest {
         assertNotNull(l2);
         assertEquals(l2.getClass(),ChronicleLogger.class);
 
+        assertNotNull(l3);
+        assertEquals(l3.getClass(),ChronicleLogger.class);
+
+
         assertEquals(l1,l2);
+        assertNotEquals(l1,l3);
+
+        ChronicleLogger cl1 = (ChronicleLogger)l1;
+
+        assertEquals(cl1.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
+        assertEquals(cl1.getName(),Slf4jChronicleTest.class.getName());
+
+        ChronicleLogger cl2 = (ChronicleLogger)l2;
+        assertEquals(cl2.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
+        assertEquals(cl2.getName(),Slf4jChronicleTest.class.getName());
+
+        ChronicleLogger cl3 = (ChronicleLogger)l3;
+        assertEquals(cl3.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_INFO);
+        assertEquals(cl3.getName(),"Logger1");
     }
 
     // *************************************************************************
@@ -169,7 +188,7 @@ public class Slf4jChronicleTest {
 
     @Test
     public void testLoggingPerf1() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        Logger l = LoggerFactory.getLogger("Logger1");
 
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();
@@ -189,14 +208,14 @@ public class Slf4jChronicleTest {
 
     @Test
     public void testLoggingPerf2() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        Logger l = LoggerFactory.getLogger("Logger1");
 
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();
 
             int items = 10000;
             for (int i = 1; i <= items; i++) {
-                l.debug("something to log");
+                l.warn("something to log");
             }
 
             long end = System.nanoTime();
