@@ -19,7 +19,8 @@ import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -28,51 +29,59 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ChronicleLoggerFactory implements ILoggerFactory {
     private final ConcurrentMap<String,Logger> loggers;
-    private final Properties properties;
-    private final BinaryChronicleWriter writer;
-    private final int level;
+    private final ConcurrentMap<String,ChronicleWriter> writers;
+    private final ChronicleLoggingConfig cfg;
 
     /**
      * c-tor
      */
     public ChronicleLoggerFactory() {
         this.loggers = new ConcurrentHashMap<String, Logger>();
-        this.properties = ChronicleHelper.loadProperties();
-
-        String  path   = ChronicleHelper.getStringProperty(this.properties, ChronicleHelper.KEY_PATH);
-        Boolean append = ChronicleHelper.getBooleanProperty(this.properties, ChronicleHelper.KEY_APPEND);
-        String  levels = ChronicleHelper.getStringProperty(this.properties, ChronicleHelper.KEY_LEVEL);
-
-        this.level = ChronicleHelper.stringToLevel(levels);
-
-        //TODO: add support for text logging?
-        if(path != null) {
-            this.writer = new BinaryChronicleWriter(
-                path,
-                append != null ? append : true,
-                VanillaChronicleConfig.DEFAULT);
-        } else {
-            this.writer = null;
-
-            StringBuilder sb = new StringBuilder("Unable to inzialize slf4j-chronicle");
-            if(path == null) {
-                sb.append("\n  org.slf4j.logger.chronicle.path is not defined");
-            }
-
-            System.out.println(sb.toString());
-        }
+        this.writers = new ConcurrentHashMap<String, ChronicleWriter>();
+        this.cfg = ChronicleLoggingConfig.load();
     }
 
     /**
      * Return an appropriate {@link ChronicleLogger} instance by name.
      */
-    public Logger getLogger(String name) {
+    @Override
+    public synchronized Logger getLogger(String name) {
         Logger logger = loggers.get(name);
         if (logger == null) {
-            if(this.writer != null) {
-                Logger newInstance = new ChronicleLogger(this.writer,name,this.level);
-                Logger oldInstance = loggers.putIfAbsent(name, newInstance);
-                logger = oldInstance == null ? newInstance : oldInstance;
+            String  path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
+            Boolean append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
+            String  levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
+            int     level  = ChronicleLoggingHelper.stringToLevel(levels);
+
+            ChronicleWriter writer = null;
+            if(path != null) {
+                writer = this.writers.get(path);
+                if(writer == null) {
+                    writer = new BinaryChronicleWriter(
+                        path,
+                        append != null ? append : true,
+                        VanillaChronicleConfig.DEFAULT);
+
+                    this.writers.put(path,writer);
+                }
+
+                if(writer != null) {
+                    Logger newInstance = new ChronicleLogger(writer,name,level);
+                    Logger oldInstance = loggers.putIfAbsent(name, newInstance);
+                    logger = oldInstance == null ? newInstance : oldInstance;
+                }
+
+            } else {
+                StringBuilder sb = new StringBuilder("Unable to inzialize slf4j-chronicle ")
+                    .append("(")
+                    .append("name")
+                    .append(")");
+
+                if(path == null) {
+                    sb.append("\n  slf4j.chronicle.path is not defined");
+                }
+
+                System.out.println(sb.toString());
             }
         }
 
