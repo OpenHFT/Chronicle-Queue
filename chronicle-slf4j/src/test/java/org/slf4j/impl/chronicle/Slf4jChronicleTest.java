@@ -81,8 +81,8 @@ public class Slf4jChronicleTest {
         ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load();
 
         assertEquals(
-           new File(BASEPATH),
-           new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
+            new File(BASEPATH),
+            new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
             cfg.getString(ChronicleLoggingConfig.KEY_LEVEL));
