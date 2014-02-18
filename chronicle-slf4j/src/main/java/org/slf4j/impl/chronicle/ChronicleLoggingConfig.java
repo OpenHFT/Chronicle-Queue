@@ -7,6 +7,7 @@ import java.lang.management.ManagementFactory;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -45,9 +46,16 @@ public class ChronicleLoggingConfig {
      * @return
      */
     public static ChronicleLoggingConfig load() {
+        return load(System.getProperty(KEY_PROPERTIES_FILE));
+    }
+
+    /**
+     *
+     * @param cfgPath
+     * @return
+     */
+    public static ChronicleLoggingConfig load(String cfgPath) {
         Properties tmpProperties = new Properties();
-        Properties locProperties = new Properties();
-        String cfgPath = System.getProperty(KEY_PROPERTIES_FILE);
         InputStream in = null;
 
         if(cfgPath == null) {
@@ -70,40 +78,46 @@ public class ChronicleLoggingConfig {
             }
         }
 
-        //TODO: re-engine
-        for(Object key : tmpProperties.keySet()) {
-            String val = tmpProperties.getProperty((String)key);
-            val = val.replace(PLACEHOLDER_TODAY, DATEFORMAT.format(new Date()));
-            val = val.replace(PLACEHOLDER_PID, PID);
+        int amended = 0;
+        do{
+            amended = 0;
+            //TODO: re-engine
+            for(Map.Entry<Object,Object> entries : tmpProperties.entrySet()) {
+                String val = tmpProperties.getProperty((String)entries.getKey());
+                val = val.replace(PLACEHOLDER_TODAY, DATEFORMAT.format(new Date()));
+                val = val.replace(PLACEHOLDER_PID, PID);
 
-            int startIndex = 0;
-            int endIndex = 0;
+                int startIndex = 0;
+                int endIndex = 0;
 
-            do {
-                startIndex = val.indexOf(PLACEHOLDER_START,endIndex);
-                if(startIndex != -1) {
-                    endIndex = val.indexOf(PLACEHOLDER_END,startIndex);
-                    if(endIndex != -1) {
-                        String envKey = val.substring(startIndex+2,endIndex);
-                        String newVal = null;
-                        if(tmpProperties.containsKey(envKey)) {
-                            newVal = tmpProperties.getProperty(envKey);
-                        } else if(System.getProperties().containsKey(envKey)){
-                            newVal = System.getProperties().getProperty(envKey);
-                        }
+                do {
+                    startIndex = val.indexOf(PLACEHOLDER_START,endIndex);
+                    if(startIndex != -1) {
+                        endIndex = val.indexOf(PLACEHOLDER_END,startIndex);
+                        if(endIndex != -1) {
+                            String envKey = val.substring(startIndex+2,endIndex);
+                            String newVal = null;
+                            if(tmpProperties.containsKey(envKey)) {
+                                newVal = tmpProperties.getProperty(envKey);
+                            } else if(System.getProperties().containsKey(envKey)){
+                                newVal = System.getProperties().getProperty(envKey);
+                            }
 
-                        if(newVal != null) {
-                            val = val.replace(PLACEHOLDER_START + envKey + PLACEHOLDER_END,newVal);
-                            endIndex += newVal.length() - envKey.length() + 3;
+                            if(newVal != null) {
+                                val = val.replace(PLACEHOLDER_START + envKey + PLACEHOLDER_END,newVal);
+                                endIndex += newVal.length() - envKey.length() + 3;
+
+                                amended++;
+                            }
                         }
                     }
-                }
-            } while(startIndex != -1 && endIndex != -1 && endIndex < val.length());
+                } while(startIndex != -1 && endIndex != -1 && endIndex < val.length());
 
-            locProperties.put(key,val);
-        }
+                entries.setValue(val);
+            }
+        } while(amended > 0);
 
-        return new ChronicleLoggingConfig(locProperties);
+        return new ChronicleLoggingConfig(tmpProperties);
     }
 
     /**

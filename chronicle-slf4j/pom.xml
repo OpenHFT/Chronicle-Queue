@@ -17,7 +17,11 @@
         <openhft.affinity.version>2.0.1</openhft.affinity.version>
         <openhft.chronicle.version>${project.version}</openhft.chronicle.version>
     </properties>
-    
+
+    <!-- ******************************************************************* -->
+    <!-- DEPENDENCIES                                                        -->
+    <!-- ******************************************************************* -->
+
     <dependencies>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -34,7 +38,6 @@
             <artifactId>chronicle-sandbox</artifactId>
             <version>${openhft.chronicle.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -49,5 +52,23 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <!-- ******************************************************************* -->
+    <!-- BUILD                                                               -->
+    <!-- ******************************************************************* -->
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <dir.resources>${project.basedir}/src/test/resources</dir.resources>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

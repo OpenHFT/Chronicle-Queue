@@ -21,23 +21,21 @@ import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  *
  */
 public class ChronicleLoggerFactory implements ILoggerFactory {
-    private final ConcurrentMap<String,Logger> loggers;
-    private final ConcurrentMap<String,ChronicleWriter> writers;
+    private final Map<String,Logger> loggers;
+    private final Map<String,ChronicleWriter> writers;
     private final ChronicleLoggingConfig cfg;
 
     /**
      * c-tor
      */
     public ChronicleLoggerFactory() {
-        this.loggers = new ConcurrentHashMap<String, Logger>();
-        this.writers = new ConcurrentHashMap<String, ChronicleWriter>();
+        this.loggers = new HashMap<String, Logger>();
+        this.writers = new HashMap<String, ChronicleWriter>();
         this.cfg = ChronicleLoggingConfig.load();
     }
 
@@ -66,11 +64,9 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                 }
 
                 if(writer != null) {
-                    Logger newInstance = new ChronicleLogger(writer,name,level);
-                    Logger oldInstance = loggers.putIfAbsent(name, newInstance);
-                    logger = oldInstance == null ? newInstance : oldInstance;
+                    logger = new ChronicleLogger(writer,name,level);
+                    this.loggers.put(name, logger);
                 }
-
             } else {
                 StringBuilder sb = new StringBuilder("Unable to inzialize slf4j-chronicle ")
                     .append("(")

@@ -15,90 +15,25 @@
  */
 package org.slf4j.impl.chronicle;
 
-import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 
-import java.io.File;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import static org.junit.Assert.*;
 
 /**
  *
  */
-public class Slf4jChronicleTest {
-
-    private static final String BASEPATH =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + new SimpleDateFormat("yyyyMMdd").format(new Date())
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "root";
-
-    private static final String BASEPATH_LOGGER_1 =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + new SimpleDateFormat("yyyyMMdd").format(new Date())
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "logger_1";
+public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     // *************************************************************************
     //
     // *************************************************************************
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Test
-    public void testLoadProperties() {
-        ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load();
-
-        assertEquals(
-            new File(BASEPATH),
-            new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
-        assertEquals(
-            ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_LEVEL));
-        assertEquals(
-            ChronicleLoggingHelper.FALSE_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_SHORTNAME));
-        assertEquals(
-            ChronicleLoggingHelper.FALSE_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_APPEND));
-        assertEquals(
-            new File(BASEPATH_LOGGER_1),
-            new File(cfg.getString("Logger1",ChronicleLoggingConfig.KEY_PATH)));
-        assertEquals(
-            ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
-            cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
-    }
 
     @Test
     public void testLoggerFactory() {
@@ -109,8 +44,8 @@ public class Slf4jChronicleTest {
 
     @Test
     public void testLogger() {
-        Logger l1 = LoggerFactory.getLogger(Slf4jChronicleTest.class);
-        Logger l2 = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        Logger l1 = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
+        Logger l2 = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
         Logger l3 = LoggerFactory.getLogger("Logger1");
 
         assertNotNull(l1);
@@ -129,11 +64,11 @@ public class Slf4jChronicleTest {
         ChronicleLogger cl1 = (ChronicleLogger)l1;
 
         assertEquals(cl1.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
-        assertEquals(cl1.getName(),Slf4jChronicleTest.class.getName());
+        assertEquals(cl1.getName(),Slf4jChronicleLoggerTest.class.getName());
 
         ChronicleLogger cl2 = (ChronicleLogger)l2;
         assertEquals(cl2.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
-        assertEquals(cl2.getName(),Slf4jChronicleTest.class.getName());
+        assertEquals(cl2.getName(),Slf4jChronicleLoggerTest.class.getName());
 
         ChronicleLogger cl3 = (ChronicleLogger)l3;
         assertEquals(cl3.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_INFO);
@@ -146,7 +81,7 @@ public class Slf4jChronicleTest {
 
     @Test
     public void testLogging1() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jChronicleTest.class);
+        Logger l = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
         l.trace("trace");
         l.debug("debug");
         l.info("info");
@@ -159,25 +94,25 @@ public class Slf4jChronicleTest {
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_DEBUG,tailer.readByte());
-        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
         assertEquals("debug",tailer.readEnum(String.class));
 
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_INFO,tailer.readByte());
-        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
         assertEquals("info",tailer.readEnum(String.class));
 
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_WARN,tailer.readByte());
-        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
         assertEquals("warn",tailer.readEnum(String.class));
 
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_ERROR,tailer.readByte());
-        assertEquals(Slf4jChronicleTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
         assertEquals("error",tailer.readEnum(String.class));
 
         assertFalse(tailer.nextIndex());
