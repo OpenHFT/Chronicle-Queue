@@ -21,26 +21,39 @@ import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  *
  */
-public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
+public class TextChronicleWriter implements ChronicleWriter, Closeable {
 
     private final String path;
+    private final String dateFormat;
     private final boolean append;
     private final VanillaChronicle chronicle;
+    private final ThreadLocal<DateFormat> dateFormatCache;
 
     /**
      *
      * @param path
+     * @param dateFormat
      * @param append
      * @param config
      */
-    public BinaryChronicleWriter(String path, boolean append, VanillaChronicleConfig config) {
+    public TextChronicleWriter(String path, String dateFormat,boolean append, VanillaChronicleConfig config) {
         this.path = path;
         this.append = append;
+        this.dateFormat = dateFormat != null ? dateFormat : ChronicleLoggingConfig.DEFAULT_DATE_FORMAT;
         this.chronicle = new VanillaChronicle(path,config);
+        this.dateFormatCache = new ThreadLocal<DateFormat>() {
+            @Override
+            protected SimpleDateFormat initialValue() {
+                return new SimpleDateFormat(TextChronicleWriter.this.dateFormat);
+            }
+        };
 
         if(!append) {
             this.chronicle.clear();
@@ -50,12 +63,6 @@ public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
     /**
      * This is the internal implementation for logging regular (non-parameterized)
      * log messages.
-     *
-     * long   : timestamp
-     * int    : level
-     * String : name
-     * String : message
-     * String : t.getMessage() ????
      *
      * @param level   One of the LOG_LEVEL_XXX constants defining the log level
      * @param name    The logger name
@@ -67,12 +74,15 @@ public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
         try {
             ExcerptAppender appender = this.chronicle.createAppender();
             appender.startExcerpt();
-            appender.writeLong(System.currentTimeMillis());
-            appender.writeByte(level);
-            appender.writeEnum(name);
-            appender.writeEnum(message);
-            //TODO: write Throwable
-            //appender.writeEnum(t.getMessage());
+            appender.append(this.dateFormatCache.get().format(new Date()));
+            appender.append('|');
+            appender.append(level);
+            appender.append('|');
+            appender.append(name);
+            appender.append('|');
+            appender.append(message);
+            appender.append('\n');
+            //TODO: append Throwable
             appender.finish();
         } catch(Exception e) {
             //TODO

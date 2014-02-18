@@ -21,6 +21,7 @@ import org.slf4j.spi.LocationAwareLogger;
  * TODO: tmp class
  */
 public class ChronicleLoggingHelper {
+
     public static final int LOG_LEVEL_TRACE = LocationAwareLogger.TRACE_INT;
     public static final int LOG_LEVEL_DEBUG = LocationAwareLogger.DEBUG_INT;
     public static final int LOG_LEVEL_INFO  = LocationAwareLogger.INFO_INT;

@@ -49,18 +49,31 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
             String  path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
             Boolean append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
             String  levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
+            String  type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
             int     level  = ChronicleLoggingHelper.stringToLevel(levels);
 
             ChronicleWriter writer = null;
             if(path != null) {
                 writer = this.writers.get(path);
                 if(writer == null) {
-                    writer = new BinaryChronicleWriter(
-                        path,
-                        append != null ? append : true,
-                        VanillaChronicleConfig.DEFAULT);
+                    if(ChronicleLoggingConfig.TYPE_BINARY.equalsIgnoreCase(type)) {
+                        writer = new BinaryChronicleWriter(
+                            path,
+                            append != null ? append : true,
+                            VanillaChronicleConfig.DEFAULT);
+                    } else if(ChronicleLoggingConfig.TYPE_TEXT.equalsIgnoreCase(type)) {
+                        writer = new TextChronicleWriter(
+                            path,
+                            this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT),
+                            append != null ? append : true,
+                            VanillaChronicleConfig.DEFAULT);
+                    }
 
-                    this.writers.put(path,writer);
+                    if(writer != null) {
+                        this.writers.put(path,writer);
+                    } else {
+                        //TODO, raise an error
+                    }
                 }
 
                 if(writer != null) {

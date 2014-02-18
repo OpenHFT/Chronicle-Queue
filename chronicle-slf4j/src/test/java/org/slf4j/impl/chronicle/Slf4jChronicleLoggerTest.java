@@ -122,6 +122,52 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
     }
 
     @Test
+    public void testTextLogging1() throws IOException {
+        Logger l = LoggerFactory.getLogger("TextLogger");
+        l.trace("trace");
+        l.debug("debug");
+        l.info("info");
+        l.warn("warn");
+        l.error("error");
+
+        VanillaChronicle reader = new VanillaChronicle(BASEPATH);
+        ExcerptTailer tailer = reader.createTailer();
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_DEBUG,tailer.readByte());
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("debug",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_INFO,tailer.readByte());
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("info",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_WARN,tailer.readByte());
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("warn",tailer.readEnum(String.class));
+
+        assertTrue(tailer.nextIndex());
+        tailer.readLong();
+        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_ERROR,tailer.readByte());
+        assertEquals(Slf4jChronicleLoggerTest.class.getName(),tailer.readEnum(String.class));
+        assertEquals("error",tailer.readEnum(String.class));
+
+        assertFalse(tailer.nextIndex());
+
+        tailer.close();
+        reader.close();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
     public void testLoggingPerf1() throws IOException {
         Logger l = LoggerFactory.getLogger("Logger1");
 

@@ -12,6 +12,21 @@ import java.util.Properties;
 
 /**
  * @author lburgazzoli
+ *
+ * Configurationn example:
+ *   # default
+ *   slf4j.chronicle.base = ${java.io.tmpdir}/chronicle/${today}/${pid}
+ *
+ *   # logger : root
+ *   slf4j.chronicle.path      = ${slf4j.chronicle.base}/root
+ *   slf4j.chronicle.level     = debug
+ *   slf4j.chronicle.shortName = false
+ *   slf4j.chronicle.append    = false
+ *   slf4j.chronicle.type      = binary
+ *
+ *   # logger : Logger1
+ *   slf4j.chronicle.logger.Logger1.path = ${slf4j.chronicle.base}/logger_1
+ *   slf4j.chronicle.logger.Logger1.level = info
  */
 public class ChronicleLoggingConfig {
     public static final String KEY_PROPERTIES_FILE      = "slf4j.chronicle.properties";
@@ -22,11 +37,15 @@ public class ChronicleLoggingConfig {
     public static final String KEY_SHORTNAME            = "shortName";
     public static final String KEY_APPEND               = "append";
     public static final String KEY_TYPE                 = "type";
+    public static final String KEY_DATE_FORMAT          = "dateFormat";
+    public static final String TYPE_BINARY              = "binary";
+    public static final String TYPE_TEXT                = "text";
     public static final String PLACEHOLDER_START        = "${";
     public static final String PLACEHOLDER_END          = "}";
     public static final String PLACEHOLDER_TODAY        = "${today}";
     public static final String PLACEHOLDER_TODAY_FORMAT = "yyyyMMdd";
     public static final String PLACEHOLDER_PID          = "${pid}";
+    public static final String DEFAULT_DATE_FORMAT      = "yyyy.MM.dd-HH:mm:ss.S";
 
     private static final DateFormat DATEFORMAT = new SimpleDateFormat(PLACEHOLDER_TODAY_FORMAT);
     private static final String     PID        = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
