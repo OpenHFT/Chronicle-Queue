@@ -61,7 +61,9 @@ public class VanillaFile implements Closeable {
         map = fc.map(FileChannel.MapMode.READ_WRITE, 0, size);
         map.order(ByteOrder.nativeOrder());
         baseAddr = ((DirectBuffer) map).address();
-        bytes = new NativeBytes(null, baseAddr, baseAddr, baseAddr + size);
+        //bytes = new NativeBytes(null, baseAddr, baseAddr, baseAddr + size);
+        bytes = new NativeBytes( baseAddr, baseAddr, baseAddr + size);
+
     }
 
     public File file() {
