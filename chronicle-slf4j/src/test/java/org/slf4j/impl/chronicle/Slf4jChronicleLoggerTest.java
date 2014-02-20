@@ -23,8 +23,15 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -204,6 +211,62 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
             System.out.printf("Took an average of %.2f us to write %d items (level enabled)\n",
                 (end - start) / items / 1e3,
                 items);
+        }
+    }
+
+    @Test
+    public void testLoggingPerf3() throws IOException, InterruptedException {
+        final int RUNS = 20000;
+        final int THREADS = 4;
+
+        final long start = System.nanoTime();
+
+        ExecutorService es = Executors.newFixedThreadPool(THREADS);
+        for (int t = 0; t < THREADS; t++) {
+            es.submit(new RunnableChronicle(RUNS,"thread-" + t));
+        }
+
+        es.shutdown();
+        es.awaitTermination(2, TimeUnit.SECONDS);
+
+        final long time = System.nanoTime() - start;
+
+        System.out.printf("Took an average of %.1f us per entry\n",
+            time / 1e3 / (RUNS * THREADS)
+        );
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     *
+     */
+    private class RunnableChronicle implements Runnable {
+        private final Logger logger;
+        private final int runs;
+
+        /**
+         *
+         * @param runs
+         * @param loggerName
+         */
+        public RunnableChronicle(int runs,String loggerName) {
+            this.logger = LoggerFactory.getLogger(loggerName);
+            this.runs = runs;
+        }
+
+        @Override
+        public void run() {
+            try {
+                for (int i = 0; i < this.runs; i++) {
+                    this.logger.info("runLoop {}",i);
+                    Thread.yield();
+                }
+            } catch (Exception e) {
+                this.logger.warn("Exception",e);
+            }
         }
     }
 }
