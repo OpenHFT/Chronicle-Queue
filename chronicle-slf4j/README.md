@@ -1,13 +1,12 @@
 chronicle-slf4j
 ===============
-Simple implementation of Logger that sends all enabled log messages, for all
-defined loggers, to one or more VanillaChronicle.
+Simple implementation of Logger that sends all enabled log messages, for all defined loggers, to one or more VanillaChronicle.
 
 ---
 
 To configure this sl4j binding you need to specify the location of a properties files via system properties:
 ```
--Dslf4j.chronicle.properties=
+-Dslf4j.chronicle.properties=${pathOfYourPropertiesFile}
 ```
 
 The following properties are supported to configure the behavior of this logger:
