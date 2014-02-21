@@ -1,10 +1,9 @@
 chronicle-slf4j
 ===============
-
 Simple implementation of Logger that sends all enabled log messages, for all
 defined loggers, to one or more VanillaChronicle.
 
-___
+---
 
 To configure this sl4j binding you need to specify the location of a properties files via system properties:
 ```
@@ -18,7 +17,7 @@ The following properties are supported to configure the behavior of this logger:
   * slf4j.chronicle.append. Must be one of ("true","false")
   * slf4j.chronicle.type. Must be one of ("binary","text")
 
-Every entry starting with slf4j.chronicle.logger can be used to customize the behavior of a specific logger using _path_,_level_,shortName_,_append_,_type_ as above.
+Every entry starting with slf4j.chronicle.logger can be used to customize the behavior of a specific logger using _path_,_level_,_shortName_,_append_,_type_ as above.
 
 ```properties
 # default
