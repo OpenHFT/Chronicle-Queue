@@ -49,32 +49,4 @@ public class Slf4jChronicleConfigurationTest extends Slf4jChronicleTestBase {
             ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
             cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
     }
-
-
-    @Test
-    public void testLoadPropertiesFromFile() {
-        ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load(
-            System.getProperty("dir.resources")
-                + File.separator
-                + "slf4j.chronicle.test.properties");
-
-        assertEquals(
-            new File(BASEPATH_FILE),
-            new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
-        assertEquals(
-            ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_LEVEL));
-        assertEquals(
-            ChronicleLoggingHelper.FALSE_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_SHORTNAME));
-        assertEquals(
-            ChronicleLoggingHelper.FALSE_S,
-            cfg.getString(ChronicleLoggingConfig.KEY_APPEND));
-        assertEquals(
-            new File(BASEPATH_FILE_LOGGER_1),
-            new File(cfg.getString("Logger1",ChronicleLoggingConfig.KEY_PATH)));
-        assertEquals(
-            ChronicleLoggingHelper.LOG_LEVEL_WARN_S,
-            cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
-    }
 }

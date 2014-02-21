@@ -18,6 +18,7 @@ package org.slf4j.impl.chronicle;
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.helpers.NOPLogger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,9 +42,16 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
 
     /**
      * Return an appropriate {@link ChronicleLogger} instance by name.
+     *
+     * TODO: review error handling/messages
      */
     @Override
     public synchronized Logger getLogger(String name) {
+        if(this.cfg == null) {
+            System.err.println("chroncile-slf4j is not configured");
+            return NOPLogger.NOP_LOGGER;
+        }
+
         Logger logger = loggers.get(name);
         if (logger == null) {
             String  path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
@@ -72,7 +80,17 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                     if(writer != null) {
                         this.writers.put(path,writer);
                     } else {
-                        //TODO, raise an error
+                        StringBuilder sb = new StringBuilder("Unable to inzialize chroncile-slf4j ")
+                            .append("(")
+                            .append("name")
+                            .append(")");
+
+                        sb.append("\n  slf4j.chronicle.type is not properly defined");
+                        sb.append("\n    got ").append(type);
+                        sb.append("\n    it must be text or binary");
+
+                        writer = null;
+                        logger = NOPLogger.NOP_LOGGER;
                     }
                 }
 
@@ -81,16 +99,19 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                     this.loggers.put(name, logger);
                 }
             } else {
-                StringBuilder sb = new StringBuilder("Unable to inzialize slf4j-chronicle ")
+                StringBuilder sb = new StringBuilder("Unable to inzialize chroncile-slf4j ")
                     .append("(")
                     .append("name")
                     .append(")");
 
                 if(path == null) {
                     sb.append("\n  slf4j.chronicle.path is not defined");
+                    sb.append("\n  slf4j.chronicle.logger.").append(name).append(".path is not defined");
                 }
 
-                System.out.println(sb.toString());
+                System.err.println(sb.toString());
+
+                logger = NOPLogger.NOP_LOGGER;
             }
         }
 

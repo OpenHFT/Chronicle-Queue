@@ -54,24 +54,6 @@ public class Slf4jChronicleTestBase {
             + File.separator
             + "logger_1";
 
-    public static final String BASEPATH_FILE =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "root";
-
-    public static final String BASEPATH_FILE_LOGGER_1 =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "logger_1";
-
     // *************************************************************************
     //
     // *************************************************************************

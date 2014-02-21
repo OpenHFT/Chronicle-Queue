@@ -64,7 +64,9 @@
                 <version>2.16</version>
                 <configuration>
                     <systemPropertyVariables>
-                        <dir.resources>${project.basedir}/src/test/resources</dir.resources>
+                        <slf4j.chronicle.properties>
+                            ${project.basedir}/src/test/resources/slf4j.chronicle.properties
+                        </slf4j.chronicle.properties>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
