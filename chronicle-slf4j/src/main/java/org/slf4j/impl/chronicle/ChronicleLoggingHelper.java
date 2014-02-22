@@ -71,4 +71,23 @@ public class ChronicleLoggingHelper {
 
         return DEFAULT_LOG_LEVEL;
     }
+
+
+
+    /**
+     *
+     * @param level
+     * @return
+     */
+    public static String levelToString(int level) {
+        switch(level) {
+            case LOG_LEVEL_TRACE: return LOG_LEVEL_TRACE_S;
+            case LOG_LEVEL_DEBUG: return LOG_LEVEL_DEBUG_S;
+            case LOG_LEVEL_INFO : return LOG_LEVEL_INFO_S;
+            case LOG_LEVEL_WARN : return LOG_LEVEL_WARN_S;
+            case LOG_LEVEL_ERROR: return LOG_LEVEL_ERROR_S;
+        }
+
+        return "<unknown>";
+    }
 }

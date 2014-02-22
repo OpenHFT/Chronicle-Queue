@@ -47,7 +47,7 @@ public class ChronicleLoggingConfig {
     public static final String PLACEHOLDER_TODAY        = "${today}";
     public static final String PLACEHOLDER_TODAY_FORMAT = "yyyyMMdd";
     public static final String PLACEHOLDER_PID          = "${pid}";
-    public static final String DEFAULT_DATE_FORMAT      = "yyyy.MM.dd-HH:mm:ss.S";
+    public static final String DEFAULT_DATE_FORMAT      = "yyyy.MM.dd-HH:mm:ss.SSS";
 
     private static final DateFormat DATEFORMAT = new SimpleDateFormat(PLACEHOLDER_TODAY_FORMAT);
     private static final String     PID        = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
