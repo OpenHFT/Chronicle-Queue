@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle.tools;
+package net.openhft.chronicle.tools.log;
 
 import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.sandbox.tools.BytesProcessor;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import net.openhft.lang.io.Bytes;
-import org.slf4j.impl.chronicle.ChronicleLoggingConfig;
-import org.slf4j.impl.chronicle.ChronicleLoggingHelper;
+import org.slf4j.impl.chronicle.*;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -29,7 +26,7 @@ import java.util.Date;
 /**
  *
  */
-public class Chronicat {
+public class ChroniCat {
     private static final DateFormat DF =
         new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
 
@@ -37,24 +34,25 @@ public class Chronicat {
     // Processors
     // *************************************************************************
 
-    private static final BytesProcessor BINARY = new BytesProcessor() {
+    private static final ChronicleLogReader BINARY = new AbstractBinaryChronicleLogReader() {
         @Override
-        public void process(Bytes bytes) {
-
-            //TODO: date format
-            Date   ts    = new Date(bytes.readLong());
-            String level = ChronicleLoggingHelper.levelToString(bytes.readByte());
-            String name  = bytes.readEnum(String.class);
-            String msg   = bytes.readEnum(String.class);
-
-            System.out.format("%s|%s|%s|%s\n",DF.format(ts),level,name,msg);
+        public void read(Date timestamp, int level, String name, String message, Throwable t) {
+            System.out.format("%s|%s|%s|%s\n",
+                DF.format(timestamp),
+                ChronicleLoggingHelper.levelToString(level),
+                name,
+                message);
         }
     };
 
-    private static final BytesProcessor TEXT = new BytesProcessor() {
+    private static final ChronicleLogReader TEXT = new AbstractTextChronicleLogReader() {
         @Override
-        public void process(Bytes bytes) {
-            //TODO: implement
+        public void read(Date timestamp, int level, String name, String message, Throwable t) {
+            System.out.format("%s|%s|%s|%s\n",
+                DF.format(timestamp),
+                ChronicleLoggingHelper.levelToString(level),
+                name,
+                message);
         }
     };
 
@@ -83,7 +81,7 @@ public class Chronicat {
                 cp.close();
 
             } else {
-                System.err.format("\nUsage: Chronicat [-t] path");
+                System.err.format("\nUsage: ChroniCat [-t] path");
                 System.err.format("\n  -t text chroncile, default binary");
             }
         } catch(Exception e) {

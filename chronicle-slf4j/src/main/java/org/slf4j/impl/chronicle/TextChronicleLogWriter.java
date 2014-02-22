@@ -28,7 +28,7 @@ import java.util.Date;
 /**
  *
  */
-public class TextChronicleWriter implements ChronicleWriter, Closeable {
+public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
 
     private final String path;
     private final String dateFormat;
@@ -43,7 +43,7 @@ public class TextChronicleWriter implements ChronicleWriter, Closeable {
      * @param append
      * @param config
      */
-    public TextChronicleWriter(String path, String dateFormat,boolean append, VanillaChronicleConfig config) {
+    public TextChronicleLogWriter(String path, String dateFormat, boolean append, VanillaChronicleConfig config) {
         this.path = path;
         this.append = append;
         this.dateFormat = dateFormat != null ? dateFormat : ChronicleLoggingConfig.DEFAULT_DATE_FORMAT;
@@ -51,7 +51,7 @@ public class TextChronicleWriter implements ChronicleWriter, Closeable {
         this.dateFormatCache = new ThreadLocal<DateFormat>() {
             @Override
             protected SimpleDateFormat initialValue() {
-                return new SimpleDateFormat(TextChronicleWriter.this.dateFormat);
+                return new SimpleDateFormat(TextChronicleLogWriter.this.dateFormat);
             }
         };
 
@@ -76,13 +76,13 @@ public class TextChronicleWriter implements ChronicleWriter, Closeable {
             appender.startExcerpt();
             appender.append(this.dateFormatCache.get().format(new Date()));
             appender.append('|');
-            appender.append(level);
+            appender.append(ChronicleLoggingHelper.levelToString(level));
             appender.append('|');
             appender.append(name);
             appender.append('|');
             appender.append(message);
             appender.append('\n');
-            //TODO: append Throwable
+            //TODO: append Throwable?
             appender.finish();
         } catch(Exception e) {
             //TODO

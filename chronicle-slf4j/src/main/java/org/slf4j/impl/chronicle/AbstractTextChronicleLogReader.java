@@ -15,16 +15,14 @@
  */
 package org.slf4j.impl.chronicle;
 
+import net.openhft.lang.io.Bytes;
+
 /**
  *
  */
-public interface ChronicleWriter {
-    /**
-     *
-     * @param level
-     * @param name
-     * @param message
-     * @param t
-     */
-    public void log(int level, String name, String message, Throwable t);
+public abstract class AbstractTextChronicleLogReader implements ChronicleLogReader {
+    @Override
+    public void process(Bytes bytes) {
+        //TODO
+    }
 }

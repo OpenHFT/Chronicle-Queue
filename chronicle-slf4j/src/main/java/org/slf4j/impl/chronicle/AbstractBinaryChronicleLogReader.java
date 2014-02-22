@@ -13,17 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.sandbox.tools;
+package org.slf4j.impl.chronicle;
 
 import net.openhft.lang.io.Bytes;
+
+import java.util.Date;
 
 /**
  *
  */
-public interface BytesProcessor {
-    /**
-     *
-     * @param bytes
-     */
-    public void process(final Bytes bytes);
+public abstract class AbstractBinaryChronicleLogReader implements ChronicleLogReader {
+    @Override
+    public void process(Bytes bytes) {
+        Date   ts    = new Date(bytes.readLong());
+        int    level = bytes.readByte();
+        String name  = bytes.readEnum(String.class);
+        String msg   = bytes.readEnum(String.class);
+
+        this.read(ts,level,name,msg,null);
+        //System.out.format("%s|%s|%s|%s\n",DF.format(ts),level,name,msg);
+    }
 }

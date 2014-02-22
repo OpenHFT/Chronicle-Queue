@@ -24,11 +24,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * <p>Simple implementation of Logger that sends all enabled log messages,
+ * for all defined loggers, to one or more VanillaChronicle..
+ *
+ * To configure this sl4j binding you need to specify the location of a properties
+ * files via system properties:
+ *
+ * <code>-Dslf4j.chronicle.properties=${pathOfYourPropertiesFile}<code>
+ *</p>
+ *
+ * The following system properties are supported to configure the behavior of this
+ * logger:
+ *
+ * <ul>
+ *     <li><code>slf4j.chronicle.path</code></li>
+ *     <li><code>slf4j.chronicle.level</code></li>
+ *     <li><code>slf4j.chronicle.shortName</code></li>
+ *     <li><code>slf4j.chronicle.append</code></li>
+ *     <li><code>slf4j.chronicle.type</code></li>
+ * </ul>
  *
  */
 public class ChronicleLoggerFactory implements ILoggerFactory {
     private final Map<String,Logger> loggers;
-    private final Map<String,ChronicleWriter> writers;
+    private final Map<String,ChronicleLogWriter> writers;
     private final ChronicleLoggingConfig cfg;
 
     /**
@@ -36,7 +55,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      */
     public ChronicleLoggerFactory() {
         this.loggers = new HashMap<String, Logger>();
-        this.writers = new HashMap<String, ChronicleWriter>();
+        this.writers = new HashMap<String, ChronicleLogWriter>();
         this.cfg = ChronicleLoggingConfig.load();
     }
 
@@ -60,17 +79,17 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
             String  type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
             int     level  = ChronicleLoggingHelper.stringToLevel(levels);
 
-            ChronicleWriter writer = null;
+            ChronicleLogWriter writer = null;
             if(path != null) {
                 writer = this.writers.get(path);
                 if(writer == null) {
                     if(ChronicleLoggingConfig.TYPE_BINARY.equalsIgnoreCase(type)) {
-                        writer = new BinaryChronicleWriter(
+                        writer = new BinaryChronicleLogWriter(
                             path,
                             append != null ? append : true,
                             VanillaChronicleConfig.DEFAULT);
                     } else if(ChronicleLoggingConfig.TYPE_TEXT.equalsIgnoreCase(type)) {
-                        writer = new TextChronicleWriter(
+                        writer = new TextChronicleLogWriter(
                             path,
                             this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT),
                             append != null ? append : true,

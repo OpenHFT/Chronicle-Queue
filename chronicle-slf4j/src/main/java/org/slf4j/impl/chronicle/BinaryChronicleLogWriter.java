@@ -25,7 +25,7 @@ import java.io.IOException;
 /**
  *
  */
-public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
+public class BinaryChronicleLogWriter implements ChronicleLogWriter, Closeable {
 
     private final String path;
     private final boolean append;
@@ -37,7 +37,7 @@ public class BinaryChronicleWriter implements ChronicleWriter, Closeable {
      * @param append
      * @param config
      */
-    public BinaryChronicleWriter(String path, boolean append, VanillaChronicleConfig config) {
+    public BinaryChronicleLogWriter(String path, boolean append, VanillaChronicleConfig config) {
         this.path = path;
         this.append = append;
         this.chronicle = new VanillaChronicle(path,config);

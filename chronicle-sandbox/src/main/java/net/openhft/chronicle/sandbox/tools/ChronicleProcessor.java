@@ -17,6 +17,7 @@ package net.openhft.chronicle.sandbox.tools;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.sandbox.BytesProcessor;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
@@ -53,7 +54,6 @@ public class ChronicleProcessor implements Runnable, Closeable {
 
             while(tailer.nextIndex()) {
                 processor.process(tailer);
-                tailer.finish();
             }
         } catch (IOException e) {
             LOGGER.warning(e.getMessage());

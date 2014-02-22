@@ -24,7 +24,7 @@ import org.slf4j.helpers.MessageFormatter;
  */
 public class ChronicleLogger extends MarkerIgnoringBase {
 
-    private final ChronicleWriter writer;
+    private final ChronicleLogWriter writer;
     private final int level;
 
     /**
@@ -33,7 +33,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
      * @param writer
      * @param name
      */
-    public ChronicleLogger(final ChronicleWriter writer,final String name) {
+    public ChronicleLogger(final ChronicleLogWriter writer,final String name) {
         this(writer,name, ChronicleLoggingHelper.DEFAULT_LOG_LEVEL);
     }
 
@@ -44,7 +44,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
      * @param name
      * @param level
      */
-    public ChronicleLogger(final ChronicleWriter writer,final String name,int level) {
+    public ChronicleLogger(final ChronicleLogWriter writer,final String name,int level) {
         this.writer = writer;
         this.name = name;
         this.level = level;
@@ -278,7 +278,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     private void formatAndLog(int level, String format, Object arg1, Object arg2) {
         if(isLevelEnabled(level)) {
             FormattingTuple tp = MessageFormatter.format(format, arg1, arg2);
-            this.writer.log(level, tp.getMessage(), this.name,tp.getThrowable());
+            this.writer.log(level, this.name, tp.getMessage(), tp.getThrowable());
         }
     }
 
@@ -292,7 +292,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     private void formatAndLog(int level, String format, Object... arguments) {
         if(isLevelEnabled(level)) {
             FormattingTuple tp = MessageFormatter.arrayFormat(format, arguments);
-            this.writer.log(level, tp.getMessage(), this.name, tp.getThrowable());
+            this.writer.log(level, this.name, tp.getMessage(),tp.getThrowable());
         }
     }
 }
