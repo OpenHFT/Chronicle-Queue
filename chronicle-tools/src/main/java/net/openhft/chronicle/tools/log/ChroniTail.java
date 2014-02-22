@@ -17,7 +17,11 @@ package net.openhft.chronicle.tools.log;
 
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import org.slf4j.impl.chronicle.*;
+import org.slf4j.impl.chronicle.AbstractBinaryChronicleLogReader;
+import org.slf4j.impl.chronicle.AbstractTextChronicleLogReader;
+import org.slf4j.impl.chronicle.ChronicleLogReader;
+import org.slf4j.impl.chronicle.ChronicleLoggingConfig;
+import org.slf4j.impl.chronicle.ChronicleLoggingHelper;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -26,7 +30,7 @@ import java.util.Date;
 /**
  *
  */
-public class ChroniCat {
+public class ChroniTail {
     private static final DateFormat DF =
         new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
 
@@ -77,7 +81,7 @@ public class ChroniCat {
                     new VanillaChronicle(args[args.length -1]),
                     binary ? BINARY : TEXT);
 
-                cp.run(false);
+                cp.run(true);
                 cp.close();
 
             } else {

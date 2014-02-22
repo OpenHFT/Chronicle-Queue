@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 /**
  *
  */
-public class ChronicleProcessor implements Runnable, Closeable {
+public class ChronicleProcessor implements Closeable {
     private static final Logger LOGGER = Logger.getLogger(ChronicleProcessor.class.getName());
 
     private final Chronicle chronicle;
@@ -45,17 +45,27 @@ public class ChronicleProcessor implements Runnable, Closeable {
         this.processor = processor;
     }
 
-    @Override
-    public void run() {
+    /**
+     *
+     */
+    public void run(boolean waitForData) {
         ExcerptTailer tailer = null;
 
         try {
             tailer = this.chronicle.createTailer();
 
-            while(tailer.nextIndex()) {
-                processor.process(tailer);
+            while(true) {
+                if(tailer.nextIndex()) {
+                    processor.process(tailer);
+                } else {
+                    if(waitForData) {
+                        Thread.sleep(50);
+                    } else {
+                        break;
+                    }
+                }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.warning(e.getMessage());
         } finally {
             if(tailer != null) {
