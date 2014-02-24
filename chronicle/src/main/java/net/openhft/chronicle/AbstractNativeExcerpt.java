@@ -304,4 +304,11 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         startEnd[0] = lo1; // inclusive
         startEnd[1] = lo2; // exclusive
     }
+
+    @Override
+    public void close() {
+    	super.close();
+    	dataBuffer.close();
+    	indexBuffer.close();
+    }
 }
