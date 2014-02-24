@@ -15,18 +15,19 @@
  */
 package net.openhft.chronicle.tools.slf4j;
 
+import net.openhft.chronicle.sandbox.BytesProcessor;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import net.openhft.chronicle.slf4j.*;
+import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
+import net.openhft.lang.io.Bytes;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
  *
  */
-public class ChroniCat {
+public class ChroniDump {
     private static final DateFormat DF =
         new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
 
@@ -34,25 +35,9 @@ public class ChroniCat {
     //
     // *************************************************************************
 
-    private static final ChronicleLogReader BINARY = new AbstractBinaryChronicleLogReader() {
+    private static final BytesProcessor HEXDUMP = new BytesProcessor() {
         @Override
-        public void read(Date timestamp, int level, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s\n",
-                DF.format(timestamp),
-                ChronicleLoggingHelper.levelToString(level),
-                name,
-                message);
-        }
-    };
-
-    private static final ChronicleLogReader TEXT = new AbstractTextChronicleLogReader() {
-        @Override
-        public void read(Date timestamp, int level, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s\n",
-                DF.format(timestamp),
-                ChronicleLoggingHelper.levelToString(level),
-                name,
-                message);
+        public void process(Bytes bytes) {
         }
     };
 
@@ -62,26 +47,15 @@ public class ChroniCat {
 
     public static void main(String[] args) {
         try {
-            boolean binary = true;
-
-            //TODO add more options
-            for(int i=0;i<args.length - 1;i++) {
-                if("-t".equals(args[i])) {
-                    binary = false;
-                }
-            }
-
-            if(args.length >= 1) {
+            if(args.length == 1) {
                 ChronicleProcessor cp = new ChronicleProcessor(
-                    new VanillaChronicle(args[args.length - 1]),
-                    binary ? BINARY : TEXT);
+                    new VanillaChronicle(args[args.length - 1]),HEXDUMP);
 
                 cp.run(false);
                 cp.close();
 
             } else {
-                System.err.format("\nUsage: ChroniCat [-t] path");
-                System.err.format("\n  -t text chroncile, default binary");
+                System.err.format("\nUsage: ChroniDump [-t] path");
             }
         } catch(Exception e) {
             e.printStackTrace(System.err);

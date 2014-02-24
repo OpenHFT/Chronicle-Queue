@@ -67,7 +67,6 @@ public class ChroniTail {
     public static void main(String[] args) {
         try {
             boolean binary = true;
-            String path = null;
 
             //TODO add more options
             for(int i=0;i<args.length - 1;i++) {
@@ -85,7 +84,7 @@ public class ChroniTail {
                 cp.close();
 
             } else {
-                System.err.format("\nUsage: ChroniCat [-t] path");
+                System.err.format("\nUsage: ChroniTail [-t] path");
                 System.err.format("\n  -t text chroncile, default binary");
             }
         } catch(Exception e) {
