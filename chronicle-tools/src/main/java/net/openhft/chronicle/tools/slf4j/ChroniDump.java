@@ -18,18 +18,17 @@ package net.openhft.chronicle.tools.slf4j;
 import net.openhft.chronicle.sandbox.BytesProcessor;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.lang.io.Bytes;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 
 /**
  *
  */
 public class ChroniDump {
-    private static final DateFormat DF =
-        new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
+
+    private final static char[] HEX_DIGITS = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F'
+    };
 
     // *************************************************************************
     //
