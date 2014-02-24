@@ -15,23 +15,33 @@ The following properties are supported to configure the behavior of this logger:
   * slf4j.chronicle.shortName - Set to true if you want the last component of the name to be included in output messages
   * slf4j.chronicle.append. Must be one of ("true","false")
   * slf4j.chronicle.type. Must be one of ("binary","text")
-
-Every entry starting with slf4j.chronicle.logger can be used to customize the behavior of a specific logger using _path_,_level_,_shortName_,_append_,_type_ as above.
+  * slf4j.chronicle.dateFormat. Defines the date format for text loggers
 
 ```properties
 # default
-slf4j.chronicle.base = ${java.io.tmpdir}/chronicle/${today}/${pid}
+slf4j.chronicle.base      = ${java.io.tmpdir}/chronicle/${today}/${pid}
 
 # logger : root
-slf4j.chronicle.path      = ${slf4j.chronicle.base}/root
+slf4j.chronicle.path      = ${slf4j.chronicle.base}/main
 slf4j.chronicle.level     = debug
 slf4j.chronicle.shortName = false
 slf4j.chronicle.append    = false
 slf4j.chronicle.type      = binary
+```
 
+The configuration of chronicle-slf4j supports variable interpolation where the variables are replaced with the corresponding values from the same configuration file, the system properties and from some predefined values. System properties have the precedence in placeholder replacement so one can override a value via system properties.
+
+Predefined values are:
+  * pid which will replaced by the process id
+  * today wich will be replaced by the current date (yyyyMMdd)
+
+
+You can setup per-logger settings using slf4j.chronicle.logger as prefix:
+
+```properties
 # logger : Logger1
-slf4j.chronicle.logger.Logger1.path = ${slf4j.chronicle.base}/logger_1
-slf4j.chronicle.logger.Logger1.level = info
+slf4j.chronicle.logger.Logger1.path           = ${slf4j.chronicle.base}/logger_1
+slf4j.chronicle.logger.Logger1.level          = info
 
 # logger : TextLogger
 slf4j.chronicle.logger.TextLogger.path        = ${slf4j.chronicle.base}/text
@@ -40,8 +50,12 @@ slf4j.chronicle.logger.TextLogger.type        = text
 slf4j.chronicle.logger.TextLogger.dateFormat  = yyyyMMdd-HHmmss-S
 ```
 
-###Notes
+You can use _path_, _level_, _shortName_, _append_, _type_ as for the main logger.
 
+
+###Notes
+  * loggers are not hierarchical grouped so my.domain.package.MyClass1 and my.domain are two distinct entities
+  * the _path_ is used to track loggers wo two loggers configured with the same _path_ will use the one from the first initializedd logger
 
 
 ###Availablility
