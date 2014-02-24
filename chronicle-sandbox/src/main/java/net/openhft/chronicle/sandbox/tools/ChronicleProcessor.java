@@ -57,6 +57,7 @@ public class ChronicleProcessor implements Closeable {
             while(true) {
                 if(tailer.nextIndex()) {
                     processor.process(tailer);
+                    tailer.finish();
                 } else {
                     if(waitForData) {
                         Thread.sleep(50);
