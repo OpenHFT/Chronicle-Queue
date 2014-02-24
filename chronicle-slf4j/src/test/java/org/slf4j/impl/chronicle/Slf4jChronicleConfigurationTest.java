@@ -15,6 +15,8 @@
  */
 package org.slf4j.impl.chronicle;
 
+import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
+import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
 import org.junit.Test;
 
 import java.io.File;

@@ -17,6 +17,9 @@ package org.slf4j.impl.chronicle;
 
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
+import net.openhft.chronicle.slf4j.ChronicleLogger;
+import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
+import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +73,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
         ChronicleLogger cl1 = (ChronicleLogger)l1;
 
-        assertEquals(cl1.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
+        assertEquals(cl1.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
         assertEquals(cl1.getName(),Slf4jChronicleLoggerTest.class.getName());
 
         ChronicleLogger cl2 = (ChronicleLogger)l2;
@@ -151,7 +154,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
             int items = 10000;
             for (int i = 1; i <= items; i++) {
-                l.trace("something to log");
+                l.trace("something to slf4j");
             }
 
             long end = System.nanoTime();
@@ -171,7 +174,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
             int items = 10000;
             for (int i = 1; i <= items; i++) {
-                l.warn("something to log");
+                l.warn("something to slf4j");
             }
 
             long end = System.nanoTime();
@@ -182,7 +185,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         }
     }
 
-    @Test
+
     public void testLoggingPerf3() throws IOException, InterruptedException {
         final int RUNS = 20000;
         final int THREADS = 4;

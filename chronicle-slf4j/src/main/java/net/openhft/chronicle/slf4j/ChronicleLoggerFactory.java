@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle;
+package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import org.slf4j.ILoggerFactory;
@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * <p>Simple implementation of Logger that sends all enabled log messages,
+ * <p>Simple implementation of Logger that sends all enabled slf4j messages,
  * for all defined loggers, to one or more VanillaChronicle..
  *
  * To configure this sl4j binding you need to specify the location of a properties

@@ -1,6 +1,4 @@
-package org.slf4j.impl.chronicle;
-
-import org.jetbrains.annotations.NotNull;
+package net.openhft.chronicle.slf4j;
 
 import java.io.FileInputStream;
 import java.io.IOException;

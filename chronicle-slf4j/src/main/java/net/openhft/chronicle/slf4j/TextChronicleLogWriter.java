@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle;
+package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
@@ -62,9 +62,9 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
 
     /**
      * This is the internal implementation for logging regular (non-parameterized)
-     * log messages.
+     * slf4j messages.
      *
-     * @param level   One of the LOG_LEVEL_XXX constants defining the log level
+     * @param level   One of the LOG_LEVEL_XXX constants defining the slf4j level
      * @param name    The logger name
      * @param message The message itself
      * @param t       The exception whose stack trace should be logged

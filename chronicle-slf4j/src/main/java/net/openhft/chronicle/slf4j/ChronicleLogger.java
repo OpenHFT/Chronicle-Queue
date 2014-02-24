@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle;
+package net.openhft.chronicle.slf4j;
 
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MarkerIgnoringBase;
@@ -257,18 +257,18 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     // *************************************************************************
 
     /**
-     * Is the given log level enabled?
+     * Is the given slf4j level enabled?
      *
      * @param level is this level enabled?
      */
     private boolean isLevelEnabled(int level) {
-        // log level are numerically ordered so can use simple numeric
+        // slf4j level are numerically ordered so can use simple numeric
         // comparison
         return (level >= this.level);
     }
 
     /**
-     * For formatted messages, first substitute arguments and then log.
+     * For formatted messages, first substitute arguments and then slf4j.
      *
      * @param level
      * @param format
@@ -283,7 +283,7 @@ public class ChronicleLogger extends MarkerIgnoringBase {
     }
 
     /**
-     * For formatted messages, first substitute arguments and then log.
+     * For formatted messages, first substitute arguments and then slf4j.
      *
      * @param level
      * @param format

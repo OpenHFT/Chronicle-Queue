@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tools.log;
+package net.openhft.chronicle.tools.slf4j;
 
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import org.slf4j.impl.chronicle.AbstractBinaryChronicleLogReader;
-import org.slf4j.impl.chronicle.AbstractTextChronicleLogReader;
-import org.slf4j.impl.chronicle.ChronicleLogReader;
-import org.slf4j.impl.chronicle.ChronicleLoggingConfig;
-import org.slf4j.impl.chronicle.ChronicleLoggingHelper;
+import net.openhft.chronicle.slf4j.*;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -30,7 +26,7 @@ import java.util.Date;
 /**
  *
  */
-public class ChroniTail {
+public class ChroniCat {
     private static final DateFormat DF =
         new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
 
@@ -78,10 +74,10 @@ public class ChroniTail {
 
             if(args.length >= 1) {
                 ChronicleProcessor cp = new ChronicleProcessor(
-                    new VanillaChronicle(args[args.length -1]),
+                    new VanillaChronicle(args[args.length - 1]),
                     binary ? BINARY : TEXT);
 
-                cp.run(true);
+                cp.run(false);
                 cp.close();
 
             } else {
