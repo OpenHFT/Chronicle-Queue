@@ -37,6 +37,39 @@ public class ChroniDump {
     private static final BytesProcessor HEXDUMP = new BytesProcessor() {
         @Override
         public void process(Bytes bytes) {
+            StringBuilder result = new StringBuilder();
+            long size  = bytes.remaining();
+            long chnks = size / 16;
+
+            for(long i=0;i<chnks;i++) {
+                for(int n=0;n<16;n++) {
+                    //Read byte, no consume
+                    byte b = bytes.readByte((chnks * 16) + n);
+
+                    result.append(" ");
+                    result.append(HEX_DIGITS[(b >>> 4) & 0x0F]);
+                    result.append(HEX_DIGITS[b & 0x0F]);
+                }
+
+                result.append(" ==> ");
+
+                for(int n=0;n<16;n++) {
+                    //Read byte, consume
+                    byte b = bytes.readByte();
+
+                    if(b > ' ' && b < '~') {
+                        result.append((char)b);
+                    } else {
+                        result.append(".");
+                    }
+                }
+
+                result.append('\n');
+            }
+
+            //TODO handle remaining data
+
+            System.out.println(result.toString());
         }
     };
 
