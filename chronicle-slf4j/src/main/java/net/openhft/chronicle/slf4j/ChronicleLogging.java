@@ -15,24 +15,31 @@
  */
 package net.openhft.chronicle.slf4j;
 
-import net.openhft.chronicle.Chronicle;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.impl.StaticLoggerBinder;
 
 /**
- *
+ * @author lburgazzoli
  */
-public interface ChronicleLogWriter {
-    /**
-     *
-     * @return
-     */
-    public Chronicle getChronicle();
+public class ChronicleLogging {
 
     /**
      *
-     * @param level
-     * @param name
-     * @param message
-     * @param t
      */
-    public void log(int level, String name, String message, Throwable t);
+    public static void warmup() {
+        ILoggerFactory factory = StaticLoggerBinder.getSingleton().getLoggerFactory();
+        if(factory instanceof ChronicleLoggerFactory) {
+            ((ChronicleLoggerFactory)factory).warmup();
+        }
+    }
+
+    /**
+     *
+     */
+    public static void shutdown() {
+        ILoggerFactory factory = StaticLoggerBinder.getSingleton().getLoggerFactory();
+        if(factory instanceof ChronicleLoggerFactory) {
+            ((ChronicleLoggerFactory)factory).shutdown();
+        }
+    }
 }

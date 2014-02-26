@@ -85,7 +85,7 @@ public class ChroniTail {
 
             } else {
                 System.err.format("\nUsage: ChroniTail [-t] path");
-                System.err.format("\n  -t text chroncile, default binary");
+                System.err.format("\n  -t = text chronicle, default binary");
             }
         } catch(Exception e) {
             e.printStackTrace(System.err);

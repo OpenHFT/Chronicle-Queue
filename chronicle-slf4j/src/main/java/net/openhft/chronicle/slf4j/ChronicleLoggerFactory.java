@@ -20,6 +20,7 @@ import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -135,6 +136,29 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
         }
 
         return logger;
+    }
+
+    /**
+     *
+     */
+    public synchronized void warmup() {
+        //TODO: preload loggers
+    }
+
+    /**
+     * close underlying Chronicles
+     */
+    public synchronized void shutdown() {
+        this.loggers.clear();
+        this.writers.clear();
+
+        for(ChronicleLogWriter writer : this.writers.values()) {
+            try {
+                writer.getChronicle().close();
+            } catch (IOException e) {
+                System.err.println(e.getMessage());
+            }
+        }
     }
 }
 

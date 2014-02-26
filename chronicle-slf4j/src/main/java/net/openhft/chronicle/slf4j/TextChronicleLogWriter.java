@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.slf4j;
 
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
@@ -58,6 +59,11 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
         if(!append) {
             this.chronicle.clear();
         }
+    }
+
+    @Override
+    public Chronicle getChronicle() {
+        return this.chronicle;
     }
 
     /**

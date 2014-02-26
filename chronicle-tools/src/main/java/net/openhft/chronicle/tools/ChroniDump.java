@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tools.slf4j;
+package net.openhft.chronicle.tools;
 
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.sandbox.BytesProcessor;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
@@ -78,15 +79,28 @@ public class ChroniDump {
 
     public static void main(String[] args) {
         try {
-            if(args.length == 1) {
+            boolean indexed = false;
+
+            //TODO add more options
+            for(int i=0;i<args.length - 1;i++) {
+                if("-i".equals(args[i])) {
+                    indexed = false;
+                }
+            }
+
+            if(args.length >= 1) {
                 ChronicleProcessor cp = new ChronicleProcessor(
-                    new VanillaChronicle(args[args.length - 1]),HEXDUMP);
+                    indexed
+                        ? new IndexedChronicle(args[args.length - 1])
+                        : new VanillaChronicle(args[args.length - 1]),
+                        HEXDUMP);
 
                 cp.run(false);
                 cp.close();
 
             } else {
-                System.err.format("\nUsage: ChroniDump [-t] path");
+                System.err.format("\nUsage: ChroniDump [-i] path");
+                System.err.format("\n  -i = IndexedCronicle, default VanillaChronicle");
             }
         } catch(Exception e) {
             e.printStackTrace(System.err);
