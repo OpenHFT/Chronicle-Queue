@@ -54,8 +54,8 @@ You can use _path_, _level_, _shortName_, _append_, _type_ as for the main logge
 
 
 ###Notes
-  * loggers are not hierarchical grouped so my.domain.package.MyClass1 and my.domain are two distinct entities
-  * the _path_ is used to track loggers wo two loggers configured with the same _path_ will use the one from the first initializedd logger
+  * Loggers are not hierarchical grouped so my.domain.package.MyClass1 and my.domain are two distinct entities.
+  * The _path_ is used to track the underlying VanillaChronicle so two loggers configured with the same _path_ will share the same VanillaChronicle, only _level_ and _shortName_ can be different.  
 
 
 ###Availablility
