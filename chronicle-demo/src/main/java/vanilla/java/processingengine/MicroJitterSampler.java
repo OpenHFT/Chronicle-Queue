@@ -16,8 +16,7 @@
 
 package vanilla.java.processingengine;
 
-//import net.openhft.affinity.AffinityLock;
-
+import net.openhft.affinity.AffinityLock;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintStream;
@@ -61,7 +60,7 @@ public class MicroJitterSampler {
     long totalTime = 0;
 
     public static void main(String... ignored) throws InterruptedException {
-//        AffinityLock al = AffinityLock.acquireLock();
+        AffinityLock al = AffinityLock.acquireLock();
 
         // warmup.
         new MicroJitterSampler().sample(1000 * 1000 * 1000);
