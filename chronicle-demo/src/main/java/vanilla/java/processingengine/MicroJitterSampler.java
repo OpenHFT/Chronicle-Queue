@@ -16,10 +16,32 @@
 
 package vanilla.java.processingengine;
 
-import net.openhft.affinity.AffinityLock;
+//import net.openhft.affinity.AffinityLock;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintStream;
+/* e.g.
+After 2430 seconds, the average per hour was
+2us	78400
+3us	122703
+4us	345238
+6us	216098
+8us	78694
+10us	3977528
+14us	114495
+20us	4931
+30us	203
+40us	35
+60us	18
+80us	11
+100us	9
+140us	132
+200us	85
+300us	473
+400us	5
+1ms	24
+ */
 
 /**
  * User: peter.lawrey Date: 30/06/13 Time: 13:13
@@ -34,12 +56,12 @@ public class MicroJitterSampler {
             20 * 1000 * 1000, 50 * 1000 * 1000, 100 * 1000 * 1000
     };
     static final double UTIL = Double.parseDouble(System.getProperty("util", "50"));
-    static final int CPU = Integer.getInteger("cpu", 0);
+    //    static final int CPU = Integer.getInteger("cpu", 0);
     final int[] count = new int[DELAY.length];
     long totalTime = 0;
 
     public static void main(String... ignored) throws InterruptedException {
-        AffinityLock al = AffinityLock.acquireLock();
+//        AffinityLock al = AffinityLock.acquireLock();
 
         // warmup.
         new MicroJitterSampler().sample(1000 * 1000 * 1000);
