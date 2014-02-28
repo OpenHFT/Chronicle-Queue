@@ -63,7 +63,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     // inherited - long limitAddr;
 
     public AbstractNativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
-        super(0, 0, 0);
+        super(NO_PAGE, NO_PAGE);
         this.chronicle = chronicle;
         cacheLineSize = chronicle.config.cacheLineSize();
         cacheLineMask = (cacheLineSize - 1);

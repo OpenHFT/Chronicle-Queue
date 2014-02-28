@@ -55,8 +55,9 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void reset() {
-        common.reset();
+    public WrappedExcerpt clear() {
+        common.clear();
+        return this;
     }
 
     @Override
@@ -896,8 +897,9 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void position(long position) {
+    public WrappedExcerpt position(long position) {
         common.position(position);
+        return this;
     }
 
     @NotNull
@@ -1052,12 +1054,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         excerpt.findRange(startEnd, comparator);
     }
 
-    @Deprecated
-    @Override
-    public void writeStartToPosition(Bytes bytes) {
-        common.writeStartToPosition(bytes);
-    }
-
     @NotNull
     @Override
     public ByteStringAppender append(long l, int base) {
@@ -1071,7 +1067,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public void write(BytesCommon bytes, long position, long length) {
+    public void write(RandomDataInput bytes, long position, long length) {
         common.write(bytes, position, length);
     }
 
@@ -1098,5 +1094,115 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public CharSequence subSequence(int start, int end) {
         return common.subSequence(start, end);
+    }
+
+    @Override
+    public Bytes flip() {
+        return common.flip();
+    }
+
+    @NotNull
+    @Override
+    public <T> T readInstance(@NotNull Class<T> objClass, T obj) {
+        return common.readInstance(objClass, obj);
+    }
+
+    @Override
+    public boolean startsWith(RandomDataInput keyBytes) {
+        return common.startsWith(keyBytes);
+    }
+
+    @Override
+    public void write(RandomDataInput bytes) {
+        common.write(bytes);
+    }
+
+    @Override
+    public <OBJ> void writeInstance(@NotNull Class<OBJ> objClass, @NotNull OBJ obj) {
+        common.writeInstance(objClass, obj);
+    }
+
+    @Override
+    public Bytes zeroOut() {
+        common.zeroOut();
+        return this;
+    }
+
+    @Override
+    public Bytes zeroOut(long start, long end) {
+        common.zeroOut(start, end);
+        return this;
+    }
+
+    @Override
+    public long limit() {
+        return common.limit();
+    }
+
+    @Override
+    public Bytes limit(long limit) {
+        common.limit(limit);
+        return this;
+    }
+
+    @Override
+    public Bytes load() {
+        common.load();
+        return this;
+    }
+
+    @Override
+    public Bytes createSlice() {
+        return common.createSlice();
+    }
+
+    @Override
+    public Bytes createSlice(long offset, long length) {
+        return common.createSlice(offset, length);
+    }
+
+    @Override
+    public long address() {
+        return common.address();
+    }
+
+    @Override
+    public void free() {
+        common.free();
+    }
+
+    @Override
+    public void resetLockInt(long offset) {
+        common.resetLockInt(offset);
+    }
+
+    @Override
+    public int threadIdForLockInt(long offset) {
+        return common.threadIdForLockInt(offset);
+    }
+
+    @Override
+    public void resetLockLong(long offset) {
+        common.resetLockLong(offset);
+    }
+
+    @Override
+    public long threadIdForLockLong(long offset) {
+        return common.threadIdForLockLong(offset);
+    }
+
+    @Override
+    public void reserve() {
+        common.reserve();
+    }
+
+    @Override
+    public void release() {
+        common.release();
+    }
+
+    @Override
+    public int refCount() {
+        return common.refCount();
     }
 }

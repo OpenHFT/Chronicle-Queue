@@ -19,8 +19,6 @@ package net.openhft.chronicle.sandbox;
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.*;
 import net.openhft.lang.Maths;
-import net.openhft.lang.io.DirectBytes;
-import net.openhft.lang.io.DirectStore;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
@@ -42,7 +40,6 @@ public class VanillaChronicle implements Chronicle {
     private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
     private final ThreadLocal<WeakReference<ExcerptTailer>> tailerCache = new ThreadLocal<WeakReference<ExcerptTailer>>();
     private final ThreadLocal<WeakReference<ExcerptAppender>> appenderCache = new ThreadLocal<WeakReference<ExcerptAppender>>();
-    private final DirectBytes NO_BYTES = DirectStore.allocateLazy(4096).createSlice();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
     private final int indexBlockSizeBits, indexBlockSizeMask;
@@ -177,7 +174,7 @@ public class VanillaChronicle implements Chronicle {
         protected VanillaFile dataFile;
 
         public AbstractVanillaExcerpt() {
-            super(acquireBMF(), NO_BYTES.startAddr(), NO_BYTES.startAddr(), NO_BYTES.startAddr());
+            super(acquireBMF(), NO_PAGE, NO_PAGE, null);
         }
 
         @Override
@@ -509,7 +506,7 @@ public class VanillaChronicle implements Chronicle {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
-            appenderFile.bytes().positionAddr((positionAddr + 3) & ~3L);
+            appenderFile.bytes().alignPositionAddr(4);
             if (nextSynchronous)
                 appenderFile.force();
 //            appenderFile.decrementUsage();
