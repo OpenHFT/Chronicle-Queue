@@ -56,6 +56,7 @@ public class OSGiBundleTest extends OSGiTestBase {
             junitBundles(),
             systemPackage("sun.misc"),
             systemPackage("sun.nio.ch"),
+            systemPackage("com.sun.tools.javac.api"),
             cleanCaches()
         );
     }
