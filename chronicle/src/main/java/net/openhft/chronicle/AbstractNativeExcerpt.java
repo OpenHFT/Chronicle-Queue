@@ -304,4 +304,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         startEnd[0] = lo1; // inclusive
         startEnd[1] = lo2; // exclusive
     }
+
+    /**
+     * For compatibility with Java-Lang 6.2.
+     */
+    @Override
+    public long capacity() {
+        return limitAddr - startAddr;
+    }
 }
