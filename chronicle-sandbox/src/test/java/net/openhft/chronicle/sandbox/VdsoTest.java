@@ -19,10 +19,7 @@ package net.openhft.chronicle.sandbox;
 import net.openhft.lang.io.NativeBytes;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 
 public class VdsoTest {
 
@@ -30,7 +27,9 @@ public class VdsoTest {
     public void printVdso() throws IOException, InterruptedException {
         long start = 0;
         long end = 0;
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/self/maps")));
+        String maps = "/proc/self/maps";
+        if (!new File(maps).exists()) return;
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(maps)));
         try {
             for (String line; (line = br.readLine()) != null; ) {
                 if (line.endsWith("[vdso]")) {
@@ -46,7 +45,7 @@ public class VdsoTest {
             throw ioe;
         }
         System.out.printf("vdso %x to %x %n", start, end);
-        NativeBytes nb = new NativeBytes(start, start, end);
+        NativeBytes nb = new NativeBytes(start, end);
         long[] longs = new long[(int) ((end - start) / 8)];
         for (int i = 0; i < longs.length; i++)
             longs[i] = nb.readLong(i * 8);

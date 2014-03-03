@@ -30,7 +30,7 @@ public class JournalRecord extends NativeBytes {
     final int size;
 
     public JournalRecord(int size) {
-        super(NativeBytes.NO_PAGE, NativeBytes.NO_PAGE, 0);
+        super(NativeBytes.NO_PAGE, 0);
         this.size = size;
     }
 
