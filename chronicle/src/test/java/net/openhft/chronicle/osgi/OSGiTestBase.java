@@ -15,7 +15,7 @@
  */
 package net.openhft.chronicle.osgi;
 
-import org.ops4j.pax.exam.options.UrlProvisionOption;
+import org.ops4j.pax.exam.Option;
 
 import java.io.File;
 
@@ -27,13 +27,23 @@ import static org.ops4j.pax.exam.CoreOptions.bundle;
 public class OSGiTestBase {
     /**
      *
-     * @param rootProjectName
      * @param projectName
      * @return
      */
-    public static UrlProvisionOption openhftBundle(String rootProjectName,String projectName) {
-        return new File(String.format("%s/%s/target/classes",rootProjectName,projectName)).exists()
-            ? bundle(String.format("reference:file:%s/%s/target/classes",rootProjectName,projectName))
-            : bundle(String.format("reference:file:../%s/target/classes",projectName));
+    public static Option workspaceBundle(String projectName) {
+        String baseDir = System.getProperty("main.basedir");
+        String bundleDir = null;
+
+        bundleDir = String.format("%s/%s/target/classes",baseDir,projectName);
+        if(new File(bundleDir).exists()) {
+            return bundle(String.format("reference:file:%s", bundleDir));
+        }
+
+        bundleDir = String.format("%s/../%s/target/classes",baseDir,projectName);
+        if(new File(bundleDir).exists()) {
+            return bundle(String.format("reference:file:%s", bundleDir));
+        }
+
+        return null;
     }
 }

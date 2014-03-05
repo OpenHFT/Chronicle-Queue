@@ -52,7 +52,7 @@ public class OSGiBundleTest extends OSGiTestBase {
             systemProperty("org.osgi.framework.storage.clean").value("true"),
             systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("WARN"),
             mavenBundle("net.openhft", "lang",System.getProperty("openhft.lang.version")),
-            openhftBundle("Java-Chronicle","chronicle"),
+            workspaceBundle("chronicle"),
             junitBundles(),
             systemPackage("sun.misc"),
             systemPackage("sun.nio.ch"),
