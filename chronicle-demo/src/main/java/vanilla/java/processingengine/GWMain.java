@@ -79,11 +79,11 @@ The latency distribution was 1.9, 14.4/38.9, 69/376 (528) us for the 50, 90/99, 
 Processed 100,000,000 events in and out in 50.1 seconds
 The latency distribution was 16.5, 81.7/199.2, 379/581 (623) us for the 50, 90/99, 99.9/99.99 %tile, (worst)
  */
-public class GWMain {
+class GWMain {
 
-    public static final int WARMUP = Integer.getInteger("warmup", 100 * 1000); // number of events
-    public static final long EVENT_SPACING = Integer.getInteger("event-spacing", 5 * 1000);
-    public static final int ORDERS = Integer.getInteger("orders", 10 * 1000 * 1000);
+    private static final int WARMUP = Integer.getInteger("warmup", 100 * 1000); // number of events
+    private static final long EVENT_SPACING = Integer.getInteger("event-spacing", 5 * 1000);
+    private static final int ORDERS = Integer.getInteger("orders", 10 * 1000 * 1000);
 
     public static void main(@NotNull String... args) throws IOException, InterruptedException {
         if (args.length < 2) {

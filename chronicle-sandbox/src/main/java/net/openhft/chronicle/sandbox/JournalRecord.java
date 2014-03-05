@@ -21,15 +21,15 @@ import net.openhft.lang.io.NativeBytes;
 import java.util.logging.Logger;
 
 public class JournalRecord extends NativeBytes {
-    static final Logger LOGGER = Logger.getLogger(JournalRecord.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(JournalRecord.class.getName());
     // int read write lock
-    static final int READ_WRITE_LOCK = -8;
+    private static final int READ_WRITE_LOCK = -8;
     // int data size
     static final int DATA_SIZE = -4;
-    static int HEADER_SIZE = 4 + 4;
-    final int size;
+    private static final int HEADER_SIZE = 4 + 4;
+    private final int size;
 
-    public JournalRecord(int size) {
+    private JournalRecord(int size) {
         super(NativeBytes.NO_PAGE, 0);
         this.size = size;
     }

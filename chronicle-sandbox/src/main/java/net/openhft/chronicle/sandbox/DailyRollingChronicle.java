@@ -44,8 +44,6 @@ public class DailyRollingChronicle implements Chronicle {
     private final File file;
     private final MasterIndexFile master;
     private final DailyRollingConfig config;
-    private final SimpleDateFormat dateFormat;
-    private final String currentFilename;
     private final List<DRFiles> filesList;
     private DirectBytes bytes;
     private DRCExcerptAppender appender;
@@ -59,9 +57,9 @@ public class DailyRollingChronicle implements Chronicle {
             throw new IOException("Failed to create directory " + file);
         master = new MasterIndexFile(new File(file, "master"));
         bytes = new DirectStore(config.getBytesMarshallerFactory(), config.getMaxEntrySize(), false).createSlice();
-        dateFormat = new SimpleDateFormat(config.getFileFormat());
+        SimpleDateFormat dateFormat = new SimpleDateFormat(config.getFileFormat());
         dateFormat.setTimeZone(config.getTimeZone());
-        currentFilename = dateFormat.format(new Date());
+        String currentFilename = dateFormat.format(new Date());
         int index = master.append(currentFilename);
         filesList = new CopyOnWriteArrayList<DRFiles>();
         while (filesList.size() < index)
@@ -212,7 +210,7 @@ public class DailyRollingChronicle implements Chronicle {
     }
 
     class AbstractDRCExcerpt extends NativeBytes implements ExcerptCommon {
-        protected long index = -1;
+        long index = -1;
         private MappedByteBuffer dataMBB;
 
         public AbstractDRCExcerpt() {
@@ -239,6 +237,7 @@ public class DailyRollingChronicle implements Chronicle {
             return capacity();
         }
 
+        @NotNull
         @Override
         public ExcerptCommon toEnd() {
             index(lastWrittenIndex());
@@ -300,6 +299,7 @@ public class DailyRollingChronicle implements Chronicle {
             throw new UnsupportedOperationException();
         }
 
+        @NotNull
         @Override
         public Excerpt toEnd() {
             super.toEnd();
@@ -325,6 +325,7 @@ public class DailyRollingChronicle implements Chronicle {
             return this;
         }
 
+        @NotNull
         @Override
         public ExcerptTailer toEnd() {
             super.toEnd();
@@ -374,6 +375,7 @@ public class DailyRollingChronicle implements Chronicle {
             nextSynchronous = config.isSynchronousWriter();
         }
 
+        @NotNull
         @Override
         public ExcerptAppender toEnd() {
             super.toEnd();

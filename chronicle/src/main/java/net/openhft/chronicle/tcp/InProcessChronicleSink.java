@@ -92,7 +92,7 @@ public class InProcessChronicleSink implements Chronicle {
 
     private class SinkExcerpt extends WrappedExcerpt {
         @SuppressWarnings("unchecked")
-        public SinkExcerpt(ExcerptCommon excerpt) throws IOException {
+        public SinkExcerpt(ExcerptCommon excerpt) {
             super(excerpt);
         }
 
@@ -103,8 +103,7 @@ public class InProcessChronicleSink implements Chronicle {
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            if (super.index(index)) return true;
-            return index >= 0 && readNext() && super.index(index);
+            return super.index(index) || index >= 0 && readNext() && super.index(index);
         }
     }
 

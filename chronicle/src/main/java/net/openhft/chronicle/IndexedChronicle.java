@@ -64,7 +64,7 @@ public class IndexedChronicle implements Chronicle {
         return config;
     }
 
-    public long findTheLastIndex() {
+    long findTheLastIndex() {
         return lastWrittenIndex = findTheLastIndex0();
     }
 

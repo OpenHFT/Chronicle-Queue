@@ -85,8 +85,12 @@ public class NativeExcerpt extends AbstractNativeExcerpt implements Excerpt {
         super.finish();
 
         if (chronicle.config.synchronousMode()) {
-            dataBuffer.force();
-            indexBuffer.force();
+            if (dataBuffer != null) {
+                dataBuffer.force();
+            }
+            if (indexBuffer != null) {
+                indexBuffer.force();
+            }
         }
     }
 

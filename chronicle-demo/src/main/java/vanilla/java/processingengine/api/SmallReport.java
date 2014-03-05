@@ -25,10 +25,10 @@ import org.jetbrains.annotations.Nullable;
  * @author peter.lawrey
  */
 public class SmallReport implements ExcerptMarshallable {
-    public CharSequence clientOrderId = new StringBuilder();
+    private CharSequence clientOrderId = new StringBuilder();
     @Nullable
-    public ReportStatus status;
-    public CharSequence rejectedReason = new StringBuilder();
+    private ReportStatus status;
+    private CharSequence rejectedReason = new StringBuilder();
 
     public void orderOkay(CharSequence clientOrderId) {
         this.clientOrderId = clientOrderId;

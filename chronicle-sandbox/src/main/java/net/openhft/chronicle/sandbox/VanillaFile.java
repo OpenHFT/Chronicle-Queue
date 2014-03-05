@@ -28,7 +28,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class VanillaFile implements Closeable {
-    private final Logger logger;
     private final File file;
     private final FileChannel fc;
     private final MappedByteBuffer map;
@@ -39,7 +38,7 @@ public class VanillaFile implements Closeable {
     private volatile boolean closed = false;
 
     public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size, boolean forAppend) throws IOException {
-        logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
+        Logger logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
         File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
         if (!dir.isDirectory()) {

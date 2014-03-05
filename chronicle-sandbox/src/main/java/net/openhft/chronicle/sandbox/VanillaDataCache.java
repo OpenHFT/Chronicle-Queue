@@ -74,7 +74,7 @@ public class VanillaDataCache implements Closeable {
         throw new AssertionError();
     }
 
-    public int nextWordAlignment(int len) {
+    int nextWordAlignment(int len) {
         return (len + 3) & ~3;
     }
 
@@ -86,8 +86,8 @@ public class VanillaDataCache implements Closeable {
         dataKeyVanillaFileMap.clear();
     }
 
-    int lastCycle = -1;
-    int lastCount = -1;
+    private int lastCycle = -1;
+    private int lastCount = -1;
 
     public VanillaFile dataForLast(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);

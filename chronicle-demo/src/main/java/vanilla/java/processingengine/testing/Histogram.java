@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author peter.lawrey
  */
-public class Histogram {
+class Histogram {
     @NotNull
     private final int[] count;
     private final int factor;

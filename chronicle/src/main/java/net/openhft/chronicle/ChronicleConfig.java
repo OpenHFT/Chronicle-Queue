@@ -26,9 +26,9 @@ import java.nio.ByteOrder;
  */
 public class ChronicleConfig implements Cloneable {
     // 16 billion max, or one per day for 11 years.
-    public static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true, 16 * 1024 * 1024);
+    private static final ChronicleConfig SMALL = new ChronicleConfig(4 * 1024, 2 * 1024 * 1024, true, 16 * 1024 * 1024);
     // 256 billion max
-    public static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false, 128 * 1024 * 1024);
+    private static final ChronicleConfig MEDIUM = new ChronicleConfig(16 * 1024, 16 * 1024 * 1024, false, 128 * 1024 * 1024);
     // 4 trillion max
     public static final ChronicleConfig LARGE = new ChronicleConfig(64 * 1024, 64 * 1024 * 1024, false, 512 * 1024 * 1024);
     // 1 quadrillion max
@@ -49,7 +49,7 @@ public class ChronicleConfig implements Cloneable {
     private int indexBlockSize;
     private int messageCapacity = 128 * 1024;
 
-    public ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint, int dataBlockSize) {
+    private ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint, int dataBlockSize) {
         this.indexFileCapacity = indexFileCapacity;
         this.indexFileExcerpts = indexFileExcerpts;
         this.minimiseFootprint = minimiseFootprint;

@@ -18,6 +18,7 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.MapUtils;
 import net.openhft.chronicle.MappedFileCache;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -32,11 +33,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * User: peter.lawrey Date: 17/08/13 Time: 14:58
  */
 public class SingleMappedFileCache implements MappedFileCache {
-    public static final AtomicLong totalWait = new AtomicLong();
-    final FileChannel fileChannel;
-    final int blockSize;
-    long lastIndex = Long.MIN_VALUE;
+    private static final AtomicLong totalWait = new AtomicLong();
+    private final FileChannel fileChannel;
+    private final int blockSize;
+    private long lastIndex = Long.MIN_VALUE;
     @Nullable
+    private
     MappedByteBuffer lastMBB = null;
 
     public SingleMappedFileCache(String basePath, int blockSize) throws FileNotFoundException {
@@ -53,7 +55,7 @@ public class SingleMappedFileCache implements MappedFileCache {
         // ignored.
     }
 
-    @Nullable
+    @NotNull
     @Override
     public MappedByteBuffer acquireBuffer(long index, boolean prefetch) {
         if (index == lastIndex)

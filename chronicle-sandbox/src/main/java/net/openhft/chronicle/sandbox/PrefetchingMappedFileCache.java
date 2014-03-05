@@ -37,22 +37,24 @@ import java.util.concurrent.atomic.AtomicLong;
  * User: peter.lawrey Date: 17/08/13 Time: 14:58
  */
 public class PrefetchingMappedFileCache implements MappedFileCache {
-    public static final AtomicLong totalWait = new AtomicLong();
-    static final ExecutorService PREFETCHER = Executors.newSingleThreadExecutor(new NamedThreadFactory("mmap-prefetch", true));
+    private static final AtomicLong totalWait = new AtomicLong();
+    private static final ExecutorService PREFETCHER = Executors.newSingleThreadExecutor(new NamedThreadFactory("mmap-prefetch", true));
     @Nullable
     private static final IndexedMBB NULL_IMBB = new IndexedMBB(Long.MIN_VALUE, null, -1);
-    final String basePath;
-    final FileChannel fileChannel;
-    final int blockSize;
-    long maxIndex = Long.MIN_VALUE;
-    long lastIndex = Long.MIN_VALUE;
+    private final String basePath;
+    private final FileChannel fileChannel;
+    private final int blockSize;
+    private long maxIndex = Long.MIN_VALUE;
+    private long lastIndex = Long.MIN_VALUE;
     @Nullable
+    private
     MappedByteBuffer lastMBB = null;
 
     @Nullable
+    private
     List<MappedByteBuffer> allBuffers = null;
     @NotNull
-    volatile IndexedMBB imbb = NULL_IMBB;
+    private volatile IndexedMBB imbb = NULL_IMBB;
 
     public PrefetchingMappedFileCache(String basePath, int blockSize) throws FileNotFoundException {
         this.basePath = basePath;
@@ -70,8 +72,10 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     private void addBuffer(long index2, MappedByteBuffer mbb) {
         if (index2 < 0) return;
         if (index2 >= Integer.MAX_VALUE) throw new AssertionError();
-        while (allBuffers.size() <= index2) allBuffers.add(null);
-        allBuffers.set((int) index2, mbb);
+        if (allBuffers != null) {
+            while (allBuffers.size() <= index2) allBuffers.add(null);
+            allBuffers.set((int) index2, mbb);
+        }
     }
 
     @NotNull
@@ -182,12 +186,14 @@ public class PrefetchingMappedFileCache implements MappedFileCache {
     }
 
     static class IndexedMBB implements Runnable {
-        volatile long created, started, finished;
-        long index;
+        final long created;
+        volatile long started;
+        volatile long finished;
+        final long index;
         volatile MappedByteBuffer buffer;
         volatile Throwable thrown;
-        private FileChannel fileChannel;
-        private int blockSize;
+        private final FileChannel fileChannel;
+        private final int blockSize;
 
         public IndexedMBB(long index, FileChannel fileChannel, int blockSize) {
             created = System.nanoTime();

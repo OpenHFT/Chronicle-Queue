@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class VanillaIndexCache implements Closeable {
     private static final int MAX_SIZE = 32;
-    public static final String INDEX = "index-";
+    private static final String INDEX = "index-";
 
     private final String basePath;
     private final File baseFile;
@@ -75,7 +75,7 @@ public class VanillaIndexCache implements Closeable {
         indexKeyVanillaFileMap.clear();
     }
 
-    public int lastIndexFile(int cycle) {
+    int lastIndexFile(int cycle) {
         int maxIndex = 0;
         File[] files = new File(dateCache.formatFor(cycle)).listFiles();
         if (files != null)
