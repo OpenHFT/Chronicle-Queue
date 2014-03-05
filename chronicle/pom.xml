@@ -221,6 +221,7 @@
                         <openhft.lang.version>${openhft.lang.version}</openhft.lang.version>
                         <openhft.affinity.version>${openhft.affinity.version}</openhft.affinity.version>
                         <logback.version>${logback.version}</logback.version>
+                        <main.basedir>${project.basedir}</main.basedir>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
