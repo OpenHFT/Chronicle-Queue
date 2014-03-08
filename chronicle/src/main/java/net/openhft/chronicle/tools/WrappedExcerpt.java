@@ -455,7 +455,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @NotNull
     @Override
-    public ByteStringAppender append(@NotNull Enum value) {
+    public ByteStringAppender append(@Nullable Enum value) {
         common.append(value);
         return this;
     }

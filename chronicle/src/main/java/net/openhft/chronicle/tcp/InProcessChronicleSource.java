@@ -27,16 +27,15 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.Set;
-import java.util.Iterator;
 
 /**
  * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up
@@ -50,7 +49,7 @@ import java.util.Iterator;
 public class InProcessChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
-    static final long HEARTBEAT_INTERVAL_MS = 2500;
+    private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
     @NotNull
     private final Chronicle chronicle;
@@ -62,7 +61,7 @@ public class InProcessChronicleSource implements Chronicle {
     private final ExecutorService service;
     private final Logger logger;
     private final Object notifier = new Object();
-    private long busyWaitTimeNS = 100 * 1000;
+    private static final long busyWaitTimeNS = 100 * 1000;
     private volatile boolean closed = false;
     private long lastUnpausedNS = 0;
 
@@ -71,9 +70,9 @@ public class InProcessChronicleSource implements Chronicle {
         server = ServerSocketChannel.open();
         server.socket().setReuseAddress(true);
         server.socket().bind(new InetSocketAddress(port));
-	server.configureBlocking(false);
+        server.configureBlocking(false);
         selector = Selector.open();
-	server.register(selector, SelectionKey.OP_ACCEPT);
+        server.register(selector, SelectionKey.OP_ACCEPT);
         name = chronicle.name() + "@" + port;
         logger = Logger.getLogger(getClass().getName() + "." + name);
         service = Executors.newCachedThreadPool(new NamedThreadFactory(name, true));
@@ -83,7 +82,8 @@ public class InProcessChronicleSource implements Chronicle {
     private void pauseReset() {
         lastUnpausedNS = System.nanoTime();
     }
-    protected void pause() {
+
+    void pause() {
         if (lastUnpausedNS + busyWaitTimeNS > System.nanoTime())
             return;
         try {
@@ -141,12 +141,12 @@ public class InProcessChronicleSource implements Chronicle {
             chronicle.close();
             server.close();
             service.shutdownNow();
-	    service.awaitTermination(10000, java.util.concurrent.TimeUnit.MILLISECONDS);
+            service.awaitTermination(10000, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (IOException e) {
             logger.warning("Error closing server port " + e);
         } catch (InterruptedException ie) {
             logger.warning("Error shutting down service threads " + ie);
-	}
+        }
     }
 
     public ChronicleConfig config() {
@@ -159,23 +159,22 @@ public class InProcessChronicleSource implements Chronicle {
             Thread.currentThread().setName(name + "-acceptor");
             try {
                 while (!closed) {
-		    selector.select();
-		    Set<SelectionKey> keys = selector.keys();
-		    for(Iterator<SelectionKey> i = keys.iterator(); i.hasNext(); ) {
-			SelectionKey key = i.next();
-			if (key.isAcceptable()) {
-			    SocketChannel socket = server.accept();
-			    socket.configureBlocking(true);
-			    service.execute(new Handler(socket));
-			}
-		    }
+                    selector.select();
+                    Set<SelectionKey> keys = selector.keys();
+                    for (SelectionKey key : keys) {
+                        if (key.isAcceptable()) {
+                            SocketChannel socket = server.accept();
+                            socket.configureBlocking(true);
+                            service.execute(new Handler(socket));
+                        }
+                    }
                 }
             } catch (IOException e) {
                 if (!closed)
                     logger.log(Level.SEVERE, "Acceptor dying", e);
             } finally {
                 service.shutdown();
-		logger.log(Level.INFO, "Acceptor loop ended");
+                logger.log(Level.INFO, "Acceptor loop ended");
             }
         }
     }

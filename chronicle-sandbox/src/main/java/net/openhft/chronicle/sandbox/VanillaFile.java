@@ -17,6 +17,7 @@
 package net.openhft.chronicle.sandbox;
 
 import net.openhft.lang.io.NativeBytes;
+import sun.misc.Cleaner;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.*;
@@ -98,6 +99,9 @@ public class VanillaFile implements Closeable {
         Logger logger = Logger.getLogger(getClass().getName());
         if (logger.isLoggable(Level.FINE))
             logger.fine("... Closing " + file);
+        Cleaner cleaner = ((DirectBuffer) map).cleaner();
+        if (cleaner != null)
+            cleaner.clean();
         try {
             fc.close();
         } catch (IOException e) {

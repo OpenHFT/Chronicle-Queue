@@ -42,7 +42,6 @@ public class VanillaChronicle implements Chronicle {
     private final ThreadLocal<WeakReference<ExcerptAppender>> appenderCache = new ThreadLocal<WeakReference<ExcerptAppender>>();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
-    private final int indexBlockSizeBits, indexBlockSizeMask;
     private final int indexBlockLongsBits, indexBlockLongsMask;
     private final int dataBlockSizeBits, dataBlockSizeMask;
     private final int entriesForCycleBits;
@@ -60,8 +59,8 @@ public class VanillaChronicle implements Chronicle {
         this.config = config;
         name = new File(basePath).getName();
         DateCache dateCache = new DateCache(config.cycleFormat(), config.cycleLength());
-        indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
-        indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
+        int indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
+        int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
         indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache);
         indexBlockLongsBits = indexBlockSizeBits - 3;
         indexBlockLongsMask = indexBlockSizeMask >>> 3;
@@ -74,7 +73,7 @@ public class VanillaChronicle implements Chronicle {
 //        cycle = (int) (System.currentTimeMillis() / config.cycleLength());
     }
 
-    public void checkNotClosed() {
+    void checkNotClosed() {
         if (closed) throw new IllegalStateException(basePath + " is closed");
     }
 
@@ -89,7 +88,7 @@ public class VanillaChronicle implements Chronicle {
         return new VanillaExcerpt();
     }
 
-    protected BytesMarshallerFactory acquireBMF() {
+    BytesMarshallerFactory acquireBMF() {
         WeakReference<BytesMarshallerFactory> bmfRef = marshallersCache.get();
         BytesMarshallerFactory bmf = null;
         if (bmfRef != null)
@@ -101,7 +100,7 @@ public class VanillaChronicle implements Chronicle {
         return bmf;
     }
 
-    protected BytesMarshallerFactory createBMF() {
+    BytesMarshallerFactory createBMF() {
         return new VanillaBytesMarshallerFactory();
     }
 
@@ -170,8 +169,8 @@ public class VanillaChronicle implements Chronicle {
     }
 
     abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
-        protected long index = -1;
-        protected VanillaFile dataFile;
+        long index = -1;
+        VanillaFile dataFile;
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_PAGE, NO_PAGE, null);
@@ -291,7 +290,7 @@ public class VanillaChronicle implements Chronicle {
             while (true) {
                 boolean found = index(nextIndex);
                 if (found)
-                    return found;
+                    return true;
                 int cycle = (int) (nextIndex / config.entriesPerCycle());
                 if (cycle >= cycle())
                     return false;
@@ -320,7 +319,7 @@ public class VanillaChronicle implements Chronicle {
                     else
                         break;
                 }
-                int cmp = comparator.compare((Excerpt) this);
+                int cmp = comparator.compare(this);
                 finish();
                 if (cmp < 0)
                     lo = mid + 1;
@@ -347,7 +346,7 @@ public class VanillaChronicle implements Chronicle {
                     else
                         break;
                 }
-                int cmp = comparator.compare((Excerpt) this);
+                int cmp = comparator.compare(this);
                 finish();
 
                 if (cmp < 0) {
@@ -374,7 +373,7 @@ public class VanillaChronicle implements Chronicle {
                     else
                         break;
                 }
-                int cmp = comparator.compare((Excerpt) this);
+                int cmp = comparator.compare(this);
                 finish();
 
                 if (cmp <= 0) {
@@ -394,15 +393,11 @@ public class VanillaChronicle implements Chronicle {
             return this;
         }
 
+        @NotNull
         @Override
         public Excerpt toEnd() {
             super.toEnd();
             return this;
-        }
-
-        @Override
-        public void finish() {
-            super.finish();
         }
     }
 
@@ -512,6 +507,7 @@ public class VanillaChronicle implements Chronicle {
 //            appenderFile.decrementUsage();
         }
 
+        @NotNull
         @Override
         public ExcerptAppender toEnd() {
             super.toEnd();
@@ -520,21 +516,18 @@ public class VanillaChronicle implements Chronicle {
     }
 
     class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {
+        @NotNull
         @Override
         public ExcerptTailer toStart() {
             super.toStart();
             return this;
         }
 
+        @NotNull
         @Override
         public ExcerptTailer toEnd() {
             super.toEnd();
             return this;
-        }
-
-        @Override
-        public void finish() {
-            super.finish();
         }
     }
 }

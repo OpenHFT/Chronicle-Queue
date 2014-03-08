@@ -16,6 +16,6 @@
 
 package net.openhft.chronicle.sandbox.tcp;
 
-public class VanillaChronicleTCPCommon {
+class VanillaChronicleTCPCommon {
 
 }

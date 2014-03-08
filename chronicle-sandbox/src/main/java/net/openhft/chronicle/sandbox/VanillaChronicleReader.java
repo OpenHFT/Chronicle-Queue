@@ -28,26 +28,24 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
-public class VanillaChronicleReader {
-    public static final int MILLI_PER_DAY = 24 * 60 * 60 * 1000;
+class VanillaChronicleReader {
+    private static final int MILLI_PER_DAY = 24 * 60 * 60 * 1000;
     private final String baseDir;
-    private final String format;
     private final int cycleLength;
     private final SimpleDateFormat sdf;
 
-    public VanillaChronicleReader(String baseDir) {
+    private VanillaChronicleReader(String baseDir) {
         this(baseDir, "yyyyMMdd", MILLI_PER_DAY);
     }
 
-    public VanillaChronicleReader(String baseDir, String format, int cycleLength) {
+    private VanillaChronicleReader(String baseDir, String format, int cycleLength) {
         this.baseDir = baseDir;
-        this.format = format;
         this.cycleLength = cycleLength;
         sdf = new SimpleDateFormat(format);
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
-    public void dump(int cycle, Writer writer) throws IOException {
+    void dump(int cycle, Writer writer) throws IOException {
         Map<Long, ReaderFile> fileMap = new LinkedHashMap<Long, ReaderFile>(128, 0.7f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Long, ReaderFile> eldest) {

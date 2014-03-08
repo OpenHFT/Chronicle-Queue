@@ -30,7 +30,7 @@ import java.nio.channels.SocketChannel;
 public enum TcpUtil {
     ;
     static final int HEADER_SIZE = 12;
-    static final int INITIAL_BUFFER_SIZE = 64 * 1024;
+    private static final int INITIAL_BUFFER_SIZE = 64 * 1024;
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
         int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
@@ -55,7 +55,7 @@ public enum TcpUtil {
         if (bb.remaining() > 0) throw new EOFException();
     }
 
-    public static void readAvailable(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
+    private static void readAvailable(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
         while (bb.remaining() > 0)
             if (socket.read(bb) < 0)
                 break;

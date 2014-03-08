@@ -37,9 +37,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class VanillaChronicleSource implements Chronicle {
-    static final int IN_SYNC_LEN = -128;
-    static final int PADDED_LEN = -127;
-    static final long HEARTBEAT_INTERVAL_MS = 2500;
+    private static final int IN_SYNC_LEN = -128;
+    private static final int PADDED_LEN = -127;
+    private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
     private final VanillaChronicle chronicle;
     private final ServerSocketChannel server;
@@ -49,7 +49,7 @@ public class VanillaChronicleSource implements Chronicle {
     private final ExecutorService service;
     private final Logger logger;
     private final Object notifier = new Object();
-    private long busyWaitTimeNS = 100 * 1000;
+    private static final long busyWaitTimeNS = 100 * 1000;
     private volatile boolean closed = false;
     private long lastUnpausedNS = 0;
 
@@ -68,7 +68,7 @@ public class VanillaChronicleSource implements Chronicle {
         lastUnpausedNS = System.nanoTime();
     }
 
-    protected void pause() {
+    void pause() {
         if (lastUnpausedNS + busyWaitTimeNS > System.nanoTime())
             return;
         try {

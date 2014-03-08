@@ -86,7 +86,7 @@ public enum ChronicleTools {
      * @return up to 1024 bytes as text with `.` replacing special bytes.
      */
     @NotNull
-    public static String asString(@NotNull ExcerptCommon excerpt, long position) {
+    private static String asString(@NotNull ExcerptCommon excerpt, long position) {
         return asString(excerpt, position, 1024);
     }
 
@@ -99,7 +99,7 @@ public enum ChronicleTools {
      * @return length bytes as text with `.` replacing special bytes.
      */
     @NotNull
-    public static String asString(@NotNull ExcerptCommon excerpt, long position, long length) {
+    private static String asString(@NotNull ExcerptCommon excerpt, long position, long length) {
         long limit = Math.min(position + length, excerpt.capacity());
         StringBuilder sb = new StringBuilder((int) (limit - position));
         for (long i = position; i < limit; i++) {
@@ -137,13 +137,14 @@ public enum ChronicleTools {
     }
 
     public static void warmup() {
+        //noinspection UnusedDeclaration needed to laod class.
         boolean done = ChronicleWarmup.DONE;
     }
 }
 
 class ChronicleWarmup {
     public static final boolean DONE;
-    public static final int WARMUP_ITER = 200000;
+    private static final int WARMUP_ITER = 200000;
     private static final String TMP = System.getProperty("java.io.tmpdir");
 
     static {

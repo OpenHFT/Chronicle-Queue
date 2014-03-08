@@ -26,7 +26,7 @@ import java.io.StringWriter;
 public enum DailingRollingIndexReader {
     ;
 
-    public static void dumpMaster(File dir, PrintWriter writer) {
+    private static void dumpMaster(File dir, PrintWriter writer) {
         MasterIndexFile mif = new MasterIndexFile(new File(dir, "master"));
         writer.println(dir.getName() + ": " + mif.size());
         for (int i = 0; i < mif.size(); i++)

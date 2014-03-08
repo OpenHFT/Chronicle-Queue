@@ -23,13 +23,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-public class DateCache {
-    static final int SIZE = 32;
-    static final TimeZone GMT = TimeZone.getTimeZone("GMT");
+class DateCache {
+    private static final int SIZE = 32;
+    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
 
-    final SimpleDateFormat format;
-    final DateValue[] values = new DateValue[SIZE];
-    final int cycleLength;
+    private final SimpleDateFormat format;
+    private final DateValue[] values = new DateValue[SIZE];
+    private final int cycleLength;
 
     public DateCache(String formatStr, int cycleLength) {
         this.cycleLength = cycleLength;

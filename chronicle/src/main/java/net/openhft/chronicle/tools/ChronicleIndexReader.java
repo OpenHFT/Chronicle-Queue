@@ -27,7 +27,7 @@ import java.nio.channels.FileChannel;
  * User: peter.lawrey Date: 16/08/13 Time: 12:30
  */
 public class ChronicleIndexReader {
-    static final boolean HEX = Boolean.getBoolean("hex");
+    private static final boolean HEX = Boolean.getBoolean("hex");
 
     public static void main(String... args) throws IOException {
         int zeros = 0;

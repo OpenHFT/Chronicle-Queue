@@ -28,7 +28,7 @@ package net.openhft.chronicle.sandbox;
  * rotating indexes
  * data
  */
-public class VanillaJournal {
+class VanillaJournal {
     public VanillaJournal(String fileName, JournalConfig config) {
 
     }

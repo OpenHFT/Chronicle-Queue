@@ -27,7 +27,7 @@ import java.io.IOException;
  *
  * @author peter.lawrey
  */
-public enum ChronicleReader {
+enum ChronicleReader {
     ;
 
     public static void main(@NotNull String... args) throws IOException, InterruptedException {

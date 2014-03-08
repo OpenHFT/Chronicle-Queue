@@ -28,12 +28,12 @@ import java.io.IOException;
  */
 public abstract class AbstractNativeExcerpt extends NativeBytes implements ExcerptCommon {
     @NotNull
-    protected final IndexedChronicle chronicle;
+    final IndexedChronicle chronicle;
     final int cacheLineMask;
     final int dataBlockSize;
     final int indexBlockSize;
     final int indexEntriesPerLine;
-    final int indexEntriesPerBlock;
+    private final int indexEntriesPerBlock;
     private final int cacheLineSize;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
@@ -46,7 +46,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     // the start of the index block, as an address
     long indexStartAddr;
     // which index does this refer to?
-    long indexStartOffset;
+    private long indexStartOffset;
     // the offset in data referred to the start of the line
     long indexBaseForLine;
     // the start of the data block, as an address
@@ -62,7 +62,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     // inherited - long positionAddr;
     // inherited - long limitAddr;
 
-    public AbstractNativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
+    AbstractNativeExcerpt(@NotNull IndexedChronicle chronicle) throws IOException {
         super(NO_PAGE, NO_PAGE);
         this.chronicle = chronicle;
         cacheLineSize = chronicle.config.cacheLineSize();
@@ -82,12 +82,12 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         return index;
     }
 
-    public ExcerptCommon toStart() {
+    ExcerptCommon toStart() {
         index = -1;
         return this;
     }
 
-    protected boolean indexForRead(long l) throws IOException {
+    boolean indexForRead(long l) throws IOException {
         if (l < 0) {
             setIndexBuffer(0, true);
             index = -1;
@@ -138,7 +138,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         indexPositionAddr = indexStartAddr = indexBuffer.address();
     }
 
-    protected void indexForAppender(long l) throws IOException {
+    void indexForAppender(long l) throws IOException {
         if (l < 0) {
             throw new IndexOutOfBoundsException("index: " + l);
         } else if (l == 0) {
@@ -224,7 +224,7 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
         setIndexBuffer(indexStartOffset / indexBlockSize, true);
     }
 
-    public boolean index(long index) {
+    boolean index(long index) {
         throw new UnsupportedOperationException();
     }
 

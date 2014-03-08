@@ -24,14 +24,14 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public class MetaData {
-    boolean targetReader;
+    private boolean targetReader;
 
     public int sourceId;
-    public long excerptId;
-    public long writeTimestampMillis;
+    private long excerptId;
+    private long writeTimestampMillis;
     public int inWriteTimestamp;
-    public int inReadTimestamp;
-    public int outWriteTimestamp;
+    private int inReadTimestamp;
+    private int outWriteTimestamp;
     public int outReadTimestamp;
 
     public MetaData(boolean targetReader) {

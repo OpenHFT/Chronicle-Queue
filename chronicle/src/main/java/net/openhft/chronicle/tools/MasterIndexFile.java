@@ -24,8 +24,8 @@ import java.util.List;
  * @author peter.lawrey
  */
 public class MasterIndexFile {
-    final File file;
-    final List<String> filenames = new ArrayList<String>();
+    private final File file;
+    private final List<String> filenames = new ArrayList<String>();
 
     public MasterIndexFile(File file) {
         this.file = file;
