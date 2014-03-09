@@ -238,7 +238,7 @@ public class VanillaChronicleTest {
 
         ExcerptAppender appender = writer.createAppender();
 
-        for(int i=0;i<3;i++) {
+        for(long i=0;i<3;i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -247,7 +247,7 @@ public class VanillaChronicleTest {
         VanillaChronicle reader = new VanillaChronicle(basepath);
         ExcerptTailer tailer = reader.createTailer().toStart();
 
-        for(int i=0;i<3;i++) {
+        for(long i=0;i<3;i++) {
             assertTrue(tailer.nextIndex());
             assertEquals(i,tailer.readLong());
             tailer.finish();
@@ -269,7 +269,7 @@ public class VanillaChronicleTest {
 
         ExcerptAppender appender = writer.createAppender();
 
-        for(int i=0;i<3;i++) {
+        for(long i=0;i<3;i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -280,7 +280,7 @@ public class VanillaChronicleTest {
         VanillaChronicle reader = new VanillaChronicle(basepath);
         ExcerptTailer tailer = reader.createTailer().toEnd();
         assertFalse(tailer.nextIndex());
-        assertEquals(2,tailer.readLong());
+        assertEquals(2L,tailer.readLong());
         tailer.finish();
 
         appender.close();
