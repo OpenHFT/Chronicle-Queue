@@ -31,6 +31,7 @@ public class BinaryChronicleLogWriter implements ChronicleLogWriter, Closeable {
     private final String path;
     private final boolean append;
     private final VanillaChronicle chronicle;
+    private final ExcerptAppender appender;
 
     /**
      *
@@ -38,10 +39,11 @@ public class BinaryChronicleLogWriter implements ChronicleLogWriter, Closeable {
      * @param append
      * @param config
      */
-    public BinaryChronicleLogWriter(String path, boolean append, VanillaChronicleConfig config) {
+    public BinaryChronicleLogWriter(String path, boolean append, VanillaChronicleConfig config) throws IOException {
         this.path = path;
         this.append = append;
         this.chronicle = new VanillaChronicle(path,config);
+        this.appender = this.chronicle.createAppender();
 
         if(!append) {
             this.chronicle.clear();
@@ -70,20 +72,17 @@ public class BinaryChronicleLogWriter implements ChronicleLogWriter, Closeable {
      */
     @Override
     public void log(int level, String name, String message, Throwable t) {
-        try {
-            ExcerptAppender appender = this.chronicle.createAppender();
-            appender.startExcerpt();
-            appender.writeLong(System.currentTimeMillis());
-            appender.writeByte(level);
-            appender.writeEnum(name);
-            appender.writeEnum(message);
-            //TODO: write Throwable
-            //appender.writeEnum(t.getMessage());
-            appender.finish();
-        } catch(Exception e) {
-            //TODO
-            e.printStackTrace();
-        }
+        System.out.format("%d,%s,%s\n",level,name,message);
+
+        this.appender.startExcerpt();
+        this.appender.writeLong(System.currentTimeMillis());
+        this.appender.writeInt(level);
+        this.appender.writeEnum(Thread.currentThread().getName());
+        this.appender.writeEnum(name);
+        this.appender.writeEnum(message);
+        //TODO: write Throwable
+        //appender.writeEnum(t.getMessage());
+        this.appender.finish();
     }
 
     @Override

@@ -36,10 +36,11 @@ public class ChroniCat {
 
     private static final ChronicleLogReader BINARY = new AbstractBinaryChronicleLogReader() {
         @Override
-        public void read(Date timestamp, int level, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s\n",
+        public void read(Date timestamp, int level, String threadName, String name, String message, Throwable t) {
+            System.out.format("%s|%s|%s|%s|%s\n",
                 DF.format(timestamp),
                 ChronicleLoggingHelper.levelToString(level),
+                threadName,
                 name,
                 message);
         }
@@ -47,10 +48,11 @@ public class ChroniCat {
 
     private static final ChronicleLogReader TEXT = new AbstractTextChronicleLogReader() {
         @Override
-        public void read(Date timestamp, int level, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s\n",
+        public void read(Date timestamp, int level, String threadName, String name, String message, Throwable t) {
+            System.out.format("%s|%s|%s|%s|%s\n",
                 DF.format(timestamp),
                 ChronicleLoggingHelper.levelToString(level),
+                threadName,
                 name,
                 message);
         }

@@ -50,5 +50,11 @@ public class Slf4jChronicleConfigurationTest extends Slf4jChronicleTestBase {
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
             cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
+        assertEquals(
+            new File(BASEPATH_LOGGER_RW),
+            new File(cfg.getString("readwrite",ChronicleLoggingConfig.KEY_PATH)));
+        assertEquals(
+            ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
+            cfg.getString("readwrite",ChronicleLoggingConfig.KEY_LEVEL));
     }
 }

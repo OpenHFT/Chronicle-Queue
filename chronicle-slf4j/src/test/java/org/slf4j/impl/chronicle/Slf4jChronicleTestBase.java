@@ -43,6 +43,17 @@ public class Slf4jChronicleTestBase {
             + File.separator
             + "root";
 
+    public static final String BASEPATH_LOGGER_RW =
+        System.getProperty("java.io.tmpdir")
+            + File.separator
+            + "chronicle"
+            + File.separator
+            + new SimpleDateFormat("yyyyMMdd").format(new Date())
+            + File.separator
+            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
+            + File.separator
+            + "readwrite";
+
     public static final String BASEPATH_LOGGER_1 =
         System.getProperty("java.io.tmpdir")
             + File.separator

@@ -74,27 +74,38 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
 
         Logger logger = loggers.get(name);
         if (logger == null) {
-            String  path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
-            Boolean append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
-            String  levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
-            String  type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
-            int     level  = ChronicleLoggingHelper.stringToLevel(levels);
+            String    path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
+            Boolean   append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
+            String    levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
+            String    type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
+            int       level  = ChronicleLoggingHelper.stringToLevel(levels);
+            Throwable error  = null;
 
             ChronicleLogWriter writer = null;
             if(path != null) {
                 writer = this.writers.get(path);
                 if(writer == null) {
                     if(ChronicleLoggingConfig.TYPE_BINARY.equalsIgnoreCase(type)) {
-                        writer = new BinaryChronicleLogWriter(
-                            path,
-                            append != null ? append : true,
-                            VanillaChronicleConfig.DEFAULT);
+                        try {
+                            writer = new BinaryChronicleLogWriter(
+                                path,
+                                append != null ? append : true,
+                                VanillaChronicleConfig.DEFAULT);
+                        } catch(IOException e) {
+                            error = e;
+                            writer = null;
+                        }
                     } else if(ChronicleLoggingConfig.TYPE_TEXT.equalsIgnoreCase(type)) {
-                        writer = new TextChronicleLogWriter(
-                            path,
-                            this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT),
-                            append != null ? append : true,
-                            VanillaChronicleConfig.DEFAULT);
+                        try {
+                            writer = new TextChronicleLogWriter(
+                                path,
+                                this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT),
+                                append != null ? append : true,
+                                VanillaChronicleConfig.DEFAULT);
+                        } catch(IOException e) {
+                            error = e;
+                            writer = null;
+                        }
                     }
 
                     if(writer != null) {
@@ -105,9 +116,13 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                             .append("name")
                             .append(")");
 
-                        sb.append("\n  slf4j.chronicle.type is not properly defined");
-                        sb.append("\n    got ").append(type);
-                        sb.append("\n    it must be text or binary");
+                        if(error == null) {
+                            sb.append("\n  slf4j.chronicle.type is not properly defined");
+                            sb.append("\n    got ").append(type);
+                            sb.append("\n    it must be text or binary");
+                        } else {
+                            sb.append("\n  " + error.getMessage());
+                        }
 
                         writer = null;
                         logger = NOPLogger.NOP_LOGGER;

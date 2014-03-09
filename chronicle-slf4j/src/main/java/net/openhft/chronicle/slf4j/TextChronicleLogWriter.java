@@ -35,6 +35,7 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
     private final String dateFormat;
     private final boolean append;
     private final VanillaChronicle chronicle;
+    private final ExcerptAppender appender;
     private final ThreadLocal<DateFormat> dateFormatCache;
 
     /**
@@ -44,11 +45,12 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
      * @param append
      * @param config
      */
-    public TextChronicleLogWriter(String path, String dateFormat, boolean append, VanillaChronicleConfig config) {
+    public TextChronicleLogWriter(String path, String dateFormat, boolean append, VanillaChronicleConfig config) throws IOException {
         this.path = path;
         this.append = append;
         this.dateFormat = dateFormat != null ? dateFormat : ChronicleLoggingConfig.DEFAULT_DATE_FORMAT;
         this.chronicle = new VanillaChronicle(path,config);
+        this.appender = this.chronicle.createAppender();
         this.dateFormatCache = new ThreadLocal<DateFormat>() {
             @Override
             protected SimpleDateFormat initialValue() {
@@ -77,23 +79,19 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
      */
     @Override
     public void log(int level, String name, String message, Throwable t) {
-        try {
-            ExcerptAppender appender = this.chronicle.createAppender();
-            appender.startExcerpt();
-            appender.append(this.dateFormatCache.get().format(new Date()));
-            appender.append('|');
-            appender.append(ChronicleLoggingHelper.levelToString(level));
-            appender.append('|');
-            appender.append(name);
-            appender.append('|');
-            appender.append(message);
-            appender.append('\n');
-            //TODO: append Throwable?
-            appender.finish();
-        } catch(Exception e) {
-            //TODO
-            e.printStackTrace();
-        }
+        appender.startExcerpt();
+        appender.append(this.dateFormatCache.get().format(new Date()));
+        appender.append('|');
+        appender.append(ChronicleLoggingHelper.levelToString(level));
+        appender.append('|');
+        appender.append(Thread.currentThread().getName());
+        appender.append('|');
+        appender.append(name);
+        appender.append('|');
+        appender.append(message);
+        appender.append('\n');
+        //TODO: append Throwable?
+        appender.finish();
     }
 
     @Override
