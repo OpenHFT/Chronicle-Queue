@@ -18,6 +18,7 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -225,5 +226,66 @@ public class VanillaChronicleTest {
             chronicle.close();
             chronicle.clear();
         }
+    }
+
+    @Ignore
+    @Test
+    public void testTailerToStart() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-tostart";
+
+        VanillaChronicle writer = new VanillaChronicle(basepath);
+        writer.clear();
+
+        ExcerptAppender appender = writer.createAppender();
+
+        for(int i=0;i<3;i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        VanillaChronicle reader = new VanillaChronicle(basepath);
+        ExcerptTailer tailer = reader.createTailer().toStart();
+
+        for(int i=0;i<3;i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i,tailer.readLong());
+            tailer.finish();
+        }
+
+        appender.close();
+        tailer.close();
+        writer.close();
+        writer.clear();
+    }
+
+    @Ignore
+    @Test
+    public void testTailerToEnd() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend";
+
+        VanillaChronicle writer = new VanillaChronicle(basepath);
+        writer.clear();
+
+        ExcerptAppender appender = writer.createAppender();
+
+        for(int i=0;i<3;i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        //appender.close();
+
+        VanillaChronicle reader = new VanillaChronicle(basepath);
+        ExcerptTailer tailer = reader.createTailer().toEnd();
+        assertFalse(tailer.nextIndex());
+        assertEquals(2,tailer.readLong());
+        tailer.finish();
+
+        appender.close();
+        tailer.close();
+        writer.close();
+        writer.clear();
     }
 }
