@@ -284,7 +284,6 @@ public class VanillaChronicle implements Chronicle {
                 toStart();
                 if (index < 0)
                     return false;
-                index--;
             }
             long nextIndex = index + 1;
             while (true) {
@@ -302,8 +301,9 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptCommon toStart() {
             long indexCount = indexCache.firstIndex();
             if (indexCount >= 0) {
-                index = indexCount * config.entriesPerCycle();
+                index = (indexCount * config.entriesPerCycle()) - 1;
             }
+
             return this;
         }
     }
@@ -429,6 +429,7 @@ public class VanillaChronicle implements Chronicle {
                         appenderFile = null;
                     }
                     appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+
                     lastCycle = appenderCycle;
                     lastThreadId = appenderThreadId;
                     if (lastIndexFile != null) {
@@ -442,6 +443,7 @@ public class VanillaChronicle implements Chronicle {
                     appenderFile = null;
                     appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
                 }
+
                 startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
                 limitAddr = startAddr + capacity;
                 nextSynchronous = config.synchronous();
@@ -475,6 +477,7 @@ public class VanillaChronicle implements Chronicle {
             int offset = (int) (startAddr - appenderFile.baseAddr());
             long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << 48) + dataOffset;
+
             try {
                 boolean done = false;
                 if (lastIndexFile != null) {
@@ -501,7 +504,10 @@ public class VanillaChronicle implements Chronicle {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+
+            appenderFile.bytes().positionAddr(positionAddr);
             appenderFile.bytes().alignPositionAddr(4);
+
             if (nextSynchronous)
                 appenderFile.force();
 //            appenderFile.decrementUsage();

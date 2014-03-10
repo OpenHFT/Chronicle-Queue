@@ -18,6 +18,8 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.lang.io.IOTools;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -26,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class VanillaChronicleTest {
     private static final int N_THREADS = 4;
@@ -225,5 +228,102 @@ public class VanillaChronicleTest {
             chronicle.close();
             chronicle.clear();
         }
+    }
+
+    @Test
+    public void testAppenderTailer() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-appender-tailer";
+
+        VanillaChronicle writer = new VanillaChronicle(basepath);
+        writer.clear();
+
+        ExcerptAppender appender = writer.createAppender();
+
+        for(long i=0;i<3;i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        {
+            VanillaChronicle reader = new VanillaChronicle(basepath);
+            ExcerptTailer tailer = reader.createTailer();
+
+            for(long i=0;i<3;i++) {
+                assertTrue(tailer.nextIndex());
+                assertEquals(i,tailer.readLong());
+                tailer.finish();
+            }
+
+            tailer.close();
+            reader.close();
+        }
+
+        {
+            VanillaChronicle reader = new VanillaChronicle(basepath);
+            ExcerptTailer tailer = reader.createTailer().toStart();
+
+            for(long i=0;i<3;i++) {
+                assertTrue(tailer.nextIndex());
+                assertEquals(i,tailer.readLong());
+                tailer.finish();
+            }
+
+            tailer.close();
+            reader.close();
+        }
+
+        appender.close();
+        writer.close();
+    }
+
+    @Test
+    public void testTailerToStart() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-tostart";
+
+        VanillaChronicle chronicle  = new VanillaChronicle(basepath);
+        chronicle.clear();
+
+        ExcerptAppender appender = chronicle.createAppender();
+        ExcerptTailer tailer = null;
+
+        for(long i=0;i<3;i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        // test a vanilla tailer, no rewind
+        tailer = chronicle.createTailer();
+        for(long i=0;i<3;i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            tailer.finish();
+        }
+
+        tailer.close();
+
+        // test a vanilla tailer, reqind
+        tailer = chronicle.createTailer().toStart();
+        for(long i=0;i<3;i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            tailer.finish();
+        }
+
+        appender.close();
+        tailer.close();
+        //chronicle.close();
+    }
+
+    @Test(expected=UnsupportedOperationException.class)
+    public void testTailerToEnd() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend";
+
+        VanillaChronicle chronicle = new VanillaChronicle(basepath);
+        chronicle.clear();
+        chronicle.createTailer().toEnd();
+
+        chronicle.close();
     }
 }

@@ -111,16 +111,19 @@ public class VanillaIndexCache implements Closeable {
         File[] files = baseFile.listFiles();
         if (files == null)
             return -1;
+
         long firstDate = Long.MAX_VALUE;
         for (File file : files) {
             try {
                 long date = dateCache.parseCount(file.getName());
                 if (firstDate > date)
                     firstDate = date;
+
             } catch (ParseException ignored) {
                 // ignored
             }
         }
+
         return firstDate;
     }
 
