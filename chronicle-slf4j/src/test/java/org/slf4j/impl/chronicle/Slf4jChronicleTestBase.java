@@ -15,6 +15,7 @@
  */
 package org.slf4j.impl.chronicle;
 
+import net.openhft.lang.io.IOTools;
 import org.junit.After;
 import org.junit.Before;
 

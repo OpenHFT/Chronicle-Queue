@@ -20,6 +20,8 @@ import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.slf4j.ChronicleLogger;
 import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -102,14 +104,14 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLogging1() throws IOException {
+        Thread.currentThread().setName("th-test-logging_1");
+
         Logger l = LoggerFactory.getLogger("readwrite");
         l.trace("trace");
         l.debug("debug");
         l.info("info");
         l.warn("warn");
         l.error("error");
-
-        Thread.currentThread().setName("th-test-logging_1");
 
         VanillaChronicle reader = new VanillaChronicle(BASEPATH_LOGGER_RW);
         ExcerptTailer tailer = reader.createTailer();
@@ -118,6 +120,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_DEBUG, tailer.readByte());
+        assertEquals(Thread.currentThread().getId(), tailer.readLong());
         assertEquals("th-test-logging_1", tailer.readEnum(String.class));
         assertEquals("readwrite",tailer.readEnum(String.class));
         assertEquals("debug",tailer.readEnum(String.class));
@@ -126,6 +129,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_INFO, tailer.readByte());
+        assertEquals(Thread.currentThread().getId(), tailer.readLong());
         assertEquals("th-test-logging_1", tailer.readEnum(String.class));
         assertEquals("readwrite",tailer.readEnum(String.class));
         assertEquals("info",tailer.readEnum(String.class));
@@ -134,6 +138,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_WARN, tailer.readByte());
+        assertEquals(Thread.currentThread().getId(), tailer.readLong());
         assertEquals("th-test-logging_1", tailer.readEnum(String.class));
         assertEquals("readwrite",tailer.readEnum(String.class));
         assertEquals("warn",tailer.readEnum(String.class));
@@ -142,6 +147,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         assertTrue(tailer.nextIndex());
         tailer.readLong();
         assertEquals(ChronicleLoggingHelper.LOG_LEVEL_ERROR, tailer.readByte());
+        assertEquals(Thread.currentThread().getId(), tailer.readLong());
         assertEquals("th-test-logging_1", tailer.readEnum(String.class));
         assertEquals("readwrite",tailer.readEnum(String.class));
         assertEquals("error",tailer.readEnum(String.class));

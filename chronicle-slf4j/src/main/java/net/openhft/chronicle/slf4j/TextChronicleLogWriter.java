@@ -79,12 +79,16 @@ public class TextChronicleLogWriter implements ChronicleLogWriter, Closeable {
      */
     @Override
     public void log(int level, String name, String message, Throwable t) {
+        final Thread currentThread = Thread.currentThread();
+
         appender.startExcerpt();
         appender.append(this.dateFormatCache.get().format(new Date()));
         appender.append('|');
         appender.append(ChronicleLoggingHelper.levelToString(level));
         appender.append('|');
-        appender.append(Thread.currentThread().getName());
+        appender.append(currentThread.getId());
+        appender.append('|');
+        appender.append(currentThread.getName());
         appender.append('|');
         appender.append(name);
         appender.append('|');

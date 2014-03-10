@@ -17,46 +17,11 @@ package net.openhft.chronicle.tools.slf4j;
 
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
-import net.openhft.chronicle.slf4j.*;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
  *
  */
-public class ChroniCat {
-    private static final DateFormat DF =
-        new SimpleDateFormat(ChronicleLoggingConfig.DEFAULT_DATE_FORMAT);
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private static final ChronicleLogReader BINARY = new AbstractBinaryChronicleLogReader() {
-        @Override
-        public void read(Date timestamp, int level, String threadName, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s|%s\n",
-                DF.format(timestamp),
-                ChronicleLoggingHelper.levelToString(level),
-                threadName,
-                name,
-                message);
-        }
-    };
-
-    private static final ChronicleLogReader TEXT = new AbstractTextChronicleLogReader() {
-        @Override
-        public void read(Date timestamp, int level, String threadName, String name, String message, Throwable t) {
-            System.out.format("%s|%s|%s|%s|%s\n",
-                DF.format(timestamp),
-                ChronicleLoggingHelper.levelToString(level),
-                threadName,
-                name,
-                message);
-        }
-    };
+public class ChroniCat extends ChroniTool {
 
     // *************************************************************************
     //

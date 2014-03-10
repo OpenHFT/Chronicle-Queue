@@ -72,12 +72,13 @@ public class BinaryChronicleLogWriter implements ChronicleLogWriter, Closeable {
      */
     @Override
     public void log(int level, String name, String message, Throwable t) {
-        System.out.format("%d,%s,%s\n",level,name,message);
+        final Thread currentThread = Thread.currentThread();
 
         this.appender.startExcerpt();
         this.appender.writeLong(System.currentTimeMillis());
-        this.appender.writeInt(level);
-        this.appender.writeEnum(Thread.currentThread().getName());
+        this.appender.writeByte(level);
+        this.appender.writeLong(currentThread.getId());
+        this.appender.writeEnum(currentThread.getName());
         this.appender.writeEnum(name);
         this.appender.writeEnum(message);
         //TODO: write Throwable

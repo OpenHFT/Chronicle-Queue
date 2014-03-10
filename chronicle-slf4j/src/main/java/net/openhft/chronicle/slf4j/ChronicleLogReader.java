@@ -27,10 +27,11 @@ public interface ChronicleLogReader extends BytesProcessor {
      *
      * @param timestamp
      * @param level
+     * @param threadId
      * @param threadName
      * @param name
      * @param message
      * @param t
      */
-    public void read(Date timestamp, int level, String threadName, String name, String message, Throwable t);
+    public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Throwable t);
 }

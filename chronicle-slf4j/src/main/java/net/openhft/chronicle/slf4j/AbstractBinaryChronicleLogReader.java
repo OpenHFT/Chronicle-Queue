@@ -26,11 +26,12 @@ public abstract class AbstractBinaryChronicleLogReader implements ChronicleLogRe
     @Override
     public void process(Bytes bytes) {
         Date   ts    = new Date(bytes.readLong());
-        int    level = bytes.readInt();
+        int    level = bytes.readByte();
+        long   tid   = bytes.readLong();
         String tname = bytes.readEnum(String.class);
         String name  = bytes.readEnum(String.class);
         String msg   = bytes.readEnum(String.class);
 
-        this.read(ts,level,tname,name,msg,null);
+        this.read(ts,level,tid,tname,name,msg,null);
     }
 }
