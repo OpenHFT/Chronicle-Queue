@@ -24,6 +24,7 @@
         <version>2.0.4-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <version>2.0.4-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <name>OpenHFT/Java-Chronicle/chronicle-sandbox</name>
@@ -31,7 +32,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openhft.affinity.version>2.0.2-SNAPSHOT</openhft.affinity.version>
+        <openhft.affinity.version>2.0.1</openhft.affinity.version>
     </properties>
 
     <dependencies>
