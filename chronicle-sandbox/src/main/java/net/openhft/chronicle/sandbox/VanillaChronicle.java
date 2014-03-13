@@ -302,9 +302,24 @@ public class VanillaChronicle implements Chronicle {
             return this;
         }
 
+        @NotNull
         @Override
         public ExcerptCommon toEnd() {
-            throw new UnsupportedOperationException();
+            resetLastInfo();
+
+            int cycle = cycle();
+            int lastIndexFile = indexCache.lastIndexFile(cycle);
+            try {
+                VanillaFile vfile = indexCache.indexFor(cycle,lastIndexFile,false);
+                NativeBytes bytes = vfile.bytes();
+                long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
+                vfile.decrementUsage();
+                index(lastIndex);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+
+            return this;
         }
 
         protected void resetLastInfo() {
@@ -517,20 +532,21 @@ public class VanillaChronicle implements Chronicle {
             appenderFile.bytes().positionAddr(positionAddr);
             appenderFile.bytes().alignPositionAddr(4);
 
-            if (nextSynchronous)
+            if (nextSynchronous) {
                 appenderFile.force();
-//            appenderFile.decrementUsage();
+            }
         }
 
         @NotNull
         @Override
         public ExcerptAppender toEnd() {
-            super.toEnd();
+            // NO-OP
             return this;
         }
     }
 
     class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {
+
         @NotNull
         @Override
         public ExcerptTailer toStart() {
@@ -543,19 +559,7 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public ExcerptTailer toEnd() {
             super.resetLastInfo();
-
-            int cycle = cycle();
-            int lastIndexFile = indexCache.lastIndexFile(cycle);
-            try {
-                VanillaFile vfile = indexCache.indexFor(cycle,lastIndexFile,false);
-                NativeBytes bytes = vfile.bytes();
-                long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
-                vfile.decrementUsage();
-                index(lastIndex);
-            } catch (IOException e) {
-                throw new AssertionError(e);
-            }
-
+            super.toEnd();
             return this;
         }
     }
