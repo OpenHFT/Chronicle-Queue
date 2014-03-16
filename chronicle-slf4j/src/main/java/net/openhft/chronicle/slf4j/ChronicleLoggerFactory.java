@@ -16,6 +16,8 @@
 package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
+import net.openhft.chronicle.slf4j.rw.BinaryChronicleLogWriter;
+import net.openhft.chronicle.slf4j.rw.TextChronicleLogWriter;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
@@ -77,7 +79,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
             String    path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
             Boolean   append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
             String    levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
-            String    type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
+            String    type   = this.cfg.getString(name,ChronicleLoggingConfig.KEY_FORMAT);
             int       level  = ChronicleLoggingHelper.stringToLevel(levels);
             Throwable error  = null;
 
@@ -85,7 +87,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
             if(path != null) {
                 writer = this.writers.get(path);
                 if(writer == null) {
-                    if(ChronicleLoggingConfig.TYPE_BINARY.equalsIgnoreCase(type)) {
+                    if(ChronicleLoggingConfig.FORMAT_BINARY.equalsIgnoreCase(type)) {
                         try {
                             writer = new BinaryChronicleLogWriter(
                                 path,
@@ -95,7 +97,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                             error = e;
                             writer = null;
                         }
-                    } else if(ChronicleLoggingConfig.TYPE_TEXT.equalsIgnoreCase(type)) {
+                    } else if(ChronicleLoggingConfig.FORMAT_TEXT.equalsIgnoreCase(type)) {
                         try {
                             writer = new TextChronicleLogWriter(
                                 path,

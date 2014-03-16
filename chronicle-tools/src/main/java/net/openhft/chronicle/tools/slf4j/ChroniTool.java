@@ -16,6 +16,8 @@
 package net.openhft.chronicle.tools.slf4j;
 
 import net.openhft.chronicle.slf4j.*;
+import net.openhft.chronicle.slf4j.rw.AbstractBinaryChronicleLogReader;
+import net.openhft.chronicle.slf4j.rw.AbstractTextChronicleLogReader;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

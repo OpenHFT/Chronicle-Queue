@@ -158,7 +158,6 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         reader.close();
     }
 
-    @Ignore
     @Test
     public void testTextLogging1() throws IOException {
         Logger l = LoggerFactory.getLogger("Text1");

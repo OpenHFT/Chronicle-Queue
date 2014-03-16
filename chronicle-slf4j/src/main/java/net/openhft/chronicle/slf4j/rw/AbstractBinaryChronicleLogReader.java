@@ -13,16 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.slf4j;
+package net.openhft.chronicle.slf4j.rw;
 
+import net.openhft.chronicle.slf4j.ChronicleLogReader;
 import net.openhft.lang.io.Bytes;
+
+import java.util.Date;
 
 /**
  *
  */
-public abstract class AbstractTextChronicleLogReader implements ChronicleLogReader {
+public abstract class AbstractBinaryChronicleLogReader implements ChronicleLogReader {
     @Override
     public void process(Bytes bytes) {
-        //TODO
+        Date   ts    = new Date(bytes.readLong());
+        int    level = bytes.readByte();
+        long   tid   = bytes.readLong();
+        String tname = bytes.readEnum(String.class);
+        String name  = bytes.readEnum(String.class);
+        String msg   = bytes.readEnum(String.class);
+
+        this.read(ts,level,tid,tname,name,msg,null);
     }
 }

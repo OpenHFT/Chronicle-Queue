@@ -17,10 +17,12 @@ package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.Chronicle;
 
+import java.io.Closeable;
+
 /**
  *
  */
-public interface ChronicleLogWriter {
+public interface ChronicleLogWriter extends Closeable {
     /**
      *
      * @return

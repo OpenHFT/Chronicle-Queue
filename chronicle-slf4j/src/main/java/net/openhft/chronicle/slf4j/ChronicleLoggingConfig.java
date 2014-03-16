@@ -33,11 +33,12 @@ import java.util.Properties;
  *   slf4j.chronicle.base = ${java.io.tmpdir}/chronicle/${today}/${pid}
  *
  *   # logger : root
+ *   slf4j.chronicle.type      = vanilla
  *   slf4j.chronicle.path      = ${slf4j.chronicle.base}/root
  *   slf4j.chronicle.level     = debug
  *   slf4j.chronicle.shortName = false
  *   slf4j.chronicle.append    = false
- *   slf4j.chronicle.type      = binary
+ *   slf4j.chronicle.format    = binary
  *
  *   # logger : Logger1
  *   slf4j.chronicle.logger.Logger1.path = ${slf4j.chronicle.base}/logger_1
@@ -51,10 +52,13 @@ public class ChronicleLoggingConfig {
     public static final String KEY_PATH                 = "path";
     public static final String KEY_SHORTNAME            = "shortName";
     public static final String KEY_APPEND               = "append";
+    public static final String KEY_FORMAT               = "format";
     public static final String KEY_TYPE                 = "type";
     public static final String KEY_DATE_FORMAT          = "dateFormat";
-    public static final String TYPE_BINARY              = "binary";
-    public static final String TYPE_TEXT                = "text";
+    public static final String FORMAT_BINARY            = "binary";
+    public static final String FORMAT_TEXT              = "text";
+    public static final String TYPE_VANILLA             = "vanilla";
+    public static final String TYPE_INDEXED             = "indexed";
     public static final String PLACEHOLDER_START        = "${";
     public static final String PLACEHOLDER_END          = "}";
     public static final String PLACEHOLDER_TODAY        = "${today}";
