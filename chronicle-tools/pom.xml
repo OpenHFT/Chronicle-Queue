@@ -14,6 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.11</junit.version>
         <slf4j.version>1.7.6</slf4j.version>
+        <jcommander.version>1.35</jcommander.version>
         <openhft.affinity.version>2.0.1</openhft.affinity.version>
         <openhft.chronicle.version>${project.version}</openhft.chronicle.version>
     </properties>
@@ -23,6 +24,12 @@
     <!-- ******************************************************************* -->
 
     <dependencies>
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>${jcommander.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
@@ -43,6 +50,8 @@
             <artifactId>chronicle-slf4j</artifactId>
             <version>${openhft.chronicle.version}</version>
         </dependency>
+
+
 
         <!-- modules for testing -->
         <dependency>
