@@ -20,7 +20,7 @@ import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
 import java.io.*;

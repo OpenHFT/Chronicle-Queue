@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.nio.ByteOrder;
 

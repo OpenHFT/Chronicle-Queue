@@ -18,7 +18,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.jetbrains.annotations.Nullable;
+import net.openhft.lang.model.constraints.Nullable;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;

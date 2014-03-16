@@ -19,8 +19,8 @@ package net.openhft.chronicle.tools;
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.*;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.model.constraints.Nullable;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -1204,5 +1204,15 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public int refCount() {
         return common.refCount();
+    }
+
+    @Override
+    public void toString(Appendable sb, long start, long position, long end) {
+        common.toString(sb, start, position, end);
+    }
+
+    @Override
+    public void alignPositionAddr(int alignment) {
+        common.alignPositionAddr(alignment);
     }
 }

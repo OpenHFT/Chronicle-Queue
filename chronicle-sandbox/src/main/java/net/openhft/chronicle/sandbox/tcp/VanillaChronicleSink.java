@@ -20,8 +20,8 @@ import net.openhft.chronicle.*;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.model.constraints.Nullable;
 
 import java.io.EOFException;
 import java.io.IOException;

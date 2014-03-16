@@ -21,7 +21,7 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Ignore;
 import org.junit.Test;
 

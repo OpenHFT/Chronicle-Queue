@@ -17,7 +17,7 @@
 package vanilla.java.processingengine;
 
 import net.openhft.affinity.AffinityLock;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.PrintStream;
 /* e.g.

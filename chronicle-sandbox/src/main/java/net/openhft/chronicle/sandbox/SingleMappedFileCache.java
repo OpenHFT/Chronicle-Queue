@@ -18,8 +18,8 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.MapUtils;
 import net.openhft.chronicle.MappedFileCache;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.model.constraints.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;

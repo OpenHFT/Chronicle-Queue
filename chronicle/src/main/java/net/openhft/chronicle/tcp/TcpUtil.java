@@ -16,7 +16,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
