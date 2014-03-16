@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.tools.slf4j;
 
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
 
@@ -30,25 +31,32 @@ public class ChroniCat extends ChroniTool {
     public static void main(String[] args) {
         try {
             boolean binary = true;
+            boolean indexed = false;
 
             //TODO add more options
             for(int i=0;i<args.length - 1;i++) {
                 if("-t".equals(args[i])) {
                     binary = false;
                 }
+                if("-i".equals(args[i])) {
+                    indexed = false;
+                }
             }
 
             if(args.length >= 1) {
                 ChronicleProcessor cp = new ChronicleProcessor(
-                    new VanillaChronicle(args[args.length - 1]),
+                    indexed
+                        ? new IndexedChronicle(args[args.length - 1])
+                        : new VanillaChronicle(args[args.length - 1]),
                     binary ? BINARY : TEXT);
 
                 cp.run(false);
                 cp.close();
 
             } else {
-                System.err.format("\nUsage: ChroniCat [-t] path");
+                System.err.format("\nUsage: ChroniCat [-t|-i] path");
                 System.err.format("\n  -t = text chronicle, default binary");
+                System.err.format("\n  -i = IndexedCronicle, default VanillaChronicle");
             }
         } catch(Exception e) {
             e.printStackTrace(System.err);

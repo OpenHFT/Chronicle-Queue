@@ -93,7 +93,7 @@ public class ChroniDump {
                     indexed
                         ? new IndexedChronicle(args[args.length - 1])
                         : new VanillaChronicle(args[args.length - 1]),
-                        HEXDUMP);
+                    HEXDUMP);
 
                 cp.run(false);
                 cp.close();
