@@ -17,8 +17,6 @@ package net.openhft.chronicle.slf4j.impl;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.slf4j.ChronicleLogWriter;
 import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
@@ -33,25 +31,21 @@ import java.util.Date;
  */
 public class TextChronicleLogWriter implements ChronicleLogWriter {
 
-    private final String path;
     private final String dateFormat;
-    private final boolean append;
-    private final VanillaChronicle chronicle;
+    private final Chronicle chronicle;
     private final ExcerptAppender appender;
     private final ThreadLocal<DateFormat> dateFormatCache;
 
     /**
+     * c-tor
      *
-     * @param path
+     * @param chronicle
      * @param dateFormat
-     * @param append
-     * @param config
+     * @throws IOException
      */
-    public TextChronicleLogWriter(String path, String dateFormat, boolean append, VanillaChronicleConfig config) throws IOException {
-        this.path = path;
-        this.append = append;
+    public TextChronicleLogWriter(Chronicle chronicle, String dateFormat) throws IOException {
         this.dateFormat = dateFormat != null ? dateFormat : ChronicleLoggingConfig.DEFAULT_DATE_FORMAT;
-        this.chronicle = new VanillaChronicle(path,config);
+        this.chronicle = chronicle;
         this.appender = this.chronicle.createAppender();
         this.dateFormatCache = new ThreadLocal<DateFormat>() {
             @Override
@@ -59,10 +53,6 @@ public class TextChronicleLogWriter implements ChronicleLogWriter {
                 return new SimpleDateFormat(TextChronicleLogWriter.this.dateFormat);
             }
         };
-
-        if(!append) {
-            this.chronicle.clear();
-        }
     }
 
     @Override

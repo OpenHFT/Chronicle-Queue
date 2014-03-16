@@ -17,8 +17,6 @@ package net.openhft.chronicle.slf4j.impl;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.slf4j.ChronicleLogWriter;
 
 import java.io.IOException;
@@ -28,26 +26,17 @@ import java.io.IOException;
  */
 public class BinaryChronicleLogWriter implements ChronicleLogWriter {
 
-    private final String path;
-    private final boolean append;
-    private final VanillaChronicle chronicle;
+    private final Chronicle chronicle;
     private final ExcerptAppender appender;
 
     /**
      *
-     * @param path
-     * @param append
-     * @param config
+     * @param chronicle
+     * @throws IOException
      */
-    public BinaryChronicleLogWriter(String path, boolean append, VanillaChronicleConfig config) throws IOException {
-        this.path = path;
-        this.append = append;
-        this.chronicle = new VanillaChronicle(path,config);
+    public BinaryChronicleLogWriter(Chronicle chronicle) throws IOException {
+        this.chronicle = chronicle;
         this.appender = this.chronicle.createAppender();
-
-        if(!append) {
-            this.chronicle.clear();
-        }
     }
 
     @Override

@@ -15,13 +15,19 @@
  */
 package net.openhft.chronicle.slf4j;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.slf4j.impl.BinaryChronicleLogWriter;
 import net.openhft.chronicle.slf4j.impl.TextChronicleLogWriter;
+import net.openhft.chronicle.tools.ChronicleTools;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +50,7 @@ import java.util.Map;
  *     <li><code>slf4j.chronicle.level</code></li>
  *     <li><code>slf4j.chronicle.shortName</code></li>
  *     <li><code>slf4j.chronicle.append</code></li>
+ *     <li><code>slf4j.chronicle.format</code></li>
  *     <li><code>slf4j.chronicle.type</code></li>
  * </ul>
  *
@@ -62,6 +69,10 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
         this.cfg = ChronicleLoggingConfig.load();
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     /**
      * Return an appropriate {@link ChronicleLogger} instance by name.
      *
@@ -70,7 +81,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     @Override
     public synchronized Logger getLogger(String name) {
         if(this.cfg == null) {
-            System.err.println("chroncile-slf4j is not configured");
+            System.err.println("chronicle-slf4j is not configured");
             return NOPLogger.NOP_LOGGER;
         }
 
@@ -90,9 +101,8 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                     if(ChronicleLoggingConfig.FORMAT_BINARY.equalsIgnoreCase(type)) {
                         try {
                             writer = new BinaryChronicleLogWriter(
-                                path,
-                                append != null ? append : true,
-                                VanillaChronicleConfig.DEFAULT);
+                                newVanillaChronicle(path,append != null ? append : true)
+                            );
                         } catch(IOException e) {
                             error = e;
                             writer = null;
@@ -100,10 +110,9 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                     } else if(ChronicleLoggingConfig.FORMAT_TEXT.equalsIgnoreCase(type)) {
                         try {
                             writer = new TextChronicleLogWriter(
-                                path,
-                                this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT),
-                                append != null ? append : true,
-                                VanillaChronicleConfig.DEFAULT);
+                                newVanillaChronicle(path,append != null ? append : true),
+                                this.cfg.getString(name,ChronicleLoggingConfig.KEY_DATE_FORMAT)
+                            );
                         } catch(IOException e) {
                             error = e;
                             writer = null;
@@ -176,6 +185,43 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                 System.err.println(e.getMessage());
             }
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * Make a VanillaChronicle with default configuration;
+     *
+     * @param path
+     * @param append
+     * @return
+     */
+    private Chronicle newVanillaChronicle(String path, boolean append) throws IOException {
+        VanillaChronicle chronicle = new VanillaChronicle(path,VanillaChronicleConfig.DEFAULT);
+        if(!append) {
+            chronicle.clear();
+        }
+
+        return chronicle;
+    }
+
+    /**
+     * Make an IndexedChronicle with default configuration;
+     *
+     * @param path
+     * @param append
+     * @return
+     */
+    private Chronicle newIndexedChronicle(String path, boolean append)  throws IOException {
+        IndexedChronicle chronicle = new IndexedChronicle(path, ChronicleConfig.DEFAULT);
+        if(!append) {
+            new File(path + ".data" ).delete();
+            new File(path + ".index").delete();
+        }
+
+        return chronicle;
     }
 }
 
