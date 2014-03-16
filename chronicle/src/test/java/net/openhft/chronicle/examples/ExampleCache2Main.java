@@ -23,7 +23,7 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.serialization.BytesMarshallable;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
 

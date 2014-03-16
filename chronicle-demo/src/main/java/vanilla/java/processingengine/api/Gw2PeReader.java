@@ -17,7 +17,7 @@
 package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptTailer;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 /**
  * @author peter.lawrey

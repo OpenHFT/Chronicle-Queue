@@ -26,7 +26,7 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.serialization.BytesMarshallable;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
 import java.util.Random;
@@ -74,10 +74,10 @@ public class CachePerfMain {
         StringBuilder surname = new StringBuilder();
         Person person = new Person(name, surname, 0);
         for (int i = 0; i < 2; i++) {
-        	duration = putTest(keys, "base", map);
-        		System.out.printf(i
-        				+ "th iter: Took %.3f secs to put seq %,d entries%n",
-        				duration / 1e9, keys); 
+            duration = putTest(keys, "base", map);
+            System.out.printf(i
+                    + "th iter: Took %.3f secs to put seq %,d entries%n",
+                    duration / 1e9, keys);
         }
 
 
@@ -99,43 +99,43 @@ public class CachePerfMain {
                     + "th iter: Took %.3f secs to get random %,d entries%n",
                     duration / 1e9, keys);
         }
-        
+
         for (int i = 0; i < 2; i++) {
-        	      duration = putTest(keys, "modif", map);
-        	      System.out
-        	          .printf(i
-        	              + "th iter: Took %.3f secs to update random %,d entries%n",
-        	              duration / 1e9, keys);
-        } 
+            duration = putTest(keys, "modif", map);
+            System.out
+                    .printf(i
+                            + "th iter: Took %.3f secs to update random %,d entries%n",
+                            duration / 1e9, keys);
+        }
 
 
     }
 
-  static long putTest(int keycount, String prefix, CachePerfMain map) {
-      long start = System.nanoTime();
-  
-      StringBuilder name = new StringBuilder();
-      StringBuilder surname = new StringBuilder();
-      Person person = new Person(name, surname, 0);
-      for (int i = 0; i < keys; i++) {
-        name.setLength(0);
-        name.append(prefix);
-        name.append("name");
-        name.append(i);
-  
-        surname.setLength(0);
-        surname.append(prefix);
-        surname.append("surname");
-        surname.append(i);
-  
-        person.set_age(i % 100);
-  
-        map.put(i, person);
-      }
-      return System.nanoTime() - start;
-  
-    } 
-    
+    static long putTest(int keycount, String prefix, CachePerfMain map) {
+        long start = System.nanoTime();
+
+        StringBuilder name = new StringBuilder();
+        StringBuilder surname = new StringBuilder();
+        Person person = new Person(name, surname, 0);
+        for (int i = 0; i < keys; i++) {
+            name.setLength(0);
+            name.append(prefix);
+            name.append("name");
+            name.append(i);
+
+            surname.setLength(0);
+            surname.append(prefix);
+            surname.append("surname");
+            surname.append(i);
+
+            person.set_age(i % 100);
+
+            map.put(i, person);
+        }
+        return System.nanoTime() - start;
+
+    }
+
     static void shufflelist() {
         Random rnd = new Random();
         int size = keyArray.length;
@@ -168,7 +168,7 @@ public class CachePerfMain {
     public void get(int key, Person person) {
 
         // Change reader position
-    	randomAccessor.index(keyIndex.get(key));
+        randomAccessor.index(keyIndex.get(key));
         // Read contents into byte buffer
         person.readMarshallable(randomAccessor);
 
@@ -178,34 +178,34 @@ public class CachePerfMain {
     }
 
     public void put(int key, Person person) {
-    	if (keyIndex.containsKey(key)) {
-    		// update existing record
-    		// Change accessor index to record.
-    		randomAccessor.index(keyIndex.get(key));
-    		// Override existing
-    		person.writeMarshallable(randomAccessor);
-    		
-    	} else { 
-    			
-		        // Start an excerpt with given chunksize
-		        appender.startExcerpt(_maxObjSize);
-		
-		        // Write the object bytes
-		        person.writeMarshallable(appender);
-		
-		        // pad it for later.
-		        appender.position(_maxObjSize);
-		
-		        // Get the position of the excerpt for further access.
-		        long index = appender.index();
-		
-		        // finish works as "commit" consider transactional
-		        // consistency between putting key to map and putting object to chronicle
-		        appender.finish();
-		
-		        // Put the position of the excerpt with its key to a map.
-		        keyIndex.put(key, (int) index);
-    		}
+        if (keyIndex.containsKey(key)) {
+            // update existing record
+            // Change accessor index to record.
+            randomAccessor.index(keyIndex.get(key));
+            // Override existing
+            person.writeMarshallable(randomAccessor);
+
+        } else {
+
+            // Start an excerpt with given chunksize
+            appender.startExcerpt(_maxObjSize);
+
+            // Write the object bytes
+            person.writeMarshallable(appender);
+
+            // pad it for later.
+            appender.position(_maxObjSize);
+
+            // Get the position of the excerpt for further access.
+            long index = appender.index();
+
+            // finish works as "commit" consider transactional
+            // consistency between putting key to map and putting object to chronicle
+            appender.finish();
+
+            // Put the position of the excerpt with its key to a map.
+            keyIndex.put(key, (int) index);
+        }
 
     }
 

@@ -21,7 +21,7 @@ import gnu.trove.map.hash.TObjectLongHashMap;
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
 import java.util.Collections;

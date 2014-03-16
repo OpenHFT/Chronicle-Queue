@@ -18,7 +18,7 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;

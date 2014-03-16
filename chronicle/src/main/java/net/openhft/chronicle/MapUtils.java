@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.MappedFile;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
 import java.nio.MappedByteBuffer;

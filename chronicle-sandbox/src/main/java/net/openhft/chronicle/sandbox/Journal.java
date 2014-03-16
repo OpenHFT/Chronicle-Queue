@@ -18,7 +18,7 @@ package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 /**
  * A Journal is a simplified Chronicle.  It is bounded in size and number, does not support random access and is designed for fast writes.

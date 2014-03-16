@@ -20,7 +20,7 @@ import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 import vanilla.java.processingengine.api.*;
 
 import java.io.IOException;

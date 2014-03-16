@@ -16,7 +16,7 @@
 
 package net.openhft.chronicle;
 
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.Closeable;
 import java.nio.MappedByteBuffer;

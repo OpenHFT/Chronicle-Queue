@@ -22,7 +22,7 @@ import net.openhft.lang.Maths;
 import net.openhft.lang.io.DirectBytes;
 import net.openhft.lang.io.DirectStore;
 import net.openhft.lang.io.NativeBytes;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.File;

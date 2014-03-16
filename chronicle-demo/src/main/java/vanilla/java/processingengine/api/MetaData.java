@@ -18,7 +18,7 @@ package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.lang.io.RandomDataOutput;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 /**
  * @author peter.lawrey

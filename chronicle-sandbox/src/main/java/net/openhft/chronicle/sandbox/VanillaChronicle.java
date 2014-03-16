@@ -23,7 +23,7 @@ import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -310,7 +310,7 @@ public class VanillaChronicle implements Chronicle {
             int cycle = cycle();
             int lastIndexFile = indexCache.lastIndexFile(cycle);
             try {
-                VanillaFile vfile = indexCache.indexFor(cycle,lastIndexFile,false);
+                VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
                 NativeBytes bytes = vfile.bytes();
                 long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
                 vfile.decrementUsage();
@@ -323,12 +323,12 @@ public class VanillaChronicle implements Chronicle {
         }
 
         protected void resetLastInfo() {
-            lastCycle      = Integer.MIN_VALUE;
+            lastCycle = Integer.MIN_VALUE;
             lastDailyCount = Integer.MIN_VALUE;
-            lastThreadId   = Integer.MIN_VALUE;
-            lastDataCount  = Integer.MIN_VALUE;
-            lastIndexFile  = null;
-            lastDataFile   = null;
+            lastThreadId = Integer.MIN_VALUE;
+            lastDataCount = Integer.MIN_VALUE;
+            lastIndexFile = null;
+            lastDataFile = null;
         }
     }
 

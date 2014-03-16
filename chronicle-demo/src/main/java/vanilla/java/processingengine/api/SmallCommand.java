@@ -18,23 +18,19 @@ package vanilla.java.processingengine.api;
 
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptMarshallable;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * @author peter.lawrey
  */
 public class SmallCommand implements ExcerptMarshallable {
     public final StringBuilder clientOrderId = new StringBuilder();
-    @Nullable
     public String instrument;
     public double price;
     public int quantity;
-    @Nullable
     public Side side;
 
     @Override
-    public void readMarshallable(@NotNull ExcerptCommon in) throws IllegalStateException {
+    public void readMarshallable(/*NotNull*/ ExcerptCommon in) throws IllegalStateException {
         // changes often.
         in.readUTFΔ(clientOrderId);
         // cachable.
@@ -45,7 +41,7 @@ public class SmallCommand implements ExcerptMarshallable {
     }
 
     @Override
-    public void writeMarshallable(@NotNull ExcerptCommon out) {
+    public void writeMarshallable(/*NotNull*/ ExcerptCommon out) {
         out.writeUTFΔ(clientOrderId);
         out.writeEnum(instrument);
         out.writeCompactDouble(price);

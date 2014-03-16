@@ -18,7 +18,7 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.IOTools;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
 import java.io.IOException;

@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 import sun.misc.Unsafe;
