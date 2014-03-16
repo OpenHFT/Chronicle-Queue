@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.slf4j.rw;
+package net.openhft.chronicle.slf4j.impl;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
@@ -21,7 +21,6 @@ import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.slf4j.ChronicleLogWriter;
 
-import java.io.Closeable;
 import java.io.IOException;
 
 /**

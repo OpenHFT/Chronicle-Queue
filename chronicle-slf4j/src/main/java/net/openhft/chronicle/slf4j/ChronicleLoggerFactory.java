@@ -16,8 +16,8 @@
 package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
-import net.openhft.chronicle.slf4j.rw.BinaryChronicleLogWriter;
-import net.openhft.chronicle.slf4j.rw.TextChronicleLogWriter;
+import net.openhft.chronicle.slf4j.impl.BinaryChronicleLogWriter;
+import net.openhft.chronicle.slf4j.impl.TextChronicleLogWriter;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
