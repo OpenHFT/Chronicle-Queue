@@ -18,6 +18,7 @@ package net.openhft.chronicle.osgi;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -35,7 +36,7 @@ import static org.ops4j.pax.exam.CoreOptions.*;
 
 /**
  * @author lburgazzoli
- *         <p/>
+ *         <p></p>
  *         Thank for adding OSGi testing to Chronicle.
  */
 @RunWith(PaxExam.class)
@@ -67,6 +68,7 @@ public class OSGiBundleTest extends OSGiTestBase {
     }
 
     @Test
+    @Ignore
     public void checkHelloBundle() {
         Boolean bundleFound = false;
         Boolean bundleActive = false;

@@ -37,7 +37,7 @@ import java.util.logging.Logger;
 /**
  * This listens to a ChronicleSource and copies new entries. This SInk can be any number of excerpt behind the source
  * and can be restart many times without losing data.
- * <p/>
+ * <p></p>
  * Can be used as a component with lower over head than ChronicleSink
  *
  * @author peter.lawrey
