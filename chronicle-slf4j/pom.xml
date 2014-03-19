@@ -63,10 +63,14 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.16</version>
                 <configuration>
+                    <forkCount>0</forkCount>
                     <systemPropertyVariables>
-                        <slf4j.chronicle.properties>
-                            ${project.basedir}/src/test/resources/slf4j.chronicle.properties
-                        </slf4j.chronicle.properties>
+                        <slf4j.chronicle.vanilla.properties>
+                            ${project.basedir}/src/test/resources/slf4j.chronicle.vanilla.properties
+                        </slf4j.chronicle.vanilla.properties>
+                        <slf4j.chronicle.indexed.properties>
+                            ${project.basedir}/src/test/resources/slf4j.chronicle.indexed.properties
+                        </slf4j.chronicle.indexed.properties>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

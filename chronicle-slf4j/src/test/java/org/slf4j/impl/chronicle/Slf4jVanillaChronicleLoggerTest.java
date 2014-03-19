@@ -22,7 +22,6 @@ import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,22 @@ import static org.junit.Assert.assertTrue;
 /**
  * TODO: add test case for text-logegrs
  */
-public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
+public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Before
+    public void setUp() {
+        System.setProperty(
+            "slf4j.chronicle.properties",
+            System.getProperty("slf4j.chronicle.vanilla.properties"));
+    }
+
+    @After
+    public void tearDown() {
+    }
 
     // *************************************************************************
     //
@@ -57,8 +71,8 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLogger() {
-        Logger l1 = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
-        Logger l2 = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
+        Logger l1 = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
+        Logger l2 = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
         Logger l3 = LoggerFactory.getLogger("Logger1");
         Logger l4 = LoggerFactory.getLogger("readwrite");
 
@@ -83,11 +97,11 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
         ChronicleLogger cl1 = (ChronicleLogger)l1;
 
         assertEquals(cl1.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
-        assertEquals(cl1.getName(),Slf4jChronicleLoggerTest.class.getName());
+        assertEquals(cl1.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
 
         ChronicleLogger cl2 = (ChronicleLogger)l2;
         assertEquals(cl2.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
-        assertEquals(cl2.getName(),Slf4jChronicleLoggerTest.class.getName());
+        assertEquals(cl2.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
 
         ChronicleLogger cl3 = (ChronicleLogger)l3;
         assertEquals(cl3.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_INFO);
@@ -174,7 +188,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLoggingPerf1() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
+        Logger l = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
 
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();
@@ -194,7 +208,7 @@ public class Slf4jChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLoggingPerf2() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jChronicleLoggerTest.class);
+        Logger l = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
 
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();

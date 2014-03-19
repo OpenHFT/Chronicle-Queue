@@ -78,77 +78,57 @@ public class ChronicleLoggingConfig {
         this.properties = properties;
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     /**
      *
+     * @param cfgPath
      * @return
      */
-    public static ChronicleLoggingConfig load() {
-        Properties tmpProperties = new Properties();
+    public static ChronicleLoggingConfig load(String cfgPath) {
+        Properties properties = new Properties();
 
         try {
-            String cfgPath = System.getProperty(KEY_PROPERTIES_FILE);
-            if(cfgPath == null) {
-                System.err.printf(
-                    "Unable to configure chroncile-slf4j, property %s is not defined\n",
-                    KEY_PROPERTIES_FILE);
-
-                return null;
-            }
-
             InputStream in = new FileInputStream(cfgPath);
 
             try {
-                tmpProperties.load(in);
+                properties.load(in);
                 in.close();
             } catch (IOException e) {
                 // ignored
             }
 
-            int amended = 0;
-            do{
-                amended = 0;
-                //TODO: re-engine
-                for(Map.Entry<Object,Object> entries : tmpProperties.entrySet()) {
-                    String val = tmpProperties.getProperty((String)entries.getKey());
-                    val = val.replace(PLACEHOLDER_TODAY, DATEFORMAT.format(new Date()));
-                    val = val.replace(PLACEHOLDER_PID, PID);
-
-                    int startIndex = 0;
-                    int endIndex = 0;
-
-                    do {
-                        startIndex = val.indexOf(PLACEHOLDER_START,endIndex);
-                        if(startIndex != -1) {
-                            endIndex = val.indexOf(PLACEHOLDER_END,startIndex);
-                            if(endIndex != -1) {
-                                String envKey = val.substring(startIndex+2,endIndex);
-                                String newVal = null;
-                                if(tmpProperties.containsKey(envKey)) {
-                                    newVal = tmpProperties.getProperty(envKey);
-                                } else if(System.getProperties().containsKey(envKey)){
-                                    newVal = System.getProperties().getProperty(envKey);
-                                }
-
-                                if(newVal != null) {
-                                    val = val.replace(PLACEHOLDER_START + envKey + PLACEHOLDER_END,newVal);
-                                    endIndex += newVal.length() - envKey.length() + 3;
-
-                                    amended++;
-                                }
-                            }
-                        }
-                    } while(startIndex != -1 && endIndex != -1 && endIndex < val.length());
-
-                    entries.setValue(val);
-                }
-            } while(amended > 0);
+            interpolate(properties);
 
         } catch(Exception e) {
             e.printStackTrace(System.err);
         }
 
-        return new ChronicleLoggingConfig(tmpProperties);
+        return new ChronicleLoggingConfig(properties);
     }
+
+    /**
+     *
+     * @return
+     */
+    public static ChronicleLoggingConfig load() {
+        String cfgPath = System.getProperty(KEY_PROPERTIES_FILE);
+        if(cfgPath == null) {
+            System.err.printf(
+                "Unable to configure chroncile-slf4j, property %s is not defined\n",
+                KEY_PROPERTIES_FILE);
+
+            return null;
+        }
+
+        return load(cfgPath);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     /**
      *
@@ -274,5 +254,54 @@ public class ChronicleLoggingConfig {
     public Short getShort(final String loggerName, final String shortName) {
         String prop = getString(loggerName,shortName);
         return (prop != null) ? Short.parseShort(prop) : null;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     *
+     * @param tmpProperties
+     */
+    private static void interpolate(final Properties tmpProperties) {
+        int amended = 0;
+        do{
+            amended = 0;
+            //TODO: re-engine
+            for(Map.Entry<Object,Object> entries : tmpProperties.entrySet()) {
+                String val = tmpProperties.getProperty((String)entries.getKey());
+                val = val.replace(PLACEHOLDER_TODAY, DATEFORMAT.format(new Date()));
+                val = val.replace(PLACEHOLDER_PID, PID);
+
+                int startIndex = 0;
+                int endIndex = 0;
+
+                do {
+                    startIndex = val.indexOf(PLACEHOLDER_START,endIndex);
+                    if(startIndex != -1) {
+                        endIndex = val.indexOf(PLACEHOLDER_END,startIndex);
+                        if(endIndex != -1) {
+                            String envKey = val.substring(startIndex+2,endIndex);
+                            String newVal = null;
+                            if(tmpProperties.containsKey(envKey)) {
+                                newVal = tmpProperties.getProperty(envKey);
+                            } else if(System.getProperties().containsKey(envKey)){
+                                newVal = System.getProperties().getProperty(envKey);
+                            }
+
+                            if(newVal != null) {
+                                val = val.replace(PLACEHOLDER_START + envKey + PLACEHOLDER_END,newVal);
+                                endIndex += newVal.length() - envKey.length() + 3;
+
+                                amended++;
+                            }
+                        }
+                    }
+                } while(startIndex != -1 && endIndex != -1 && endIndex < val.length());
+
+                entries.setValue(val);
+            }
+        } while(amended > 0);
     }
 }

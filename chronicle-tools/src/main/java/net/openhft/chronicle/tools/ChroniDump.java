@@ -84,7 +84,7 @@ public class ChroniDump {
             //TODO add more options
             for(int i=0;i<args.length - 1;i++) {
                 if("-i".equals(args[i])) {
-                    indexed = false;
+                    indexed = true;
                 }
             }
 

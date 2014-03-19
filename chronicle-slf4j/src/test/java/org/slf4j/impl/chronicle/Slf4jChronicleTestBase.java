@@ -65,16 +65,4 @@ public class Slf4jChronicleTestBase {
             + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
             + File.separator
             + "logger_1";
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
 }

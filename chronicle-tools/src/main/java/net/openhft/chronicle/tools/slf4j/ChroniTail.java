@@ -39,7 +39,7 @@ public class ChroniTail extends ChroniTool {
                     binary = false;
                 }
                 if("-i".equals(args[i])) {
-                    indexed = false;
+                    indexed = true;
                 }
             }
 

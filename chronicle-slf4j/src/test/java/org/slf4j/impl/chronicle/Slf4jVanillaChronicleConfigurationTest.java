@@ -26,15 +26,19 @@ import static org.junit.Assert.assertEquals;
 /**
  *
  */
-public class Slf4jChronicleConfigurationTest extends Slf4jChronicleTestBase {
+public class Slf4jVanillaChronicleConfigurationTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLoadProperties() {
-        ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load();
+        String cfgPath = System.getProperty("slf4j.chronicle.vanilla.properties");
+        ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load(cfgPath);
 
         assertEquals(
             new File(BASEPATH),
             new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
+        assertEquals(
+            ChronicleLoggingConfig.TYPE_VANILLA,
+            cfg.getString(ChronicleLoggingConfig.KEY_TYPE));
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
             cfg.getString(ChronicleLoggingConfig.KEY_LEVEL));
