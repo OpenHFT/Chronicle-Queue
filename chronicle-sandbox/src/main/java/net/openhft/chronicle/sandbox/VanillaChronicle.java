@@ -530,5 +530,12 @@ public class VanillaChronicle implements Chronicle {
         public void finish() {
             super.finish();
         }
+
+        //Must add this to get the correct capacity
+        @Override
+        public long capacity() {
+            return limitAddr - startAddr;
+        }
+
     }
 }

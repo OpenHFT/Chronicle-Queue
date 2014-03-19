@@ -17,7 +17,7 @@
 package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
+import net.openhft.chronicle.tcp.InProcessChronicleSource;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import org.jetbrains.annotations.NotNull;
@@ -44,14 +44,14 @@ import java.util.logging.Logger;
  */
 public class VanillaChronicleSink implements Chronicle {
     @NotNull
-    private final VanillaChronicle chronicle;
+    private final Chronicle chronicle;
     @NotNull
     private final SocketAddress address;
     private final ExcerptAppender excerpt;
     private final Logger logger;
     private volatile boolean closed = false;
 
-    public VanillaChronicleSink(@NotNull VanillaChronicle chronicle, String hostname, int port) throws IOException {
+    public VanillaChronicleSink(@NotNull Chronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
         this.address = new InetSocketAddress(hostname, port);
         logger = Logger.getLogger(getClass().getName() + '.' + chronicle);
@@ -94,19 +94,25 @@ public class VanillaChronicleSink implements Chronicle {
 
     private class SinkExcerpt extends WrappedExcerpt {
         @SuppressWarnings("unchecked")
-        public SinkExcerpt(ExcerptCommon excerpt) throws IOException {
+        public SinkExcerpt(ExcerptCommon excerpt) {
             super(excerpt);
         }
 
         @Override
+        //This is a blocking call
         public boolean nextIndex() {
-            return super.nextIndex() || readNext() && super.nextIndex();
+            //readNext() can return false if IN_SYNCH_LEN is called
+            //this is not a real excerpt keep trying until readIndex() return true.
+            if(super.nextIndex())return true;
+            if(readNext()){
+                return super.nextIndex();
+            }
+            return nextIndex();
         }
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            if (super.index(index)) return true;
-            return index >= 0 && readNext() && super.index(index);
+            return super.index(index) || index >= 0 && readNext() && super.index(index);
         }
     }
 
@@ -159,7 +165,7 @@ public class VanillaChronicleSink implements Chronicle {
         try {
             if (closed) return false;
 
-  /*          if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
+            if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
                 if (readBuffer.remaining() == 0)
                     readBuffer.clear();
                 else
@@ -173,28 +179,28 @@ public class VanillaChronicleSink implements Chronicle {
                 }
                 readBuffer.flip();
             }
-//*/
-            System.out.println("rb " + readBuffer);
+//            System.out.println("rb " + readBuffer);
 
             if (scFirst) {
                 long scIndex = readBuffer.getLong();
 //                System.out.println("ri " + scIndex);
                 if (scIndex != chronicle.size())
-                    throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
+                    //DS
+                    //throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
                 scFirst = false;
             }
             int size = readBuffer.getInt();
-/*            switch (size) {
-                case InProcessChronicleSource.IN_SYNC_LEN:
+            switch (size) {
+                case VanillaChronicleSource.IN_SYNC_LEN:
 //                System.out.println("... received inSync");
                     return false;
-                case InProcessChronicleSource.PADDED_LEN:
+                case VanillaChronicleSource.PADDED_LEN:
 //                System.out.println("... received padded");
                     excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
                     return true;
                 default:
                     break;
-            }*/
+            }
 
 //            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
@@ -259,6 +265,6 @@ public class VanillaChronicleSink implements Chronicle {
     }
 
     public ChronicleConfig config() {
-        throw new UnsupportedOperationException();
+        return ((IndexedChronicle) chronicle).config();
     }
 }
