@@ -16,15 +16,19 @@
 
 package net.openhft.chronicle.sandbox;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import org.junit.Test;
-
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 
+import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class VanillaChronicleTest {
@@ -464,6 +468,83 @@ public class VanillaChronicleTest {
             chronicle.close();
             chronicle.clear();
         }
+    }
+
+
+    @Test
+    public void testConcurrentAppend() throws Exception {
+        String basepath = System.getProperty("java.io.tmpdir") + "/testConcurrentAppend";
+
+        // Create with small data and index sizes so that the test frequently generates new files
+        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+                .dataBlockSize(64)
+                .indexBlockSize(64);
+        VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
+        chronicle.clear();
+
+        final int numberOfTasks = 2;
+        final int countPerTask = 1000;
+
+        // Create tasks that append to the index
+        final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+        int nextValue = countPerTask;
+        for (int i = 0; i < numberOfTasks; i++) {
+            final int endValue = nextValue + countPerTask;
+            tasks.add(createAppendTask(chronicle, nextValue, endValue));
+            nextValue = endValue;
+        }
+
+        // Execute tasks using a thread per task
+        TestTaskExecutionUtil.executeConcurrentTasks(tasks, 30000L);
+
+        // Verify that all values have been written
+        final ExcerptTailer tailer = chronicle.createTailer();
+        final Set<String> values = readAllValues(tailer);
+        assertEquals(createRangeDataSet(countPerTask, nextValue), values);
+        tailer.close();
+
+        chronicle.close();
+    }
+
+    private static Set<String> readAllValues(final ExcerptTailer tailer) {
+        final Set<String> values = new TreeSet<String>();
+        tailer.toStart();
+        while (tailer.nextIndex()) {
+            final String value = tailer.readUTF();
+            values.add(value);
+        }
+        return values;
+    }
+
+    private static Set<String> createRangeDataSet(final long start, final long end) {
+        final Set<String> values = new TreeSet<String>();
+        long counter = start;
+        while (counter < end) {
+            values.add("data-" + counter);
+            counter++;
+        }
+        return values;
+    }
+
+    private Callable<Void> createAppendTask(final VanillaChronicle chronicle, final int startValue, final int endValue) {
+        return new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                final ExcerptAppender appender = chronicle.createAppender();
+                try {
+                    int counter = startValue;
+                    while (counter < endValue) {
+                        appender.startExcerpt();
+                        appender.writeUTF("data-" + counter);
+                        appender.finish();
+                        counter++;
+                    }
+                } finally {
+                    appender.close();
+                }
+                return null;
+            }
+        };
     }
 
 }
