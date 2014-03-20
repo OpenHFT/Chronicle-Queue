@@ -19,6 +19,7 @@ package net.openhft.chronicle.sandbox;
 import org.junit.Test;
 
 import java.io.File;
+import net.openhft.lang.io.IOTools;
 
 import static org.junit.Assert.*;
 
@@ -61,4 +62,34 @@ public class VanillaIndexCacheTest {
         assertTrue(file0.getParentFile().delete());
         file0.getParentFile().getParentFile().delete();
     }
+
+    @Test
+    public void testLastIndexFile() throws Exception {
+        File dir = new File(System.getProperty("java.io.tmpdir"), "testLastIndexFile");
+        IOTools.deleteDir(dir.getAbsolutePath());
+
+        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        VanillaIndexCache cache = new VanillaIndexCache(dir.getAbsolutePath(), 10 + 3, dateCache);
+
+        int cycle = (int) (System.currentTimeMillis() / 1000);
+
+        // Check that the index file count starts at 0 when the data directory is empty
+        assertEquals(0, cache.lastIndexFile(cycle));
+
+        VanillaFile vanillaFile0 = cache.indexFor(cycle, 0, true);
+        assertEquals("index-0", vanillaFile0.file().getName());
+        vanillaFile0.decrementUsage();
+        assertEquals(0, cache.lastIndexFile(cycle));
+
+        VanillaFile vanillaFile1 = cache.indexFor(cycle, 1, true);
+        assertEquals("index-1", vanillaFile1.file().getName());
+        assertEquals(1, cache.lastIndexFile(cycle));
+
+        VanillaFile vanillaFile3 = cache.indexFor(cycle, 3, true);
+        assertEquals("index-3", vanillaFile3.file().getName());
+        assertEquals(3, cache.lastIndexFile(cycle));
+
+        IOTools.deleteDir(dir.getAbsolutePath());
+    }
+
 }
