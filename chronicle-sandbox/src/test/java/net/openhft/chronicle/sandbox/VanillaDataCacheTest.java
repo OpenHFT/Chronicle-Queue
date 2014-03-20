@@ -17,6 +17,7 @@
 package net.openhft.chronicle.sandbox;
 
 import net.openhft.affinity.AffinitySupport;
+import net.openhft.lang.io.IOTools;
 import org.junit.Test;
 
 import java.io.File;
@@ -90,5 +91,45 @@ public class VanillaDataCacheTest {
         }
         assertTrue(file0.getParentFile().delete());
         dir.delete();
+    }
+
+    @Test
+    public void testDataForLast() throws Exception {
+        File dir = new File(System.getProperty("java.io.tmpdir"), "testDataForLast");
+        IOTools.deleteDir(dir.getAbsolutePath());
+
+        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+
+        int cycle = (int) (System.currentTimeMillis() / 1000);
+        final int threadId = AffinitySupport.getThreadId();
+
+        // Check that the data file count starts at 0 when the data directory is empty
+        final VanillaFile vanillaFile0 = cache.dataForLast(cycle, threadId);
+        assertEquals("data-" + threadId + "-0", vanillaFile0.file().getName());
+        vanillaFile0.decrementUsage();
+
+        // Add some more data files into the directory - use discontinuous numbers to test reading
+        VanillaFile vanillaFile1 = cache.dataFor(cycle, threadId, 1, true);
+        vanillaFile1.decrementUsage();
+
+        VanillaFile vanillaFile2 = cache.dataFor(cycle, threadId, 2, true);
+        vanillaFile2.decrementUsage();
+
+        VanillaFile vanillaFile4 = cache.dataFor(cycle, threadId, 4, true);
+        vanillaFile4.decrementUsage();
+
+        cache.close();
+
+        // Open a new cache and check that it reads the existing data files that were created above
+        VanillaDataCache cache2 = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+
+        final VanillaFile lastVanillaFile = cache2.dataForLast(cycle, threadId);
+        assertEquals("data-" + threadId + "-4", lastVanillaFile.file().getName());
+        lastVanillaFile.decrementUsage();
+
+        cache2.close();
+
+        IOTools.deleteDir(dir.getAbsolutePath());
     }
 }
