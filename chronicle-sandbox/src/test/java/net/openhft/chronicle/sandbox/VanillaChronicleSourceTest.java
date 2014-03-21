@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSink;
@@ -30,10 +31,10 @@ import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleSourceTest {
     @Test
-    public void testReplication() throws IOException {
+     public void testReplication() throws IOException {
         int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/testReplication";
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplication";
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
         int localPort = chronicle.getLocalPort();
         VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
@@ -42,28 +43,90 @@ public class VanillaChronicleSourceTest {
             ExcerptAppender appender = chronicle.createAppender();
             ExcerptTailer tailer = chronicle2.createTailer();
 
-            //The first index from a VanillaChronicle is not 0
-//            assertEquals(-1L, tailer.index());
             for (int i = 0; i < RUNS; i++) {
-//                if ((i & 65535) == 0)
-//                    System.err.println("i: " + i);
-//                if (i == 88000)
-//                    Thread.yield();
-//                The following line spins waiting might need to fix
-//                assertFalse(tailer.nextIndex());
                 appender.startExcerpt();
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-//                chronicle.checkCounts(1, 2);
-//                assertTrue("i: " + i, tailer.nextIndex());
                 tailer.nextIndex();
-//                chronicle2.checkCounts(1, 2);
                 assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
                 assertEquals("i: " + i, value, tailer.parseLong());
                 assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
-//                chronicle2.checkCounts(1, 2);
+            }
+        } finally {
+            chronicle2.close();
+            chronicle.clear();
+        }
+    }
+
+
+    @Test
+    public void testReplicationWithRolling() throws Exception {
+        int RUNS = 500;
+
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling";
+        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.cycleLength(1000);
+        config.cycleFormat("yyyyMMddHHmmss");
+        config.entriesPerCycle(1L << 20);
+        config.indexBlockSize(16L << 10);
+        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 0);
+
+        int localPort = chronicle.getLocalPort();
+        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink", config), "localhost", localPort);
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle2.createTailer();
+
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                Thread.sleep(10);
+
+                tailer.nextIndex();
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+            }
+        } finally {
+            chronicle2.close();
+            chronicle.clear();
+        }
+    }
+
+
+    @Test
+    public void testReplicationWithRolling2() throws Exception {
+        int RUNS = 100;
+
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling2";
+        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.cycleLength(1000);
+        config.cycleFormat("yyyyMMddHHmmss");
+        config.entriesPerCycle(1L << 20);
+        config.indexBlockSize(16L << 10);
+        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 55555);
+        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink", config), "localhost", 55555);
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle2.createTailer();
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                Thread.sleep(100);
+
+                tailer.nextIndex();
+                long val = tailer.parseLong();
+                assertEquals("i: " + i, value, val);
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
             }
         } finally {
             chronicle2.close();

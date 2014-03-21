@@ -220,9 +220,10 @@ public class VanillaChronicle implements Chronicle {
                 int dailyCount = (int) ((nextIndex & entriesForCycleMask) >>> indexBlockLongsBits);
                 int dailyOffset = (int) (nextIndex & indexBlockLongsMask);
                 long indexValue;
+
                 boolean indexFileChange = false;
                 try {
-                    if (lastCycle != cycle || lastDailyCount != dailyCount) {
+                    if (lastCycle != cycle || lastDailyCount != dailyCount || lastIndexFile==null) {
                         if (lastIndexFile != null) {
                             lastIndexFile.decrementUsage();
                             lastIndexFile = null;
