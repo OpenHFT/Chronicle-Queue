@@ -22,6 +22,7 @@ import net.openhft.chronicle.slf4j.ChronicleLogger;
 import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
 import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
+import net.openhft.lang.io.IOTools;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,12 +59,16 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
         cld.relaod();
         cld.warmup();
+
+        System.out.println(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
     }
 
     @After
     public void tearDown() {
         ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
         cld.shutdown();
+
+        //IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
     }
 
     // *************************************************************************

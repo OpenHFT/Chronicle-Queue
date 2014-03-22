@@ -32,7 +32,7 @@ public class Slf4jChronicleTestBase {
     //
     // *************************************************************************
 
-    protected static String basePath(String type,String loggerName) {
+    protected static String basePath(String type) {
         return System.getProperty("java.io.tmpdir")
             + File.separator
             + "chronicle"
@@ -41,7 +41,11 @@ public class Slf4jChronicleTestBase {
             + File.separator
             + new SimpleDateFormat("yyyyMMdd").format(new Date())
             + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
+            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+    }
+
+    protected static String basePath(String type,String loggerName) {
+        return basePath(type)
             + File.separator
             + loggerName;
     }
