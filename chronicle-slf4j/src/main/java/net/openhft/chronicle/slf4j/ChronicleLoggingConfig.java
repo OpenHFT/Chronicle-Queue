@@ -52,6 +52,7 @@ public class ChronicleLoggingConfig {
     public static final String KEY_PATH                 = "path";
     public static final String KEY_SHORTNAME            = "shortName";
     public static final String KEY_APPEND               = "append";
+    public static final String KEY_SYNCHRONOUS          = "synchronous";
     public static final String KEY_FORMAT               = "format";
     public static final String KEY_TYPE                 = "type";
     public static final String KEY_DATE_FORMAT          = "dateFormat";
@@ -129,6 +130,7 @@ public class ChronicleLoggingConfig {
     // *************************************************************************
     //
     // *************************************************************************
+
 
     /**
      *

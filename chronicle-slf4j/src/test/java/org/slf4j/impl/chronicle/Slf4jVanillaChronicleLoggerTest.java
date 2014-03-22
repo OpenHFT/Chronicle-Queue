@@ -15,10 +15,12 @@
  */
 package org.slf4j.impl.chronicle;
 
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.slf4j.ChronicleLogger;
 import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
+import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
 import org.junit.After;
 import org.junit.Before;
@@ -52,10 +54,16 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         System.setProperty(
             "slf4j.chronicle.properties",
             System.getProperty("slf4j.chronicle.vanilla.properties"));
+
+        ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
+        cld.relaod();
+        cld.warmup();
     }
 
     @After
     public void tearDown() {
+        ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
+        cld.shutdown();
     }
 
     // *************************************************************************
@@ -98,17 +106,21 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
 
         assertEquals(cl1.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
         assertEquals(cl1.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
+        assertTrue(cl1.getWriter().getChronicle() instanceof VanillaChronicle);
 
         ChronicleLogger cl2 = (ChronicleLogger)l2;
         assertEquals(cl2.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
         assertEquals(cl2.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
+        assertTrue(cl2.getWriter().getChronicle() instanceof VanillaChronicle);
 
         ChronicleLogger cl3 = (ChronicleLogger)l3;
         assertEquals(cl3.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_INFO);
+        assertTrue(cl3.getWriter().getChronicle() instanceof VanillaChronicle);
         assertEquals(cl3.getName(),"Logger1");
 
         ChronicleLogger cl4 = (ChronicleLogger)l4;
         assertEquals(cl4.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
+        assertTrue(cl4.getWriter().getChronicle() instanceof VanillaChronicle);
         assertEquals(cl4.getName(),"readwrite");
     }
 
@@ -127,7 +139,7 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         l.warn("warn");
         l.error("error");
 
-        VanillaChronicle reader = new VanillaChronicle(BASEPATH_LOGGER_RW);
+        Chronicle reader = new VanillaChronicle(basePath(ChronicleLoggingConfig.TYPE_VANILLA,"readwrite"));
         ExcerptTailer tailer = reader.createTailer();
 
         // debug
@@ -246,39 +258,5 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         System.out.printf("testLoggingPerf3: took an average of %.1f us per entry\n",
             time / 1e3 / (RUNS * THREADS)
         );
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    /**
-     *
-     */
-    private class RunnableChronicle implements Runnable {
-        private final Logger logger;
-        private final int runs;
-
-        /**
-         *
-         * @param runs
-         * @param loggerName
-         */
-        public RunnableChronicle(int runs,String loggerName) {
-            this.logger = LoggerFactory.getLogger(loggerName);
-            this.runs = runs;
-        }
-
-        @Override
-        public void run() {
-            try {
-                for (int i = 0; i < this.runs; i++) {
-                    this.logger.info("runLoop {}",i);
-                    Thread.yield();
-                }
-            } catch (Exception e) {
-                this.logger.warn("Exception",e);
-            }
-        }
     }
 }

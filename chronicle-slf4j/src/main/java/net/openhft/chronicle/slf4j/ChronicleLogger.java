@@ -62,6 +62,14 @@ public class ChronicleLogger extends MarkerIgnoringBase {
         return this.level;
     }
 
+    /**
+     *
+     * @return
+     */
+    public ChronicleLogWriter getWriter() {
+        return this.writer;
+    }
+
     // *************************************************************************
     // TRACE
     // *************************************************************************

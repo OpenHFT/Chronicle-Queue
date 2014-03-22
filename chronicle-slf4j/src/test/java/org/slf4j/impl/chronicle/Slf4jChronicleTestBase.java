@@ -15,9 +15,8 @@
  */
 package org.slf4j.impl.chronicle;
 
-import net.openhft.lang.io.IOTools;
-import org.junit.After;
-import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.management.ManagementFactory;
@@ -33,36 +32,51 @@ public class Slf4jChronicleTestBase {
     //
     // *************************************************************************
 
-    public static final String BASEPATH =
-        System.getProperty("java.io.tmpdir")
+    protected static String basePath(String type,String loggerName) {
+        return System.getProperty("java.io.tmpdir")
             + File.separator
             + "chronicle"
+            + File.separator
+            + type
             + File.separator
             + new SimpleDateFormat("yyyyMMdd").format(new Date())
             + File.separator
             + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
             + File.separator
-            + "root";
+            + loggerName;
+    }
 
-    public static final String BASEPATH_LOGGER_RW =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + new SimpleDateFormat("yyyyMMdd").format(new Date())
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "readwrite";
+    // *************************************************************************
+    //
+    // *************************************************************************
 
-    public static final String BASEPATH_LOGGER_1 =
-        System.getProperty("java.io.tmpdir")
-            + File.separator
-            + "chronicle"
-            + File.separator
-            + new SimpleDateFormat("yyyyMMdd").format(new Date())
-            + File.separator
-            + ManagementFactory.getRuntimeMXBean().getName().split("@")[0]
-            + File.separator
-            + "logger_1";
+    /**
+     *
+     */
+    protected final class RunnableChronicle implements Runnable {
+        private final Logger logger;
+        private final int runs;
+
+        /**
+         *
+         * @param runs
+         * @param loggerName
+         */
+        public RunnableChronicle(int runs,String loggerName) {
+            this.logger = LoggerFactory.getLogger(loggerName);
+            this.runs = runs;
+        }
+
+        @Override
+        public void run() {
+            try {
+                for (int i = 0; i < this.runs; i++) {
+                    this.logger.info("runLoop {}",i);
+                    Thread.yield();
+                }
+            } catch (Exception e) {
+                this.logger.warn("Exception",e);
+            }
+        }
+    }
 }

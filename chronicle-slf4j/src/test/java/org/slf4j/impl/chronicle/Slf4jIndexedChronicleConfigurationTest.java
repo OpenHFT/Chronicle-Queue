@@ -34,11 +34,14 @@ public class Slf4jIndexedChronicleConfigurationTest extends Slf4jChronicleTestBa
         ChronicleLoggingConfig cfg = ChronicleLoggingConfig.load(cfgPath);
 
         assertEquals(
-            new File(BASEPATH),
+            new File(basePath(ChronicleLoggingConfig.TYPE_INDEXED,"root")),
             new File(cfg.getString(ChronicleLoggingConfig.KEY_PATH)));
         assertEquals(
             ChronicleLoggingConfig.TYPE_INDEXED,
             cfg.getString(ChronicleLoggingConfig.KEY_TYPE));
+        assertEquals(
+            ChronicleLoggingHelper.FALSE_S,
+            cfg.getString(ChronicleLoggingConfig.KEY_SYNCHRONOUS));
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,
             cfg.getString(ChronicleLoggingConfig.KEY_LEVEL));
@@ -49,13 +52,13 @@ public class Slf4jIndexedChronicleConfigurationTest extends Slf4jChronicleTestBa
             ChronicleLoggingHelper.FALSE_S,
             cfg.getString(ChronicleLoggingConfig.KEY_APPEND));
         assertEquals(
-            new File(BASEPATH_LOGGER_1),
+            new File(basePath(ChronicleLoggingConfig.TYPE_INDEXED,"logger_1")),
             new File(cfg.getString("Logger1",ChronicleLoggingConfig.KEY_PATH)));
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_INFO_S,
             cfg.getString("Logger1",ChronicleLoggingConfig.KEY_LEVEL));
         assertEquals(
-            new File(BASEPATH_LOGGER_RW),
+            new File(basePath(ChronicleLoggingConfig.TYPE_INDEXED,"readwrite")),
             new File(cfg.getString("readwrite",ChronicleLoggingConfig.KEY_PATH)));
         assertEquals(
             ChronicleLoggingHelper.LOG_LEVEL_DEBUG_S,

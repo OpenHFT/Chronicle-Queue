@@ -23,14 +23,12 @@ import net.openhft.chronicle.sandbox.VanillaChronicleConfig;
 import net.openhft.chronicle.slf4j.impl.BinaryChronicleLogWriter;
 import net.openhft.chronicle.slf4j.impl.SynchronizedChronicleLogWriter;
 import net.openhft.chronicle.slf4j.impl.TextChronicleLogWriter;
-import net.openhft.chronicle.tools.ChronicleTools;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -60,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChronicleLoggerFactory implements ILoggerFactory {
     private final Map<String,Logger> loggers;
     private final Map<String,ChronicleLogWriter> writers;
-    private final ChronicleLoggingConfig cfg;
+    private ChronicleLoggingConfig cfg;
 
     /**
      * c-tor
@@ -99,6 +97,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
             String    type   = this.cfg.getString(ChronicleLoggingConfig.KEY_TYPE);
             String    path   = this.cfg.getString(name, ChronicleLoggingConfig.KEY_PATH);
             Boolean   append = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_APPEND);
+            Boolean   synch  = this.cfg.getBoolean(name,ChronicleLoggingConfig.KEY_SYNCHRONOUS);
             String    levels = this.cfg.getString(name,ChronicleLoggingConfig.KEY_LEVEL);
             String    format = this.cfg.getString(name,ChronicleLoggingConfig.KEY_FORMAT);
             int       level  = ChronicleLoggingHelper.stringToLevel(levels);
@@ -110,7 +109,13 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                 writer = this.writers.get(path);
                 if(writer == null) {
                     try {
-                        writer = newWriter(name,type,format,path,append != null ? append : true);
+                        writer = newWriter(
+                            name,
+                            type,
+                            format,
+                            path,
+                            append != null ? append : true,
+                            synch != null ? synch : false);
                     } catch(IOException e) {
                         error = e;
                         writer = null;
@@ -182,9 +187,6 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      * close underlying Chronicles
      */
     public synchronized void shutdown() {
-        this.loggers.clear();
-        this.writers.clear();
-
         for(ChronicleLogWriter writer : this.writers.values()) {
             try {
                 writer.getChronicle().close();
@@ -192,6 +194,18 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
                 System.err.println(e.getMessage());
             }
         }
+
+        this.loggers.clear();
+        this.writers.clear();
+    }
+
+    /**
+     *
+     */
+    public synchronized void relaod() {
+        shutdown();
+
+        this.cfg = ChronicleLoggingConfig.load();
     }
 
     // *************************************************************************
@@ -205,19 +219,21 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      * @param format
      * @param path
      * @param append
+     * @param synchronous
+     *
      * @return
      * @throws IOException
      */
-    private ChronicleLogWriter newWriter(String name, String type, String format, String path, boolean append) throws IOException {
+    private ChronicleLogWriter newWriter(String name, String type, String format, String path, boolean append, boolean synchronous) throws IOException {
         ChronicleLogWriter writer = null;
 
         if(ChronicleLoggingConfig.FORMAT_BINARY.equalsIgnoreCase(format)) {
-            Chronicle chronicle = newChronicle(type,path,append);
+            Chronicle chronicle = newChronicle(type,path,append,synchronous);
             if(chronicle != null) {
                 writer = new BinaryChronicleLogWriter(chronicle);
             }
         } else if(ChronicleLoggingConfig.FORMAT_TEXT.equalsIgnoreCase(format)) {
-            Chronicle chronicle = newChronicle(type,path,append);
+            Chronicle chronicle = newChronicle(type,path,append,synchronous);
             if(chronicle != null) {
                 writer = new TextChronicleLogWriter(
                     chronicle,
@@ -242,14 +258,16 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      * @param type
      * @param path
      * @param append
+     * @param synchronous
+     *
      * @return
      * @throws IOException
      */
-    private Chronicle newChronicle(String type, String path, boolean append) throws IOException {
+    private Chronicle newChronicle(String type, String path, boolean append, boolean synchronous) throws IOException {
         if(ChronicleLoggingConfig.TYPE_INDEXED.equalsIgnoreCase(type)) {
-            return newIndexedChronicle(path,append);
+            return newIndexedChronicle(path, append, synchronous);
         } else if(ChronicleLoggingConfig.TYPE_VANILLA.equalsIgnoreCase(type)) {
-            return newVanillaChronicle(path, append);
+            return newVanillaChronicle(path, append, synchronous);
         }
 
         return null;
@@ -260,10 +278,15 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      *
      * @param path
      * @param append
+     * #param synchronous
+     *
      * @return
      */
-    private Chronicle newVanillaChronicle(String path, boolean append) throws IOException {
-        VanillaChronicle chronicle = new VanillaChronicle(path,VanillaChronicleConfig.DEFAULT);
+    private Chronicle newVanillaChronicle(String path, boolean append, boolean synchronous) throws IOException {
+        VanillaChronicle chronicle = new VanillaChronicle(
+            path,
+            new VanillaChronicleConfig().synchronous(synchronous));
+
         if(!append) {
             chronicle.clear();
         }
@@ -276,16 +299,19 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
      *
      * @param path
      * @param append
+     * @param synchronous
+     *
      * @return
      */
-    private Chronicle newIndexedChronicle(String path, boolean append)  throws IOException {
-        IndexedChronicle chronicle = new IndexedChronicle(path, ChronicleConfig.DEFAULT);
+    private Chronicle newIndexedChronicle(String path, boolean append, boolean synchronous)  throws IOException {
         if(!append) {
             new File(path + ".data" ).delete();
             new File(path + ".index").delete();
         }
 
-        return chronicle;
+        return new IndexedChronicle(
+            path,
+            ChronicleConfig.DEFAULT.clone().synchronousMode(synchronous));
     }
 }
 

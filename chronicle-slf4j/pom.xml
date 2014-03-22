@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.11</junit.version>
         <slf4j.version>1.7.6</slf4j.version>
-        <openhft.affinity.version>2.0.1</openhft.affinity.version>
+        <openhft.affinity.version>2.0.2-SNAPSHOT</openhft.affinity.version>
         <openhft.chronicle.version>${project.version}</openhft.chronicle.version>
     </properties>
 
