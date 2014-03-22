@@ -23,6 +23,7 @@ import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
 import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
 import net.openhft.chronicle.slf4j.impl.SynchronizedChronicleLogWriter;
+import net.openhft.lang.io.IOTools;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,6 +67,8 @@ public class Slf4jIndexedChronicleLoggerTest extends Slf4jChronicleTestBase {
     public void tearDown() {
         ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
         cld.shutdown();
+
+        IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_INDEXED));
     }
 
     // *************************************************************************

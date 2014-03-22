@@ -59,8 +59,6 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
         cld.relaod();
         cld.warmup();
-
-        System.out.println(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
     }
 
     @After
@@ -68,7 +66,7 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
         cld.shutdown();
 
-        //IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
+        IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
     }
 
     // *************************************************************************
