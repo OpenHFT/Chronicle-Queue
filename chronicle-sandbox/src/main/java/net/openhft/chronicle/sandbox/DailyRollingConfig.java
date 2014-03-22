@@ -51,8 +51,8 @@ public class DailyRollingConfig implements Cloneable {
     }
 
     DailyRollingConfig setTimeZone(TimeZone timeZone) {
-        if (timeZone.observesDaylightTime())
-            this.timeZone = timeZone;
+//        if (timeZone.observesDaylightTime())
+        this.timeZone = timeZone;
         return this;
     }
 
