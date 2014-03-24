@@ -5,6 +5,7 @@ chronicle-tools
   ``` 
     ChroniTail [-t] path
         -t = text chronicle, default binary
+        -i = IndexedCronicle, default VanillaChronicle
 
     mvn exec:java -Dexec.mainClass="net.openhft.chronicle.tools.slf4j.ChroniTail" -Dexec.args="..."
   ```
@@ -13,6 +14,7 @@ chronicle-tools
   ``` 
       ChroniCat [-t] path
         -t = text chronicle, default binary
+        -i = IndexedCronicle, default VanillaChronicle
 
       mvn exec:java -Dexec.mainClass="net.openhft.chronicle.tools.slf4j.ChroniCat" -Dexec.args="..."
   ``` 
