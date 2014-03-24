@@ -45,7 +45,7 @@ public class VanillaChronicleConfig {
         return cycleLength;
     }
 
-    public VanillaChronicleConfig indexBlockSize(int indexBlockSize) {
+    public VanillaChronicleConfig indexBlockSize(long indexBlockSize) {
         this.indexBlockSize = indexBlockSize;
         return this;
     }

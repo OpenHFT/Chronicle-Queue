@@ -377,4 +377,81 @@ public class VanillaChronicleTest {
 
         chronicle.close();
     }
+
+    @Test
+    public void testReplicationWithRollingFilesEverySecond() throws Exception {
+        int RUNS = 100;
+
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling";
+        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.cycleLength(1000);
+        config.cycleFormat("yyyyMMddHHmmss");
+        config.entriesPerCycle(1L << 20);
+        config.indexBlockSize(16L << 10);
+        VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                System.out.println("Sleeping " +i );
+                Thread.sleep(100);
+
+                tailer.nextIndex();
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+            }
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
+
+    @Test
+    public void testReplicationWithRollingFilesEverySecond2() throws Exception {
+        int RUNS = 10;
+
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling2";
+        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.cycleLength(1000);
+        config.cycleFormat("yyyyMMddHHmmss");
+        config.entriesPerCycle(1L << 20);
+        config.indexBlockSize(16L << 10);
+        VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                int value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                System.out.println("Sleeping " +i );
+                Thread.sleep(2000);
+            }
+
+            for (int i = 0; i < RUNS; i++) {
+                int value = 1000000000 + i;
+
+                tailer.nextIndex();
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+            }
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
+
 }

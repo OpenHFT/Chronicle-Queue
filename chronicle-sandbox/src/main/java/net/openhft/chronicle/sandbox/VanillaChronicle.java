@@ -218,6 +218,7 @@ public class VanillaChronicle implements Chronicle {
                 int dailyCount = (int) ((nextIndex & entriesForCycleMask) >>> indexBlockLongsBits);
                 int dailyOffset = (int) (nextIndex & indexBlockLongsMask);
                 long indexValue;
+                boolean indexFileChange = false;
                 try {
                     if (lastCycle != cycle || lastDailyCount != dailyCount) {
                         if (lastIndexFile != null) {
@@ -225,6 +226,7 @@ public class VanillaChronicle implements Chronicle {
                             lastIndexFile = null;
                         }
                         lastIndexFile = indexCache.indexFor(cycle, dailyCount, false);
+                        indexFileChange = true;
                         assert lastIndexFile.usage() > 1;
                         lastCycle = cycle;
                         lastDailyCount = dailyCount;
@@ -244,7 +246,7 @@ public class VanillaChronicle implements Chronicle {
                 long dataOffset0 = indexValue & (-1L >>> -48);
                 int dataCount = (int) (dataOffset0 >>> dataBlockSizeBits);
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
-                if (lastThreadId != threadId || lastDataCount != dataCount) {
+                if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
                     if (dataFile != null) {
                         dataFile.decrementUsage();
                         dataFile = null;
@@ -561,6 +563,12 @@ public class VanillaChronicle implements Chronicle {
             super.resetLastInfo();
             super.toEnd();
             return this;
+        }
+
+        //Must add this to get the correct capacity
+        @Override
+        public long capacity() {
+            return limitAddr - startAddr;
         }
     }
 }

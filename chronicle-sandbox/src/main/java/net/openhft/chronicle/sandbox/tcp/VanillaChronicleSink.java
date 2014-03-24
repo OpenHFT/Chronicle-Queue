@@ -105,7 +105,14 @@ public class VanillaChronicleSink implements Chronicle {
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            return super.index(index) || index >= 0 && readNext() && super.index(index);
+            //return super.index(index) || index >= 0 && readNext() && super.index(index);
+            //readNext() can return false if IN_SYNCH_LEN is called
+            //this is not a real excerpt keep trying until readIndex() return true.
+            if(super.nextIndex())return true;
+            if(readNext()){
+                return super.nextIndex();
+            }
+            return nextIndex();
         }
     }
 
@@ -158,7 +165,7 @@ public class VanillaChronicleSink implements Chronicle {
         try {
             if (closed) return false;
 
-  /*          if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
+            if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
                 if (readBuffer.remaining() == 0)
                     readBuffer.clear();
                 else
@@ -172,28 +179,28 @@ public class VanillaChronicleSink implements Chronicle {
                 }
                 readBuffer.flip();
             }
-//*/
-            System.out.println("rb " + readBuffer);
+
+            //System.out.println("rb " + readBuffer);
 
             if (scFirst) {
                 long scIndex = readBuffer.getLong();
 //                System.out.println("ri " + scIndex);
                 if (scIndex != chronicle.size())
-                    throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
+                    //throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
                 scFirst = false;
             }
             int size = readBuffer.getInt();
-/*            switch (size) {
-                case InProcessChronicleSource.IN_SYNC_LEN:
+//            switch (size) {
+//                case VanillaChronicleSource.IN_SYNC_LEN:
 //                System.out.println("... received inSync");
-                    return false;
-                case InProcessChronicleSource.PADDED_LEN:
+//                    return false;
+//                case VanillaChronicleSource.PADDED_LEN:
 //                System.out.println("... received padded");
-                    excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
-                    return true;
-                default:
-                    break;
-            }*/
+//                    excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);//
+//                    return true;
+//                default:
+//                    break;
+//            }
 
 //            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)

@@ -20,8 +20,8 @@ import net.openhft.chronicle.*;
 import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.NamedThreadFactory;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -29,20 +29,34 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up
+ * to.
+ * <p/>
+ * Can be used an in process component which wraps the underlying Chronicle and offers lower overhead than using
+ * ChronicleSource
+ *
+ * @author peter.lawrey
+ */
 public class VanillaChronicleSource implements Chronicle {
-    private static final int IN_SYNC_LEN = -128;
-    private static final int PADDED_LEN = -127;
+    static final int IN_SYNC_LEN = -128;
+    static final int PADDED_LEN = -127;
     private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
+    @NotNull
     private final VanillaChronicle chronicle;
     private final ServerSocketChannel server;
+    private final Selector selector;
     @NotNull
     private final String name;
     @NotNull
@@ -58,6 +72,9 @@ public class VanillaChronicleSource implements Chronicle {
         server = ServerSocketChannel.open();
         server.socket().setReuseAddress(true);
         server.socket().bind(new InetSocketAddress(port));
+        server.configureBlocking(false);
+        selector = Selector.open();
+        server.register(selector, SelectionKey.OP_ACCEPT);
         name = chronicle.name() + "@" + port;
         logger = Logger.getLogger(getClass().getName() + "." + name);
         service = Executors.newCachedThreadPool(new NamedThreadFactory(name, true));
@@ -89,6 +106,14 @@ public class VanillaChronicleSource implements Chronicle {
     @Override
     public String name() {
         return chronicle.name();
+    }
+
+    public int getLocalPort() {
+        return server.socket().getLocalPort();
+    }
+
+    public void clear() {
+        chronicle.clear();
     }
 
     @NotNull
@@ -125,21 +150,17 @@ public class VanillaChronicleSource implements Chronicle {
         try {
             chronicle.close();
             server.close();
+            service.shutdownNow();
+            service.awaitTermination(10000, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (IOException e) {
             logger.warning("Error closing server port " + e);
+        } catch (InterruptedException ie) {
+            logger.warning("Error shutting down service threads " + ie);
         }
     }
 
     public ChronicleConfig config() {
         throw new UnsupportedOperationException();
-    }
-
-    public int getLocalPort() {
-        return server.socket().getLocalPort();
-    }
-
-    public void clear() {
-        chronicle.clear();
     }
 
     private class Acceptor implements Runnable {
@@ -148,14 +169,22 @@ public class VanillaChronicleSource implements Chronicle {
             Thread.currentThread().setName(name + "-acceptor");
             try {
                 while (!closed) {
-                    SocketChannel socket = server.accept();
-                    service.execute(new Handler(socket));
+                    selector.select();
+                    Set<SelectionKey> keys = selector.keys();
+                    for (SelectionKey key : keys) {
+                        if (key.isAcceptable()) {
+                            SocketChannel socket = server.accept();
+                            socket.configureBlocking(true);
+                            service.execute(new Handler(socket));
+                        }
+                    }
                 }
             } catch (IOException e) {
                 if (!closed)
                     logger.log(Level.SEVERE, "Acceptor dying", e);
             } finally {
                 service.shutdown();
+                logger.log(Level.INFO, "Acceptor loop ended");
             }
         }
     }
@@ -180,7 +209,8 @@ public class VanillaChronicleSource implements Chronicle {
                 boolean first = true;
                 OUTER:
                 while (!closed) {
-                    while (!excerpt.index(index)) {
+                    //while (!excerpt.index(index)) {
+                    while (!excerpt.nextIndex()) {
                         long now = System.currentTimeMillis();
                         if (excerpt.wasPadding()) {
                             if (index >= 0) {
@@ -218,7 +248,7 @@ public class VanillaChronicleSource implements Chronicle {
 //                        System.out.println("wi " + index);
                         bb.putLong(excerpt.index());
                         first = false;
-                        remaining = size; // + TcpUtil.HEADER_SIZE;
+                        remaining = size + TcpUtil.HEADER_SIZE;
                     } else {
                         remaining = size + 4;
                     }
@@ -238,21 +268,25 @@ public class VanillaChronicleSource implements Chronicle {
                         bb.limit((int) remaining);
                         excerpt.read(bb);
                         int count = 1;
-                        while (excerpt.index(index + 1) && count++ < MAX_MESSAGE) {
-                            if (excerpt.wasPadding()) {
-                                index++;
-                                continue;
-                            }
-                            if (excerpt.remaining() + 4 >= bb.capacity() - bb.position())
-                                break;
-                            // if there is free space, copy another one.
-                            int size2 = (int) excerpt.capacity();
-//                            System.out.println("W+ "+size);
-                            bb.limit(bb.position() + size2 + 4);
-                            bb.putInt(size2);
-                            excerpt.read(bb);
+                        //DS
+                        //while (excerpt.index(index + 1) && count++ < MAX_MESSAGE) {
+                        while (count++ < MAX_MESSAGE) {
+                            if(excerpt.nextIndex()){
+                                if (excerpt.wasPadding()) {
+                                    index++;
+                                    continue;
+                                }
+                                if (excerpt.remaining() + 4 >= bb.capacity() - bb.position())
+                                    break;
+                                // if there is free space, copy another one.
+                                int size2 = (int) excerpt.capacity();
+                                //                            System.out.println("W+ "+size);
+                                bb.limit(bb.position() + size2 + 4);
+                                bb.putInt(size2);
+                                excerpt.read(bb);
 
-                            index++;
+                                index++;
+                            }
                         }
 
                         bb.flip();
