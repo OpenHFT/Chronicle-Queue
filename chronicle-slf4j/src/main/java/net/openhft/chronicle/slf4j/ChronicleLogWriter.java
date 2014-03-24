@@ -34,7 +34,7 @@ public interface ChronicleLogWriter extends Closeable {
      * @param level
      * @param name
      * @param message
-     * @param t
+     * @param args
      */
-    public void log(int level, String name, String message, Throwable t);
+    public void log(int level, String name, String message, Object... args);
 }

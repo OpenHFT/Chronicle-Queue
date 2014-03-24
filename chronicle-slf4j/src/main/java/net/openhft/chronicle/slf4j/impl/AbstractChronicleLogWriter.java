@@ -16,42 +16,38 @@
 package net.openhft.chronicle.slf4j.impl;
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.slf4j.ChronicleLogWriter;
 
-import java.io.Closeable;
 import java.io.IOException;
 
 /**
  *
  */
-public class SynchronizedChronicleLogWriter implements ChronicleLogWriter, Closeable {
-    private final ChronicleLogWriter writer;
-    private final Object sync;
+public abstract class AbstractChronicleLogWriter implements ChronicleLogWriter {
+
+    private final Chronicle chronicle;
+    protected final ExcerptAppender appender;
 
     /**
      *
-     * @param writer
+     * @param chronicle
+     * @throws java.io.IOException
      */
-    public SynchronizedChronicleLogWriter(final ChronicleLogWriter writer) {
-        this.writer = writer;
-        this.sync = new Object();
+    public AbstractChronicleLogWriter(Chronicle chronicle) throws IOException {
+        this.chronicle = chronicle;
+        this.appender = this.chronicle.createAppender();
     }
 
     @Override
     public Chronicle getChronicle() {
-        return this.writer.getChronicle();
-    }
-
-    @Override
-    public void log(int level, String name, String message, Throwable t) {
-        synchronized (this.sync) {
-            this.writer.log(level,name,message,t);
-        }
-
+        return this.chronicle;
     }
 
     @Override
     public void close() throws IOException {
-        this.writer.close();
+        if(this.chronicle != null) {
+            this.chronicle.close();
+        }
     }
 }

@@ -39,6 +39,7 @@ import java.util.Properties;
  *   slf4j.chronicle.shortName = false
  *   slf4j.chronicle.append    = false
  *   slf4j.chronicle.format    = binary
+ *   slf4j.chronicle.serialize = false
  *
  *   # logger : Logger1
  *   slf4j.chronicle.logger.Logger1.path = ${slf4j.chronicle.base}/logger_1
@@ -56,6 +57,7 @@ public class ChronicleLoggingConfig {
     public static final String KEY_FORMAT               = "format";
     public static final String KEY_TYPE                 = "type";
     public static final String KEY_DATE_FORMAT          = "dateFormat";
+    public static final String KEY_SERIALIZE            = "serialize";
     public static final String FORMAT_BINARY            = "binary";
     public static final String FORMAT_TEXT              = "text";
     public static final String TYPE_VANILLA             = "vanilla";
@@ -173,9 +175,32 @@ public class ChronicleLoggingConfig {
      * @param shortName
      * @return
      */
+    public Boolean getBoolean(final String shortName,boolean defval) {
+        String prop = getString(shortName);
+        return (prop != null) ? "true".equalsIgnoreCase(prop) : defval;
+    }
+
+    /**
+     *
+     * @param shortName
+     * @return
+     */
     public Boolean getBoolean(final String loggerName, final String shortName) {
         String prop = getString(loggerName,shortName);
         return (prop != null) ? "true".equalsIgnoreCase(prop) : null;
+    }
+
+    /**
+     *
+     * @param loggerName
+     * @param shortName
+     * @param defval
+     *
+     * @return
+     */
+    public Boolean getBoolean(final String loggerName, final String shortName,boolean defval) {
+        String prop = getString(loggerName,shortName);
+        return (prop != null) ? "true".equalsIgnoreCase(prop) : defval;
     }
 
     /**

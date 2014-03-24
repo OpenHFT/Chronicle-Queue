@@ -208,7 +208,7 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();
 
-            int items = 10000;
+            int items = 1000000;
             for (int i = 1; i <= items; i++) {
                 l.trace("something to slf4j ({}}",i);
             }
@@ -228,7 +228,7 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         for(int x=0;x<10;x++) {
             long start = System.nanoTime();
 
-            int items = 10000;
+            int items = 1000000;
             for (int i = 1; i <= items; i++) {
                 l.warn("something to slf4j ({})",i);
             }
@@ -243,7 +243,7 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     @Test
     public void testLoggingPerf3() throws IOException, InterruptedException {
-        final int RUNS = 20000;
+        final int RUNS = 1000000;
         final int THREADS = 4;
 
         final long start = System.nanoTime();
