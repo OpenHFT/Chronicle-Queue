@@ -220,7 +220,7 @@ public class VanillaChronicle implements Chronicle {
                 long indexValue;
                 boolean indexFileChange = false;
                 try {
-                    if (lastCycle != cycle || lastDailyCount != dailyCount) {
+                    if (lastCycle != cycle || lastDailyCount != dailyCount || lastIndexFile==null) {
                         if (lastIndexFile != null) {
                             lastIndexFile.decrementUsage();
                             lastIndexFile = null;
