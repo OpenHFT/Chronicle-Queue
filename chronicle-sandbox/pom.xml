@@ -33,9 +33,21 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <openhft.affinity.version>2.0.1</openhft.affinity.version>
+        <!--
+          maven-resources-plugin 2.6 fixes the following jira:
+            https://jira.codehaus.org/browse/MRESOURCES-140
+            [debug] execute contextualize
+        -->
+        <maven.plugin.resources.version>2.6</maven.plugin.resources.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>${maven.plugin.resources.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
@@ -55,5 +67,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.plugin.resources.version}</version>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
