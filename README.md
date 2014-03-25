@@ -20,4 +20,6 @@ For working examples, have a look at the unit tests and demo module.
 
 [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 
+[Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)
+
 [Forum for those learning about OpenHFT](https://groups.google.com/forum/?hl=en-GB#!forum/open-hft)
