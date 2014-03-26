@@ -57,11 +57,13 @@ public class ChronicleLoggingConfig {
     public static final String KEY_FORMAT               = "format";
     public static final String KEY_TYPE                 = "type";
     public static final String KEY_DATE_FORMAT          = "dateFormat";
-    public static final String KEY_SERIALIZE            = "serialize";
+    public static final String KEY_BINARY_MODE          = "binaryMode";
     public static final String FORMAT_BINARY            = "binary";
     public static final String FORMAT_TEXT              = "text";
     public static final String TYPE_VANILLA             = "vanilla";
     public static final String TYPE_INDEXED             = "indexed";
+    public static final String BINARY_MODE_FORMATTED    = "formatted";
+    public static final String BINARY_MODE_SERIALIZED   = "serialized";
     public static final String PLACEHOLDER_START        = "${";
     public static final String PLACEHOLDER_END          = "}";
     public static final String PLACEHOLDER_TODAY        = "${today}";

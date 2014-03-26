@@ -40,6 +40,9 @@ public class Slf4jVanillaChronicleConfigurationTest extends Slf4jChronicleTestBa
             ChronicleLoggingConfig.TYPE_VANILLA,
             cfg.getString(ChronicleLoggingConfig.KEY_TYPE));
         assertEquals(
+            ChronicleLoggingConfig.BINARY_MODE_FORMATTED,
+            cfg.getString(ChronicleLoggingConfig.KEY_BINARY_MODE));
+        assertEquals(
             ChronicleLoggingHelper.FALSE_S,
             cfg.getString(ChronicleLoggingConfig.KEY_SYNCHRONOUS));
         assertEquals(

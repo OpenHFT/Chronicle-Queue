@@ -40,6 +40,9 @@ public class Slf4jIndexedChronicleConfigurationTest extends Slf4jChronicleTestBa
             ChronicleLoggingConfig.TYPE_INDEXED,
             cfg.getString(ChronicleLoggingConfig.KEY_TYPE));
         assertEquals(
+            ChronicleLoggingConfig.BINARY_MODE_FORMATTED,
+            cfg.getString(ChronicleLoggingConfig.KEY_BINARY_MODE));
+        assertEquals(
             ChronicleLoggingHelper.FALSE_S,
             cfg.getString(ChronicleLoggingConfig.KEY_SYNCHRONOUS));
         assertEquals(

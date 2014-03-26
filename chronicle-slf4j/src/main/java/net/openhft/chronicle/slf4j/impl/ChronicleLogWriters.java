@@ -34,6 +34,8 @@ import java.util.Date;
  */
 public class ChronicleLogWriters {
 
+    public static final Object[] NULL_ARGS = new Object[] {};
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -41,9 +43,9 @@ public class ChronicleLogWriters {
     /**
      *
      */
-    public static final class BinarySerializingWriter extends AbstractChronicleLogWriter {
+    public static final class BinaryWriter extends AbstractChronicleLogWriter {
 
-        public BinarySerializingWriter(Chronicle chronicle) throws IOException {
+        public BinaryWriter(Chronicle chronicle) throws IOException {
             super(chronicle);
         }
 
@@ -64,7 +66,6 @@ public class ChronicleLogWriters {
         @Override
         public void log(int level, String name, String message, Object... args) {
             final Thread currentThread = Thread.currentThread();
-            final FormattingTuple tp = MessageFormatter.format(message, args);
 
             this.appender.startExcerpt();
             this.appender.writeLong(System.currentTimeMillis());
@@ -72,10 +73,11 @@ public class ChronicleLogWriters {
             this.appender.writeLong(currentThread.getId());
             this.appender.writeEnum(currentThread.getName());
             this.appender.writeEnum(name);
-            this.appender.writeEnum(tp.getMessage());
-
-            //TODO: write Throwable
-            //appender.writeEnum(t.getMessage());
+            this.appender.writeEnum(message);
+            this.appender.writeInt(args.length);
+            for(Object arg : args) {
+                this.appender.writeObject(arg);
+            }
 
             this.appender.finish();
         }

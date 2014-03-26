@@ -26,13 +26,19 @@ import java.util.Date;
 public abstract class AbstractBinaryChronicleLogReader implements ChronicleLogReader {
     @Override
     public void process(Bytes bytes) {
-        Date   ts    = new Date(bytes.readLong());
-        int    level = bytes.readByte();
-        long   tid   = bytes.readLong();
-        String tname = bytes.readEnum(String.class);
-        String name  = bytes.readEnum(String.class);
-        String msg   = bytes.readEnum(String.class);
+        Date     ts     = new Date(bytes.readLong());
+        int      level  = bytes.readByte();
+        long     tid    = bytes.readLong();
+        String   tname  = bytes.readEnum(String.class);
+        String   name   = bytes.readEnum(String.class);
+        String   msg    = bytes.readEnum(String.class);
+        int      nbargs = bytes.readInt();
+        Object[] args   = nbargs > 0 ? new Object[nbargs] : ChronicleLogWriters.NULL_ARGS;
 
-        this.read(ts,level,tid,tname,name,msg,null);
+        for(int i=0;i<nbargs;i++) {
+            args[i] = bytes.readObject();
+        }
+
+        this.read(ts,level,tid,tname,name,msg,args);
     }
 }

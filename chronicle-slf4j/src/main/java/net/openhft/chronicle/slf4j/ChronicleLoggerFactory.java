@@ -200,15 +200,15 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     private ChronicleLogWriter newWriter(String path, String name) throws IOException {
         ChronicleLogWriter writer = null;
 
-        String  type      = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
-        String  format    = this.cfg.getString(name,ChronicleLoggingConfig.KEY_FORMAT);
-        Boolean serialize = this.cfg.getBoolean(ChronicleLoggingConfig.KEY_SERIALIZE, false);
+        String type       = this.cfg.getString(name,ChronicleLoggingConfig.KEY_TYPE);
+        String format     = this.cfg.getString(name,ChronicleLoggingConfig.KEY_FORMAT);
+        String binaryMode = this.cfg.getString(ChronicleLoggingConfig.KEY_BINARY_MODE);
 
         if(ChronicleLoggingConfig.FORMAT_BINARY.equalsIgnoreCase(format)) {
             Chronicle chronicle = newChronicle(type,path,name);
             if(chronicle != null) {
-                writer = serialize
-                    ? new ChronicleLogWriters.BinarySerializingWriter(chronicle)
+                writer = ChronicleLoggingConfig.BINARY_MODE_SERIALIZED.equalsIgnoreCase(binaryMode)
+                    ? new ChronicleLogWriters.BinaryWriter(chronicle)
                     : new ChronicleLogWriters.BinaryFormattingWriter(chronicle);
             }
         } else if(ChronicleLoggingConfig.FORMAT_TEXT.equalsIgnoreCase(format)) {
