@@ -310,15 +310,19 @@ public class VanillaChronicle implements Chronicle {
             resetLastInfo();
 
             int cycle = cycle();
-            int lastIndexFile = indexCache.lastIndexFile(cycle);
-            try {
-                VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
-                NativeBytes bytes = vfile.bytes();
-                long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
-                vfile.decrementUsage();
-                index(lastIndex);
-            } catch (IOException e) {
-                throw new AssertionError(e);
+            int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
+            if(lastIndexFile >= 0) {
+                try {
+                    VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
+                    NativeBytes bytes = vfile.bytes();
+                    long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
+                    vfile.decrementUsage();
+                    index(lastIndex);
+                } catch (IOException e) {
+                    throw new AssertionError(e);
+                }
+            } else {
+                toStart();
             }
 
             return this;
