@@ -92,11 +92,24 @@ public class ChronicleConfig implements Cloneable {
         return useUnsafe;
     }
 
+    /**
+     * Sets the synchronous mode to be used. Enabling synchronous mode means that
+     * {@link ExcerptCommon#finish()} will force a persistence every time.
+     *
+     * @param synchronousMode If synchronous mode should be used or not.
+     *
+     * @return the same instance of {@link net.openhft.chronicle.ChronicleConfig} that
+     * the method was called upon.
+     */
     public ChronicleConfig synchronousMode(boolean synchronousMode) {
         this.synchronousMode = synchronousMode;
         return this;
     }
 
+    /**
+     * Checks if synchronous mode is enabled or not.
+     * @return true if synchronous mode is enabled, false otherwise.
+     */
     public boolean synchronousMode() {
         return synchronousMode;
     }

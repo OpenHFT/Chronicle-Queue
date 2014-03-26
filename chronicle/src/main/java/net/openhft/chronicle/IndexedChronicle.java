@@ -26,6 +26,18 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 
 /**
+ * {@link net.openhft.chronicle.IndexedChronicle} is a single-writer-multiple-reader
+ * {@link net.openhft.chronicle.Chronicle} that you can put huge numbers of objects in,
+ * having different sizes.
+ *
+ * <p>For each record, IndexedChronicle holds the memory-offset in another index cache
+ * for random access. This means IndexedChronicle "knows" where the Nth object resides at
+ * in memory, thus the name "Indexed".</p>
+ *
+ * <p>But this index is just sequential index, first object has index 0, second object has
+ * index 1, and so on. If you want to access objects with other logical keys
+ * you have to manage your own mapping from logical key to index.</p>
+ *
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {

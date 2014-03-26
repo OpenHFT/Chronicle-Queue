@@ -19,6 +19,8 @@ package net.openhft.chronicle;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
+ * The component that facilitates sequentially reading data from a {@link net.openhft.chronicle.Chronicle}.
+ *
  * @author peter.lawrey
  */
 public interface ExcerptTailer extends ExcerptCommon {
