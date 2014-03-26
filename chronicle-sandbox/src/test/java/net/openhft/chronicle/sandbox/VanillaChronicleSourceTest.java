@@ -47,14 +47,58 @@ public class VanillaChronicleSourceTest {
                 long value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                tailer.nextIndex();
-                assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
-                assertEquals("i: " + i, value, tailer.parseLong());
-                assertEquals("i: " + i, 0, tailer.remaining());
-                tailer.finish();
+                boolean nextIndex = tailer.nextIndex();
+                long val = tailer.parseLong();
+                System.out.println(val);
+                    assertEquals("i: " + i, value, val);
+                    assertEquals("i: " + i, 0, tailer.remaining());
+                    tailer.finish();
+
             }
         } finally {
             chronicle2.close();
+            chronicle.close();
+            chronicle2.clear();
+            chronicle.clear();
+        }
+    }
+
+
+    @Test
+    public void testReplication2() throws IOException {
+        int RUNS = 100;
+
+        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplication2";
+        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
+        int localPort = chronicle.getLocalPort();
+        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                long value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+            }
+
+            ExcerptTailer tailer = chronicle2.createTailer();
+            for (int i = 0; i < RUNS; i++) {
+                long value = 1000000000 + i;
+                boolean nextIndex = tailer.nextIndex();
+                long val = tailer.parseLong();
+                System.out.println(val);
+                assertEquals("i: " + i, value, val);
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+
+            }
+
+        } finally {
+            chronicle2.close();
+            chronicle.close();
+            chronicle2.clear();
             chronicle.clear();
         }
     }
@@ -92,8 +136,9 @@ public class VanillaChronicleSourceTest {
             }
         } finally {
             chronicle2.close();
-            chronicle.clear();
-        }
+            chronicle.close();
+            chronicle2.clear();
+            chronicle.clear();        }
     }
 
 
@@ -128,36 +173,8 @@ public class VanillaChronicleSourceTest {
             }
         } finally {
             chronicle2.close();
-            chronicle.clear();
-        }
-    }
-
-    @Test
-    public void write() throws Exception {
-        int RUNS = 100;
-
-        String basePath = "/tmp/testReplicationWithRolling2";
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.cycleLength(1000);
-        config.cycleFormat("yyyyMMddHHmmss");
-        config.entriesPerCycle(1L << 20);
-        config.indexBlockSize(16L << 10);
-        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 55555);
-
-        try {
-            ExcerptAppender appender = chronicle.createAppender();
-            for (int i = 0; i < RUNS; i++) {
-                appender.startExcerpt();
-                long value = 1000000000 + i;
-                appender.append(value).append(' ');
-                appender.finish();
-                Thread.sleep(100);
-
-            }
-            System.out.println("Written " + RUNS + " items");
-        } finally {
-            //chronicle.clear();
-            Thread.sleep(3000 * 1000);
-        }
+            chronicle.close();
+            chronicle2.clear();
+            chronicle.clear();        }
     }
 }

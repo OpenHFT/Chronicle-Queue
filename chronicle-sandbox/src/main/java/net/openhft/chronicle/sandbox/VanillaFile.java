@@ -43,6 +43,15 @@ public class VanillaFile implements Closeable {
         logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
         File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
+
+        if(!forAppend){
+            //This test needs to be done before any directories are created.
+            File f = new File(dir, name);
+            if(!f.exists()){
+                throw new FileNotFoundException(f.getAbsolutePath());
+            }
+        }
+
         if (!dir.isDirectory()) {
             boolean created = dir.mkdirs();
             if (logger.isLoggable(Level.FINE))

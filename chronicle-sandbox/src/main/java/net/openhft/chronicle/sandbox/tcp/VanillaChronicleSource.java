@@ -228,14 +228,15 @@ public class VanillaChronicleSource implements Chronicle {
                             continue;
                         }
 //                        System.out.println("Waiting for " + index);
-                        if (sendInSync <= now && !first) {
+                          //No need to send this message...
+/*                        if (sendInSync <= now && !first) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
                             bb.flip();
                             TcpUtil.writeAll(socket, bb);
                             sendInSync = now + HEARTBEAT_INTERVAL_MS;
                         }
-                        pause();
+*/                        pause();
                         if (closed) break OUTER;
                     }
                     pauseReset();

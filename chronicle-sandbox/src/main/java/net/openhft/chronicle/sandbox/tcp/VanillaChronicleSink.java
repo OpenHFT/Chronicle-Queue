@@ -190,17 +190,17 @@ public class VanillaChronicleSink implements Chronicle {
                 scFirst = false;
             }
             int size = readBuffer.getInt();
-//            switch (size) {
-//                case VanillaChronicleSource.IN_SYNC_LEN:
+            switch (size) {
+                case VanillaChronicleSource.IN_SYNC_LEN:
 //                System.out.println("... received inSync");
-//                    return false;
+                    return false;
 //                case VanillaChronicleSource.PADDED_LEN:
 //                System.out.println("... received padded");
 //                    excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);//
 //                    return true;
-//                default:
-//                    break;
-//            }
+                default:
+                    break;
+            }
 
 //            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
@@ -266,5 +266,9 @@ public class VanillaChronicleSink implements Chronicle {
 
     public ChronicleConfig config() {
         throw new UnsupportedOperationException();
+    }
+
+    public void clear() {
+        chronicle.clear();
     }
 }
