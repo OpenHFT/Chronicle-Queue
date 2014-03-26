@@ -76,9 +76,13 @@ public class VanillaIndexCache implements Closeable {
     }
 
     int lastIndexFile(int cycle) {
-        int maxIndex = 0;
-        File[] files = new File(dateCache.formatFor(cycle)).listFiles();
-        if (files != null)
+        return lastIndexFile(cycle,0);
+    }
+
+    int lastIndexFile(int cycle,int defaultCycle) {
+        int maxIndex = -1;
+        File[] files = new File(basePath,dateCache.formatFor(cycle)).listFiles();
+        if (files != null) {
             for (File file : files) {
                 String name = file.getName();
                 if (name.startsWith(INDEX)) {
@@ -87,11 +91,13 @@ public class VanillaIndexCache implements Closeable {
                         maxIndex = index;
                 }
             }
-        return maxIndex;
+        }
+
+        return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
     public VanillaFile append(int cycle, long indexValue, boolean synchronous) throws IOException {
-        for (int indexCount = lastIndexFile(cycle); indexCount < 10000; indexCount++) {
+        for (int indexCount = lastIndexFile(cycle,0); indexCount < 10000; indexCount++) {
             VanillaFile file = indexFor(cycle, indexCount, true);
             NativeBytes bytes = file.bytes();
             while (bytes.remaining() >= 8) {

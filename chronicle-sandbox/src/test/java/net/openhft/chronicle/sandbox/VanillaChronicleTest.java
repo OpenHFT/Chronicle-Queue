@@ -349,6 +349,11 @@ public class VanillaChronicleTest {
         ExcerptAppender appender = chronicle.createAppender();
         ExcerptTailer tailer = null;
 
+        // test a vanilla tailer, wind to end on an empty chronicle
+        tailer = chronicle.createTailer().toEnd();
+        assertFalse(tailer.nextIndex());
+
+        // add some data to the chronicle
         for(long i=0;i<3;i++) {
             appender.startExcerpt();
             appender.writeLong(i);
@@ -356,6 +361,13 @@ public class VanillaChronicleTest {
         }
 
         appender.close();
+
+        // test that the tailer now can tail
+        for(long i=0;i<3;i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            tailer.finish();
+        }
 
         // test a vanilla tailer, wind to end
         tailer = chronicle.createTailer().toEnd();
@@ -397,7 +409,7 @@ public class VanillaChronicleTest {
 
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
-                int value = 1000000000 + i;
+                long value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
                 System.out.println("Sleeping " +i );

@@ -8,7 +8,7 @@ It is available on maven central as
 &lt;dependency>
     &lt;groupId>net.openhft&lt;/groupId>
     &lt;artifactId>chronicle&lt;/artifactId>
-    &lt;version>2.0.1&lt;/version>
+    &lt;version>2.0.3&lt;/version>
 &lt;/dependency>
 </pre>
 
