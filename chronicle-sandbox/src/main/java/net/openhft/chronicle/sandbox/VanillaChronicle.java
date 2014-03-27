@@ -509,27 +509,14 @@ public class VanillaChronicle implements Chronicle {
             long indexValue = ((long) appenderThreadId << 48) + dataOffset;
 
             try {
-                boolean done = false;
-                if (lastIndexFile != null) {
-                    NativeBytes bytes = lastIndexFile.bytes();
-                    while (bytes.remaining() >= 8) {
-                        if (bytes.compareAndSwapLong(bytes.position(), 0L, indexValue)) {
-                            if (nextSynchronous)
-                                lastIndexFile.force();
-                            done = true;
-                            break;
-                        }
-                        bytes.position(bytes.position() + 8);
-                    }
-                }
-                if (!done) {
+                final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);
+                if (!appendDone) {
                     if (lastIndexFile != null) {
                         lastIndexFile.decrementUsage();
                         lastIndexFile = null;
                     }
 
                     lastIndexFile = indexCache.append(appenderCycle, indexValue, nextSynchronous);
-
                 }
             } catch (IOException e) {
                 throw new AssertionError(e);
