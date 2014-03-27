@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle;
+package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
-import net.openhft.chronicle.slf4j.ChronicleLogger;
-import net.openhft.chronicle.slf4j.ChronicleLoggerFactory;
-import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
-import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.slf4j.impl.ChronicleLogWriters;
 import net.openhft.lang.io.IOTools;
 import org.junit.After;
 import org.junit.Before;
@@ -31,20 +28,13 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
- * TODO: add test case for text-logegrs
+ *
  */
-public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
+public class Slf4jIndexedChronicleLoggerTest extends Slf4jChronicleTestBase {
 
     // *************************************************************************
     //
@@ -54,19 +44,18 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
     public void setUp() {
         System.setProperty(
             "slf4j.chronicle.properties",
-            System.getProperty("slf4j.chronicle.vanilla.properties"));
+            System.getProperty("slf4j.chronicle.indexed.properties")
+        );
 
-        ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
-        cld.relaod();
-        cld.warmup();
+        getChronicleLoggerFactory().relaod();
+        getChronicleLoggerFactory().warmup();
     }
 
     @After
     public void tearDown() {
-        ChronicleLoggerFactory cld = (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
-        cld.shutdown();
+        getChronicleLoggerFactory().shutdown();
 
-        IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_VANILLA));
+        IOTools.deleteDir(basePath(ChronicleLoggingConfig.TYPE_INDEXED));
     }
 
     // *************************************************************************
@@ -109,21 +98,25 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
 
         assertEquals(cl1.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
         assertEquals(cl1.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
-        assertTrue(cl1.getWriter().getChronicle() instanceof VanillaChronicle);
+        assertTrue(cl1.getWriter().getChronicle() instanceof IndexedChronicle);
+        assertTrue(cl1.getWriter() instanceof ChronicleLogWriters.SynchronizedWriter);
 
         ChronicleLogger cl2 = (ChronicleLogger)l2;
         assertEquals(cl2.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
         assertEquals(cl2.getName(),Slf4jVanillaChronicleLoggerTest.class.getName());
-        assertTrue(cl2.getWriter().getChronicle() instanceof VanillaChronicle);
+        assertTrue(cl2.getWriter().getChronicle() instanceof IndexedChronicle);
+        assertTrue(cl2.getWriter() instanceof ChronicleLogWriters.SynchronizedWriter);
 
         ChronicleLogger cl3 = (ChronicleLogger)l3;
         assertEquals(cl3.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_INFO);
-        assertTrue(cl3.getWriter().getChronicle() instanceof VanillaChronicle);
+        assertTrue(cl3.getWriter().getChronicle() instanceof IndexedChronicle);
+        assertTrue(cl3.getWriter() instanceof ChronicleLogWriters.SynchronizedWriter);
         assertEquals(cl3.getName(),"Logger1");
 
         ChronicleLogger cl4 = (ChronicleLogger)l4;
         assertEquals(cl4.getLevel(),ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
-        assertTrue(cl4.getWriter().getChronicle() instanceof VanillaChronicle);
+        assertTrue(cl4.getWriter().getChronicle() instanceof IndexedChronicle);
+        assertTrue(cl4.getWriter() instanceof ChronicleLogWriters.SynchronizedWriter);
         assertEquals(cl4.getName(),"readwrite");
     }
 
@@ -142,8 +135,8 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
         l.warn("warn");
         l.error("error");
 
-        Chronicle reader = new VanillaChronicle(basePath(ChronicleLoggingConfig.TYPE_VANILLA,"readwrite"));
-        ExcerptTailer tailer = reader.createTailer();
+        Chronicle reader = new IndexedChronicle(basePath(ChronicleLoggingConfig.TYPE_INDEXED,"readwrite"));
+        ExcerptTailer tailer = reader.createTailer().toStart();
 
         // debug
         assertTrue(tailer.nextIndex());
@@ -185,81 +178,5 @@ public class Slf4jVanillaChronicleLoggerTest extends Slf4jChronicleTestBase {
 
         tailer.close();
         reader.close();
-    }
-
-    @Test
-    public void testTextLogging1() throws IOException {
-        Logger l = LoggerFactory.getLogger("Text1");
-        l.trace("trace");
-        l.debug("debug");
-        l.info("info");
-        l.warn("warn");
-        l.error("error");
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Test
-    public void testLoggingPerf1() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
-
-        for(int x=0;x<10;x++) {
-            long start = System.nanoTime();
-
-            int items = 1000000;
-            for (int i = 1; i <= items; i++) {
-                l.trace("something to slf4j ({}}",i);
-            }
-
-            long end = System.nanoTime();
-
-            System.out.printf("testLoggingPerf1: took an average of %.2f us to write %d items (level disabled)\n",
-                (end - start) / items / 1e3,
-                items);
-        }
-    }
-
-    @Test
-    public void testLoggingPerf2() throws IOException {
-        Logger l = LoggerFactory.getLogger(Slf4jVanillaChronicleLoggerTest.class);
-
-        for(int x=0;x<10;x++) {
-            long start = System.nanoTime();
-
-            int items = 1000000;
-            for (int i = 1; i <= items; i++) {
-                l.warn("something to slf4j ({})",i);
-            }
-
-            long end = System.nanoTime();
-
-            System.out.printf("testLoggingPerf2: took an average of %.2f us to write %d items (level enabled)\n",
-                (end - start) / items / 1e3,
-                items);
-        }
-    }
-
-    @Test
-    public void testLoggingPerf3() throws IOException, InterruptedException {
-        final int RUNS = 1000000;
-        final int THREADS = 4;
-
-        final long start = System.nanoTime();
-
-        ExecutorService es = Executors.newFixedThreadPool(THREADS);
-        for (int t = 0; t < THREADS; t++) {
-            es.submit(new RunnableChronicle(RUNS,"thread-" + t));
-        }
-
-        es.shutdown();
-        es.awaitTermination(2, TimeUnit.SECONDS);
-
-        final long time = System.nanoTime() - start;
-
-        System.out.printf("testLoggingPerf3: took an average of %.1f us per entry\n",
-            time / 1e3 / (RUNS * THREADS)
-        );
     }
 }

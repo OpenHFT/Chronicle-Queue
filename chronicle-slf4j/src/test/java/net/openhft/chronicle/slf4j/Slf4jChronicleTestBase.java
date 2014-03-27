@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.impl.chronicle;
+package net.openhft.chronicle.slf4j;
 
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.sandbox.VanillaChronicle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -48,6 +52,37 @@ public class Slf4jChronicleTestBase {
         return basePath(type)
             + File.separator
             + loggerName;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * @return the ChronicleLoggerFactory singleton
+     */
+    protected ChronicleLoggerFactory getChronicleLoggerFactory() {
+        return (ChronicleLoggerFactory)StaticLoggerBinder.getSingleton().getLoggerFactory();
+    }
+
+    /**
+     *
+     * @param type
+     * @param id
+     * @return
+     */
+    protected IndexedChronicle getIndexedChronicle(String type,String id) throws IOException {
+        return new IndexedChronicle(basePath(type,id));
+    }
+
+    /**
+     *
+     * @param type
+     * @param id
+     * @return
+     */
+    protected VanillaChronicle getVanillaChronicle(String type,String id) throws IOException {
+        return new VanillaChronicle(basePath(type,id));
     }
 
     // *************************************************************************

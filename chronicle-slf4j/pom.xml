@@ -14,6 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>4.11</junit.version>
         <slf4j.version>1.7.6</slf4j.version>
+        <commons.lang3.version>3.3.1</commons.lang3.version>
         <openhft.affinity.version>2.0.2-SNAPSHOT</openhft.affinity.version>
         <openhft.chronicle.version>${project.version}</openhft.chronicle.version>
     </properties>
@@ -46,6 +47,13 @@
 
         <!-- modules for testing -->
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
@@ -68,9 +76,15 @@
                         <slf4j.chronicle.vanilla.properties>
                             ${project.basedir}/src/test/resources/slf4j.chronicle.vanilla.properties
                         </slf4j.chronicle.vanilla.properties>
+                        <slf4j.chronicle.vanilla.binary.properties>
+                            ${project.basedir}/src/test/resources/slf4j.chronicle.vanilla.binary.properties
+                        </slf4j.chronicle.vanilla.binary.properties>
                         <slf4j.chronicle.indexed.properties>
                             ${project.basedir}/src/test/resources/slf4j.chronicle.indexed.properties
                         </slf4j.chronicle.indexed.properties>
+                        <slf4j.chronicle.indexed.binary.properties>
+                            ${project.basedir}/src/test/resources/slf4j.chronicle.indexed.binary.properties
+                        </slf4j.chronicle.indexed.binary.properties>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

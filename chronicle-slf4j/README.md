@@ -10,23 +10,27 @@ To configure this sl4j binding you need to specify the location of a properties 
 ```
 
 The following properties are supported to configure the behavior of this logger:
-  * slf4j.chronicle.path - the base target of a VanillaChronicle
-  * slf4j.chronicle.level - the default log level for all instances of ChdonicleLogger. Must be one of ("trace", "debug", "info", "warn", or "error"). If not specified, defaults to "info".
+  * slf4j.chronicle.type - Must be one of ("indexed","vanilla")
+  * slf4j.chronicle.path - the base target of a Chronicle
+  * slf4j.chronicle.level - the default log level for all instances of ChronicleLogger. Must be one of ("trace", "debug", "info", "warn", or "error"). If not specified, defaults to "info".
   * slf4j.chronicle.shortName - Set to true if you want the last component of the name to be included in output messages
-  * slf4j.chronicle.append. Must be one of ("true","false")
-  * slf4j.chronicle.format. Must be one of ("binary","text")
-  * slf4j.chronicle.dateFormat. Defines the date format for text loggers
+  * slf4j.chronicle.append - Must be one of ("true","false")
+  * slf4j.chronicle.format - Must be one of ("binary","text")
+  * slf4j.chronicle.binaryFormat - Must be one of ("formatted","serialized")
+  * slf4j.chronicle.dateFormat - Defines the date format for text loggers
 
 ```properties
 # default
-slf4j.chronicle.base      = ${java.io.tmpdir}/chronicle/${today}/${pid}
+slf4j.chronicle.base         = ${java.io.tmpdir}/chronicle/${today}/${pid}
 
 # logger : root
-slf4j.chronicle.path      = ${slf4j.chronicle.base}/main
-slf4j.chronicle.level     = debug
-slf4j.chronicle.shortName = false
-slf4j.chronicle.append    = false
-slf4j.chronicle.format    = binary
+slf4j.chronicle.type         = vanilla
+slf4j.chronicle.path         = ${slf4j.chronicle.base}/main
+slf4j.chronicle.level        = debug
+slf4j.chronicle.shortName    = false
+slf4j.chronicle.append       = false
+slf4j.chronicle.format       = binary
+slf4j.chronicle.binaryFormat = formatted
 ```
 
 The configuration of chronicle-slf4j supports variable interpolation where the variables are replaced with the corresponding values from the same configuration file, the system properties and from some predefined values. System properties have the precedence in placeholder replacement so one can override a value via system properties.
@@ -46,7 +50,7 @@ slf4j.chronicle.logger.Logger1.level          = info
 # logger : TextLogger
 slf4j.chronicle.logger.TextLogger.path        = ${slf4j.chronicle.base}/text
 slf4j.chronicle.logger.TextLogger.level       = debug
-slf4j.chronicle.logger.TextLogger.format        = text
+slf4j.chronicle.logger.TextLogger.format      = text
 slf4j.chronicle.logger.TextLogger.dateFormat  = yyyyMMdd-HHmmss-S
 ```
 
