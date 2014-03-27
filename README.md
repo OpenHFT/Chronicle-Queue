@@ -14,6 +14,10 @@ It is available on maven central as
 
 For working examples, have a look at the unit tests and demo module.
 
+
+##  JavaDoc
+Check out our documentation at [JavaDoc] (http://openhft.github.io/Java-Chronicle/apidocs/)
+
 ---
 
 [Chronicle Wiki](https://github.com/OpenHFT/Java-Chronicle/wiki)
