@@ -21,7 +21,7 @@ Check out our documentation at [JavaDoc] (http://openhft.github.io/Java-Chronicl
 
 ###  Support
 
-See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/chronicle/info) or you can post your question on the forum at [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
+See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/chronicle/info), or you can post your question on the forum at [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 
 
 ---
