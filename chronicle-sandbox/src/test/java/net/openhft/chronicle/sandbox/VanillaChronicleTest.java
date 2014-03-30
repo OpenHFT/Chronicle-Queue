@@ -16,6 +16,13 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.lang.io.IOTools;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestName;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,13 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.lang.io.IOTools;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
 import static org.junit.Assert.*;
 
 public class VanillaChronicleTest {
@@ -250,7 +251,7 @@ public class VanillaChronicleTest {
 
         ExcerptAppender appender = writer.createAppender();
 
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -260,9 +261,9 @@ public class VanillaChronicleTest {
             VanillaChronicle reader = new VanillaChronicle(basepath);
             ExcerptTailer tailer = reader.createTailer();
 
-            for(long i=0;i<3;i++) {
+            for (long i = 0; i < 3; i++) {
                 assertTrue(tailer.nextIndex());
-                assertEquals(i,tailer.readLong());
+                assertEquals(i, tailer.readLong());
                 tailer.finish();
             }
 
@@ -274,9 +275,9 @@ public class VanillaChronicleTest {
             VanillaChronicle reader = new VanillaChronicle(basepath);
             ExcerptTailer tailer = reader.createTailer().toStart();
 
-            for(long i=0;i<3;i++) {
+            for (long i = 0; i < 3; i++) {
                 assertTrue(tailer.nextIndex());
-                assertEquals(i,tailer.readLong());
+                assertEquals(i, tailer.readLong());
                 tailer.finish();
             }
 
@@ -292,13 +293,13 @@ public class VanillaChronicleTest {
     public void testTailerToStart() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-tostart";
 
-        VanillaChronicle chronicle  = new VanillaChronicle(basepath);
+        VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
 
         ExcerptAppender appender = chronicle.createAppender();
         ExcerptTailer tailer = null;
 
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -308,7 +309,7 @@ public class VanillaChronicleTest {
 
         // test a vanilla tailer, no rewind
         tailer = chronicle.createTailer();
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             assertTrue(tailer.nextIndex());
             assertEquals(i, tailer.readLong());
             tailer.finish();
@@ -318,7 +319,7 @@ public class VanillaChronicleTest {
 
         // test a vanilla tailer, rewind
         tailer = chronicle.createTailer().toStart();
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             assertTrue(tailer.nextIndex());
             assertEquals(i, tailer.readLong());
             tailer.finish();
@@ -332,11 +333,11 @@ public class VanillaChronicleTest {
     public void testTailerToEnd() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend";
 
-        VanillaChronicle chronicle  = new VanillaChronicle(basepath);
+        VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
 
         ExcerptAppender appender = chronicle.createAppender();
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -346,7 +347,7 @@ public class VanillaChronicleTest {
 
         // test a vanilla tailer, wind to end
         ExcerptTailer tailer = chronicle.createTailer().toEnd();
-        assertEquals(2,tailer.readLong());
+        assertEquals(2, tailer.readLong());
         assertFalse(tailer.nextIndex());
 
         tailer.close();
@@ -357,7 +358,7 @@ public class VanillaChronicleTest {
     public void testTailerEndStart() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart";
 
-        VanillaChronicle chronicle  = new VanillaChronicle(basepath);
+        VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
 
         ExcerptAppender appender = chronicle.createAppender();
@@ -368,7 +369,7 @@ public class VanillaChronicleTest {
         assertFalse(tailer.nextIndex());
 
         // add some data to the chronicle
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             appender.startExcerpt();
             appender.writeLong(i);
             appender.finish();
@@ -377,7 +378,7 @@ public class VanillaChronicleTest {
         appender.close();
 
         // test that the tailer now can tail
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             assertTrue(tailer.nextIndex());
             assertEquals(i, tailer.readLong());
             tailer.finish();
@@ -385,7 +386,7 @@ public class VanillaChronicleTest {
 
         // test a vanilla tailer, wind to end
         tailer = chronicle.createTailer().toEnd();
-        assertEquals(2,tailer.readLong());
+        assertEquals(2, tailer.readLong());
         assertFalse(tailer.nextIndex());
 
         tailer.finish();
@@ -393,7 +394,7 @@ public class VanillaChronicleTest {
 
         // test a vanilla tailer, rewind
         tailer = chronicle.createTailer().toStart();
-        for(long i=0;i<3;i++) {
+        for (long i = 0; i < 3; i++) {
             assertTrue(tailer.nextIndex());
             assertEquals(i, tailer.readLong());
             tailer.finish();
@@ -404,15 +405,26 @@ public class VanillaChronicleTest {
         chronicle.close();
     }
 
+    /*
+    TODO Fix this test as it sometime jumps e.g.
+
+    Major: 1396197284
+    Major: 1396197285
+
+    java.lang.AssertionError: major jumped
+        Expected :1396197286
+        Actual   :1396197287
+     */
     @Test
     public void testReplicationWithRollingFilesEverySecond() throws Exception {
-        int RUNS = 100;
+//        TODO int RUNS = 100000;
+        int RUNS = 5 * 1000;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
-        config.entriesPerCycle(1L << 20);
+        config.entriesPerCycle(1L << 16);
         config.indexBlockSize(16L << 10);
         VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
 
@@ -420,16 +432,26 @@ public class VanillaChronicleTest {
         try {
             ExcerptAppender appender = chronicle.createAppender();
             ExcerptTailer tailer = chronicle.createTailer();
-
+            long lastMajor = 0;
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
                 long value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                System.out.println("Sleeping " +i );
-                Thread.sleep(100);
+//                System.out.println("Sleeping " +i );
+                Thread.sleep(1);
 
-                tailer.nextIndex();
+                assertTrue(tailer.nextIndex());
+                long major = tailer.index() / config.entriesPerCycle();
+                if (lastMajor == 0 || lastMajor == major) {
+                    // ok.
+                } else if (lastMajor + 1 == major) {
+                    System.out.println("Major: " + major);
+                } else {
+                    assertEquals("major jumped", lastMajor + 1, major);
+                }
+                lastMajor = major;
+//                System.out.printf("Index: %x%n", major);
                 assertEquals("i: " + i, value, tailer.parseLong());
                 assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
@@ -444,7 +466,7 @@ public class VanillaChronicleTest {
     public void testReplicationWithRollingFilesEverySecond2() throws Exception {
         int RUNS = 10;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling2";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
@@ -462,7 +484,7 @@ public class VanillaChronicleTest {
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                System.out.println("Sleeping " +i );
+                System.out.println("Sleeping " + i);
                 Thread.sleep(2000);
             }
 
