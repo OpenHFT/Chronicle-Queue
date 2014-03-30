@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
 import sun.misc.Cleaner;
@@ -44,10 +44,10 @@ public class VanillaFile implements Closeable {
         File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
 
-        if(!forAppend){
+        if (!forAppend) {
             //This test needs to be done before any directories are created.
             File f = new File(dir, name);
-            if(!f.exists()){
+            if (!f.exists()) {
                 throw new FileNotFoundException(f.getAbsolutePath());
             }
         }

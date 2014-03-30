@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
+import net.openhft.lang.io.IOTools;
+import net.openhft.lang.io.NativeBytes;
 import org.junit.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,9 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
-
-import net.openhft.lang.io.IOTools;
-import net.openhft.lang.io.NativeBytes;
 
 import static org.junit.Assert.*;
 

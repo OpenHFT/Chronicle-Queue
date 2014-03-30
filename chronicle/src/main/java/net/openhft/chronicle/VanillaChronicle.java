@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
-import net.openhft.chronicle.*;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;

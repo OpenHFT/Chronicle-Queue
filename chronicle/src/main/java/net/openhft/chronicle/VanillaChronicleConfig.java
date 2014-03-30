@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 public class VanillaChronicleConfig {
     public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();

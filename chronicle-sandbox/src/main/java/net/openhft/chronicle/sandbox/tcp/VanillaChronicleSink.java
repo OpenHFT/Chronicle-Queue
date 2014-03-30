@@ -17,7 +17,6 @@
 package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
@@ -108,8 +107,8 @@ public class VanillaChronicleSink implements Chronicle {
             //return super.index(index) || index >= 0 && readNext() && super.index(index);
             //readNext() can return false if IN_SYNCH_LEN is called
             //this is not a real excerpt keep trying until readIndex() return true.
-            if(super.nextIndex())return true;
-            if(readNext()){
+            if (super.nextIndex()) return true;
+            if (readNext()) {
                 return super.nextIndex();
             }
             return nextIndex();
@@ -187,7 +186,7 @@ public class VanillaChronicleSink implements Chronicle {
 //                System.out.println("ri " + scIndex);
                 if (scIndex != chronicle.size())
                     //throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
-                scFirst = false;
+                    scFirst = false;
             }
             int size = readBuffer.getInt();
             switch (size) {

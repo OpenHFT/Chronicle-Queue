@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
 
@@ -76,7 +76,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     int lastIndexFile(int cycle) {
-        return lastIndexFile(cycle,0);
+        return lastIndexFile(cycle, 0);
     }
 
     int lastIndexFile(int cycle, int defaultCycle) {
@@ -98,7 +98,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public VanillaFile append(int cycle, long indexValue, boolean synchronous) throws IOException {
-        for (int indexCount = lastIndexFile(cycle,0); indexCount < 10000; indexCount++) {
+        for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
             VanillaFile file = indexFor(cycle, indexCount, true);
             if (append(file, indexValue, synchronous))
                 return file;

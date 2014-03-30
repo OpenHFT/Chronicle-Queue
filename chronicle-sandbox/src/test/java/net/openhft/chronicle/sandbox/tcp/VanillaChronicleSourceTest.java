@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSink;
-import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSource;
+import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicleConfig;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
-
-import static org.junit.Assert.*;
 
 @Ignore
 public class VanillaChronicleSourceTest {
@@ -33,7 +32,7 @@ public class VanillaChronicleSourceTest {
     public void testReplication() throws IOException {
         int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplication";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplication";
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
         int localPort = chronicle.getLocalPort();
         VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
@@ -50,9 +49,9 @@ public class VanillaChronicleSourceTest {
                 boolean nextIndex = tailer.nextIndex();
                 long val = tailer.parseLong();
                 System.out.println(val);
-                    assertEquals("i: " + i, value, val);
-                    assertEquals("i: " + i, 0, tailer.remaining());
-                    tailer.finish();
+                Assert.assertEquals("i: " + i, value, val);
+                Assert.assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
 
             }
         } finally {
@@ -68,7 +67,7 @@ public class VanillaChronicleSourceTest {
     public void testReplication2() throws IOException {
         int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplication2";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplication2";
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
         int localPort = chronicle.getLocalPort();
         VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
@@ -89,8 +88,8 @@ public class VanillaChronicleSourceTest {
                 boolean nextIndex = tailer.nextIndex();
                 long val = tailer.parseLong();
                 System.out.println(val);
-                assertEquals("i: " + i, value, val);
-                assertEquals("i: " + i, 0, tailer.remaining());
+                Assert.assertEquals("i: " + i, value, val);
+                Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
 
             }
@@ -107,7 +106,7 @@ public class VanillaChronicleSourceTest {
     public void testReplicationWithRolling() throws Exception {
         int RUNS = 500;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
@@ -130,15 +129,16 @@ public class VanillaChronicleSourceTest {
                 Thread.sleep(10);
 
                 tailer.nextIndex();
-                assertEquals("i: " + i, value, tailer.parseLong());
-                assertEquals("i: " + i, 0, tailer.remaining());
+                Assert.assertEquals("i: " + i, value, tailer.parseLong());
+                Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
         } finally {
             chronicle2.close();
             chronicle.close();
             chronicle2.clear();
-            chronicle.clear();        }
+            chronicle.clear();
+        }
     }
 
 
@@ -146,7 +146,7 @@ public class VanillaChronicleSourceTest {
     public void testReplicationWithRolling2() throws Exception {
         int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") +  "/tmp/testReplicationWithRolling2";
+        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
@@ -167,14 +167,15 @@ public class VanillaChronicleSourceTest {
 
                 tailer.nextIndex();
                 long val = tailer.parseLong();
-                assertEquals("i: " + i, value, val);
-                assertEquals("i: " + i, 0, tailer.remaining());
+                Assert.assertEquals("i: " + i, value, val);
+                Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
         } finally {
             chronicle2.close();
             chronicle.close();
             chronicle2.clear();
-            chronicle.clear();        }
+            chronicle.clear();
+        }
     }
 }

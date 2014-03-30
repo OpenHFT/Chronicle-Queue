@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.io.IOTools;
 import org.junit.Rule;
 import org.junit.Test;
