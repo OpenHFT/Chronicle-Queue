@@ -23,7 +23,7 @@
 
     <groupId>net.openhft</groupId>
     <artifactId>Java-Chronicle</artifactId>
-    <version>3.0a</version>
+    <version>3.0b-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Chronicle Parent</name>

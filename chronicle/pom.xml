@@ -22,7 +22,7 @@
 
     <groupId>net.openhft</groupId>
     <artifactId>chronicle</artifactId>
-    <version>3.0a</version>
+    <version>3.0b-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle</name>

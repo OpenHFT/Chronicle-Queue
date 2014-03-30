@@ -21,11 +21,11 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>Java-Chronicle</artifactId>
-        <version>3.0a</version>
+        <version>3.0b-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <version>3.0a</version>
+    <version>3.0b-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <name>OpenHFT/Java-Chronicle/chronicle-sandbox</name>
     <artifactId>chronicle-sandbox</artifactId>

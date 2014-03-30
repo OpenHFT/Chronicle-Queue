@@ -22,14 +22,14 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>Java-Chronicle</artifactId>
-        <version>3.0a</version>
+        <version>3.0b-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>chronicle-demo</artifactId>
 
     <name>chronicle-demo</name>
-    <version>3.0a</version>
+    <version>3.0b-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
     <properties>
