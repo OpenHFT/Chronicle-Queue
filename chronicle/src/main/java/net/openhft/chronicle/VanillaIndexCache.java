@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
 
@@ -76,12 +76,13 @@ public class VanillaIndexCache implements Closeable {
     }
 
     int lastIndexFile(int cycle) {
-        return lastIndexFile(cycle,0);
+        return lastIndexFile(cycle, 0);
     }
 
-    int lastIndexFile(int cycle,int defaultCycle) {
+    int lastIndexFile(int cycle, int defaultCycle) {
         int maxIndex = -1;
-        File[] files = new File(basePath,dateCache.formatFor(cycle)).listFiles();
+        File cyclePath = new File(baseFile, dateCache.formatFor(cycle));
+        File[] files = cyclePath.listFiles();
         if (files != null) {
             for (File file : files) {
                 String name = file.getName();
@@ -97,20 +98,37 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public VanillaFile append(int cycle, long indexValue, boolean synchronous) throws IOException {
-        for (int indexCount = lastIndexFile(cycle,0); indexCount < 10000; indexCount++) {
+        for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
             VanillaFile file = indexFor(cycle, indexCount, true);
-            NativeBytes bytes = file.bytes();
-            while (bytes.remaining() >= 8) {
-                if (bytes.compareAndSwapLong(bytes.position(), 0L, indexValue)) {
-                    if (synchronous)
-                        file.force();
-                    return file;
-                }
-                bytes.position(bytes.position() + 8);
-            }
+            if (append(file, indexValue, synchronous))
+                return file;
             file.decrementUsage();
         }
         throw new AssertionError();
+    }
+
+    public static boolean append(final VanillaFile vanillaFile, final long indexValue, final boolean synchronous) {
+
+        // Position can be changed by another thread, so take a snapshot each loop so that
+        // buffer overflows are not generated when advancing to the next position.
+        // As a result, the position could step backwards when this method is called concurrently,
+        // but the compareAndSwapLong call ensures that data is never overwritten.
+
+        final NativeBytes bytes = vanillaFile.bytes();
+        boolean endOfFile = false;
+        while (!endOfFile) {
+            final long position = bytes.position();
+            endOfFile = (bytes.limit() - position) < 8;
+            if (!endOfFile) {
+                if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
+                    if (synchronous)
+                        vanillaFile.force();
+                    return true;
+                }
+                bytes.position(position + 8);
+            }
+        }
+        return false;
     }
 
     public long firstIndex() {

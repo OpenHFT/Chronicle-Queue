@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
 
@@ -91,10 +91,11 @@ public class VanillaDataCache implements Closeable {
 
     public VanillaFile dataForLast(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
-        String dataPrefix = basePath + "/" + cycleStr + "/data-" + threadId + "-";
+        String cyclePath = basePath + "/" + cycleStr;
+        String dataPrefix = "data-" + threadId + "-";
         if (lastCycle != cycle) {
             int maxCount = 0;
-            File[] files = new File(dataPrefix).listFiles();
+            File[] files = new File(cyclePath).listFiles();
             if (files != null)
                 for (File file : files) {
                     if (file.getName().startsWith(dataPrefix)) {

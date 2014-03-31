@@ -19,6 +19,9 @@ package net.openhft.chronicle;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
+ * The main data container of a {@link net.openhft.chronicle.Chronicle}, an extended version
+ * of {@link net.openhft.chronicle.ExcerptTailer} which also facilitates random access.
+ *
  * @author peter.lawrey
  */
 public interface Excerpt extends ExcerptTailer {

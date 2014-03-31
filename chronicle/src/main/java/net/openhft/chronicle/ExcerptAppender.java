@@ -19,6 +19,8 @@ package net.openhft.chronicle;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
+ * The component that facilitates sequentially writing data to a {@link net.openhft.chronicle.Chronicle}.
+ *
  * @author peter.lawrey
  */
 public interface ExcerptAppender extends ExcerptCommon {

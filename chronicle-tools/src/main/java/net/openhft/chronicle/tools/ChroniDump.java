@@ -16,8 +16,8 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.sandbox.BytesProcessor;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
 import net.openhft.lang.io.Bytes;
 

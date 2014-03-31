@@ -17,11 +17,10 @@
 package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
 import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.lang.thread.NamedThreadFactory;
 import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.thread.NamedThreadFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -228,13 +227,15 @@ public class VanillaChronicleSource implements Chronicle {
                             continue;
                         }
 //                        System.out.println("Waiting for " + index);
-                        if (sendInSync <= now && !first) {
+                        //No need to send this message...
+/*                        if (sendInSync <= now && !first) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
                             bb.flip();
                             TcpUtil.writeAll(socket, bb);
                             sendInSync = now + HEARTBEAT_INTERVAL_MS;
                         }
+*/
                         pause();
                         if (closed) break OUTER;
                     }
@@ -271,7 +272,7 @@ public class VanillaChronicleSource implements Chronicle {
                         //DS
                         //while (excerpt.index(index + 1) && count++ < MAX_MESSAGE) {
                         while (count++ < MAX_MESSAGE) {
-                            if(excerpt.nextIndex()){
+                            if (excerpt.nextIndex()) {
                                 if (excerpt.wasPadding()) {
                                     index++;
                                     continue;
