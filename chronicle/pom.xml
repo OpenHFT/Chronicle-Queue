@@ -30,20 +30,24 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <felix.bundle.plugin.version>2.4.0</felix.bundle.plugin.version>
-        <felix.version>4.2.1</felix.version>
-        <pax.exam.version>3.4.0</pax.exam.version>
-        <pax.url.version>1.6.0</pax.url.version>
-        <osgi.version>5.0.0</osgi.version>
-        <logback.version>0.9.6</logback.version>
 
         <!-- hft version is here so it can be included in OSGi tests -->
         <openhft.lang.version>6.3.4</openhft.lang.version>
         <openhft.affinity.version>2.0.1</openhft.affinity.version>
+        <logback.version>0.9.6</logback.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>third-party-bom</artifactId>
+                <type>pom</type>
+                <version>3.1-SNAPSHOT</version>
+                <scope>import</scope>
+            </dependency>
+
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
@@ -53,89 +57,6 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
                 <version>${openhft.affinity.version}</version>
-            </dependency>
-
-            <!-- for testing -->
-            <dependency>
-                <groupId>org.easymock</groupId>
-                <artifactId>easymock</artifactId>
-                <version>3.1</version>
-            </dependency>
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.11</version>
-            </dependency>
-
-            <!-- for OSGi testing -->
-            <dependency>
-                <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.core</artifactId>
-                <version>${osgi.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.compendium</artifactId>
-                <version>${osgi.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ops4j.pax.exam</groupId>
-                <artifactId>pax-exam-container-native</artifactId>
-                <version>${pax.exam.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ops4j.pax.exam</groupId>
-                <artifactId>pax-exam-junit4</artifactId>
-                <version>${pax.exam.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ops4j.pax.exam</groupId>
-                <artifactId>pax-exam-link-mvn</artifactId>
-                <version>${pax.exam.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.ops4j.pax.url</groupId>
-                <artifactId>pax-url-aether</artifactId>
-                <version>${pax.url.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>org.apache.felix.framework</artifactId>
-                <version>${felix.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-core</artifactId>
-                <version>${logback.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.version}</version>
-            </dependency>
-
-            <!-- on linux install with sudo apt-get install libjna-java -->
-            <dependency>
-                <groupId>net.java.dev.jna</groupId>
-                <artifactId>jna</artifactId>
-                <version>4.0.0</version>
-            </dependency>
-            <dependency>
-                <groupId>net.java.dev.jna</groupId>
-                <artifactId>platform</artifactId>
-                <version>3.5.2</version>
-            </dependency>
-            <dependency>
-                <groupId>net.sf.trove4j</groupId>
-                <artifactId>trove4j</artifactId>
-                <version>3.0.3</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.java</groupId>
-                <artifactId>tools</artifactId>
-                <version>${java.version}</version>
-                <scope>system</scope>
-                <systemPath>${java.home}/../lib/tools.jar</systemPath>
             </dependency>
 
         </dependencies>
@@ -369,7 +290,7 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>${felix.bundle.plugin.version}</version>
+                <version>2.4.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
