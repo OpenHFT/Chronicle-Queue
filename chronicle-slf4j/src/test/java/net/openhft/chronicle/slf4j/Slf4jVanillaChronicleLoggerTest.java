@@ -17,7 +17,7 @@ package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.sandbox.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.lang.io.IOTools;
 import org.junit.After;
 import org.junit.Before;
