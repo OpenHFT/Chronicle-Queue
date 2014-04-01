@@ -32,7 +32,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openhft.affinity.version>2.0.1</openhft.affinity.version>
 
         <!-- hft version is here so it can be included in OSGi tests -->
         <openhft.lang.version>6.3.4</openhft.lang.version>
