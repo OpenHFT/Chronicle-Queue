@@ -50,7 +50,7 @@ class AbstractBlockingQueue {
     // only set and read by the producer thread, ( that the thread that's calling put(), offer() or add() )
     int producerWriteLocation;
 
-    // only set and read by the comumer thread, ( that the thread that's calling get(), poll() or peek() )
+    // only set and read by the consumer thread, ( that the thread that's calling get(), poll() or peek() )
     int consumerReadLocation;
 
     // we set volatiles here, for the writes we use putOrderedInt ( as this is quicker ),
