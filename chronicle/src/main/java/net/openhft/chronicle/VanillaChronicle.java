@@ -295,9 +295,9 @@ public class VanillaChronicle implements Chronicle {
 
         @NotNull
         public ExcerptCommon toStart() {
-            long indexCount = indexCache.firstIndex();
-            if (indexCount >= 0) {
-                index = (indexCount * config.entriesPerCycle()) - 1;
+            int cycle = (int)indexCache.firstCycle();
+            if (cycle >= 0) {
+                index = (cycle * config.entriesPerCycle()) - 1;
             }
 
             return this;
@@ -308,15 +308,16 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptCommon toEnd() {
             resetLastInfo();
 
-            int cycle = cycle();
+            int cycle = (int)indexCache.lastCycle();
             int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
             if(lastIndexFile >= 0) {
                 try {
-                    VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
-                    NativeBytes bytes = vfile.bytes();
-                    long lastIndex = (cycle * config.entriesPerCycle()) + (bytes.position() / 8);
+                    final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
+                    final long indices = VanillaIndexCache.countIndices(vfile);
+
                     vfile.decrementUsage();
-                    index(lastIndex);
+
+                    index((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
                 } catch (IOException e) {
                     throw new AssertionError(e);
                 }

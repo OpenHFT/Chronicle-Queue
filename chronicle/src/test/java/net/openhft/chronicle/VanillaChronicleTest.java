@@ -328,8 +328,8 @@ public class VanillaChronicleTest {
     }
 
     @Test
-    public void testTailerToEnd() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend";
+    public void testTailerToEnd1() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend-1";
 
         VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
@@ -353,13 +353,42 @@ public class VanillaChronicleTest {
     }
 
     @Test
-    public void testTailerEndStart() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart";
+    public void testTailerToEnd2() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend-2";
+
+        VanillaChronicle wchronicle = new VanillaChronicle(basepath);
+        wchronicle.clear();
+
+        ExcerptAppender appender = wchronicle.createAppender();
+        for (long i = 0; i < 3; i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        appender.close();
+
+        // test a vanilla tailer, wind to end
+        VanillaChronicle rchronicle = new VanillaChronicle(basepath);
+        ExcerptTailer tailer = rchronicle.createTailer().toEnd();
+        assertEquals(2, tailer.readLong());
+        assertFalse(tailer.nextIndex());
+
+        tailer.close();
+
+        wchronicle.close();
+        rchronicle.close();
+    }
+
+    @Test
+    public void testTailerEndStart1() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart-1";
 
         VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
 
         ExcerptAppender appender = chronicle.createAppender();
+
         ExcerptTailer tailer = null;
 
         // test a vanilla tailer, wind to end on an empty chronicle
@@ -401,6 +430,61 @@ public class VanillaChronicleTest {
         tailer.close();
 
         chronicle.close();
+    }
+
+    @Test
+    public void testTailerEndStart2() throws IOException {
+        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart-2";
+
+        VanillaChronicle wchronicle = new VanillaChronicle(basepath);
+        VanillaChronicle rchronicle = new VanillaChronicle(basepath);
+
+        wchronicle.clear();
+
+        ExcerptAppender appender = wchronicle.createAppender();
+
+        ExcerptTailer tailer = null;
+
+        // test a vanilla tailer, wind to end on an empty chronicle
+        tailer = rchronicle.createTailer().toEnd();
+        assertFalse(tailer.nextIndex());
+
+        // add some data to the chronicle
+        for (long i = 0; i < 3; i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
+
+        appender.close();
+
+        // test that the tailer now can tail
+        for (long i = 0; i < 3; i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            tailer.finish();
+        }
+
+        // test a vanilla tailer, wind to end
+        tailer = rchronicle.createTailer().toEnd();
+        assertEquals(2, tailer.readLong());
+        assertFalse(tailer.nextIndex());
+
+        tailer.finish();
+        tailer.close();
+
+        // test a vanilla tailer, rewind
+        tailer = rchronicle.createTailer().toStart();
+        for (long i = 0; i < 3; i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            tailer.finish();
+        }
+
+        tailer.close();
+
+        wchronicle.close();
+        rchronicle.close();
     }
 
     /*
