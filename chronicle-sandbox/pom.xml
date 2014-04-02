@@ -15,8 +15,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>net.openhft</groupId>
@@ -33,25 +33,22 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openhft.affinity.version>2.0.1</openhft.affinity.version>
-        <!--
-          maven-resources-plugin 2.6 fixes the following jira:
-            https://jira.codehaus.org/browse/MRESOURCES-140
-            [debug] execute contextualize
-        -->
-        <maven.plugin.resources.version>2.6</maven.plugin.resources.version>
-    </properties>
 
+        <!-- hft version is here so it can be included in OSGi tests -->
+        <openhft.lang.version>6.3.4</openhft.lang.version>
+        <openhft.affinity.version>2.0.1</openhft.affinity.version>
+        <logback.version>0.9.6</logback.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
 
             <dependency>
-                <groupId>com.sun.java</groupId>
-                <artifactId>tools</artifactId>
-                <version>${java.version}</version>
-                <scope>system</scope>
-                <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                <groupId>net.openhft</groupId>
+                <artifactId>third-party-bom</artifactId>
+                <type>pom</type>
+                <version>3.1-SNAPSHOT</version>
+                <scope>import</scope>
             </dependency>
 
             <dependency>
@@ -64,13 +61,6 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-
-            <!-- modules for testing -->
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.11</version>
             </dependency>
 
 
@@ -95,12 +85,20 @@
             <artifactId>chronicle</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>lang</artifactId>
+            <version>${openhft.lang.version}</version>
+        </dependency>
+
+
         <!-- modules for testing -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
 
@@ -109,7 +107,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>${maven.plugin.resources.version}</version>
+                <version>2.6</version>
             </plugin>
         </plugins>
     </build>

@@ -42,12 +42,13 @@
         <dependencies>
 
             <dependency>
-                <groupId>com.sun.java</groupId>
-                <artifactId>tools</artifactId>
-                <version>${java.version}</version>
-                <scope>system</scope>
-                <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                <groupId>net.openhft</groupId>
+                <artifactId>third-party-bom</artifactId>
+                <type>pom</type>
+                <version>3.0</version>
+                <scope>import</scope>
             </dependency>
+
 
             <dependency>
                 <groupId>net.openhft</groupId>

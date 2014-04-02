@@ -131,7 +131,21 @@ public class VanillaIndexCache implements Closeable {
         return false;
     }
 
-    public long firstIndex() {
+    public static long countIndices(final VanillaFile vanillaFile) {
+        final NativeBytes bytes = vanillaFile.bytes();
+        long indices = 0;
+        for (long offset = 0;(bytes.limit() - bytes.address() + offset) < 8;offset += 8) {
+            if(bytes.readLong(offset) != 0) {
+                indices++;
+            } else {
+                break;
+            }
+        }
+
+        return indices;
+    }
+
+    public long firstCycle() {
         File[] files = baseFile.listFiles();
         if (files == null)
             return -1;
@@ -141,6 +155,26 @@ public class VanillaIndexCache implements Closeable {
             try {
                 long date = dateCache.parseCount(file.getName());
                 if (firstDate > date)
+                    firstDate = date;
+
+            } catch (ParseException ignored) {
+                // ignored
+            }
+        }
+
+        return firstDate;
+    }
+
+    public long lastCycle() {
+        File[] files = baseFile.listFiles();
+        if (files == null)
+            return -1;
+
+        long firstDate = Long.MIN_VALUE;
+        for (File file : files) {
+            try {
+                long date = dateCache.parseCount(file.getName());
+                if (firstDate < date)
                     firstDate = date;
 
             } catch (ParseException ignored) {
