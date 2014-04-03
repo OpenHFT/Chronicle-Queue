@@ -169,7 +169,6 @@
     </dependencies>
 
     <build>
-
         <pluginManagement>
             <plugins>
 
@@ -185,7 +184,6 @@
                     <version>2.9.1</version>
                 </plugin>
 
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
@@ -197,7 +195,15 @@
                     <artifactId>maven-scm-publish-plugin</artifactId>
                     <version>1.0-beta-2</version>
                 </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.5</version>
+                </plugin>
+
             </plugins>
+
         </pluginManagement>
 
 
@@ -257,23 +263,7 @@
                     <nohelp>true</nohelp>
                 </configuration>
             </plugin>
-            <!-- plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
-                <configuration>
-                    <passphrase>${gpg.passphrase}</passphrase>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin -->
+
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.16</version>
@@ -300,9 +290,9 @@
                     </instructions>
                 </configuration>
                 <executions>
-                    <!-- 
-                      This execution makes sure that the manifest is available 
-                      when the tests are executed 
+                    <!--
+                      This execution makes sure that the manifest is available
+                      when the tests are executed
                     -->
                     <execution>
                         <goals>
@@ -313,6 +303,32 @@
             </plugin>
         </plugins>
     </build>
+
+
+    <profiles>
+        <profile>
+            <id>sign-artifact</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+
+        </profile>
+    </profiles>
+
 
     <url>http://www.openhft.net</url>
     <licenses>
@@ -331,7 +347,30 @@
         </developer>
     </developers>
 
+    <repositories>
+        <repository>
+            <id>Snapshot Repository</id>
+            <name>Snapshot Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <scm>
         <url>scm:git:https://github.com/OpenHFT/Java-Chronicle.git</url>
     </scm>
+
 </project>
