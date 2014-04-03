@@ -185,7 +185,6 @@
                     <version>2.9.1</version>
                 </plugin>
 
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
@@ -197,9 +196,16 @@
                     <artifactId>maven-scm-publish-plugin</artifactId>
                     <version>1.0-beta-2</version>
                 </plugin>
-            </plugins>
-        </pluginManagement>
 
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.5</version>
+                </plugin>
+
+            </plugins>
+
+        </pluginManagement>
 
         <plugins>
 
@@ -284,9 +290,9 @@
                     </instructions>
                 </configuration>
                 <executions>
-                    <!-- 
-                      This execution makes sure that the manifest is available 
-                      when the tests are executed 
+                    <!--
+                      This execution makes sure that the manifest is available
+                      when the tests are executed
                     -->
                     <execution>
                         <goals>
@@ -352,7 +358,19 @@
         </developer>
     </developers>
 
+    <repositories>
+        <repository>
+            <id>Snapshot Repository</id>
+            <name>Snapshot Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <scm>
         <url>scm:git:https://github.com/OpenHFT/Java-Chronicle.git</url>
     </scm>
+
 </project>
