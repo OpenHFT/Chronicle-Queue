@@ -185,7 +185,6 @@
                     <version>2.9.1</version>
                 </plugin>
 
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
@@ -197,9 +196,16 @@
                     <artifactId>maven-scm-publish-plugin</artifactId>
                     <version>1.0-beta-2</version>
                 </plugin>
-            </plugins>
-        </pluginManagement>
 
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.5</version>
+                </plugin>
+
+            </plugins>
+
+        </pluginManagement>
 
         <plugins>
 
@@ -284,9 +290,9 @@
                     </instructions>
                 </configuration>
                 <executions>
-                    <!-- 
-                      This execution makes sure that the manifest is available 
-                      when the tests are executed 
+                    <!--
+                      This execution makes sure that the manifest is available
+                      when the tests are executed
                     -->
                     <execution>
                         <goals>
