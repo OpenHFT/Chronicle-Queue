@@ -358,7 +358,19 @@
         </developer>
     </developers>
 
+    <repositories>
+        <repository>
+            <id>Snapshot Repository</id>
+            <name>Snapshot Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <scm>
         <url>scm:git:https://github.com/OpenHFT/Java-Chronicle.git</url>
     </scm>
+
 </project>
