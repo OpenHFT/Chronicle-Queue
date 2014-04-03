@@ -38,7 +38,7 @@ public class VanillaChronicle implements Chronicle {
     private final VanillaChronicleConfig config;
     private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
     private final ThreadLocal<WeakReference<ExcerptTailer>> tailerCache = new ThreadLocal<WeakReference<ExcerptTailer>>();
-    private final ThreadLocal<WeakReference<ExcerptAppender>> appenderCache = new ThreadLocal<WeakReference<ExcerptAppender>>();
+    private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
     private final int indexBlockLongsBits, indexBlockLongsMask;
@@ -79,6 +79,10 @@ public class VanillaChronicle implements Chronicle {
     @Override
     public String name() {
         return name;
+    }
+
+    public int getEntriesForCycleBits(){
+        return entriesForCycleBits;
     }
 
     @NotNull
@@ -148,19 +152,19 @@ public class VanillaChronicle implements Chronicle {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() throws IOException {
-        WeakReference<ExcerptAppender> ref = appenderCache.get();
-        ExcerptAppender appender = null;
+    public VanillaAppender createAppender() throws IOException {
+        WeakReference<VanillaAppender> ref = appenderCache.get();
+        VanillaAppender appender = null;
         if (ref != null)
             appender = ref.get();
         if (appender == null) {
             appender = createAppender0();
-            appenderCache.set(new WeakReference<ExcerptAppender>(appender));
+            appenderCache.set(new WeakReference<VanillaAppender>(appender));
         }
         return appender;
     }
 
-    private ExcerptAppender createAppender0() {
+    private VanillaAppender createAppender0() {
         return new VanillaAppender();
     }
 
@@ -450,7 +454,7 @@ public class VanillaChronicle implements Chronicle {
         }
     }
 
-    class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
+    public class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
         private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
         private int appenderCycle, appenderThreadId;
         private boolean nextSynchronous;
@@ -464,12 +468,15 @@ public class VanillaChronicle implements Chronicle {
         public void startExcerpt() {
             startExcerpt(config.defaultMessageSize());
         }
-
         @Override
         public void startExcerpt(long capacity) {
+            startExcerpt(capacity, cycle());
+        }
+
+        public void startExcerpt(long capacity, int cycle) {
             checkNotClosed();
             try {
-                appenderCycle = cycle();
+                appenderCycle = cycle;
                 appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & 0xFFFF) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {

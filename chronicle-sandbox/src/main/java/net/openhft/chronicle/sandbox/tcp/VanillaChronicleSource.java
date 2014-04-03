@@ -232,14 +232,15 @@ public class VanillaChronicleSource implements Chronicle {
                     long remaining;
 
                     bb.clear();
-                    if (first) {
+                    //if (first) {
 //                        System.out.println("wi " + index);
-                        bb.putLong(excerpt.index());
-                        first = false;
-                        remaining = size + TcpUtil.HEADER_SIZE;
-                    } else {
-                        remaining = size + 4;
-                    }
+                        //bb.putLong(excerpt.index());
+                        //first = false;
+                    //    remaining = size + TcpUtil.HEADER_SIZE;
+                    //} else {
+                        remaining = size + 8 + 4;
+                    //}
+                    bb.putLong(excerpt.index());
                     bb.putInt((int) size);
                     // for large objects send one at a time.
                     if (size > bb.capacity() / 2) {
@@ -262,12 +263,13 @@ public class VanillaChronicleSource implements Chronicle {
                                 if (excerpt.wasPadding()) {
                                     throw new AssertionError("Entry should not be padding - remove");
                                 }
-                                if (excerpt.remaining() + 4 >= bb.capacity() - bb.position())
+                                if (excerpt.remaining() + 4 + 8 >= bb.capacity() - bb.position())
                                     break;
                                 // if there is free space, copy another one.
                                 int size2 = (int) excerpt.capacity();
                                 //                            System.out.println("W+ "+size);
-                                bb.limit(bb.position() + size2 + 4);
+                                bb.limit(bb.position() + size2 + 4 + 8);
+                                bb.putLong(excerpt.index());
                                 bb.putInt(size2);
                                 excerpt.read(bb);
                             }

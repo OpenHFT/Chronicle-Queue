@@ -46,7 +46,7 @@ public class VanillaChronicleSink implements Chronicle {
     private final VanillaChronicle chronicle;
     @NotNull
     private final SocketAddress address;
-    private final ExcerptAppender excerpt;
+    private final VanillaChronicle.VanillaAppender excerpt;
     private final Logger logger;
     private volatile boolean closed = false;
 
@@ -181,31 +181,37 @@ public class VanillaChronicleSink implements Chronicle {
 
             //System.out.println("rb " + readBuffer);
 
-            if (scFirst) {
+//            if (scFirst) {
                 long scIndex = readBuffer.getLong();
 //                System.out.println("ri " + scIndex);
-                if (scIndex != chronicle.size())
+//                if (scIndex != chronicle.size())
                     //throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
-                    scFirst = false;
-            }
+//                    scFirst = false;
+//            }
             int size = readBuffer.getInt();
-            switch (size) {
-                case VanillaChronicleSource.IN_SYNC_LEN:
+
+            if(size == VanillaChronicleSource.IN_SYNC_LEN){
+                return false;
+            }
+//            switch (size) {
+//                case VanillaChronicleSource.IN_SYNC_LEN:
 //                System.out.println("... received inSync");
-                    return false;
+//                    return false;
 //                case VanillaChronicleSource.PADDED_LEN:
 //                System.out.println("... received padded");
 //                    excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);//
 //                    return true;
-                default:
-                    break;
-            }
+//                default:
+//                    break;
+//            }
 
 //            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
                 throw new StreamCorruptedException("size was " + size);
 
-            excerpt.startExcerpt(size);
+            int cycle = (int) (scIndex >>> chronicle.getEntriesForCycleBits());
+
+            excerpt.startExcerpt(size,cycle);
             // perform a progressive copy of data.
             long remaining = size;
             int limit = readBuffer.limit();
