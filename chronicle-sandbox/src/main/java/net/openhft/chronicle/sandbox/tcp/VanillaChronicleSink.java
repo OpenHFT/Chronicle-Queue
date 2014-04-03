@@ -104,9 +104,6 @@ public class VanillaChronicleSink implements Chronicle {
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            //return super.index(index) || index >= 0 && readNext() && super.index(index);
-            //readNext() can return false if IN_SYNCH_LEN is called
-            //this is not a real excerpt keep trying until readIndex() return true.
             if (super.nextIndex()) return true;
             if (readNext()) {
                 return super.nextIndex();
@@ -179,33 +176,13 @@ public class VanillaChronicleSink implements Chronicle {
                 readBuffer.flip();
             }
 
-            //System.out.println("rb " + readBuffer);
-
-//            if (scFirst) {
-                long scIndex = readBuffer.getLong();
-//                System.out.println("ri " + scIndex);
-//                if (scIndex != chronicle.size())
-                    //throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
-//                    scFirst = false;
-//            }
+            long scIndex = readBuffer.getLong();
             int size = readBuffer.getInt();
 
             if(size == VanillaChronicleSource.IN_SYNC_LEN){
                 return false;
             }
-//            switch (size) {
-//                case VanillaChronicleSource.IN_SYNC_LEN:
-//                System.out.println("... received inSync");
-//                    return false;
-//                case VanillaChronicleSource.PADDED_LEN:
-//                System.out.println("... received padded");
-//                    excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);//
-//                    return true;
-//                default:
-//                    break;
-//            }
 
-//            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
                 throw new StreamCorruptedException("size was " + size);
 
@@ -225,21 +202,17 @@ public class VanillaChronicleSink implements Chronicle {
 
             // needs more than one read.
             while (remaining > 0) {
-//                System.out.println("++ read remaining "+remaining +" rb "+readBuffer);
                 readBuffer.clear();
                 int size3 = (int) Math.min(readBuffer.capacity(), remaining);
                 readBuffer.limit(size3);
-//                    System.out.println("... reading");
                 if (sc.read(readBuffer) < 0)
                     throw new EOFException();
                 readBuffer.flip();
-//                    System.out.println("r " + ChronicleTools.asString(bb));
                 remaining -= readBuffer.remaining();
                 excerpt.write(readBuffer);
             }
 
             excerpt.finish();
-//            System.out.println(" ri: " + excerpt.index());
         } catch (IOException e) {
             if (logger.isLoggable(Level.FINE))
                 logger.log(Level.FINE, "Lost connection to " + address + " retrying", e);
@@ -266,7 +239,7 @@ public class VanillaChronicleSink implements Chronicle {
     public void close() {
         closed = true;
         closeSocket(sc);
-//        chronicle.close();
+        chronicle.close();
     }
 
     public ChronicleConfig config() {

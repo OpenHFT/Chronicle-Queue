@@ -202,20 +202,15 @@ public class VanillaChronicleSource implements Chronicle {
         public void run() {
             try {
                 long lastSinkIndex = readIndex(socket);
-                System.out.println("Last synched index " + lastSinkIndex);
                 ExcerptTailer excerpt = chronicle.createTailer();
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
-                boolean first = true;
                 excerpt.index(lastSinkIndex);
                 OUTER:
                 while (!closed) {
                     while (!excerpt.nextIndex()) {
                         long now = System.currentTimeMillis();
-                        if (excerpt.wasPadding()) {
-                            throw new AssertionError("Entry should not be padding - remove");
-                        }
-                        if (sendInSync <= now && !first) {
+                        if (sendInSync <= now) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
                             bb.flip();
@@ -227,19 +222,13 @@ public class VanillaChronicleSource implements Chronicle {
                         if (closed) break OUTER;
                     }
                     pauseReset();
-//                    System.out.println("Writing " + index);
                     final long size = excerpt.capacity();
                     long remaining;
 
                     bb.clear();
-                    //if (first) {
-//                        System.out.println("wi " + index);
-                        //bb.putLong(excerpt.index());
-                        //first = false;
-                    //    remaining = size + TcpUtil.HEADER_SIZE;
-                    //} else {
-                        remaining = size + 8 + 4;
-                    //}
+                    //8 bytes for the index (a long) 4 bytes for size (an int)
+                    remaining = size + 8 + 4;
+
                     bb.putLong(excerpt.index());
                     bb.putInt((int) size);
                     // for large objects send one at a time.
@@ -249,7 +238,6 @@ public class VanillaChronicleSource implements Chronicle {
                             bb.limit(size2);
                             excerpt.read(bb);
                             bb.flip();
-//                        System.out.println("w " + ChronicleTools.asString(bb));
                             remaining -= bb.remaining();
                             TcpUtil.writeAll(socket, bb);
                         }
@@ -257,7 +245,6 @@ public class VanillaChronicleSource implements Chronicle {
                         bb.limit((int) remaining);
                         excerpt.read(bb);
                         int count = 1;
-                        //DS
                         while (count++ < MAX_MESSAGE) {
                             if (excerpt.nextIndex()) {
                                 if (excerpt.wasPadding()) {
@@ -267,7 +254,6 @@ public class VanillaChronicleSource implements Chronicle {
                                     break;
                                 // if there is free space, copy another one.
                                 int size2 = (int) excerpt.capacity();
-                                //                            System.out.println("W+ "+size);
                                 bb.limit(bb.position() + size2 + 4 + 8);
                                 bb.putLong(excerpt.index());
                                 bb.putInt(size2);
@@ -276,14 +262,11 @@ public class VanillaChronicleSource implements Chronicle {
                         }
 
                         bb.flip();
-//                        System.out.println("W " + size + " wb " + bb);
                         TcpUtil.writeAll(socket, bb);
                     }
                     if (bb.remaining() > 0) throw new EOFException("Failed to send index=" + excerpt.index());
 
                     sendInSync = 0;
-//                    if (index % 20000 == 0)
-//                        System.out.println(System.currentTimeMillis() + ": wrote " + index);
                 }
             } catch (Exception e) {
                 if (!closed) {
@@ -315,7 +298,6 @@ public class VanillaChronicleSource implements Chronicle {
         public void finish() {
             super.finish();
             wakeSessionHandlers();
-//            System.out.println("Wrote " + index());
         }
     }
 }
