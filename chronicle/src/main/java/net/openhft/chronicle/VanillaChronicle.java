@@ -103,6 +103,31 @@ public class VanillaChronicle implements Chronicle {
         return new VanillaBytesMarshallerFactory();
     }
 
+    /**
+     * This method returns the very last index in the chronicle.  Not to be confused with lastWrittenIndex(),
+     * this method returns the actual last index by scanning the underlying data even the appender has not
+     * been activated.
+     * @return The last index in the file
+     */
+    public long lastIndex(){
+        int cycle = (int)indexCache.lastCycle();
+        int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
+        if(lastIndexFile >= 0) {
+            try {
+                final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
+                final long indices = VanillaIndexCache.countIndices(vfile);
+
+                vfile.decrementUsage();
+
+                return ((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
+            } catch (IOException e) {
+                    throw new AssertionError(e);
+            }
+        } else {
+            return -1;
+        }
+    }
+
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
@@ -185,6 +210,10 @@ public class VanillaChronicle implements Chronicle {
             return index;
         }
 
+        /**
+         * Return the last index written by the appender.  This may not be the actual last index in the Chronicle
+         * which can be found from lastIndex().
+         */
         @Override
         public long lastWrittenIndex() {
             return VanillaChronicle.this.lastWrittenIndex();
@@ -308,21 +337,11 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptCommon toEnd() {
             resetLastInfo();
 
-            int cycle = (int)indexCache.lastCycle();
-            int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
-            if(lastIndexFile >= 0) {
-                try {
-                    final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
-                    final long indices = VanillaIndexCache.countIndices(vfile);
-
-                    vfile.decrementUsage();
-
-                    index((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
-                } catch (IOException e) {
-                    throw new AssertionError(e);
-                }
-            } else {
-                toStart();
+            long lastIndex = lastIndex();
+            if(lastIndex >= 0){
+                index(lastIndex);
+            }  else {
+                return toStart();
             }
 
             return this;

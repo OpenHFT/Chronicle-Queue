@@ -201,41 +201,28 @@ public class VanillaChronicleSource implements Chronicle {
         @Override
         public void run() {
             try {
-                long index = readIndex(socket);
+                long lastSinkIndex = readIndex(socket);
+                System.out.println("Last synched index " + lastSinkIndex);
                 ExcerptTailer excerpt = chronicle.createTailer();
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
                 boolean first = true;
+                excerpt.index(lastSinkIndex);
                 OUTER:
                 while (!closed) {
-                    //while (!excerpt.index(index)) {
                     while (!excerpt.nextIndex()) {
                         long now = System.currentTimeMillis();
                         if (excerpt.wasPadding()) {
-                            if (index >= 0) {
-                                bb.clear();
-                                if (first) {
-                                    bb.putLong(excerpt.index());
-                                    first = false;
-                                }
-                                bb.putInt(PADDED_LEN);
-                                bb.flip();
-                                TcpUtil.writeAll(socket, bb);
-                                sendInSync = now + HEARTBEAT_INTERVAL_MS;
-                            }
-                            index++;
-                            continue;
+                            throw new AssertionError("Entry should not be padding - remove");
                         }
-//                        System.out.println("Waiting for " + index);
-                        //No need to send this message...
-/*                        if (sendInSync <= now && !first) {
+                        if (sendInSync <= now && !first) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
                             bb.flip();
                             TcpUtil.writeAll(socket, bb);
                             sendInSync = now + HEARTBEAT_INTERVAL_MS;
                         }
-*/
+
                         pause();
                         if (closed) break OUTER;
                     }
@@ -270,12 +257,10 @@ public class VanillaChronicleSource implements Chronicle {
                         excerpt.read(bb);
                         int count = 1;
                         //DS
-                        //while (excerpt.index(index + 1) && count++ < MAX_MESSAGE) {
                         while (count++ < MAX_MESSAGE) {
                             if (excerpt.nextIndex()) {
                                 if (excerpt.wasPadding()) {
-                                    index++;
-                                    continue;
+                                    throw new AssertionError("Entry should not be padding - remove");
                                 }
                                 if (excerpt.remaining() + 4 >= bb.capacity() - bb.position())
                                     break;
@@ -285,8 +270,6 @@ public class VanillaChronicleSource implements Chronicle {
                                 bb.limit(bb.position() + size2 + 4);
                                 bb.putInt(size2);
                                 excerpt.read(bb);
-
-                                index++;
                             }
                         }
 
@@ -294,8 +277,8 @@ public class VanillaChronicleSource implements Chronicle {
 //                        System.out.println("W " + size + " wb " + bb);
                         TcpUtil.writeAll(socket, bb);
                     }
-                    if (bb.remaining() > 0) throw new EOFException("Failed to send index=" + index);
-                    index++;
+                    if (bb.remaining() > 0) throw new EOFException("Failed to send index=" + excerpt.index());
+
                     sendInSync = 0;
 //                    if (index % 20000 == 0)
 //                        System.out.println(System.currentTimeMillis() + ": wrote " + index);

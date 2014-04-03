@@ -138,7 +138,7 @@ public class VanillaChronicleSink implements Chronicle {
                 sc.socket().setReceiveBufferSize(256 * 1024);
                 logger.info("Connected to " + address);
                 ByteBuffer bb = ByteBuffer.allocate(8);
-                bb.putLong(0, chronicle.lastWrittenIndex());
+                bb.putLong(0, chronicle.lastIndex());
                 TcpUtil.writeAllOrEOF(sc, bb);
                 return sc;
 
