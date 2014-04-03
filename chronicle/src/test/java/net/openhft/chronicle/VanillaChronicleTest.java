@@ -17,7 +17,6 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -283,8 +282,6 @@ public class VanillaChronicleTest {
     }
 
     @Test
-    @Ignore
-    // set to  @Ignore  as it was failing the teamcity build, and I want to test the deploy is working ok
     public void testAppenderTailer() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-appender-tailer";
 
@@ -332,8 +329,6 @@ public class VanillaChronicleTest {
     }
 
     @Test
-    @Ignore
-    // set to @Ignore as it was failing the team city build, and I want to test the deploy is working ok
     public void testTailerToStart() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-tostart";
 
