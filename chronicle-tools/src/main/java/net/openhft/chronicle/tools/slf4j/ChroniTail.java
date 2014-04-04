@@ -50,7 +50,7 @@ public class ChroniTail extends ChroniTool {
                         : new VanillaChronicle(args[args.length - 1]),
                     binary ? BINARY : TEXT);
 
-                cp.run(true);
+                cp.run(true,true);
                 cp.close();
 
             } else {

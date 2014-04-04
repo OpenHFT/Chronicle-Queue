@@ -45,14 +45,17 @@ public class ChronicleProcessor implements Closeable {
         this.processor = processor;
     }
 
-    /**
-     *
-     */
     public void run(boolean waitForData) {
+        run(waitForData,false);
+    }
+
+    public void run(boolean waitForData, boolean fromEnd) {
         ExcerptTailer tailer = null;
 
         try {
-            tailer = this.chronicle.createTailer();
+            tailer = fromEnd
+                ? this.chronicle.createTailer().toEnd()
+                : this.chronicle.createTailer();
 
             while(true) {
                 if(tailer.nextIndex()) {
