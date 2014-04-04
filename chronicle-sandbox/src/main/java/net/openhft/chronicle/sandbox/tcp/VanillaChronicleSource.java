@@ -212,6 +212,8 @@ public class VanillaChronicleSource implements Chronicle {
                         long now = System.currentTimeMillis();
                         if (sendInSync <= now) {
                             bb.clear();
+                            //The sink is expecting this structure long for index then int for size
+                            bb.putLong(IN_SYNC_LEN);
                             bb.putInt(IN_SYNC_LEN);
                             bb.flip();
                             TcpUtil.writeAll(socket, bb);
@@ -228,9 +230,9 @@ public class VanillaChronicleSource implements Chronicle {
                     bb.clear();
                     //8 bytes for the index (a long) 4 bytes for size (an int)
                     remaining = size + 8 + 4;
-
                     bb.putLong(excerpt.index());
                     bb.putInt((int) size);
+
                     // for large objects send one at a time.
                     if (size > bb.capacity() / 2) {
                         while (remaining > 0) {

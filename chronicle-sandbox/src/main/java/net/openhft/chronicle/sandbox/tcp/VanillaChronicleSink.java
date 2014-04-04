@@ -114,12 +114,10 @@ public class VanillaChronicleSink implements Chronicle {
 
     @Nullable
     private SocketChannel sc = null;
-    private boolean scFirst = true;
 
     boolean readNext() {
         if (sc == null || !sc.isOpen()) {
             sc = createConnection();
-            scFirst = true;
         }
         return sc != null && readNextExcerpt(sc);
     }
@@ -161,13 +159,14 @@ public class VanillaChronicleSink implements Chronicle {
         try {
             if (closed) return false;
 
-            if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
-                if (readBuffer.remaining() == 0)
+            if (readBuffer.remaining() < TcpUtil.HEADER_SIZE +8) {
+                if (readBuffer.remaining() == 0){
                     readBuffer.clear();
-                else
+                }
+                else{
                     readBuffer.compact();
-                int minSize = scFirst ? 8 + 4 + 8 : 4 + 8;
-                while (readBuffer.position() < minSize) {
+                }
+                while (readBuffer.position() < 8 + 4 + 8 + 8) {
                     if (sc.read(readBuffer) < 0) {
                         sc.close();
                         return false;
@@ -180,6 +179,7 @@ public class VanillaChronicleSink implements Chronicle {
             int size = readBuffer.getInt();
 
             if(size == VanillaChronicleSource.IN_SYNC_LEN){
+                //Heartbeat message ignore and return false
                 return false;
             }
 
@@ -192,7 +192,6 @@ public class VanillaChronicleSink implements Chronicle {
             // perform a progressive copy of data.
             long remaining = size;
             int limit = readBuffer.limit();
-
             int size2 = (int) Math.min(readBuffer.remaining(), remaining);
             remaining -= size2;
             readBuffer.limit(readBuffer.position() + size2);
