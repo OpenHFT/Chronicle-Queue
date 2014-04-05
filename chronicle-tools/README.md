@@ -20,12 +20,12 @@ chronicle-tools
   ``` 
   Output:
   ``` 
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.Slf4jVanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
   ``` 
 
   * net.openhft.chronicle.tools.ChroniDump

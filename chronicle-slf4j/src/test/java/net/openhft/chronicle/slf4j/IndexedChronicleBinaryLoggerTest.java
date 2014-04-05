@@ -17,12 +17,9 @@ package net.openhft.chronicle.slf4j;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.slf4j.impl.ChronicleLogWriters;
-import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
-import net.openhft.lang.io.serialization.BytesMarshallable;
-import net.openhft.lang.model.constraints.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,14 +28,13 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.IOException;
-import java.io.Serializable;
 
 import static org.junit.Assert.*;
 
 /**
  * TODO: add test case for text-logegrs
  */
-public class Slf4jVanillaChronicleBinaryLoggerTest extends Slf4jChronicleTestBase {
+public class IndexedChronicleBinaryLoggerTest extends ChronicleTestBase {
 
     // *************************************************************************
     //
@@ -48,7 +44,7 @@ public class Slf4jVanillaChronicleBinaryLoggerTest extends Slf4jChronicleTestBas
     public void setUp() {
         System.setProperty(
             "slf4j.chronicle.properties",
-            System.getProperty("slf4j.chronicle.vanilla.binary.properties"));
+            System.getProperty("slf4j.chronicle.indexed.binary.properties"));
 
         getChronicleLoggerFactory().relaod();
         getChronicleLoggerFactory().warmup();
@@ -74,17 +70,17 @@ public class Slf4jVanillaChronicleBinaryLoggerTest extends Slf4jChronicleTestBas
 
     @Test
     public void testLogger() {
-        Logger logger = LoggerFactory.getLogger(Slf4jVanillaChronicleBinaryLoggerTest.class);
+        Logger logger = LoggerFactory.getLogger(IndexedChronicleBinaryLoggerTest.class);
 
         assertNotNull(logger);
         assertEquals(logger.getClass(),ChronicleLogger.class);
 
         ChronicleLogger cl = (ChronicleLogger)logger;
 
-        assertEquals(cl.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_TRACE);
-        assertEquals(cl.getName(),Slf4jVanillaChronicleBinaryLoggerTest.class.getName());
-        assertTrue(cl.getWriter() instanceof ChronicleLogWriters.BinaryWriter);
-        assertTrue(cl.getWriter().getChronicle() instanceof VanillaChronicle);
+        assertEquals(cl.getLevel(), ChronicleLoggingHelper.LOG_LEVEL_DEBUG);
+        assertEquals(cl.getName(),IndexedChronicleBinaryLoggerTest.class.getName());
+        assertTrue(cl.getWriter() instanceof ChronicleLogWriters.SynchronizedWriter);
+        assertTrue(cl.getWriter().getChronicle() instanceof IndexedChronicle);
     }
 
     // *************************************************************************
@@ -94,23 +90,22 @@ public class Slf4jVanillaChronicleBinaryLoggerTest extends Slf4jChronicleTestBas
     @Test
     public void testLogging1() throws IOException {
         String theradName = "th-test-binary-logging";
-        String loggerName = Slf4jVanillaChronicleBinaryLoggerTest.class.getName();
+        String loggerName = IndexedChronicleBinaryLoggerTest.class.getName();
 
         Thread.currentThread().setName(theradName);
 
         Logger l = LoggerFactory.getLogger(loggerName);
-        l.trace("data {}, {}",
+        l.debug("data {}, {}",
             new MySerializableData("a Serializable object"),
             new MyMarshallableData("a Marshallable object")
         );
 
-        Chronicle reader = getVanillaChronicle(ChronicleLoggingConfig.TYPE_VANILLA, "root-binary");
+        Chronicle reader = getIndexedChronicle(ChronicleLoggingConfig.TYPE_INDEXED, "root-binary");
         ExcerptTailer tailer = reader.createTailer();
 
-        // trace
         assertTrue(tailer.nextIndex());
         tailer.readLong();
-        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_TRACE, tailer.readByte());
+        assertEquals(ChronicleLoggingHelper.LOG_LEVEL_DEBUG, tailer.readByte());
         assertEquals(Thread.currentThread().getId(), tailer.readLong());
         assertEquals(theradName, tailer.readEnum(String.class));
         assertEquals(loggerName,tailer.readEnum(String.class));
@@ -131,49 +126,5 @@ public class Slf4jVanillaChronicleBinaryLoggerTest extends Slf4jChronicleTestBas
 
         tailer.close();
         reader.close();
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private final static class MySerializableData implements Serializable {
-        private final Object data;
-
-        public MySerializableData(Object data) {
-            this.data = data;
-        }
-
-        @Override
-        public String toString() {
-            return this.data.toString();
-        }
-    }
-
-    private final static class MyMarshallableData implements BytesMarshallable {
-        private Object data;
-
-        public MyMarshallableData() {
-            this(null);
-        }
-
-        public MyMarshallableData(Object data) {
-            this.data = data;
-        }
-
-        @Override
-        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
-            this.data = in.readObject();
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull Bytes out) {
-            out.writeObject(data);
-        }
-
-        @Override
-        public String toString() {
-            return this.data.toString();
-        }
     }
 }
