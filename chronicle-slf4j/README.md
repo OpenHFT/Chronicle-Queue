@@ -1,8 +1,5 @@
 chronicle-slf4j
 ===============
-Simple implementation of Logger that sends all enabled log messages, for all defined loggers, to one or more VanillaChronicle.
-
-===
 
 To configure this sl4j binding you need to specify the location of a properties files via system properties:
 ```
@@ -59,19 +56,7 @@ Predefined values are:
   * Loggers are not hierarchical grouped so my.domain.package.MyClass1 and my.domain are two distinct entities.
   * The _path_ is used to track the underlying VanillaChronicle so two loggers configured with the same _path_ will share the same Chronicle  
 
-
-###Availablility
-This module will be available on maven central as
-
-```xml
-<dependency>
-    <groupId>net.openhft</groupId>
-    <artifactId>chronicle-slfj</artifactId>
-    <version>3.0b</version>
-</dependency>
-```
-
-===
+###Tools
 
   * net.openhft.chronicle.slf4j.tools.ChroniTail
   ```
@@ -102,11 +87,19 @@ This module will be available on maven central as
 
   Output:
   ```
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
-    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+  2014.04.06-13:30:03.306|debug|1|th-test-logging_1|readwrite|debug
+  2014.04.06-13:30:03.313|info|1|th-test-logging_1|readwrite|info
+  2014.04.06-13:30:03.314|warn|1|th-test-logging_1|readwrite|warn
+  2014.04.06-13:30:03.314|error|1|th-test-logging_1|readwrite|error
   ```
 
+###Availablility
+This module will be available on maven central as
+
+```xml
+<dependency>
+    <groupId>net.openhft</groupId>
+    <artifactId>chronicle-slfj</artifactId>
+    <version>3.0b</version>
+</dependency>
+```
