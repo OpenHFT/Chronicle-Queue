@@ -93,6 +93,45 @@ Predefined values are:
   2014.04.06-13:30:03.314|error|1|th-test-logging_1|readwrite|error
   ```
 
+
+###Writing a simple LogSearch with Groovy and Grape
+
+  ```groovy
+  import net.openhft.chronicle.VanillaChronicle
+  import net.openhft.chronicle.IndexedChronicle
+  import net.openhft.chronicle.slf4j.tools.ChroniTool
+  import net.openhft.chronicle.slf4j.impl.AbstractBinaryChronicleLogReader;
+  
+  @Grapes([
+     @Grab(group='net.openhft', module='chronicle'      , version='3.0b-SNAPSHOT'),
+     @Grab(group='net.openhft', module='chronicle-slf4j', version='3.0b-SNAPSHOT'),
+  ])
+  class LogSearch {
+      static def main(String[] args) {
+          def reader = new AbstractBinaryChronicleLogReader() {
+              @Override
+              public void read(Date ts,int level,long thId,String thName,String logName,String msg,Object... msgArgs) {
+                  if(msg =~ '.*n.*') {
+                      printf("%s => %s\n",ts,msg)
+                  }
+              }
+          };
+  
+          try {
+              if(args.length == 1) {
+                  ChroniTool.process(
+                      new VanillaChronicle(args[0]),
+                      reader,
+                      false,
+                      false)
+              }
+          } catch(Exception e) {
+              e.printStackTrace(System.err);
+          }
+      }
+  }
+  ```
+
 ###Availablility
 This module will be available on maven central as
 
