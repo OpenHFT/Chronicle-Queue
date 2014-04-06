@@ -16,6 +16,9 @@
 
 package net.openhft.chronicle;
 
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+
 public class VanillaChronicleConfig {
     public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();
 
@@ -37,6 +40,7 @@ public class VanillaChronicleConfig {
     }
 
     public VanillaChronicleConfig cycleLength(int cycleLength) {
+        checkCycleParamCombinationForOverflow(cycleLength, entriesPerCycle);
         this.cycleLength = cycleLength;
         return this;
     }
@@ -64,6 +68,7 @@ public class VanillaChronicleConfig {
     }
 
     public VanillaChronicleConfig entriesPerCycle(long entriesPerCycle) {
+        checkCycleParamCombinationForOverflow(cycleLength, entriesPerCycle);
         this.entriesPerCycle = entriesPerCycle;
         return this;
     }
@@ -88,6 +93,19 @@ public class VanillaChronicleConfig {
 
     public boolean synchronous() {
         return synchronous;
+    }
+
+    private void checkCycleParamCombinationForOverflow(int cycleLength, long entriesPerCycle) {
+        BigDecimal cycle = new BigDecimal(System.currentTimeMillis() / cycleLength);
+        BigDecimal entries = cycle.multiply(new BigDecimal(entriesPerCycle));
+        BigDecimal threshold = new BigDecimal(Long.MAX_VALUE * 0.75);
+        boolean aboveThreshold = entries.compareTo(threshold) > 0;
+        if (aboveThreshold) {
+            DecimalFormat df = new DecimalFormat();
+            df.setGroupingUsed(true);
+            throw new IllegalArgumentException("Cycle length [" + df.format(cycleLength) + "] can't be accepted! " +
+                    "With the current entries-per-cycle value [" + df.format(entriesPerCycle) + "] it can lead to overflows in the code!");
+        }
     }
 
 

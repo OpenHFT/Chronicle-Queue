@@ -111,9 +111,9 @@ public class VanillaChronicleSourceTest {
 
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.entriesPerCycle(1L << 20);
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
-        config.entriesPerCycle(1L << 20);
         config.indexBlockSize(16L << 10);
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 0);
 
@@ -153,9 +153,9 @@ public class VanillaChronicleSourceTest {
 
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.entriesPerCycle(1L << 20);
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
-        config.entriesPerCycle(1L << 20);
         config.indexBlockSize(16L << 10);
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 55555);
         VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink", config), "localhost", 55555);
@@ -198,9 +198,9 @@ public class VanillaChronicleSourceTest {
     public void testSourceSinkStartResumeRollingEverySecond() throws Exception {
         //This is the config that is required to make the VanillaChronicle roll every second
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.entriesPerCycle(1L << 20);
         config.cycleLength(1000);
         config.cycleFormat("yyyyMMddHHmmss");
-        config.entriesPerCycle(1L << 20);
         config.indexBlockSize(16L << 10);
 
         final String baseDir_source = System.getProperty("java.io.tmpdir") + "/tmp/testAppendRolling_Source";
