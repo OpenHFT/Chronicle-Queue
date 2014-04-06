@@ -118,10 +118,7 @@ public class ChronicleLogWriters {
             this.appender.writeEnum(currentThread.getName());
             this.appender.writeEnum(name);
             this.appender.writeEnum(tp.getMessage());
-
-            //TODO: write Throwable
-            //appender.writeEnum(t.getMessage());
-
+            this.appender.writeInt(0);
             this.appender.finish();
         }
     }

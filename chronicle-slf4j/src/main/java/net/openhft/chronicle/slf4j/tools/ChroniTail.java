@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tools.slf4j;
+package net.openhft.chronicle.slf4j.tools;
 
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
 
 /**
  *
@@ -30,10 +29,9 @@ public class ChroniTail extends ChroniTool {
 
     public static void main(String[] args) {
         try {
-            boolean binary = true;
             boolean indexed = false;
+            boolean binary  = true;
 
-            //TODO add more options
             for(int i=0;i<args.length - 1;i++) {
                 if("-t".equals(args[i])) {
                     binary = false;
@@ -44,15 +42,13 @@ public class ChroniTail extends ChroniTool {
             }
 
             if(args.length >= 1) {
-                ChronicleProcessor cp = new ChronicleProcessor(
+                ChroniTool.process(
                     indexed
                         ? new IndexedChronicle(args[args.length - 1])
                         : new VanillaChronicle(args[args.length - 1]),
-                    binary ? BINARY : TEXT);
-
-                cp.run(true,true);
-                cp.close();
-
+                    binary ? READER_BINARY : READER_TEXT,
+                    true,
+                    true);
             } else {
                 System.err.format("\nUsage: ChroniTail [-t|-i] path");
                 System.err.format("\n  -t = text chronicle, default binary");

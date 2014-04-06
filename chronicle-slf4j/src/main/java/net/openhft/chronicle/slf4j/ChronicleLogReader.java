@@ -15,23 +15,16 @@
  */
 package net.openhft.chronicle.slf4j;
 
-import net.openhft.chronicle.sandbox.BytesProcessor;
 
-import java.util.Date;
+import net.openhft.lang.io.Bytes;
 
 /**
  *
  */
-public interface ChronicleLogReader extends BytesProcessor {
+public interface ChronicleLogReader  {
     /**
      *
-     * @param timestamp
-     * @param level
-     * @param threadId
-     * @param threadName
-     * @param name
-     * @param message
-     * @param args
+     * @param bytes
      */
-    public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args);
+    public void read(Bytes bytes);
 }

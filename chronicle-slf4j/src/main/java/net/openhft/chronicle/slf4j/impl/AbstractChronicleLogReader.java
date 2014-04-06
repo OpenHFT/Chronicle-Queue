@@ -13,17 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.slf4j.impl;
 
-import net.openhft.lang.io.Bytes;
+import net.openhft.chronicle.slf4j.ChronicleLogReader;
 
-/**
- *
- */
-public interface BytesProcessor {
+import java.util.Date;
+
+public abstract class AbstractChronicleLogReader implements ChronicleLogReader {
+
     /**
      *
-     * @param bytes
+     * @param timestamp
+     * @param level
+     * @param threadId
+     * @param threadName
+     * @param name
+     * @param message
+     * @param args
      */
-    public void process(final Bytes bytes);
+    public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+    }
 }

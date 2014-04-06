@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.slf4j.impl;
 
-import net.openhft.chronicle.slf4j.ChronicleLogReader;
 import net.openhft.lang.io.Bytes;
 
 import java.util.Date;
@@ -23,9 +22,9 @@ import java.util.Date;
 /**
  *
  */
-public abstract class AbstractBinaryChronicleLogReader implements ChronicleLogReader {
+public abstract class AbstractBinaryChronicleLogReader extends AbstractChronicleLogReader {
     @Override
-    public void process(Bytes bytes) {
+    public void read(Bytes bytes) {
         Date     ts     = new Date(bytes.readLong());
         int      level  = bytes.readByte();
         long     tid    = bytes.readLong();

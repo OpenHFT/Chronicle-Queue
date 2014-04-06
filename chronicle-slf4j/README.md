@@ -70,4 +70,43 @@ This module will be available on maven central as
     <version>3.0b</version>
 </dependency>
 ```
-    
+
+===
+
+  * net.openhft.chronicle.slf4j.tools.ChroniTail
+  ```
+    ChroniTail [-t|-i] path
+        -t = text chronicle, default binary
+        -i = IndexedCronicle, default VanillaChronicle
+
+    mvn exec:java -Dexec.mainClass="net.openhft.chronicle.slf4j.tools.ChroniTail" -Dexec.args="..."
+  ```
+
+  * net.openhft.chronicle.slf4j.tools.ChroniCat
+  ```
+      ChroniCat [-t|-i] path
+        -t = text chronicle, default binary
+        -i = IndexedCronicle, default VanillaChronicle
+
+      mvn exec:java -Dexec.mainClass="net.openhft.chronicle.slf4j.tools.ChroniCat" -Dexec.args="..."
+  ```
+
+  * net.openhft.chronicle.slf4j.tools.ChroniGrep
+  ```
+      ChroniCat [-t|-i] regexp1 ... regexpN path
+        -t = text chronicle, default binary
+        -i = IndexedCronicle, default VanillaChronicle
+
+      mvn exec:java -Dexec.mainClass="net.openhft.chronicle.slf4j.tools.ChroniCat" -Dexec.args="..."
+  ```
+
+  Output:
+  ```
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+    2014.02.26-15:14:54.548|warn|net.openhft.chronicle.slf4j.VanillaChronicleLoggerTest|something to slf4j
+  ```
+

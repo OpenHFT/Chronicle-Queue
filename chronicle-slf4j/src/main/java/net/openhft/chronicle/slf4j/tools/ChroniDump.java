@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tools;
+package net.openhft.chronicle.slf4j.tools;
 
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.sandbox.BytesProcessor;
-import net.openhft.chronicle.sandbox.tools.ChronicleProcessor;
+import net.openhft.chronicle.slf4j.ChronicleLogReader;
 import net.openhft.lang.io.Bytes;
 
 /**
@@ -35,9 +34,9 @@ public class ChroniDump {
     //
     // *************************************************************************
 
-    private static final BytesProcessor HEXDUMP = new BytesProcessor() {
+    private static final ChronicleLogReader HEXDUMP = new ChronicleLogReader() {
         @Override
-        public void process(Bytes bytes) {
+        public void read(Bytes bytes) {
             StringBuilder result = new StringBuilder();
 
             for(long i=0;bytes.remaining() > 0;i++) {
@@ -89,15 +88,13 @@ public class ChroniDump {
             }
 
             if(args.length >= 1) {
-                ChronicleProcessor cp = new ChronicleProcessor(
+                ChroniTool.process(
                     indexed
                         ? new IndexedChronicle(args[args.length - 1])
                         : new VanillaChronicle(args[args.length - 1]),
-                    HEXDUMP);
-
-                cp.run(false);
-                cp.close();
-
+                    HEXDUMP,
+                    false,
+                    false);
             } else {
                 System.err.format("\nUsage: ChroniDump [-i] path");
                 System.err.format("\n  -i = IndexedCronicle, default VanillaChronicle");

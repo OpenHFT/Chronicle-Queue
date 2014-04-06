@@ -52,11 +52,6 @@
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>chronicle-sandbox</artifactId>
-                <version>${openhft.chronicle.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
                 <artifactId>chronicle-slf4j</artifactId>
                 <version>${openhft.chronicle.version}</version>
             </dependency>
@@ -76,10 +71,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-sandbox</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

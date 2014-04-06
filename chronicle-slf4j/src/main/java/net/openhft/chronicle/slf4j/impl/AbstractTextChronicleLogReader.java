@@ -15,15 +15,14 @@
  */
 package net.openhft.chronicle.slf4j.impl;
 
-import net.openhft.chronicle.slf4j.ChronicleLogReader;
 import net.openhft.lang.io.Bytes;
 
 /**
  *
  */
-public abstract class AbstractTextChronicleLogReader implements ChronicleLogReader {
+public abstract class AbstractTextChronicleLogReader extends AbstractChronicleLogReader {
     @Override
-    public void process(Bytes bytes) {
+    public void read(Bytes bytes) {
         //TODO
     }
 }
