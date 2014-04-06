@@ -99,29 +99,26 @@ Predefined values are:
   ```groovy
   import net.openhft.chronicle.VanillaChronicle
   import net.openhft.chronicle.IndexedChronicle
+  import net.openhft.chronicle.slf4j.ChronicleLogProcessor
   import net.openhft.chronicle.slf4j.tools.ChroniTool
-  import net.openhft.chronicle.slf4j.impl.AbstractBinaryChronicleLogReader;
-  
+
   @Grapes([
      @Grab(group='net.openhft', module='chronicle'      , version='3.0b-SNAPSHOT'),
      @Grab(group='net.openhft', module='chronicle-slf4j', version='3.0b-SNAPSHOT'),
   ])
   class LogSearch {
       static def main(String[] args) {
-          def reader = new AbstractBinaryChronicleLogReader() {
-              @Override
-              public void read(Date ts,int level,long thId,String thName,String logName,String msg,Object... msgArgs) {
-                  if(msg =~ '.*n.*') {
-                      printf("%s => %s\n",ts,msg)
-                  }
+          def reader = { ts,level,thId,thName,logName,msg,msgArgs ->
+              if(msg =~ '.*n.*') {
+                  printf("%s => %s\n",ts,msg)
               }
-          };
-  
+          }
+
           try {
               if(args.length == 1) {
                   ChroniTool.process(
                       new VanillaChronicle(args[0]),
-                      reader,
+                      ChroniTool.binaryReader(reader as ChronicleLogProcessor),
                       false,
                       false)
               }

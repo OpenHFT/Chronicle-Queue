@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.slf4j.impl;
+package net.openhft.chronicle.slf4j;
 
-import net.openhft.chronicle.slf4j.ChronicleLogProcessor;
-import net.openhft.chronicle.slf4j.ChronicleLogReader;
+import java.util.Date;
 
-public abstract class AbstractChronicleLogReader implements ChronicleLogReader, ChronicleLogProcessor {
+public interface ChronicleLogProcessor {
+    public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args);
 }

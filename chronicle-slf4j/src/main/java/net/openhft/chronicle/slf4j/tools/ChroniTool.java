@@ -17,6 +17,7 @@ package net.openhft.chronicle.slf4j.tools;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.slf4j.ChronicleLogProcessor;
 import net.openhft.chronicle.slf4j.ChronicleLogReader;
 import net.openhft.chronicle.slf4j.ChronicleLoggingConfig;
 import net.openhft.chronicle.slf4j.ChronicleLoggingHelper;
@@ -101,6 +102,28 @@ public class ChroniTool {
             System.out.println(asString(timestamp,level,threadId,threadName,name,message,args));
         }
     };
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static ChronicleLogReader binaryReader(final ChronicleLogProcessor processor) {
+        return new AbstractBinaryChronicleLogReader() {
+            @Override
+            public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+                processor.read(timestamp,level,threadId,threadName,name,message,args);
+            }
+        };
+    }
+
+    public static ChronicleLogReader textReader(final ChronicleLogProcessor processor) {
+        return new AbstractTextChronicleLogReader() {
+            @Override
+            public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+                processor.read(timestamp,level,threadId,threadName,name,message,args);
+            }
+        };
+    }
 
     // *************************************************************************
     //
