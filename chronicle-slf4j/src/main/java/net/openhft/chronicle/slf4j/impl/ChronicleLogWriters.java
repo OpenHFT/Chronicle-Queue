@@ -50,18 +50,12 @@ public class ChronicleLogWriters {
         }
 
         /**
-         * This is the internal implementation for logging regular (non-parameterized)
-         * slf4j messages.
-         *
-         * long   : timestamp
-         * int    : level
-         * String : name
-         * String : message
+         * This is the internal implementation for logging slf4j messages.
          *
          * @param level   One of the LOG_LEVEL_XXX constants defining the slf4j level
          * @param name    The logger name
-         * @param message The message itself
-         * @param args    args
+         * @param message The message
+         * @param message The message arguments
          */
         @Override
         public void log(int level, String name, String message, Object... args) {
@@ -93,18 +87,12 @@ public class ChronicleLogWriters {
         }
 
         /**
-         * This is the internal implementation for logging regular (non-parameterized)
-         * slf4j messages.
-         *
-         * long   : timestamp
-         * int    : level
-         * String : name
-         * String : message
+         * This is the internal implementation for logging slf4j messages.
          *
          * @param level   One of the LOG_LEVEL_XXX constants defining the slf4j level
          * @param name    The logger name
-         * @param message The message itself
-         * @param args    args
+         * @param message The message
+         * @param message The message arguments
          */
         @Override
         public void log(int level, String name, String message, Object... args) {
@@ -117,7 +105,13 @@ public class ChronicleLogWriters {
             this.appender.writeLong(currentThread.getId());
             this.appender.writeEnum(currentThread.getName());
             this.appender.writeEnum(name);
-            this.appender.writeEnum(tp.getMessage());
+
+            if(tp.getThrowable() == null) {
+                this.appender.writeEnum(tp.getMessage());
+            } else {
+                appender.writeEnum(tp.getMessage() + " " + tp.getThrowable().toString());
+            }
+
             this.appender.writeInt(0);
             this.appender.finish();
         }
@@ -154,12 +148,12 @@ public class ChronicleLogWriters {
         }
 
         /**
-         * This is the internal implementation for logging regular (non-parameterized)
-         * slf4j messages.
+         * This is the internal implementation for logging slf4j messages.
          *
          * @param level   One of the LOG_LEVEL_XXX constants defining the slf4j level
          * @param name    The logger name
-         * @param message The message itself
+         * @param message The message
+         * @param message The message arguments
          */
         @Override
         public void log(int level, String name, String message, Object... args) {
@@ -178,6 +172,12 @@ public class ChronicleLogWriters {
             appender.append(name);
             appender.append('|');
             appender.append(tp.getMessage());
+
+            if(tp.getThrowable() != null) {
+                appender.append('|');
+                appender.append(tp.getThrowable().toString());
+            }
+
             appender.append('\n');
             appender.finish();
         }

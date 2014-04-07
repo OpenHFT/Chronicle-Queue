@@ -38,6 +38,11 @@ public abstract class AbstractBinaryChronicleLogReader extends AbstractChronicle
             args[i] = bytes.readObject();
         }
 
-        this.read(ts,level,tid,tname,name,msg,args);
+        this.process(ts, level, tid, tname, name, msg, args);
+    }
+
+    @Override
+    public void process(String message) {
+        throw new UnsupportedOperationException();
     }
 }

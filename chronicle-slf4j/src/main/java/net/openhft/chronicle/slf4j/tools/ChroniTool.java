@@ -91,15 +91,15 @@ public class ChroniTool {
 
     public static final ChronicleLogReader READER_BINARY = new AbstractBinaryChronicleLogReader() {
         @Override
-        public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+        public void process(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
             System.out.println(asString(timestamp,level,threadId,threadName,name,message,args));
         }
     };
 
     public static final ChronicleLogReader READER_TEXT = new AbstractTextChronicleLogReader() {
         @Override
-        public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
-            System.out.println(asString(timestamp,level,threadId,threadName,name,message,args));
+        public void process(String message) {
+            System.out.println(message);
         }
     };
 
@@ -110,8 +110,8 @@ public class ChroniTool {
     public static ChronicleLogReader binaryReader(final ChronicleLogProcessor processor) {
         return new AbstractBinaryChronicleLogReader() {
             @Override
-            public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
-                processor.read(timestamp,level,threadId,threadName,name,message,args);
+            public void process(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+                processor.process(timestamp, level, threadId, threadName, name, message, args);
             }
         };
     }
@@ -119,8 +119,8 @@ public class ChroniTool {
     public static ChronicleLogReader textReader(final ChronicleLogProcessor processor) {
         return new AbstractTextChronicleLogReader() {
             @Override
-            public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
-                processor.read(timestamp,level,threadId,threadName,name,message,args);
+            public void process(String message) {
+                processor.process(message);
             }
         };
     }

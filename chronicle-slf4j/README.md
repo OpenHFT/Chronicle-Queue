@@ -96,6 +96,7 @@ Predefined values are:
 
 ###Writing a simple LogSearch with Groovy and Grape
 
+  * Binary log search
   ```groovy
   import net.openhft.chronicle.VanillaChronicle
   import net.openhft.chronicle.IndexedChronicle
@@ -108,7 +109,7 @@ Predefined values are:
   ])
   class LogSearch {
       static def main(String[] args) {
-          def reader = { ts,level,thId,thName,logName,msg,msgArgs ->
+          def processor = { ts,level,thId,thName,logName,msg,msgArgs ->
               if(msg =~ '.*n.*') {
                   printf("%s => %s\n",ts,msg)
               }
@@ -118,7 +119,41 @@ Predefined values are:
               if(args.length == 1) {
                   ChroniTool.process(
                       new VanillaChronicle(args[0]),
-                      ChroniTool.binaryReader(reader as ChronicleLogProcessor),
+                      ChroniTool.binaryReader(processor as ChronicleLogProcessor),
+                      false,
+                      false)
+              }
+          } catch(Exception e) {
+              e.printStackTrace(System.err);
+          }
+      }
+  }
+  ```
+
+  * Text log search
+  ```groovy
+  import net.openhft.chronicle.VanillaChronicle
+  import net.openhft.chronicle.IndexedChronicle
+  import net.openhft.chronicle.slf4j.ChronicleLogProcessor
+  import net.openhft.chronicle.slf4j.tools.ChroniTool
+
+  @Grapes([
+     @Grab(group='net.openhft', module='chronicle'      , version='3.0b-SNAPSHOT'),
+     @Grab(group='net.openhft', module='chronicle-slf4j', version='3.0b-SNAPSHOT'),
+  ])
+  class LogSearch {
+      static def main(String[] args) {
+          def processor = { message ->
+              if(msg =~ '.*n.*') {
+                  printf("%s => %s\n",ts,msg)
+              }
+          }
+
+          try {
+              if(args.length == 1) {
+                  ChroniTool.process(
+                      new VanillaChronicle(args[0]),
+                      ChroniTool.binaryReader(processor as ChronicleLogProcessor),
                       false,
                       false)
               }

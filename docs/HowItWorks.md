@@ -6,10 +6,10 @@ In first glance it can be seen as **yet another queue implementation** but it ha
 
 Using non-heap storage options(RandomAccessFile) Chronicle provides a processing environment where applications does not suffer from GarbageCollection. While implementing high performance and memory-intensive applications ( you heard the fancy term "bigdata"?) in Java; one of the biggest problem is GarbageCollection. GarbageCollection (GC) may slow down your critical operations non-deterministically at any time.. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are addressed. The main idea is to manage your memory manually so does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
 
-Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibility. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
+Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibility. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and process from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
 
 ### What is the effect of page faults when we have a huge Chronicle and not enough RAM ?
-Pages are swapped in and out by the OS on demand.  Writes are performed asynchronously and under moderate loads don't impact the latency of writes.  Sequential reads are also read uses look ahead ie before you ask for them.  Random reads perform best when the data accessed is already in memory
+Pages are swapped in and out by the OS on demand.  Writes are performed asynchronously and under moderate loads don't impact the latency of writes.  Sequential reads are also process uses look ahead ie before you ask for them.  Random reads perform best when the data accessed is already in memory
 
 The size of data stored can exceed the amount of memory you have, provided the amount you use is less than the main memory size, you see little impact.  If you exceed main memory size, you will see measurable performance degradation but it is dramatically more graceful than using too much heap.  Using the same amount of heap can cause the whole machine to fail.
 ## Building Blocks
@@ -51,7 +51,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
             appender.writeObject("TestMessage");
             appender.finish();
 
-            // read one object
+            // process one object
             ExcerptTailer reader = chronicle.createTailer();
             Object ret = reader.readObject();
             reader.finish();
@@ -89,7 +89,7 @@ in finish method object offset is written to index cache. This method acts like 
 
 	appender.finish();
 
-In order to read data from data cache, you first need to get physical start address of the data from index cache. Reader.index(0) method does the calculation for you. You read the data and finish reading operation.
+In order to process data from data cache, you first need to get physical start address of the data from index cache. Reader.index(0) method does the calculation for you. You process the data and finish reading operation.
 
 	reader.index(0); // optional as it is at the start already
 	Object ret = reader.readObject();

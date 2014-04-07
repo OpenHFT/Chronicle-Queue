@@ -25,7 +25,7 @@ This library now supports low latency/GC-less writing and reading/parsing or tex
 ##  How fast is fast?
 
 Chronicle is design to persist messages and replay them in micro-second time.  Simple messages are as low as 0.1 micro-seconds.
-Complex messages might take 10 micro-seconds to write and read.
+Complex messages might take 10 micro-seconds to write and process.
 
 Chronicle is designed to sustain millions of inserts and updates per second. For burst of up to 10% of your main memory, you can sustain rates of 1 - 3 GB/second written.
 e.g. A laptop with 8 GB of memory might handle bursts of 800 MB at a rate of 1 GB per second.
@@ -105,11 +105,11 @@ Note: huge memory to memory copies do not have safe points, which means a 1 GB r
 
 ## How does reading work?
 
-When you read an excerpt, it first checks that index entry is there (the last thing written)
+When you process an excerpt, it first checks that index entry is there (the last thing written)
 
     if(tailer.nextIndex()) {
-       // read the new excerpt
-       Type value = tailer.readXxxx(); // read a data type.
+       // process the new excerpt
+       Type value = tailer.readXxxx(); // process a data type.
     }
 
 Finally you must call finish() to perform bounds check.  Chronicle doesn't bounds check every access to reduce runtime overhead.
@@ -137,7 +137,7 @@ An old library called HugeCollections will be resurrected to handle collections 
 
 A given Chronicle can safely have many readers, both inside and outside of the process creating it.
 
-To have multiple readers of a Chronicle, you should generally create a new Chronicle per reader pointing at the same underlying Journal. On each of these Chronicles, you will call createTailer and get a new tailer that can be used to read it. These Tailers should never be shared.
+To have multiple readers of a Chronicle, you should generally create a new Chronicle per reader pointing at the same underlying Journal. On each of these Chronicles, you will call createTailer and get a new tailer that can be used to process it. These Tailers should never be shared.
 A less performant option to this is to share a single Chronicle and Tailer and lock access with synchronized or ReentrantLock. Only one Tailer should ever be active at the same time.
 
 
@@ -180,9 +180,9 @@ At this point you get significant inefficiencies unless you increase the data al
 
 Most often this means you wrote more than the capcity allowed.  The quaility of the messages is improving?
 
-## I get an Exception attempting to read an Excerpt. What does this mean?
+## I get an Exception attempting to process an Excerpt. What does this mean?
 
-Most likely your read code doesn't match your write code.  I suggest making your reader and writer separate, stand alone and well tested so you can pick up such errors.
+Most likely your process code doesn't match your write code.  I suggest making your reader and writer separate, stand alone and well tested so you can pick up such errors.
 
 ## How does the byte order work with replication?
 

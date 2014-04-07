@@ -28,11 +28,7 @@ import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * TODO: add test case for text-logegrs
@@ -123,7 +119,7 @@ public class VanillaChronicleLoggerTest extends ChronicleTestBase {
     // *************************************************************************
 
     @Test
-    public void testLogging1() throws IOException {
+    public void testBiaryLogging() throws IOException {
         Thread.currentThread().setName("th-test-logging_1");
 
         Logger l = LoggerFactory.getLogger("readwrite");
@@ -179,12 +175,26 @@ public class VanillaChronicleLoggerTest extends ChronicleTestBase {
     }
 
     @Test
-    public void testTextLogging1() throws IOException {
+    public void testTextLogging() throws IOException {
         Logger l = LoggerFactory.getLogger("Text1");
         l.trace("trace");
         l.debug("debug");
         l.info("info");
         l.warn("warn");
         l.error("error");
+
+        Chronicle reader = new VanillaChronicle(basePath(ChronicleLoggingConfig.TYPE_VANILLA,"text_1"));
+        ExcerptTailer tailer = reader.createTailer().toStart();
+
+        assertTrue(tailer.nextIndex());
+        assertTrue(tailer.readLine().contains("warn"));
+
+        assertTrue(tailer.nextIndex());
+        assertTrue(tailer.readLine().contains("error"));
+
+        assertFalse(tailer.nextIndex());
+
+        tailer.close();
+        reader.close();
     }
 }

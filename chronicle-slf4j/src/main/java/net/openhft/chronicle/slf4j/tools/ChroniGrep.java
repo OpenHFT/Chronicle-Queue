@@ -72,7 +72,7 @@ public class ChroniGrep extends ChroniTool {
         }
 
         @Override
-        public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
+        public void process(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
             String msg = asString(timestamp,level,threadId,threadName,name,message,args);
             if(this.grep.matches(msg)) {
                 System.out.println(msg);
@@ -88,8 +88,7 @@ public class ChroniGrep extends ChroniTool {
         }
 
         @Override
-        public void read(Date timestamp, int level, long threadId, String threadName, String name, String message, Object... args) {
-            String msg = asString(timestamp,level,threadId,threadName,name,message,args);
+        public void process(String msg) {
             if(this.grep.matches(msg)) {
                 System.out.println(msg);
             }
