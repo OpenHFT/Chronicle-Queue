@@ -85,7 +85,8 @@ Predefined values are:
       mvn exec:java -Dexec.mainClass="net.openhft.chronicle.slf4j.tools.ChroniCat" -Dexec.args="..."
   ```
 
-  Output:
+
+Output:
   ```
   2014.04.06-13:30:03.306|debug|1|th-test-logging_1|readwrite|debug
   2014.04.06-13:30:03.313|info|1|th-test-logging_1|readwrite|info
