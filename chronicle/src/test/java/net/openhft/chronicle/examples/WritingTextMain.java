@@ -26,7 +26,7 @@ import java.io.IOException;
 
 public class WritingTextMain {
     public static void main(String[] args) throws IOException {
-        String basePath = "/tmp/my.slf4j";
+        String basePath = "/tmp/my.log";
         // clear the file first.
         for (String name : new String[]{basePath + ".data", basePath + ".index"}) {
             File file = new File(name);
