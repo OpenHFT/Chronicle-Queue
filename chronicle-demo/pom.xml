@@ -28,7 +28,7 @@
 
     <artifactId>chronicle-demo</artifactId>
 
-    <name>chronicle-demo</name>
+    <name>OpenHFT/Java-Chronicle/chronicle-demo</name>
     <version>3.0b-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
