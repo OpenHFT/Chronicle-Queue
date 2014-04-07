@@ -38,7 +38,7 @@ public class VanillaChronicle implements Chronicle {
     private final VanillaChronicleConfig config;
     private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
     private final ThreadLocal<WeakReference<ExcerptTailer>> tailerCache = new ThreadLocal<WeakReference<ExcerptTailer>>();
-    private final ThreadLocal<WeakReference<ExcerptAppender>> appenderCache = new ThreadLocal<WeakReference<ExcerptAppender>>();
+    private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
     private final int indexBlockLongsBits, indexBlockLongsMask;
@@ -81,6 +81,10 @@ public class VanillaChronicle implements Chronicle {
         return name;
     }
 
+    public int getEntriesForCycleBits(){
+        return entriesForCycleBits;
+    }
+
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
@@ -103,6 +107,31 @@ public class VanillaChronicle implements Chronicle {
         return new VanillaBytesMarshallerFactory();
     }
 
+    /**
+     * This method returns the very last index in the chronicle.  Not to be confused with lastWrittenIndex(),
+     * this method returns the actual last index by scanning the underlying data even the appender has not
+     * been activated.
+     * @return The last index in the file
+     */
+    public long lastIndex(){
+        int cycle = (int)indexCache.lastCycle();
+        int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
+        if(lastIndexFile >= 0) {
+            try {
+                final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
+                final long indices = VanillaIndexCache.countIndices(vfile);
+
+                vfile.decrementUsage();
+
+                return ((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
+            } catch (IOException e) {
+                    throw new AssertionError(e);
+            }
+        } else {
+            return -1;
+        }
+    }
+
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
@@ -123,19 +152,19 @@ public class VanillaChronicle implements Chronicle {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() throws IOException {
-        WeakReference<ExcerptAppender> ref = appenderCache.get();
-        ExcerptAppender appender = null;
+    public VanillaAppender createAppender() throws IOException {
+        WeakReference<VanillaAppender> ref = appenderCache.get();
+        VanillaAppender appender = null;
         if (ref != null)
             appender = ref.get();
         if (appender == null) {
             appender = createAppender0();
-            appenderCache.set(new WeakReference<ExcerptAppender>(appender));
+            appenderCache.set(new WeakReference<VanillaAppender>(appender));
         }
         return appender;
     }
 
-    private ExcerptAppender createAppender0() {
+    private VanillaAppender createAppender0() {
         return new VanillaAppender();
     }
 
@@ -185,6 +214,10 @@ public class VanillaChronicle implements Chronicle {
             return index;
         }
 
+        /**
+         * Return the last index written by the appender.  This may not be the actual last index in the Chronicle
+         * which can be found from lastIndex().
+         */
         @Override
         public long lastWrittenIndex() {
             return VanillaChronicle.this.lastWrittenIndex();
@@ -308,21 +341,11 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptCommon toEnd() {
             resetLastInfo();
 
-            int cycle = (int)indexCache.lastCycle();
-            int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
-            if(lastIndexFile >= 0) {
-                try {
-                    final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
-                    final long indices = VanillaIndexCache.countIndices(vfile);
-
-                    vfile.decrementUsage();
-
-                    index((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
-                } catch (IOException e) {
-                    throw new AssertionError(e);
-                }
-            } else {
-                toStart();
+            long lastIndex = lastIndex();
+            if(lastIndex >= 0){
+                index(lastIndex);
+            }  else {
+                return toStart();
             }
 
             return this;
@@ -431,7 +454,7 @@ public class VanillaChronicle implements Chronicle {
         }
     }
 
-    class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
+    public class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
         private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
         private int appenderCycle, appenderThreadId;
         private boolean nextSynchronous;
@@ -445,12 +468,15 @@ public class VanillaChronicle implements Chronicle {
         public void startExcerpt() {
             startExcerpt(config.defaultMessageSize());
         }
-
         @Override
         public void startExcerpt(long capacity) {
+            startExcerpt(capacity, cycle());
+        }
+
+        public void startExcerpt(long capacity, int cycle) {
             checkNotClosed();
             try {
-                appenderCycle = cycle();
+                appenderCycle = cycle;
                 appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & 0xFFFF) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
@@ -507,7 +533,7 @@ public class VanillaChronicle implements Chronicle {
             int offset = (int) (startAddr - appenderFile.baseAddr());
             long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << 48) + dataOffset;
-
+            lastWrittenIndex = indexValue;
             try {
                 final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);
                 if (!appendDone) {

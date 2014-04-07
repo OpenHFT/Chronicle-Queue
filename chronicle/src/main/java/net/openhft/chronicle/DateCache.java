@@ -37,6 +37,13 @@ class DateCache {
         format.setTimeZone(GMT);
     }
 
+    /**
+     * Formats a cycle number into a date/time String based on a fixed date/time format.
+     *
+     * @param cycle the cycle number to format
+     *
+     * @return the formatted date/time string
+     */
     public String formatFor(int cycle) {
         long millis = (long) cycle * cycleLength;
         int hash = Maths.hash(millis) & (SIZE - 1);

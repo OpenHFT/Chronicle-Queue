@@ -16,8 +16,12 @@
 
 package net.openhft.chronicle;
 
+import java.util.concurrent.TimeUnit;
+
 public class VanillaChronicleConfig {
     public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();
+
+    public static final long MIN_CYCLE_LENGTH = TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
 
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
@@ -37,6 +41,13 @@ public class VanillaChronicleConfig {
     }
 
     public VanillaChronicleConfig cycleLength(int cycleLength) {
+        return cycleLength(cycleLength, true);
+    }
+
+    VanillaChronicleConfig cycleLength(int cycleLength, boolean check) {
+        if (check && cycleLength < MIN_CYCLE_LENGTH) {
+            throw new IllegalArgumentException("Cycle length can't be less than " + MIN_CYCLE_LENGTH + " ms!");
+        }
         this.cycleLength = cycleLength;
         return this;
     }
