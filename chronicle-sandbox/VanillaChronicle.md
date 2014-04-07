@@ -76,7 +76,7 @@ Consumers can work on either a Topic basis (the default) or can be applied on a 
         tailer.position(4); // skip the lock.
         // binary format
         long v = tailer.readXxxx();
-        String text = tailer.readEnum(String.class); // process a UTF-8 String using a string pool.
+        String text = tailer.readEnum(String.class); // read a UTF-8 String using a string pool.
         // text format
         long x = tailer.parseLong();
         double y = tailer.parseDouble();
