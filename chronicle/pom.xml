@@ -18,9 +18,14 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.openhft</groupId>
+    <parent>
+        <groupId>net.openhft</groupId>
+        <artifactId>java-parent-pom</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle</artifactId>
     <version>3.0b-SNAPSHOT</version>
     <packaging>bundle</packaging>
@@ -29,8 +34,6 @@
     <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
         <!-- hft version is here so it can be included in OSGi tests -->
         <openhft.lang.version>6.3.4</openhft.lang.version>
         <openhft.affinity.version>2.0.2-SNAPSHOT</openhft.affinity.version>
@@ -169,104 +172,11 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
-            <plugins>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.9.1</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-source-plugin</artifactId>
-                    <version>2.2.1</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-scm-publish-plugin</artifactId>
-                    <version>1.0-beta-2</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-gpg-plugin</artifactId>
-                    <version>1.5</version>
-                </plugin>
-
-            </plugins>
-
-        </pluginManagement>
-
 
         <plugins>
 
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-scm-publish-plugin</artifactId>
-                <configuration>
-                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc</checkoutDirectory>
-                    <checkinComment>Publishing javadoc for ${project.artifactId}:${project.version}</checkinComment>
-                    <content>${project.reporting.outputDirectory}</content>
-                    <skipDeletedFiles>true</skipDeletedFiles>
-                    <pubScmUrl>scm:git:git@github.com:OpenHFT/Java-Chronicle
-                    </pubScmUrl>
-                    <scmBranch>gh-pages</scmBranch>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <show>public</show>
-                    <nohelp>true</nohelp>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.16</version>
                 <configuration>
                     <systemPropertyVariables>
                         <openhft.lang.version>${openhft.lang.version}</openhft.lang.version>
@@ -280,7 +190,6 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>2.4.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
@@ -303,71 +212,6 @@
             </plugin>
         </plugins>
     </build>
-
-
-    <profiles>
-        <profile>
-            <id>sign-artifact</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-
-        </profile>
-    </profiles>
-
-
-    <url>http://www.openhft.net</url>
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-            <comments>A business-friendly OSS license</comments>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <name>Peter Lawrey</name>
-            <email>peter.lawrey@higherfrequencytrading.com</email>
-        </developer>
-    </developers>
-
-    <repositories>
-        <repository>
-            <id>Snapshot Repository</id>
-            <name>Snapshot Repository</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>sonatype-nexus-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
-        <repository>
-            <id>sonatype-nexus-staging</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
 
     <scm>
         <url>scm:git:https://github.com/OpenHFT/Java-Chronicle.git</url>
