@@ -16,11 +16,12 @@
 
 package net.openhft.chronicle;
 
-import java.math.BigDecimal;
-import java.text.DecimalFormat;
+import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleConfig {
     public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();
+
+    public static final long MIN_CYCLE_LENGTH = TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
 
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
@@ -40,7 +41,13 @@ public class VanillaChronicleConfig {
     }
 
     public VanillaChronicleConfig cycleLength(int cycleLength) {
-        checkCycleParamCombinationForOverflow(cycleLength, entriesPerCycle);
+        return cycleLength(cycleLength, true);
+    }
+
+    VanillaChronicleConfig cycleLength(int cycleLength, boolean check) {
+        if (check && cycleLength < MIN_CYCLE_LENGTH) {
+            throw new IllegalArgumentException("Cycle length can't be less than " + MIN_CYCLE_LENGTH + " ms!");
+        }
         this.cycleLength = cycleLength;
         return this;
     }
@@ -68,7 +75,6 @@ public class VanillaChronicleConfig {
     }
 
     public VanillaChronicleConfig entriesPerCycle(long entriesPerCycle) {
-        checkCycleParamCombinationForOverflow(cycleLength, entriesPerCycle);
         this.entriesPerCycle = entriesPerCycle;
         return this;
     }
@@ -93,19 +99,6 @@ public class VanillaChronicleConfig {
 
     public boolean synchronous() {
         return synchronous;
-    }
-
-    private void checkCycleParamCombinationForOverflow(int cycleLength, long entriesPerCycle) {
-        BigDecimal cycle = new BigDecimal(System.currentTimeMillis() / cycleLength);
-        BigDecimal entries = cycle.multiply(new BigDecimal(entriesPerCycle));
-        BigDecimal threshold = new BigDecimal(Long.MAX_VALUE * 0.75);
-        boolean aboveThreshold = entries.compareTo(threshold) > 0;
-        if (aboveThreshold) {
-            DecimalFormat df = new DecimalFormat();
-            df.setGroupingUsed(true);
-            throw new IllegalArgumentException("Cycle length [" + df.format(cycleLength) + "] can't be accepted! " +
-                    "With the current entries-per-cycle value [" + df.format(entriesPerCycle) + "] it can lead to overflows in the code!");
-        }
     }
 
 

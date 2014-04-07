@@ -546,7 +546,7 @@ public class VanillaChronicleTest {
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 16);
-        config.cycleLength(1000);
+        config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
         VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
@@ -592,7 +592,7 @@ public class VanillaChronicleTest {
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000);
+        config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
         VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
@@ -667,7 +667,7 @@ public class VanillaChronicleTest {
         // Create with small data and index sizes so that the test frequently generates new files
         final VanillaChronicleConfig config = new VanillaChronicleConfig()
                 .entriesPerCycle(1L << 20)  // avoid overflow of the entry indexes
-                .cycleLength(1000)  // 1 second
+                .cycleLength(1000, false)  // 1 second
                 .cycleFormat("yyyyMMddHHmmss")
                 .dataBlockSize(128)
                 .indexBlockSize(64);
@@ -711,7 +711,7 @@ public class VanillaChronicleTest {
         // Create with small data and index sizes so that the test frequently generates new files
         final VanillaChronicleConfig config = new VanillaChronicleConfig()
                 .entriesPerCycle(1L << 20)  // avoid overflow of the entry indexes
-                .cycleLength(1000)  // 1 second
+                .cycleLength(1000, false)  // 1 second
                 .cycleFormat("yyyyMMddHHmmss")
                 .dataBlockSize(128)
                 .indexBlockSize(64);

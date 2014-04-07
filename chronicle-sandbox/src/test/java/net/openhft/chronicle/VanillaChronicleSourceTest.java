@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox.tcp;
+package net.openhft.chronicle;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSink;
+import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSource;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -112,7 +110,7 @@ public class VanillaChronicleSourceTest {
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000);
+        config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 0);
@@ -154,7 +152,7 @@ public class VanillaChronicleSourceTest {
         String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000);
+        config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
         VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 55555);
@@ -199,7 +197,7 @@ public class VanillaChronicleSourceTest {
         //This is the config that is required to make the VanillaChronicle roll every second
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000);
+        config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
 
