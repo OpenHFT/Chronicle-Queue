@@ -143,7 +143,7 @@ Predefined values are:
   ])
   class LogSearch {
       static def main(String[] args) {
-          def processor = { message ->
+          def processor = { msg ->
               if(msg =~ '.*n.*') {
                   printf("%s => %s\n",ts,msg)
               }
