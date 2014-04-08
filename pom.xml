@@ -38,6 +38,7 @@
         <module>chronicle-demo</module>
         <module>chronicle-sandbox</module>
         <module>chronicle-slf4j</module>
+        <module>chronicle-test</module>
     </modules>
 
 </project>

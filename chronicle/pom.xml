@@ -23,6 +23,7 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath/>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -30,19 +31,11 @@
     <version>3.0b-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
-    <name>OpenHTF/Java-Chronicle</name>
+    <name>OpenHTF/Java-Chronicle/chronicle</name>
     <description>Java library for persisted low latency messaging (Java 6+)</description>
-
-    <properties>
-        <!-- hft version is here so it can be included in OSGi tests -->
-        <openhft.lang.version>6.3.4</openhft.lang.version>
-        <openhft.affinity.version>2.0.2-SNAPSHOT</openhft.affinity.version>
-        <logback.version>0.9.6</logback.version>
-    </properties>
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
@@ -50,18 +43,16 @@
                 <version>3.1-SNAPSHOT</version>
                 <scope>import</scope>
             </dependency>
-
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>${openhft.lang.version}</version>
+                <version>6.3.4</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
-                <version>${openhft.affinity.version}</version>
+                <version>2.0.2-SNAPSHOT</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
@@ -95,61 +86,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- for OSGi testing -->
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.compendium</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-container-native</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-junit4</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-link-mvn</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.url</groupId>
-            <artifactId>pax-url-aether</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.framework</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- on linux install with sudo apt-get install libjna-java -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
@@ -172,21 +108,7 @@
     </dependencies>
 
     <build>
-
         <plugins>
-
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <systemPropertyVariables>
-                        <openhft.lang.version>${openhft.lang.version}</openhft.lang.version>
-                        <openhft.affinity.version>${openhft.affinity.version}</openhft.affinity.version>
-                        <logback.version>${logback.version}</logback.version>
-                        <main.basedir>${project.basedir}</main.basedir>
-                    </systemPropertyVariables>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
