@@ -285,6 +285,7 @@ public class VanillaChronicleTest {
     }
 
     @Test
+    @Ignore
     public void testAppenderTailer() throws IOException {
         String basepath = System.getProperty("java.io.tmpdir") + "/test-appender-tailer";
 
