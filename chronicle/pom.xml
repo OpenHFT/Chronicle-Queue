@@ -27,7 +27,11 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle</artifactId>
+<<<<<<< HEAD
     <version>3.0.1-SNAPSHOT</version>
+=======
+    <version>3.2b-SNAPSHOT</version>
+>>>>>>> 969c16f58c143c3c45e097728cb371bbb0123ea5
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle/chronicle</name>
