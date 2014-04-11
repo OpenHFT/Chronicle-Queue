@@ -22,13 +22,11 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0</version>
         <relativePath/>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>net.openhft</groupId>
     <artifactId>chronicle-test</artifactId>
     <version>3.0b-SNAPSHOT</version>
     <packaging>bundle</packaging>
@@ -142,7 +140,7 @@
     </dependencies>
 
     <build>
-       <pluginManagement>
+        <pluginManagement>
             <plugins>
                 <plugin>
                     <groupId>org.apache.servicemix.tooling</groupId>
@@ -185,16 +183,16 @@
                     target/classes/META-INF/maven/dependencies.properties
             -->
             <plugin>
-              <groupId>org.apache.servicemix.tooling</groupId>
-              <artifactId>depends-maven-plugin</artifactId>
-              <executions>
-                <execution>
-                  <id>generate-depends-file</id>
-                  <goals>
-                    <goal>generate-depends-file</goal>
-                  </goals>
-                </execution>
-              </executions>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-depends-file</id>
+                        <goals>
+                            <goal>generate-depends-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
