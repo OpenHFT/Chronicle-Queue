@@ -32,11 +32,6 @@
                 <scope>import</scope>
             </dependency>
 
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>${openhft.affinity.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
@@ -54,11 +49,8 @@
     </dependencyManagement>
 
     <dependencies>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
-        </dependency>
-        <dependency>
+
+    <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
         </dependency>
