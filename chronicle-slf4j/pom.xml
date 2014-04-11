@@ -50,8 +50,8 @@
 
     <dependencies>
 
-    <dependency>
-            <groupId>net.openhft</groupId>
+        <dependency>
+        <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
         </dependency>
 
