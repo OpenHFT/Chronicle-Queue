@@ -41,7 +41,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>${openhft.chronicle.version}</version>
+                <version>3.0.1</version>
             </dependency>
 
             <dependency>
