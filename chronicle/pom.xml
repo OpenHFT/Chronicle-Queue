@@ -26,7 +26,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle</artifactId>
-    <version>3.1b-SNAPSHOT</version>
+    <version>3.1b</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle/chronicle</name>
@@ -137,7 +137,7 @@
         <url>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</developerConnection>
-        <tag>master</tag>
+        <tag>chronicle-3.1b</tag>
     </scm>
 
 </project>
