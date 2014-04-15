@@ -28,9 +28,15 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author peter.lawrey
@@ -326,10 +332,11 @@ public class IndexedChronicleTest {
         r.close();
         long rate = words / size * 10 * 1000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages, " +
-                "maxJitter: " + maxJitter / 1000 + " us, " +
-                "maxDelay: " + maxDelay / 1000 + " us," + "");
+            "maxJitter: " + maxJitter / 1000 + " us, " +
+            "maxDelay: " + maxDelay / 1000 + " us," + "");
 //                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
         Thread.sleep(200);
+        
         ChronicleTools.deleteOnExit(basePath);
     }
 

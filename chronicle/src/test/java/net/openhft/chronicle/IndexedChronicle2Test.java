@@ -17,6 +17,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -26,8 +27,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class IndexedChronicle2Test {
-    static final String TMP = System.getProperty("java.io.tmpdir") + File.separator + "indexed-chronicle";
-
+    private static final String TMP    = System.getProperty("java.io.tmpdir") + File.separator + "indexed-chronicle";
+    private static final long   WARMUP = 20000;
 
     private static String newTmpPath(String name) {
         return TMP + File.separator + name;
@@ -132,5 +133,24 @@ public class IndexedChronicle2Test {
 
         ch1.close();
         ch2.close();
+    }
+
+    @Ignore
+    @Test
+    public void testIndexedChronicle_003() throws IOException {
+        final String basePath = newTmpPath("ic_003");
+
+        final long            nb = 50 * 1000 * 1000;
+        final Chronicle       ch = new IndexedChronicle(basePath);
+        final ExcerptAppender ap = ch.createAppender();
+
+        for(long i=0; i < nb; i++) {
+            ap.startExcerpt();
+            ap.writeLong(i);
+            ap.finish();
+        }
+
+        ap.close();
+        ch.close();
     }
 }
