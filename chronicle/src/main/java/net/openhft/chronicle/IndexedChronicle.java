@@ -16,14 +16,15 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.MappedFile;
+import net.openhft.lang.io.VanillaMappedBlocks;
+import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedFile;
+import net.openhft.lang.io.VanillaMappedMode;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteOrder;
-import java.nio.MappedByteBuffer;
 
 /**
  * IndexedChronicle is a single-writer-multiple-reader
@@ -47,10 +48,17 @@ import java.nio.MappedByteBuffer;
  * @author peter.lawrey
  */
 public class IndexedChronicle implements Chronicle {
+
     @NotNull
-    final MappedFile indexFileCache;
+    final VanillaMappedFile indexFile;
     @NotNull
-    final MappedFile dataFileCache;
+    final VanillaMappedBlocks indexFileCache;
+
+    @NotNull
+    final VanillaMappedFile dataFile;
+    @NotNull
+    final VanillaMappedBlocks dataFileCache;
+
     @NotNull
     final ChronicleConfig config;
     private final String basePath;
@@ -68,7 +76,7 @@ public class IndexedChronicle implements Chronicle {
      * writable regular file and a new regular file of that name cannot be created, or if some
      * other error occurs while opening or creating the file
      */
-    public IndexedChronicle(@NotNull String basePath) throws FileNotFoundException {
+    public IndexedChronicle(@NotNull String basePath) throws IOException {
         this(basePath, ChronicleConfig.DEFAULT);
     }
 
@@ -84,14 +92,19 @@ public class IndexedChronicle implements Chronicle {
      * writable regular file and a new regular file of that name cannot be created, or if some
      * other error occurs while opening or creating the file
      */
-    public IndexedChronicle(@NotNull String basePath, @NotNull ChronicleConfig config) throws FileNotFoundException {
+    public IndexedChronicle(@NotNull String basePath, @NotNull ChronicleConfig config) throws IOException {
         this.basePath = basePath;
         this.config = config.clone();
+
         File parentFile = new File(basePath).getParentFile();
-        if (parentFile != null)
+        if (parentFile != null) {
             parentFile.mkdirs();
-        this.indexFileCache = new MappedFile(basePath + ".index", config.indexBlockSize());
-        this.dataFileCache = new MappedFile(basePath + ".data", config.dataBlockSize());
+        }
+
+        this.indexFile      = new VanillaMappedFile(new File(basePath + ".index"), VanillaMappedMode.RW);
+        this.indexFileCache = this.indexFile.blocks(config.indexBlockSize());
+        this.dataFile       = new VanillaMappedFile(new File(basePath + ".data"), VanillaMappedMode.RW);
+        this.dataFileCache  = this.dataFile.blocks(config.indexBlockSize());
 
         findTheLastIndex();
     }
@@ -136,31 +149,41 @@ public class IndexedChronicle implements Chronicle {
     }
 
     private long findTheLastIndex0() {
-        long size = indexFileCache.size();
+        long size = 0;
+
+        try {
+            size = indexFile.size();
+        } catch(Exception e) {
+            return -1;
+        }
+
         if (size <= 0) {
             return -1;
         }
+
         int indexBlockSize = config.indexBlockSize();
         for (long block = size / indexBlockSize - 1; block >= 0; block--) {
-            MappedByteBuffer mbb = null;
+            VanillaMappedBuffer mbb = null;
             try {
-                mbb = indexFileCache.acquire(block).buffer();
+                mbb = indexFileCache.acquire(block);
             } catch (IOException e) {
                 continue;
             }
-            mbb.order(ByteOrder.nativeOrder());
-            if (block > 0 && mbb.getLong(0) == 0) {
+
+            if (block > 0 && mbb.readLong(0) == 0) {
                 continue;
             }
+
             int cacheLineSize = config.cacheLineSize();
             for (int pos = 0; pos < indexBlockSize; pos += cacheLineSize) {
                 // if the next line is blank
-                if (pos + cacheLineSize >= indexBlockSize || mbb.getLong(pos + cacheLineSize) == 0) {
+                if (pos + cacheLineSize >= indexBlockSize || mbb.readLong(pos + cacheLineSize) == 0) {
                     // last cache line.
                     int pos2 = 8;
                     for (pos2 = 8; pos2 < cacheLineSize; pos2 += 4) {
-                        if (mbb.getInt(pos + pos2) == 0)
+                        if (mbb.readInt(pos + pos2) == 0) {
                             break;
+                        }
                     }
                     return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos2 / 4 - 3;
                 }
@@ -203,7 +226,9 @@ public class IndexedChronicle implements Chronicle {
     public void close() throws IOException {
         closed = true;
         this.indexFileCache.close();
+        this.indexFile.close();
         this.dataFileCache.close();
+        this.dataFile.close();
     }
 
     /**
