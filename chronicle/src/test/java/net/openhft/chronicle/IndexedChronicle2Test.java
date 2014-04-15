@@ -17,7 +17,6 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -135,7 +134,6 @@ public class IndexedChronicle2Test {
         ch2.close();
     }
 
-    @Ignore
     @Test
     public void testIndexedChronicle_003() throws IOException {
         final String basePath = newTmpPath("ic_003");

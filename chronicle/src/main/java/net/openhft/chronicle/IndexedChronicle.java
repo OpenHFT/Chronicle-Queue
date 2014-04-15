@@ -104,7 +104,7 @@ public class IndexedChronicle implements Chronicle {
         this.indexFile      = new VanillaMappedFile(new File(basePath + ".index"), VanillaMappedMode.RW);
         this.indexFileCache = this.indexFile.blocks(config.indexBlockSize());
         this.dataFile       = new VanillaMappedFile(new File(basePath + ".data"), VanillaMappedMode.RW);
-        this.dataFileCache  = this.dataFile.blocks(config.indexBlockSize());
+        this.dataFileCache  = this.dataFile.blocks(config.dataBlockSize());
 
         findTheLastIndex();
     }
