@@ -16,63 +16,65 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedCache;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.logging.Logger;
 
 public class VanillaIndexCache implements Closeable {
     private static final int MAX_SIZE = 32;
-    private static final String INDEX = "index-";
+    private static final String FILE_NAME_PREFIX = "index-";
+    private static final Logger LOGGER = Logger.getLogger(VanillaIndexCache.class.getName());
 
     private final String basePath;
     private final File baseFile;
     private final IndexKey key = new IndexKey();
     private final int blockBits;
     private final DateCache dateCache;
-    private final Map<IndexKey, VanillaFile> indexKeyVanillaFileMap = new LinkedHashMap<IndexKey, VanillaFile>(MAX_SIZE, 1.0f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<IndexKey, VanillaFile> eldest) {
-            boolean removed = size() >= MAX_SIZE;
-            if (removed) {
-                VanillaFile file = eldest.getValue();
-                file.decrementUsage();
-                file.close();
-            }
-            return removed;
-        }
-    };
+    private final VanillaMappedCache<IndexKey> cache;
 
     public VanillaIndexCache(String basePath, int blockBits, DateCache dateCache) {
         this.basePath = basePath;
-        baseFile = new File(basePath);
+        this.baseFile = new File(basePath);
         this.blockBits = blockBits;
         this.dateCache = dateCache;
+        this.cache     = new VanillaMappedCache<IndexKey>(MAX_SIZE, 1.0f, true, true);
     }
 
-    public synchronized VanillaFile indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
-        key.cycle = cycle;
+    public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {
+        return new File(
+            new File(basePath, dateCache.formatFor(cycle)),
+            FILE_NAME_PREFIX + indexCount);
+    }
+
+    public synchronized VanillaMappedBuffer indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
+        key.cycle      = cycle;
         key.indexCount = indexCount << blockBits;
-        VanillaFile vanillaFile = indexKeyVanillaFileMap.get(key);
-        if (vanillaFile == null) {
-            String cycleStr = dateCache.formatFor(cycle);
-            indexKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, INDEX + indexCount, indexCount, 1L << blockBits, forAppend));
+
+        VanillaMappedBuffer vmb = this.cache.get(key);
+        if(vmb == null) {
+            vmb = this.cache.put(
+                key.clone(),
+                VanillaChronicleUtils.mkFiles(
+                    basePath,
+                    dateCache.formatFor(cycle),
+                    FILE_NAME_PREFIX + indexCount,
+                    forAppend),
+                1L << blockBits,
+                indexCount);
         }
-        vanillaFile.incrementUsage();
-//        new Throwable("IndexFor " + vanillaFile + " as " + vanillaFile.usage()).printStackTrace();
-        return vanillaFile;
+
+        vmb.reserve();
+        return vmb;
     }
 
     @Override
     public synchronized void close() {
-        for (VanillaFile vanillaFile : indexKeyVanillaFileMap.values()) {
-            vanillaFile.close();
-        }
-        indexKeyVanillaFileMap.clear();
+        this.cache.close();
     }
 
     int lastIndexFile(int cycle) {
@@ -86,8 +88,8 @@ public class VanillaIndexCache implements Closeable {
         if (files != null) {
             for (File file : files) {
                 String name = file.getName();
-                if (name.startsWith(INDEX)) {
-                    int index = Integer.parseInt(name.substring(INDEX.length()));
+                if (name.startsWith(FILE_NAME_PREFIX)) {
+                    int index = Integer.parseInt(name.substring(FILE_NAME_PREFIX.length()));
                     if (maxIndex < index)
                         maxIndex = index;
                 }
@@ -97,45 +99,46 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
-    public VanillaFile append(int cycle, long indexValue, boolean synchronous) throws IOException {
+    public VanillaMappedBuffer append(int cycle, long indexValue, boolean synchronous) throws IOException {
         for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
-            VanillaFile file = indexFor(cycle, indexCount, true);
-            if (append(file, indexValue, synchronous))
+            VanillaMappedBuffer file = indexFor(cycle, indexCount, true);
+            if (append(file, indexValue, synchronous)) {
                 return file;
-            file.decrementUsage();
+            }
+
+            file.release();
         }
         throw new AssertionError();
     }
 
-    public static boolean append(final VanillaFile vanillaFile, final long indexValue, final boolean synchronous) {
+    public static boolean append(final VanillaMappedBuffer buffer, final long indexValue, final boolean synchronous) {
 
         // Position can be changed by another thread, so take a snapshot each loop so that
         // buffer overflows are not generated when advancing to the next position.
         // As a result, the position could step backwards when this method is called concurrently,
         // but the compareAndSwapLong call ensures that data is never overwritten.
 
-        final NativeBytes bytes = vanillaFile.bytes();
         boolean endOfFile = false;
         while (!endOfFile) {
-            final long position = bytes.position();
-            endOfFile = (bytes.limit() - position) < 8;
+            final long position = buffer.position();
+            endOfFile = (buffer.limit() - position) < 8;
             if (!endOfFile) {
-                if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
+                if (buffer.compareAndSwapLong(position, 0L, indexValue)) {
                     if (synchronous)
-                        vanillaFile.force();
+                        buffer.force();
                     return true;
                 }
-                bytes.position(position + 8);
+
+                buffer.position(position + 8);
             }
         }
         return false;
     }
 
-    public static long countIndices(final VanillaFile vanillaFile) {
-        final NativeBytes bytes = vanillaFile.bytes();
+    public static long countIndices(final VanillaMappedBuffer buffer) {
         long indices = 0;
-        for (long offset = 0;(bytes.limit() - bytes.address() + offset) < 8;offset += 8) {
-            if(bytes.readLong(offset) != 0) {
+        for (long offset = 0;(buffer.limit() - buffer.address() + offset) < 8;offset += 8) {
+            if(buffer.readLong(offset) != 0) {
                 indices++;
             } else {
                 break;
@@ -186,10 +189,12 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public synchronized void checkCounts(int min, int max) {
+        /* TODO: impleemnt
         for (VanillaFile file : indexKeyVanillaFileMap.values()) {
             if (file.usage() < min || file.usage() > max)
                 throw new IllegalStateException(file.file() + " has a count of " + file.usage());
         }
+        */
     }
 
     static class IndexKey implements Cloneable {

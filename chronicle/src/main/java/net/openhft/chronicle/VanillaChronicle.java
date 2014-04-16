@@ -20,6 +20,7 @@ import net.openhft.affinity.AffinitySupport;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.VanillaMappedBuffer;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -118,10 +119,10 @@ public class VanillaChronicle implements Chronicle {
         int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
         if(lastIndexFile >= 0) {
             try {
-                final VanillaFile vfile = indexCache.indexFor(cycle, lastIndexFile, false);
-                final long indices = VanillaIndexCache.countIndices(vfile);
+                final VanillaMappedBuffer buffer = indexCache.indexFor(cycle, lastIndexFile, false);
+                final long indices = VanillaIndexCache.countIndices(buffer);
 
-                vfile.decrementUsage();
+                buffer.release();
 
                 return ((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
             } catch (IOException e) {
@@ -198,7 +199,7 @@ public class VanillaChronicle implements Chronicle {
 
     abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
         long index = -1;
-        VanillaFile dataFile;
+        VanillaMappedBuffer dataFile;
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_PAGE, NO_PAGE, null);
@@ -237,11 +238,13 @@ public class VanillaChronicle implements Chronicle {
             return (int) (System.currentTimeMillis() / config.cycleLength());
         }
 
-        private int lastCycle = Integer.MIN_VALUE,
-                lastDailyCount = Integer.MIN_VALUE,
-                lastThreadId = Integer.MIN_VALUE,
-                lastDataCount = Integer.MIN_VALUE;
-        private VanillaFile lastIndexFile = null, lastDataFile = null;
+        private int lastCycle = Integer.MIN_VALUE;
+        private int lastDailyCount = Integer.MIN_VALUE;
+        private int lastThreadId = Integer.MIN_VALUE;
+        private int lastDataCount = Integer.MIN_VALUE;
+
+        private VanillaMappedBuffer lastIndexFile = null;
+        private VanillaMappedBuffer lastDataFile = null;
 
         public boolean index(long nextIndex) {
             checkNotClosed();
@@ -254,20 +257,20 @@ public class VanillaChronicle implements Chronicle {
                 try {
                     if (lastCycle != cycle || lastDailyCount != dailyCount || lastIndexFile==null) {
                         if (lastIndexFile != null) {
-                            lastIndexFile.decrementUsage();
+                            lastIndexFile.release();
                             lastIndexFile = null;
                         }
                         lastIndexFile = indexCache.indexFor(cycle, dailyCount, false);
                         indexFileChange = true;
-                        assert lastIndexFile.usage() > 1;
+                        assert lastIndexFile.refCount() > 1;
                         lastCycle = cycle;
                         lastDailyCount = dailyCount;
                         if (lastDataFile != null) {
-                            lastDataFile.decrementUsage();
+                            lastDataFile.release();
                             lastDataFile = null;
                         }
                     }
-                    indexValue = lastIndexFile.bytes().readVolatileLong(dailyOffset << 3);
+                    indexValue = lastIndexFile.readVolatileLong(dailyOffset << 3);
                 } catch (FileNotFoundException e) {
                     return false;
                 }
@@ -280,7 +283,7 @@ public class VanillaChronicle implements Chronicle {
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
                 if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
                     if (dataFile != null) {
-                        dataFile.decrementUsage();
+                        dataFile.release();
                         dataFile = null;
                     }
                 }
@@ -289,15 +292,15 @@ public class VanillaChronicle implements Chronicle {
                     lastThreadId = threadId;
                     lastDataCount = dataCount;
                 }
-                NativeBytes bytes = dataFile.bytes();
-                int len = bytes.readVolatileInt(dataOffset - 4);
+
+                int len = dataFile.readVolatileInt(dataOffset - 4);
                 if (len == 0)
                     return false;
                 int len2 = ~len;
                 // invalid if either the top two bits are set,
                 if ((len2 >>> 30) != 0)
                     throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
-                startAddr = positionAddr = bytes.startAddr() + dataOffset;
+                startAddr = positionAddr = dataFile.startAddr() + dataOffset;
                 limitAddr = startAddr + ~len;
                 index = nextIndex;
                 finished = false;
@@ -458,8 +461,8 @@ public class VanillaChronicle implements Chronicle {
         private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
         private int appenderCycle, appenderThreadId;
         private boolean nextSynchronous;
-        private VanillaFile lastIndexFile = null;
-        private VanillaFile appenderFile;
+        private VanillaMappedBuffer lastIndexFile = null;
+        private VanillaMappedBuffer appenderFile;
 
         VanillaAppender() {
         }
@@ -481,7 +484,7 @@ public class VanillaChronicle implements Chronicle {
                 assert (appenderThreadId & 0xFFFF) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
                     if (appenderFile != null) {
-                        appenderFile.decrementUsage();
+                        appenderFile.release();
                         appenderFile = null;
                     }
                     appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
@@ -489,18 +492,18 @@ public class VanillaChronicle implements Chronicle {
                     lastCycle = appenderCycle;
                     lastThreadId = appenderThreadId;
                     if (lastIndexFile != null) {
-                        lastIndexFile.decrementUsage();
+                        lastIndexFile.release();
                         lastIndexFile = null;
                     }
                 }
-                if (appenderFile.bytes().remaining() < capacity + 4) {
+                if (appenderFile.remaining() < capacity + 4) {
                     dataCache.incrementLastCount();
-                    appenderFile.decrementUsage();
+                    appenderFile.release();
                     appenderFile = null;
                     appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
                 }
 
-                startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
+                startAddr = positionAddr = appenderFile.positionAddr() + 4;
                 limitAddr = startAddr + capacity;
                 nextSynchronous = config.synchronous();
                 finished = false;
@@ -530,15 +533,15 @@ public class VanillaChronicle implements Chronicle {
             int length = ~(int) (positionAddr - startAddr);
             NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
             // position of the start not the end.
-            int offset = (int) (startAddr - appenderFile.baseAddr());
-            long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
+            int offset = (int) (startAddr - appenderFile.address());
+            long dataOffset = appenderFile.index() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << 48) + dataOffset;
             lastWrittenIndex = indexValue;
             try {
                 final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);
                 if (!appendDone) {
                     if (lastIndexFile != null) {
-                        lastIndexFile.decrementUsage();
+                        lastIndexFile.release();
                         lastIndexFile = null;
                     }
 
@@ -548,8 +551,8 @@ public class VanillaChronicle implements Chronicle {
                 throw new AssertionError(e);
             }
 
-            appenderFile.bytes().positionAddr(positionAddr);
-            appenderFile.bytes().alignPositionAddr(4);
+            appenderFile.positionAddr(positionAddr);
+            appenderFile.alignPositionAddr(4);
 
             if (nextSynchronous) {
                 appenderFile.force();

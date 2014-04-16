@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
-import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.VanillaMappedBuffer;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,35 +38,37 @@ public class VanillaIndexCacheTest {
         VanillaIndexCache cache = new VanillaIndexCache(dir.getAbsolutePath(), 10 + 3, dateCache);
 
         int cycle = (int) (System.currentTimeMillis() / 1000);
-        VanillaFile vanillaFile0 = cache.indexFor(cycle, 0, true);
-        vanillaFile0.bytes().writeLong(0, 0x12345678);
-        File file0 = vanillaFile0.file();
+        VanillaMappedBuffer vanillaBuffer0 = cache.indexFor(cycle, 0, true);
+        vanillaBuffer0.writeLong(0, 0x12345678);
+        File file0 = cache.fileFor(cycle, 0, true);
         assertEquals(8 << 10, file0.length());
-        assertEquals(0x12345678L, vanillaFile0.bytes().readLong(0));
-        vanillaFile0.decrementUsage();
+        assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
+        vanillaBuffer0.release();
 
-        VanillaFile vanillaFile1 = cache.indexFor(cycle, 1, true);
-        File file1 = vanillaFile1.file();
+        VanillaMappedBuffer vanillaBuffer1 = cache.indexFor(cycle, 1, true);
+        File file1 = cache.fileFor(cycle, 1, true);
         assertEquals(8 << 10, file1.length());
-        vanillaFile1.decrementUsage();
-        assertNotEquals(vanillaFile1.file(), vanillaFile0.file());
+        vanillaBuffer1.release();
+        assertNotEquals(file1, file0);
 
-        VanillaFile vanillaFile2 = cache.indexFor(cycle, 2, true);
-        File file2 = vanillaFile2.file();
+        VanillaMappedBuffer vanillaBuffer2 = cache.indexFor(cycle, 2, true);
+        File file2 = cache.fileFor(cycle, 2, true);
         assertEquals(8 << 10, file2.length());
-        vanillaFile2.decrementUsage();
+        vanillaBuffer2.release();
 
-        assertNotEquals(vanillaFile2.file(), vanillaFile0.file());
-        assertNotEquals(vanillaFile2.file(), vanillaFile1.file());
+        assertNotEquals(file2, file0);
+        assertNotEquals(file2, file1);
         cache.close();
-        assertEquals(0, vanillaFile0.usage());
-        assertEquals(0, vanillaFile1.usage());
-        assertEquals(0, vanillaFile2.usage());
+        assertEquals(0, vanillaBuffer0.refCount());
+        assertEquals(0, vanillaBuffer1.refCount());
+        assertEquals(0, vanillaBuffer2.refCount());
+
         // check you can delete after closing.
         assertTrue(file0.delete());
         assertTrue(file1.delete());
         assertTrue(file2.delete());
         assertTrue(file0.getParentFile().delete());
+
         file0.getParentFile().getParentFile().delete();
     }
 
@@ -83,17 +85,17 @@ public class VanillaIndexCacheTest {
         // Check that the index file count starts at 0 when the data directory is empty
         assertEquals(0, cache.lastIndexFile(cycle));
 
-        VanillaFile vanillaFile0 = cache.indexFor(cycle, 0, true);
-        assertEquals("index-0", vanillaFile0.file().getName());
-        vanillaFile0.decrementUsage();
+        VanillaMappedBuffer vanillaBuffer0 = cache.indexFor(cycle, 0, true);
+        assertEquals("index-0", cache.fileFor(cycle, 0, true).getName());
+        vanillaBuffer0.release();
         assertEquals(0, cache.lastIndexFile(cycle));
 
-        VanillaFile vanillaFile1 = cache.indexFor(cycle, 1, true);
-        assertEquals("index-1", vanillaFile1.file().getName());
+        VanillaMappedBuffer vanillaBuffer1 = cache.indexFor(cycle, 1, true);
+        assertEquals("index-1", cache.fileFor(cycle, 1, true).getName());
         assertEquals(1, cache.lastIndexFile(cycle));
 
-        VanillaFile vanillaFile3 = cache.indexFor(cycle, 3, true);
-        assertEquals("index-3", vanillaFile3.file().getName());
+        VanillaMappedBuffer vanillaBuffer3 = cache.indexFor(cycle, 3, true);
+        assertEquals("index-3", cache.fileFor(cycle, 3, true).getName());
         assertEquals(3, cache.lastIndexFile(cycle));
 
         IOTools.deleteDir(dir.getAbsolutePath());
@@ -136,19 +138,18 @@ public class VanillaIndexCacheTest {
     private Set<Long> readAllIndexValues(final VanillaIndexCache cache, final int cycle) throws IOException {
         final Set<Long> indexValues = new TreeSet<Long>();
         for (int i = 0; i <= cache.lastIndexFile(cycle); i++) {
-            final VanillaFile vanillaFile = cache.indexFor(cycle, i, false);
-            indexValues.addAll(readAllIndexValues(vanillaFile));
-            vanillaFile.decrementUsage();
+            final VanillaMappedBuffer vanillaBuffer = cache.indexFor(cycle, i, false);
+            indexValues.addAll(readAllIndexValues(vanillaBuffer));
+            vanillaBuffer.release();
         }
         return indexValues;
     }
 
-    private Set<Long> readAllIndexValues(final VanillaFile vanillaFile) {
+    private Set<Long> readAllIndexValues(final VanillaMappedBuffer vanillaBuffer) {
         final Set<Long> indexValues = new TreeSet<Long>();
-        final NativeBytes bytes = vanillaFile.bytes();
-        bytes.position(0);
-        while (bytes.remaining() >= 8) {
-            indexValues.add(bytes.readLong());
+        vanillaBuffer.position(0);
+        while (vanillaBuffer.remaining() >= 8) {
+            indexValues.add(vanillaBuffer.readLong());
         }
         return indexValues;
     }
