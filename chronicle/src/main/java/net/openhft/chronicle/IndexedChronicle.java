@@ -18,8 +18,6 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBuffer;
-import net.openhft.lang.io.VanillaMappedFile;
-import net.openhft.lang.io.VanillaMappedMode;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
@@ -50,12 +48,7 @@ import java.io.IOException;
 public class IndexedChronicle implements Chronicle {
 
     @NotNull
-    final VanillaMappedFile indexFile;
-    @NotNull
     final VanillaMappedBlocks indexFileCache;
-
-    @NotNull
-    final VanillaMappedFile dataFile;
     @NotNull
     final VanillaMappedBlocks dataFileCache;
 
@@ -101,10 +94,8 @@ public class IndexedChronicle implements Chronicle {
             parentFile.mkdirs();
         }
 
-        this.indexFile      = new VanillaMappedFile(new File(basePath + ".index"), VanillaMappedMode.RW);
-        this.indexFileCache = this.indexFile.blocks(config.indexBlockSize());
-        this.dataFile       = new VanillaMappedFile(new File(basePath + ".data"), VanillaMappedMode.RW);
-        this.dataFileCache  = this.dataFile.blocks(config.dataBlockSize());
+        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"),config.indexBlockSize());
+        this.dataFileCache  = VanillaMappedBlocks.readWrite(new File(basePath + ".data" ),config.dataBlockSize());
 
         findTheLastIndex();
     }
@@ -152,7 +143,7 @@ public class IndexedChronicle implements Chronicle {
         long size = 0;
 
         try {
-            size = indexFile.size();
+            size = indexFileCache.size();
         } catch(Exception e) {
             return -1;
         }
@@ -226,9 +217,7 @@ public class IndexedChronicle implements Chronicle {
     public void close() throws IOException {
         closed = true;
         this.indexFileCache.close();
-        this.indexFile.close();
         this.dataFileCache.close();
-        this.dataFile.close();
     }
 
     /**
