@@ -40,18 +40,13 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.3.0</version>
+                <version>3.3.1</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
                 <version>6.3.5</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>2.0.6</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
@@ -70,10 +65,6 @@
         <dependency>
             <groupId>com.sun.java</groupId>
             <artifactId>tools</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>

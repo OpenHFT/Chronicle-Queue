@@ -76,7 +76,8 @@ public final class TestTaskExecutionUtil {
             try {
                 task.call();
             } catch (Throwable e) {
-                failure = new AssertionError("Task failed", e);
+                failure = new AssertionError("Task failed");
+                failure.initCause(e);
             }
         }
 
