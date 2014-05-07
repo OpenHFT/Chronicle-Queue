@@ -34,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
+import static net.openhft.chronicle.TestTaskExecutionUtil.TestTaskRunner;
+
 public class VanillaChronicleTest {
     private static final int N_THREADS = 4;
 
@@ -240,17 +242,12 @@ public class VanillaChronicleTest {
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
         try {
-            Thread t = new Thread(new Runnable() {
+            final TestTaskRunner tailerTask = new TestTaskRunner(new Callable<Void>() {
                 @Override
-                public void run() {
+                public Void call() throws Exception {
+                    ExcerptTailer tailer = chronicle.createTailer();
                     for (int i = -WARMUP; i < RUNS; i++) {
-                        ExcerptTailer tailer = null;
-                        try {
-                            tailer = chronicle.createTailer();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        while (!tailer.nextIndex()) ;
+                        while (!tailer.nextIndex());
                         long actual = -1;
                         for (int j = 0; j < BYTES; j += 8)
                             actual = tailer.readLong();
@@ -260,9 +257,10 @@ public class VanillaChronicleTest {
                         }
                         tailer.finish();
                     }
-
+                    return null;
                 }
             });
+            Thread t = new Thread(tailerTask);
             t.start();
             ExcerptAppender appender = chronicle.createAppender();
             long start = 0;
@@ -276,6 +274,7 @@ public class VanillaChronicleTest {
                 appender.finish();
             }
             t.join();
+            tailerTask.assertIfFailed();
             long time = System.nanoTime() - start;
             System.out.printf("Average write/read times was %.3f us%n", time / RUNS / 1e3);
         } finally {

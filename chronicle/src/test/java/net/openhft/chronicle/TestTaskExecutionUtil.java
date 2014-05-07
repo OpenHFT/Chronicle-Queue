@@ -37,10 +37,10 @@ public final class TestTaskExecutionUtil {
     public static void executeConcurrentTasks(final List<? extends Callable<Void>> tasks, final long taskTimeoutMillis) {
 
         // Create and start a thread per task
-        final List<TaskRunner> taskRunners = new ArrayList<TaskRunner>();
+        final List<TestTaskRunner> taskRunners = new ArrayList<TestTaskRunner>();
         final List<Thread> threads = new ArrayList<Thread>();
         for (Callable<Void> task : tasks) {
-            final TaskRunner taskRunner = new TaskRunner(task);
+            final TestTaskRunner taskRunner = new TestTaskRunner(task);
             taskRunners.add(taskRunner);
             final Thread thread = new Thread(taskRunner, task.toString());
             threads.add(thread);
@@ -58,16 +58,19 @@ public final class TestTaskExecutionUtil {
         }
 
         // Fail if any tasks failed
-        for (TaskRunner taskRunner : taskRunners) {
+        for (TestTaskRunner taskRunner : taskRunners) {
             taskRunner.assertIfFailed();
         }
     }
 
-    private static class TaskRunner implements Runnable {
+    /**
+     * Wraps a task so that failures in another thread can be reported.
+     */
+    public static class TestTaskRunner implements Runnable {
         private final Callable<?> task;
         private volatile AssertionError failure;
 
-        public TaskRunner(final Callable<?> task) {
+        public TestTaskRunner(final Callable<?> task) {
             this.task = task;
         }
 
