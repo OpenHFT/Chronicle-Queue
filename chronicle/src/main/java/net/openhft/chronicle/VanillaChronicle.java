@@ -16,6 +16,10 @@
 
 package net.openhft.chronicle;
 
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_BITS;
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_MASK;
+import static net.openhft.chronicle.VanillaChronicleConfig.THREAD_ID_MASK;
+
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
@@ -274,8 +278,8 @@ public class VanillaChronicle implements Chronicle {
                 if (indexValue == 0) {
                     return false;
                 }
-                int threadId = (int) (indexValue >>> 48);
-                long dataOffset0 = indexValue & (-1L >>> -48);
+                int threadId = (int) (indexValue >>> INDEX_DATA_OFFSET_BITS);
+                long dataOffset0 = indexValue & INDEX_DATA_OFFSET_MASK;
                 int dataCount = (int) (dataOffset0 >>> dataBlockSizeBits);
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
                 if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
@@ -478,7 +482,7 @@ public class VanillaChronicle implements Chronicle {
             try {
                 appenderCycle = cycle;
                 appenderThreadId = AffinitySupport.getThreadId();
-                assert (appenderThreadId & 0xFFFF) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
+                assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
                     if (appenderFile != null) {
                         appenderFile.decrementUsage();
@@ -532,7 +536,7 @@ public class VanillaChronicle implements Chronicle {
             // position of the start not the end.
             int offset = (int) (startAddr - appenderFile.baseAddr());
             long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
-            long indexValue = ((long) appenderThreadId << 48) + dataOffset;
+            long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
             lastWrittenIndex = indexValue;
             try {
                 final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);

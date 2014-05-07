@@ -23,6 +23,28 @@ public class VanillaChronicleConfig {
 
     public static final long MIN_CYCLE_LENGTH = TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
 
+    /**
+     * Number of most-significant bits used to hold the thread id in index entries.
+     * The remaining least-significant bits of the index entry are used for the data offset info.
+     */
+    public static final int THREAD_ID_BITS = 24;
+
+    /**
+     * Mask used to validate that the thread id does not exceed the allocated number of bits.
+     */
+    public static final long THREAD_ID_MASK = -1L >>> -THREAD_ID_BITS;
+
+    /**
+     * Number of least-significant bits used to hold the data offset info in index entries.
+     */
+    public static final int INDEX_DATA_OFFSET_BITS = 64 - THREAD_ID_BITS;
+
+    /**
+     * Mask used to extract the data offset info from an index entry.
+     */
+    public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
+
+
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
     private long indexBlockSize = 16L << 20; // 16 MB
