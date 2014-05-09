@@ -1152,13 +1152,23 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
-    public Bytes createSlice() {
-        return common.createSlice();
+    public Bytes slice() {
+        return common.slice();
     }
 
     @Override
-    public Bytes createSlice(long offset, long length) {
-        return common.createSlice(offset, length);
+    public Bytes slice(long offset, long length) {
+        return common.slice(offset, length);
+    }
+
+    @Override
+    public Bytes bytes() {
+        return common.bytes();
+    }
+
+    @Override
+    public Bytes bytes(long offset, long length) {
+        return common.bytes(offset, length);
     }
 
     @Override
