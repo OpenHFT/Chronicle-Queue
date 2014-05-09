@@ -42,7 +42,7 @@ public class VanillaIndexCache implements Closeable {
         this.baseFile = new File(basePath);
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache     = new VanillaMappedCache<IndexKey>(MAX_SIZE, 1.0f, true, true);
+        this.cache     = new VanillaMappedCache<IndexKey>(MAX_SIZE, true);
     }
 
     public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {

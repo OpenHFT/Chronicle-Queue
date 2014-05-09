@@ -40,7 +40,7 @@ public class VanillaDataCache implements Closeable {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache     = new VanillaMappedCache<DataKey>(MAX_SIZE, 1.0f, true, false);
+        this.cache     = new VanillaMappedCache<DataKey>(MAX_SIZE, false);
     }
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
