@@ -34,7 +34,7 @@ import java.io.IOException;
  * memory manually so does not suffer from GC. Chronicle behaves like a
  * management interface over off-heap memory so you can build your own solutions over it.
  *
- * <p> </p><em>Chronicle</em> uses RandomAccessFiles while managing memory and this choice
+ * <p><em>Chronicle</em> uses RandomAccessFiles while managing memory and this choice
  * brings lots of possibility. Random access files permit non-sequential,
  * or random, access to a file's contents. To access a file randomly, you
  * open the file, seek a particular location, and read from or write to

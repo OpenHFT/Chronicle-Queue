@@ -39,11 +39,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up
- * to.
- * <p/>
- * Can be used an in process component which wraps the underlying Chronicle and offers lower overhead than using
- * ChronicleSource
+ * A Chronicle as a service to be replicated to any number of clients.
+ * Clients can restart from where ever they are up to.
+ *
+ * <p>Can be used an in process component which wraps the underlying Chronicle
+ * and offers lower overhead than using ChronicleSource
  *
  * @author peter.lawrey
  */
