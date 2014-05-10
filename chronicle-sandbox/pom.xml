@@ -33,7 +33,7 @@
 
     <properties>
         <!-- hft version is here so it can be included in OSGi tests -->
-        <openhft.lang.version>6.3.5</openhft.lang.version>
+        <openhft.lang.version>6.4.0-SNAPSHOT</openhft.lang.version>
         <openhft.affinity.version>2.0.6</openhft.affinity.version>
         <logback.version>0.9.6</logback.version>
     </properties>

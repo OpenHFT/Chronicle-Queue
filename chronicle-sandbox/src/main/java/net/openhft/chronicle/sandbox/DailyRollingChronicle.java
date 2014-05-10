@@ -56,7 +56,7 @@ public class DailyRollingChronicle implements Chronicle {
         if (!file.isDirectory())
             throw new IOException("Failed to create directory " + file);
         master = new MasterIndexFile(new File(file, "master"));
-        bytes = new DirectStore(config.getBytesMarshallerFactory(), config.getMaxEntrySize(), false).createSlice();
+        bytes = new DirectStore(config.getBytesMarshallerFactory(), config.getMaxEntrySize(), false).bytes();
         SimpleDateFormat dateFormat = new SimpleDateFormat(config.getFileFormat());
         dateFormat.setTimeZone(config.getTimeZone());
         String currentFilename = dateFormat.format(new Date());

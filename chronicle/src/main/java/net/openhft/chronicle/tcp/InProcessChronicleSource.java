@@ -38,11 +38,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A Chronicle as a service to be replicated to any number of clients.  Clients can restart from where ever they are up
- * to.
- * <p></p>
- * Can be used an in process component which wraps the underlying Chronicle and offers lower overhead than using
- * ChronicleSource
+ * A Chronicle as a service to be replicated to any number of clients.
+ * Clients can restart from where ever they are up to.
+ *
+ * <p>Can be used an in process component which wraps the underlying Chronicle and offers
+ * lower overhead than using ChronicleSource
  *
  * @author peter.lawrey
  */
@@ -192,7 +192,7 @@ public class InProcessChronicleSource implements Chronicle {
         @Override
         public void run() {
             try {
-                long index = readIndex(socket);
+                long index = readIndex(socket) + 1; //Catch-up up to the first index that the remote sink doesn't have (last known remote index + 1)
                 ExcerptTailer excerpt = chronicle.createTailer();
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
