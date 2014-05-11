@@ -44,14 +44,14 @@ public class VanillaDataCache implements Closeable {
         this.dateCache = dateCache;
     }
 
-    public synchronized VanillaFile dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+    public synchronized VanillaFile dataFor(int cycle, int appenderId, int dataCount, boolean forWrite) throws IOException {
         key.cycle = cycle;
-        key.threadId = threadId;
+        key.appenderId = appenderId;
         key.dataCount = dataCount;
         VanillaFile vanillaFile = dataKeyVanillaFileMap.get(key);
         if (vanillaFile == null) {
             String cycleStr = dateCache.formatFor(cycle);
-            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + threadId + "-" + dataCount, dataCount, 1L << blockBits, forWrite));
+            dataKeyVanillaFileMap.put(key.clone(), vanillaFile = new VanillaFile(basePath, cycleStr, "data-" + appenderId + "-" + dataCount, dataCount, 1L << blockBits, forWrite));
             findEndOfData(vanillaFile);
         }
         vanillaFile.incrementUsage();
@@ -89,10 +89,10 @@ public class VanillaDataCache implements Closeable {
     private int lastCycle = -1;
     private int lastCount = -1;
 
-    public VanillaFile dataForLast(int cycle, int threadId) throws IOException {
+    public VanillaFile dataForLast(int cycle, int appenderId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
         String cyclePath = basePath + "/" + cycleStr;
-        String dataPrefix = "data-" + threadId + "-";
+        String dataPrefix = "data-" + appenderId + "-";
         if (lastCycle != cycle) {
             int maxCount = 0;
             File[] files = new File(cyclePath).listFiles();
@@ -108,7 +108,7 @@ public class VanillaDataCache implements Closeable {
             lastCount = maxCount;
         }
 
-        return dataFor(cycle, threadId, lastCount, true);
+        return dataFor(cycle, appenderId, lastCount, true);
     }
 
     public void incrementLastCount() {
@@ -125,19 +125,19 @@ public class VanillaDataCache implements Closeable {
 
     static class DataKey implements Cloneable {
         int cycle;
-        int threadId;
+        int appenderId;
         int dataCount;
 
         @Override
         public int hashCode() {
-            return threadId * 10191 + cycle * 17 + dataCount;
+            return appenderId * 10191 + cycle * 17 + dataCount;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof DataKey)) return false;
             DataKey key = (DataKey) obj;
-            return dataCount == key.dataCount && threadId == key.threadId && cycle == key.cycle;
+            return dataCount == key.dataCount && appenderId == key.appenderId && cycle == key.cycle;
         }
 
         @Override

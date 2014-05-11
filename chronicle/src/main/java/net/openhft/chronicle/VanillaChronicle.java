@@ -16,7 +16,10 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.affinity.AffinitySupport;
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_BITS;
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_MASK;
+import static net.openhft.chronicle.VanillaChronicleConfig.APPENDER_ID_MASK;
+
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
@@ -27,18 +30,16 @@ import net.openhft.lang.model.constraints.NotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by peter
  */
 public class VanillaChronicle implements Chronicle {
+    private final AtomicInteger appenderCount = new AtomicInteger();
     private final String name;
     private final String basePath;
     private final VanillaChronicleConfig config;
-    private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
-    private final ThreadLocal<WeakReference<ExcerptTailer>> tailerCache = new ThreadLocal<WeakReference<ExcerptTailer>>();
-    private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
     private final int indexBlockLongsBits, indexBlockLongsMask;
@@ -88,19 +89,7 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return new VanillaExcerpt();
-    }
-
-    BytesMarshallerFactory acquireBMF() {
-        WeakReference<BytesMarshallerFactory> bmfRef = marshallersCache.get();
-        BytesMarshallerFactory bmf = null;
-        if (bmfRef != null)
-            bmf = bmfRef.get();
-        if (bmf == null) {
-            bmf = createBMF();
-            marshallersCache.set(new WeakReference<BytesMarshallerFactory>(bmf));
-        }
-        return bmf;
+        return new VanillaExcerpt(createBMF());
     }
 
     BytesMarshallerFactory createBMF() {
@@ -135,37 +124,15 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        WeakReference<ExcerptTailer> ref = tailerCache.get();
-        ExcerptTailer tailer = null;
-        if (ref != null)
-            tailer = ref.get();
-        if (tailer == null) {
-            tailer = createTailer0();
-            tailerCache.set(new WeakReference<ExcerptTailer>(tailer));
-        }
-        return tailer;
-    }
-
-    private ExcerptTailer createTailer0() {
-        return new VanillaTailer();
+        return new VanillaTailer(createBMF());
     }
 
     @NotNull
     @Override
     public VanillaAppender createAppender() throws IOException {
-        WeakReference<VanillaAppender> ref = appenderCache.get();
-        VanillaAppender appender = null;
-        if (ref != null)
-            appender = ref.get();
-        if (appender == null) {
-            appender = createAppender0();
-            appenderCache.set(new WeakReference<VanillaAppender>(appender));
-        }
-        return appender;
-    }
-
-    private VanillaAppender createAppender0() {
-        return new VanillaAppender();
+        final int appenderId = appenderCount.incrementAndGet();
+        assert (appenderId & APPENDER_ID_MASK) == appenderId : "appenderId has exceeded max: " + appenderId;
+        return new VanillaAppender(appenderId, createBMF());
     }
 
     @Override
@@ -200,8 +167,8 @@ public class VanillaChronicle implements Chronicle {
         long index = -1;
         VanillaFile dataFile;
 
-        public AbstractVanillaExcerpt() {
-            super(acquireBMF(), NO_PAGE, NO_PAGE, null);
+        public AbstractVanillaExcerpt(final BytesMarshallerFactory bytesMarshallerFactory) {
+            super(bytesMarshallerFactory, NO_PAGE, NO_PAGE, null);
         }
 
         @Override
@@ -239,7 +206,7 @@ public class VanillaChronicle implements Chronicle {
 
         private int lastCycle = Integer.MIN_VALUE,
                 lastDailyCount = Integer.MIN_VALUE,
-                lastThreadId = Integer.MIN_VALUE,
+                lastAppenderId = Integer.MIN_VALUE,
                 lastDataCount = Integer.MIN_VALUE;
         private VanillaFile lastIndexFile = null, lastDataFile = null;
 
@@ -274,19 +241,19 @@ public class VanillaChronicle implements Chronicle {
                 if (indexValue == 0) {
                     return false;
                 }
-                int threadId = (int) (indexValue >>> 48);
-                long dataOffset0 = indexValue & (-1L >>> -48);
+                int appenderId = (int) (indexValue >>> INDEX_DATA_OFFSET_BITS);
+                long dataOffset0 = indexValue & INDEX_DATA_OFFSET_MASK;
                 int dataCount = (int) (dataOffset0 >>> dataBlockSizeBits);
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
-                if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
+                if (lastAppenderId != appenderId || lastDataCount != dataCount || indexFileChange) {
                     if (dataFile != null) {
                         dataFile.decrementUsage();
                         dataFile = null;
                     }
                 }
                 if (dataFile == null) {
-                    dataFile = dataCache.dataFor(cycle, threadId, dataCount, false);
-                    lastThreadId = threadId;
+                    dataFile = dataCache.dataFor(cycle, appenderId, dataCount, false);
+                    lastAppenderId = appenderId;
                     lastDataCount = dataCount;
                 }
                 NativeBytes bytes = dataFile.bytes();
@@ -354,7 +321,7 @@ public class VanillaChronicle implements Chronicle {
         protected void resetLastInfo() {
             lastCycle = Integer.MIN_VALUE;
             lastDailyCount = Integer.MIN_VALUE;
-            lastThreadId = Integer.MIN_VALUE;
+            lastAppenderId = Integer.MIN_VALUE;
             lastDataCount = Integer.MIN_VALUE;
             lastIndexFile = null;
             lastDataFile = null;
@@ -362,6 +329,10 @@ public class VanillaChronicle implements Chronicle {
     }
 
     class VanillaExcerpt extends AbstractVanillaExcerpt implements Excerpt {
+        VanillaExcerpt(final BytesMarshallerFactory bytesMarshallerFactory) {
+            super(bytesMarshallerFactory);
+        }
+
         public long findMatch(@NotNull ExcerptComparator comparator) {
             long lo = 0, hi = lastWrittenIndex();
             while (lo <= hi) {
@@ -455,19 +426,25 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
-        private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
-        private int appenderCycle, appenderThreadId;
+        private final int appenderId;
+        private final long appenderIndexValue;
+        private int lastCycle = Integer.MIN_VALUE;
+        private int appenderCycle;
         private boolean nextSynchronous;
         private VanillaFile lastIndexFile = null;
         private VanillaFile appenderFile;
 
-        VanillaAppender() {
+        VanillaAppender(final int appenderId, final BytesMarshallerFactory bytesMarshallerFactory) {
+            super(bytesMarshallerFactory);
+            this.appenderId = appenderId;
+            this.appenderIndexValue = ((long) appenderId << INDEX_DATA_OFFSET_BITS);
         }
 
         @Override
         public void startExcerpt() {
             startExcerpt(config.defaultMessageSize());
         }
+
         @Override
         public void startExcerpt(long capacity) {
             startExcerpt(capacity, cycle());
@@ -477,17 +454,14 @@ public class VanillaChronicle implements Chronicle {
             checkNotClosed();
             try {
                 appenderCycle = cycle;
-                appenderThreadId = AffinitySupport.getThreadId();
-                assert (appenderThreadId & 0xFFFF) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
-                if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
+                if (appenderCycle != lastCycle) {
                     if (appenderFile != null) {
                         appenderFile.decrementUsage();
                         appenderFile = null;
                     }
-                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                    appenderFile = dataCache.dataForLast(appenderCycle, appenderId);
 
                     lastCycle = appenderCycle;
-                    lastThreadId = appenderThreadId;
                     if (lastIndexFile != null) {
                         lastIndexFile.decrementUsage();
                         lastIndexFile = null;
@@ -497,7 +471,7 @@ public class VanillaChronicle implements Chronicle {
                     dataCache.incrementLastCount();
                     appenderFile.decrementUsage();
                     appenderFile = null;
-                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                    appenderFile = dataCache.dataForLast(appenderCycle, appenderId);
                 }
 
                 startAddr = positionAddr = appenderFile.bytes().positionAddr() + 4;
@@ -532,7 +506,7 @@ public class VanillaChronicle implements Chronicle {
             // position of the start not the end.
             int offset = (int) (startAddr - appenderFile.baseAddr());
             long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
-            long indexValue = ((long) appenderThreadId << 48) + dataOffset;
+            long indexValue = appenderIndexValue + dataOffset;
             lastWrittenIndex = indexValue;
             try {
                 final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);
@@ -565,6 +539,10 @@ public class VanillaChronicle implements Chronicle {
     }
 
     class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {
+
+        VanillaTailer(final BytesMarshallerFactory bytesMarshallerFactory) {
+            super(bytesMarshallerFactory);
+        }
 
         @NotNull
         @Override
