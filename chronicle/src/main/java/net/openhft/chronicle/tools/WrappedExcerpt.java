@@ -24,6 +24,7 @@ import net.openhft.lang.model.constraints.Nullable;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
@@ -1234,5 +1235,20 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public CharSequence asString() {
         return common.asString();
+    }
+
+    @Override
+    public void selfTerminating(boolean selfTerminate) {
+        common.selfTerminating(selfTerminate);
+    }
+
+    @Override
+    public boolean selfTerminating() {
+        return common.selfTerminating();
+    }
+
+    @Override
+    public int readUnsignedByteOrThrow() throws BufferUnderflowException {
+        return common.readUnsignedByteOrThrow();
     }
 }
