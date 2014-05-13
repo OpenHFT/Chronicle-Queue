@@ -462,13 +462,17 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
-        private int lastCycle = Integer.MIN_VALUE, lastThreadId = Integer.MIN_VALUE;
-        private int appenderCycle, appenderThreadId;
+        private int lastCycle = Integer.MIN_VALUE;
+        private int lastThreadId = Integer.MIN_VALUE;
+        private int appenderCycle;
+        private int appenderThreadId;
         private boolean nextSynchronous;
-        private VanillaMappedBuffer lastIndexFile = null;
-        private VanillaMappedBuffer appenderFile;
+        private VanillaMappedBuffer lastIndexBuffer;
+        private VanillaMappedBuffer appenderBuffer;
 
         VanillaAppender() {
+            lastIndexBuffer = null;
+            appenderBuffer = null;
         }
 
         @Override
@@ -487,27 +491,27 @@ public class VanillaChronicle implements Chronicle {
                 appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
                 if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
-                    if (appenderFile != null) {
-                        appenderFile.release();
-                        appenderFile = null;
+                    if (appenderBuffer != null) {
+                        appenderBuffer.release();
+                        appenderBuffer = null;
                     }
-                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                    appenderBuffer = dataCache.dataForLast(appenderCycle, appenderThreadId);
 
                     lastCycle = appenderCycle;
                     lastThreadId = appenderThreadId;
-                    if (lastIndexFile != null) {
-                        lastIndexFile.release();
-                        lastIndexFile = null;
+                    if (lastIndexBuffer != null) {
+                        lastIndexBuffer.release();
+                        lastIndexBuffer = null;
                     }
                 }
-                if (appenderFile.remaining() < capacity + 4) {
+                if (appenderBuffer.remaining() < capacity + 4) {
                     dataCache.incrementLastCount();
-                    appenderFile.release();
-                    appenderFile = null;
-                    appenderFile = dataCache.dataForLast(appenderCycle, appenderThreadId);
+                    appenderBuffer.release();
+                    appenderBuffer = null;
+                    appenderBuffer = dataCache.dataForLast(appenderCycle, appenderThreadId);
                 }
 
-                startAddr = positionAddr = appenderFile.positionAddr() + 4;
+                startAddr = positionAddr = appenderBuffer.positionAddr() + 4;
                 limitAddr = startAddr + capacity;
                 nextSynchronous = config.synchronous();
                 finished = false;
@@ -537,29 +541,29 @@ public class VanillaChronicle implements Chronicle {
             int length = ~(int) (positionAddr - startAddr);
             NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
             // position of the start not the end.
-            int offset = (int) (startAddr - appenderFile.baseAddr());
-            long dataOffset = appenderFile.indexCount() * config.dataBlockSize() + offset;
+            int offset = (int) (startAddr - appenderBuffer.address());
+            long dataOffset = appenderBuffer.index() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
             lastWrittenIndex = indexValue;
             try {
-                final boolean appendDone = (lastIndexFile != null) && VanillaIndexCache.append(lastIndexFile, indexValue, nextSynchronous);
+                final boolean appendDone = (lastIndexBuffer != null) && VanillaIndexCache.append(lastIndexBuffer, indexValue, nextSynchronous);
                 if (!appendDone) {
-                    if (lastIndexFile != null) {
-                        lastIndexFile.release();
-                        lastIndexFile = null;
+                    if (lastIndexBuffer != null) {
+                        lastIndexBuffer.release();
+                        lastIndexBuffer = null;
                     }
 
-                    lastIndexFile = indexCache.append(appenderCycle, indexValue, nextSynchronous);
+                    lastIndexBuffer = indexCache.append(appenderCycle, indexValue, nextSynchronous);
                 }
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
 
-            appenderFile.positionAddr(positionAddr);
-            appenderFile.alignPositionAddr(4);
+            appenderBuffer.positionAddr(positionAddr);
+            appenderBuffer.alignPositionAddr(4);
 
             if (nextSynchronous) {
-                appenderFile.force();
+                appenderBuffer.force();
             }
         }
 
