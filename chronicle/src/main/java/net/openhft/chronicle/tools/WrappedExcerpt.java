@@ -1225,4 +1225,14 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     public void alignPositionAddr(int alignment) {
         common.alignPositionAddr(alignment);
     }
+
+    @Override
+    public void asString(Appendable appendable) {
+        common.asString(appendable);
+    }
+
+    @Override
+    public CharSequence asString() {
+        return common.asString();
+    }
 }
