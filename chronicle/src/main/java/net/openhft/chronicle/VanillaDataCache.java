@@ -16,7 +16,7 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 
 import java.io.Closeable;
@@ -73,12 +73,12 @@ public class VanillaDataCache implements Closeable {
         return fileFor(cycle, threadId, lastCount, true);
     }
 
-    public synchronized VanillaMappedBuffer dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+    public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
         key.cycle     = cycle;
         key.threadId  = threadId;
         key.dataCount = dataCount;
 
-        VanillaMappedBuffer vmb = this.cache.get(key);
+        VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
             vmb = this.cache.put(
                 key.clone(),
@@ -95,7 +95,7 @@ public class VanillaDataCache implements Closeable {
         return vmb;
     }
 
-    private void findEndOfData(VanillaMappedBuffer buffer) {
+    private void findEndOfData(VanillaMappedBytes buffer) {
         for (int i = 0, max = 1 << blockBits; i < max; i += 4) {
             int len = buffer.readInt(buffer.position());
             if (len == 0) {
@@ -123,7 +123,7 @@ public class VanillaDataCache implements Closeable {
     private int lastCycle = -1;
     private int lastCount = -1;
 
-    public VanillaMappedBuffer dataForLast(int cycle, int threadId) throws IOException {
+    public VanillaMappedBytes dataForLast(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
         String cyclePath = basePath + File.separator + cycleStr;
         String dataPrefix = FILE_NAME_PREFIX + threadId + "-";

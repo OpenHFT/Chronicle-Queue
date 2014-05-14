@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
 
@@ -37,10 +37,10 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     private final int cacheLineSize;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    VanillaMappedBuffer indexBuffer;
+    VanillaMappedBytes indexBuffer;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    VanillaMappedBuffer dataBuffer;
+    VanillaMappedBytes dataBuffer;
     long index = -1;
     // relatively static
     // the start of the index block, as an address

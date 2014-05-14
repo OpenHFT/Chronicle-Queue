@@ -17,7 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.VanillaMappedBlocks;
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
@@ -154,7 +154,7 @@ public class IndexedChronicle implements Chronicle {
 
         int indexBlockSize = config.indexBlockSize();
         for (long block = size / indexBlockSize - 1; block >= 0; block--) {
-            VanillaMappedBuffer mbb = null;
+            VanillaMappedBytes mbb = null;
             try {
                 mbb = indexFileCache.acquire(block);
             } catch (IOException e) {

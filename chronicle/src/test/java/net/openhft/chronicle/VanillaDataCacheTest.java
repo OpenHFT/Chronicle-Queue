@@ -18,7 +18,7 @@ package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.lang.io.IOTools;
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import org.junit.Test;
 
 import java.io.File;
@@ -33,20 +33,20 @@ public class VanillaDataCacheTest {
         VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
 
         int cycle = (int) (System.currentTimeMillis() / 1000);
-        VanillaMappedBuffer vanillaBuffer0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
+        VanillaMappedBytes vanillaBuffer0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
         vanillaBuffer0.writeLong(0, 0x12345678);
         File file0 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 0, true);
         assertEquals(64 << 10, file0.length());
         assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
         vanillaBuffer0.release();
 
-        VanillaMappedBuffer vanillaBuffer1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
+        VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
         File file1 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 1, true);
         assertEquals(64 << 10, file1.length());
         vanillaBuffer1.release();
         assertNotEquals(file1, file0);
 
-        VanillaMappedBuffer vanillaBuffer2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
+        VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
         File file2 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 2, true);
         assertEquals(64 << 10, file2.length());
         vanillaBuffer2.release();
@@ -75,7 +75,7 @@ public class VanillaDataCacheTest {
 
         int cycle = (int) (System.currentTimeMillis() / 1000);
         File file = null;
-        VanillaMappedBuffer buffer = null;
+        VanillaMappedBytes buffer = null;
 
         for (int j = 0; j < 5; j++) {
             long start = System.nanoTime();
@@ -114,18 +114,18 @@ public class VanillaDataCacheTest {
         final int threadId = AffinitySupport.getThreadId();
 
         // Check that the data file count starts at 0 when the data directory is empty
-        final VanillaMappedBuffer vanillaBuffer0 = cache.dataForLast(cycle, threadId);
+        final VanillaMappedBytes vanillaBuffer0 = cache.dataForLast(cycle, threadId);
         assertEquals("data-" + threadId + "-0", cache.fileFor(cycle, threadId).getName());
         vanillaBuffer0.release();
 
         // Add some more data files into the directory - use discontinuous numbers to test reading
-        VanillaMappedBuffer vanillaBuffer1 = cache.dataFor(cycle, threadId, 1, true);
+        VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, threadId, 1, true);
         vanillaBuffer1.release();
 
-        VanillaMappedBuffer vanillaBuffer2 = cache.dataFor(cycle, threadId, 2, true);
+        VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, threadId, 2, true);
         vanillaBuffer2.release();
 
-        VanillaMappedBuffer vanillaBuffer4 = cache.dataFor(cycle, threadId, 4, true);
+        VanillaMappedBytes vanillaBuffer4 = cache.dataFor(cycle, threadId, 4, true);
         vanillaBuffer4.release();
 
         cache.close();
@@ -133,7 +133,7 @@ public class VanillaDataCacheTest {
         // Open a new cache and check that it reads the existing data files that were created above
         VanillaDataCache cache2 = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
 
-        final VanillaMappedBuffer lastVanillaBuffer = cache2.dataForLast(cycle, threadId);
+        final VanillaMappedBytes lastVanillaBuffer = cache2.dataForLast(cycle, threadId);
         assertEquals("data-" + threadId + "-4", cache2.fileFor(cycle, threadId).getName());
         lastVanillaBuffer.release();
 

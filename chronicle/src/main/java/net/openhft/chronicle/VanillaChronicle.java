@@ -24,7 +24,7 @@ import net.openhft.affinity.AffinitySupport;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -123,7 +123,7 @@ public class VanillaChronicle implements Chronicle {
         int lastIndexFile = indexCache.lastIndexFile(cycle,-1);
         if(lastIndexFile >= 0) {
             try {
-                final VanillaMappedBuffer buffer = indexCache.indexFor(cycle, lastIndexFile, false);
+                final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexFile, false);
                 final long indices = VanillaIndexCache.countIndices(buffer);
 
                 buffer.release();
@@ -203,7 +203,7 @@ public class VanillaChronicle implements Chronicle {
 
     abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
         long index = -1;
-        VanillaMappedBuffer dataFile;
+        VanillaMappedBytes dataFile;
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_PAGE, NO_PAGE, null);
@@ -247,8 +247,8 @@ public class VanillaChronicle implements Chronicle {
         private int lastThreadId = Integer.MIN_VALUE;
         private int lastDataCount = Integer.MIN_VALUE;
 
-        private VanillaMappedBuffer lastIndexFile = null;
-        private VanillaMappedBuffer lastDataFile = null;
+        private VanillaMappedBytes lastIndexFile = null;
+        private VanillaMappedBytes lastDataFile = null;
 
         public boolean index(long nextIndex) {
             checkNotClosed();
@@ -467,8 +467,8 @@ public class VanillaChronicle implements Chronicle {
         private int appenderCycle;
         private int appenderThreadId;
         private boolean nextSynchronous;
-        private VanillaMappedBuffer lastIndexBuffer;
-        private VanillaMappedBuffer appenderBuffer;
+        private VanillaMappedBytes lastIndexBuffer;
+        private VanillaMappedBytes appenderBuffer;
 
         VanillaAppender() {
             lastIndexBuffer = null;

@@ -16,7 +16,7 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.VanillaMappedBuffer;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 
 import java.io.Closeable;
@@ -51,11 +51,11 @@ public class VanillaIndexCache implements Closeable {
             FILE_NAME_PREFIX + indexCount);
     }
 
-    public synchronized VanillaMappedBuffer indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
+    public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle      = cycle;
         key.indexCount = indexCount << blockBits;
 
-        VanillaMappedBuffer vmb = this.cache.get(key);
+        VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
             vmb = this.cache.put(
                 key.clone(),
@@ -99,19 +99,19 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
-    public VanillaMappedBuffer append(int cycle, long indexValue, boolean synchronous) throws IOException {
+    public VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous) throws IOException {
         for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
-            VanillaMappedBuffer file = indexFor(cycle, indexCount, true);
-            if (append(file, indexValue, synchronous)) {
-                return file;
+            VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
+            if (append(vmb, indexValue, synchronous)) {
+                return vmb;
             }
 
-            file.release();
+            vmb.release();
         }
         throw new AssertionError();
     }
 
-    public static boolean append(final VanillaMappedBuffer buffer, final long indexValue, final boolean synchronous) {
+    public static boolean append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
 
         // Position can be changed by another thread, so take a snapshot each loop so that
         // buffer overflows are not generated when advancing to the next position.
@@ -120,22 +120,25 @@ public class VanillaIndexCache implements Closeable {
 
         boolean endOfFile = false;
         while (!endOfFile) {
-            final long position = buffer.position();
-            endOfFile = (buffer.limit() - position) < 8;
+            final long position = bytes.position();
+            endOfFile = (bytes.limit() - position) < 8;
             if (!endOfFile) {
-                if (buffer.compareAndSwapLong(position, 0L, indexValue)) {
-                    if (synchronous)
-                        buffer.force();
+                if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
+                    if (synchronous) {
+                        bytes.force();
+                    }
+
                     return true;
                 }
 
-                buffer.position(position + 8);
+                bytes.position(position + 8);
             }
         }
+
         return false;
     }
 
-    public static long countIndices(final VanillaMappedBuffer buffer) {
+    public static long countIndices(final VanillaMappedBytes buffer) {
         long indices = 0;
         for (long offset = 0;(buffer.limit() - buffer.address() + offset) < 8;offset += 8) {
             if(buffer.readLong(offset) != 0) {
