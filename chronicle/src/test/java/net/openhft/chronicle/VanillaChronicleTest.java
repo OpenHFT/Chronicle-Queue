@@ -113,6 +113,8 @@ public class VanillaChronicleTest {
         chronicle.clear();
     }
 
+    // for 0.5m Throughput was 2940 per milli-second
+    // for 100m Throughput was 4364 per milli-second
     @Test
     public void testAppend4() throws IOException, InterruptedException {
         final int RUNS = 500000; // increase to 25 million for a proper test. Can be 50% faster.
