@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,15 +113,14 @@ public class VanillaChronicleTest {
         chronicle.clear();
     }
 
+    // for 0.5m Throughput was 2940 per milli-second
+    // for 100m Throughput was 4364 per milli-second
     @Test
     public void testAppend4() throws IOException, InterruptedException {
-        final int RUNS = 20000;
+        final int RUNS = 500000; // increase to 25 million for a proper test. Can be 50% faster.
         String baseDir = System.getProperty("java.io.tmpdir") + "/testAppend4";
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.defaultMessageSize(128);
-//        config.indexBlockSize(1024);
-//        config.dataBlockSize(1024);
         long start = System.nanoTime();
+        VanillaChronicleConfig config = new VanillaChronicleConfig().defaultMessageSize(64);
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
         ExecutorService es = Executors.newFixedThreadPool(N_THREADS);
@@ -134,9 +133,9 @@ public class VanillaChronicleTest {
                         ExcerptAppender appender = chronicle.createAppender();
                         for (int i = 0; i < RUNS; i++) {
                             appender.startExcerpt();
-                            appender.append(finalT).append("/").append(i).append('\n');
+                            appender.appendDateMillis(System.currentTimeMillis()).append(" - ").append(finalT).append(" / ").append(i).append('\n');
                             appender.finish();
-                            Thread.yield();
+//                            Thread.yield();
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -145,11 +144,11 @@ public class VanillaChronicleTest {
             });
         }
         es.shutdown();
-        es.awaitTermination(2, TimeUnit.SECONDS);
+        es.awaitTermination(30, TimeUnit.SECONDS);
         long time = System.nanoTime() - start;
         chronicle.close();
         chronicle.clear();
-        System.out.printf("Took an average of %.1f us per entry%n", time / 1e3 / (RUNS * N_THREADS));
+        System.out.printf("Throughput was %.0f per milli-second%n", 1e6 * (RUNS * N_THREADS) / time);
     }
 
     @Test
