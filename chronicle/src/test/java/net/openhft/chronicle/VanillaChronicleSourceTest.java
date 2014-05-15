@@ -16,15 +16,13 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSink;
-import net.openhft.chronicle.sandbox.tcp.VanillaChronicleSource;
+import net.openhft.chronicle.tcp.VanillaChronicleSink;
+import net.openhft.chronicle.tcp.VanillaChronicleSource;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 
-@Ignore
 public class VanillaChronicleSourceTest {
     @Test
     public void testReplication() throws IOException {
