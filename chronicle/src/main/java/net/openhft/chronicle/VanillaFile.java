@@ -17,16 +17,20 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.NativeBytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;
 import sun.nio.ch.DirectBuffer;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class VanillaFile implements Closeable {
     private final Logger logger;
@@ -40,7 +44,7 @@ public class VanillaFile implements Closeable {
     private volatile boolean closed = false;
 
     public VanillaFile(String basePath, String cycleStr, String name, int indexCount, long size, boolean forAppend) throws IOException {
-        logger = Logger.getLogger(VanillaFile.class.getName() + "." + name);
+        logger = LoggerFactory.getLogger(VanillaFile.class.getName() + "." + name);
         File dir = new File(basePath, cycleStr);
         this.indexCount = indexCount;
 
@@ -54,16 +58,13 @@ public class VanillaFile implements Closeable {
 
         if (!dir.isDirectory()) {
             boolean created = dir.mkdirs();
-            if (logger.isLoggable(Level.FINE))
-                logger.fine("Created " + dir + " is " + created);
+            logger.trace("Created {} is {}",dir,created);
         }
         file = new File(dir, name);
         if (file.exists()) {
-            if (logger.isLoggable(Level.FINE))
-                logger.fine("Opening " + file);
+            logger.trace("Opening {}",file);
         } else if (forAppend) {
-            if (logger.isLoggable(Level.FINE))
-                logger.fine("Creating " + file);
+            logger.trace("Creating {}",file);
         } else {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
@@ -105,9 +106,7 @@ public class VanillaFile implements Closeable {
     }
 
     private void close0() {
-        Logger logger = Logger.getLogger(getClass().getName());
-        if (logger.isLoggable(Level.FINE))
-            logger.fine("... Closing " + file);
+        LoggerFactory.getLogger(getClass()).trace("... Closing {}", file);
         Cleaner cleaner = ((DirectBuffer) map).cleaner();
         if (cleaner != null)
             cleaner.clean();
