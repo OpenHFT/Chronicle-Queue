@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox.tcp;
+package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.tcp.TcpUtil;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
@@ -47,6 +46,9 @@ public class VanillaChronicleSink implements Chronicle {
     private final VanillaChronicle chronicle;
     @NotNull
     private final SocketAddress address;
+    @Nullable
+    private SocketChannel sc = null;
+
     private final VanillaChronicle.VanillaAppender excerpt;
     private final Logger logger;
     private volatile boolean closed = false;
@@ -113,9 +115,6 @@ public class VanillaChronicleSink implements Chronicle {
         }
     }
 
-    @Nullable
-    private SocketChannel sc = null;
-
     boolean readNext() {
         if (sc == null || !sc.isOpen()) {
             sc = createConnection();
@@ -158,21 +157,27 @@ public class VanillaChronicleSink implements Chronicle {
 
     private boolean readNextExcerpt(@NotNull SocketChannel sc) {
         try {
-            if (closed) return false;
+            if (closed) {
+                return false;
+            }
 
-            if (readBuffer.remaining() < TcpUtil.HEADER_SIZE +8) {
+            // Check if there is enogh data (header plus some more data)
+            if (readBuffer.remaining() < TcpUtil.HEADER_SIZE + 8) {
                 if (readBuffer.remaining() == 0){
                     readBuffer.clear();
                 }
                 else{
                     readBuffer.compact();
                 }
-                while (readBuffer.position() < 8 + 4 + 8 + 8) {
+
+                // Waith till some more data has been readed
+                while (readBuffer.position() < TcpUtil.HEADER_SIZE + 8 + 8) {
                     if (sc.read(readBuffer) < 0) {
                         sc.close();
                         return false;
                     }
                 }
+
                 readBuffer.flip();
             }
 

@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox.tcp;
+package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
-import net.openhft.chronicle.tcp.TcpUtil;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.NamedThreadFactory;
