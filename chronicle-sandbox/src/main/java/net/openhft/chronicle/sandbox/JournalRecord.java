@@ -17,11 +17,12 @@
 package net.openhft.chronicle.sandbox;
 
 import net.openhft.lang.io.NativeBytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.logging.Logger;
 
 public class JournalRecord extends NativeBytes {
-    private static final Logger LOGGER = Logger.getLogger(JournalRecord.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(JournalRecord.class);
     // int read write lock
     private static final int READ_WRITE_LOCK = -8;
     // int data size
@@ -58,7 +59,7 @@ public class JournalRecord extends NativeBytes {
                 timeOutMS--;
             last = now;
         } while (timeOutMS > 0);
-        LOGGER.warning("Grabbing write lock. count=" + readInt(READ_WRITE_LOCK));
+        LOGGER.warn("Grabbing write lock. count={}",readInt(READ_WRITE_LOCK));
         writeOrderedInt(READ_WRITE_LOCK, -1);
         return true;
     }
