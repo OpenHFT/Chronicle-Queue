@@ -16,10 +16,18 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -29,8 +37,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * This listens to a ChronicleSource and copies new entries. This SInk can be any number of excerpt behind the source
@@ -52,7 +58,7 @@ public class InProcessChronicleSink implements Chronicle {
     public InProcessChronicleSink(@NotNull Chronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
         this.address = new InetSocketAddress(hostname, port);
-        logger = Logger.getLogger(getClass().getName() + '.' + chronicle);
+        logger = LoggerFactory.getLogger(getClass().getName() + '.' + chronicle);
         excerpt = chronicle.createAppender();
         readBuffer = TcpUtil.createBuffer(256 * 1024, ByteOrder.nativeOrder());
     }
@@ -135,10 +141,7 @@ public class InProcessChronicleSink implements Chronicle {
                 return sc;
 
             } catch (IOException e) {
-                if (logger.isLoggable(Level.FINE))
-                    logger.log(Level.FINE, "Failed to connect to " + address + " retrying", e);
-                else if (logger.isLoggable(Level.INFO))
-                    logger.log(Level.INFO, "Failed to connect to " + address + " retrying " + e);
+                logger.info("Failed to connect to {} retrying", address, e);
             }
             try {
                 Thread.sleep(500);
@@ -226,10 +229,7 @@ public class InProcessChronicleSink implements Chronicle {
             excerpt.finish();
 //            System.out.println(" ri: " + excerpt.index());
         } catch (IOException e) {
-            if (logger.isLoggable(Level.FINE))
-                logger.log(Level.FINE, "Lost connection to " + address + " retrying", e);
-            else if (logger.isLoggable(Level.INFO))
-                logger.log(Level.INFO, "Lost connection to " + address + " retrying " + e);
+            logger.info("Lost connection to {} retrying", address, e);
             try {
                 sc.close();
             } catch (IOException ignored) {
@@ -243,7 +243,7 @@ public class InProcessChronicleSink implements Chronicle {
             try {
                 sc.close();
             } catch (IOException e) {
-                logger.warning("Error closing socket " + e);
+                logger.warn("Error closing socket", e);
             }
     }
 

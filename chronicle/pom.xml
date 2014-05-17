@@ -49,11 +49,6 @@
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>lang-sandbox</artifactId>
-                <version>6.4.0-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
                 <version>2.0.6</version>
             </dependency>
@@ -74,12 +69,12 @@
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>lang-sandbox</artifactId>
+            <artifactId>affinity</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
 
         <!-- for testing -->
@@ -111,6 +106,12 @@
         <dependency>
             <groupId>net.sf.trove4j</groupId>
             <artifactId>trove4j</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
         </dependency>
 

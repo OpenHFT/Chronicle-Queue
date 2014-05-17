@@ -16,10 +16,18 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.NamedThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -34,8 +42,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A Chronicle as a service to be replicated to any number of clients.
@@ -74,7 +80,7 @@ public class InProcessChronicleSource implements Chronicle {
         selector = Selector.open();
         server.register(selector, SelectionKey.OP_ACCEPT);
         name = chronicle.name() + "@" + port;
-        logger = Logger.getLogger(getClass().getName() + "." + name);
+        logger = LoggerFactory.getLogger(getClass().getName() + "." + name);
         service = Executors.newCachedThreadPool(new NamedThreadFactory(name, true));
         service.execute(new Acceptor());
     }
@@ -91,7 +97,7 @@ public class InProcessChronicleSource implements Chronicle {
                 notifier.wait(HEARTBEAT_INTERVAL_MS / 2);
             }
         } catch (InterruptedException ie) {
-            logger.warning("Interrupt ignored");
+            logger.warn("Interrupt ignored");
         }
     }
 
@@ -143,9 +149,9 @@ public class InProcessChronicleSource implements Chronicle {
             service.shutdownNow();
             service.awaitTermination(10000, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (IOException e) {
-            logger.warning("Error closing server port " + e);
+            logger.warn("Error closing server port", e);
         } catch (InterruptedException ie) {
-            logger.warning("Error shutting down service threads " + ie);
+            logger.warn("Error shutting down service threads", ie);
         }
     }
 
@@ -170,11 +176,12 @@ public class InProcessChronicleSource implements Chronicle {
                     }
                 }
             } catch (IOException e) {
-                if (!closed)
-                    logger.log(Level.SEVERE, "Acceptor dying", e);
+                if (!closed) {
+                    logger.warn("Acceptor dying", e);
+                }
             } finally {
                 service.shutdown();
-                logger.log(Level.INFO, "Acceptor loop ended");
+                logger.info("Acceptor loop ended");
             }
         }
     }
@@ -288,11 +295,13 @@ public class InProcessChronicleSource implements Chronicle {
                 if (!closed) {
                     String msg = e.getMessage();
                     if (msg != null &&
-                            (msg.contains("reset by peer") || msg.contains("Broken pipe")
-                                    || msg.contains("was aborted by")))
-                        logger.log(Level.INFO, "Connect " + socket + " closed from the other end " + e);
-                    else
-                        logger.log(Level.INFO, "Connect " + socket + " died", e);
+                            (msg.contains("reset by peer")
+                                || msg.contains("Broken pipe")
+                                || msg.contains("was aborted by"))) {
+                        logger.info("Connect {} closed from the other end", socket, e);
+                    } else {
+                        logger.info("Connect {} died",socket, e);
+                    }
                 }
             }
         }
