@@ -16,8 +16,8 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.MappedMemory;
 import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
 
@@ -37,10 +37,10 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     private final int cacheLineSize;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedMemory indexBuffer;
+    VanillaMappedBytes indexBuffer;
     @Nullable
     @SuppressWarnings("FieldCanBeLocal")
-    MappedMemory dataBuffer;
+    VanillaMappedBytes dataBuffer;
     long index = -1;
     // relatively static
     // the start of the index block, as an address
@@ -133,8 +133,11 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     }
 
     private void setIndexBuffer(long index, boolean prefetch) throws IOException {
-        MappedMemory.release(indexBuffer);
-        indexBuffer = chronicle.indexFileCache.acquire(index, prefetch);
+        if(indexBuffer != null) {
+            indexBuffer.release();
+        }
+
+        indexBuffer = chronicle.indexFileCache.acquire(index);
         indexPositionAddr = indexStartAddr = indexBuffer.address();
     }
 
@@ -173,8 +176,11 @@ public abstract class AbstractNativeExcerpt extends NativeBytes implements Excer
     }
 
     private void setDataBuffer(long dataLookup) throws IOException {
-        MappedMemory.release(dataBuffer);
-        dataBuffer = chronicle.dataFileCache.acquire(dataLookup, true);
+        if(dataBuffer != null) {
+            dataBuffer.release();
+        }
+
+        dataBuffer = chronicle.dataFileCache.acquire(dataLookup);
         dataStartAddr = dataBuffer.address();
     }
 

@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
@@ -33,7 +32,7 @@ public class IndexedChronicleCache {
         this.basePath = basePath;
     }
 
-    public IndexedChronicle acquireChronicle(int index) throws FileNotFoundException {
+    public IndexedChronicle acquireChronicle(int index) throws IOException {
         if (index == chronicleIndex)
             return chronicle;
         chronicleIndex = index;
