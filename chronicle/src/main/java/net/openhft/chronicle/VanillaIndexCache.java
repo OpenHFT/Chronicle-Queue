@@ -23,12 +23,10 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.logging.Logger;
 
 public class VanillaIndexCache implements Closeable {
     private static final int MAX_SIZE = 32;
     private static final String FILE_NAME_PREFIX = "index-";
-    private static final Logger LOGGER = Logger.getLogger(VanillaIndexCache.class.getName());
 
     private final String basePath;
     private final File baseFile;

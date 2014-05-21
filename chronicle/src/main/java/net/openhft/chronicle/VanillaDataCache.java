@@ -22,12 +22,10 @@ import net.openhft.lang.io.VanillaMappedCache;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Logger;
 
 public class VanillaDataCache implements Closeable {
     private static final int MAX_SIZE = 32;
     private static final String FILE_NAME_PREFIX = "data-";
-    private static final Logger LOGGER = Logger.getLogger(VanillaDataCache.class.getName());
 
     private final String basePath;
     private final DataKey key = new DataKey();
@@ -51,7 +49,7 @@ public class VanillaDataCache implements Closeable {
 
     public File fileFor(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
-        String cyclePath = basePath + File.separator + cycleStr;
+        String cyclePath = basePath + "/" + cycleStr;
         String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
         if (lastCycle != cycle) {
             int maxCount = 0;
@@ -125,7 +123,7 @@ public class VanillaDataCache implements Closeable {
 
     public VanillaMappedBytes dataForLast(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
-        String cyclePath = basePath + File.separator + cycleStr;
+        String cyclePath = basePath + "/" + cycleStr;
         String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
         if (lastCycle != cycle) {
             int maxCount = 0;

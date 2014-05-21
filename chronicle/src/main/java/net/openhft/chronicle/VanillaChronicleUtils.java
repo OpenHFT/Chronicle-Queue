@@ -15,14 +15,15 @@
  */
 package net.openhft.chronicle;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class VanillaChronicleUtils {
-    private static final Logger LOGGER = Logger.getLogger(VanillaChronicleUtils.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
 
     public static File mkFiles(String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
         File dir = new File(basePath, cycleStr);
@@ -37,19 +38,14 @@ public class VanillaChronicleUtils {
 
         if (!dir.isDirectory()) {
             boolean created = dir.mkdirs();
-            if (LOGGER.isLoggable(Level.FINE))
-                LOGGER.fine("Created " + dir + " is " + created);
+            LOGGER.trace("Created {} is {}",dir,created);
         }
 
         File file = new File(dir, name);
         if (file.exists()) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Opening " + file);
-            }
+             LOGGER.trace("Opening {}", file);
         } else if (forAppend) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine("Creating " + file);
-            }
+             LOGGER.trace("Creating {}", file);
         } else {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
