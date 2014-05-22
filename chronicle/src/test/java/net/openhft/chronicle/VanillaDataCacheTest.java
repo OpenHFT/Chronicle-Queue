@@ -88,7 +88,11 @@ public class VanillaDataCacheTest {
                 assertEquals(128 << 10, file.length());
                 assertEquals(0x12345678L, buffer.readLong(0));
 
-                buffer.release();
+                //TODO: should cache.dataFor increase the ref-count ?
+                while(!buffer.unmapped()) {
+                    buffer.release();
+                }
+
                 buffer.close();
                 buffer = null;
 

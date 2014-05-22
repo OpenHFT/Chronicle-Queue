@@ -64,9 +64,9 @@ public class VanillaIndexCache implements Closeable {
                     forAppend),
                 1L << blockBits,
                 indexCount);
-        } else {
-            vmb.reserve();
         }
+
+        vmb.reserve();
 
         return vmb;
     }

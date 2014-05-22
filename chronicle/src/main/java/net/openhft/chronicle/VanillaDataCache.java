@@ -87,9 +87,9 @@ public class VanillaDataCache implements Closeable {
                     forWrite),
                 1L << blockBits,
                 dataCount);
-        } else {
-            vmb.reserve();
         }
+
+        vmb.reserve();
 
         return vmb;
     }
