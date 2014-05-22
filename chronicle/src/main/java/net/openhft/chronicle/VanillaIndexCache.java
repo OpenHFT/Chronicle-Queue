@@ -50,7 +50,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
-        key.cycle      = cycle;
+        key.cycle = cycle;
         key.indexCount = indexCount << blockBits;
 
         VanillaMappedBytes vmb = this.cache.get(key);
@@ -64,9 +64,10 @@ public class VanillaIndexCache implements Closeable {
                     forAppend),
                 1L << blockBits,
                 indexCount);
+        } else {
+            vmb.reserve();
         }
 
-        vmb.reserve();
         return vmb;
     }
 
@@ -189,13 +190,8 @@ public class VanillaIndexCache implements Closeable {
         return firstDate;
     }
 
-    public synchronized void checkCounts(int min, int max) {
-        /* TODO: impleemnt
-        for (VanillaFile file : indexKeyVanillaFileMap.values()) {
-            if (file.usage() < min || file.usage() > max)
-                throw new IllegalStateException(file.file() + " has a count of " + file.usage());
-        }
-        */
+    public void checkCounts(int min, int max) {
+        this.cache.checkCounts(min,max);
     }
 
     static class IndexKey implements Cloneable {
