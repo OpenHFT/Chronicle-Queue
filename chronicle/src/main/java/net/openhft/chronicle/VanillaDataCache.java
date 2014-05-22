@@ -72,8 +72,8 @@ public class VanillaDataCache implements Closeable {
     }
 
     public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
-        key.cycle     = cycle;
-        key.threadId  = threadId;
+        key.cycle = cycle;
+        key.threadId = threadId;
         key.dataCount = dataCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
@@ -90,6 +90,7 @@ public class VanillaDataCache implements Closeable {
         }
 
         vmb.reserve();
+
         return vmb;
     }
 
@@ -149,13 +150,8 @@ public class VanillaDataCache implements Closeable {
         lastCount++;
     }
 
-    public synchronized void checkCounts(int min, int max) {
-        /* TODO: impleemnt
-        for (VanillaFile file : dataKeyVanillaFileMap.values()) {
-            if (file.usage() < min || file.usage() > max)
-                throw new IllegalStateException(file.file() + " has a count of " + file.usage());
-        }
-        */
+    public void checkCounts(int min, int max) {
+        this.cache.checkCounts(min,max);
     }
 
 
