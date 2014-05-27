@@ -79,7 +79,7 @@ public class VanillaDataCacheTest {
 
         for (int j = 0; j < 5; j++) {
             long start = System.nanoTime();
-            int runs = 10000;
+            int runs = 1000;
             for (int i = 0; i < runs; i++) {
                 buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
                 buffer.writeLong(0, 0x12345678);
@@ -88,20 +88,22 @@ public class VanillaDataCacheTest {
                 assertEquals(128 << 10, file.length());
                 assertEquals(0x12345678L, buffer.readLong(0));
 
-                //TODO: should cache.dataFor increase the ref-count ?
-                while(!buffer.unmapped()) {
-                    buffer.release();
-                }
-
+                buffer.release();
+                buffer.release();
                 buffer.close();
+
                 buffer = null;
 
                 assertTrue(file.delete());
             }
+
             file.getParentFile().getParentFile().delete();
             long time = System.nanoTime() - start;
             System.out.printf("The average time was %,d us%n", time / runs / 1000);
+
+            cache.close();
         }
+
         assertTrue(file.getParentFile().delete());
         dir.delete();
     }
