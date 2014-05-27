@@ -59,11 +59,6 @@
     <dependencies>
 
         <dependency>
-            <groupId>com.sun.java</groupId>
-            <artifactId>tools</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
         </dependency>
@@ -148,6 +143,19 @@
     </build>
 
     <!-- todo remove once next parent pom is adopted -->
+    <!-- If you're not quite yet ready to release the artifacts and do not want the artifacts to
+    sync to Maven Central, you could reference the staging repository. After successfully deploying
+    the artifacts to maven.java.net, you need to first close the repository so artifacts are moved
+    to the staging repository. See instructions here to close artifacts to the staging repository.
+    After closing the repository, the artifacts will be available in
+    https://maven.java.net/content/repositories/staging/. You could set this URL in the repository
+    element in $MAVEN_HOME/.m2/settings.xml to test the artifact before closing the artifacts to the
+     release repository. See option 1 above for specifying the repository in settings.xml file.
+     If you don't want to release the artifact to Maven Central, you could drop the artifacts in
+     the staging repository and redeploy. See instructions here to drop artifacts in the staging
+      repository. Keep in mind that once the artifact is released and sync'd to Maven Central,
+      you cannot redeploy the same version again. The staging repository is very helpful when you
+      want to test the promoted artifacts before actually releasing to Maven Central. -->
     <repositories>
         <repository>
             <id>sonatype-nexus-staging</id>
