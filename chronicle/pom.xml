@@ -15,8 +15,10 @@
   ~ limitations under the License.
   -->
 
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
@@ -24,9 +26,8 @@
         <version>1.0.1</version>
         <relativePath/>
     </parent>
-    <artifactId>chronicle</artifactId>
-    <modelVersion>4.0.0</modelVersion>
 
+    <artifactId>chronicle</artifactId>
     <version>3.1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
@@ -39,18 +40,18 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.3.1</version>
+                <version>3.4.0</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.0-SNAPSHOT</version>
+                <version>6.4.0</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
-                <version>2.0.6</version>
+                <version>2.1.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -125,7 +126,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
+                        </Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>net.openhft.chronicle.*</Export-Package>
                     </instructions>
@@ -144,6 +146,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- todo remove once next parent pom is adopted -->
+    <repositories>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <url>https://oss.sonatype.org/content/repositories/staging</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
 
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</url>
