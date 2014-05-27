@@ -79,7 +79,7 @@ public class VanillaDataCacheTest {
 
         for (int j = 0; j < 5; j++) {
             long start = System.nanoTime();
-            int runs = 1000;
+            int runs = 10000;
             for (int i = 0; i < runs; i++) {
                 buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
                 buffer.writeLong(0, 0x12345678);
@@ -100,8 +100,6 @@ public class VanillaDataCacheTest {
             file.getParentFile().getParentFile().delete();
             long time = System.nanoTime() - start;
             System.out.printf("The average time was %,d us%n", time / runs / 1000);
-
-            cache.close();
         }
 
         assertTrue(file.getParentFile().delete());
