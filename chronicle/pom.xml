@@ -15,20 +15,18 @@
   ~ limitations under the License.
   -->
 
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.0</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.1.0</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle/chronicle</name>
@@ -171,7 +169,7 @@
         <url>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</developerConnection>
-        <tag>master</tag>
+        <tag>chronicle-3.1.0</tag>
     </scm>
 
 </project>
