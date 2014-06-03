@@ -22,19 +22,14 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.0.1</version>
+        <version>1.1.0</version>
         <relativePath/>
     </parent>
 
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.1.2-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <name>OpenHFT/Java-Chronicle/chronicle-sandbox</name>
     <artifactId>chronicle-sandbox</artifactId>
-
-    <properties>
-        <openhft.lang.version>6.4.0-SNAPSHOT</openhft.lang.version>
-        <openhft.affinity.version>2.0.6</openhft.affinity.version>
-    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -43,20 +38,14 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.3.1</version>
+                <version>3.4.0</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>${openhft.affinity.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>${project.version}</version>
+                <version>3.1.2-SNAPSHOT</version>
             </dependency>
 
         </dependencies>
@@ -76,18 +65,7 @@
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>lang</artifactId>
-            <version>${openhft.lang.version}</version>
         </dependency>
 
         <!-- modules for testing -->

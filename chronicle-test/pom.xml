@@ -22,13 +22,13 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.0.1</version>
+        <version>1.1.0</version>
         <relativePath/>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle-test</artifactId>
-    <version>3.0b-SNAPSHOT</version>
+    <version>3.1.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHFT/Java-Chronicle/chronicle-test</name>
@@ -45,18 +45,13 @@
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>lang</artifactId>
-                <version>6.4.0</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>compiler</artifactId>
-                <version>2.1.2</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>3.0.1</version>
+                <version>3.1.2-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>affinity</artifactId>
+                <version>2.1.1-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -68,11 +63,7 @@
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>compiler</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>lang</artifactId>
+            <artifactId>affinity</artifactId>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -192,16 +183,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
-                        </Bundle-SymbolicName>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <!--
-                        <Import-Package>
-                            net.openhft.lang.io.serialization,
-                            net.openhft.lang.model,
-                            *
-                        </Import-Package>
-                        -->
                     </instructions>
                 </configuration>
                 <executions>
