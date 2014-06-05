@@ -92,23 +92,28 @@ public class VanillaChronicleTest {
     // fails the release build only
     public void testAppend() throws IOException {
         final int RUNS = 1000;
-        String baseDir = System.getProperty("java.io.tmpdir") + "/testAppend";
+        final String baseDir = getTestPath();
+
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.defaultMessageSize(128);
         config.indexBlockSize(1024);
         config.dataBlockSize(1024);
+
         VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
+
         ExcerptAppender appender = chronicle.createAppender();
         for (int i = 0; i < RUNS; i++) {
-//            System.err.println("i: " + i);
-//            if (i == 256)
-//                Thread.yield();
             appender.startExcerpt();
             appender.append(1000000000 + i);
             appender.finish();
+
             chronicle.checkCounts(1, 2);
         }
+
+        appender.close();
+
+        chronicle.checkCounts(0, 1);
         chronicle.close();
         chronicle.clear();
     }
@@ -118,7 +123,7 @@ public class VanillaChronicleTest {
     @Test
     public void testAppend4() throws IOException, InterruptedException {
         final int RUNS = 500000; // increase to 25 million for a proper test. Can be 50% faster.
-        String baseDir = System.getProperty("java.io.tmpdir") + "/testAppend4";
+        String baseDir = getTestPath();
         long start = System.nanoTime();
         VanillaChronicleConfig config = new VanillaChronicleConfig().defaultMessageSize(64);
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
@@ -135,8 +140,8 @@ public class VanillaChronicleTest {
                             appender.startExcerpt();
                             appender.appendDateMillis(System.currentTimeMillis()).append(" - ").append(finalT).append(" / ").append(i).append('\n');
                             appender.finish();
-//                            Thread.yield();
                         }
+                        appender.close();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -146,6 +151,8 @@ public class VanillaChronicleTest {
         es.shutdown();
         es.awaitTermination(30, TimeUnit.SECONDS);
         long time = System.nanoTime() - start;
+
+        chronicle.checkCounts(0, 1);
         chronicle.close();
         chronicle.clear();
         System.out.printf("Throughput was %.0f per milli-second%n", 1e6 * (RUNS * N_THREADS) / time);
@@ -154,16 +161,20 @@ public class VanillaChronicleTest {
     @Test
     public void testTailer() throws IOException {
         final int RUNS = 1000000; // 5000000;
-        String baseDir = System.getProperty("java.io.tmpdir") + "/" + "testTailer";
+
+        String baseDir = getTestPath();
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.defaultMessageSize(128);
         config.indexBlockSize(256 << 10);
         config.dataBlockSize(512 << 10);
-        VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
-        chronicle.clear();
-        VanillaChronicle chronicle2 = new VanillaChronicle(baseDir, config);
+
+        final VanillaChronicle chronicle1 = new VanillaChronicle(baseDir, config);
+        chronicle1.clear();
+
+        final VanillaChronicle chronicle2 = new VanillaChronicle(baseDir, config);
+
         try {
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle1.createAppender();
             ExcerptTailer tailer = chronicle2.createTailer();
 
             assertEquals(-1L, tailer.index());
@@ -177,7 +188,7 @@ public class VanillaChronicleTest {
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                chronicle.checkCounts(1, 2);
+                chronicle1.checkCounts(1, 2);
                 assertTrue("i: " + i, tailer.nextIndex());
                 chronicle2.checkCounts(1, 2);
                 assertTrue("i: " + i + " remaining: " + tailer.remaining(), tailer.remaining() > 0);
@@ -186,9 +197,16 @@ public class VanillaChronicleTest {
                 tailer.finish();
                 chronicle2.checkCounts(1, 2);
             }
+
+            appender.close();
+            tailer.close();
         } finally {
+            chronicle2.checkCounts(0, 1);
             chronicle2.close();
-            chronicle.clear();
+
+            chronicle1.checkCounts(0, 1);
+            chronicle1.close();
+            chronicle1.clear();
         }
     }
 
@@ -196,12 +214,14 @@ public class VanillaChronicleTest {
     public void testTailerPerf() throws IOException {
         final int WARMUP = 50000;
         final int RUNS = 5000000;
-        String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
-        VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+
+        String baseDir = getTestPath();
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
+
         try {
-            ExcerptAppender appender = chronicle.createAppender();
-            ExcerptTailer tailer = chronicle.createTailer();
+            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptTailer tailer = chronicle.createTailer();
             long start = 0;
             assertEquals(-1L, tailer.index());
             for (int i = -WARMUP; i < RUNS; i++) {
@@ -224,7 +244,12 @@ public class VanillaChronicleTest {
             }
             long time = System.nanoTime() - start;
             System.out.printf("Average write/read times was %.3f us%n", time / RUNS / 1e3);
+
+            appender.close();
+            tailer.close();
+
         } finally {
+            chronicle.checkCounts(0, 1);
             chronicle.close();
             chronicle.clear();
         }
@@ -235,15 +260,17 @@ public class VanillaChronicleTest {
         final int WARMUP = 100000;
         final int RUNS = 4000000;
         final int BYTES = 96;
-        String baseDir = System.getProperty("java.io.tmpdir") + "/testTailerPerf";
+
+        String baseDir = getTestPath();
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
+
         try {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    ExcerptTailer tailer = null;
                     for (int i = -WARMUP; i < RUNS; i++) {
-                        ExcerptTailer tailer = null;
                         try {
                             tailer = chronicle.createTailer();
                         } catch (IOException e) {
@@ -260,6 +287,7 @@ public class VanillaChronicleTest {
                         tailer.finish();
                     }
 
+                    tailer.close();
                 }
             });
             t.start();
@@ -277,7 +305,9 @@ public class VanillaChronicleTest {
             t.join();
             long time = System.nanoTime() - start;
             System.out.printf("Average write/read times was %.3f us%n", time / RUNS / 1e3);
+            appender.close();
         } finally {
+            chronicle.checkCounts(0, 1);
             chronicle.close();
             chronicle.clear();
         }
@@ -285,7 +315,7 @@ public class VanillaChronicleTest {
 
     @Test
     public void testAppenderTailer() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-appender-tailer";
+        String basepath = getTestPath();
 
         VanillaChronicle writer = new VanillaChronicle(basepath);
         writer.clear();
@@ -327,12 +357,15 @@ public class VanillaChronicleTest {
         }
 
         appender.close();
+
+        writer.checkCounts(0,1);
         writer.close();
+        writer.clear();
     }
 
     @Test
     public void testTailerToStart() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-tostart";
+        String basepath = getTestPath();
 
         VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
@@ -367,12 +400,15 @@ public class VanillaChronicleTest {
         }
 
         tailer.close();
+
+        chronicle.checkCounts(0,1);
         chronicle.close();
+        chronicle.clear();
     }
 
     @Test
     public void testTailerToEnd1() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend-1";
+        String basepath = getTestPath();
 
         VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
@@ -392,12 +428,15 @@ public class VanillaChronicleTest {
         assertFalse(tailer.nextIndex());
 
         tailer.close();
+
+        chronicle.checkCounts(0,1);
         chronicle.close();
+        chronicle.clear();
     }
 
     @Test
     public void testTailerToEnd2() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-toend-2";
+        String basepath = getTestPath();
 
         VanillaChronicle wchronicle = new VanillaChronicle(basepath);
         wchronicle.clear();
@@ -419,13 +458,18 @@ public class VanillaChronicleTest {
 
         tailer.close();
 
+        wchronicle.checkCounts(0,1);
         wchronicle.close();
+        wchronicle.clear();
+
+        rchronicle.checkCounts(0,1);
         rchronicle.close();
+        rchronicle.clear();
     }
 
     @Test
     public void testTailerEndStart1() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart-1";
+        String basepath = getTestPath();
 
         VanillaChronicle chronicle = new VanillaChronicle(basepath);
         chronicle.clear();
@@ -472,12 +516,14 @@ public class VanillaChronicleTest {
 
         tailer.close();
 
+        chronicle.checkCounts(0,1);
         chronicle.close();
+        chronicle.clear();
     }
 
     @Test
     public void testTailerEndStart2() throws IOException {
-        String basepath = System.getProperty("java.io.tmpdir") + "/test-tailer-endstart-2";
+        String basepath = getTestPath();
 
         VanillaChronicle wchronicle = new VanillaChronicle(basepath);
         VanillaChronicle rchronicle = new VanillaChronicle(basepath);
@@ -526,8 +572,13 @@ public class VanillaChronicleTest {
 
         tailer.close();
 
+        wchronicle.checkCounts(0,1);
         wchronicle.close();
+        wchronicle.clear();
+
+        rchronicle.checkCounts(0, 1);
         rchronicle.close();
+        rchronicle.clear();
     }
 
     /*
@@ -545,13 +596,15 @@ public class VanillaChronicleTest {
 //        TODO int RUNS = 100000;
         int RUNS = 5 * 1000;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
+        String basePath = getTestPath();
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 16);
         config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
-        VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+        chronicle.clear();
 
 
         try {
@@ -581,7 +634,11 @@ public class VanillaChronicleTest {
                 assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
+
+            appender.close();
+            tailer.close();
         } finally {
+            chronicle.checkCounts(0,1);
             chronicle.close();
             chronicle.clear();
         }
@@ -591,13 +648,15 @@ public class VanillaChronicleTest {
     public void testReplicationWithRollingFilesEverySecond2() throws Exception {
         int RUNS = 10;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
+        String basePath = getTestPath();
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
         config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
-        VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(basePath + "-source", config);
+        chronicle.clear();
 
 
         try {
@@ -621,7 +680,11 @@ public class VanillaChronicleTest {
                 assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
+
+            appender.close();
+            tailer.close();
         } finally {
+            chronicle.checkCounts(0,1);
             chronicle.close();
             chronicle.clear();
         }
@@ -630,36 +693,43 @@ public class VanillaChronicleTest {
     @Test
     public void testConcurrentAppend() throws Exception {
         String basepath = getTestPath();
-
-        // Create with small data and index sizes so that the test frequently generates new files
         final VanillaChronicleConfig config = new VanillaChronicleConfig()
-                .dataBlockSize(64)
-                .indexBlockSize(64);
-        VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
+            .dataBlockSize(64)
+            .indexBlockSize(64);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
         chronicle.clear();
 
-        final int numberOfTasks = 2;
-        final int countPerTask = 1000;
+        try {
+            // Create with small data and index sizes so that the test frequently
+            // generates new files
 
-        // Create tasks that append to the index
-        final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
-        int nextValue = countPerTask;
-        for (int i = 0; i < numberOfTasks; i++) {
-            final int endValue = nextValue + countPerTask;
-            tasks.add(createAppendTask(chronicle, nextValue, endValue));
-            nextValue = endValue;
+            final int numberOfTasks = 2;
+            final int countPerTask = 1000;
+
+            // Create tasks that append to the index
+            final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+            int nextValue = countPerTask;
+            for (int i = 0; i < numberOfTasks; i++) {
+                final int endValue = nextValue + countPerTask;
+                tasks.add(createAppendTask(chronicle, nextValue, endValue));
+                nextValue = endValue;
+            }
+
+            // Execute tasks using a thread per task
+            TestTaskExecutionUtil.executeConcurrentTasks(tasks, 30000L);
+
+            // Verify that all values have been written
+            final ExcerptTailer tailer = chronicle.createTailer();
+            final Set<String> values = readAvailableValues(tailer);
+            assertEquals(createRangeDataSet(countPerTask, nextValue), values);
+
+            tailer.close();
+        } finally {
+            chronicle.checkCounts(0,1);
+            chronicle.close();
+            chronicle.clear();
         }
-
-        // Execute tasks using a thread per task
-        TestTaskExecutionUtil.executeConcurrentTasks(tasks, 30000L);
-
-        // Verify that all values have been written
-        final ExcerptTailer tailer = chronicle.createTailer();
-        final Set<String> values = readAvailableValues(tailer);
-        assertEquals(createRangeDataSet(countPerTask, nextValue), values);
-        tailer.close();
-
-        chronicle.close();
     }
 
     @Test
@@ -673,37 +743,43 @@ public class VanillaChronicleTest {
                 .cycleFormat("yyyyMMddHHmmss")
                 .dataBlockSize(128)
                 .indexBlockSize(64);
-        VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
         chronicle.clear();
 
-        final ExcerptAppender appender = chronicle.createAppender();
-        appendValues(appender, 1, 20);
+        try {
+            final ExcerptAppender appender = chronicle.createAppender();
+            appendValues(appender, 1, 20);
 
-        // Ensure the appender writes in another cycle from the initial writes
-        Thread.sleep(2000L);
-        appendValues(appender, 20, 40);
+            // Ensure the appender writes in another cycle from the initial writes
+            Thread.sleep(2000L);
+            appendValues(appender, 20, 40);
 
-        // Verify that all values are read by the tailer
-        final ExcerptTailer tailer = chronicle.createTailer();
-        assertEquals(createRangeDataSet(1, 40), readAvailableValues(tailer));
+            // Verify that all values are read by the tailer
+            final ExcerptTailer tailer = chronicle.createTailer();
+            assertEquals(createRangeDataSet(1, 40), readAvailableValues(tailer));
 
-        // Verify that the tailer reads no new data from a new cycle
-        Thread.sleep(2000L);
-        assertTrue(!tailer.nextIndex());
+            // Verify that the tailer reads no new data from a new cycle
+            Thread.sleep(2000L);
+            assertTrue(!tailer.nextIndex());
 
-        // ### Throws java.lang.NullPointerException
-        // - lastIndexFile is set to null by the previous call to nextIndex
-        assertTrue(!tailer.nextIndex());
+            // ### Throws java.lang.NullPointerException
+            // - lastIndexFile is set to null by the previous call to nextIndex
+            assertTrue(!tailer.nextIndex());
 
-        // Append data in this new cycle
-        appendValues(appender, 41, 60);
+            // Append data in this new cycle
+            appendValues(appender, 41, 60);
 
-        // Verify that the tailer can read the new data
-        assertEquals(createRangeDataSet(41, 60), readAvailableValues(tailer));
+            // Verify that the tailer can read the new data
+            assertEquals(createRangeDataSet(41, 60), readAvailableValues(tailer));
 
-        appender.close();
-        tailer.close();
-        chronicle.close();
+            appender.close();
+            tailer.close();
+        } finally {
+            chronicle.checkCounts(0,1);
+            chronicle.close();
+            chronicle.clear();
+        }
     }
 
     @Test
@@ -717,26 +793,32 @@ public class VanillaChronicleTest {
                 .cycleFormat("yyyyMMddHHmmss")
                 .dataBlockSize(128)
                 .indexBlockSize(64);
-        VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(basepath, config);
         chronicle.clear();
 
-        final ExcerptAppender appender = chronicle.createAppender();
-        final ExcerptTailer tailer = chronicle.createTailer();
+        try {
+            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptTailer tailer = chronicle.createTailer();
 
-        // Append a small number of events in this cycle
-        appendValues(appender, 1, 5);
+            // Append a small number of events in this cycle
+            appendValues(appender, 1, 5);
 
-        // Ensure the appender writes in another cycle from the initial writes
-        Thread.sleep(2000L);
+            // Ensure the appender writes in another cycle from the initial writes
+            Thread.sleep(2000L);
 
-        appendValues(appender, 5, 50);
+            appendValues(appender, 5, 50);
 
-        // ### Fails because it only reads the values written in the first cycle
-        assertEquals(createRangeDataSet(1, 50), readAvailableValues(tailer));
+            // ### Fails because it only reads the values written in the first cycle
+            assertEquals(createRangeDataSet(1, 50), readAvailableValues(tailer));
 
-        appender.close();
-        tailer.close();
-        chronicle.close();
+            appender.close();
+            tailer.close();
+        } finally {
+            chronicle.checkCounts(0,1);
+            chronicle.close();
+            chronicle.clear();
+        }
     }
 
     private String getTestPath() {
@@ -744,5 +826,4 @@ public class VanillaChronicleTest {
         IOTools.deleteDir(path);
         return path;
     }
-
 }
