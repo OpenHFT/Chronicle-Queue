@@ -39,15 +39,16 @@ public class VanillaChronicle implements Chronicle {
     private final String name;
     private final String basePath;
     private final VanillaChronicleConfig config;
-    private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
-    private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
-    private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
+    private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache;
+    private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
+    private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
     private final int indexBlockLongsBits, indexBlockLongsMask;
     private final int dataBlockSizeBits, dataBlockSizeMask;
     private final int entriesForCycleBits;
     private final long entriesForCycleMask;
+
     //    private volatile int cycle;
     private volatile long lastWrittenIndex;
     private volatile boolean closed = false;
@@ -57,26 +58,33 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public VanillaChronicle(String basePath, VanillaChronicleConfig config) {
+        this.marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
+        this.tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
+        this.appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
         this.basePath = basePath;
         this.config = config;
-        name = new File(basePath).getName();
+        this.name = new File(basePath).getName();
+
         DateCache dateCache = new DateCache(config.cycleFormat(), config.cycleLength());
         int indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
         int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
-        indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache);
-        indexBlockLongsBits = indexBlockSizeBits - 3;
-        indexBlockLongsMask = indexBlockSizeMask >>> 3;
-        dataBlockSizeBits = Maths.intLog2(config.dataBlockSize());
-        dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
-        dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache);
-        entriesForCycleBits = Maths.intLog2(config.entriesPerCycle());
-        entriesForCycleMask = -1L >>> -entriesForCycleBits;
 
-//        cycle = (int) (System.currentTimeMillis() / config.cycleLength());
+        this.indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache, config.cleanupOnClose());
+        this.indexBlockLongsBits = indexBlockSizeBits - 3;
+        this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
+
+        this.dataBlockSizeBits = Maths.intLog2(config.dataBlockSize());
+        this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
+        this.dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache, config.cleanupOnClose());
+
+        this.entriesForCycleBits = Maths.intLog2(config.entriesPerCycle());
+        this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
     }
 
     void checkNotClosed() {
-        if (closed) throw new IllegalStateException(basePath + " is closed");
+        if (closed) {
+            throw new IllegalStateException(basePath + " is closed");
+        }
     }
 
     @Override
@@ -142,9 +150,9 @@ public class VanillaChronicle implements Chronicle {
         VanillaTailer tailer = null;
         if (ref != null) {
             tailer = ref.get();
-            //if(tailer != null && tailer.unampped()) {
-            //    tailer = null;
-            //}
+            if(tailer != null && tailer.unampped()) {
+                tailer = null;
+            }
         }
 
         if (tailer == null) {
@@ -165,9 +173,9 @@ public class VanillaChronicle implements Chronicle {
         VanillaAppender appender = null;
         if (ref != null) {
             appender = ref.get();
-            //if(appender != null && appender.unampped()) {
-            //    appender = null;
-            //}
+            if(appender != null && appender.unampped()) {
+                appender = null;
+            }
         }
         if (appender == null) {
             appender = createAppender0();
@@ -318,6 +326,7 @@ public class VanillaChronicle implements Chronicle {
                 int len = dataBytes.readVolatileInt(dataOffset - 4);
                 if (len == 0)
                     return false;
+
                 int len2 = ~len;
                 // invalid if either the top two bits are set,
                 if ((len2 >>> 30) != 0)
@@ -339,14 +348,17 @@ public class VanillaChronicle implements Chronicle {
                 if (index < 0)
                     return false;
             }
+
             long nextIndex = index + 1;
             while (true) {
                 boolean found = index(nextIndex);
                 if (found)
                     return true;
+
                 int cycle = (int) (nextIndex / config.entriesPerCycle());
                 if (cycle >= cycle())
                     return false;
+
                 nextIndex = (cycle + 1) * config.entriesPerCycle();
             }
         }
@@ -593,20 +605,6 @@ public class VanillaChronicle implements Chronicle {
             // NO-OP
             return this;
         }
-
-        /*
-        @Override
-        public void close() {
-            if(indexBytes != null) {
-                indexBytes.release();
-            }
-            if(dataBytes != null) {
-                dataBytes.release();
-            }
-
-            super.close();
-        }
-        */
     }
 
     class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {

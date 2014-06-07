@@ -36,11 +36,15 @@ public class VanillaIndexCache implements Closeable {
     private final VanillaMappedCache<IndexKey> cache;
 
     public VanillaIndexCache(String basePath, int blockBits, DateCache dateCache) {
+        this(basePath, blockBits, dateCache, false);
+    }
+
+    public VanillaIndexCache(String basePath, int blockBits, DateCache dateCache, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.baseFile = new File(basePath);
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache     = new VanillaMappedCache<IndexKey>(MAX_SIZE, true);
+        this.cache = new VanillaMappedCache<IndexKey>(MAX_SIZE, true, cleanupOnClose);
     }
 
     public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {

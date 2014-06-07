@@ -54,6 +54,7 @@ public class VanillaChronicleConfig {
     private int defaultMessageSize = 128 << 10; // 128 KB.
     private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
     private boolean synchronous = false;
+    private boolean cleanupOnClose = false;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
         this.cycleFormat = cycleFormat;
@@ -125,5 +126,12 @@ public class VanillaChronicleConfig {
         return synchronous;
     }
 
+    public VanillaChronicleConfig cleanupOnClose(boolean cleanupOnClose) {
+        this.cleanupOnClose = cleanupOnClose;
+        return this;
+    }
 
+    public boolean cleanupOnClose() {
+        return cleanupOnClose;
+    }
 }

@@ -24,125 +24,143 @@ import org.junit.Test;
 import java.io.File;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-public class VanillaDataCacheTest {
+public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     @Test
     public void testDataFor() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testDataFor");
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+        final String baseDir = getTestPath();
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
-        VanillaMappedBytes vanillaBuffer0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
-        vanillaBuffer0.writeLong(0, 0x12345678);
-        File file0 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 0, true);
-        assertEquals(64 << 10, file0.length());
-        assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
-        vanillaBuffer0.release();
+        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 6, dateCache);
 
-        VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
-        File file1 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 1, true);
-        assertEquals(64 << 10, file1.length());
-        vanillaBuffer1.release();
-        assertNotEquals(file1, file0);
+        try {
+            int cycle = (int) (System.currentTimeMillis() / 1000);
+            VanillaMappedBytes vanillaBuffer0 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
+            vanillaBuffer0.writeLong(0, 0x12345678);
+            File file0 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 0, true);
+            assertEquals(64 << 10, file0.length());
+            assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
+            vanillaBuffer0.release();
 
-        VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
-        File file2 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 2, true);
-        assertEquals(64 << 10, file2.length());
-        vanillaBuffer2.release();
+            VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
+            File file1 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 1, true);
+            assertEquals(64 << 10, file1.length());
+            vanillaBuffer1.release();
+            assertNotEquals(file1, file0);
 
-        assertNotEquals(file2, file0);
-        assertNotEquals(file2, file1);
-        cache.close();
-        assertEquals(0, vanillaBuffer0.refCount());
-        assertEquals(0, vanillaBuffer1.refCount());
-        assertEquals(0, vanillaBuffer2.refCount());
+            VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
+            File file2 = cache.fileFor(cycle, AffinitySupport.getThreadId(), 2, true);
+            assertEquals(64 << 10, file2.length());
+            vanillaBuffer2.release();
 
-        // check you can delete after closing.
-        assertTrue(file0.delete());
-        assertTrue(file1.delete());
-        assertTrue(file2.delete());
-        assertTrue(file0.getParentFile().delete());
+            assertNotEquals(file2, file0);
+            assertNotEquals(file2, file1);
+            cache.close();
+            assertEquals(0, vanillaBuffer0.refCount());
+            assertEquals(0, vanillaBuffer1.refCount());
+            assertEquals(0, vanillaBuffer2.refCount());
 
-        dir.delete();
+            // check you can delete after closing.
+            assertTrue(file0.delete());
+            assertTrue(file1.delete());
+            assertTrue(file2.delete());
+            assertTrue(file0.getParentFile().delete());
+
+            cache.checkCounts(1, 1);
+        } finally {
+            cache.close();
+            IOTools.deleteDir(baseDir);
+
+            assertFalse(new File(baseDir).exists());
+        }
     }
 
     @Test
     public void testDataForPerf() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testDataForPerf");
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 7, dateCache);
+        final String baseDir = getTestPath();
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
-        File file = null;
-        VanillaMappedBytes buffer = null;
+        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache);
 
-        for (int j = 0; j < 5; j++) {
-            long start = System.nanoTime();
-            int runs = 10000;
-            for (int i = 0; i < runs; i++) {
-                buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
-                buffer.writeLong(0, 0x12345678);
-                file = cache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
+        try {
+            int cycle = (int) (System.currentTimeMillis() / 1000);
+            File file = null;
+            VanillaMappedBytes buffer = null;
 
-                assertEquals(128 << 10, file.length());
-                assertEquals(0x12345678L, buffer.readLong(0));
+            for (int j = 0; j < 5; j++) {
+                long start = System.nanoTime();
+                int runs = 10000;
+                for (int i = 0; i < runs; i++) {
+                    buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
+                    buffer.writeLong(0, 0x12345678);
+                    file = cache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
 
-                buffer.release();
-                buffer.release();
-                buffer.close();
+                    assertEquals(128 << 10, file.length());
+                    assertEquals(0x12345678L, buffer.readLong(0));
 
-                buffer = null;
+                    buffer.release(); // hold by VanillaMappedCache
+                    buffer.release(); // VanillaDataCache always call ackquire()
+                    buffer.close();
 
-                assertTrue(file.delete());
+                    assertTrue(file.delete());
+                }
+
+                long time = System.nanoTime() - start;
+                System.out.printf("The average time was %,d us%n", time / runs / 1000);
+
+                cache.checkCounts(0, 0);
             }
+        } finally {
+            cache.close();
+            IOTools.deleteDir(baseDir);
 
-            file.getParentFile().getParentFile().delete();
-            long time = System.nanoTime() - start;
-            System.out.printf("The average time was %,d us%n", time / runs / 1000);
+            assertFalse(new File(baseDir).exists());
         }
-
-        assertTrue(file.getParentFile().delete());
-        dir.delete();
     }
 
     @Test
     public void testDataForLast() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testDataForLast");
-        IOTools.deleteDir(dir.getAbsolutePath());
+        final String baseDir = getTestPath();
+        IOTools.deleteDir(baseDir);
 
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaDataCache cache = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+        try {
+            final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+            final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 6, dateCache);
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
-        final int threadId = AffinitySupport.getThreadId();
+            int cycle = (int) (System.currentTimeMillis() / 1000);
+            final int threadId = AffinitySupport.getThreadId();
 
-        // Check that the data file count starts at 0 when the data directory is empty
-        final VanillaMappedBytes vanillaBuffer0 = cache.dataForLast(cycle, threadId);
-        assertEquals("data-" + threadId + "-0", cache.fileFor(cycle, threadId).getName());
-        vanillaBuffer0.release();
+            // Check that the data file count starts at 0 when the data directory is empty
+            final VanillaMappedBytes vanillaBuffer0 = cache.dataForLast(cycle, threadId);
+            assertEquals("data-" + threadId + "-0", cache.fileFor(cycle, threadId).getName());
+            vanillaBuffer0.release();
 
-        // Add some more data files into the directory - use discontinuous numbers to test reading
-        VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, threadId, 1, true);
-        vanillaBuffer1.release();
+            // Add some more data files into the directory - use discontinuous numbers to test reading
+            VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, threadId, 1, true);
+            vanillaBuffer1.release();
 
-        VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, threadId, 2, true);
-        vanillaBuffer2.release();
+            VanillaMappedBytes vanillaBuffer2 = cache.dataFor(cycle, threadId, 2, true);
+            vanillaBuffer2.release();
 
-        VanillaMappedBytes vanillaBuffer4 = cache.dataFor(cycle, threadId, 4, true);
-        vanillaBuffer4.release();
+            VanillaMappedBytes vanillaBuffer4 = cache.dataFor(cycle, threadId, 4, true);
+            vanillaBuffer4.release();
 
-        cache.close();
+            cache.checkCounts(1, 1);
+            cache.close();
 
-        // Open a new cache and check that it reads the existing data files that were created above
-        VanillaDataCache cache2 = new VanillaDataCache(dir.getAbsolutePath(), 10 + 6, dateCache);
+            // Open a new cache and check that it reads the existing data files that were created above
+            final VanillaDataCache cache2 = new VanillaDataCache(baseDir, 10 + 6, dateCache);
 
-        final VanillaMappedBytes lastVanillaBuffer = cache2.dataForLast(cycle, threadId);
-        assertEquals("data-" + threadId + "-4", cache2.fileFor(cycle, threadId).getName());
-        lastVanillaBuffer.release();
+            final VanillaMappedBytes lastVanillaBuffer = cache2.dataForLast(cycle, threadId);
+            assertEquals("data-" + threadId + "-4", cache2.fileFor(cycle, threadId).getName());
+            lastVanillaBuffer.release();
 
-        cache2.close();
-
-        IOTools.deleteDir(dir.getAbsolutePath());
+            cache.checkCounts(1, 1);
+            cache2.close();
+        } finally {
+            IOTools.deleteDir(baseDir);
+            assertFalse(new File(baseDir).exists());
+        }
     }
 }
