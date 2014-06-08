@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleTest extends VanillaChronicleTestBase {
@@ -86,7 +87,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     @Test
     public void testAppend() throws IOException {
         final int RUNS = 1000;
-        final String baseDir = getTestPath();
+
+        final String baseDir = getTestPath("testAppend");
+        assertNotNull(baseDir);
 
         VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.defaultMessageSize(128);
@@ -122,7 +125,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     @Test
     public void testAppend4() throws IOException, InterruptedException {
         final int RUNS = 500000; // increase to 25 million for a proper test. Can be 50% faster.
-        final String baseDir = getTestPath();
+
+        final String baseDir = getTestPath("testAppend4");
+        assertNotNull(baseDir);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig().defaultMessageSize(64);
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
@@ -178,7 +183,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     @Test
     public void testTailer() throws IOException {
         final int RUNS = 1000000; // 5000000;
-        final String baseDir = getTestPath();
+
+        final String baseDir = getTestPath("testTailer");
+        assertNotNull(baseDir);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.defaultMessageSize(128);
@@ -234,7 +241,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     public void testTailerPerf() throws IOException {
         final int WARMUP = 50000;
         final int RUNS = 5000000;
-        final String baseDir = getTestPath();
+
+        final String baseDir = getTestPath("testTailerPerf");
+        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -283,7 +292,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final int WARMUP = 100000;
         final int RUNS = 4000000;
         final int BYTES = 96;
-        final String baseDir = getTestPath();
+
+        final String baseDir = getTestPath("testTailerPerf2");
+        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -353,7 +364,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testAppenderTailer() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testAppenderTailer");
+        assertNotNull(baseDir);
 
         final VanillaChronicle writer = new VanillaChronicle(baseDir);
         writer.clear();
@@ -408,7 +420,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testTailerToStart() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testTailerToStart");
+        assertNotNull(baseDir);
 
         VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -453,7 +466,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testTailerToEnd1() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testTailerToEnd1");
+        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -485,7 +499,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testTailerToEnd2() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testTailerToEnd2");
+        assertNotNull(baseDir);
 
         final VanillaChronicle wchronicle = new VanillaChronicle(baseDir);
         wchronicle.clear();
@@ -522,7 +537,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testTailerEndStart1() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testTailerEndStart1");
+        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -576,7 +592,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testTailerEndStart2() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testTailerEndStart2");
+        assertNotNull(baseDir);
 
         final VanillaChronicle wchronicle = new VanillaChronicle(baseDir);
         final VanillaChronicle rchronicle = new VanillaChronicle(baseDir);
@@ -647,7 +664,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     public void testReplicationWithRollingFilesEverySecond() throws Exception {
 //        TODO int RUNS = 100000;
         final int RUNS = 5 * 1000;
-        final String baseDir = getTestPath() + "-source";
+
+        final String baseDir = getTestPath("testReplicationWithRollingFilesEverySecond-source");
+        assertNotNull(baseDir);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 16);
@@ -701,7 +720,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     @Test
     public void testReplicationWithRollingFilesEverySecond2() throws Exception {
         final int RUNS = 10;
-        final String baseDir = getTestPath() + "-source";
+
+        final String baseDir = getTestPath("testReplicationWithRollingFilesEverySecond2-source");
+        assertNotNull(baseDir);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
@@ -747,7 +768,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testConcurrentAppend() throws Exception {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testConcurrentAppend");
+        assertNotNull(baseDir);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.dataBlockSize(64);
@@ -793,7 +815,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testMultipleCycles() throws Exception {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testMultipleCycles");
+        assertNotNull(baseDir);
 
         // Create with small data and index sizes so that the test frequently generates new files
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
@@ -846,7 +869,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
     @Test
     public void testMultipleCycles2() throws Exception {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testMultipleCycles2");
+        assertNotNull(baseDir);
 
         // Create with small data and index sizes so that the test frequently generates new files
         final VanillaChronicleConfig config = new VanillaChronicleConfig();

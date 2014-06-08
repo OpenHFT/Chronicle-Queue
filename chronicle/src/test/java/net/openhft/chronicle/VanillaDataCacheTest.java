@@ -29,7 +29,8 @@ import static org.junit.Assert.assertEquals;
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     @Test
     public void testDataFor() throws Exception {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testDataFor");
+        assertNotNull(baseDir);
 
         final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
         final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 6, dateCache);
@@ -57,6 +58,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
             assertNotEquals(file2, file0);
             assertNotEquals(file2, file1);
             cache.close();
+
             assertEquals(0, vanillaBuffer0.refCount());
             assertEquals(0, vanillaBuffer1.refCount());
             assertEquals(0, vanillaBuffer2.refCount());
@@ -78,7 +80,8 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
 
     @Test
     public void testDataForPerf() throws Exception {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testDataForPerf");
+        assertNotNull(baseDir);
 
         final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
         final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache);
@@ -121,8 +124,8 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
 
     @Test
     public void testDataForLast() throws Exception {
-        final String baseDir = getTestPath();
-        IOTools.deleteDir(baseDir);
+        final String baseDir = getTestPath("testDataForLast");
+        assertNotNull(baseDir);
 
         try {
             final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);

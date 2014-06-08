@@ -21,13 +21,15 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
     @Test
     public void testResourcesCleanup1() throws IOException {
-        final String baseDir = getTestPath();
+        final String baseDir = getTestPath("testResourcesCleanup1");
+        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();

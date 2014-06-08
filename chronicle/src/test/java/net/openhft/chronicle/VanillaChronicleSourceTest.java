@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
@@ -32,8 +33,11 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     @Test
     public void testReplication1() throws IOException {
         final int RUNS = 100;
-        final String sourceBasePath = getTestPath("-source");
-        final String sinkBasePath = getTestPath("-sink");
+
+        final String sourceBasePath = getTestPath("testReplication1-source");
+        final String sinkBasePath = getTestPath("testReplication1-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
         final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath), 0);
         final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
@@ -79,8 +83,11 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     @Test
     public void testReplication2() throws IOException {
         final int RUNS = 100;
-        final String sourceBasePath = getTestPath("-source");
-        final String sinkBasePath = getTestPath("-sink");
+
+        final String sourceBasePath = getTestPath("testReplication2-source");
+        final String sinkBasePath = getTestPath("testReplication2-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
         final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath), 0);
         final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
@@ -125,8 +132,11 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     @Test
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
-        final String sourceBasePath = getTestPath("-source");
-        final String sinkBasePath = getTestPath("-sink");
+
+        final String sourceBasePath = getTestPath("sourceBasePath-source");
+        final String sinkBasePath = getTestPath("sourceBasePath-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
@@ -176,8 +186,11 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     @Test
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
-        final String sourceBasePath = getTestPath("-source");
-        final String sinkBasePath = getTestPath("-sink");
+
+        final String sourceBasePath = getTestPath("testReplicationWithRolling2-source");
+        final String sinkBasePath = getTestPath("testReplicationWithRolling2-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
         final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
@@ -241,8 +254,10 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
 
-        final String sourceBasePath = getTestPath("-source");
-        final String sinkBasePath = getTestPath("-sink");
+        final String sourceBasePath = getTestPath("testSourceSinkStartResumeRollingEverySecond-source");
+        final String sinkBasePath = getTestPath("testSourceSinkStartResumeRollingEverySecond-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
         final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath, config), 8888);
 

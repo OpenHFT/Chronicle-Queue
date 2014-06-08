@@ -16,24 +16,12 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
 public class VanillaChronicleTestBase {
     protected static final String TMP_PATH = System.getProperty("java.io.tmpdir");
 
-    @Rule
-    public final TestName testName = new TestName();
-
-    protected String getTestPath() {
-        final String path = TMP_PATH + "/" + testName.getMethodName();
-        IOTools.deleteDir(path);
-
-        return path;
-    }
-
-    protected String getTestPath(String suffix) {
-        final String path = TMP_PATH + "/" + testName.getMethodName() + suffix;
+    protected synchronized String getTestPath(String testName) {
+        final String path = TMP_PATH + "/" + testName;
         IOTools.deleteDir(path);
 
         return path;
