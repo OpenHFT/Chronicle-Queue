@@ -48,6 +48,12 @@ public class WritingTextMain {
         appender.append("Bye for now\n");
         appender.finish();
 
+        appender.startExcerpt();
+        appender.append(987654321);
+        appender.append("\n");
+        appender.finish();
+
+
         chronicle.close();
 
         BufferedReader br = new BufferedReader(new FileReader(basePath + ".data"));

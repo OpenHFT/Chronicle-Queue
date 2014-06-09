@@ -34,15 +34,24 @@ public class VanillaDataCache implements Closeable {
     private final VanillaMappedCache<DataKey> cache;
 
     public VanillaDataCache(String basePath, int blockBits, DateCache dateCache) {
-        this(basePath, blockBits, dateCache, false);
+        this(basePath, blockBits, dateCache, MAX_SIZE, false);
+    }
+
+    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, int maxElementsInCache) {
+        this(basePath, blockBits, dateCache, maxElementsInCache, false);
     }
 
     public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, boolean cleanupOnClose) {
+        this(basePath, blockBits, dateCache, MAX_SIZE, cleanupOnClose);
+    }
+
+    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, int maxElementsInCache, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache = new VanillaMappedCache<DataKey>(MAX_SIZE, true, cleanupOnClose);
+        this.cache = new VanillaMappedCache<DataKey>(maxElementsInCache, true, cleanupOnClose);
     }
+
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
         return new File(

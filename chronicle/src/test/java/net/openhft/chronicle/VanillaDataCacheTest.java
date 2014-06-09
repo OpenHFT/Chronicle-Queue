@@ -84,7 +84,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache);
+        final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
