@@ -41,7 +41,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author peter.lawrey
  */
-public class IndexedChronicleTest {
+public class IndexedChronicleTest extends IndexedChronicleTestBase {
     static {
         ChronicleTools.warmup();
     }
@@ -92,8 +92,7 @@ public class IndexedChronicleTest {
     @Test
     @Ignore
     public void testWasPadding() throws IOException {
-        final String basePath = TMP + "/singleThreaded";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
         config.dataBlockSize(128);
@@ -184,8 +183,7 @@ public class IndexedChronicleTest {
 
     @Test
     public void singleThreaded() throws IOException {
-        final String basePath = TMP + "/singleThreaded";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
         // TODO fix for 4096 !!!
@@ -258,8 +256,8 @@ public class IndexedChronicleTest {
             return;
         }
 
-        final String basePath = TMP + "/multiThreaded";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
+
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
         int dataBlockSize = 1 << 26;
         config.dataBlockSize(dataBlockSize);
@@ -347,10 +345,8 @@ public class IndexedChronicleTest {
             System.err.println("Test requires 3 CPUs, skipping");
             return;
         }
-        final String basePath = TMP + "/multiThreaded";
-        final String basePath2 = TMP + "/multiThreaded2";
-        ChronicleTools.deleteOnExit(basePath);
-        ChronicleTools.deleteOnExit(basePath2);
+        final String basePath1 = getTestPath("-1");
+        final String basePath2 = getTestPath("-2");
 
         final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4*1024);
@@ -363,7 +359,7 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath1, config);
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         w.startExcerpt();
@@ -384,7 +380,7 @@ public class IndexedChronicleTest {
             @Override
             public void run() {
                 try {
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+                    IndexedChronicle chronicle = new IndexedChronicle(basePath1, config);
                     final ExcerptTailer r = chronicle.createTailer();
                     IndexedChronicle chronicle2 = null;
                     try {
@@ -413,7 +409,7 @@ public class IndexedChronicleTest {
         }, "t2");
         t2.start();
 
-        IndexedChronicle chronicle = new IndexedChronicle(basePath2, config);
+        final IndexedChronicle chronicle = new IndexedChronicle(basePath2, config);
         final ExcerptTailer r = chronicle.createTailer();
 
         for (int i = 0; i < runs; i += size) {
@@ -437,19 +433,19 @@ public class IndexedChronicleTest {
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
         chronicle.close();
         Thread.sleep(200);
-        ChronicleTools.deleteOnExit(basePath);
+
+        ChronicleTools.deleteOnExit(basePath1);
         ChronicleTools.deleteOnExit(basePath2);
     }
 
     @Test
     public void testOneAtATime() throws IOException {
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        final ChronicleConfig config = ChronicleConfig.TEST.clone();
         config.indexBlockSize(128); // very small
         config.dataBlockSize(128);  // very small
-        final String basePath = TMP + "/testOneAtATime";
-        ChronicleTools.deleteOnExit(basePath);
 
-        File indexFile = new File(basePath + ".index");
+        final String basePath = getTestPath();
+        final File indexFile = new File(basePath + ".index");
 
         for (int i = 0; i < 1000; i++) {
             if (i % 10 == 0)
@@ -511,8 +507,7 @@ public class IndexedChronicleTest {
 
     @Test
     public void testFindRange() throws IOException {
-        final String basePath = TMP + "/testFindRange";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
 
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         ExcerptAppender appender = chronicle.createAppender();
@@ -523,6 +518,7 @@ public class IndexedChronicleTest {
             appender.finish();
             ints.add(i);
         }
+
         Excerpt excerpt = chronicle.createExcerpt();
         final MyExcerptComparator mec = new MyExcerptComparator();
         // exact matches at a the start
@@ -580,8 +576,7 @@ public class IndexedChronicleTest {
 
     @Test
     public void testParseLines() throws IOException {
-        final String basePath = TMP + "/testParseLines";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
 
         IndexedChronicle chronicle = new IndexedChronicle(basePath);
         ExcerptAppender appender = chronicle.createAppender();

@@ -15,37 +15,16 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tools.ChronicleTools;
-import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class IndexedChronicle2Test {
-    private static final String TMP    = System.getProperty("java.io.tmpdir") + File.separator + "indexed-chronicle";
+public class IndexedChronicle2Test extends IndexedChronicleTestBase {
     private static final long   WARMUP = 20000;
 
-    private static String newTmpPath(String name) {
-        return TMP + File.separator + name;
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Before
-    public void startUp() {
-        //ChronicleTools.warmup();
-        ChronicleTools.deleteDirOnExit(TMP);
-    }
-
-    @Before
-    public void tearDown() {
-    }
 
     // *************************************************************************
     //
@@ -53,8 +32,7 @@ public class IndexedChronicle2Test {
 
     @Test
     public void testIndexedChronicle_001() throws IOException {
-        String basePath = newTmpPath("ic_001");
-
+        final String basePath = getTestPath();
         final Chronicle ch1 = new IndexedChronicle(basePath);
 
         ExcerptAppender app = ch1.createAppender();
@@ -97,8 +75,7 @@ public class IndexedChronicle2Test {
         config.indexBlockSize(64);
         config.dataBlockSize(64);
 
-        String basePath = newTmpPath("ic_002");
-
+        final String basePath = getTestPath();
         final Chronicle ch1 = new IndexedChronicle(basePath,config);
 
         ExcerptAppender app = ch1.createAppender();
@@ -136,7 +113,7 @@ public class IndexedChronicle2Test {
 
     @Test
     public void testIndexedChronicle_003() throws IOException {
-        final String basePath = newTmpPath("ic_003");
+        final String basePath = getTestPath();
 
         final long            nb = 50 * 1000 * 1000;
         final Chronicle       ch = new IndexedChronicle(basePath);

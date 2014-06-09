@@ -102,7 +102,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                     assertEquals(128 << 10, file.length());
                     assertEquals(0x12345678L, buffer.readLong(0));
 
-                    buffer.release(); // hold by VanillaMappedCache
+                    buffer.release(); // held by VanillaMappedCache
                     buffer.release(); // VanillaDataCache always call ackquire()
                     buffer.close();
 

@@ -17,13 +17,11 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
-import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.model.constraints.Nullable;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -34,8 +32,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author peter.lawrey
  */
-public class IndexedChronicle1Test {
-    static final String TMP = System.getProperty("java.io.tmpdir");
+public class IndexedChronicle1Test extends IndexedChronicleTestBase {
 
     static void assertEquals(long a, long b) {
         if (a != b)
@@ -53,9 +50,8 @@ public class IndexedChronicle1Test {
 
     @Test
     public void testSerializationPerformance() throws IOException, ClassNotFoundException, InterruptedException {
-        String testPath = TMP + File.separator + "chronicle-object";
-        IndexedChronicle tsc = new IndexedChronicle(testPath);
-        ChronicleTools.deleteOnExit(testPath);
+        final String testPath = getTestPath();
+        final IndexedChronicle tsc = new IndexedChronicle(testPath);
 
 //        tsc.clear();
         ExcerptAppender appender = tsc.createAppender();
@@ -98,10 +94,9 @@ public class IndexedChronicle1Test {
     }
 
     private void doRewriteableEntries(boolean useUnsafe, boolean minimiseByteBuffers, boolean synchronousMode) throws IOException {
-        String basePath = TMP + File.separator + "doRewriteableEntries.ict";
-        IndexedChronicle tsc = new IndexedChronicle(basePath);
+        final String basePath = getTestPath();
+        final IndexedChronicle tsc = new IndexedChronicle(basePath);
 //        tsc.useUnsafe(useUnsafe);
-        ChronicleTools.deleteOnExit(basePath);
 
 //        tsc.clear();
         ExcerptAppender excerpt = tsc.createAppender();
@@ -133,15 +128,16 @@ public class IndexedChronicle1Test {
     }
 
     /**
-     * Tests that <code>IndexedChronicle.close()</code> does not blow up (anymore) when you reopen an existing chronicle
-     * due to the null data buffers created internally.
+     * Tests that <code>IndexedChronicle.close()</code> does not blow up (anymore)
+     * when you reopen an existing chronicle due to the null data buffers created
+     * internally.
      *
      * @throws IOException if opening chronicle fails
      */
     @Test
     public void testCloseWithNullBuffers() throws IOException {
-        String basePath = TMP + File.separator + "deleteme.ict";
-        ChronicleTools.deleteOnExit(basePath);
+        final String basePath = getTestPath();
+
         IndexedChronicle tsc = new IndexedChronicle(basePath);
 
 //        tsc.clear();
@@ -163,13 +159,13 @@ public class IndexedChronicle1Test {
     @Test
     @Ignore
     public void testTimeTenMillion() throws IOException {
+        final String basePath = getTestPath();
+
         int repeats = 3;
         for (int j = 0; j < repeats; j++) {
             long start = System.nanoTime();
-            String basePath = TMP + File.separator + "testTimeTenMillion";
-            ChronicleTools.deleteOnExit(basePath);
-            int records = 10 * 1000 * 1000;
-            {
+
+            int records = 10 * 1000 * 1000; {
                 IndexedChronicle ic = new IndexedChronicle(basePath);
 //                ic.useUnsafe(true);
 //                ic.clear();
@@ -211,10 +207,9 @@ public class IndexedChronicle1Test {
      * @author AndrasMilassin
      */
     @Test
-    public void test_boolean() throws Exception {
-        String testPath = TMP + File.separator + "chroncle-bool-test";
-        ChronicleTools.deleteOnExit(testPath);
-        IndexedChronicle tsc = new IndexedChronicle(testPath);
+    public void testBoolean() throws Exception {
+        final String testPath = getTestPath();
+        final IndexedChronicle tsc = new IndexedChronicle(testPath);
 //        tsc.useUnsafe(false);
 
         ExcerptAppender excerpt = tsc.createAppender();
@@ -236,9 +231,8 @@ public class IndexedChronicle1Test {
     @Test
     public void testStopBitEncoded() throws IOException {
         boolean ok = false;
-        String testPath = TMP + File.separator + "chronicle-stop-bit";
-        ChronicleTools.deleteOnExit(testPath);
-        IndexedChronicle tsc = new IndexedChronicle(testPath);
+        final String testPath = getTestPath();
+        final IndexedChronicle tsc = new IndexedChronicle(testPath);
 //        ChronicleIndexReader.main(testPath);
 
         try {
@@ -283,10 +277,9 @@ public class IndexedChronicle1Test {
 
     @Test
     public void testEnum() throws IOException {
-        String testPath = TMP + File.separator + "chroncle-bool-enum";
-        IndexedChronicle tsc = new IndexedChronicle(testPath);
+        final String testPath = getTestPath();
+        final IndexedChronicle tsc = new IndexedChronicle(testPath);
 //        tsc.useUnsafe(false);
-        ChronicleTools.deleteOnExit(testPath);
 
 //        tsc.clear();
 
