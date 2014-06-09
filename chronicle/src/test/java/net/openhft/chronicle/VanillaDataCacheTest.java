@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     @Test
     public void testDataFor() throws Exception {
-        final String baseDir = getTestPath("testDataFor");
+        final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
         final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
@@ -80,7 +80,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
 
     @Test
     public void testDataForPerf() throws Exception {
-        final String baseDir = getTestPath("testDataForPerf");
+        final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
         final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
@@ -124,7 +124,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
 
     @Test
     public void testDataForLast() throws Exception {
-        final String baseDir = getTestPath("testDataForLast");
+        final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
         try {

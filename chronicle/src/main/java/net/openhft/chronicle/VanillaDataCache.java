@@ -41,7 +41,7 @@ public class VanillaDataCache implements Closeable {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache = new VanillaMappedCache<DataKey>(MAX_SIZE, false, cleanupOnClose);
+        this.cache = new VanillaMappedCache<DataKey>(MAX_SIZE, true, cleanupOnClose);
     }
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
@@ -170,7 +170,10 @@ public class VanillaDataCache implements Closeable {
 
         @Override
         public boolean equals(Object obj) {
-            if (!(obj instanceof DataKey)) return false;
+            if (!(obj instanceof DataKey)) {
+                return false;
+            }
+
             DataKey key = (DataKey) obj;
             return dataCount == key.dataCount && threadId == key.threadId && cycle == key.cycle;
         }

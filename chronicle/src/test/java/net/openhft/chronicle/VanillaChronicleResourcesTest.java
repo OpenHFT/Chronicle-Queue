@@ -20,15 +20,13 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
     @Test
     public void testResourcesCleanup1() throws IOException {
-        final String baseDir = getTestPath("testResourcesCleanup1");
+        final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
@@ -47,9 +45,10 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             appender2.finish();
             chronicle.checkCounts(1, 2);
 
-            assertTrue(appender1 == appender1);
+            assertTrue(appender1 == appender2);
 
-            appender1.close();
+            appender2.close();
+
             chronicle.checkCounts(1, 1);
 
             final ExcerptTailer tailer = chronicle.createTailer();
@@ -57,8 +56,43 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             chronicle.checkCounts(1, 2);
 
             tailer.close();
-        } finally {
+
             chronicle.checkCounts(1, 1);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
+    }
+
+    @Test
+    public void testResourcesCleanup2() throws Exception {
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
+
+        final VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.dataBlockSize(64);
+        config.indexBlockSize(64);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
+        chronicle.clear();
+
+        try {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            for (int counter = 0; counter < 100; counter++) {
+                appender.startExcerpt(20);
+                appender.writeUTF("data-" + counter);
+                appender.finish();
+            }
+
+            appender.close();
+
+            chronicle.checkCounts(1,1);
+        } catch(Exception e) {
+            e.printStackTrace();
+        } finally {
             chronicle.close();
             chronicle.clear();
 

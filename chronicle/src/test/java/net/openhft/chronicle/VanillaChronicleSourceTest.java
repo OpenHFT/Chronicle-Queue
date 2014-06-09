@@ -34,8 +34,8 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     public void testReplication1() throws IOException {
         final int RUNS = 100;
 
-        final String sourceBasePath = getTestPath("testReplication1-source");
-        final String sinkBasePath = getTestPath("testReplication1-sink");
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
@@ -84,8 +84,8 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     public void testReplication2() throws IOException {
         final int RUNS = 100;
 
-        final String sourceBasePath = getTestPath("testReplication2-source");
-        final String sinkBasePath = getTestPath("testReplication2-sink");
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
@@ -133,8 +133,8 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
 
-        final String sourceBasePath = getTestPath("sourceBasePath-source");
-        final String sinkBasePath = getTestPath("sourceBasePath-sink");
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
@@ -187,8 +187,8 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
 
-        final String sourceBasePath = getTestPath("testReplicationWithRolling2-source");
-        final String sinkBasePath = getTestPath("testReplicationWithRolling2-sink");
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
@@ -254,8 +254,8 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
 
-        final String sourceBasePath = getTestPath("testSourceSinkStartResumeRollingEverySecond-source");
-        final String sinkBasePath = getTestPath("testSourceSinkStartResumeRollingEverySecond-sink");
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
