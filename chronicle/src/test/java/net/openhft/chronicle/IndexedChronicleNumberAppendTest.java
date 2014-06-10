@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 import sun.misc.Unsafe;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
@@ -31,8 +28,7 @@ import static org.junit.Assert.fail;
 /**
  * @author andrew.bissell
  */
-public class NewNumberAppendTest {
-    static final String TMP = System.getProperty("java.io.tmpdir");
+public class IndexedChronicleNumberAppendTest extends IndexedChronicleTestBase {
     static final Class[] NUMBER_TYPES = {long.class, double.class};
     static final Class[] EXCERPT_TYPES = {/*ByteBuffer.class,*/ Unsafe.class};
     private static final int NUM_ENTRIES_PER_RECORD = 20;
@@ -43,45 +39,43 @@ public class NewNumberAppendTest {
     private static final double[][] RANDOM_DOUBLES = new double[TOTAL_RECORDS][NUM_ENTRIES_PER_RECORD];
     private static final int MAX_PRECISION = 8;
 
-    private static void timeAppends(
-            @NotNull Class excerptType,
-            Class numType) throws IOException {
+    private void timeAppends(@NotNull Class excerptType, Class numType) throws IOException {
+        final String basePath = getTestPath(excerptType.getSimpleName());
+        final Chronicle chronicle = new IndexedChronicle(basePath);
 
-        String newPath = TMP + File.separator + excerptType.getSimpleName() + "Ic";
-        ChronicleTools.deleteOnExit(newPath);
-        IndexedChronicle newIc = new IndexedChronicle(newPath);
-//        newIc.useUnsafe(excerptType == Unsafe.class);
+        try {
+            ExcerptAppender excerpt = chronicle.createAppender();
 
-        ExcerptAppender excerpt = newIc.createAppender();
+            long start = 0;
+            for (int i = -NUM_WARMUP_RECORDS; i < TOTAL_RECORDS; i++) {
+                if (i == 0)
+                    start = System.nanoTime();
 
-        long start = 0;
-        for (int i = -NUM_WARMUP_RECORDS; i < TOTAL_RECORDS; i++) {
-            if (i == 0)
-                start = System.nanoTime();
-
-            int precision = Math.abs(i) % MAX_PRECISION + 1;
-            excerpt.startExcerpt();
-            if (numType == long.class) {
-                long[] longs = RANDOM_LONGS[Math.abs(i)];
-                for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
-                    excerpt.append(longs[j]);
-                    excerpt.append(' '); // need something in between.
+                int precision = Math.abs(i) % MAX_PRECISION + 1;
+                excerpt.startExcerpt();
+                if (numType == long.class) {
+                    long[] longs = RANDOM_LONGS[Math.abs(i)];
+                    for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
+                        excerpt.append(longs[j]);
+                        excerpt.append(' '); // need something in between.
+                    }
+                } else if (numType == double.class) {
+                    double[] doubles = RANDOM_DOUBLES[Math.abs(i)];
+                    for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
+                        excerpt.append(doubles[j], precision);
+                        excerpt.append(' '); // need something in between.
+                    }
+                } else {
+                    fail();
                 }
-            } else if (numType == double.class) {
-                double[] doubles = RANDOM_DOUBLES[Math.abs(i)];
-                for (int j = 0; j < NUM_ENTRIES_PER_RECORD; j++) {
-                    excerpt.append(doubles[j], precision);
-                    excerpt.append(' '); // need something in between.
-                }
-            } else {
-                fail();
+                excerpt.finish();
             }
-            excerpt.finish();
+            long time = System.nanoTime() - start;
+            System.out.printf("%s %s average time taken %d ns%n", numType, excerptType, time / TOTAL_RECORDS / NUM_ENTRIES_PER_RECORD);
+        } finally {
+            chronicle.close();
+            assertClean(basePath);
         }
-        newIc.close();
-
-        long time = System.nanoTime() - start;
-        System.out.printf("%s %s average time taken %d ns%n", numType, excerptType, time / TOTAL_RECORDS / NUM_ENTRIES_PER_RECORD);
     }
 
     @Before

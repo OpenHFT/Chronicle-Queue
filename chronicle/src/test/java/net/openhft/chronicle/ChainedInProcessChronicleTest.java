@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
-import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -29,23 +27,18 @@ import java.io.IOException;
 /**
  * @author peter.lawrey
  */
-public class ChainedInProcessChronicleTest {
-    private static final String TMP = System.getProperty("java.io.tmpdir");
+public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
 
     @Test
     public void testChained() throws IOException {
-        ChronicleTools.deleteOnExit(TMP + "/chronicle1");
-        Chronicle chronicle1 = new IndexedChronicle(TMP + "/chronicle1");
-        InProcessChronicleSource source1 = new InProcessChronicleSource(chronicle1, 61111);
+        final String basePath1 = getTestPath("-1");
+        final String basePath2 = getTestPath("-2");
+        final String basePath3 = getTestPath("-3");
 
-        ChronicleTools.deleteOnExit(TMP + "/chronicle2");
-        Chronicle chronicle2 = new IndexedChronicle(TMP + "/chronicle2");
-        InProcessChronicleSource source2 = new InProcessChronicleSource(chronicle2, 62222);
-        InProcessChronicleSink sink2 = new InProcessChronicleSink(source2, "localhost", 61111);
-
-        ChronicleTools.deleteOnExit(TMP + "/chronicle3");
-        Chronicle chronicle3 = new IndexedChronicle(TMP + "/chronicle3");
-        InProcessChronicleSink sink3 = new InProcessChronicleSink(chronicle3, "localhost", 62222);
+        Chronicle source1 = new InProcessChronicleSource(new IndexedChronicle(basePath1), 61111);
+        Chronicle source2 = new InProcessChronicleSource( new IndexedChronicle(basePath2), 62222);
+        Chronicle sink2 = new InProcessChronicleSink(source2, "localhost", 61111);
+        Chronicle sink3 = new InProcessChronicleSink(new IndexedChronicle(basePath3), "localhost", 62222);
 
         ExcerptAppender excerpt1 = source1.createAppender();
         ExcerptTailer excerpt2 = sink2.createTailer();
@@ -56,28 +49,33 @@ public class ChainedInProcessChronicleTest {
             excerpt1.writeLong(System.nanoTime());
             excerpt1.finish();
 
-            while (excerpt2.size() < i)
+            while (excerpt2.size() < i) {
                 excerpt2.nextIndex();
+            }
 
-            while (excerpt3.size() < i)
+            while (excerpt3.size() < i) {
                 excerpt3.nextIndex();
+            }
         }
 
         sink3.close();
         sink2.close();
         source1.close();
+
+        assertClean(basePath1);
+        assertClean(basePath2);
+        assertClean(basePath3);
     }
 
     @Test
     public void testChainedChronicleReconnection() throws IOException, InterruptedException {
+        final String basePath1 = getTestPath("-1");
+        final String basePath2 = getTestPath("-2");
 
-        //create the 'source' chronicle
-        ChronicleTools.deleteOnExit(TMP + "/chronicle1");
-        Chronicle chronicle = new IndexedChronicle(TMP + "/chronicle1");
-        InProcessChronicleSource chronicleSource = new InProcessChronicleSource(chronicle, 61111);
+        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePath1), 61111);
 
         //write some data into the 'source' chronicle
-        ExcerptAppender sourceAppender = chronicleSource.createAppender();
+        ExcerptAppender sourceAppender = source.createAppender();
         long NUM_INITIAL_MESSAGES = 20;
         for (long i = 0; i < NUM_INITIAL_MESSAGES; i++) {
             sourceAppender.startExcerpt();
@@ -89,14 +87,12 @@ public class ChainedInProcessChronicleTest {
         // Starting first slave instance
         // create the 'slave' chronicle
 
-        ChronicleTools.deleteOnExit(TMP + "/chronicle2");
-        Chronicle chronicle1 = new IndexedChronicle(TMP + "/chronicle2");
-        InProcessChronicleSource chronicleSource1 = new InProcessChronicleSource(chronicle1, 62222);
-        InProcessChronicleSink chronicleSink1 = new InProcessChronicleSink(chronicleSource1, "localhost", 61111);
+        Chronicle source1 = new InProcessChronicleSource(new IndexedChronicle(basePath2), 62222);
+        Chronicle sink1 = new InProcessChronicleSink(source1, "localhost", 61111);
 
         //try to read current data from the 'slave' chronicle
 
-        ExcerptTailer tailer1 = chronicleSink1.createTailer();
+        ExcerptTailer tailer1 = sink1.createTailer();
         long nextIndex1 = 0;
         while (tailer1.nextIndex()) {
             assertEquals("Unexpected index in stream", tailer1.readLong(), nextIndex1++);
@@ -105,9 +101,8 @@ public class ChainedInProcessChronicleTest {
 
         // Close first 'slave' chronicle
 
-        chronicleSink1.close();
-        chronicleSource1.close();
-        chronicle1.close();
+        sink1.close();
+        source1.close();
 
         // Write some more data
 
@@ -121,11 +116,10 @@ public class ChainedInProcessChronicleTest {
         // Starting second slave instance
         // Observe that we don't call ChronicleTools.deleteOnExit(file) -
         // the new instance will re-open the existing chronicle file
-        Chronicle chronicle2 = new IndexedChronicle(TMP + "/chronicle2");
-        InProcessChronicleSource chronicleSource2 = new InProcessChronicleSource(chronicle2, 63333);
-        InProcessChronicleSink chronicleSink2 = new InProcessChronicleSink(chronicleSource2, "localhost", 61111);
+        Chronicle source2 = new InProcessChronicleSource(new IndexedChronicle(basePath2), 63333);
+        Chronicle sink2 = new InProcessChronicleSink(source2, "localhost", 61111);
 
-        ExcerptTailer tailer2 = chronicleSink2.createTailer();
+        ExcerptTailer tailer2 = sink2.createTailer();
         long nextIndex2 = 0;
         while (tailer2.nextIndex()) {
             assertEquals("Unexpected message index in stream", tailer2.readLong(), nextIndex2++);
@@ -134,11 +128,12 @@ public class ChainedInProcessChronicleTest {
         assertEquals("Didn't read all messages", NUM_INITIAL_MESSAGES * 2, nextIndex2);
 
         // Cleaning up
-        chronicleSink2.close();
-        chronicleSource2.close();
-        chronicle2.close();
+        sink2.close();
+        source2.close();
 
-        chronicleSource.close();
-        chronicle.close();
+        source.close();
+
+        assertClean(basePath1);
+        assertClean(basePath2);
     }
 }

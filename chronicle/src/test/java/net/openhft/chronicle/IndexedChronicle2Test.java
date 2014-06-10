@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle;
 
 import org.junit.Test;
@@ -23,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class IndexedChronicle2Test extends IndexedChronicleTestBase {
-    private static final long   WARMUP = 20000;
-
 
     // *************************************************************************
     //
@@ -52,6 +51,8 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
             tail1.finish();
         }
 
+        tail1.close();
+
         final Chronicle ch2 = new IndexedChronicle(basePath);
         ExcerptTailer tail2 = ch1.createTailer().toStart();
         for(long i=0;i<100;i++) {
@@ -61,12 +62,12 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
             tail2.finish();
         }
 
-        tail1.close();
         tail2.close();
-
 
         ch1.close();
         ch2.close();
+
+        assertClean(basePath);
     }
 
     @Test
@@ -95,6 +96,8 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
             tail1.finish();
         }
 
+        tail1.close();
+
         final Chronicle ch2 = new IndexedChronicle(basePath,config);
         ExcerptTailer tail2 = ch1.createTailer().toStart();
         for(long i=0;i<100;i++) {
@@ -104,19 +107,20 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
             tail2.finish();
         }
 
-        tail1.close();
         tail2.close();
 
         ch1.close();
         ch2.close();
+
+        assertClean(basePath);
     }
 
     @Test
     public void testIndexedChronicle_003() throws IOException {
         final String basePath = getTestPath();
 
-        final long            nb = 50 * 1000 * 1000;
-        final Chronicle       ch = new IndexedChronicle(basePath);
+        final long nb = 50 * 1000 * 1000;
+        final Chronicle ch = new IndexedChronicle(basePath);
         final ExcerptAppender ap = ch.createAppender();
 
         for(long i=0; i < nb; i++) {
@@ -127,5 +131,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
         ap.close();
         ch.close();
+
+        assertClean(basePath);
     }
 }

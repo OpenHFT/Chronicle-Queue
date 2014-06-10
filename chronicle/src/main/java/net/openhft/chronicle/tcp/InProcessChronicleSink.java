@@ -58,7 +58,7 @@ public class InProcessChronicleSink implements Chronicle {
     public InProcessChronicleSink(@NotNull Chronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
         this.address = new InetSocketAddress(hostname, port);
-        logger = LoggerFactory.getLogger(getClass().getName() + '.' + chronicle);
+        logger = LoggerFactory.getLogger(getClass().getName() + '.' + hostname + '@' + port);
         excerpt = chronicle.createAppender();
         readBuffer = TcpUtil.createBuffer(256 * 1024, ByteOrder.nativeOrder());
     }
@@ -239,19 +239,25 @@ public class InProcessChronicleSink implements Chronicle {
     }
 
     void closeSocket(@Nullable SocketChannel sc) {
-        if (sc != null)
+        if (sc != null) {
             try {
                 sc.close();
             } catch (IOException e) {
                 logger.warn("Error closing socket", e);
             }
+        }
     }
 
     @Override
     public void close() {
         closed = true;
         closeSocket(sc);
-//        chronicle.close();
+
+        try {
+            chronicle.close();
+        } catch (IOException e) {
+            logger.warn("Error closing Sink", e);
+        }
     }
 
     public ChronicleConfig config() {

@@ -20,20 +20,20 @@ import org.junit.Rule;
 import org.junit.rules.TestName;
 
 public class VanillaChronicleTestBase {
-    protected static final String TMP_PATH = System.getProperty("java.io.tmpdir");
+    protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
     @Rule
     public final TestName testName = new TestName();
 
     protected synchronized String getTestPath() {
-        final String path = TMP_PATH + "/" + testName.getMethodName();
+        final String path = TMP_DIR + "/vc-" + testName.getMethodName();
         IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getTestPath(String suffix) {
-        final String path = TMP_PATH + "/" + testName.getMethodName() + suffix;
+        final String path = TMP_DIR + "/vc-" + testName.getMethodName() + suffix;
         IOTools.deleteDir(path);
 
         return path;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle;
-
-//import vanilla.java.processingengine.affinity.PosixJNAAffinity;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -78,112 +75,143 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
 
     static void testSearchRange(List<Integer> ints, Excerpt excerpt, MyExcerptComparator mec, long[] startEnd) {
         int elo = Collections.binarySearch(ints, mec.lo);
-        if (elo < 0) elo = ~elo;
+        if (elo < 0) {
+            elo = ~elo;
+        }
+
         int ehi = Collections.binarySearch(ints, mec.hi);
-        if (ehi < 0)
+        if (ehi < 0) {
             ehi = ~ehi;
-        else ehi++;
+        } else {
+            ehi++;
+        }
+
         excerpt.findRange(startEnd, mec);
-        assertEquals("lo: " + mec.lo + ", hi: " + mec.hi,
-                "[" + elo + ", " + ehi + "]",
-                Arrays.toString(startEnd));
+
+        assertEquals(
+            "lo: " + mec.lo + ", hi: " + mec.hi,
+            "[" + elo + ", " + ehi + "]",
+            Arrays.toString(startEnd));
     }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
+        }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
     @Ignore
     public void testWasPadding() throws IOException {
         final String basePath = getTestPath();
 
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
+        final ChronicleConfig config = ChronicleConfig.TEST.clone();
         config.dataBlockSize(128);
         config.indexBlockSize(128);
-        IndexedChronicle chronicle1 = new IndexedChronicle(basePath, config);
-        ExcerptAppender appender = chronicle1.createAppender();
 
-        IndexedChronicle chronicle2 = new IndexedChronicle(basePath, config);
-        ExcerptTailer tailer = chronicle2.createTailer();
+        final Chronicle chronicle1 = new IndexedChronicle(basePath, config);
+        final Chronicle chronicle2 = new IndexedChronicle(basePath, config);
 
-        assertEquals(-1, tailer.index());
-        assertTrue(tailer.wasPadding());
-        assertFalse(tailer.index(-1));
-        assertTrue(tailer.wasPadding());
+        try {
+            final ExcerptAppender appender = chronicle1.createAppender();
+            final ExcerptTailer tailer = chronicle2.createTailer();
 
-        appender.startExcerpt(48);
-        appender.position(48);
-        appender.finish();
+            assertEquals(-1, tailer.index());
+            assertTrue(tailer.wasPadding());
+            assertFalse(tailer.index(-1));
+            assertTrue(tailer.wasPadding());
 
-        assertTrue(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(0, tailer.index());
-        assertTrue(tailer.index(0));
-        assertFalse(tailer.wasPadding());
+            appender.startExcerpt(48);
+            appender.position(48);
+            appender.finish();
 
-        // rewind it to the start - issue # 12
-        assertFalse(tailer.index(-1));
-        assertEquals(-1, tailer.index());
-        assertTrue(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(0, tailer.index());
-        // end of issue # 12;
+            assertTrue(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(0, tailer.index());
+            assertTrue(tailer.index(0));
+            assertFalse(tailer.wasPadding());
 
-        assertFalse(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(0, tailer.index());
-        assertFalse(tailer.index(1));
-        assertFalse(tailer.wasPadding());
+            // rewind it to the start - issue # 12
+            assertFalse(tailer.index(-1));
+            assertEquals(-1, tailer.index());
+            assertTrue(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(0, tailer.index());
+            // end of issue # 12;
 
-        appender.startExcerpt(48);
-        appender.position(48);
-        appender.finish();
+            assertFalse(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(0, tailer.index());
+            assertFalse(tailer.index(1));
+            assertFalse(tailer.wasPadding());
 
-        assertTrue(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(2, tailer.index());
-        assertTrue(tailer.index(1));
-        assertFalse(tailer.wasPadding());
-        assertEquals(1, tailer.index());
+            appender.startExcerpt(48);
+            appender.position(48);
+            appender.finish();
 
-        assertFalse(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(1, tailer.index());
-        assertFalse(tailer.index(2));
-        assertFalse(tailer.wasPadding());
-        assertEquals(2, tailer.index());
+            assertTrue(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(2, tailer.index());
+            assertTrue(tailer.index(1));
+            assertFalse(tailer.wasPadding());
+            assertEquals(1, tailer.index());
 
-        // doesn't fit.
-        appender.startExcerpt(48);
-        appender.position(48);
-        appender.finish();
+            assertFalse(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(1, tailer.index());
+            assertFalse(tailer.index(2));
+            assertFalse(tailer.wasPadding());
+            assertEquals(2, tailer.index());
 
-        assertFalse(tailer.index(2));
-        assertTrue(tailer.wasPadding());
-        assertEquals(2, tailer.index());
+            // doesn't fit.
+            appender.startExcerpt(48);
+            appender.position(48);
+            appender.finish();
 
-        assertTrue(tailer.index(1));
+            assertFalse(tailer.index(2));
+            assertTrue(tailer.wasPadding());
+            assertEquals(2, tailer.index());
 
-        assertTrue(tailer.nextIndex());
-        assertFalse(tailer.wasPadding());
-        assertEquals(3, tailer.index());
+            assertTrue(tailer.index(1));
 
-        assertFalse(tailer.index(2));
-        assertTrue(tailer.wasPadding());
-        assertEquals(2, tailer.index());
+            assertTrue(tailer.nextIndex());
+            assertFalse(tailer.wasPadding());
+            assertEquals(3, tailer.index());
 
-        assertTrue(tailer.index(3));
-        assertFalse(tailer.wasPadding());
-        assertEquals(3, tailer.index());
+            assertFalse(tailer.index(2));
+            assertTrue(tailer.wasPadding());
+            assertEquals(2, tailer.index());
 
-        assertFalse(tailer.index(4));
-        assertFalse(tailer.wasPadding());
-        assertEquals(4, tailer.index());
+            assertTrue(tailer.index(3));
+            assertFalse(tailer.wasPadding());
+            assertEquals(3, tailer.index());
 
-        chronicle1.close();
-        chronicle2.close();
+            assertFalse(tailer.index(4));
+            assertFalse(tailer.wasPadding());
+            assertEquals(4, tailer.index());
+
+            appender.close();
+            tailer.close();
+        } finally {
+            chronicle1.close();
+            chronicle2.close();
+
+            assertClean(basePath);
+        }
     }
 
     @Test
     public void singleThreaded() throws IOException {
         final String basePath = getTestPath();
+        final int runs = 50000;
 
         ChronicleConfig config = ChronicleConfig.TEST.clone();
         // TODO fix for 4096 !!!
@@ -199,7 +227,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             Random rand = new Random(1);
             // finish just at the end of the first page.
             int idx = 0;
-            for (i = 0; i < 50000; i++) {
+            for (i = 0; i < runs; i++) {
 //                System.out.println(i + " " + idx);
 //                if (i == 28)
 //                    ChronicleIndexReader.main(basePath + ".index");
@@ -242,9 +270,9 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             r.close();
         } finally {
             chronicle.close();
-            System.out.println("i: " + i);
-//            ChronicleIndexReader.main(basePath + ".index");
-//            ChronicleTools.deleteOnExit(basePath);
+
+            assertEquals(runs,i);
+            assertClean(basePath);
         }
     }
 
@@ -262,7 +290,8 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         int dataBlockSize = 1 << 26;
         config.dataBlockSize(dataBlockSize);
         config.indexBlockSize(dataBlockSize / 4);
-        IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+
+        final Chronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
         // shorten the test for a build server.
@@ -273,19 +302,21 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
-                    final ExcerptAppender w = chronicle.createAppender();
+                    final Chronicle c = new IndexedChronicle(basePath, config);
+                    final ExcerptAppender w = c.createAppender();
                     for (int i = 0; i < words; i += size) {
                         w.startExcerpt();
-                        for (int s = 0; s < size; s++)
+                        for (int s = 0; s < size; s++) {
                             w.writeInt(1 + i);
+                        }
+
 //                        w.position(4L * size);
                         w.finish();
 //                        System.out.println(i);
                     }
-                    w.close();
 
-//                    chronicle.close();
+                    w.close();
+                    c.close();
                 } catch (Throwable e) {
                     e.printStackTrace();
                 }
@@ -333,9 +364,11 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             "maxJitter: " + maxJitter / 1000 + " us, " +
             "maxDelay: " + maxDelay / 1000 + " us," + "");
 //                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
-        Thread.sleep(200);
-        
-        ChronicleTools.deleteOnExit(basePath);
+
+
+        t.join();
+        chronicle.close();
+        assertClean(basePath);
     }
 
     @Test
@@ -452,7 +485,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 System.out.println("i: " + i);
 
             long indexFileSize = indexFile.length();
-            IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+            final Chronicle chronicle = new IndexedChronicle(basePath, config);
             assertEquals("Index should not grow on open (i=" + i + ")", indexFileSize, indexFile.length());
 
             if (i == 0) {
@@ -503,112 +536,109 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             assertFalse(excerpt.index(-1));
             chronicle.close();
         }
+
+        assertClean(basePath);
     }
 
     @Test
     public void testFindRange() throws IOException {
         final String basePath = getTestPath();
 
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
-        ExcerptAppender appender = chronicle.createAppender();
-        List<Integer> ints = new ArrayList<Integer>();
-        for (int i = 0; i < 1000; i += 10) {
-            appender.startExcerpt();
-            appender.writeInt(i);
-            appender.finish();
-            ints.add(i);
-        }
+        final Chronicle chronicle = new IndexedChronicle(basePath);
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            List<Integer> ints = new ArrayList<Integer>();
+            for (int i = 0; i < 1000; i += 10) {
+                appender.startExcerpt();
+                appender.writeInt(i);
+                appender.finish();
+                ints.add(i);
+            }
 
-        Excerpt excerpt = chronicle.createExcerpt();
-        final MyExcerptComparator mec = new MyExcerptComparator();
-        // exact matches at a the start
+            Excerpt excerpt = chronicle.createExcerpt();
+            final MyExcerptComparator mec = new MyExcerptComparator();
+            // exact matches at a the start
 
-        mec.lo = mec.hi = -1;
-        assertEquals(~0, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 0;
-        assertEquals(0, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 9;
-        assertEquals(~1, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 10;
-        assertEquals(1, excerpt.findMatch(mec));
+            mec.lo = mec.hi = -1;
+            assertEquals(~0, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 0;
+            assertEquals(0, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 9;
+            assertEquals(~1, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 10;
+            assertEquals(1, excerpt.findMatch(mec));
 
-        // exact matches at a the end
-        mec.lo = mec.hi = 980;
-        assertEquals(98, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 981;
-        assertEquals(~99, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 990;
-        assertEquals(99, excerpt.findMatch(mec));
-        mec.lo = mec.hi = 1000;
-        assertEquals(~100, excerpt.findMatch(mec));
+            // exact matches at a the end
+            mec.lo = mec.hi = 980;
+            assertEquals(98, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 981;
+            assertEquals(~99, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 990;
+            assertEquals(99, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 1000;
+            assertEquals(~100, excerpt.findMatch(mec));
 
 
-        // range match near the start
-        long[] startEnd = new long[2];
+            // range match near the start
+            long[] startEnd = new long[2];
 
-        mec.lo = 0;
-        mec.hi = 3;
-        excerpt.findRange(startEnd, mec);
-        assertEquals("[0, 1]", Arrays.toString(startEnd));
+            mec.lo = 0;
+            mec.hi = 3;
+            excerpt.findRange(startEnd, mec);
+            assertEquals("[0, 1]", Arrays.toString(startEnd));
 
-        mec.lo = 21;
-        mec.hi = 29;
-        excerpt.findRange(startEnd, mec);
-        assertEquals("[3, 3]", Arrays.toString(startEnd));
+            mec.lo = 21;
+            mec.hi = 29;
+            excerpt.findRange(startEnd, mec);
+            assertEquals("[3, 3]", Arrays.toString(startEnd));
 
-        /*
-        mec.lo = 129;
-        mec.hi = 631;
-        testSearchRange(ints, excerpt, mec, startEnd);
-*/
-        Random rand = new Random(1);
-        for (int i = 0; i < 1000; i++) {
-            int x = rand.nextInt(1010) - 5;
-            int y = rand.nextInt(1010) - 5;
-            mec.lo = Math.min(x, y);
-            mec.hi = Math.max(x, y);
+            /*
+            mec.lo = 129;
+            mec.hi = 631;
             testSearchRange(ints, excerpt, mec, startEnd);
+    */
+            Random rand = new Random(1);
+            for (int i = 0; i < 1000; i++) {
+                int x = rand.nextInt(1010) - 5;
+                int y = rand.nextInt(1010) - 5;
+                mec.lo = Math.min(x, y);
+                mec.hi = Math.max(x, y);
+                testSearchRange(ints, excerpt, mec, startEnd);
+            }
+
+        } finally {
+            chronicle.close();
+            assertClean(basePath);
         }
-
-        chronicle.close();
-
     }
 
     @Test
     public void testParseLines() throws IOException {
         final String basePath = getTestPath();
+        final Chronicle chronicle = new IndexedChronicle(basePath);
 
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
-        ExcerptAppender appender = chronicle.createAppender();
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            int runs = 10000;
+            for (int i = 0; i < runs; i++) {
+                appender.startExcerpt();
+                appender.append("Hello world ").append(i).append("\n");
+                appender.finish();
+            }
 
-        int runs = 10000;
-        for (int i = 0; i < runs; i++) {
-            appender.startExcerpt();
-            appender.append("Hello world ").append(i).append("\n");
-            appender.finish();
+            ExcerptTailer tailer = chronicle.createTailer();
+            for (int i = 0; i < runs; i++) {
+                assertTrue(tailer.nextIndex());
+                String s = tailer.parseUTF(StopCharTesters.CONTROL_STOP);
+                assertEquals("Hello world " + i, s);
+                tailer.finish();
+            }
+
+            tailer.close();
+        } finally {
+            chronicle.close();
+            assertClean(basePath);
         }
-
-        ExcerptTailer tailer = chronicle.createTailer();
-        for (int i = 0; i < runs; i++) {
-            assertTrue(tailer.nextIndex());
-            String s = tailer.parseUTF(StopCharTesters.CONTROL_STOP);
-//            System.out.println(s);
-            assertEquals("Hello world " + i, s);
-            tailer.finish();
-        }
-        chronicle.close();
-    }
-
-    static class MyExcerptComparator implements ExcerptComparator {
-
-        int lo, hi;
-
-        @Override
-        public int compare(Excerpt excerpt) {
-            final int x = excerpt.readInt();
-            return x < lo ? -1 : x > hi ? +1 : 0;
-        }
-
     }
 
 }
