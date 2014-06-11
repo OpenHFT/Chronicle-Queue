@@ -209,6 +209,19 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     }
 
     @Test
+    public void testClean() throws IOException {
+        final String basePath = getTestPath();
+
+        final Chronicle chronicle = new IndexedChronicle(basePath);
+        assertExists(basePath);
+
+        chronicle.close();
+        chronicle.clear();
+
+        assertNotExists(basePath);
+    }
+
+    @Test
     public void singleThreaded() throws IOException {
         final String basePath = getTestPath();
         final int runs = 50000;

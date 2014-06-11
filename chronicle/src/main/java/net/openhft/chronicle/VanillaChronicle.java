@@ -29,9 +29,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import static net.openhft.chronicle.VanillaChronicleConfig.*;
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_BITS;
+import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_MASK;
+import static net.openhft.chronicle.VanillaChronicleConfig.THREAD_ID_MASK;
 
 /**
  * Created by peter
@@ -206,6 +207,7 @@ public class VanillaChronicle implements Chronicle {
         dataCache.close();
     }
 
+    @Override
     public void clear() {
         indexCache.close();
         dataCache.close();

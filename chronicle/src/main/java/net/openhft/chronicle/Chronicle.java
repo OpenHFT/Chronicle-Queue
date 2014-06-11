@@ -73,4 +73,6 @@ public interface Chronicle extends Closeable {
     long lastWrittenIndex();
 
     long size();
+
+    void clear();
 }

@@ -195,6 +195,12 @@ public class IndexedChronicle implements Chronicle {
         return lastWrittenIndex + 1;
     }
 
+    @Override
+    public void clear() {
+        new File(basePath + ".index").delete();
+        new File(basePath + ".data").delete();
+    }
+
     /**
      * Returns the base file name backing this instance of IndexChronicle. Index chronicle uses two files:
      * <ul>

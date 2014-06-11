@@ -21,6 +21,7 @@ import org.junit.rules.TestName;
 
 import java.io.File;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -42,6 +43,18 @@ public class IndexedChronicleTestBase {
         ChronicleTools.deleteOnExit(path);
 
         return path;
+    }
+
+    protected static void assertExists(String path) {
+        assertNotNull(path);
+        assertTrue(new File(path + ".index").exists());
+        assertTrue(new File(path + ".data").exists());
+    }
+
+    protected static void assertNotExists(String path) {
+        assertNotNull(path);
+        assertFalse(new File(path + ".index").exists());
+        assertFalse(new File(path + ".data").exists());
     }
 
     protected static void assertClean(String path) {

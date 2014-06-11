@@ -96,6 +96,11 @@ public class InProcessChronicleSink implements Chronicle {
         return chronicle.size();
     }
 
+    @Override
+    public void clear() {
+        chronicle.clear();
+    }
+
     private class SinkExcerpt extends WrappedExcerpt {
         @SuppressWarnings("unchecked")
         public SinkExcerpt(ExcerptCommon excerpt) {

@@ -141,6 +141,11 @@ public class InProcessChronicleSource implements Chronicle {
     }
 
     @Override
+    public void clear() {
+        chronicle.clear();
+    }
+
+    @Override
     public void close() {
         closed = true;
         try {
