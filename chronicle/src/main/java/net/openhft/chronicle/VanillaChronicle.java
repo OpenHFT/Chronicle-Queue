@@ -71,13 +71,13 @@ public class VanillaChronicle implements Chronicle {
         int indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
         int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
 
-        this.indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache, config.cleanupOnClose());
+        this.indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache, config);
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
 
         this.dataBlockSizeBits = Maths.intLog2(config.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
-        this.dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache, config.cleanupOnClose());
+        this.dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache, config);
 
         this.entriesForCycleBits = Maths.intLog2(config.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;

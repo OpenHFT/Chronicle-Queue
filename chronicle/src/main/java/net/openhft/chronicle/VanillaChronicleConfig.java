@@ -55,6 +55,8 @@ public class VanillaChronicleConfig {
     private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
     private boolean synchronous = false;
     private boolean cleanupOnClose = false;
+    private int dataCacheCapacity = 32;
+    private int indexCacheCapacity = 32;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
         this.cycleFormat = cycleFormat;
@@ -133,5 +135,23 @@ public class VanillaChronicleConfig {
 
     public boolean cleanupOnClose() {
         return cleanupOnClose;
+    }
+
+    public VanillaChronicleConfig dataCacheCapacity(int dataCacheCapacity) {
+        this.dataCacheCapacity = dataCacheCapacity;
+        return this;
+    }
+
+    public int dataCacheCapacity() {
+        return this.dataCacheCapacity;
+    }
+
+    public VanillaChronicleConfig indexCacheCapacity(int indexCacheCapacity) {
+        this.indexCacheCapacity = indexCacheCapacity;
+        return this;
+    }
+
+    public int indexCacheCapacity() {
+        return this.indexCacheCapacity;
     }
 }

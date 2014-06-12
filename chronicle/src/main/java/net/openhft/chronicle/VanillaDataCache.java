@@ -18,13 +18,13 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 public class VanillaDataCache implements Closeable {
-    private static final int MAX_SIZE = 32;
     private static final String FILE_NAME_PREFIX = "data-";
 
     private final String basePath;
@@ -33,23 +33,23 @@ public class VanillaDataCache implements Closeable {
     private final DateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
-    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache) {
-        this(basePath, blockBits, dateCache, MAX_SIZE, false);
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
+        this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
     }
 
-    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, int maxElementsInCache) {
-        this(basePath, blockBits, dateCache, maxElementsInCache, false);
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
+        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
     }
 
-    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, boolean cleanupOnClose) {
-        this(basePath, blockBits, dateCache, MAX_SIZE, cleanupOnClose);
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
+        this(basePath, blockBits, dateCache, capacity, false);
     }
 
-    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache, int maxElementsInCache, boolean cleanupOnClose) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache = new VanillaMappedCache<DataKey>(maxElementsInCache, true, cleanupOnClose);
+        this.cache = new VanillaMappedCache<DataKey>(capacity, true, cleanupOnClose);
     }
 
 
