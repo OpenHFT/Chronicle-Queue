@@ -1251,4 +1251,13 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     public int readUnsignedByteOrThrow() throws BufferUnderflowException {
         return common.readUnsignedByteOrThrow();
     }
+
+    public String toDebugString() {
+        return common.toDebugString();
+    }
+
+    @Override
+    public boolean compareAndSwapDouble(long offset, double expected, double x) {
+        return common.compareAndSwapDouble(offset, expected, x);
+    }
 }
