@@ -388,8 +388,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
-    @Test
     @Ignore
+    @Test(expected = UnsupportedOperationException.class)
     public void testFindRange() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
