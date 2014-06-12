@@ -327,10 +327,10 @@ public class IndexedChronicle implements Chronicle {
 
         protected AbstractIndexedExcerpt() throws IOException {
             super(NO_PAGE, NO_PAGE);
-            cacheLineSize = config().cacheLineSize();
+            cacheLineSize = IndexedChronicle.this.config.cacheLineSize();
             cacheLineMask = (cacheLineSize - 1);
-            dataBlockSize = config().dataBlockSize();
-            indexBlockSize = config().indexBlockSize();
+            dataBlockSize = IndexedChronicle.this.config.dataBlockSize();
+            indexBlockSize = IndexedChronicle.this.config.indexBlockSize();
             indexEntriesPerLine = (cacheLineSize - 8) / 4;
             indexEntriesPerBlock = indexBlockSize * indexEntriesPerLine / cacheLineSize;
             loadIndexBuffer();
@@ -344,8 +344,28 @@ public class IndexedChronicle implements Chronicle {
             return index;
         }
 
-        ExcerptCommon toStart() {
+        protected ExcerptCommon toStart0() {
             index = -1;
+            return this;
+        }
+
+        protected ExcerptCommon toEndForRead0() {
+            index = IndexedChronicle.this.size();
+            try {
+                indexForRead(index);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+            return this;
+        }
+
+        protected ExcerptCommon toEndForAppend0() {
+            index = IndexedChronicle.this.size();
+            try {
+                indexForAppender(index);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
             return this;
         }
 
@@ -483,7 +503,6 @@ public class IndexedChronicle implements Chronicle {
         void loadNextDataBuffer(long offsetInThisBuffer) throws IOException {
             dataStartOffset += offsetInThisBuffer / dataBlockSize * dataBlockSize;
             loadDataBuffer();
-
         }
 
         void loadDataBuffer() throws IOException {
@@ -499,86 +518,6 @@ public class IndexedChronicle implements Chronicle {
             throw new UnsupportedOperationException();
         }
 
-        public long findMatch(@NotNull ExcerptComparator comparator) {
-            long lo = 0, hi = lastWrittenIndex();
-            while (lo <= hi) {
-                long mid = (hi + lo) >>> 1;
-                if (!index(mid)) {
-                    if (mid > lo)
-                        index(--mid);
-                    else
-                        break;
-                }
-                int cmp = comparator.compare((Excerpt) this);
-                finish();
-                if (cmp < 0)
-                    lo = mid + 1;
-                else if (cmp > 0)
-                    hi = mid - 1;
-                else
-                    return mid; // key found
-            }
-            return ~lo; // -(lo + 1)
-        }
-
-        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
-            // lower search range
-            long lo1 = 0, hi1 = lastWrittenIndex();
-            // upper search range
-            long lo2 = 0, hi2 = hi1;
-            boolean both = true;
-            // search for the low values.
-            while (lo1 <= hi1) {
-                long mid = (hi1 + lo1) >>> 1;
-                if (!index(mid)) {
-                    if (mid > lo1)
-                        index(--mid);
-                    else
-                        break;
-                }
-                int cmp = comparator.compare((Excerpt) this);
-                finish();
-
-                if (cmp < 0) {
-                    lo1 = mid + 1;
-                    if (both)
-                        lo2 = lo1;
-                }
-                else if (cmp > 0) {
-                    hi1 = mid - 1;
-                    if (both)
-                        hi2 = hi1;
-                }
-                else {
-                    hi1 = mid - 1;
-                    if (both)
-                        lo2 = mid + 1;
-                    both = false;
-                }
-            }
-            // search for the high values.
-            while (lo2 <= hi2) {
-                long mid = (hi2 + lo2) >>> 1;
-                if (!index(mid)) {
-                    if (mid > lo2)
-                        index(--mid);
-                    else
-                        break;
-                }
-                int cmp = comparator.compare((Excerpt) this);
-                finish();
-
-                if (cmp <= 0) {
-                    lo2 = mid + 1;
-                }
-                else {
-                    hi2 = mid - 1;
-                }
-            }
-            startEnd[0] = lo1; // inclusive
-            startEnd[1] = lo2; // exclusive
-        }
-
         /**
          * For compatibility with Java-Lang 6.2.
          */
@@ -588,10 +527,8 @@ public class IndexedChronicle implements Chronicle {
         }
     }
 
-    protected class IndexedExcerpt extends AbstractIndexedExcerpt implements Excerpt {
-        private boolean padding = true;
-
-        protected IndexedExcerpt() throws IOException {
+    private class IndexedExcerpt extends AbstractIndexedExcerpt implements Excerpt {
+        IndexedExcerpt() throws IOException {
         }
 
         public void startExcerpt(long capacity) {
@@ -600,12 +537,10 @@ public class IndexedChronicle implements Chronicle {
             if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
                 // check we are the start of a block.
                 checkNewIndexLine();
-
                 writePaddedEntry();
 
                 try {
                     loadNextDataBuffer();
-
                 } catch (IOException e) {
                     throw new IllegalStateException(e);
                 }
@@ -685,7 +620,6 @@ public class IndexedChronicle implements Chronicle {
             assert indexBaseForLine >= 0 && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
             appendToIndex();
-            // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
             indexPositionAddr += 8;
         }
 
@@ -696,19 +630,14 @@ public class IndexedChronicle implements Chronicle {
         @NotNull
         @Override
         public Excerpt toStart() {
-            index = -1;
+            super.toStart0();
             return this;
         }
 
         @NotNull
         @Override
         public Excerpt toEnd() {
-            index = chronicle().size();
-            try {
-                indexForRead(index);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+            super.toEndForRead0();
             return this;
         }
 
@@ -732,18 +661,100 @@ public class IndexedChronicle implements Chronicle {
                 return false;
             }
         }
+
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            long lo = 0, hi = lastWrittenIndex();
+            while (lo <= hi) {
+                long mid = (hi + lo) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare(this);
+                finish();
+                if (cmp < 0)
+                    lo = mid + 1;
+                else if (cmp > 0)
+                    hi = mid - 1;
+                else
+                    return mid; // key found
+            }
+            return ~lo; // -(lo + 1)
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+            // lower search range
+            long lo1 = 0, hi1 = lastWrittenIndex();
+            // upper search range
+            long lo2 = 0, hi2 = hi1;
+            boolean both = true;
+            // search for the low values.
+            while (lo1 <= hi1) {
+                long mid = (hi1 + lo1) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo1)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare(this);
+                finish();
+
+                if (cmp < 0) {
+                    lo1 = mid + 1;
+                    if (both)
+                        lo2 = lo1;
+                }
+                else if (cmp > 0) {
+                    hi1 = mid - 1;
+                    if (both)
+                        hi2 = hi1;
+                }
+                else {
+                    hi1 = mid - 1;
+                    if (both)
+                        lo2 = mid + 1;
+                    both = false;
+                }
+            }
+            // search for the high values.
+            while (lo2 <= hi2) {
+                long mid = (hi2 + lo2) >>> 1;
+                if (!index(mid)) {
+                    if (mid > lo2)
+                        index(--mid);
+                    else
+                        break;
+                }
+                int cmp = comparator.compare(this);
+                finish();
+
+                if (cmp <= 0) {
+                    lo2 = mid + 1;
+                }
+                else {
+                    hi2 = mid - 1;
+                }
+            }
+            startEnd[0] = lo1; // inclusive
+            startEnd[1] = lo2; // exclusive
+        }
     }
 
-    public class IndexedExcerptAppender extends AbstractIndexedExcerpt implements ExcerptAppender {
+    private class IndexedExcerptAppender extends AbstractIndexedExcerpt implements ExcerptAppender {
         private boolean nextSynchronous;
 
-        public IndexedExcerptAppender() throws IOException {
+        IndexedExcerptAppender() throws IOException {
             toEnd();
         }
 
         @Override
         public void startExcerpt() {
-            startExcerpt(config().messageCapacity());
+            startExcerpt(IndexedChronicle.this.config.messageCapacity());
         }
 
         public void startExcerpt(long capacity) {
@@ -753,8 +764,11 @@ public class IndexedChronicle implements Chronicle {
                 toEnd();
             }
 
-            if (capacity >= config.dataBlockSize())
-                throw new IllegalArgumentException("Capacity too large " + capacity + " >= " + config.dataBlockSize());
+            if (capacity >= IndexedChronicle.this.config.dataBlockSize()) {
+                throw new IllegalArgumentException(
+                    "Capacity too large " + capacity + " >= " + IndexedChronicle.this.config.dataBlockSize());
+            }
+
             // if the capacity is to large, roll the previous entry, and there was one
             if (positionAddr + capacity > dataStartAddr + dataBlockSize) {
                 // check we are the start of a block.
@@ -775,7 +789,7 @@ public class IndexedChronicle implements Chronicle {
             startAddr = positionAddr;
             limitAddr = positionAddr + capacity;
             finished = false;
-            nextSynchronous = config.synchronousMode();
+            nextSynchronous = IndexedChronicle.this.config.synchronousMode();
         }
 
         public void nextSynchronous(boolean nextSynchronous) {
@@ -865,12 +879,7 @@ public class IndexedChronicle implements Chronicle {
         @NotNull
         @Override
         public ExcerptAppender toEnd() {
-            index = chronicle().size();
-            try {
-                indexForAppender(index);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+            super.toEndForAppend0();
             return this;
         }
 
@@ -909,11 +918,9 @@ public class IndexedChronicle implements Chronicle {
         }
     }
 
-    public class IndexedExcerptTailer extends AbstractIndexedExcerpt implements ExcerptTailer {
-
-        public static final long UNSIGNED_INT_MASK = 0xFFFFFFFFL;
-
-        public IndexedExcerptTailer() throws IOException {
+    private class IndexedExcerptTailer extends AbstractIndexedExcerpt implements ExcerptTailer {
+        IndexedExcerptTailer() throws IOException {
+            super();
         }
 
         @Override
@@ -929,19 +936,14 @@ public class IndexedChronicle implements Chronicle {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            index = chronicle().size();
-            try {
-                indexForRead(index);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+            super.toEndForRead0();
             return this;
         }
 
         @NotNull
         @Override
         public ExcerptTailer toStart() {
-            super.toStart();
+            super.toStart0();
             return this;
         }
 
@@ -952,8 +954,6 @@ public class IndexedChronicle implements Chronicle {
             if (offset == 0) {
                 offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
             }
-
-            // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
             if (offset == 0) {
                 return false;
             }
@@ -969,7 +969,6 @@ public class IndexedChronicle implements Chronicle {
             if (offset == 0) {
                 offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
             }
-            // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + " was " + offset);
             if (offset == 0) {
                 return false;
             }

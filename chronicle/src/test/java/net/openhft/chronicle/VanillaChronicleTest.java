@@ -16,23 +16,18 @@
 
 package net.openhft.chronicle;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static final int N_THREADS = 4;
@@ -78,6 +73,37 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 return null;
             }
         };
+    }
+
+    static void testSearchRange(List<Integer> ints, Excerpt excerpt, MyExcerptComparator mec, long[] startEnd) {
+        int elo = Collections.binarySearch(ints, mec.lo);
+        if (elo < 0) {
+            elo = ~elo;
+        }
+
+        int ehi = Collections.binarySearch(ints, mec.hi);
+        if (ehi < 0) {
+            ehi = ~ehi;
+        } else {
+            ehi++;
+        }
+
+        excerpt.findRange(startEnd, mec);
+
+        assertEquals(
+            "lo: " + mec.lo + ", hi: " + mec.hi,
+            "[" + elo + ", " + ehi + "]",
+            Arrays.toString(startEnd));
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
+        }
     }
 
     // *************************************************************************
@@ -353,6 +379,86 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
             appender.close();
 
+            chronicle.checkCounts(1, 1);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
+    }
+
+    @Test
+    @Ignore
+    public void testFindRange() throws IOException {
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            List<Integer> ints = new ArrayList<Integer>();
+            for (int i = 0; i < 1000; i += 10) {
+                appender.startExcerpt();
+                appender.writeInt(i);
+                appender.finish();
+                ints.add(i);
+            }
+            appender.close();
+
+            Excerpt excerpt = chronicle.createExcerpt();
+            final MyExcerptComparator mec = new MyExcerptComparator();
+            // exact matches at a the start
+
+            mec.lo = mec.hi = -1;
+            assertEquals(~0, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 0;
+            assertEquals(0, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 9;
+            assertEquals(~1, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 10;
+            assertEquals(1, excerpt.findMatch(mec));
+
+            // exact matches at a the end
+            mec.lo = mec.hi = 980;
+            assertEquals(98, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 981;
+            assertEquals(~99, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 990;
+            assertEquals(99, excerpt.findMatch(mec));
+            mec.lo = mec.hi = 1000;
+            assertEquals(~100, excerpt.findMatch(mec));
+
+
+            // range match near the start
+            long[] startEnd = new long[2];
+
+            mec.lo = 0;
+            mec.hi = 3;
+            excerpt.findRange(startEnd, mec);
+            assertEquals("[0, 1]", Arrays.toString(startEnd));
+
+            mec.lo = 21;
+            mec.hi = 29;
+            excerpt.findRange(startEnd, mec);
+            assertEquals("[3, 3]", Arrays.toString(startEnd));
+
+            /*
+            mec.lo = 129;
+            mec.hi = 631;
+            testSearchRange(ints, excerpt, mec, startEnd);
+    */
+            Random rand = new Random(1);
+            for (int i = 0; i < 1000; i++) {
+                int x = rand.nextInt(1010) - 5;
+                int y = rand.nextInt(1010) - 5;
+                mec.lo = Math.min(x, y);
+                mec.hi = Math.max(x, y);
+                testSearchRange(ints, excerpt, mec, startEnd);
+            }
+
+            excerpt.close();
             chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();

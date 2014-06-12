@@ -494,8 +494,8 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         final File indexFile = new File(basePath + ".index");
 
         for (int i = 0; i < 1000; i++) {
-            if (i % 10 == 0)
-                System.out.println("i: " + i);
+            //if (i % 10 == 0)
+            //    System.out.println("i: " + i);
 
             long indexFileSize = indexFile.length();
             final Chronicle chronicle = new IndexedChronicle(basePath, config);
@@ -528,6 +528,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 tailer.finish();
             }
             assertFalse(tailer.nextIndex());
+
             Excerpt excerpt = chronicle.createExcerpt();
             // forward
             for (int j = 0; j < i; j++) {
@@ -538,6 +539,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 excerpt.finish();
             }
             assertFalse(excerpt.index(indexes[indexes.length - 1] + 1));
+
             // backward
             for (int j = i - 1; j >= 0; j--) {
                 assertTrue(excerpt.index(indexes[j]));
