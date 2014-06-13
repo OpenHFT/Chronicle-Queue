@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
@@ -33,29 +32,26 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
-
-public class InProcessChronicleTest {
+public class InProcessChronicleTest extends IndexedChronicleTestBase {
 
     public static final int PORT = 12345;
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
-        String baseDir = System.getProperty("java.io.tmpdir");
-        String srcBasePath = baseDir + "/IPCT.testOverTCP.source";
-        ChronicleTools.deleteOnExit(srcBasePath);
+        final String basePathSource = getTestPath("-source");
+        final String basePathSink = getTestPath("-sink");
+
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-//        config.dataBlockSize(4096);
-//        config.indexBlockSize(4096);
-        final IndexedChronicle underlying = new IndexedChronicle(srcBasePath/*, config*/);
-        final Chronicle source = new InProcessChronicleSource(underlying, PORT + 1);
+
+        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
+        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
+
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-//                    PosixJNAAffinity.INSTANCE.setAffinity(1 << 1);
                     ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
@@ -73,12 +69,6 @@ public class InProcessChronicleTest {
             }
         });
 
-//        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
-        String snkBasePath = baseDir + "/IPCT.testOverTCP.sink";
-        ChronicleTools.deleteOnExit(snkBasePath);
-        final IndexedChronicle underlying2 = new IndexedChronicle(snkBasePath/*, config*/);
-        Chronicle sink = new InProcessChronicleSink(underlying2, "localhost", PORT + 1);
-
         long start = System.nanoTime();
         t.start();
         ExcerptTailer excerpt = sink.createTailer();
@@ -92,33 +82,36 @@ public class InProcessChronicleTest {
                 assertEquals('\'' + text + '\'', i, n);
             excerpt.finish();
         }
+
         sink.close();
         System.out.println("There were " + count + " isSync messages");
         t.join();
+
         source.close();
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+
+        assertClean(basePathSource);
+        assertClean(basePathSink);
     }
 
     @Test
-    public void testPricePublishing() throws IOException, InterruptedException {
-        String baseDir = System.getProperty("java.io.tmpdir");
-        String sourceName = baseDir + "/price.source";
-        ChronicleTools.deleteOnExit(sourceName);
-        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
-        PriceWriter pw = new PriceWriter(source.createAppender());
+    public void testPricePublishing1() throws IOException, InterruptedException {
+        final String basePathSource = getTestPath("-source");
+        final String basePathSink = getTestPath("-sink");
 
-        String sinkName = baseDir + "/price.sink";
-        ChronicleTools.deleteOnExit(sinkName);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
+        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
+        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
 
+        final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
-        PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
+        final PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
             @Override
             public void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
                 count.incrementAndGet();
             }
         });
+
         pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
         reader.read();
 
@@ -136,30 +129,30 @@ public class InProcessChronicleTest {
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
                 (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
-
         source.close();
         sink.close();
+
+        assertClean(basePathSource);
+        assertClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
-        String baseDir = System.getProperty("java.io.tmpdir");
-        String sourceName = baseDir + "/price3.source";
-        ChronicleTools.deleteOnExit(sourceName);
-        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
-        PriceWriter pw = new PriceWriter(source.createAppender());
+        final String basePathSource = getTestPath("-source");
+        final String basePathSink = getTestPath("-sink");
 
-        String sinkName = baseDir + "/price3.sink";
-        ChronicleTools.deleteOnExit(sinkName);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
+        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
+        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
 
+        final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
-        PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
+        final PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
             @Override
             public void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
                 count.incrementAndGet();
             }
         });
+
         pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
         assertEquals(-1, reader.excerpt.index());
         reader.read();
@@ -172,8 +165,9 @@ public class InProcessChronicleTest {
         }
 
         long mid = System.nanoTime();
-        while (count.get() < prices)
+        while (count.get() < prices) {
             reader.read();
+        }
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
@@ -182,20 +176,20 @@ public class InProcessChronicleTest {
 
         source.close();
         sink.close();
+
+        assertClean(basePathSource);
+        assertClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing3() throws IOException, InterruptedException {
-        String baseDir = System.getProperty("java.io.tmpdir");
-        String sourceName = baseDir + "/price2.source";
-        ChronicleTools.deleteOnExit(sourceName);
-        Chronicle source = new InProcessChronicleSource(new IndexedChronicle(sourceName), PORT + 2);
-        PriceWriter pw = new PriceWriter(source.createAppender());
+        final String basePathSource = getTestPath("-source");
+        final String basePathSink = getTestPath("-sink");
 
-        String sinkName = baseDir + "/price2.sink";
-        ChronicleTools.deleteOnExit(sinkName);
-        Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(sinkName), "localhost", PORT + 2);
+        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
+        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
 
+        final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
         PriceReader reader = new PriceReader(sink.createTailer(), new PriceListener() {
             @Override
@@ -203,6 +197,7 @@ public class InProcessChronicleTest {
                 count.incrementAndGet();
             }
         });
+
         pw.onPrice(1, "symbol", 99.9, 1, 100.1, 2);
         assertEquals(-1, reader.excerpt.index());
         reader.read();
@@ -222,9 +217,11 @@ public class InProcessChronicleTest {
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Tailer%n",
                 (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
-
         source.close();
         sink.close();
+
+        assertClean(basePathSource);
+        assertClean(basePathSink);
     }
 
     // Took an average of 2.8 us to write and 7.6 us to read (Java 7)
@@ -255,6 +252,10 @@ public class InProcessChronicleTest {
 
     // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
     // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     interface PriceListener {
         void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);

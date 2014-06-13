@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
@@ -30,12 +29,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author Alex Koon
  */
-
-public class AssertionErrorNextIndexTest {
-    private static final String CHRONICLE
-            = System.getProperty("java.io.tmpdir")
-            + System.getProperty("file.separator")
-            + "AssertionErrorNextIndexTest";
+public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
     private static final Random R = new Random(1);
 
     private static void writeToChronicle(ExcerptAppender a, int i) {
@@ -57,22 +51,22 @@ public class AssertionErrorNextIndexTest {
 
     @Test
     @Ignore
-    public void startTest() throws IOException, InterruptedException {
-        ChronicleTools.deleteOnExit(CHRONICLE);
+    public void assertionErrorNextIndexTest() throws IOException, InterruptedException {
+        final String basePath = getTestPath();
 
         // shrink the chronicle chunks to trigger error earlier
         final ChronicleConfig config = ChronicleConfig.TEST;
         config.indexBlockSize(1024 * 1024);
         config.dataBlockSize(4 * 1024);
 
-        Chronicle chronicle1 = new IndexedChronicle(CHRONICLE, config);
+        Chronicle chronicle1 = new IndexedChronicle(basePath, config);
         ExcerptAppender appender = chronicle1.createAppender();
         for (int i = 0; i < 100; i++) {
             writeToChronicle(appender, i);
         }
         chronicle1.close();
         {
-            Chronicle chronicle = new IndexedChronicle(CHRONICLE, config);
+            Chronicle chronicle = new IndexedChronicle(basePath, config);
             ExcerptTailer tailer = chronicle.createTailer();
             int counter = 0;
             while (tailer.nextIndex()) {
@@ -85,13 +79,13 @@ public class AssertionErrorNextIndexTest {
             chronicle.close();
         }
 
-        ChronicleIndexReader.main(CHRONICLE + ".index");
+        ChronicleIndexReader.main(basePath + ".index");
         // Let the writer start writing first
         long lastIndex = 0;
         long counter = 0;
 
         while (counter < 100) {
-            Chronicle chronicle = new IndexedChronicle(CHRONICLE, config);
+            Chronicle chronicle = new IndexedChronicle(basePath, config);
             ExcerptTailer tailer = chronicle.createTailer();
             System.out.println("index(" + (lastIndex - 1) + ")");
             boolean ok = tailer.index(lastIndex - 1);
@@ -111,5 +105,7 @@ public class AssertionErrorNextIndexTest {
             lastIndex = tailer.index();
             chronicle.close();
         }
+
+        assertClean(basePath);
     }
 }

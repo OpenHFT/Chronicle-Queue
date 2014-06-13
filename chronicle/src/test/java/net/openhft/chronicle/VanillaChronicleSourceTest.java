@@ -21,21 +21,30 @@ import net.openhft.chronicle.tcp.VanillaChronicleSource;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
-public class VanillaChronicleSourceTest {
-    @Test
-    public void testReplication() throws IOException {
-        int RUNS = 100;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplication";
-        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
-        int localPort = chronicle.getLocalPort();
-        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
+public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
+
+    @Test
+    public void testReplication1() throws IOException {
+        final int RUNS = 100;
+
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
+
+        final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath), 0);
+        final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
 
         try {
-            ExcerptAppender appender = chronicle.createAppender();
-            ExcerptTailer tailer = chronicle2.createTailer();
+            final ExcerptAppender appender = source.createAppender();
+            final ExcerptTailer tailer = sink.createTailer();
 
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
@@ -43,36 +52,48 @@ public class VanillaChronicleSourceTest {
                 appender.append(value).append(' ');
                 appender.finish();
                 while(true){
-                  if(tailer.nextIndex())break;
+                  if(tailer.nextIndex()) {
+                      break;
+                  }
                 }
 
                 long val = tailer.parseLong();
-                System.out.println(val);
+                //System.out.println(val);
                 Assert.assertEquals("i: " + i, value, val);
                 Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
-
             }
+
+            appender.close();
+            tailer.close();
         } finally {
-            chronicle2.close();
-            chronicle.close();
-            chronicle2.clear();
-            chronicle.clear();
+            sink.close();
+            sink.checkCounts(1, 1);
+            sink.clear();
+
+            source.close();
+            source.checkCounts(1, 1);
+            source.clear();
+
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkBasePath).exists());
         }
     }
 
-
     @Test
     public void testReplication2() throws IOException {
-        int RUNS = 100;
+        final int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplication2";
-        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source"), 0);
-        int localPort = chronicle.getLocalPort();
-        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink"), "localhost", localPort);
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
+
+        final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath), 0);
+        final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
 
         try {
-            ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = source.createAppender();
 
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
@@ -81,44 +102,54 @@ public class VanillaChronicleSourceTest {
                 appender.finish();
             }
 
-            ExcerptTailer tailer = chronicle2.createTailer();
+            final ExcerptTailer tailer = sink.createTailer();
             for (int i = 0; i < RUNS; i++) {
                 long value = 1000000000 + i;
-                boolean nextIndex = tailer.nextIndex();
+                assertTrue(tailer.nextIndex());
                 long val = tailer.parseLong();
-                System.out.println(val);
+                //System.out.println(val);
                 Assert.assertEquals("i: " + i, value, val);
                 Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
-
             }
 
+            appender.close();
+            tailer.close();
         } finally {
-            chronicle2.close();
-            chronicle.close();
-            chronicle2.clear();
-            chronicle.clear();
+            sink.close();
+            sink.checkCounts(1, 1);
+            sink.clear();
+
+            source.close();
+            source.checkCounts(1, 1);
+            source.clear();
+
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkBasePath).exists());
         }
     }
 
     @Test
-    public void testReplicationWithRolling() throws Exception {
-        int RUNS = 500;
+    public void testReplicationWithRolling1() throws Exception {
+        final int RUNS = 500;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling";
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
+
+        final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
         config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
-        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 0);
 
-        int localPort = chronicle.getLocalPort();
-        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink", config), "localhost", localPort);
+        final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath, config), 0);
+        final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
 
         try {
-            ExcerptAppender appender = chronicle.createAppender();
-            ExcerptTailer tailer = chronicle2.createTailer();
+            final ExcerptAppender appender = source.createAppender();
+            final ExcerptTailer tailer = sink.createTailer();
 
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
@@ -127,38 +158,53 @@ public class VanillaChronicleSourceTest {
                 appender.finish();
                 Thread.sleep(10);
 
-                while(true){
-                    if(tailer.nextIndex())break;
-                }
+                // busy loop
+                while(!tailer.nextIndex());
+
                 Assert.assertEquals("i: " + i, value, tailer.parseLong());
                 Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
+
+            appender.close();
+            tailer.close();
         } finally {
-            chronicle2.close();
-            chronicle.close();
-            chronicle2.clear();
-            chronicle.clear();
+            sink.close();
+            sink.checkCounts(1, 1);
+            sink.clear();
+
+            source.close();
+            source.checkCounts(1, 1);
+            source.clear();
+
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkBasePath).exists());
         }
     }
 
 
     @Test
     public void testReplicationWithRolling2() throws Exception {
-        int RUNS = 100;
+        final int RUNS = 100;
 
-        String basePath = System.getProperty("java.io.tmpdir") + "/tmp/testReplicationWithRolling2";
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
+
+        final VanillaChronicleConfig config = new VanillaChronicleConfig();
         config.entriesPerCycle(1L << 20);
         config.cycleLength(1000, false);
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
-        VanillaChronicleSource chronicle = new VanillaChronicleSource(new VanillaChronicle(basePath + "-source", config), 55555);
-        VanillaChronicleSink chronicle2 = new VanillaChronicleSink(new VanillaChronicle(basePath + "-sink", config), "localhost", 55555);
+
+        final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath, config), 55555);
+        final VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 55555);
 
         try {
-            ExcerptAppender appender = chronicle.createAppender();
-            ExcerptTailer tailer = chronicle2.createTailer();
+            final ExcerptAppender appender = source.createAppender();
+            final ExcerptTailer tailer = sink.createTailer();
+
             for (int i = 0; i < RUNS; i++) {
                 appender.startExcerpt();
                 long value = 1000000000 + i;
@@ -166,19 +212,28 @@ public class VanillaChronicleSourceTest {
                 appender.finish();
                 Thread.sleep(100);
 
-                while(true){
-                    if(tailer.nextIndex())break;
-                }
+                // busy loop
+                while(!tailer.nextIndex());
+
                 long val = tailer.parseLong();
                 Assert.assertEquals("i: " + i, value, val);
                 Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
+
+            appender.close();
+            tailer.close();
         } finally {
-            chronicle2.close();
-            chronicle.close();
-            chronicle2.clear();
-            chronicle.clear();
+            sink.close();
+            sink.checkCounts(1, 1);
+            sink.clear();
+
+            source.close();
+            source.checkCounts(1, 1);
+            source.clear();
+
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkBasePath).exists());
         }
     }
 
@@ -199,11 +254,12 @@ public class VanillaChronicleSourceTest {
         config.cycleFormat("yyyyMMddHHmmss");
         config.indexBlockSize(16L << 10);
 
-        final String baseDir_source = System.getProperty("java.io.tmpdir") + "/tmp/testAppendRolling_Source";
-        final String baseDir_sink = System.getProperty("java.io.tmpdir") + "/tmp/testAppendRolling_Sink";
+        final String sourceBasePath = getTestPath("-source");
+        final String sinkBasePath = getTestPath("-sink");
+        assertNotNull(sourceBasePath);
+        assertNotNull(sinkBasePath);
 
-        final VanillaChronicle chronicle_source = new VanillaChronicle(baseDir_source, config);
-        final VanillaChronicleSource source = new VanillaChronicleSource(chronicle_source, 8888);
+        final VanillaChronicleSource source = new VanillaChronicleSource(new VanillaChronicle(sourceBasePath, config), 8888);
 
         new Thread(){
             public void run(){
@@ -216,8 +272,12 @@ public class VanillaChronicleSourceTest {
                         appender.append(value).append(' '); //this space is really important.
                         appender.finish();
                         Thread.sleep(100);
-                        if(i % 10==0)System.out.print(".");
+
+                        if(i % 10==0) {
+                            System.out.print(".");
+                        }
                     }
+                    appender.close();
                     System.out.print("\n");
                 }catch(Exception e){
                     e.printStackTrace();
@@ -241,46 +301,57 @@ public class VanillaChronicleSourceTest {
         }
 
         //create a tailer to get the first 50 items then exit the tailer
-        VanillaChronicle chronicle_sink = new VanillaChronicle(baseDir_sink, config);
-        VanillaChronicleSink sink = new VanillaChronicleSink(chronicle_sink, "localhost", 8888);
-        ExcerptTailer tailer = sink.createTailer();
+        final VanillaChronicleSink sink1 = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ExcerptTailer tailer1 = sink1.createTailer();
 
         int count=0;
-        System.out.println("Sink reading first 50 items then stopping");
+        System.out.println("Sink1 reading first 50 items then stopping");
         while (true) {
-            if(tailer.nextIndex()){
-                long ll = tailer.parseLong();
+            if(tailer1.nextIndex()) {
+                long ll = tailer1.parseLong();
                 int value = 1000000000 + count;
                 Assert.assertEquals(value, ll);
-                tailer.finish();
+                tailer1.finish();
                 count ++;
                 if(count == 50)break;
             }
         }
-        sink.close();
+
+        tailer1.close();
+        sink1.close();
+        sink1.checkCounts(1, 1);
 
         //now resume the tailer to get the first 50 items
-        chronicle_sink = new VanillaChronicle(baseDir_sink, config);
-        sink = new VanillaChronicleSink(chronicle_sink, "localhost", 8888);
-        tailer = sink.createTailer();
+        final VanillaChronicleSink sink2 = new VanillaChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ExcerptTailer tailer2 = sink2.createTailer();
         //Take the tailer to the last index (item 50) and start reading from there.
-        tailer.toEnd();
+        tailer2.toEnd();
 
-        System.out.println("Sink restarting to continue to read the next 50 items");
+        System.out.println("Sink2 restarting to continue to read the next 50 items");
         while (true) {
-            if(tailer.nextIndex()){
-                long ll = tailer.parseLong();
-                tailer.finish();
+            if(tailer2.nextIndex()) {
+                long ll = tailer2.parseLong();
+                tailer2.finish();
                 int value = 1000000000 + count;
                 Assert.assertEquals(value, ll);
                 count ++;
-                if(count == 100)break;
+                if(count == 100) {
+                    break;
+                }
             }
         }
 
+        tailer2.close();
+        sink2.close();
+        sink2.checkCounts(1, 1);
+
+        sink2.clear();
+
         source.close();
+        source.checkCounts(1, 1);
         source.clear();
-        sink.close();
-        sink.clear();
+
+        assertFalse(new File(sourceBasePath).exists());
+        assertFalse(new File(sinkBasePath).exists());
     }
 }

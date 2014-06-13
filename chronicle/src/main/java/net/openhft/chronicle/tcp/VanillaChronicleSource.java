@@ -206,9 +206,10 @@ public class VanillaChronicleSource implements Chronicle {
 
         @Override
         public void run() {
+            ExcerptTailer excerpt = null;
             try {
                 long lastSinkIndex = readIndex(socket);
-                ExcerptTailer excerpt = chronicle.createTailer();
+                excerpt = chronicle.createTailer();
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
                 excerpt.index(lastSinkIndex);
@@ -288,6 +289,10 @@ public class VanillaChronicleSource implements Chronicle {
                         logger.info("Connect {} died", socket, e);
                     }
                 }
+            } finally {
+                if(excerpt != null) {
+                    excerpt.close();
+                }
             }
         }
 
@@ -309,5 +314,9 @@ public class VanillaChronicleSource implements Chronicle {
             super.finish();
             wakeSessionHandlers();
         }
+    }
+
+    public void checkCounts(int min, int max) {
+        chronicle.checkCounts(min, max);
     }
 }

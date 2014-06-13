@@ -18,13 +18,13 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 public class VanillaDataCache implements Closeable {
-    private static final int MAX_SIZE = 32;
     private static final String FILE_NAME_PREFIX = "data-";
 
     private final String basePath;
@@ -33,13 +33,25 @@ public class VanillaDataCache implements Closeable {
     private final DateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
+        this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
+    }
 
-    public VanillaDataCache(String basePath, int blockBits, DateCache dateCache) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
+        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
+    }
+
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
+        this(basePath, blockBits, dateCache, capacity, false);
+    }
+
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache     = new VanillaMappedCache<DataKey>(MAX_SIZE, false);
+        this.cache = new VanillaMappedCache<DataKey>(capacity, true, cleanupOnClose);
     }
+
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
         return new File(
@@ -167,7 +179,10 @@ public class VanillaDataCache implements Closeable {
 
         @Override
         public boolean equals(Object obj) {
-            if (!(obj instanceof DataKey)) return false;
+            if (!(obj instanceof DataKey)) {
+                return false;
+            }
+
             DataKey key = (DataKey) obj;
             return dataCount == key.dataCount && threadId == key.threadId && cycle == key.cycle;
         }

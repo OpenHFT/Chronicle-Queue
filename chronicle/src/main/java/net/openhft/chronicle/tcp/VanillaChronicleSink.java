@@ -244,6 +244,7 @@ public class VanillaChronicleSink implements Chronicle {
     public void close() {
         closed = true;
         closeSocket(sc);
+        excerpt.close();
         chronicle.close();
     }
 
@@ -253,5 +254,9 @@ public class VanillaChronicleSink implements Chronicle {
 
     public void clear() {
         chronicle.clear();
+    }
+
+    public void checkCounts(int min, int max) {
+        chronicle.checkCounts(min, max);
     }
 }

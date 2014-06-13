@@ -30,110 +30,138 @@ import java.util.concurrent.Callable;
 
 import static org.junit.Assert.*;
 
-public class VanillaIndexCacheTest {
+public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     @Test
     public void testIndexFor() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testIndexFor");
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaIndexCache cache = new VanillaIndexCache(dir.getAbsolutePath(), 10 + 3, dateCache);
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
-        VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
-        vanillaBuffer0.writeLong(0, 0x12345678);
-        File file0 = cache.fileFor(cycle, 0, true);
-        assertEquals(8 << 10, file0.length());
-        assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
-        vanillaBuffer0.release();
+        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache);
 
-        VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
-        File file1 = cache.fileFor(cycle, 1, true);
-        assertEquals(8 << 10, file1.length());
-        vanillaBuffer1.release();
-        assertNotEquals(file1, file0);
+        try {
+            int cycle = (int) (System.currentTimeMillis() / 1000);
+            VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
+            vanillaBuffer0.writeLong(0, 0x12345678);
+            File file0 = cache.fileFor(cycle, 0, true);
+            assertEquals(8 << 10, file0.length());
+            assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
+            vanillaBuffer0.release();
 
-        VanillaMappedBytes vanillaBuffer2 = cache.indexFor(cycle, 2, true);
-        File file2 = cache.fileFor(cycle, 2, true);
-        assertEquals(8 << 10, file2.length());
-        vanillaBuffer2.release();
+            VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
+            File file1 = cache.fileFor(cycle, 1, true);
+            assertEquals(8 << 10, file1.length());
+            vanillaBuffer1.release();
+            assertNotEquals(file1, file0);
 
-        assertNotEquals(file2, file0);
-        assertNotEquals(file2, file1);
-        cache.close();
-        assertEquals(0, vanillaBuffer0.refCount());
-        assertEquals(0, vanillaBuffer1.refCount());
-        assertEquals(0, vanillaBuffer2.refCount());
+            VanillaMappedBytes vanillaBuffer2 = cache.indexFor(cycle, 2, true);
+            File file2 = cache.fileFor(cycle, 2, true);
+            assertEquals(8 << 10, file2.length());
+            vanillaBuffer2.release();
 
-        // check you can delete after closing.
-        assertTrue(file0.delete());
-        assertTrue(file1.delete());
-        assertTrue(file2.delete());
-        assertTrue(file0.getParentFile().delete());
+            assertNotEquals(file2, file0);
+            assertNotEquals(file2, file1);
+            cache.close();
+            assertEquals(0, vanillaBuffer0.refCount());
+            assertEquals(0, vanillaBuffer1.refCount());
+            assertEquals(0, vanillaBuffer2.refCount());
 
-        file0.getParentFile().getParentFile().delete();
+            // check you can delete after closing.
+            assertTrue(file0.delete());
+            assertTrue(file1.delete());
+            assertTrue(file2.delete());
+            assertTrue(file0.getParentFile().delete());
+
+            cache.checkCounts(1, 1);
+        } finally {
+            cache.close();
+            IOTools.deleteDir(baseDir);
+
+            assertFalse(new File(baseDir).exists());
+        }
     }
 
     @Test
     public void testLastIndexFile() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testLastIndexFile");
-        IOTools.deleteDir(dir.getAbsolutePath());
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
 
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        VanillaIndexCache cache = new VanillaIndexCache(dir.getAbsolutePath(), 10 + 3, dateCache);
+        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache);
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
+        final int cycle = (int) (System.currentTimeMillis() / 1000);
 
-        // Check that the index file count starts at 0 when the data directory is empty
-        assertEquals(0, cache.lastIndexFile(cycle));
+        try {
+            // Check that the index file count starts at 0 when the data directory is empty
+            assertEquals(0, cache.lastIndexFile(cycle));
 
-        VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
-        assertEquals("index-0", cache.fileFor(cycle, 0, true).getName());
-        vanillaBuffer0.release();
-        assertEquals(0, cache.lastIndexFile(cycle));
+            final VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
+            assertEquals("index-0", cache.fileFor(cycle, 0, true).getName());
+            vanillaBuffer0.release();
+            assertEquals(0, cache.lastIndexFile(cycle));
 
-        VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
-        assertEquals("index-1", cache.fileFor(cycle, 1, true).getName());
-        assertEquals(1, cache.lastIndexFile(cycle));
+            final VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
+            assertEquals("index-1", cache.fileFor(cycle, 1, true).getName());
+            vanillaBuffer1.release();
+            assertEquals(1, cache.lastIndexFile(cycle));
 
-        VanillaMappedBytes vanillaBuffer3 = cache.indexFor(cycle, 3, true);
-        assertEquals("index-3", cache.fileFor(cycle, 3, true).getName());
-        assertEquals(3, cache.lastIndexFile(cycle));
+            final VanillaMappedBytes vanillaBuffer3 = cache.indexFor(cycle, 3, true);
+            assertEquals("index-3", cache.fileFor(cycle, 3, true).getName());
+            vanillaBuffer3.release();
+            assertEquals(3, cache.lastIndexFile(cycle));
 
-        IOTools.deleteDir(dir.getAbsolutePath());
+            cache.checkCounts(1, 1);
+        } finally {
+            cache.close();
+            IOTools.deleteDir(baseDir);
+
+            assertFalse(new File(baseDir).exists());
+        }
     }
 
     @Test
     public void testConcurrentAppend() throws Exception {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "testConcurrentAppend");
-        IOTools.deleteDir(dir.getAbsolutePath());
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
 
-        DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
 
         // Use a small index file size so that the test frequently generates new index files
-        VanillaIndexCache cache = new VanillaIndexCache(dir.getAbsolutePath(), 5, dateCache);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 5, dateCache);
 
-        int cycle = (int) (System.currentTimeMillis() / 1000);
+        final int cycle = (int) (System.currentTimeMillis() / 1000);
         final int numberOfTasks = 2;
         final int countPerTask = 1000;
 
-        // Create tasks that append to the index
-        final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
-        long nextValue = countPerTask;
-        for (int i = 0; i < numberOfTasks; i++) {
-            final long endValue = nextValue + countPerTask;
-            tasks.add(createAppendTask(cache, cycle, nextValue, endValue));
-            nextValue = endValue;
+        try {
+            // Create tasks that append to the index
+            final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+            long nextValue = countPerTask;
+            for (int i = 0; i < numberOfTasks; i++) {
+                final long endValue = nextValue + countPerTask;
+                tasks.add(createAppendTask(cache, cycle, nextValue, endValue));
+                nextValue = endValue;
+            }
+
+            // Execute tasks using a thread per task
+            TestTaskExecutionUtil.executeConcurrentTasks(tasks, 30000L);
+
+            // Verify that all values can be read back from the index
+            final Set<Long> indexValues = readAllIndexValues(cache, cycle);
+            assertEquals(createRangeSet(countPerTask, nextValue), indexValues);
+
+            cache.checkCounts(1, 1);
+        } finally {
+            cache.close();
+            IOTools.deleteDir(baseDir);
+
+            assertFalse(new File(baseDir).exists());
         }
-
-        // Execute tasks using a thread per task
-        TestTaskExecutionUtil.executeConcurrentTasks(tasks, 30000L);
-
-        // Verify that all values can be read back from the index
-        final Set<Long> indexValues = readAllIndexValues(cache, cycle);
-        assertEquals(createRangeSet(countPerTask, nextValue), indexValues);
-
-        cache.close();
-        IOTools.deleteDir(dir.getAbsolutePath());
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     private Set<Long> readAllIndexValues(final VanillaIndexCache cache, final int cycle) throws IOException {
         final Set<Long> indexValues = new TreeSet<Long>();
@@ -170,7 +198,11 @@ public class VanillaIndexCacheTest {
             public Void call() throws Exception {
                 long counter = startValue;
                 while (counter < endValue) {
-                    cache.append(cycle, counter, false);
+                    final VanillaMappedBytes vmb = cache.append(cycle, counter, false);
+                    if(vmb != null) {
+                        vmb.release();
+                    }
+
                     counter++;
                 }
                 return null;

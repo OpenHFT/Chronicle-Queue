@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.Closeable;
 import java.io.File;
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.text.ParseException;
 
 public class VanillaIndexCache implements Closeable {
-    private static final int MAX_SIZE = 32;
     private static final String FILE_NAME_PREFIX = "index-";
 
     private final String basePath;
@@ -35,12 +35,25 @@ public class VanillaIndexCache implements Closeable {
     private final DateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
 
-    public VanillaIndexCache(String basePath, int blockBits, DateCache dateCache) {
+
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
+        this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
+    }
+
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
+        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
+    }
+
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
+        this(basePath, blockBits, dateCache, capacity, false);
+    }
+
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.baseFile = new File(basePath);
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache     = new VanillaMappedCache<IndexKey>(MAX_SIZE, true);
+        this.cache = new VanillaMappedCache<IndexKey>(capacity, true, cleanupOnClose);
     }
 
     public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {
