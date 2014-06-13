@@ -118,6 +118,10 @@ public class RollingChronicle implements Chronicle {
         masterFileCache.close();
     }
 
+    @Override
+    public void clear() {
+    }
+
     enum Type {
         Appender, Tailer, Excerpt
     }

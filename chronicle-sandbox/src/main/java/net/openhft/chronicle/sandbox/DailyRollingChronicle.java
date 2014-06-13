@@ -123,6 +123,10 @@ public class DailyRollingChronicle implements Chronicle {
         }
     }
 
+    @Override
+    public void clear() {
+    }
+
     synchronized DRFiles acquireDRFile(int fileIndex) {
         DRFiles drFiles = filesList.get(fileIndex);
         if (drFiles == null) {
