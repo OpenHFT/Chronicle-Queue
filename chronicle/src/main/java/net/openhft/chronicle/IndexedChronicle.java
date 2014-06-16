@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tools.SafeExcerptAppender;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
@@ -268,7 +269,14 @@ public class IndexedChronicle implements Chronicle {
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new IndexedExcerptAppender();
+        final ExcerptAppender appender = new IndexedExcerptAppender();
+
+        return !config.useSafeBuffer()
+            ? appender
+            : new SafeExcerptAppender(
+                appender,
+                config.safeBufferSize(),
+                config.leazySafeBuffer());
     }
 
     /**
