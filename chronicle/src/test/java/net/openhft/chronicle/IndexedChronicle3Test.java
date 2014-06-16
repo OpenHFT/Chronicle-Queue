@@ -40,17 +40,21 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
         final Chronicle chronicle = new IndexedChronicle(basePath,cfg);
 
-        ExcerptAppender appender = chronicle.createAppender();
+        final ExcerptAppender appender = chronicle.createAppender();
         assertTrue(appender instanceof SafeExcerptAppender);
-        appender.startExcerpt();
-        appender.writeLong(1);
-        appender.finish();
+        for(long i=0;i<100;i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.finish();
+        }
 
-        ExcerptTailer tailer = chronicle.createTailer().toStart();
-        assertTrue(tailer.nextIndex());
-        assertEquals(1, tailer.readLong());
-        assertEquals(1, tailer.readLong(0));
-        tailer.finish();
+        final ExcerptTailer tailer = chronicle.createTailer().toStart();
+        for(long i=0;i<100;i++) {
+            assertTrue(tailer.nextIndex());
+            assertEquals(i, tailer.readLong());
+            assertEquals(i, tailer.readLong(0));
+            tailer.finish();
+        }
 
         appender.close();
         tailer.close();

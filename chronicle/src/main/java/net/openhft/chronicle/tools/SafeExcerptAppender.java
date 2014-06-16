@@ -17,7 +17,6 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.lang.io.DirectBytes;
 import net.openhft.lang.io.DirectStore;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -25,7 +24,7 @@ import net.openhft.lang.model.constraints.NotNull;
 public class SafeExcerptAppender extends NativeBytes implements ExcerptAppender {
     private final ExcerptAppender appender;
     private final long bufferSize;
-    private DirectBytes buffer;
+    private DirectStore buffer;
 
     public SafeExcerptAppender(final @NotNull ExcerptAppender appender, long bufferSize) {
         this(appender, bufferSize, true);
@@ -56,14 +55,16 @@ public class SafeExcerptAppender extends NativeBytes implements ExcerptAppender 
     public void startExcerpt(long capacity) {
         assert capacity <= this.bufferSize;
         allocate();
-        buffer.positionAndSize(0,capacity);
+        capacityAddr = startAddr + capacity;
     }
 
     @Override
     public void finish() {
         if(this.startAddr != NO_PAGE) {
-            appender.startExcerpt(positionAddr - startAddr);
-            appender.write(buffer);
+            long size = positionAddr - startAddr;
+
+            appender.startExcerpt(size);
+            appender.write(this,0,size);
             appender.finish();
 
             reset();
@@ -75,7 +76,7 @@ public class SafeExcerptAppender extends NativeBytes implements ExcerptAppender 
         this.appender.close();
 
         if(this.buffer != null) {
-            this.buffer.release();
+            this.buffer.free();
 
             this.startAddr = NO_PAGE;
             this.limitAddr = NO_PAGE;
@@ -135,9 +136,9 @@ public class SafeExcerptAppender extends NativeBytes implements ExcerptAppender 
 
     private void allocate() {
         if(this.startAddr == NO_PAGE && buffer == null) {
-            buffer = DirectStore.allocateLazy(this.bufferSize).bytes();
+            buffer = DirectStore.allocateLazy(this.bufferSize);
             startAddr = buffer.address();
-            limitAddr = startAddr + buffer.capacity();
+            limitAddr = startAddr + this.bufferSize;
 
             reset();
         }
@@ -145,9 +146,8 @@ public class SafeExcerptAppender extends NativeBytes implements ExcerptAppender 
 
     private void reset() {
         if(this.startAddr != NO_PAGE && buffer != null) {
-            buffer.positionAndSize(0,this.bufferSize);
             positionAddr = buffer.address();
-            capacityAddr = limitAddr;
+            capacityAddr = startAddr + this.bufferSize;
         }
     }
 }
