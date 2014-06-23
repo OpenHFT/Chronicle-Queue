@@ -18,13 +18,13 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
 
-public class ChronicleSynkConfig implements Cloneable {
-    public static final ChronicleSynkConfig DEFAULT = new ChronicleSynkConfig();
+public class ChronicleSinkConfig implements Cloneable {
+    public static final ChronicleSinkConfig DEFAULT = new ChronicleSinkConfig();
 
     private int minBufferSize;
     private long reconnectDelay;
 
-    private ChronicleSynkConfig() {
+    private ChronicleSinkConfig() {
         minBufferSize = 256 * 1024;
         reconnectDelay = 500; // milliseconds
     }
@@ -33,7 +33,7 @@ public class ChronicleSynkConfig implements Cloneable {
     //
     // *************************************************************************
 
-    public ChronicleSynkConfig minBufferSize(int minBufferSize) {
+    public ChronicleSinkConfig minBufferSize(int minBufferSize) {
         this.minBufferSize = minBufferSize;
         return this;
     }
@@ -42,7 +42,7 @@ public class ChronicleSynkConfig implements Cloneable {
         return this.minBufferSize;
     }
 
-    public ChronicleSynkConfig reconnectDelay(long reconnectDelay) {
+    public ChronicleSinkConfig reconnectDelay(long reconnectDelay) {
         this.reconnectDelay = reconnectDelay;
         return this;
     }
@@ -58,9 +58,9 @@ public class ChronicleSynkConfig implements Cloneable {
     @NotNull
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
     @Override
-    public ChronicleSynkConfig clone() {
+    public ChronicleSinkConfig clone() {
         try {
-            return (ChronicleSynkConfig) super.clone();
+            return (ChronicleSinkConfig) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }

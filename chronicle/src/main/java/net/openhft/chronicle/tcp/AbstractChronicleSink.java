@@ -31,28 +31,28 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class AbstractChronicleSynk implements Chronicle {
+public abstract class AbstractChronicleSink implements Chronicle {
 
-    private final ChronicleSynkConfig config;
+    private final ChronicleSinkConfig config;
     private final InetSocketAddress address;
     private final Logger logger;
     private final List<SynkConnector> connectors;
 
     private volatile boolean closed;
 
-    protected AbstractChronicleSynk(String hostName, int port) {
-        this(hostName, port, ChronicleSynkConfig.DEFAULT.clone());
+    protected AbstractChronicleSink(String hostName, int port) {
+        this(hostName, port, ChronicleSinkConfig.DEFAULT.clone());
     }
 
-    protected AbstractChronicleSynk(String hostName, int port, @NotNull final ChronicleSynkConfig config) {
+    protected AbstractChronicleSink(String hostName, int port, @NotNull final ChronicleSinkConfig config) {
         this(new InetSocketAddress(hostName, port), config);
     }
 
-    protected AbstractChronicleSynk(@NotNull final InetSocketAddress address) {
-        this(address, ChronicleSynkConfig.DEFAULT.clone());
+    protected AbstractChronicleSink(@NotNull final InetSocketAddress address) {
+        this(address, ChronicleSinkConfig.DEFAULT.clone());
     }
 
-    protected AbstractChronicleSynk(@NotNull final InetSocketAddress address, @NotNull final ChronicleSynkConfig config) {
+    protected AbstractChronicleSink(@NotNull final InetSocketAddress address, @NotNull final ChronicleSinkConfig config) {
         this.config = config;
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.toString());
@@ -228,7 +228,7 @@ public abstract class AbstractChronicleSynk implements Chronicle {
         }
 
         public InetSocketAddress remoteAddress() {
-            return AbstractChronicleSynk.this.address;
+            return AbstractChronicleSink.this.address;
         }
     }
 }

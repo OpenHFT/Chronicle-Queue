@@ -29,28 +29,28 @@ import java.io.StreamCorruptedException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-public class InMemoryChronicleSynk extends AbstractChronicleSynk {
+public class InMemoryChronicleSink extends AbstractChronicleSink {
     private final ChronicleType type;
 
-    public InMemoryChronicleSynk(final ChronicleType type, String hostName, int port) {
+    public InMemoryChronicleSink(final ChronicleType type, String hostName, int port) {
         super(hostName, port);
 
         this.type = type;
     }
 
-    public InMemoryChronicleSynk(final ChronicleType type, String hostName, int port, @NotNull ChronicleSynkConfig config) {
+    public InMemoryChronicleSink(final ChronicleType type, String hostName, int port, @NotNull ChronicleSinkConfig config) {
         super(hostName, port, config);
 
         this.type = type;
     }
 
-    public InMemoryChronicleSynk(final ChronicleType type, @NotNull InetSocketAddress address) {
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull InetSocketAddress address) {
         super(address);
 
         this.type = type;
     }
 
-    public InMemoryChronicleSynk(final ChronicleType type, @NotNull InetSocketAddress address, @NotNull ChronicleSynkConfig config) {
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull InetSocketAddress address, @NotNull ChronicleSinkConfig config) {
         super(address, config);
 
         this.type = type;
@@ -59,15 +59,15 @@ public class InMemoryChronicleSynk extends AbstractChronicleSynk {
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return this.type == ChronicleType.INDEXED
-            ? new IndexedExcerptTailer(super.newConnector())
-            : new VanillaExcerptTailer(super.newConnector());
+            ? new InMemoryIndexedExcerptTailer(super.newConnector())
+            : new InMemoryVanillaExcerptTailer(super.newConnector());
     }
 
     // *************************************************************************
     //
     // *************************************************************************
 
-    private abstract class AbstractExcerptTailer extends NativeBytes implements ExcerptTailer {
+    private abstract class AbstractInMemoryExcerptTailer extends NativeBytes implements ExcerptTailer {
         protected final Logger logger;
         protected final SynkConnector connector;
         protected final ByteBuffer buffer;
@@ -75,7 +75,7 @@ public class InMemoryChronicleSynk extends AbstractChronicleSynk {
         protected long index;
         protected int lastSize;
 
-        public AbstractExcerptTailer(@NotNull final SynkConnector connector) {
+        public AbstractInMemoryExcerptTailer(@NotNull final SynkConnector connector) {
             super(NO_PAGE, NO_PAGE);
 
             this.connector = connector;
@@ -83,8 +83,6 @@ public class InMemoryChronicleSynk extends AbstractChronicleSynk {
             this.firstMessage = true;
             this.index = -1;
             this.lastSize = 0;
-            this.startAddr = ((DirectBuffer) buffer).address();
-            this.capacityAddr = startAddr + buffer.capacity();
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connector.remoteAddress().toString());
         }
 
@@ -150,13 +148,16 @@ public class InMemoryChronicleSynk extends AbstractChronicleSynk {
 
         @Override
         public Chronicle chronicle() {
-            return InMemoryChronicleSynk.this;
+            return InMemoryChronicleSink.this;
         }
     }
 
-    private final class IndexedExcerptTailer extends AbstractExcerptTailer {
-        public IndexedExcerptTailer(@NotNull final SynkConnector connector) {
+    private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerptTailer {
+        public InMemoryIndexedExcerptTailer(@NotNull final SynkConnector connector) {
             super(connector);
+
+            this.startAddr = ((DirectBuffer) buffer).address();
+            this.capacityAddr = startAddr + buffer.capacity();
         }
 
         @Override
@@ -222,9 +223,13 @@ public class InMemoryChronicleSynk extends AbstractChronicleSynk {
         }
     }
 
-    private final class VanillaExcerptTailer extends AbstractExcerptTailer {
-        public VanillaExcerptTailer(@NotNull final SynkConnector connector) {
+    private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerptTailer {
+        public InMemoryVanillaExcerptTailer(@NotNull final SynkConnector connector) {
             super(connector);
+
+
+            this.startAddr = ((DirectBuffer) buffer).address();
+            this.capacityAddr = startAddr + buffer.capacity();
         }
 
         @Override

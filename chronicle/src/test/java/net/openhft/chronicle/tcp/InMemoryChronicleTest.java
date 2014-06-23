@@ -27,12 +27,8 @@ import static org.junit.Assert.assertTrue;
 
 public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
 
-    @Test
-    public void testInMemorySynk_001() throws Exception {
-        final int items = 5;
-        final String basePathSource = getTestPath("-source");
-
-        final Chronicle source = indexedChronicleSource(basePathSource, BASE_PORT + 1);
+    public void testInMemorySink(Chronicle source, Chronicle sink) throws Exception {
+        final int items = 100;
         final ExcerptAppender appender = source.createAppender();
 
         try {
@@ -44,7 +40,6 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
 
             appender.close();
 
-            final Chronicle sink = new InMemoryChronicleSynk(ChronicleType.INDEXED, "localhost", BASE_PORT + 1);
             final ExcerptTailer tailer = sink.createTailer().toStart();
 
             for (long i = 0; i < items; i++) {
@@ -62,5 +57,31 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
             source.close();
             source.clear();
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testIndexedInMemorySink_001() throws Exception {
+        final int port = BASE_PORT + 1;
+        final String basePathSource = getTestPath("-source");
+
+        testInMemorySink(
+            indexedChronicleSource(basePathSource, port),
+            new InMemoryChronicleSink(ChronicleType.INDEXED, "localhost", port)
+        );
+    }
+
+    @Test
+    public void testVanillaInMemorySink_001() throws Exception {
+        final int port = BASE_PORT + 2;
+        final String basePathSource = getTestPath("-source");
+
+        testInMemorySink(
+            vanillaChronicleSource(basePathSource, port),
+            new InMemoryChronicleSink(ChronicleType.VANILLA, "localhost", port)
+        );
     }
 }

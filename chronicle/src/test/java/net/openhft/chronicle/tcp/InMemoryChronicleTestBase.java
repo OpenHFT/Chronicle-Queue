@@ -18,10 +18,12 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import java.io.File;
 import java.io.IOException;
 
 public class InMemoryChronicleTestBase {
@@ -40,10 +42,12 @@ public class InMemoryChronicleTestBase {
     }
 
     protected synchronized String getTestPath(String suffix) {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
-        ChronicleTools.deleteOnExit(path);
+        final File path = new File(TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix);
+        if(path.exists()) {
+            path.delete();
+        }
 
-        return path;
+        return path.getAbsolutePath();
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
@@ -51,6 +55,6 @@ public class InMemoryChronicleTestBase {
     }
 
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
-        return new InProcessChronicleSource(new IndexedChronicle(basePath), port);
+        return new VanillaChronicleSource(new VanillaChronicle(basePath), port);
     }
 }
