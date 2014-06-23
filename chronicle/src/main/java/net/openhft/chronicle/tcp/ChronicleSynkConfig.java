@@ -18,11 +18,16 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
 
-public class ChronicleSynkConfig {
+public class ChronicleSynkConfig implements Cloneable {
     public static final ChronicleSynkConfig DEFAULT = new ChronicleSynkConfig();
 
-    private int minBufferSize = 256 * 1024;
-    private long reconnectDelay = 500; // milliseconds
+    private int minBufferSize;
+    private long reconnectDelay;
+
+    private ChronicleSynkConfig() {
+        minBufferSize = 256 * 1024;
+        reconnectDelay = 500; // milliseconds
+    }
 
     // *************************************************************************
     //

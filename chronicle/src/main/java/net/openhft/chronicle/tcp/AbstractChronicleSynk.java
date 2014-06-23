@@ -16,6 +16,8 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +31,7 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
+public abstract class AbstractChronicleSynk implements Chronicle {
 
     private final ChronicleSynkConfig config;
     private final InetSocketAddress address;
@@ -38,15 +40,19 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
 
     private volatile boolean closed;
 
-    public AbstractInMemoryChronicleSynk(String hostName, int port) {
-        this(new InetSocketAddress(hostName, port), ChronicleSynkConfig.DEFAULT.clone());
+    protected AbstractChronicleSynk(String hostName, int port) {
+        this(hostName, port, ChronicleSynkConfig.DEFAULT.clone());
     }
 
-    public AbstractInMemoryChronicleSynk(@NotNull final InetSocketAddress address) {
+    protected AbstractChronicleSynk(String hostName, int port, @NotNull final ChronicleSynkConfig config) {
+        this(new InetSocketAddress(hostName, port), config);
+    }
+
+    protected AbstractChronicleSynk(@NotNull final InetSocketAddress address) {
         this(address, ChronicleSynkConfig.DEFAULT.clone());
     }
 
-    public AbstractInMemoryChronicleSynk(@NotNull final InetSocketAddress address, @NotNull final ChronicleSynkConfig config) {
+    protected AbstractChronicleSynk(@NotNull final InetSocketAddress address, @NotNull final ChronicleSynkConfig config) {
         this.config = config;
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.toString());
@@ -60,18 +66,49 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
     }
 
     @Override
-    public void close() {
-        closed = true;
+    public void close() throws IOException {
+        if(!closed) {
+            closed = true;
 
-        for(SynkConnector connector : connectors) {
-            try {
-                connector.close();
-            } catch (IOException e) {
-                logger.warn("Error closing Sink", e);
+            for (SynkConnector connector : connectors) {
+                try {
+                    connector.close();
+                } catch (IOException e) {
+                    logger.warn("Error closing Sink", e);
+                }
             }
-        }
 
-        connectors.clear();
+            connectors.clear();
+        }
+    }
+
+    @Override
+    public void clear() {
+        try {
+            close();
+        } catch (IOException e) {
+            logger.warn("Error closing Sink", e);
+        }
+    }
+
+    @Override
+    public Excerpt createExcerpt() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long lastWrittenIndex() {
+        return 0;
+    }
+
+    @Override
+    public long size() {
+        return 0;
     }
 
     // *************************************************************************
@@ -111,6 +148,8 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
                     channel = SocketChannel.open(address);
                     channel.socket().setReceiveBufferSize(config.minBufferSize());
                     logger.info("Connected to " + address);
+
+                    return;
                 } catch (IOException e) {
                     logger.info("Failed to connect to {}, retrying", address, e);
                 }
@@ -123,6 +162,32 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
             }
         }
 
+        public boolean write(final ByteBuffer buffer) {
+            try {
+                TcpUtil.writeAllOrEOF(channel, buffer);
+            } catch (IOException e) {
+                return false;
+            }
+
+            return true;
+        }
+
+        public boolean readIfNeeded(int thresholdSize, int minSize) throws IOException {
+            if(!closed) {
+                if (buffer.remaining() < thresholdSize) {
+                    if (buffer.remaining() == 0) {
+                        buffer.clear();
+                    } else {
+                        buffer.compact();
+                    }
+
+                    return read(minSize);
+                }
+            }
+
+            return !closed;
+        }
+
         public boolean read(int minSize) throws IOException {
             if(!closed) {
                 while (buffer.position() < minSize) {
@@ -131,6 +196,8 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
                         return false;
                     }
                 }
+
+                buffer.flip();
             }
 
             return !closed;
@@ -149,7 +216,19 @@ public abstract class AbstractInMemoryChronicleSynk implements Chronicle {
         }
 
         public boolean isOpen() {
-            return !closed &&  channel.isOpen();
+            return !closed && channel!= null && channel.isOpen();
+        }
+
+        public ByteBuffer buffer() {
+            return this.buffer;
+        }
+
+        public long bufferSize() {
+            return config.minBufferSize();
+        }
+
+        public InetSocketAddress remoteAddress() {
+            return AbstractChronicleSynk.this.address;
         }
     }
 }
