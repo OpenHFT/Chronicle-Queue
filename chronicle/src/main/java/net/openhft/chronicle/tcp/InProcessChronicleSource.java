@@ -204,8 +204,13 @@ public class InProcessChronicleSource implements Chronicle {
         @Override
         public void run() {
             try {
-                long index = readIndex(socket) + 1; //Catch-up up to the first index that the remote sink doesn't have (last known remote index + 1)
+                // Catch-up up to the first index that the remote sink doesn't
+                // have (last known remote index + 1)
+                long index = readIndex(socket) + 1;
+
                 ExcerptTailer excerpt = chronicle.createTailer();
+
+
                 ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
                 long sendInSync = 0;
                 boolean first = true;
@@ -228,7 +233,7 @@ public class InProcessChronicleSource implements Chronicle {
                             index++;
                             continue;
                         }
-//                        System.out.println("Waiting for " + index);
+
                         if (sendInSync <= now && !first) {
                             bb.clear();
                             bb.putInt(IN_SYNC_LEN);
@@ -236,8 +241,12 @@ public class InProcessChronicleSource implements Chronicle {
                             TcpUtil.writeAll(socket, bb);
                             sendInSync = now + HEARTBEAT_INTERVAL_MS;
                         }
+
                         pause();
-                        if (closed) break OUTER;
+
+                        if (closed) {
+                            break OUTER;
+                        }
                     }
                     pauseReset();
 //                    System.out.println("Writing " + index);

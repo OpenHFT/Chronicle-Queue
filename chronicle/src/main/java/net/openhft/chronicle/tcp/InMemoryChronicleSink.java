@@ -16,7 +16,8 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleType;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -28,75 +29,154 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
+import java.util.List;
 
-public class InMemoryChronicleSink extends AbstractChronicleSink {
-    private final ChronicleType type;
+public class InMemoryChronicleSink implements Chronicle {
 
-    public InMemoryChronicleSink(final ChronicleType type, String hostName, int port) {
-        super(hostName, port);
-
-        this.type = type;
+    public enum ChronicleType {
+        INDEXED,
+        VANILLA
     }
 
-    public InMemoryChronicleSink(final ChronicleType type, String hostName, int port, @NotNull ChronicleSinkConfig config) {
-        super(hostName, port, config);
+    private final ChronicleSinkConfig config;
+    private final InetSocketAddress address;
+    private final Logger logger;
+    private final List<ExcerptTailer> excerpts;
+    private final ChronicleType chronicleType;
 
-        this.type = type;
+    private volatile boolean closed;
+
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull String host, int port) {
+        this(type, new InetSocketAddress(host, port), ChronicleSinkConfig.DEFAULT);
     }
 
-    public InMemoryChronicleSink(final ChronicleType type, @NotNull InetSocketAddress address) {
-        super(address);
-
-        this.type = type;
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull String host, int port, @NotNull final ChronicleSinkConfig config) {
+        this(type, new InetSocketAddress(host, port), config);
     }
 
-    public InMemoryChronicleSink(final ChronicleType type, @NotNull InetSocketAddress address, @NotNull ChronicleSinkConfig config) {
-        super(address, config);
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull final InetSocketAddress address) {
+        this(type, address, ChronicleSinkConfig.DEFAULT);
+    }
 
-        this.type = type;
+    public InMemoryChronicleSink(final ChronicleType type, @NotNull final InetSocketAddress address, @NotNull final ChronicleSinkConfig config) {
+        this.config = config;
+        this.address = address;
+        this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + address.toString());
+        this.excerpts = new LinkedList<ExcerptTailer>();
+        this.closed = false;
+        this.chronicleType = type;
+    }
+
+
+    @Override
+    public String name() {
+        return getClass().getName() + "@" + address.toString();
+    }
+
+    @Override
+    public void close() throws IOException {
+        if(!closed) {
+            closed = true;
+
+            for (ExcerptTailer excerpt : excerpts) {
+                excerpt.close();
+            }
+
+            excerpts.clear();
+        }
+    }
+
+    @Override
+    public void clear() {
+        try {
+            close();
+        } catch (IOException e) {
+            logger.warn("Error closing Sink", e);
+        }
+    }
+
+    @Override
+    public Excerpt createExcerpt() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long lastWrittenIndex() {
+        return 0;
+    }
+
+    @Override
+    public long size() {
+        return 0;
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return this.type == ChronicleType.INDEXED
-            ? new InMemoryIndexedExcerptTailer(super.newConnector())
-            : new InMemoryVanillaExcerptTailer(super.newConnector());
+        ExcerptTailer tailer = this.chronicleType == ChronicleType.INDEXED
+            ? new InMemoryIndexedExcerptTailer()
+            : new InMemoryVanillaExcerptTailer();
+
+        excerpts.add(tailer);
+
+        return tailer;
     }
 
     // *************************************************************************
-    //
+    // Excerpt
     // *************************************************************************
 
-    private abstract class AbstractInMemoryExcerptTailer extends NativeBytes implements ExcerptTailer {
+    private abstract class AbstractInMemoryExcerpt extends NativeBytes implements ExcerptTailer {
         protected final Logger logger;
-        protected final SynkConnector connector;
-        protected final ByteBuffer buffer;
-        protected boolean firstMessage;
         protected long index;
         protected int lastSize;
+        protected final ByteBuffer buffer;
+        private SocketChannel channel;
 
-        public AbstractInMemoryExcerptTailer(@NotNull final SynkConnector connector) {
+        public AbstractInMemoryExcerpt() {
             super(NO_PAGE, NO_PAGE);
 
-            this.connector = connector;
-            this.buffer = connector.buffer();
-            this.firstMessage = true;
+            this.buffer = TcpUtil.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
+            this.startAddr = ((DirectBuffer) this.buffer).address();
+            this.capacityAddr = this.startAddr + config.minBufferSize();
             this.index = -1;
             this.lastSize = 0;
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connector.remoteAddress().toString());
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + address.toString());
+            this.channel = null;
         }
 
         @Override
         public boolean index(long index) {
-            if(!connector.isOpen()) {
+            if(!isChannelOpen()) {
                 this.index = index;
                 this.lastSize = 0;
 
-                if(!connector.isOpen()) {
-                    connector.open();
-                }
+                openChannel();
+                writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index));
 
-                return connector.write(ByteBuffer.allocate(8).putLong(0,this.index));
+                try {
+                    if (!readFromChannel(8)) {
+                        return false;
+                    }
+
+                    long receivedIndex = buffer.getLong();
+                    if (this.index == -1 && receivedIndex != 0) {
+                        if (receivedIndex != index) {
+                            throw new IllegalStateException("Expected index " + index + " but got " + receivedIndex);
+                        }
+                    }
+
+                    this.index = receivedIndex;
+                } catch (IOException e) {
+                    logger.warn("",e);
+                }
             }
 
             throw new UnsupportedOperationException();
@@ -113,10 +193,13 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
 
         @Override
         public void close() {
-            try {
-                connector.close();
-            } catch (IOException ioe) {
-                logger.warn("IOException",ioe);
+            if (channel != null) {
+                try {
+                    channel.close();
+                    channel = null;
+                } catch (IOException e) {
+                    logger.warn("Error closing socket", e);
+                }
             }
         }
 
@@ -128,7 +211,8 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
 
         @Override
         public ExcerptTailer toEnd() {
-            throw new UnsupportedOperationException();
+            index(Long.MAX_VALUE);
+            return this;
         }
 
         @Override
@@ -143,46 +227,89 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
 
         @Override
         public long lastWrittenIndex() {
-            return 0;
+            return index();
         }
 
         @Override
         public Chronicle chronicle() {
             return InMemoryChronicleSink.this;
         }
-    }
 
-    private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerptTailer {
-        public InMemoryIndexedExcerptTailer(@NotNull final SynkConnector connector) {
-            super(connector);
+        protected void openChannel() {
+            while (!closed) {
+                try {
+                    buffer.clear();
+                    buffer.limit(0);
 
-            this.startAddr = ((DirectBuffer) buffer).address();
-            this.capacityAddr = startAddr + buffer.capacity();
+                    channel = SocketChannel.open(address);
+                    channel.socket().setReceiveBufferSize(config.minBufferSize());
+                    logger.info("Connected to " + address);
+
+                    return;
+                } catch (IOException e) {
+                    logger.info("Failed to connect to {}, retrying", address, e);
+                }
+
+                try {
+                    Thread.sleep(config.reconnectDelay());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
 
+        public boolean isChannelOpen() {
+            return !closed && channel!= null && channel.isOpen();
+        }
+
+        protected boolean writeToChannel(final ByteBuffer buffer) {
+            try {
+                TcpUtil.writeAllOrEOF(channel, buffer);
+            } catch (IOException e) {
+                return false;
+            }
+
+            return true;
+        }
+
+        protected boolean readFromChannel(int thresholdSize, int minSize) throws IOException {
+            if(!closed) {
+                if (buffer.remaining() < thresholdSize) {
+                    if (buffer.remaining() == 0) {
+                        buffer.clear();
+                    } else {
+                        buffer.compact();
+                    }
+
+                    return readFromChannel(minSize);
+                }
+            }
+
+            return !closed;
+        }
+
+        protected boolean readFromChannel(int minSize) throws IOException {
+            if(!closed) {
+                while (buffer.position() < minSize) {
+                    if (channel.read(buffer) < 0) {
+                        channel.close();
+                        return false;
+                    }
+                }
+
+                buffer.flip();
+            }
+
+            return !closed;
+        }
+    }
+
+    private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
         public boolean nextIndex() {
             try {
-                if(!connector.isOpen()) {
+                if(!isChannelOpen()) {
                     index(this.index);
-                }
-
-                if(!connector.readIfNeeded(
-                    !firstMessage ? 4 : TcpUtil.HEADER_SIZE ,
-                    !firstMessage ? TcpUtil.HEADER_SIZE : TcpUtil.HEADER_SIZE + 8)) {
-                    return false;
-                }
-
-                if (firstMessage) {
-                    long receivedIndex = buffer.getLong();
-                    if (this.index == -1 && receivedIndex != 0) {
-                        if (receivedIndex != index) {
-                            throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
-                        }
-                    }
-
-                    index = receivedIndex;
-                    this.firstMessage = false;
                 }
 
                 int excerptSize = buffer.getInt();
@@ -200,7 +327,7 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
                 }
 
                 if(buffer.remaining() < excerptSize) {
-                    if(!connector.read(buffer.remaining() - excerptSize)) {
+                    if(!readFromChannel(buffer.remaining() - excerptSize)) {
                         return false;
                     }
                 }
@@ -210,12 +337,7 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
                 lastSize = excerptSize;
                 index++;
             } catch (IOException e) {
-                try {
-                    connector.close();
-                } catch (IOException ioe) {
-                    logger.warn("IOException",ioe);
-                }
-
+                close();
                 return false;
             }
 
@@ -223,53 +345,42 @@ public class InMemoryChronicleSink extends AbstractChronicleSink {
         }
     }
 
-    private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerptTailer {
-        public InMemoryVanillaExcerptTailer(@NotNull final SynkConnector connector) {
-            super(connector);
-
-
-            this.startAddr = ((DirectBuffer) buffer).address();
-            this.capacityAddr = startAddr + buffer.capacity();
-        }
-
+    private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
         public boolean nextIndex() {
             try {
-                if(!connector.isOpen()) {
+                if(!isChannelOpen()) {
                     index(this.index);
                 }
 
-                if(!connector.readIfNeeded(TcpUtil.HEADER_SIZE + 8, TcpUtil.HEADER_SIZE + 8 + 8)) {
+                if(!readFromChannel(TcpUtil.HEADER_SIZE + 8, TcpUtil.HEADER_SIZE + 8 + 8)) {
                     return false;
                 }
 
                 long excerptIndex = buffer.getLong();
                 int excerptSize = buffer.getInt();
-                if(excerptSize == InProcessChronicleSource.IN_SYNC_LEN) {
+
+                if(excerptSize != InProcessChronicleSource.IN_SYNC_LEN) {
+                    if (excerptSize > 128 << 20 || excerptSize < 0) {
+                        throw new StreamCorruptedException("Size was " + excerptSize);
+                    }
+
+                    if (buffer.remaining() < excerptSize) {
+                        if (!readFromChannel(buffer.remaining() - excerptSize)) {
+                            return false;
+                        }
+                    }
+
+                    positionAddr = startAddr + buffer.position();
+                    limitAddr = startAddr + buffer.limit();
+                    lastSize = excerptSize;
+                    index = excerptIndex;
+                } else {
+                    // Heartbeat
                     return false;
                 }
-
-                if (excerptSize > 128 << 20 || excerptSize < 0) {
-                    throw new StreamCorruptedException("Size was " + excerptSize);
-                }
-
-                if(buffer.remaining() < excerptSize) {
-                    if(!connector.read(buffer.remaining() - excerptSize)) {
-                        return false;
-                    }
-                }
-
-                positionAddr = startAddr + buffer.position();
-                limitAddr = startAddr + buffer.limit();
-                lastSize = excerptSize;
-                index = excerptIndex;
             } catch (IOException e) {
-                try {
-                    connector.close();
-                } catch (IOException ioe) {
-                    logger.warn("IOException",ioe);
-                }
-
+                close();
                 return false;
             }
 
