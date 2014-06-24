@@ -19,6 +19,7 @@ package net.openhft.chronicle.tools;
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.*;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
+import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
 
@@ -909,12 +910,6 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
         return common.byteOrder();
     }
 
-    @NotNull
-    @Override
-    public BytesMarshallerFactory bytesMarshallerFactory() {
-        return common.bytesMarshallerFactory();
-    }
-
     @Override
     public void checkEndOfBuffer() throws IndexOutOfBoundsException {
         common.checkEndOfBuffer();
@@ -1259,5 +1254,10 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public boolean compareAndSwapDouble(long offset, double expected, double x) {
         return common.compareAndSwapDouble(offset, expected, x);
+    }
+
+    @Override
+    public ObjectSerializer objectSerializer() {
+        return common.objectSerializer();
     }
 }
