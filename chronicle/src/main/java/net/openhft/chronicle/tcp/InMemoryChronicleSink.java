@@ -153,36 +153,6 @@ public class InMemoryChronicleSink implements Chronicle {
         }
 
         @Override
-        public boolean index(long index) {
-            if(!isChannelOpen()) {
-                this.index = index;
-                this.lastSize = 0;
-
-                openChannel();
-                writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index));
-
-                try {
-                    if (!readFromChannel(8)) {
-                        return false;
-                    }
-
-                    long receivedIndex = buffer.getLong();
-                    if (this.index == -1 && receivedIndex != 0) {
-                        if (receivedIndex != index) {
-                            throw new IllegalStateException("Expected index " + index + " but got " + receivedIndex);
-                        }
-                    }
-
-                    this.index = receivedIndex;
-                } catch (IOException e) {
-                    logger.warn("",e);
-                }
-            }
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public void finish() {
             if(lastSize > 0) {
                 buffer.position(buffer.position() + lastSize);
@@ -306,10 +276,46 @@ public class InMemoryChronicleSink implements Chronicle {
 
     private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
+        public boolean index(long index) {
+            if(!isChannelOpen()) {
+                this.index = index;
+                this.lastSize = 0;
+
+                try {
+                    openChannel();
+
+                    if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
+                        if (readFromChannel(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
+                            long receivedIndex = buffer.getLong();
+                            if (receivedIndex != this.index + 1) {
+                                throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
+                            }
+
+                            this.index = receivedIndex;
+                            return true;
+                        }
+                    }
+                } catch (IOException e) {
+                    logger.warn("",e);
+                }
+
+                return false;
+            }
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean nextIndex() {
             try {
                 if(!isChannelOpen()) {
-                    index(this.index);
+                    if(!index(this.index)) {
+                        return false;
+                    }
+                }
+
+                if(!readFromChannel(4, 4 + 8)) {
+                    return false;
                 }
 
                 int excerptSize = buffer.getInt();
@@ -347,13 +353,49 @@ public class InMemoryChronicleSink implements Chronicle {
 
     private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
+        public boolean index(long index) {
+            if(!isChannelOpen()) {
+                this.index = index;
+                this.lastSize = 0;
+
+                try {
+                    openChannel();
+
+                    if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
+                        if (readFromChannel(TcpUtil.HEADER_SIZE + 8, TcpUtil.HEADER_SIZE + 8 + 8)) {
+                            buffer.mark();
+
+                            long receivedIndex = buffer.getLong();
+                            if (this.index != -1 && this.index != Long.MAX_VALUE && receivedIndex != index) {
+                                throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
+                            }
+
+                            buffer.reset();
+
+                            this.index = receivedIndex;
+                            return true;
+                        }
+                    }
+                } catch (IOException e) {
+                    logger.warn("",e);
+                }
+
+                return false;
+            }
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean nextIndex() {
             try {
                 if(!isChannelOpen()) {
-                    index(this.index);
+                    if(!index(this.index)) {
+                        return false;
+                    }
                 }
 
-                if(!readFromChannel(TcpUtil.HEADER_SIZE + 8, TcpUtil.HEADER_SIZE + 8 + 8)) {
+                if(!readFromChannel(12,12 + 8)) {
                     return false;
                 }
 

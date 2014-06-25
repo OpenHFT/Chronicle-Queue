@@ -19,7 +19,6 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -28,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
 
     public void testInMemorySink(final Chronicle source, final Chronicle sink) throws Exception {
-        final int items = 100;
+        final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
 
         try {
@@ -74,7 +73,6 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
         );
     }
 
-    @Ignore
     @Test
     public void testVanillaInMemorySink_001() throws Exception {
         final int port = BASE_PORT + 2;
