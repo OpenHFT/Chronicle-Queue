@@ -32,13 +32,13 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +55,8 @@ import java.util.concurrent.Executors;
 public class InProcessChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
+    static final int STX = -125;
+
     private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
     @NotNull
@@ -195,115 +197,161 @@ public class InProcessChronicleSource implements Chronicle {
         @NotNull
         private final SocketChannel socket;
 
-        public Handler(@NotNull SocketChannel socket) throws SocketException {
+        @NotNull
+        private final Selector selector;
+
+        @NotNull
+        private final ExcerptTailer tailer;
+
+        @NotNull
+        private final ByteBuffer buffer;
+
+        private long index;
+        private long lastHeartbeatTime;
+        private boolean first;
+
+        public Handler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
-            socket.socket().setSendBufferSize(256 * 1024);
-            socket.socket().setTcpNoDelay(true);
+            this.socket.configureBlocking(false);
+            this.socket.socket().setSendBufferSize(256 * 1024);
+            this.socket.socket().setTcpNoDelay(true);
+            this.selector = Selector.open();
+            this.tailer = chronicle.createTailer();
+            this.buffer = TcpUtil.createBuffer(1, ByteOrder.nativeOrder());
+            this.index = -1;
+            this.first = true;
+            this.lastHeartbeatTime = 0;
+        }
+
+        private boolean write() throws IOException {
+            if (!tailer.index(index)) {
+                if (tailer.wasPadding()) {
+                    if (index >= 0) {
+                        buffer.clear();
+                        if (first) {
+                            buffer.putInt(STX).putLong(tailer.index());
+                            first = false;
+                        }
+
+                        buffer.putInt(PADDED_LEN);
+                        buffer.flip();
+                        TcpUtil.writeAll(socket, buffer);
+                    }
+
+                    index++;
+                }
+
+                pause();
+
+                if(closed || !tailer.index(index)) {
+                    return false;
+                }
+            }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining;
+
+            buffer.clear();
+            if (first) {
+                buffer.putInt(STX).putLong(tailer.index());
+                first = false;
+                remaining = size + TcpUtil.HEADER_SIZE;
+            } else {
+                remaining = size + 4;
+            }
+
+            buffer.putInt((int) size);
+
+            // for large objects send one at a time.
+            if (size > buffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, buffer.capacity());
+                    buffer.limit(size2);
+                    tailer.read(buffer);
+                    buffer.flip();
+                    remaining -= buffer.remaining();
+                    TcpUtil.writeAll(socket, buffer);
+                }
+            } else {
+                buffer.limit((int) remaining);
+                tailer.read(buffer);
+                int count = 1;
+                while (tailer.index(index + 1) && count++ < MAX_MESSAGE) {
+                    if (tailer.wasPadding()) {
+                        index++;
+                        continue;
+                    }
+
+                    if (tailer.remaining() + 4 >= buffer.capacity() - buffer.position()) {
+                        break;
+                    }
+
+                    // if there is free space, copy another one.
+                    int size2 = (int) tailer.capacity();
+                    buffer.limit(buffer.position() + size2 + 4);
+                    buffer.putInt(size2);
+                    tailer.read(buffer);
+
+                    index++;
+                }
+
+                buffer.flip();
+                TcpUtil.writeAll(socket, buffer);
+            }
+
+            if (buffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + index);
+            }
+
+            index++;
+            return true;
         }
 
         @Override
         public void run() {
             try {
-                // Catch-up up to the first index that the remote sink doesn't
-                // have (last known remote index + 1)
-                long index = readIndex(socket) + 1;
+                socket.register(selector, SelectionKey.OP_READ);
 
-                ExcerptTailer excerpt = chronicle.createTailer();
+                while(!closed) {
+                    if(selector.select() > 0) {
+                        final Set<SelectionKey> keys = selector.selectedKeys();
+                        final Iterator<SelectionKey> it = keys.iterator();
 
+                        while (it.hasNext()) {
+                            while (it.hasNext()) {
+                                final SelectionKey key = it.next();
+                                it.remove();
 
-                ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
-                long sendInSync = 0;
-                boolean first = true;
-                OUTER:
-                while (!closed) {
-                    while (!excerpt.index(index)) {
-                        long now = System.currentTimeMillis();
-                        if (excerpt.wasPadding()) {
-                            if (index >= 0) {
-                                bb.clear();
-                                if (first) {
-                                    bb.putLong(excerpt.index());
-                                    first = false;
+                                if(key.isReadable()) {
+                                    try {
+                                        this.index = readIndex(socket) + 1;
+                                        this.first = true;
+                                        this.lastHeartbeatTime = System.currentTimeMillis();
+
+                                        logger.info("Start publishing from : {}", this.index);
+
+                                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                                    } catch(EOFException e) {
+                                        key.selector().close();
+                                        throw e;
+                                    }
+                                } else if(key.isWritable()) {
+                                    long now = System.currentTimeMillis();
+                                    if(!write() && !closed) {
+                                        if (lastHeartbeatTime <= now && !first) {
+                                            buffer.clear();
+                                            buffer.putInt(IN_SYNC_LEN);
+                                            buffer.flip();
+                                            TcpUtil.writeAll(socket, buffer);
+                                            lastHeartbeatTime = now + HEARTBEAT_INTERVAL_MS;
+                                        }
+                                    }
                                 }
-                                bb.putInt(PADDED_LEN);
-                                bb.flip();
-                                TcpUtil.writeAll(socket, bb);
-                                sendInSync = now + HEARTBEAT_INTERVAL_MS;
                             }
-                            index++;
-                            continue;
-                        }
-
-                        if (sendInSync <= now && !first) {
-                            bb.clear();
-                            bb.putInt(IN_SYNC_LEN);
-                            bb.flip();
-                            TcpUtil.writeAll(socket, bb);
-                            sendInSync = now + HEARTBEAT_INTERVAL_MS;
-                        }
-
-                        pause();
-
-                        if (closed) {
-                            break OUTER;
                         }
                     }
-                    pauseReset();
-//                    System.out.println("Writing " + index);
-                    final long size = excerpt.capacity();
-                    long remaining;
-
-                    bb.clear();
-                    if (first) {
-//                        System.out.println("wi " + index);
-                        bb.putLong(excerpt.index());
-                        first = false;
-                        remaining = size + TcpUtil.HEADER_SIZE;
-                    } else {
-                        remaining = size + 4;
-                    }
-                    bb.putInt((int) size);
-                    // for large objects send one at a time.
-                    if (size > bb.capacity() / 2) {
-                        while (remaining > 0) {
-                            int size2 = (int) Math.min(remaining, bb.capacity());
-                            bb.limit(size2);
-                            excerpt.read(bb);
-                            bb.flip();
-//                        System.out.println("w " + ChronicleTools.asString(bb));
-                            remaining -= bb.remaining();
-                            TcpUtil.writeAll(socket, bb);
-                        }
-                    } else {
-                        bb.limit((int) remaining);
-                        excerpt.read(bb);
-                        int count = 1;
-                        while (excerpt.index(index + 1) && count++ < MAX_MESSAGE) {
-                            if (excerpt.wasPadding()) {
-                                index++;
-                                continue;
-                            }
-                            if (excerpt.remaining() + 4 >= bb.capacity() - bb.position())
-                                break;
-                            // if there is free space, copy another one.
-                            int size2 = (int) excerpt.capacity();
-//                            System.out.println("W+ "+size);
-                            bb.limit(bb.position() + size2 + 4);
-                            bb.putInt(size2);
-                            excerpt.read(bb);
-
-                            index++;
-                        }
-
-                        bb.flip();
-//                        System.out.println("W " + size + " wb " + bb);
-                        TcpUtil.writeAll(socket, bb);
-                    }
-                    if (bb.remaining() > 0) throw new EOFException("Failed to send index=" + index);
-                    index++;
-                    sendInSync = 0;
-//                    if (index % 20000 == 0)
-//                        System.out.println(System.currentTimeMillis() + ": wrote " + index);
                 }
             } catch (Exception e) {
                 if (!closed) {
@@ -315,6 +363,12 @@ public class InProcessChronicleSource implements Chronicle {
                         logger.info("Connect {} closed from the other end", socket, e);
                     } else {
                         logger.info("Connect {} died",socket, e);
+                    }
+
+                    try {
+                        this.socket.close();
+                    } catch(IOException ioe) {
+                        logger.warn("",e);
                     }
                 }
             }

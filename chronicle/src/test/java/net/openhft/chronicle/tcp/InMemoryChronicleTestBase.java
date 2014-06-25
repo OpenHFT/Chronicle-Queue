@@ -52,12 +52,20 @@ public class InMemoryChronicleTestBase {
         return path.getAbsolutePath();
     }
 
+    protected Chronicle inMemoryIndexedChronicleSink( String host, int port) throws IOException {
+        return new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.INDEXED, host, port);
+    }
+
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
         return new InProcessChronicleSource(new IndexedChronicle(basePath), port);
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
         return new InProcessChronicleSource(new IndexedChronicle(basePath, config), port);
+    }
+
+    protected Chronicle inMemoryVanillaChronicleSink( String host, int port) throws IOException {
+        return new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.VANILLA, host, port);
     }
 
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {

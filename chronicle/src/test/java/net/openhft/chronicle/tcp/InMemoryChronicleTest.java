@@ -17,10 +17,12 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -44,8 +46,68 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
 
             for (long i = 0; i < items; i++) {
                 assertTrue(tailer.nextIndex());
+                assertEquals(i, tailer.index());
                 assertEquals(i, tailer.readLong());
+                tailer.finish();
 
+                assertEquals(i + 1, tailer.index());
+            }
+
+            tailer.close();
+
+            sink.close();
+            sink.clear();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+    // *************************************************************************
+    // INDEXED
+    // *************************************************************************
+
+    @Test
+    public void testIndexedInMemorySink_001() throws Exception {
+        final int port = BASE_PORT + 100;
+        final String basePathSource = getTestPath("-source");
+
+        testInMemorySink(
+            indexedChronicleSource(basePathSource, port),
+            inMemoryIndexedChronicleSink("localhost", port)
+        );
+    }
+
+    @Test
+    public void testIndexedInMemorySink_002() throws Exception {
+        final int port = BASE_PORT + 101;
+        final String basePathSource = getTestPath("-source");
+
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+
+        final int items = 1000000;
+        final ExcerptAppender appender = source.createAppender();
+
+        try {
+            for (int i = 0; i < items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+            }
+
+            appender.close();
+
+            final ExcerptTailer tailer = sink.createTailer().toStart();
+
+            final Random r = new Random();
+            for(int i=0;i<1000;i++) {
+                int index = r.nextInt(items - -1) + -1;
+
+                assertTrue(tailer.index(index));
+                assertTrue(tailer.nextIndex());
+                assertEquals(index + 1, tailer.index());
+                assertEquals(index + 1, tailer.readLong());
                 tailer.finish();
             }
 
@@ -60,30 +122,18 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
     }
 
     // *************************************************************************
-    //
+    // INDEXED
     // *************************************************************************
 
-    @Test
-    public void testIndexedInMemorySink_001() throws Exception {
-        final int port = BASE_PORT + 1;
-        final String basePathSource = getTestPath("-source");
-
-        ChronicleConfig cfg = ChronicleConfig.SMALL.clone();
-
-        testInMemorySink(
-            indexedChronicleSource(basePathSource, port),
-            new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.INDEXED, "localhost", port)
-        );
-    }
-
+    @Ignore
     @Test
     public void testVanillaInMemorySink_001() throws Exception {
-        final int port = BASE_PORT + 2;
+        final int port = BASE_PORT + 200;
         final String basePathSource = getTestPath("-source");
 
         testInMemorySink(
             vanillaChronicleSource(basePathSource, port),
-            new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.VANILLA, "localhost", port)
+            inMemoryVanillaChronicleSink("localhost", port)
         );
     }
 }

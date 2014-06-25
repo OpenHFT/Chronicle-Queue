@@ -169,7 +169,7 @@ public class InProcessChronicleSink implements Chronicle {
                     readBuffer.clear();
                 else
                     readBuffer.compact();
-                int minSize = scFirst ? 8 + 4 + 8 : 4 + 8;
+                int minSize = scFirst ? 8 + 8 + 8 : 4 + 8;
                 while (readBuffer.position() < minSize) {
                     if (sc.read(readBuffer) < 0) {
                         sc.close();
@@ -178,29 +178,28 @@ public class InProcessChronicleSink implements Chronicle {
                 }
                 readBuffer.flip();
             }
-//            System.out.println("rb " + readBuffer);
 
             if (scFirst) {
+                int stx = readBuffer.getInt();
                 long scIndex = readBuffer.getLong();
-//                System.out.println("ri " + scIndex);
+                if (stx != InProcessChronicleSource.STX)
+                    throw new StreamCorruptedException("Expected STX  but got " + stx);
                 if (scIndex != chronicle.size())
                     throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
+
                 scFirst = false;
             }
             int size = readBuffer.getInt();
             switch (size) {
                 case InProcessChronicleSource.IN_SYNC_LEN:
-//                System.out.println("... received inSync");
                     return false;
                 case InProcessChronicleSource.PADDED_LEN:
-//                System.out.println("... received padded");
                     excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
                     return true;
                 default:
                     break;
             }
 
-//            System.out.println("size=" + size + "  rb " + readBuffer);
             if (size > 128 << 20 || size < 0)
                 throw new StreamCorruptedException("size was " + size);
 
@@ -218,21 +217,17 @@ public class InProcessChronicleSink implements Chronicle {
 
             // needs more than one read.
             while (remaining > 0) {
-//                System.out.println("++ read remaining "+remaining +" rb "+readBuffer);
                 readBuffer.clear();
                 int size3 = (int) Math.min(readBuffer.capacity(), remaining);
                 readBuffer.limit(size3);
-//                    System.out.println("... reading");
                 if (sc.read(readBuffer) < 0)
                     throw new EOFException();
                 readBuffer.flip();
-//                    System.out.println("r " + ChronicleTools.asString(bb));
                 remaining -= readBuffer.remaining();
                 excerpt.write(readBuffer);
             }
 
             excerpt.finish();
-//            System.out.println(" ri: " + excerpt.index());
         } catch (IOException e) {
             logger.info("Lost connection to {} retrying", address, e);
             try {

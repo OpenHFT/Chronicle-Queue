@@ -277,32 +277,40 @@ public class InMemoryChronicleSink implements Chronicle {
     private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
         public boolean index(long index) {
-            if(!isChannelOpen()) {
-                this.index = index;
-                this.lastSize = 0;
+            this.index = index;
+            this.lastSize = 0;
 
-                try {
+            try {
+                if(!isChannelOpen()) {
                     openChannel();
-
-                    if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                        if (readFromChannel(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
-                            long receivedIndex = buffer.getLong();
-                            if (receivedIndex != this.index + 1) {
-                                throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
-                            }
-
-                            this.index = receivedIndex;
-                            return true;
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.warn("",e);
                 }
 
-                return false;
+                if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
+                    buffer.clear();
+                    buffer.limit(0);
+
+                    while(true) {
+                        if (readFromChannel(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
+                            while (buffer.remaining() > 12) {
+                                if(buffer.getInt() == InProcessChronicleSource.STX) {
+                                    long receivedIndex = buffer.getLong();
+                                    logger.info("Received STX and index: " + receivedIndex);
+                                    if (receivedIndex != this.index + 1) {
+                                        throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
+                                    }
+
+                                    this.index = receivedIndex;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                logger.warn("",e);
             }
 
-            throw new UnsupportedOperationException();
+            return false;
         }
 
         @Override
@@ -321,8 +329,9 @@ public class InMemoryChronicleSink implements Chronicle {
                 int excerptSize = buffer.getInt();
                 switch (excerptSize) {
                     case InProcessChronicleSource.IN_SYNC_LEN:
+                        return false;
                     case InProcessChronicleSource.PADDED_LEN:
-                        this.index++; //TODO: increment index on padded entry ?
+                        this.index++;
                         return false;
                     default:
                         break;
@@ -341,13 +350,18 @@ public class InMemoryChronicleSink implements Chronicle {
                 positionAddr = startAddr + buffer.position();
                 limitAddr = startAddr + buffer.limit();
                 lastSize = excerptSize;
-                index++;
             } catch (IOException e) {
                 close();
                 return false;
             }
 
             return true;
+        }
+
+        @Override
+        public void finish() {
+            super.finish();
+            index++;
         }
     }
 
