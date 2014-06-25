@@ -17,8 +17,10 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicleConfig;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -54,7 +56,15 @@ public class InMemoryChronicleTestBase {
         return new InProcessChronicleSource(new IndexedChronicle(basePath), port);
     }
 
+    protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
+        return new InProcessChronicleSource(new IndexedChronicle(basePath, config), port);
+    }
+
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
         return new VanillaChronicleSource(new VanillaChronicle(basePath), port);
+    }
+
+    protected Chronicle vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
+        return new VanillaChronicleSource(new VanillaChronicle(basePath, config), port);
     }
 }

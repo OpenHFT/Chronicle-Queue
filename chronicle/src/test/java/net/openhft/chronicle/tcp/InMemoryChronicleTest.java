@@ -17,6 +17,7 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
@@ -66,6 +67,8 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
     public void testIndexedInMemorySink_001() throws Exception {
         final int port = BASE_PORT + 1;
         final String basePathSource = getTestPath("-source");
+
+        ChronicleConfig cfg = ChronicleConfig.SMALL.clone();
 
         testInMemorySink(
             indexedChronicleSource(basePathSource, port),
