@@ -17,12 +17,19 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.InProcessChronicleSink;
 import net.openhft.chronicle.tcp.InProcessChronicleSource;
-import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,7 +91,7 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         }
 
         sink.close();
-        System.out.println("There were " + count + " isSync messages");
+        System.out.println("There were " + count + " InSynk messages");
         t.join();
 
         source.close();
@@ -292,8 +299,10 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         }
 
         public boolean read() {
-            if (!excerpt.nextIndex()) return false;
-//            System.out.println("ei: "+excerpt.index());
+            if (!excerpt.nextIndex()) {
+                return false;
+            }
+
             char ch = (char) excerpt.readByte();
             switch (ch) {
                 case 'P': {

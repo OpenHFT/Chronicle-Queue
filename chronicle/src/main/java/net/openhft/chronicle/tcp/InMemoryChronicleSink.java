@@ -242,32 +242,24 @@ public class InMemoryChronicleSink implements Chronicle {
             return true;
         }
 
-        protected boolean readFromChannel(int thresholdSize, int minSize) throws IOException {
+        protected boolean readFromChannel(int size) throws IOException {
             if(!closed) {
-                if (buffer.remaining() < thresholdSize) {
+                if (buffer.remaining() < size) {
                     if (buffer.remaining() == 0) {
                         buffer.clear();
                     } else {
                         buffer.compact();
                     }
 
-                    return readFromChannel(minSize);
-                }
-            }
-
-            return !closed;
-        }
-
-        protected boolean readFromChannel(int minSize) throws IOException {
-            if(!closed) {
-                while (buffer.position() < minSize) {
-                    if (channel.read(buffer) < 0) {
-                        channel.close();
-                        return false;
+                    while (buffer.position() < size) {
+                        if (channel.read(buffer) < 0) {
+                            channel.close();
+                            return false;
+                        }
                     }
-                }
 
-                buffer.flip();
+                    buffer.flip();
+                }
             }
 
             return !closed;
@@ -286,23 +278,24 @@ public class InMemoryChronicleSink implements Chronicle {
                 }
 
                 if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                    buffer.clear();
-                    buffer.limit(0);
+                    while (readFromChannel(TcpUtil.HEADER_SIZE)) {
+                        buffer.mark();
+                        int size = buffer.getInt();
+                        switch(size) {
+                            case InProcessChronicleSource.PADDED_LEN:
+                            case InProcessChronicleSource.IN_SYNC_LEN:
+                                buffer.getLong();
+                                return false;
+                        }
 
-                    while(true) {
-                        if (readFromChannel(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
-                            while (buffer.remaining() > 12) {
-                                if(buffer.getInt() == InProcessChronicleSource.STX) {
-                                    long receivedIndex = buffer.getLong();
-                                    logger.info("Received STX and index: " + receivedIndex);
-                                    if (receivedIndex != this.index + 1) {
-                                        throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
-                                    }
+                        long receivedIndex = buffer.getLong();
+                        if(receivedIndex == index + 1) {
+                            buffer.reset();
+                            return true;
+                        }
 
-                                    this.index = receivedIndex;
-                                    return true;
-                                }
-                            }
+                        if(buffer.remaining() >= size) {
+                            buffer.position(buffer.position() + size);
                         }
                     }
                 }
@@ -322,16 +315,15 @@ public class InMemoryChronicleSink implements Chronicle {
                     }
                 }
 
-                if(!readFromChannel(4, 4 + 8)) {
+                if(!readFromChannel(TcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
                 int excerptSize = buffer.getInt();
                 switch (excerptSize) {
                     case InProcessChronicleSource.IN_SYNC_LEN:
-                        return false;
                     case InProcessChronicleSource.PADDED_LEN:
-                        this.index++;
+                        buffer.getLong();
                         return false;
                     default:
                         break;
@@ -341,6 +333,7 @@ public class InMemoryChronicleSink implements Chronicle {
                     throw new StreamCorruptedException("Size was " + excerptSize);
                 }
 
+                index = buffer.getLong();
                 if(buffer.remaining() < excerptSize) {
                     if(!readFromChannel(buffer.remaining() - excerptSize)) {
                         return false;
@@ -357,17 +350,12 @@ public class InMemoryChronicleSink implements Chronicle {
 
             return true;
         }
-
-        @Override
-        public void finish() {
-            super.finish();
-            index++;
-        }
     }
 
     private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt {
         @Override
         public boolean index(long index) {
+            /*
             if(!isChannelOpen()) {
                 this.index = index;
                 this.lastSize = 0;
@@ -396,6 +384,7 @@ public class InMemoryChronicleSink implements Chronicle {
 
                 return false;
             }
+            */
 
             throw new UnsupportedOperationException();
         }
@@ -409,7 +398,7 @@ public class InMemoryChronicleSink implements Chronicle {
                     }
                 }
 
-                if(!readFromChannel(12,12 + 8)) {
+                if(!readFromChannel(TcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 

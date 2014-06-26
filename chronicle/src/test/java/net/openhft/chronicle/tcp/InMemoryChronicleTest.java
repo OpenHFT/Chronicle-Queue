@@ -49,8 +49,6 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
                 assertEquals(i, tailer.index());
                 assertEquals(i, tailer.readLong());
                 tailer.finish();
-
-                assertEquals(i + 1, tailer.index());
             }
 
             tailer.close();
@@ -122,7 +120,7 @@ public class InMemoryChronicleTest extends InMemoryChronicleTestBase {
     }
 
     // *************************************************************************
-    // INDEXED
+    // VANILLA
     // *************************************************************************
 
     @Ignore

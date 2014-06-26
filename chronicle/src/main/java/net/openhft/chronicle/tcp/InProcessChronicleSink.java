@@ -53,14 +53,15 @@ public class InProcessChronicleSink implements Chronicle {
     private final SocketAddress address;
     private final ExcerptAppender excerpt;
     private final Logger logger;
+    private final ByteBuffer buffer; // minimum size
     private volatile boolean closed = false;
 
     public InProcessChronicleSink(@NotNull Chronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
         this.address = new InetSocketAddress(hostname, port);
-        logger = LoggerFactory.getLogger(getClass().getName() + '.' + hostname + '@' + port);
-        excerpt = chronicle.createAppender();
-        readBuffer = TcpUtil.createBuffer(256 * 1024, ByteOrder.nativeOrder());
+        this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + hostname + '@' + port);
+        this.excerpt = chronicle.createAppender();
+        this.buffer = TcpUtil.createBuffer(256 * 1024, ByteOrder.nativeOrder());
     }
 
     @Override
@@ -120,12 +121,10 @@ public class InProcessChronicleSink implements Chronicle {
 
     @Nullable
     private SocketChannel sc = null;
-    private boolean scFirst = true;
 
     boolean readNext() {
         if (sc == null || !sc.isOpen()) {
             sc = createConnection();
-            scFirst = true;
         }
         return sc != null && readNextExcerpt(sc);
     }
@@ -134,20 +133,22 @@ public class InProcessChronicleSink implements Chronicle {
     private SocketChannel createConnection() {
         while (!closed) {
             try {
-                readBuffer.clear();
-                readBuffer.limit(0);
+                buffer.clear();
+                buffer.limit(0);
 
                 SocketChannel sc = SocketChannel.open(address);
                 sc.socket().setReceiveBufferSize(256 * 1024);
                 logger.info("Connected to " + address);
+
                 ByteBuffer bb = ByteBuffer.allocate(8);
                 bb.putLong(0, chronicle.lastWrittenIndex());
                 TcpUtil.writeAllOrEOF(sc, bb);
-                return sc;
 
+                return sc;
             } catch (IOException e) {
                 logger.info("Failed to connect to {} retrying", address, e);
             }
+
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -158,43 +159,37 @@ public class InProcessChronicleSink implements Chronicle {
         return null;
     }
 
-    private final ByteBuffer readBuffer; // minimum size
+
 
     private boolean readNextExcerpt(@NotNull SocketChannel sc) {
         try {
             if (closed) return false;
 
-            if (readBuffer.remaining() < (scFirst ? TcpUtil.HEADER_SIZE : 4)) {
-                if (readBuffer.remaining() == 0)
-                    readBuffer.clear();
-                else
-                    readBuffer.compact();
-                int minSize = scFirst ? 8 + 8 + 8 : 4 + 8;
-                while (readBuffer.position() < minSize) {
-                    if (sc.read(readBuffer) < 0) {
+            if (buffer.remaining() < TcpUtil.HEADER_SIZE) {
+                if (buffer.remaining() == 0) {
+                    buffer.clear();
+                } else {
+                    buffer.compact();
+                }
+
+                int minSize = TcpUtil.HEADER_SIZE + 8;
+                while (buffer.position() < minSize) {
+                    if (sc.read(buffer) < 0) {
                         sc.close();
                         return false;
                     }
                 }
-                readBuffer.flip();
+                buffer.flip();
             }
 
-            if (scFirst) {
-                int stx = readBuffer.getInt();
-                long scIndex = readBuffer.getLong();
-                if (stx != InProcessChronicleSource.STX)
-                    throw new StreamCorruptedException("Expected STX  but got " + stx);
-                if (scIndex != chronicle.size())
-                    throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
-
-                scFirst = false;
-            }
-            int size = readBuffer.getInt();
+            int size = buffer.getInt();
             switch (size) {
                 case InProcessChronicleSource.IN_SYNC_LEN:
+                    buffer.getLong();
                     return false;
                 case InProcessChronicleSource.PADDED_LEN:
                     excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
+                    buffer.getLong();
                     return true;
                 default:
                     break;
@@ -203,28 +198,33 @@ public class InProcessChronicleSink implements Chronicle {
             if (size > 128 << 20 || size < 0)
                 throw new StreamCorruptedException("size was " + size);
 
+            final long scIndex = buffer.getLong();
+            if (scIndex != chronicle.size()) {
+                throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
+            }
+
             excerpt.startExcerpt(size);
             // perform a progressive copy of data.
             long remaining = size;
-            int limit = readBuffer.limit();
+            int limit = buffer.limit();
 
-            int size2 = (int) Math.min(readBuffer.remaining(), remaining);
+            int size2 = (int) Math.min(buffer.remaining(), remaining);
             remaining -= size2;
-            readBuffer.limit(readBuffer.position() + size2);
-            excerpt.write(readBuffer);
+            buffer.limit(buffer.position() + size2);
+            excerpt.write(buffer);
             // reset the limit;
-            readBuffer.limit(limit);
+            buffer.limit(limit);
 
             // needs more than one read.
             while (remaining > 0) {
-                readBuffer.clear();
-                int size3 = (int) Math.min(readBuffer.capacity(), remaining);
-                readBuffer.limit(size3);
-                if (sc.read(readBuffer) < 0)
+                buffer.clear();
+                int size3 = (int) Math.min(buffer.capacity(), remaining);
+                buffer.limit(size3);
+                if (sc.read(buffer) < 0)
                     throw new EOFException();
-                readBuffer.flip();
-                remaining -= readBuffer.remaining();
-                excerpt.write(readBuffer);
+                buffer.flip();
+                remaining -= buffer.remaining();
+                excerpt.write(buffer);
             }
 
             excerpt.finish();

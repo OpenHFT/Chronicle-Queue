@@ -53,9 +53,9 @@ import java.util.concurrent.Executors;
  * @author peter.lawrey
  */
 public class InProcessChronicleSource implements Chronicle {
+
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
-    static final int STX = -125;
 
     private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
@@ -208,7 +208,6 @@ public class InProcessChronicleSource implements Chronicle {
 
         private long index;
         private long lastHeartbeatTime;
-        private boolean first;
 
         public Handler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
@@ -219,7 +218,6 @@ public class InProcessChronicleSource implements Chronicle {
             this.tailer = chronicle.createTailer();
             this.buffer = TcpUtil.createBuffer(1, ByteOrder.nativeOrder());
             this.index = -1;
-            this.first = true;
             this.lastHeartbeatTime = 0;
         }
 
@@ -228,12 +226,8 @@ public class InProcessChronicleSource implements Chronicle {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
                         buffer.clear();
-                        if (first) {
-                            buffer.putInt(STX).putLong(tailer.index());
-                            first = false;
-                        }
-
                         buffer.putInt(PADDED_LEN);
+                        buffer.putLong(tailer.index());
                         buffer.flip();
                         TcpUtil.writeAll(socket, buffer);
                     }
@@ -243,7 +237,7 @@ public class InProcessChronicleSource implements Chronicle {
 
                 pause();
 
-                if(closed || !tailer.index(index)) {
+                if(!closed && !tailer.index(index)) {
                     return false;
                 }
             }
@@ -251,18 +245,11 @@ public class InProcessChronicleSource implements Chronicle {
             pauseReset();
 
             final long size = tailer.capacity();
-            long remaining;
+            long remaining = size + TcpUtil.HEADER_SIZE;
 
             buffer.clear();
-            if (first) {
-                buffer.putInt(STX).putLong(tailer.index());
-                first = false;
-                remaining = size + TcpUtil.HEADER_SIZE;
-            } else {
-                remaining = size + 4;
-            }
-
             buffer.putInt((int) size);
+            buffer.putLong(tailer.index());
 
             // for large objects send one at a time.
             if (size > buffer.capacity() / 2) {
@@ -279,22 +266,21 @@ public class InProcessChronicleSource implements Chronicle {
                 tailer.read(buffer);
                 int count = 1;
                 while (tailer.index(index + 1) && count++ < MAX_MESSAGE) {
-                    if (tailer.wasPadding()) {
+                    if(!tailer.wasPadding()) {
+                        if (tailer.capacity() + TcpUtil.HEADER_SIZE >= (buffer.capacity() - buffer.position())) {
+                            break;
+                        }
+
+                        // if there is free space, copy another one.
+                        int size2 = (int) tailer.capacity();
+                        buffer.limit(buffer.position() + size2 + TcpUtil.HEADER_SIZE);
+                        buffer.putInt(size2);
+                        buffer.putLong(tailer.index());
+                        tailer.read(buffer);
                         index++;
-                        continue;
+                    } else {
+                        index++;
                     }
-
-                    if (tailer.remaining() + 4 >= buffer.capacity() - buffer.position()) {
-                        break;
-                    }
-
-                    // if there is free space, copy another one.
-                    int size2 = (int) tailer.capacity();
-                    buffer.limit(buffer.position() + size2 + 4);
-                    buffer.putInt(size2);
-                    tailer.read(buffer);
-
-                    index++;
                 }
 
                 buffer.flip();
@@ -320,33 +306,33 @@ public class InProcessChronicleSource implements Chronicle {
                         final Iterator<SelectionKey> it = keys.iterator();
 
                         while (it.hasNext()) {
-                            while (it.hasNext()) {
-                                final SelectionKey key = it.next();
-                                it.remove();
+                            final SelectionKey key = it.next();
+                            it.remove();
 
-                                if(key.isReadable()) {
-                                    try {
-                                        this.index = readIndex(socket) + 1;
-                                        this.first = true;
-                                        this.lastHeartbeatTime = System.currentTimeMillis();
+                            if(key.isReadable()) {
+                                try {
+                                    this.index = readIndex(socket) + 1;
+                                    this.lastHeartbeatTime = System.currentTimeMillis();
 
-                                        logger.info("Start publishing from : {}", this.index);
+                                    logger.info("Start publishing from : {}", this.index);
 
-                                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                                    } catch(EOFException e) {
-                                        key.selector().close();
-                                        throw e;
-                                    }
-                                } else if(key.isWritable()) {
-                                    long now = System.currentTimeMillis();
-                                    if(!write() && !closed) {
-                                        if (lastHeartbeatTime <= now && !first) {
-                                            buffer.clear();
-                                            buffer.putInt(IN_SYNC_LEN);
-                                            buffer.flip();
-                                            TcpUtil.writeAll(socket, buffer);
-                                            lastHeartbeatTime = now + HEARTBEAT_INTERVAL_MS;
-                                        }
+                                    key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                                    keys.clear();
+                                    break;
+                                } catch(EOFException e) {
+                                    key.selector().close();
+                                    throw e;
+                                }
+                            } else if(key.isWritable()) {
+                                final long now = System.currentTimeMillis();
+                                if(!closed && !write()) {
+                                    if (lastHeartbeatTime <= now) {
+                                        buffer.clear();
+                                        buffer.putInt(IN_SYNC_LEN);
+                                        buffer.putLong(0L);
+                                        buffer.flip();
+                                        TcpUtil.writeAll(socket, buffer);
+                                        lastHeartbeatTime = now + HEARTBEAT_INTERVAL_MS;
                                     }
                                 }
                             }

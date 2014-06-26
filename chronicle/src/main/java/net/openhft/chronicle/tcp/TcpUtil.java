@@ -29,7 +29,7 @@ import java.nio.channels.SocketChannel;
  */
 public enum TcpUtil {
     ;
-    public static final int HEADER_SIZE = 16;
+    public static final int HEADER_SIZE = 12;
     private static final int INITIAL_BUFFER_SIZE = 64 * 1024;
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
