@@ -194,16 +194,9 @@ public class InProcessChronicleSource implements Chronicle {
     }
 
     class Handler implements Runnable {
-        @NotNull
         private final SocketChannel socket;
-
-        @NotNull
         private final Selector selector;
-
-        @NotNull
         private final ExcerptTailer tailer;
-
-        @NotNull
         private final ByteBuffer buffer;
 
         private long index;
