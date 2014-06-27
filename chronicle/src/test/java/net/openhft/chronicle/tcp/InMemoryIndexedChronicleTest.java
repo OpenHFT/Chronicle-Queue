@@ -22,6 +22,9 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -48,10 +51,11 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
             for (long i = 0; i < items; i++) {
-                assertTrue(tailer1.nextIndex());
                 assertEquals(i, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
+
+                assertTrue(tailer1.nextIndex());
             }
 
             tailer1.close();
@@ -131,9 +135,9 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
                 int index = r.nextInt(items - -1) + -1;
 
                 assertTrue(tailer.index(index));
-                assertTrue(tailer.nextIndex());
                 assertEquals(index + 1, tailer.index());
                 assertEquals(index + 1, tailer.readLong());
+
                 tailer.finish();
             }
 
@@ -147,19 +151,43 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         }
     }
 
-
-
     @Test
     public void testIndexedInMemorySink_004() throws Exception {
         final int port = BASE_PORT + 104;
+        final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
         final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final ExecutorService executor = Executors.newFixedThreadPool(tailers + 1);
 
         try {
 
-            final Thread appenderThread = new Thread() {
+            for(int i=0;i<tailers;i++) {
+                executor.submit(new Runnable() {
+                    public void run() {
+                        try {
+                            final ExcerptTailer tailer = sink.createTailer().toStart();
+                            for (int i = 0; i < items; ) {
+                                if (tailer.nextIndex()) {
+                                    assertEquals(i, tailer.index());
+                                    assertEquals(i, tailer.readLong());
+                                    tailer.finish();
+
+                                    i++;
+                                }
+                            }
+
+                            tailer.close();
+                        } catch (Exception e) {
+                        }
+                    }
+                });
+            }
+
+            Thread.sleep(100);
+
+            executor.submit(new Runnable() {
                 public void run() {
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -176,41 +204,10 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
                     } catch (Exception e) {
                     }
                 }
-            };
+            });
 
-            final Runnable runnableTailer = new Runnable() {
-                public void run() {
-                    try {
-                        final ExcerptTailer tailer = sink.createTailer().toStart();
-                        for(int i=0; i<items; ) {
-                            if(tailer.nextIndex()) {
-                                assertEquals(i, tailer.index());
-                                assertEquals(i, tailer.readLong());
-                                tailer.finish();
-
-                                i++;
-                            }
-                        }
-
-                        tailer.close();
-                    } catch (Exception e) {
-                    }
-                }
-            };
-
-
-            final Thread tailerThread1 = new Thread(runnableTailer);
-            final Thread tailerThread2 = new Thread(runnableTailer);
-            tailerThread1.start();
-            tailerThread2.start();
-
-            Thread.sleep(100);
-
-            appenderThread.start();
-
-            tailerThread1.join();
-            tailerThread2.join();
-            appenderThread.join();
+            executor.shutdown();
+            executor.awaitTermination(30, TimeUnit.SECONDS);
 
             sink.close();
             sink.clear();

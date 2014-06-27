@@ -68,7 +68,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void  close() throws IOException {
         if(!closed) {
             closed = true;
 
@@ -90,7 +90,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
     }
 
     @Override
-    public Excerpt createExcerpt() throws IOException {
+    public synchronized Excerpt createExcerpt() throws IOException {
         Excerpt excerpt = this.chronicleType == ChronicleType.INDEXED
             ? new InMemoryIndexedExcerpt()
             : new InMemoryVanillaExcerpt();
@@ -101,7 +101,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
     }
 
     @Override
-    public ExcerptTailer createTailer() throws IOException {
+    public synchronized ExcerptTailer createTailer() throws IOException {
         ExcerptTailer excerpt = this.chronicleType == ChronicleType.INDEXED
             ? new InMemoryIndexedExcerptTailer()
             : new InMemoryVanillaExcerptTailer();
@@ -281,8 +281,8 @@ public class InMemoryChronicleSink extends ChronicleSink {
                 if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
                     while (readFromChannel(TcpUtil.HEADER_SIZE)) {
                         buffer.mark();
-                        int size = buffer.getInt();
-                        switch(size) {
+                        int excerptSize = buffer.getInt();
+                        switch(excerptSize) {
                             case InProcessChronicleSource.PADDED_LEN:
                             case InProcessChronicleSource.IN_SYNC_LEN:
                                 buffer.getLong();
@@ -290,16 +290,19 @@ public class InMemoryChronicleSink extends ChronicleSink {
                         }
 
                         long receivedIndex = buffer.getLong();
-                        if(index == -2) {
+                        if(index == -2 || receivedIndex == index + 1) {
                             buffer.reset();
-                            return true;
-                        } else if(receivedIndex == index + 1) {
-                            buffer.reset();
-                            return true;
+                            if(nextIndex()) {
+                                finish();
+                                lastSize = 0;
+                                return true;
+                            } else {
+                                return false;
+                            }
                         }
 
-                        if(buffer.remaining() >= size) {
-                            buffer.position(buffer.position() + size);
+                        if(buffer.remaining() >= excerptSize) {
+                            buffer.position(buffer.position() + excerptSize);
                         }
                     }
                 }
@@ -314,9 +317,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
         public boolean nextIndex() {
             try {
                 if(!isChannelOpen()) {
-                    if(!index(this.index)) {
-                        return false;
-                    }
+                    return index(this.index);
                 }
 
                 if(!readFromChannel(TcpUtil.HEADER_SIZE + 8)) {
@@ -329,8 +330,6 @@ public class InMemoryChronicleSink extends ChronicleSink {
                     case InProcessChronicleSource.PADDED_LEN:
                         buffer.getLong();
                         return false;
-                    default:
-                        break;
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
@@ -399,75 +398,93 @@ public class InMemoryChronicleSink extends ChronicleSink {
 
         @Override
         public boolean index(long index) {
-            /*
-            if(!isChannelOpen()) {
-                this.index = index;
-                this.lastSize = 0;
+            this.index = index;
+            this.lastSize = 0;
 
-                try {
+            try {
+                if(!isChannelOpen()) {
                     openChannel();
-
-                    if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                        if (readFromChannel(TcpUtil.HEADER_SIZE + 8, TcpUtil.HEADER_SIZE + 8 + 8)) {
-                            buffer.mark();
-
-                            long receivedIndex = buffer.getLong();
-                            if (this.index != -1 && this.index != Long.MAX_VALUE && receivedIndex != index) {
-                                throw new StreamCorruptedException("Expected index " + index + " but got " + receivedIndex);
-                            }
-
-                            buffer.reset();
-
-                            this.index = receivedIndex;
-                            return true;
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.warn("",e);
                 }
 
-                return false;
-            }
-            */
+                if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
+                    while (readFromChannel(TcpUtil.HEADER_SIZE)) {
+                        buffer.mark();
+                        int excerptSize = buffer.getInt();
+                        switch(excerptSize) {
+                            case InProcessChronicleSource.IN_SYNC_LEN:
+                            case InProcessChronicleSource.PADDED_LEN:
+                                buffer.getLong();
+                                return false;
+                        }
 
-            throw new UnsupportedOperationException();
+                        long receivedIndex = buffer.getLong();
+                        if(index == -2 || receivedIndex == index) {
+                            buffer.reset();
+                            if(nextIndex()) {
+                                finish();
+                                lastSize = 0;
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        } else if(index == -1) {
+                            buffer.reset();
+                            if(nextIndex()) {
+                                finish();
+                                lastSize = 0;
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+
+                        if(buffer.remaining() >= excerptSize) {
+                            buffer.position(buffer.position() + excerptSize);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                logger.warn("",e);
+            }
+
+            return false;
         }
 
         @Override
         public boolean nextIndex() {
             try {
                 if(!isChannelOpen()) {
-                    if(!index(this.index)) {
-                        return false;
-                    }
+                    return index(this.index);
                 }
 
                 if(!readFromChannel(TcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
-                long excerptIndex = buffer.getLong();
                 int excerptSize = buffer.getInt();
-
-                if(excerptSize != InProcessChronicleSource.IN_SYNC_LEN) {
-                    if (excerptSize > 128 << 20 || excerptSize < 0) {
-                        throw new StreamCorruptedException("Size was " + excerptSize);
-                    }
-
-                    if (buffer.remaining() < excerptSize) {
-                        if (!readFromChannel(buffer.remaining() - excerptSize)) {
-                            return false;
-                        }
-                    }
-
-                    positionAddr = startAddr + buffer.position();
-                    limitAddr = startAddr + buffer.limit();
-                    lastSize = excerptSize;
-                    index = excerptIndex;
-                } else {
-                    // Heartbeat
-                    return false;
+                switch (excerptSize) {
+                    case InProcessChronicleSource.IN_SYNC_LEN:
+                    case InProcessChronicleSource.PADDED_LEN:
+                        buffer.getLong();
+                        return false;
+                    default:
+                        break;
                 }
+
+                if (excerptSize > 128 << 20 || excerptSize < 0) {
+                    throw new StreamCorruptedException("Size was " + excerptSize);
+                }
+
+                index = buffer.getLong();
+                if(buffer.remaining() < excerptSize) {
+                    if(!readFromChannel(buffer.remaining() - excerptSize)) {
+                        return false;
+                    }
+                }
+
+                positionAddr = startAddr + buffer.position();
+                limitAddr = startAddr + buffer.limit();
+                lastSize = excerptSize;
             } catch (IOException e) {
                 close();
                 return false;
