@@ -16,13 +16,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.NamedThreadFactory;
@@ -32,13 +26,13 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -195,105 +189,158 @@ public class VanillaChronicleSource implements Chronicle {
     }
 
     class Handler implements Runnable {
-        @NotNull
         private final SocketChannel socket;
+        private final Selector selector;
+        private final ByteBuffer buffer;
+        private ExcerptTailer tailer;
 
-        public Handler(@NotNull SocketChannel socket) throws SocketException {
+        private long index;
+        private long lastHeartbeatTime;
+
+        public Handler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
-            socket.socket().setSendBufferSize(256 * 1024);
-            socket.socket().setTcpNoDelay(true);
+            this.socket.configureBlocking(false);
+            this.socket.socket().setSendBufferSize(256 * 1024);
+            this.socket.socket().setTcpNoDelay(true);
+            this.selector = Selector.open();
+            this.tailer = chronicle.createTailer();
+            this.buffer = TcpUtil.createBuffer(1, ByteOrder.nativeOrder());
+            this.index = -1;
+            this.lastHeartbeatTime = 0;
         }
 
         @Override
         public void run() {
-            ExcerptTailer excerpt = null;
             try {
-                long lastSinkIndex = readIndex(socket);
-                excerpt = chronicle.createTailer();
-                ByteBuffer bb = TcpUtil.createBuffer(1, ByteOrder.nativeOrder()); // minimum size
-                long sendInSync = 0;
-                excerpt.index(lastSinkIndex);
-                OUTER:
-                while (!closed) {
-                    while (!excerpt.nextIndex()) {
-                        long now = System.currentTimeMillis();
-                        if (sendInSync <= now) {
-                            bb.clear();
-                            //The sink is expecting this structure long for index then int for size
-                            bb.putLong(IN_SYNC_LEN);
-                            bb.putInt(IN_SYNC_LEN);
-                            bb.flip();
-                            TcpUtil.writeAll(socket, bb);
-                            sendInSync = now + HEARTBEAT_INTERVAL_MS;
-                        }
+                socket.register(selector, SelectionKey.OP_READ);
 
-                        pause();
-                        if (closed) break OUTER;
-                    }
-                    pauseReset();
-                    final long size = excerpt.capacity();
-                    long remaining;
+                while(!closed) {
+                    if(selector.select() > 0) {
+                        final Set<SelectionKey> keys = selector.selectedKeys();
+                        final Iterator<SelectionKey> it = keys.iterator();
 
-                    bb.clear();
-                    //8 bytes for the index (a long) 4 bytes for size (an int)
-                    remaining = size + 8 + 4;
-                    bb.putLong(excerpt.index());
-                    bb.putInt((int) size);
+                        while (it.hasNext()) {
+                            final SelectionKey key = it.next();
+                            it.remove();
 
-                    // for large objects send one at a time.
-                    if (size > bb.capacity() / 2) {
-                        while (remaining > 0) {
-                            int size2 = (int) Math.min(remaining, bb.capacity());
-                            bb.limit(size2);
-                            excerpt.read(bb);
-                            bb.flip();
-                            remaining -= bb.remaining();
-                            TcpUtil.writeAll(socket, bb);
-                        }
-                    } else {
-                        bb.limit((int) remaining);
-                        excerpt.read(bb);
-                        int count = 1;
-                        while (count++ < MAX_MESSAGE) {
-                            if (excerpt.nextIndex()) {
-                                if (excerpt.wasPadding()) {
-                                    throw new AssertionError("Entry should not be padding - remove");
-                                }
-                                if (excerpt.remaining() + 4 + 8 >= bb.capacity() - bb.position())
+                            if(key.isReadable()) {
+                                try {
+                                    this.index = readIndex(socket);
+                                    if(this.index == -1) {
+                                        this.tailer = tailer.toStart();
+                                        this.index = tailer.index();
+                                    } if(this.index == -2) {
+                                        this.tailer = tailer.toEnd();
+                                        this.index = chronicle.lastWrittenIndex();
+                                    }
+
+                                    this.lastHeartbeatTime = System.currentTimeMillis();
+
+                                    logger.info("Start publishing from : {}", this.index);
+
+                                    key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                                    keys.clear();
                                     break;
-                                // if there is free space, copy another one.
-                                int size2 = (int) excerpt.capacity();
-                                bb.limit(bb.position() + size2 + 4 + 8);
-                                bb.putLong(excerpt.index());
-                                bb.putInt(size2);
-                                excerpt.read(bb);
+                                } catch(EOFException e) {
+                                    key.selector().close();
+                                    throw e;
+                                }
+                            } else if(key.isWritable()) {
+                                final long now = System.currentTimeMillis();
+                                if(!closed && !write()) {
+                                    if (lastHeartbeatTime <= now) {
+                                        buffer.clear();
+                                        buffer.putInt(IN_SYNC_LEN);
+                                        buffer.putLong(0L);
+                                        buffer.flip();
+                                        TcpUtil.writeAll(socket, buffer);
+                                        lastHeartbeatTime = now + HEARTBEAT_INTERVAL_MS;
+                                    }
+                                }
                             }
                         }
-
-                        bb.flip();
-                        TcpUtil.writeAll(socket, bb);
                     }
-                    if (bb.remaining() > 0) throw new EOFException("Failed to send index=" + excerpt.index());
-
-                    sendInSync = 0;
                 }
             } catch (Exception e) {
                 if (!closed) {
                     String msg = e.getMessage();
                     if (msg != null &&
-                            (msg.contains("reset by peer")
-                                || msg.contains("Broken pipe")
-                                || msg.contains("was aborted by"))) {
-                        logger.info("Connect {} closed from the other end ", socket, e);
+                        (msg.contains("reset by peer")
+                            || msg.contains("Broken pipe")
+                            || msg.contains("was aborted by"))) {
+                        logger.info("Connect {} closed from the other end", socket, e);
                     } else {
-                        logger.info("Connect {} died", socket, e);
+                        logger.info("Connect {} died",socket, e);
+                    }
+
+                    try {
+                        this.socket.close();
+                    } catch(IOException ioe) {
+                        logger.warn("",e);
                     }
                 }
-            } finally {
-                if(excerpt != null) {
-                    excerpt.close();
+            }
+        }
+
+        private boolean write() throws IOException {
+            if (!tailer.nextIndex()) {
+                pause();
+                if(!closed && !tailer.nextIndex()) {
+                    return false;
                 }
             }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining = size + TcpUtil.HEADER_SIZE;
+
+            buffer.clear();
+            buffer.putInt((int) size);
+            buffer.putLong(tailer.index());
+
+            // for large objects send one at a time.
+            if (size > buffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, buffer.capacity());
+                    buffer.limit(size2);
+                    tailer.read(buffer);
+                    buffer.flip();
+                    remaining -= buffer.remaining();
+                    TcpUtil.writeAll(socket, buffer);
+                }
+            } else {
+                buffer.limit((int) remaining);
+                tailer.read(buffer);
+                int count = 1;
+                while (count++ < MAX_MESSAGE) {
+                    if (tailer.nextIndex()) {
+                        if (tailer.wasPadding()) {
+                            throw new AssertionError("Entry should not be padding - remove");
+                        }
+
+                        if (tailer.capacity() + TcpUtil.HEADER_SIZE >= buffer.capacity() - buffer.position()) {
+                            break;
+                        }
+
+                        // if there is free space, copy another one.
+                        int size2 = (int) tailer.capacity();
+                        buffer.limit(buffer.position() + size2 + TcpUtil.HEADER_SIZE);
+                        buffer.putInt(size2);
+                        buffer.putLong(tailer.index());
+                        tailer.read(buffer);
+                    }
+                }
+
+                buffer.flip();
+                TcpUtil.writeAll(socket, buffer);
+            }
+
+            if (buffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + tailer.index());
+            }
+
+            return true;
         }
 
         private long readIndex(@NotNull SocketChannel socket) throws IOException {

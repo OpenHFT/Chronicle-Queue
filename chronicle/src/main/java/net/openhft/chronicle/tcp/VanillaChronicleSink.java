@@ -165,16 +165,15 @@ public class VanillaChronicleSink implements Chronicle {
             }
 
             // Check if there is enogh data (header plus some more data)
-            if (readBuffer.remaining() < TcpUtil.HEADER_SIZE + 8) {
+            if (readBuffer.remaining() < TcpUtil.HEADER_SIZE) {
                 if (readBuffer.remaining() == 0){
                     readBuffer.clear();
-                }
-                else{
+                } else {
                     readBuffer.compact();
                 }
 
                 // Waith till some more data has been readed
-                while (readBuffer.position() < TcpUtil.HEADER_SIZE + 8 + 8) {
+                while (readBuffer.position() < TcpUtil.HEADER_SIZE + 8) {
                     if (sc.read(readBuffer) < 0) {
                         sc.close();
                         return false;
@@ -184,16 +183,17 @@ public class VanillaChronicleSink implements Chronicle {
                 readBuffer.flip();
             }
 
-            long scIndex = readBuffer.getLong();
             int size = readBuffer.getInt();
+            long scIndex = readBuffer.getLong();
 
             if(size == VanillaChronicleSource.IN_SYNC_LEN){
                 //Heartbeat message ignore and return false
                 return false;
             }
 
-            if (size > 128 << 20 || size < 0)
+            if (size > 128 << 20 || size < 0) {
                 throw new StreamCorruptedException("size was " + size);
+            }
 
             int cycle = (int) (scIndex >>> chronicle.getEntriesForCycleBits());
 
@@ -228,6 +228,7 @@ public class VanillaChronicleSink implements Chronicle {
             } catch (IOException ignored) {
             }
         }
+
         return true;
     }
 

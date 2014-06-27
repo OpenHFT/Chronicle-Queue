@@ -21,6 +21,7 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import java.io.File;
 import java.io.IOException;
 
 public class InMemoryChronicleTestBase {
@@ -30,6 +31,10 @@ public class InMemoryChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -55,6 +60,30 @@ public class InMemoryChronicleTestBase {
 
     protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
         return new InProcessChronicleSource(new IndexedChronicle(basePath, config), port);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected synchronized String getVanillaTestPath() {
+        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
+        final File f = new File(path);
+        if(f.exists()) {
+            f.delete();
+        }
+
+        return path;
+    }
+
+    protected synchronized String getVanillaTestPath(String suffix) {
+        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        final File f = new File(path);
+        if(f.exists()) {
+            f.delete();
+        }
+
+        return path;
     }
 
     protected Chronicle inMemoryVanillaChronicleSink( String host, int port) throws IOException {

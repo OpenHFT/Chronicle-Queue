@@ -58,7 +58,7 @@ public class VanillaChronicleSourceTest extends VanillaChronicleTestBase {
                 }
 
                 long val = tailer.parseLong();
-                //System.out.println(val);
+                //System.out.println("" + val);
                 Assert.assertEquals("i: " + i, value, val);
                 Assert.assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
