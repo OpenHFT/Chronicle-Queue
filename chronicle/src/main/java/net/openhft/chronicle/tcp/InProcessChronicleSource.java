@@ -311,7 +311,13 @@ public class InProcessChronicleSource implements Chronicle {
 
                             if(key.isReadable()) {
                                 try {
-                                    this.index = readIndex(socket) + 1;
+                                    this.index = readIndex(socket);
+                                    if(this.index != -2) {
+                                        this.index++;
+                                    } else {
+                                        this.index = chronicle.lastWrittenIndex() + 1;
+                                    }
+
                                     this.lastHeartbeatTime = System.currentTimeMillis();
 
                                     logger.info("Start publishing from : {}", this.index);

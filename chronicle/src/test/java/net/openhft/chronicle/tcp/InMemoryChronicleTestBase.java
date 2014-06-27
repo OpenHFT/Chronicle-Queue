@@ -16,16 +16,11 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
-import java.io.File;
 import java.io.IOException;
 
 public class InMemoryChronicleTestBase {
@@ -36,24 +31,22 @@ public class InMemoryChronicleTestBase {
     @Rule
     public final TestName testName = new TestName();
 
-    protected synchronized String getTestPath() {
+    protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
         ChronicleTools.deleteOnExit(path);
 
         return path;
     }
 
-    protected synchronized String getTestPath(String suffix) {
-        final File path = new File(TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix);
-        if(path.exists()) {
-            path.delete();
-        }
+    protected synchronized String getIndexedTestPath(String suffix) {
+        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        ChronicleTools.deleteOnExit(path);
 
-        return path.getAbsolutePath();
+        return path;
     }
 
     protected Chronicle inMemoryIndexedChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.INDEXED, host, port);
+        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.INDEXED, host, port);
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
@@ -65,7 +58,7 @@ public class InMemoryChronicleTestBase {
     }
 
     protected Chronicle inMemoryVanillaChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(InMemoryChronicleSink.ChronicleType.VANILLA, host, port);
+        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.VANILLA, host, port);
     }
 
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {

@@ -15,10 +15,7 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.*;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
@@ -34,17 +31,11 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
-public class InMemoryChronicleSink implements Chronicle {
-
-    public enum ChronicleType {
-        INDEXED,
-        VANILLA
-    }
-
+public class InMemoryChronicleSink extends ChronicleSink {
     private final ChronicleSinkConfig config;
     private final InetSocketAddress address;
     private final Logger logger;
-    private final List<ExcerptTailer> excerpts;
+    private final List<ExcerptCommon> excerpts;
     private final ChronicleType chronicleType;
 
     private volatile boolean closed;
@@ -65,7 +56,7 @@ public class InMemoryChronicleSink implements Chronicle {
         this.config = config;
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + address.toString());
-        this.excerpts = new LinkedList<ExcerptTailer>();
+        this.excerpts = new LinkedList<ExcerptCommon>();
         this.closed = false;
         this.chronicleType = type;
     }
@@ -81,7 +72,7 @@ public class InMemoryChronicleSink implements Chronicle {
         if(!closed) {
             closed = true;
 
-            for (ExcerptTailer excerpt : excerpts) {
+            for (ExcerptCommon excerpt : excerpts) {
                 excerpt.close();
             }
 
@@ -100,7 +91,24 @@ public class InMemoryChronicleSink implements Chronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        throw new UnsupportedOperationException();
+        Excerpt excerpt = this.chronicleType == ChronicleType.INDEXED
+            ? new InMemoryIndexedExcerpt()
+            : new InMemoryVanillaExcerpt();
+
+        excerpts.add(excerpt);
+
+        return excerpt;
+    }
+
+    @Override
+    public ExcerptTailer createTailer() throws IOException {
+        ExcerptTailer excerpt = this.chronicleType == ChronicleType.INDEXED
+            ? new InMemoryIndexedExcerptTailer()
+            : new InMemoryVanillaExcerptTailer();
+
+        excerpts.add(excerpt);
+
+        return excerpt;
     }
 
     @Override
@@ -118,22 +126,11 @@ public class InMemoryChronicleSink implements Chronicle {
         return 0;
     }
 
-    @Override
-    public ExcerptTailer createTailer() throws IOException {
-        ExcerptTailer tailer = this.chronicleType == ChronicleType.INDEXED
-            ? new InMemoryIndexedExcerptTailer()
-            : new InMemoryVanillaExcerptTailer();
-
-        excerpts.add(tailer);
-
-        return tailer;
-    }
-
     // *************************************************************************
     // Excerpt
     // *************************************************************************
 
-    private abstract class AbstractInMemoryExcerpt extends NativeBytes implements ExcerptTailer {
+    private abstract class AbstractInMemoryExcerpt extends NativeBytes implements ExcerptCommon {
         protected final Logger logger;
         protected long index;
         protected int lastSize;
@@ -171,18 +168,6 @@ public class InMemoryChronicleSink implements Chronicle {
                     logger.warn("Error closing socket", e);
                 }
             }
-        }
-
-        @Override
-        public ExcerptTailer toStart() {
-            index(-1);
-            return this;
-        }
-
-        @Override
-        public ExcerptTailer toEnd() {
-            index(Long.MAX_VALUE);
-            return this;
         }
 
         @Override
@@ -266,7 +251,23 @@ public class InMemoryChronicleSink implements Chronicle {
         }
     }
 
-    private final class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt {
+    // *************************************************************************
+    // INDEXED
+    // *************************************************************************
+
+    private class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt implements ExcerptTailer {
+        @Override
+        public ExcerptTailer toStart() {
+            index(-1);
+            return this;
+        }
+
+        @Override
+        public ExcerptTailer toEnd() {
+            index(-2);
+            return this;
+        }
+
         @Override
         public boolean index(long index) {
             this.index = index;
@@ -289,7 +290,10 @@ public class InMemoryChronicleSink implements Chronicle {
                         }
 
                         long receivedIndex = buffer.getLong();
-                        if(receivedIndex == index + 1) {
+                        if(index == -2) {
+                            buffer.reset();
+                            return true;
+                        } else if(receivedIndex == index + 1) {
                             buffer.reset();
                             return true;
                         }
@@ -352,7 +356,47 @@ public class InMemoryChronicleSink implements Chronicle {
         }
     }
 
-    private final class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt {
+    private class InMemoryIndexedExcerpt extends InMemoryIndexedExcerptTailer implements Excerpt {
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Excerpt toStart() {
+            super.toStart();
+            return this;
+        }
+
+        @Override
+        public Excerpt toEnd() {
+            super.toEnd();
+            return this;
+        }
+    }
+
+    // *************************************************************************
+    // VANILLA
+    // *************************************************************************
+
+    private class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt implements ExcerptTailer {
+        @Override
+        public ExcerptTailer toStart() {
+            index(-1);
+            return this;
+        }
+
+        @Override
+        public ExcerptTailer toEnd() {
+            index(-2);
+            return this;
+        }
+
         @Override
         public boolean index(long index) {
             /*
@@ -430,6 +474,30 @@ public class InMemoryChronicleSink implements Chronicle {
             }
 
             return true;
+        }
+    }
+
+    private class InMemoryVanillaExcerpt extends InMemoryVanillaExcerptTailer implements Excerpt {
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Excerpt toStart() {
+            super.toStart();
+            return this;
+        }
+
+        @Override
+        public Excerpt toEnd() {
+            super.toEnd();
+            return this;
         }
     }
 }
