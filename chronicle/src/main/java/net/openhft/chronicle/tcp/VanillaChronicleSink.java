@@ -17,7 +17,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptCommon;
@@ -58,6 +57,7 @@ public class VanillaChronicleSink implements Chronicle {
     private final VanillaChronicle.VanillaAppender excerpt;
     private final Logger logger;
     private volatile boolean closed = false;
+    private final ByteBuffer readBuffer; // minimum size
 
     public VanillaChronicleSink(@NotNull VanillaChronicle chronicle, String hostname, int port) throws IOException {
         this.chronicle = chronicle;
@@ -108,20 +108,12 @@ public class VanillaChronicleSink implements Chronicle {
 
         @Override
         public boolean nextIndex() {
-            if(super.nextIndex()) {
-                return true;
-            }
-
-            return readNext() && super.nextIndex();
+            return super.nextIndex() || (readNext() && super.nextIndex());
         }
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            if (super.index(index)) {
-                return true;
-            }
-
-            return readNext() && super.index(index);
+            return super.index(index) || (readNext() && super.index(index));
         }
     }
 
@@ -129,6 +121,7 @@ public class VanillaChronicleSink implements Chronicle {
         if (sc == null || !sc.isOpen()) {
             sc = createConnection();
         }
+
         return sc != null && readNextExcerpt(sc);
     }
 
@@ -142,11 +135,12 @@ public class VanillaChronicleSink implements Chronicle {
                 SocketChannel sc = SocketChannel.open(address);
                 sc.socket().setReceiveBufferSize(256 * 1024);
                 logger.info("Connected to " + address);
+
                 ByteBuffer bb = ByteBuffer.allocate(8);
                 bb.putLong(0, chronicle.lastIndex());
                 TcpUtil.writeAllOrEOF(sc, bb);
-                return sc;
 
+                return sc;
             } catch (IOException e) {
                 logger.info("Failed to connect to {} retrying ", address, e);
             }
@@ -159,8 +153,6 @@ public class VanillaChronicleSink implements Chronicle {
         }
         return null;
     }
-
-    private final ByteBuffer readBuffer; // minimum size
 
     private boolean readNextExcerpt(@NotNull SocketChannel sc) {
         try {
@@ -260,10 +252,6 @@ public class VanillaChronicleSink implements Chronicle {
         closeSocket(sc);
         excerpt.close();
         chronicle.close();
-    }
-
-    public ChronicleConfig config() {
-        throw new UnsupportedOperationException();
     }
 
     public void clear() {

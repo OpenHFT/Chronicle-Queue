@@ -17,7 +17,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptCommon;
@@ -51,6 +50,8 @@ public class InProcessChronicleSink implements Chronicle {
     private final Chronicle chronicle;
     @NotNull
     private final SocketAddress address;
+    @Nullable
+    private SocketChannel sc = null;
     private final ExcerptAppender excerpt;
     private final Logger logger;
     private final ByteBuffer buffer; // minimum size
@@ -110,22 +111,20 @@ public class InProcessChronicleSink implements Chronicle {
 
         @Override
         public boolean nextIndex() {
-            return super.nextIndex() || readNext() && super.nextIndex();
+            return super.nextIndex() || (readNext() && super.nextIndex());
         }
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            return super.index(index) || index >= 0 && readNext() && super.index(index);
+            return super.index(index) || (index >= 0 && readNext() && super.index(index));
         }
     }
-
-    @Nullable
-    private SocketChannel sc = null;
 
     boolean readNext() {
         if (sc == null || !sc.isOpen()) {
             sc = createConnection();
         }
+
         return sc != null && readNextExcerpt(sc);
     }
 
@@ -262,9 +261,5 @@ public class InProcessChronicleSink implements Chronicle {
         } catch (IOException e) {
             logger.warn("Error closing Sink", e);
         }
-    }
-
-    public ChronicleConfig config() {
-        return ((IndexedChronicle) chronicle).config();
     }
 }
