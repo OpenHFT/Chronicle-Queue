@@ -52,10 +52,7 @@ import java.util.concurrent.Executors;
  *
  * @author peter.lawrey
  */
-public class InProcessChronicleSource implements Chronicle {
-
-    static final int IN_SYNC_LEN = -128;
-    static final int PADDED_LEN = -127;
+public class InProcessChronicleSource extends ChronicleSource {
 
     private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
@@ -305,15 +302,19 @@ public class InProcessChronicleSource implements Chronicle {
                             if(key.isReadable()) {
                                 try {
                                     this.index = readIndex(socket);
-                                    if(this.index != -2) {
-                                        this.index++;
-                                    } else {
-                                        this.index = chronicle.lastWrittenIndex() + 1;
+                                    if(this.index == -1) {
+                                        this.index = 0;
+                                    } else if(this.index == -2){
+                                        this.index = tailer.toEnd().index();
                                     }
 
-                                    this.lastHeartbeatTime = System.currentTimeMillis();
+                                    buffer.clear();
+                                    buffer.putInt(SYNC_IDX_LEN);
+                                    buffer.putLong(this.index);
+                                    buffer.flip();
+                                    TcpUtil.writeAll(socket, buffer);
 
-                                    logger.info("Start publishing from : {}", this.index);
+                                    this.lastHeartbeatTime = System.currentTimeMillis() + HEARTBEAT_INTERVAL_MS;
 
                                     key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
                                     keys.clear();

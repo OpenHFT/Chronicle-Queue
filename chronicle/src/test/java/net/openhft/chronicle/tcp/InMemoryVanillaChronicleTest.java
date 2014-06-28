@@ -21,9 +21,13 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
-import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
 
@@ -51,7 +55,11 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
 
-                assertTrue(tailer1.nextIndex());
+                if(i < items - 1) {
+                    assertTrue(tailer1.nextIndex());
+                } else {
+                    assertFalse(tailer1.nextIndex());
+                }
             }
 
             tailer1.close();
@@ -104,16 +112,71 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
     }
 
     @Test
-    public void testVanillaInMemorySink_003() throws Exception {
-        final int port = BASE_PORT + 303;
+    public void testVanillaInMemorySink_004() throws Exception {
+        final int port = BASE_PORT + 204;
+        final int tailers = 4;
+        final int items = 1000000;
         final String basePathSource = getVanillaTestPath("-source");
-
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
         final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
-        final int items = 10;//1000000;
-        final long[] indices = new long[items];
-        final long[] values = new long[items];
+        final ExecutorService executor = Executors.newFixedThreadPool(tailers);
+
+        try {
+            for(int i=0;i<tailers;i++) {
+                executor.submit(new Runnable() {
+                    public void run() {
+                        try {
+                            final ExcerptTailer tailer = sink.createTailer().toStart();
+                            for (int i = 0; i < items; ) {
+                                if (tailer.nextIndex()) {
+                                    assertEquals(i, tailer.readLong());
+                                    tailer.finish();
+
+                                    i++;
+                                }
+                            }
+
+                            tailer.close();
+                        } catch (Exception e) {
+                        }
+                    }
+                });
+            }
+
+            Thread.sleep(100);
+
+            final ExcerptAppender appender = source.createAppender();
+
+            for (int i=0; i<items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+            }
+
+            appender.close();
+
+            executor.shutdown();
+            executor.awaitTermination(30, TimeUnit.SECONDS);
+
+            sink.close();
+            sink.clear();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+    @Test
+    public void testVanillaInMemorySink_005() throws Exception {
+        final int port = BASE_PORT + 205;
+        final String basePathSource = getVanillaTestPath("-source");
+        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+
+        final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
+        final ExcerptTailer st = source.createTailer().toStart();
+        final ExcerptTailer tailer = sink.createTailer();
 
         try {
             for (int i = 0; i < items; i++) {
@@ -121,26 +184,14 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
                 appender.writeLong(i);
                 appender.finish();
 
-                indices[i] = appender.index();
-                values[i]  = i;
+                st.nextIndex();
+                st.finish();
+
+                assertTrue(tailer.index(st.index()));
+                assertEquals(i, tailer.readLong());
             }
 
             appender.close();
-
-            final ExcerptTailer tailer = sink.createTailer().toStart();
-
-            final Random r = new Random();
-            for(int i=0;i<1000;i++) {
-                int index = r.nextInt(items);
-
-                assertTrue(tailer.index(indices[index]));
-                assertTrue(tailer.nextIndex());
-                System.out.println(">" + tailer.index());
-                //assertEquals(indices[index], tailer.index());
-                assertEquals(values[index], tailer.readLong());
-                tailer.finish();
-            }
-
             tailer.close();
 
             sink.close();
@@ -150,78 +201,4 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
             source.clear();
         }
     }
-
-
-    /*
-    @Test
-    public void testVanillaInMemorySink_004() throws Exception {
-        final int port = BASE_PORT + 104;
-        final int items = 1000000;
-        final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
-
-        try {
-
-            final Thread appenderThread = new Thread() {
-                public void run() {
-                    try {
-                        final ExcerptAppender appender = source.createAppender();
-                        final Random r = new Random();
-
-                        for (int i=0; i<items; i++) {
-                            appender.startExcerpt(8);
-                            appender.writeLong(i);
-                            appender.finish();
-                        }
-
-
-                        appender.close();
-                    } catch (Exception e) {
-                    }
-                }
-            };
-
-            final Runnable runnableTailer = new Runnable() {
-                public void run() {
-                    try {
-                        final ExcerptTailer tailer = sink.createTailer().toStart();
-                        for(int i=0; i<items; ) {
-                            if(tailer.nextIndex()) {
-                                assertEquals(i, tailer.index());
-                                assertEquals(i, tailer.readLong());
-                                tailer.finish();
-
-                                i++;
-                            }
-                        }
-
-                        tailer.close();
-                    } catch (Exception e) {
-                    }
-                }
-            };
-
-
-            final Thread tailerThread1 = new Thread(runnableTailer);
-            final Thread tailerThread2 = new Thread(runnableTailer);
-            tailerThread1.start();
-            tailerThread2.start();
-
-            Thread.sleep(100);
-
-            appenderThread.start();
-
-            tailerThread1.join();
-            tailerThread2.join();
-            appenderThread.join();
-
-            sink.close();
-            sink.clear();
-        } finally {
-            source.close();
-            source.clear();
-        }
-    }
-    */
 }

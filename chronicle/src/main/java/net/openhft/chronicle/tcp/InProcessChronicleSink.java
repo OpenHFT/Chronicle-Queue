@@ -184,13 +184,17 @@ public class InProcessChronicleSink implements Chronicle {
 
             int size = buffer.getInt();
             switch (size) {
-                case InProcessChronicleSource.IN_SYNC_LEN:
+                case ChronicleSource.IN_SYNC_LEN:
                     buffer.getLong();
                     return false;
-                case InProcessChronicleSource.PADDED_LEN:
+                case ChronicleSource.PADDED_LEN:
                     excerpt.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
                     buffer.getLong();
                     return true;
+                case ChronicleSource.SYNC_IDX_LEN:
+                    buffer.getLong();
+                    //Sync IDX message, re-try
+                    return readNextExcerpt(sc);
                 default:
                     break;
             }

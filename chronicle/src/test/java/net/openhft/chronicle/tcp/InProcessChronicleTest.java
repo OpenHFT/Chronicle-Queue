@@ -13,10 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle;
+package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.tcp.InProcessChronicleSink;
-import net.openhft.chronicle.tcp.InProcessChronicleSource;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.IndexedChronicleTestBase;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;

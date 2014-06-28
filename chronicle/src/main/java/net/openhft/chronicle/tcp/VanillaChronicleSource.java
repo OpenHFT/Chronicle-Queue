@@ -46,9 +46,8 @@ import java.util.concurrent.Executors;
  *
  * @author peter.lawrey
  */
-public class VanillaChronicleSource implements Chronicle {
-    static final int IN_SYNC_LEN = -128;
-    static final int PADDED_LEN = -127;
+public class VanillaChronicleSource extends ChronicleSource {
+
     private static final long HEARTBEAT_INTERVAL_MS = 2500;
     private static final int MAX_MESSAGE = 128;
     @NotNull
@@ -196,6 +195,7 @@ public class VanillaChronicleSource implements Chronicle {
 
         private long index;
         private long lastHeartbeatTime;
+        private boolean nextIndex;
 
         public Handler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
@@ -207,6 +207,7 @@ public class VanillaChronicleSource implements Chronicle {
             this.buffer = TcpUtil.createBuffer(1, ByteOrder.nativeOrder());
             this.index = -1;
             this.lastHeartbeatTime = 0;
+            this.nextIndex = true;
         }
 
         @Override
@@ -225,18 +226,27 @@ public class VanillaChronicleSource implements Chronicle {
 
                             if(key.isReadable()) {
                                 try {
+
                                     this.index = readIndex(socket);
                                     if(this.index == -1) {
+                                        this.nextIndex = true;
                                         this.tailer = tailer.toStart();
                                         this.index = tailer.index();
-                                    } if(this.index == -2) {
+                                    } else if(this.index == -2) {
+                                        this.nextIndex = true;
                                         this.tailer = tailer.toEnd();
-                                        this.index = chronicle.lastWrittenIndex();
+                                        this.index = tailer.index();
+                                    } else {
+                                        this.nextIndex = false;
                                     }
 
-                                    this.lastHeartbeatTime = System.currentTimeMillis();
+                                    buffer.clear();
+                                    buffer.putInt(SYNC_IDX_LEN);
+                                    buffer.putLong(this.index);
+                                    buffer.flip();
+                                    TcpUtil.writeAll(socket, buffer);
 
-                                    logger.info("Start publishing from : {}", this.index);
+                                    this.lastHeartbeatTime = System.currentTimeMillis() + HEARTBEAT_INTERVAL_MS;
 
                                     key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
                                     keys.clear();
@@ -283,10 +293,18 @@ public class VanillaChronicleSource implements Chronicle {
         }
 
         private boolean write() throws IOException {
-            if (!tailer.nextIndex()) {
-                pause();
-                if(!closed && !tailer.nextIndex()) {
+            if(nextIndex) {
+                if (!tailer.nextIndex()) {
+                    pause();
+                    if (!closed && !tailer.nextIndex()) {
+                        return false;
+                    }
+                }
+            } else {
+                if(!tailer.index(this.index)) {
                     return false;
+                } else {
+                    this.nextIndex = true;
                 }
             }
 

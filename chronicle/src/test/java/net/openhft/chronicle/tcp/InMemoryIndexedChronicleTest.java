@@ -55,7 +55,11 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
 
-                assertTrue(tailer1.nextIndex());
+                if(i < items - 1) {
+                    assertTrue(tailer1.nextIndex());
+                } else {
+                    assertFalse(tailer1.nextIndex());
+                }
             }
 
             tailer1.close();
@@ -128,15 +132,15 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
 
             appender.close();
 
-            final ExcerptTailer tailer = sink.createTailer().toStart();
+            final ExcerptTailer tailer = sink.createTailer();
 
             final Random r = new Random();
             for(int i=0;i<1000;i++) {
-                int index = r.nextInt(items - -1) + -1;
+                int index = r.nextInt(items);
 
                 assertTrue(tailer.index(index));
-                assertEquals(index + 1, tailer.index());
-                assertEquals(index + 1, tailer.readLong());
+                assertEquals(index, tailer.index());
+                assertEquals(index, tailer.readLong());
 
                 tailer.finish();
             }
@@ -159,7 +163,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
         final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
-        final ExecutorService executor = Executors.newFixedThreadPool(tailers + 1);
+        final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         try {
 
@@ -187,24 +191,15 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
 
             Thread.sleep(100);
 
-            executor.submit(new Runnable() {
-                public void run() {
-                    try {
-                        final ExcerptAppender appender = source.createAppender();
-                        final Random r = new Random();
+            final ExcerptAppender appender = source.createAppender();
 
-                        for (int i=0; i<items; i++) {
-                            appender.startExcerpt(8);
-                            appender.writeLong(i);
-                            appender.finish();
-                        }
+            for (int i=0; i<items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+            }
 
-
-                        appender.close();
-                    } catch (Exception e) {
-                    }
-                }
-            });
+            appender.close();
 
             executor.shutdown();
             executor.awaitTermination(30, TimeUnit.SECONDS);
@@ -216,4 +211,38 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
             source.clear();
         }
     }
+
+    @Test
+    public void testIndexedInMemorySink_005() throws Exception {
+        final int port = BASE_PORT + 105;
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+
+        final int items = 1000;
+        final ExcerptAppender appender = source.createAppender();
+        final ExcerptTailer tailer = sink.createTailer();
+
+        try {
+            for (int i = 0; i < items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+
+                assertTrue(tailer.index(i));
+                assertEquals(i, tailer.readLong());
+                tailer.finish();
+            }
+
+            appender.close();
+            tailer.close();
+
+            sink.close();
+            sink.clear();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
 }

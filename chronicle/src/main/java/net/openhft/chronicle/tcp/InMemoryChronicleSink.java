@@ -130,14 +130,14 @@ public class InMemoryChronicleSink extends ChronicleSink {
     // Excerpt
     // *************************************************************************
 
-    private abstract class AbstractInMemoryExcerpt extends NativeBytes implements ExcerptCommon {
+    private abstract class AbstractInMemoryExcerptTailer extends NativeBytes implements ExcerptTailer {
         protected final Logger logger;
         protected long index;
         protected int lastSize;
         protected final ByteBuffer buffer;
         private SocketChannel channel;
 
-        public AbstractInMemoryExcerpt() {
+        public AbstractInMemoryExcerptTailer() {
             super(NO_PAGE, NO_PAGE);
 
             this.buffer = TcpUtil.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
@@ -255,7 +255,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
     // INDEXED
     // *************************************************************************
 
-    private class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerpt implements ExcerptTailer {
+    private class InMemoryIndexedExcerptTailer extends AbstractInMemoryExcerptTailer {
         @Override
         public ExcerptTailer toStart() {
             index(-1);
@@ -273,6 +273,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
             this.index = index;
             this.lastSize = 0;
 
+            boolean skip = true;
             try {
                 if(!isChannelOpen()) {
                     openChannel();
@@ -282,27 +283,35 @@ public class InMemoryChronicleSink extends ChronicleSink {
                     while (readFromChannel(TcpUtil.HEADER_SIZE)) {
                         buffer.mark();
                         int excerptSize = buffer.getInt();
-                        switch(excerptSize) {
-                            case InProcessChronicleSource.PADDED_LEN:
-                            case InProcessChronicleSource.IN_SYNC_LEN:
-                                buffer.getLong();
-                                return false;
-                        }
-
                         long receivedIndex = buffer.getLong();
-                        if(index == -2 || receivedIndex == index + 1) {
-                            buffer.reset();
-                            if(nextIndex()) {
-                                finish();
-                                lastSize = 0;
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        }
 
-                        if(buffer.remaining() >= excerptSize) {
-                            buffer.position(buffer.position() + excerptSize);
+                        if(excerptSize == ChronicleSource.SYNC_IDX_LEN) {
+                            if(index == -1 || index == -2) {
+                                index = receivedIndex;
+                            }
+
+                            skip = false;
+                        } else {
+                            switch (excerptSize) {
+                                case ChronicleSource.PADDED_LEN:
+                                case ChronicleSource.IN_SYNC_LEN:
+                                    return false;
+                            }
+
+                            if (!skip && receivedIndex == index) {
+                                buffer.reset();
+                                if (nextIndex()) {
+                                    finish();
+                                    lastSize = 0;
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            } else {
+                                if (buffer.remaining() >= excerptSize) {
+                                    buffer.position(buffer.position() + excerptSize);
+                                }
+                            }
                         }
                     }
                 }
@@ -325,24 +334,27 @@ public class InMemoryChronicleSink extends ChronicleSink {
                 }
 
                 int excerptSize = buffer.getInt();
+                long receivedIndex = buffer.getLong();
+
                 switch (excerptSize) {
-                    case InProcessChronicleSource.IN_SYNC_LEN:
-                    case InProcessChronicleSource.PADDED_LEN:
-                        buffer.getLong();
+                    case ChronicleSource.IN_SYNC_LEN:
+                    case ChronicleSource.PADDED_LEN:
                         return false;
+                    case ChronicleSource.SYNC_IDX_LEN:
+                        return nextIndex();
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
                     throw new StreamCorruptedException("Size was " + excerptSize);
                 }
 
-                index = buffer.getLong();
                 if(buffer.remaining() < excerptSize) {
                     if(!readFromChannel(buffer.remaining() - excerptSize)) {
                         return false;
                     }
                 }
 
+                index = receivedIndex;
                 positionAddr = startAddr + buffer.position();
                 limitAddr = startAddr + buffer.limit();
                 lastSize = excerptSize;
@@ -383,7 +395,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
     // VANILLA
     // *************************************************************************
 
-    private class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerpt implements ExcerptTailer {
+    private class InMemoryVanillaExcerptTailer extends AbstractInMemoryExcerptTailer {
         @Override
         public ExcerptTailer toStart() {
             index(-1);
@@ -401,6 +413,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
             this.index = index;
             this.lastSize = 0;
 
+            boolean skip = true;
             try {
                 if(!isChannelOpen()) {
                     openChannel();
@@ -410,36 +423,36 @@ public class InMemoryChronicleSink extends ChronicleSink {
                     while (readFromChannel(TcpUtil.HEADER_SIZE)) {
                         buffer.mark();
                         int excerptSize = buffer.getInt();
-                        switch(excerptSize) {
-                            case InProcessChronicleSource.IN_SYNC_LEN:
-                            case InProcessChronicleSource.PADDED_LEN:
-                                buffer.getLong();
-                                return false;
-                        }
-
                         long receivedIndex = buffer.getLong();
-                        if(index == -2 || receivedIndex == index) {
-                            buffer.reset();
-                            if(nextIndex()) {
-                                finish();
-                                lastSize = 0;
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        } else if(index == -1) {
-                            buffer.reset();
-                            if(nextIndex()) {
-                                finish();
-                                lastSize = 0;
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        }
 
-                        if(buffer.remaining() >= excerptSize) {
-                            buffer.position(buffer.position() + excerptSize);
+                        if(excerptSize == ChronicleSource.SYNC_IDX_LEN) {
+                            if(index == -1 || index == -2) {
+                                index = receivedIndex;
+                            }
+
+                            skip = false;
+                        } else {
+                            switch (excerptSize) {
+                                case ChronicleSource.IN_SYNC_LEN:
+                                case ChronicleSource.PADDED_LEN:
+                                    return false;
+                            }
+
+                            if (!skip) {
+                                buffer.reset();
+                                if (nextIndex()) {
+                                    finish();
+                                    lastSize = 0;
+                                    return true;
+                                }
+                                else {
+                                    return false;
+                                }
+                            } else {
+                                if (buffer.remaining() >= excerptSize) {
+                                    buffer.position(buffer.position() + excerptSize);
+                                }
+                            }
                         }
                     }
                 }
@@ -462,26 +475,27 @@ public class InMemoryChronicleSink extends ChronicleSink {
                 }
 
                 int excerptSize = buffer.getInt();
+                long receivedIndex = buffer.getLong();
+
                 switch (excerptSize) {
-                    case InProcessChronicleSource.IN_SYNC_LEN:
-                    case InProcessChronicleSource.PADDED_LEN:
-                        buffer.getLong();
+                    case ChronicleSource.IN_SYNC_LEN:
+                    case ChronicleSource.PADDED_LEN:
                         return false;
-                    default:
-                        break;
+                    case ChronicleSource.SYNC_IDX_LEN:
+                        return nextIndex();
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
                     throw new StreamCorruptedException("Size was " + excerptSize);
                 }
 
-                index = buffer.getLong();
                 if(buffer.remaining() < excerptSize) {
                     if(!readFromChannel(buffer.remaining() - excerptSize)) {
                         return false;
                     }
                 }
 
+                index = receivedIndex;
                 positionAddr = startAddr + buffer.position();
                 limitAddr = startAddr + buffer.limit();
                 lastSize = excerptSize;

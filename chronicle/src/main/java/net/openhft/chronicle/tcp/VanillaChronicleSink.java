@@ -108,16 +108,20 @@ public class VanillaChronicleSink implements Chronicle {
 
         @Override
         public boolean nextIndex() {
-            return super.nextIndex() || readNext() && super.nextIndex();
+            if(super.nextIndex()) {
+                return true;
+            }
+
+            return readNext() && super.nextIndex();
         }
 
         @Override
         public boolean index(long index) throws IndexOutOfBoundsException {
-            if (super.nextIndex()) return true;
-            if (readNext()) {
-                return super.nextIndex();
+            if (super.index(index)) {
+                return true;
             }
-            return nextIndex();
+
+            return readNext() && super.index(index);
         }
     }
 
@@ -186,9 +190,18 @@ public class VanillaChronicleSink implements Chronicle {
             int size = readBuffer.getInt();
             long scIndex = readBuffer.getLong();
 
-            if(size == VanillaChronicleSource.IN_SYNC_LEN){
-                //Heartbeat message ignore and return false
-                return false;
+            switch (size) {
+                case ChronicleSource.IN_SYNC_LEN:
+                    //Heartbeat message ignore and return false
+                    return false;
+                case ChronicleSource.PADDED_LEN:
+                    //Padded message, should not happen
+                    return false;
+                case ChronicleSource.SYNC_IDX_LEN:
+                    //Sync IDX message, re-try
+                    return readNextExcerpt(sc);
+                default:
+                    break;
             }
 
             if (size > 128 << 20 || size < 0) {
