@@ -43,7 +43,7 @@ public class VanillaChronicleSource extends ChronicleSource {
     private final Logger logger;
 
     public VanillaChronicleSource(@NotNull VanillaChronicle chronicle, int port) throws IOException {
-        super(chronicle, new InetSocketAddress(port));
+        super(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
 
         this.vanillaChronicle = chronicle;
         this.logger = LoggerFactory.getLogger(getClass().getName() + "." + name());
@@ -71,7 +71,7 @@ public class VanillaChronicleSource extends ChronicleSource {
         }
 
         @Override
-        public void select(final Set<SelectionKey> keys) throws IOException {
+        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
             final Iterator<SelectionKey> it = keys.iterator();
 
             while (it.hasNext()) {
@@ -111,7 +111,7 @@ public class VanillaChronicleSource extends ChronicleSource {
                     }
                 } else if(key.isWritable()) {
                     final long now = System.currentTimeMillis();
-                    if(!closed && !write()) {
+                    if(!closed && !publishData()) {
                         if (lastHeartbeatTime <= now) {
                             buffer.clear();
                             buffer.putInt(IN_SYNC_LEN);
@@ -125,7 +125,7 @@ public class VanillaChronicleSource extends ChronicleSource {
             }
         }
 
-        private boolean write() throws IOException {
+        private boolean publishData() throws IOException {
             if(nextIndex) {
                 if (!tailer.nextIndex()) {
                     pause();

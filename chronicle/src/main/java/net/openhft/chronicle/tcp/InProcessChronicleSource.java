@@ -43,7 +43,7 @@ public class InProcessChronicleSource extends ChronicleSource {
     private final Logger logger;
 
     public InProcessChronicleSource(@NotNull Chronicle chronicle, int port) throws IOException {
-        super(chronicle, new InetSocketAddress(port));
+        super(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
         this.logger = LoggerFactory.getLogger(getClass().getName() + "." + name());
     }
 
@@ -61,7 +61,53 @@ public class InProcessChronicleSource extends ChronicleSource {
             super(socket);
         }
 
-        private boolean write() throws IOException {
+        @Override
+        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
+            for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
+                final SelectionKey key = it.next();
+                it.remove();
+
+                if(key.isReadable()) {
+                    try {
+                        this.index = readIndex(socket);
+                        if(this.index == -1) {
+                            this.index = 0;
+                        } else if(this.index == -2){
+                            this.index = tailer.toEnd().index();
+                        }
+
+                        buffer.clear();
+                        buffer.putInt(SYNC_IDX_LEN);
+                        buffer.putLong(this.index);
+                        buffer.flip();
+                        TcpUtil.writeAll(socket, buffer);
+
+                        setLastHeartbeatTime();
+
+                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        keys.clear();
+                        break;
+                    } catch(EOFException e) {
+                        key.selector().close();
+                        throw e;
+                    }
+                } else if(key.isWritable()) {
+                    final long now = System.currentTimeMillis();
+                    if(!closed && !publishData()) {
+                        if (lastHeartbeatTime <= now) {
+                            buffer.clear();
+                            buffer.putInt(IN_SYNC_LEN);
+                            buffer.putLong(0L);
+                            buffer.flip();
+                            TcpUtil.writeAll(socket, buffer);
+                            setLastHeartbeatTime(now);
+                        }
+                    }
+                }
+            }
+        }
+
+        private boolean publishData() throws IOException {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
@@ -133,52 +179,6 @@ public class InProcessChronicleSource extends ChronicleSource {
 
             index++;
             return true;
-        }
-
-        @Override
-        public void select(final Set<SelectionKey> keys) throws IOException {
-            for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
-                final SelectionKey key = it.next();
-                it.remove();
-
-                if(key.isReadable()) {
-                    try {
-                        this.index = readIndex(socket);
-                        if(this.index == -1) {
-                            this.index = 0;
-                        } else if(this.index == -2){
-                            this.index = tailer.toEnd().index();
-                        }
-
-                        buffer.clear();
-                        buffer.putInt(SYNC_IDX_LEN);
-                        buffer.putLong(this.index);
-                        buffer.flip();
-                        TcpUtil.writeAll(socket, buffer);
-
-                        setLastHeartbeatTime();
-
-                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                        keys.clear();
-                        break;
-                    } catch(EOFException e) {
-                        key.selector().close();
-                        throw e;
-                    }
-                } else if(key.isWritable()) {
-                    final long now = System.currentTimeMillis();
-                    if(!closed && !write()) {
-                        if (lastHeartbeatTime <= now) {
-                            buffer.clear();
-                            buffer.putInt(IN_SYNC_LEN);
-                            buffer.putLong(0L);
-                            buffer.flip();
-                            TcpUtil.writeAll(socket, buffer);
-                            setLastHeartbeatTime(now);
-                        }
-                    }
-                }
-            }
         }
     }
 }

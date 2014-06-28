@@ -49,6 +49,7 @@ public abstract class ChronicleSource implements Chronicle {
 
     @NotNull
     protected final Chronicle chronicle;
+    protected final ChronicleSourceConfig config;
     private final ServerSocketChannel server;
     private final Selector selector;
     @NotNull
@@ -61,8 +62,9 @@ public abstract class ChronicleSource implements Chronicle {
     protected volatile boolean closed = false;
     private long lastUnpausedNS = 0;
 
-    protected ChronicleSource(@NotNull Chronicle chronicle, InetSocketAddress address) throws IOException {
+    protected ChronicleSource(@NotNull final Chronicle chronicle, @NotNull final ChronicleSourceConfig config, @NotNull final InetSocketAddress address) throws IOException {
         this.chronicle = chronicle;
+        this.config = config;
         this.server = ServerSocketChannel.open();
         this.server.socket().setReuseAddress(true);
         this.server.socket().bind(address);
@@ -218,7 +220,7 @@ public abstract class ChronicleSource implements Chronicle {
         public AbstractSocketHandler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
             this.socket.configureBlocking(false);
-            this.socket.socket().setSendBufferSize(256 * 1024);
+            this.socket.socket().setSendBufferSize(config.minBufferSize());
             this.socket.socket().setTcpNoDelay(true);
             this.selector = Selector.open();
             this.tailer = chronicle.createTailer();
@@ -235,7 +237,7 @@ public abstract class ChronicleSource implements Chronicle {
                 while(!closed) {
                     if (selector.select() > 0) {
                         final Set<SelectionKey> keys = selector.selectedKeys();
-                        select(keys);
+                        onSelectResult(keys);
                     }
                 }
 
@@ -274,6 +276,6 @@ public abstract class ChronicleSource implements Chronicle {
             this.lastHeartbeatTime = from + HEARTBEAT_INTERVAL_MS;
         }
 
-        protected abstract void select(final Set<SelectionKey> keys) throws IOException;
+        protected abstract void onSelectResult(final Set<SelectionKey> keys) throws IOException;
     }
 }
