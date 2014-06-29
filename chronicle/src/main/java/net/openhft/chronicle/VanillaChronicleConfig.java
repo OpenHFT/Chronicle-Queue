@@ -71,7 +71,7 @@ public class VanillaChronicleConfig {
         return cycleLength(cycleLength, true);
     }
 
-    VanillaChronicleConfig cycleLength(int cycleLength, boolean check) {
+    public VanillaChronicleConfig cycleLength(int cycleLength, boolean check) {
         if (check && cycleLength < MIN_CYCLE_LENGTH) {
             throw new IllegalArgumentException("Cycle length can't be less than " + MIN_CYCLE_LENGTH + " ms!");
         }

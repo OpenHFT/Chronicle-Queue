@@ -183,7 +183,8 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
                             }
 
                             tailer.close();
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                         }
                     }
                 });
@@ -236,6 +237,45 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
 
             appender.close();
             tailer.close();
+
+            sink.close();
+            sink.clear();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+    @Test
+    public void testIndexedInMemorySink_006() throws Exception {
+        final int port = BASE_PORT + 106;
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+
+        final int items = 1000000;
+        final ExcerptAppender appender = source.createAppender();
+
+        try {
+            for (int i = 0; i < items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+            }
+
+            appender.close();
+
+            final ExcerptTailer tailer1 = sink.createTailer().toStart();
+            assertEquals(0, tailer1.index());
+            assertEquals(0, tailer1.readLong());
+            tailer1.finish();
+            tailer1.close();
+
+            final ExcerptTailer tailer2 = sink.createTailer().toEnd();
+            assertEquals(items - 1, tailer2.index());
+            assertEquals(items - 1, tailer2.readLong());
+            tailer2.finish();
+            tailer2.close();
 
             sink.close();
             sink.clear();

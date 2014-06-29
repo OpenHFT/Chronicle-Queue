@@ -80,14 +80,13 @@ public class VanillaChronicleSource extends ChronicleSource {
 
                 if(key.isReadable()) {
                     try {
-
                         this.index = readIndex(socket);
                         if(this.index == -1) {
                             this.nextIndex = true;
                             this.tailer = tailer.toStart();
                             this.index = tailer.index();
                         } else if(this.index == -2) {
-                            this.nextIndex = true;
+                            this.nextIndex = false;
                             this.tailer = tailer.toEnd();
                             this.index = tailer.index();
                         } else {

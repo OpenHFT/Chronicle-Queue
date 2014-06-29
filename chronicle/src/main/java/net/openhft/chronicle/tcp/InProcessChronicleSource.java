@@ -74,6 +74,9 @@ public class InProcessChronicleSource extends ChronicleSource {
                             this.index = 0;
                         } else if(this.index == -2){
                             this.index = tailer.toEnd().index();
+                            if(this.index >= 0) {
+                                this.index -= 1;
+                            }
                         }
 
                         buffer.clear();
@@ -86,7 +89,7 @@ public class InProcessChronicleSource extends ChronicleSource {
 
                         key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
                         keys.clear();
-                        break;
+                        return;
                     } catch(EOFException e) {
                         key.selector().close();
                         throw e;

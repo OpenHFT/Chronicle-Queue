@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.VanillaChronicleTestBase;
 import net.openhft.chronicle.tcp.VanillaChronicleSink;
 import net.openhft.chronicle.tcp.VanillaChronicleSource;
 import org.junit.Assert;

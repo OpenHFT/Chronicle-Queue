@@ -20,11 +20,14 @@ import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
 public class InMemoryChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("InMemoryChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "in-memory-";
     protected static final int    BASE_PORT = 12000;

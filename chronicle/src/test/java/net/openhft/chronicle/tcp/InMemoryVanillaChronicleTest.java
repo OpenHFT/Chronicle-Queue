@@ -201,4 +201,58 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
             source.clear();
         }
     }
+
+
+
+    @Test
+    public void testIndexedInMemorySink_006() throws Exception {
+        final int port = BASE_PORT + 206;
+        final String basePathSource = getVanillaTestPath("-source");
+        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+
+        final int items = 1000000;
+        final ExcerptAppender appender = source.createAppender();
+        final ExcerptTailer st = source.createTailer().toStart();
+
+        long startIndex = Long.MIN_VALUE;
+        long endIndex = Long.MIN_VALUE;
+
+        try {
+            for (int i = 0; i < items; i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.finish();
+
+                st.nextIndex();
+                st.finish();
+
+                if(i == 0) {
+                    startIndex = st.index();
+                } else if(i == items - 1) {
+                    endIndex = st.index();
+                }
+            }
+
+            appender.close();
+
+            final ExcerptTailer tailer1 = sink.createTailer().toStart();
+            assertEquals(startIndex, tailer1.index());
+            assertEquals(0, tailer1.readLong());
+            tailer1.finish();
+            tailer1.close();
+
+            final ExcerptTailer tailer2 = sink.createTailer().toEnd();
+            assertEquals(endIndex, tailer2.index());
+            assertEquals(items - 1, tailer2.readLong());
+            tailer2.finish();
+            tailer2.close();
+
+            sink.close();
+            sink.clear();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
 }
