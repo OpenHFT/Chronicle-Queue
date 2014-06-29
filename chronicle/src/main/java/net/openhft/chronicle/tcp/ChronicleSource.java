@@ -1,11 +1,11 @@
 /*
- * Copyright 2013 Peter Lawrey
+ * Copyright 2014 Higher Frequency Trading
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,12 +20,15 @@ import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -34,12 +37,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public abstract class ChronicleSource implements Chronicle {
+public class ChronicleSource implements Chronicle {
 
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
@@ -48,8 +52,8 @@ public abstract class ChronicleSource implements Chronicle {
     static final long HEARTBEAT_INTERVAL_MS = 2500;
 
     @NotNull
-    protected final Chronicle chronicle;
-    protected final ChronicleSourceConfig config;
+    private final Chronicle chronicle;
+    private final ChronicleSourceConfig sourceConfig;
     private final ServerSocketChannel server;
     private final Selector selector;
     @NotNull
@@ -62,9 +66,20 @@ public abstract class ChronicleSource implements Chronicle {
     protected volatile boolean closed = false;
     private long lastUnpausedNS = 0;
 
-    protected ChronicleSource(@NotNull final Chronicle chronicle, @NotNull final ChronicleSourceConfig config, @NotNull final InetSocketAddress address) throws IOException {
+    public ChronicleSource(@NotNull final Chronicle chronicle, final int port) throws IOException {
+        this(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
+    }
+
+    public ChronicleSource(@NotNull final Chronicle chronicle, @NotNull final InetSocketAddress address) throws IOException {
+        this(chronicle, ChronicleSourceConfig.DEFAULT, address);
+    }
+    public ChronicleSource(@NotNull final Chronicle chronicle, @NotNull final ChronicleSourceConfig sourceConfig, final int port) throws IOException {
+        this(chronicle, sourceConfig, new InetSocketAddress(port));
+    }
+
+    public ChronicleSource(@NotNull final Chronicle chronicle, @NotNull final ChronicleSourceConfig sourceConfig, @NotNull final InetSocketAddress address) throws IOException {
         this.chronicle = chronicle;
-        this.config = config;
+        this.sourceConfig = sourceConfig;
         this.server = ServerSocketChannel.open();
         this.server.socket().setReuseAddress(true);
         this.server.socket().bind(address);
@@ -133,6 +148,12 @@ public abstract class ChronicleSource implements Chronicle {
         return new SourceExcerpt(chronicle.createAppender());
     }
 
+    public void checkCounts(int min, int max) {
+        if(chronicle instanceof VanillaChronicle) {
+            ((VanillaChronicle)chronicle).checkCounts(min, max);
+        }
+    }
+
     protected void pauseReset() {
         lastUnpausedNS = System.nanoTime();
     }
@@ -162,7 +183,11 @@ public abstract class ChronicleSource implements Chronicle {
         return bb.getLong(0);
     }
 
-    protected abstract Runnable createSocketHandler(SocketChannel channel) throws IOException;
+    protected Runnable createSocketHandler(SocketChannel channel) throws IOException {
+        return (chronicle instanceof IndexedChronicle)
+            ? new IndexedSocketHandler(channel)
+            : new VanillaSocketHandler(channel);
+    }
 
     // *************************************************************************
     //
@@ -220,7 +245,7 @@ public abstract class ChronicleSource implements Chronicle {
         public AbstractSocketHandler(@NotNull SocketChannel socket) throws IOException {
             this.socket = socket;
             this.socket.configureBlocking(false);
-            this.socket.socket().setSendBufferSize(config.minBufferSize());
+            this.socket.socket().setSendBufferSize(sourceConfig.minBufferSize());
             this.socket.socket().setTcpNoDelay(true);
             this.selector = Selector.open();
             this.tailer = chronicle.createTailer();
@@ -277,5 +302,270 @@ public abstract class ChronicleSource implements Chronicle {
         }
 
         protected abstract void onSelectResult(final Set<SelectionKey> keys) throws IOException;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private final class IndexedSocketHandler extends AbstractSocketHandler {
+        public IndexedSocketHandler(@NotNull SocketChannel socket) throws IOException {
+            super(socket);
+        }
+
+        @Override
+        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
+            for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
+                final SelectionKey key = it.next();
+                it.remove();
+
+                if(key.isReadable()) {
+                    try {
+                        this.index = readIndex(socket);
+                        if(this.index == -1) {
+                            this.index = 0;
+                        } else if(this.index == -2){
+                            this.index = tailer.toEnd().index();
+                            if(this.index >= 0) {
+                                this.index -= 1;
+                            }
+                        }
+
+                        buffer.clear();
+                        buffer.putInt(SYNC_IDX_LEN);
+                        buffer.putLong(this.index);
+                        buffer.flip();
+                        TcpUtil.writeAll(socket, buffer);
+
+                        setLastHeartbeatTime();
+
+                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        keys.clear();
+                        return;
+                    } catch(EOFException e) {
+                        key.selector().close();
+                        throw e;
+                    }
+                } else if(key.isWritable()) {
+                    final long now = System.currentTimeMillis();
+                    if(!closed && !publishData()) {
+                        if (lastHeartbeatTime <= now) {
+                            buffer.clear();
+                            buffer.putInt(IN_SYNC_LEN);
+                            buffer.putLong(0L);
+                            buffer.flip();
+                            TcpUtil.writeAll(socket, buffer);
+                            setLastHeartbeatTime(now);
+                        }
+                    }
+                }
+            }
+        }
+
+        private boolean publishData() throws IOException {
+            if (!tailer.index(index)) {
+                if (tailer.wasPadding()) {
+                    if (index >= 0) {
+                        buffer.clear();
+                        buffer.putInt(PADDED_LEN);
+                        buffer.putLong(tailer.index());
+                        buffer.flip();
+                        TcpUtil.writeAll(socket, buffer);
+                    }
+
+                    index++;
+                }
+
+                pause();
+
+                if(!closed && !tailer.index(index)) {
+                    return false;
+                }
+            }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining = size + TcpUtil.HEADER_SIZE;
+
+            buffer.clear();
+            buffer.putInt((int) size);
+            buffer.putLong(tailer.index());
+
+            // for large objects send one at a time.
+            if (size > buffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, buffer.capacity());
+                    buffer.limit(size2);
+                    tailer.read(buffer);
+                    buffer.flip();
+                    remaining -= buffer.remaining();
+                    TcpUtil.writeAll(socket, buffer);
+                }
+            } else {
+                buffer.limit((int) remaining);
+                tailer.read(buffer);
+                int count = 1;
+                while (tailer.index(index + 1) && count++ < MAX_MESSAGE) {
+                    if(!tailer.wasPadding()) {
+                        if (tailer.capacity() + TcpUtil.HEADER_SIZE >= (buffer.capacity() - buffer.position())) {
+                            break;
+                        }
+
+                        // if there is free space, copy another one.
+                        int size2 = (int) tailer.capacity();
+                        buffer.limit(buffer.position() + size2 + TcpUtil.HEADER_SIZE);
+                        buffer.putInt(size2);
+                        buffer.putLong(tailer.index());
+                        tailer.read(buffer);
+                        index++;
+                    } else {
+                        index++;
+                    }
+                }
+
+                buffer.flip();
+                TcpUtil.writeAll(socket, buffer);
+            }
+
+            if (buffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + index);
+            }
+
+            index++;
+            return true;
+        }
+    }
+
+    private final class VanillaSocketHandler extends AbstractSocketHandler {
+        private boolean nextIndex;
+
+        public VanillaSocketHandler(@NotNull SocketChannel socket) throws IOException {
+            super(socket);
+            this.nextIndex = true;
+        }
+
+        @Override
+        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
+            final Iterator<SelectionKey> it = keys.iterator();
+
+            while (it.hasNext()) {
+                final SelectionKey key = it.next();
+                it.remove();
+
+                if(key.isReadable()) {
+                    try {
+                        this.index = readIndex(socket);
+                        if(this.index == -1) {
+                            this.nextIndex = true;
+                            this.tailer = tailer.toStart();
+                            this.index = tailer.index();
+                        } else if(this.index == -2) {
+                            this.nextIndex = false;
+                            this.tailer = tailer.toEnd();
+                            this.index = tailer.index();
+                        } else {
+                            this.nextIndex = false;
+                        }
+
+                        buffer.clear();
+                        buffer.putInt(SYNC_IDX_LEN);
+                        buffer.putLong(this.index);
+                        buffer.flip();
+                        TcpUtil.writeAll(socket, buffer);
+
+                        setLastHeartbeatTime();
+
+                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        keys.clear();
+                        break;
+                    } catch(EOFException e) {
+                        key.selector().close();
+                        throw e;
+                    }
+                } else if(key.isWritable()) {
+                    final long now = System.currentTimeMillis();
+                    if(!closed && !publishData()) {
+                        if (lastHeartbeatTime <= now) {
+                            buffer.clear();
+                            buffer.putInt(IN_SYNC_LEN);
+                            buffer.putLong(0L);
+                            buffer.flip();
+                            TcpUtil.writeAll(socket, buffer);
+                            setLastHeartbeatTime(now);
+                        }
+                    }
+                }
+            }
+        }
+
+        private boolean publishData() throws IOException {
+            if(nextIndex) {
+                if (!tailer.nextIndex()) {
+                    pause();
+                    if (!closed && !tailer.nextIndex()) {
+                        return false;
+                    }
+                }
+            } else {
+                if(!tailer.index(this.index)) {
+                    return false;
+                } else {
+                    this.nextIndex = true;
+                }
+            }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining = size + TcpUtil.HEADER_SIZE;
+
+            buffer.clear();
+            buffer.putInt((int) size);
+            buffer.putLong(tailer.index());
+
+            // for large objects send one at a time.
+            if (size > buffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, buffer.capacity());
+                    buffer.limit(size2);
+                    tailer.read(buffer);
+                    buffer.flip();
+                    remaining -= buffer.remaining();
+                    TcpUtil.writeAll(socket, buffer);
+                }
+            } else {
+                buffer.limit((int) remaining);
+                tailer.read(buffer);
+                int count = 1;
+                while (count++ < MAX_MESSAGE) {
+                    if (tailer.nextIndex()) {
+                        if (tailer.wasPadding()) {
+                            throw new AssertionError("Entry should not be padding - remove");
+                        }
+
+                        if (tailer.capacity() + TcpUtil.HEADER_SIZE >= buffer.capacity() - buffer.position()) {
+                            break;
+                        }
+
+                        // if there is free space, copy another one.
+                        int size2 = (int) tailer.capacity();
+                        buffer.limit(buffer.position() + size2 + TcpUtil.HEADER_SIZE);
+                        buffer.putInt(size2);
+                        buffer.putLong(tailer.index());
+                        tailer.read(buffer);
+                    }
+                }
+
+                buffer.flip();
+                TcpUtil.writeAll(socket, buffer);
+            }
+
+            if (buffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + tailer.index());
+            }
+
+            return true;
+        }
     }
 }

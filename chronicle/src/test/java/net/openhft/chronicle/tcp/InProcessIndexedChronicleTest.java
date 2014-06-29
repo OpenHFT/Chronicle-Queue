@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.IndexedChronicleTestBase;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
@@ -42,20 +41,20 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
-public class InProcessChronicleTest extends IndexedChronicleTestBase {
+public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
 
     public static final int PORT = 12345;
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
         final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
 
         Thread t = new Thread(new Runnable() {
@@ -101,16 +100,16 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing1() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
         final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -142,16 +141,16 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
         final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -187,16 +186,16 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing3() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
         final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -230,8 +229,8 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     // Took an average of 2.8 us to write and 7.6 us to read (Java 7)
@@ -339,7 +338,7 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         config.indexFileExcerpts(512);
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
-        final Chronicle source = new InProcessChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
+        final Chronicle source = new ChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {

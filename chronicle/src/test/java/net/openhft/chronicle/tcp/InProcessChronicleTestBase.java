@@ -16,7 +16,11 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicleConfig;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -26,10 +30,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-public class InMemoryChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("InMemoryChronicleTest");
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class InProcessChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("InProcessChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "in-memory-";
+    protected static final String PREFIX    = "in-process-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
@@ -53,16 +60,18 @@ public class InMemoryChronicleTestBase {
         return path;
     }
 
-    protected Chronicle inMemoryIndexedChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.INDEXED, host, port);
-    }
-
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
         return new ChronicleSource(new IndexedChronicle(basePath), port);
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
         return new ChronicleSource(new IndexedChronicle(basePath, config), port);
+    }
+
+    protected static void assertIndexedClean(String path) {
+        assertNotNull(path);
+        assertTrue(new File(path + ".index").delete());
+        assertTrue(new File(path + ".data").delete());
     }
 
     // *************************************************************************
@@ -87,10 +96,6 @@ public class InMemoryChronicleTestBase {
         }
 
         return path;
-    }
-
-    protected Chronicle inMemoryVanillaChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.VANILLA, host, port);
     }
 
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
