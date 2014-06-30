@@ -17,7 +17,6 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -25,13 +24,14 @@ import org.junit.rules.TestName;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests aimed to check the consistency of the interfaces:
  * - toStart
  * - toEnd
  */
-@Ignore
 public class ChronicleTest  {
 
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
@@ -61,7 +61,7 @@ public class ChronicleTest  {
         final long items = 10;
         final ExcerptAppender ap = ch.createAppender();
 
-        for(long i=0; i < items; i++) {
+        for(long i=1; i <= items; i++) {
             ap.startExcerpt();
             ap.writeLong(i);
             ap.finish();
@@ -70,11 +70,15 @@ public class ChronicleTest  {
         ap.close();
 
         final ExcerptTailer t1 = ch.createTailer().toStart();
-        assertEquals(0, t1.readLong());
+        assertTrue(t1.nextIndex());
+        assertEquals(1, t1.readLong());
+        t1.finish();
         t1.close();
 
         final ExcerptTailer t2 = ch.createTailer().toEnd();
-        assertEquals(items - 1, t2.readLong());
+        assertFalse(t2.nextIndex());
+        assertEquals(items, t2.readLong());
+        t2.finish();
         t2.close();
     }
 
@@ -90,7 +94,7 @@ public class ChronicleTest  {
 
     @Test
     public void testVanillaChronicleToStartToEndBehavior()  throws IOException {
-        final Chronicle ch = new VanillaChronicle(getIndexedTestPath());
+        final Chronicle ch = new VanillaChronicle(getVanillaTestPath());
 
         testChronicleToStartToEndBehavior(ch);
 
