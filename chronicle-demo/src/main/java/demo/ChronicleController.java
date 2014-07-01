@@ -6,18 +6,19 @@ import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tcp.VanillaChronicleSink;
 import net.openhft.chronicle.tcp.VanillaChronicleSource;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by daniel on 19/06/2014.
  */
 public class ChronicleController {
     private VanillaChronicle chronicle;
-    private ExcerptAppender appender;
     private ExcerptTailer tailer;
     private ExcerptTailer tcpTailer;
     private ChronicleUpdatable updatable;
@@ -28,13 +29,15 @@ public class ChronicleController {
     private String BASE_PATH_SINK;
     private TimerThread timerThread;
 
-    public ChronicleController(ChronicleUpdatable updatable) {
-        BASE_PATH = (System.getProperty("java.io.tmpdir") + "/demo/source").replaceAll("//", "/");
-        BASE_PATH_SINK = (System.getProperty("java.io.tmpdir") + "/demo/sink").replaceAll("//", "/");
+    public ChronicleController(ChronicleUpdatable updatable, File demo_path) throws IOException {
+        BASE_PATH = demo_path+"/source";
+        BASE_PATH_SINK = demo_path+"/sink";
         this.updatable = updatable;
-        writerThread1 = new WriterThread("EURUSD");
+                                    reset();
+
+        writerThread1 = new WriterThread("EURUSD", updatable.count1());
         writerThread1.start();
-        writerThread2 = new WriterThread("USDCHF");
+        writerThread2 = new WriterThread("USDCHF", updatable.count2());
         writerThread2.start();
         readerThread = new ReaderThread();
         readerThread.start();
@@ -53,7 +56,6 @@ public class ChronicleController {
             chronicle.clear();
             sink.clear();
 
-            appender = chronicle.createAppender();
             tailer = chronicle.createTailer();
 
 
@@ -68,12 +70,12 @@ public class ChronicleController {
     public void start(String srate) {
         if (chronicle == null) reset();
         int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
-        readerThread.go();
-        tcpReaderThread.go();
         writerThread1.setRate(rate / 2);
         writerThread1.go();
         writerThread2.setRate(rate / 2);
         writerThread2.go();
+        readerThread.go();
+        tcpReaderThread.go();
         timerThread.go();
     }
 
@@ -114,17 +116,23 @@ public class ChronicleController {
 
     private class WriterThread extends Thread {
         private final String symbol;
-        private AtomicBoolean isRunning = new AtomicBoolean(false);
+        private final AtomicBoolean isRunning = new AtomicBoolean(false);
+        private final AtomicLong count;
+        private final VanillaChronicle.VanillaAppender appender;
         private int rate;
-        private long count = 0;
 
-        public WriterThread(String symbol) {
+        public WriterThread(String symbol, AtomicLong count) throws IOException {
             this.symbol = symbol;
+            this.count = count;
+                appender = chronicle.createAppender();
         }
 
 
         public void run() {
             Price price = new Price(symbol, 1.1234, 2000000, 1.1244, 3000000, true);
+            ExcerptAppender appender;
+
+
             while (true) {
                 if (isRunning.get()) {
                     if (rate != Integer.MAX_VALUE) {
@@ -138,8 +146,9 @@ public class ChronicleController {
                             msleep(1000 - (int) timeToFinishBatch);
                         }
                     } else {
-                        price.askPrice = 1.1234 + (count & 15) / 1e4;
-                        price.bidPrice = 1.1244 + (count & 15) / 1e4;
+                        double v = (count.get() & 15) / 1e4;
+                        price.askPrice = 1.1234 + v;
+                        price.bidPrice = 1.1244 + v;
                         writeMessage(price);
                     }
                 } else {
@@ -152,8 +161,7 @@ public class ChronicleController {
             appender.startExcerpt();
             price.writeMarshallable(appender);
             appender.finish();
-            updatable.messageProduced();
-            count++;
+            count.incrementAndGet();
         }
 
         public void pause() {

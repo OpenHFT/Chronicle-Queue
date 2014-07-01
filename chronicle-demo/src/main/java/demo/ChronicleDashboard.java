@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,18 +26,19 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     private JTextField tfRunningTime;
     private JTextField tfDiskSpace;
     private JTextField tfTCPReads;
-    private AtomicLong messagesProduced = new AtomicLong(0);
+    private AtomicLong messagesProduced1 = new AtomicLong(0);
+    private AtomicLong messagesProduced2 = new AtomicLong(0);
     private AtomicLong messagesRead = new AtomicLong(0);
     private AtomicLong runningTime = new AtomicLong(0);
     private AtomicLong tcpMessagesProduced = new AtomicLong(0);
-    private File file = new File("/");
+    private File demo_path = new File((System.getProperty("java.io.tmpdir") + "/demo").replaceAll("//", "/"));
+
     private ChronicleController controller;
 
     public ChronicleDashboard() {
     }
 
-    public void init() {
-        controller = new ChronicleController(this);
+    public void init() throws IOException {
         final GUIUpdaterThread updater = new GUIUpdaterThread();
         updater.start();
 
@@ -73,13 +75,16 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         cbRate.addItem("3,000,000");
         cbRate.addItem("MAX");
 
-        cbRate.setSelectedItem("MAX");
+        cbRate.setSelectedItem("3,000,000");
 
         reset();
+
+        controller = new ChronicleController(this, demo_path);
     }
 
     public void reset() {
-        messagesProduced.set(0);
+        messagesProduced1.set(0);
+        messagesProduced2.set(0);
         tcpMessagesProduced.set(0);
         messagesRead.set(0);
         runningTime.set(0);
@@ -90,13 +95,11 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         tfTCPMessages.setText("0");
         tfMessagesRead.setText("0");
         tfTCPReads.setText("0");
-        controller.reset();
-        tfDiskSpace.setText(getBytesAsGB(file.getUsableSpace()));
+        tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
+        if (controller != null)
+            controller.reset();
     }
 
-    public void messageProduced() {
-        messagesProduced.addAndGet(1);
-    }
 
     @Override
     public void setFileNames(List<String> files) {
@@ -131,19 +134,34 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("ChronicleDashboard");
-        ChronicleDashboard chronicleDashboard = new ChronicleDashboard();
-        frame.setContentPane(chronicleDashboard.mainPanel);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setSize(800, 500);
-        frame.setVisible(true);
+        try {
+            JFrame frame = new JFrame("ChronicleDashboard");
+            ChronicleDashboard chronicleDashboard = new ChronicleDashboard();
+            frame.setContentPane(chronicleDashboard.mainPanel);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.pack();
+            frame.setSize(800, 500);
+            frame.setVisible(true);
 
-        chronicleDashboard.init();
+            chronicleDashboard.init();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            System.exit(1);
+        }
     }
 
     private void createUIComponents() {
         // TODO: place custom component creation code here
+    }
+
+    @Override
+    public AtomicLong count1() {
+        return messagesProduced1;
+    }
+
+    @Override
+    public AtomicLong count2() {
+        return messagesProduced2;
     }
 
     private class GUIUpdaterThread extends Thread {
@@ -162,17 +180,18 @@ public class ChronicleDashboard implements ChronicleUpdatable {
                 if (isRunning.get()) {
                     tfTCPMessages.setText(String.format("%,d K", tcpMessagesProduced.get() / 1000));
                     tfMessagesRead.setText(String.format("%,d K", messagesRead.get() / 1000));
-                    tfMessagesWritten.setText(String.format("%,d K", messagesProduced.get() / 1000));
+                    long totalMessage = messagesProduced1.get() + messagesProduced2.get();
+                    tfMessagesWritten.setText(String.format("%,d K", totalMessage / 1000));
                     long runningTime = ChronicleDashboard.this.runningTime.get();
-                    tfRunningTime.setText(String.format("%.3f sec", runningTime/1000.0));
+                    tfRunningTime.setText(String.format("%.3f sec", runningTime / 1000.0));
                     if (runningTime != 0) {
                         tfActualReadRate.setText(String.format("%,d K", messagesRead.get() / runningTime));
                         tfTCPReads.setText(String.format("%,d K", tcpMessagesProduced.get() / runningTime));
-                        tfActualWriteRate.setText(String.format("%,d K", messagesProduced.get() / runningTime));
+                        tfActualWriteRate.setText(String.format("%,d K", totalMessage / runningTime));
                     }
                     if (count % 5 == 0) {
                         //Once a second read file space
-                        tfDiskSpace.setText(getBytesAsGB(file.getUsableSpace()));
+                        tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
                     }
                     count++;
                 }
