@@ -21,7 +21,7 @@ public class ChronicleController {
     private ExcerptTailer tailer;
     private ExcerptTailer tcpTailer;
     private ChronicleUpdatable updatable;
-    private WriterThread writerThread;
+    private WriterThread writerThread1, writerThread2;
     private ReaderThread readerThread;
     private TCPReaderThread tcpReaderThread;
     private String BASE_PATH;
@@ -32,8 +32,10 @@ public class ChronicleController {
         BASE_PATH = (System.getProperty("java.io.tmpdir") + "/demo/source").replaceAll("//", "/");
         BASE_PATH_SINK = (System.getProperty("java.io.tmpdir") + "/demo/sink").replaceAll("//", "/");
         this.updatable = updatable;
-        writerThread = new WriterThread();
-        writerThread.start();
+        writerThread1 = new WriterThread("EURUSD");
+        writerThread1.start();
+        writerThread2 = new WriterThread("USDCHF");
+        writerThread2.start();
         readerThread = new ReaderThread();
         readerThread.start();
         tcpReaderThread = new TCPReaderThread();
@@ -68,13 +70,16 @@ public class ChronicleController {
         int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
         readerThread.go();
         tcpReaderThread.go();
-        writerThread.setRate(rate);
-        writerThread.go();
+        writerThread1.setRate(rate / 2);
+        writerThread1.go();
+        writerThread2.setRate(rate / 2);
+        writerThread2.go();
         timerThread.go();
     }
 
     public void stop() {
-        writerThread.pause();
+        writerThread1.pause();
+        writerThread2.pause();
         timerThread.pause();
         readerThread.pause();
         tcpReaderThread.pause();
@@ -108,12 +113,18 @@ public class ChronicleController {
     }
 
     private class WriterThread extends Thread {
+        private final String symbol;
         private AtomicBoolean isRunning = new AtomicBoolean(false);
         private int rate;
         private long count = 0;
 
+        public WriterThread(String symbol) {
+            this.symbol = symbol;
+        }
+
+
         public void run() {
-            Price price = new Price("EURUSD", 1.1234, 2000000, 1.1244, 3000000, true);
+            Price price = new Price(symbol, 1.1234, 2000000, 1.1244, 3000000, true);
             while (true) {
                 if (isRunning.get()) {
                     if (rate != Integer.MAX_VALUE) {
