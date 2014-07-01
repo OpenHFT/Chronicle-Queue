@@ -118,7 +118,7 @@ public class ChronicleController {
     }
 
     private class WriterThread extends Thread {
-        private static final int BATCH = 10;
+        private static final int BATCH = 16;
         public static final int ELASTICITY = 1000000;
         private final String symbol;
         private final AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -146,18 +146,17 @@ public class ChronicleController {
                 }
                 long countWritten = count.get();
                 for (int i = 0; i < BATCH; i++) {
-                    double v = ((countWritten + i) & 15) / 1e4;
+                    double v = ((countWritten + i) & 31) / 1e4;
                     price.askPrice = 1.1234 + v;
                     price.bidPrice = 1.1244 + v;
                     writeMessage(price);
                 }
-                countWritten += BATCH;
+                countWritten = count.addAndGet(BATCH);
 
                 // give the replication a break.
                 long diff = countWritten * 2 - updatable.tcpMessageRead().get();
                 if (diff > ELASTICITY) {
-                    msleep(1);
-                    continue;
+                    pause(diff - ELASTICITY);
                 }
 
                 if (rate == Integer.MAX_VALUE)
@@ -171,17 +170,24 @@ public class ChronicleController {
 //                    reportTime += 1000;
 //                }
                 long runtime = now - startTime;
-                long targetCount = runtime * rate / 1000;
-                if (countWritten > targetCount)
-                    msleep(1);
+                long targetCount = runtime * rate / 990;
+                if (countWritten > targetCount) {
+                    pause(countWritten - targetCount - 100);
+                }
             }
         }
 
+        private void pause(long overrun) {
+            if (overrun > 0)
+                msleep(1);
+            else
+                Thread.yield();
+        }
+
         private void writeMessage(Price price) {
-            appender.startExcerpt();
+            appender.startExcerpt(128);
             price.writeMarshallable(appender);
             appender.finish();
-            count.incrementAndGet();
         }
 
         public void pause() {
