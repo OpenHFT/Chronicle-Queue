@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by daniel on 19/06/2014.
  */
-public class ChronicleDashboard implements ChronicleUpdatable{
+public class ChronicleDashboard implements ChronicleUpdatable {
     private JPanel mainPanel;
     private JButton startButton;
     private JTextField tfMessagesRead;
@@ -35,7 +35,7 @@ public class ChronicleDashboard implements ChronicleUpdatable{
     public ChronicleDashboard() {
     }
 
-    public void init(){
+    public void init() {
         controller = new ChronicleController(this);
         final GUIUpdaterThread updater = new GUIUpdaterThread();
         updater.start();
@@ -43,12 +43,12 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(startButton.getText().equals("Start")){
+                if (startButton.getText().equals("Start")) {
                     startButton.setText("Stop");
                     resetButton.setEnabled(false);
                     updater.go();
-                    controller.start((String)cbRate.getSelectedItem());
-                }else{
+                    controller.start((String) cbRate.getSelectedItem());
+                } else {
                     startButton.setText("Start");
                     resetButton.setEnabled(true);
                     controller.stop();
@@ -65,11 +65,12 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         });
 
 
-        cbRate.addItem("1000");
-        cbRate.addItem("5000");
-        cbRate.addItem("25000");
-        cbRate.addItem("125000");
-        cbRate.addItem("625000");
+        cbRate.addItem("     10,000");
+        cbRate.addItem("     30,000");
+        cbRate.addItem("   100,000");
+        cbRate.addItem("   300,000");
+        cbRate.addItem("1,000,000");
+        cbRate.addItem("3,000,000");
         cbRate.addItem("MAX");
 
         cbRate.setSelectedItem("MAX");
@@ -77,7 +78,7 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         reset();
     }
 
-    public void reset(){
+    public void reset() {
         messagesProduced.set(0);
         tcpMessagesProduced.set(0);
         messagesRead.set(0);
@@ -93,16 +94,16 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         tfDiskSpace.setText(getBytesAsGB(file.getUsableSpace()));
     }
 
-    public void messageProduced(){
+    public void messageProduced() {
         messagesProduced.addAndGet(1);
     }
 
     @Override
     public void setFileNames(List<String> files) {
         String fileNames = "";
-        for(int i=0; i<files.size(); i++){
-            if(i!=0)fileNames+="\n";
-            fileNames+=files.get(i);
+        for (int i = 0; i < files.size(); i++) {
+            if (i != 0) fileNames += "\n";
+            fileNames += files.get(i);
         }
         tpFiles.setText(fileNames);
         System.out.println("Setting files " + fileNames);
@@ -123,8 +124,7 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         tcpMessagesProduced.addAndGet(1);
     }
 
-    public String getBytesAsGB(long bytes)
-    {
+    public String getBytesAsGB(long bytes) {
         double step = Math.pow(1000, 3);
         if (bytes > step) return String.format("%3.1f %s", bytes / step, "GB");
         return Long.toString(bytes);
@@ -136,7 +136,7 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         frame.setContentPane(chronicleDashboard.mainPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
-        frame.setSize(800,500);
+        frame.setSize(800, 500);
         frame.setVisible(true);
 
         chronicleDashboard.init();
@@ -146,28 +146,31 @@ public class ChronicleDashboard implements ChronicleUpdatable{
         // TODO: place custom component creation code here
     }
 
-    private class GUIUpdaterThread extends Thread{
+    private class GUIUpdaterThread extends Thread {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
 
-        private long count=0;
-        public void run(){
-            while(true){
+        private long count = 0;
+
+        public void run() {
+            while (true) {
                 try {
-                    Thread.sleep(200);
+                    Thread.sleep(250);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                if(isRunning.get()) {
-                    tfTCPMessages.setText(String.valueOf(tcpMessagesProduced));
-                    tfMessagesRead.setText(String.valueOf(messagesRead));
-                    tfMessagesWritten.setText(String.valueOf(messagesProduced));
-                    tfRunningTime.setText(String.valueOf(runningTime));
-                    if(runningTime.get() !=0)
-                    tfActualReadRate.setText(String.valueOf((int)(messagesRead.get()/(runningTime.get()/1000.0))));
-                    tfTCPReads.setText(String.valueOf((int)(tcpMessagesProduced.get()/(runningTime.get()/1000.0))));
-                    tfActualWriteRate.setText(String.valueOf((int)(messagesProduced.get()/(runningTime.get()/1000.0))));
-                    if(count % 5 == 0){
+                if (isRunning.get()) {
+                    tfTCPMessages.setText(String.format("%,d K", tcpMessagesProduced.get() / 1000));
+                    tfMessagesRead.setText(String.format("%,d K", messagesRead.get() / 1000));
+                    tfMessagesWritten.setText(String.format("%,d K", messagesProduced.get() / 1000));
+                    long runningTime = ChronicleDashboard.this.runningTime.get();
+                    tfRunningTime.setText(String.format("%.3f sec", runningTime/1000.0));
+                    if (runningTime != 0) {
+                        tfActualReadRate.setText(String.format("%,d K", messagesRead.get() / runningTime));
+                        tfTCPReads.setText(String.format("%,d K", tcpMessagesProduced.get() / runningTime));
+                        tfActualWriteRate.setText(String.format("%,d K", messagesProduced.get() / runningTime));
+                    }
+                    if (count % 5 == 0) {
                         //Once a second read file space
                         tfDiskSpace.setText(getBytesAsGB(file.getUsableSpace()));
                     }
@@ -177,11 +180,11 @@ public class ChronicleDashboard implements ChronicleUpdatable{
             }
         }
 
-        public void pause(){
+        public void pause() {
             isRunning.set(false);
         }
 
-        public void go(){
+        public void go() {
             isRunning.set(true);
         }
     }

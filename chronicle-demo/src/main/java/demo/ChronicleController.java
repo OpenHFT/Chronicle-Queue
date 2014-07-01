@@ -28,9 +28,9 @@ public class ChronicleController {
     private String BASE_PATH_SINK;
     private TimerThread timerThread;
 
-    public ChronicleController(ChronicleUpdatable updatable){
-        BASE_PATH = System.getProperty("java.io.tmpdir") + "/demo/source";
-        BASE_PATH_SINK = System.getProperty("java.io.tmpdir") + "/demo/sink";
+    public ChronicleController(ChronicleUpdatable updatable) {
+        BASE_PATH = (System.getProperty("java.io.tmpdir") + "/demo/source").replaceAll("//", "/");
+        BASE_PATH_SINK = (System.getProperty("java.io.tmpdir") + "/demo/sink").replaceAll("//", "/");
         this.updatable = updatable;
         writerThread = new WriterThread();
         writerThread.start();
@@ -44,8 +44,7 @@ public class ChronicleController {
 
     public void reset() {
 
-        try
-        {
+        try {
             chronicle = new VanillaChronicle(BASE_PATH);
             VanillaChronicleSource source = new VanillaChronicleSource(chronicle, 0);
             VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
@@ -57,7 +56,7 @@ public class ChronicleController {
 
 
             tcpTailer = sink.createTailer();
-        }catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -65,8 +64,8 @@ public class ChronicleController {
     }
 
     public void start(String srate) {
-        if (chronicle == null)reset();
-        int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate);
+        if (chronicle == null) reset();
+        int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
         readerThread.go();
         tcpReaderThread.go();
         writerThread.setRate(rate);
@@ -74,82 +73,83 @@ public class ChronicleController {
         timerThread.go();
     }
 
-    public void stop(){
+    public void stop() {
         writerThread.pause();
         timerThread.pause();
         readerThread.pause();
         tcpReaderThread.pause();
     }
 
-    public void updateFileNames(){
+    public void updateFileNames() {
         Path dir = FileSystems.getDefault().getPath(BASE_PATH);
         updatable.setFileNames(getFileNames(new ArrayList<String>(), dir));
     }
 
-    private List<String> getFileNames(List<String> fileNames, Path dir){
+    private List<String> getFileNames(List<String> fileNames, Path dir) {
         try {
             DirectoryStream<Path> stream = null;
             try {
                 stream = Files.newDirectoryStream(dir);
-            }catch (NoSuchFileException nsfe){
+            } catch (NoSuchFileException nsfe) {
                 return fileNames;
             }
 
             for (Path path : stream) {
-                if(path.toFile().isDirectory())getFileNames(fileNames, path);
+                if (path.toFile().isDirectory()) getFileNames(fileNames, path);
                 else {
                     fileNames.add(path.toAbsolutePath().toString());
                 }
             }
             stream.close();
-        }catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return fileNames;
     }
 
-    private class WriterThread extends Thread{
+    private class WriterThread extends Thread {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
         private int rate;
         private long count = 0;
 
         public void run() {
-            while(true) {
-                if(isRunning.get()){
-                    if(rate!=Integer.MAX_VALUE) {
+            Price price = new Price("EURUSD", 1.1234, 2000000, 1.1244, 3000000, true);
+            while (true) {
+                if (isRunning.get()) {
+                    if (rate != Integer.MAX_VALUE) {
                         long startTime = System.currentTimeMillis();
                         for (int i = 0; i < rate; i++) {
-                            writeMessage();
+                            writeMessage(price);
                         }
                         long timeToFinishBatch = System.currentTimeMillis() - startTime;
 
                         if (timeToFinishBatch < 1000) {
                             msleep(1000 - (int) timeToFinishBatch);
                         }
+                    } else {
+                        price.askPrice = 1.1234 + (count & 15) / 1e4;
+                        price.bidPrice = 1.1244 + (count & 15) / 1e4;
+                        writeMessage(price);
                     }
-                    else{
-                        writeMessage();
-                    }
-                }else{
+                } else {
                     msleep(100);
                 }
             }
         }
 
-        private void writeMessage() {
+        private void writeMessage(Price price) {
             appender.startExcerpt();
-            appender.writeObject(new Price("PID_100", count, true));
-            //appender.writeLong(count);
+            price.writeMarshallable(appender);
             appender.finish();
             updatable.messageProduced();
             count++;
         }
 
-        public void pause(){
+        public void pause() {
             isRunning.set(false);
         }
 
-        public void go(){
+        public void go() {
             isRunning.set(true);
         }
 
@@ -158,92 +158,94 @@ public class ChronicleController {
         }
     }
 
-    private class ReaderThread extends Thread{
+    private class ReaderThread extends Thread {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
 
         public void run() {
-            while(true) {
-                if(isRunning.get()){
-                    if(tailer.nextIndex()) {
-                       updatable.messageRead();
+            Price p = new Price();
+            while (true) {
+                if (isRunning.get()) {
+                    if (tailer.nextIndex()) {
+                        p.readMarshallable(tailer);
+                        updatable.messageRead();
                     }
-                }else{
+                } else {
                     msleep(100);
                 }
             }
         }
 
-        public void pause(){
+        public void pause() {
             isRunning.set(false);
         }
 
-        public void go(){
+        public void go() {
             isRunning.set(true);
         }
     }
 
-    private class TCPReaderThread extends Thread{
+    private class TCPReaderThread extends Thread {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
 
         public void run() {
-            while(true) {
-                if(isRunning.get()){
-                    if(tcpTailer.nextIndex()) {
+            while (true) {
+                if (isRunning.get()) {
+                    if (tcpTailer.nextIndex()) {
                         long val = tcpTailer.readLong();
                         updatable.tcpMessageRead();
                     }
-                }else{
+                } else {
                     msleep(100);
                 }
             }
         }
 
-        public void pause(){
+        public void pause() {
             isRunning.set(false);
         }
 
-        public void go(){
+        public void go() {
             isRunning.set(true);
         }
     }
 
-    private class TimerThread extends Thread{
+    private class TimerThread extends Thread {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
         private boolean restart = true;
         private int count = 0;
 
         public void run() {
-            while(true) {
-                if(isRunning.get()){
+            while (true) {
+                if (isRunning.get()) {
                     long startTime = System.currentTimeMillis();
                     msleep(100);
 
-                    if(restart || count % 50==0){
+                    if (restart || count % 50 == 0) {
                         count = 0;
                         updateFileNames();
                         restart = false;
                     }
                     count++;
 
-                    updatable.addTimeMillis(System.currentTimeMillis()-startTime);
-                }else{
+                    updatable.addTimeMillis(System.currentTimeMillis() - startTime);
+                } else {
                     msleep(100);
                 }
             }
         }
 
-        public void pause(){
+        public void pause() {
             isRunning.set(false);
         }
 
-        public void go(){
+        public void go() {
             restart = true;
             isRunning.set(true);
         }
     }
 
 
-    public void msleep(int time){
+    public void msleep(int time) {
         try {
             Thread.sleep(time);
         } catch (InterruptedException e) {
