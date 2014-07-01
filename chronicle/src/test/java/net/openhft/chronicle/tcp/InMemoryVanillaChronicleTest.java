@@ -36,7 +36,7 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 201;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -80,7 +80,7 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 202;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -121,7 +121,7 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
         final int items = 1000000;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         try {
@@ -174,7 +174,7 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 205;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
@@ -210,7 +210,7 @@ public class InMemoryVanillaChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 206;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryVanillaChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();

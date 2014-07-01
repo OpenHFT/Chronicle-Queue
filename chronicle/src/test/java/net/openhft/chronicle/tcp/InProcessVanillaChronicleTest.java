@@ -41,7 +41,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         assertNotNull(sinkBasePath);
 
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath), 0);
-        final InProcessChronicleSink sink = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
+        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -88,7 +88,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         assertNotNull(sinkBasePath);
 
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath), 0);
-        final InProcessChronicleSink sink = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
+        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -143,7 +143,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         config.indexBlockSize(16L << 10);
 
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 0);
-        final InProcessChronicleSink sink = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
+        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -197,7 +197,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         config.indexBlockSize(16L << 10);
 
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 55555);
-        final InProcessChronicleSink sink = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 55555);
+        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 55555);
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -278,7 +278,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         System.out.print("\n");
 
         //create a tailer to get the first 50 items then exit the tailer
-        final InProcessChronicleSink sink1 = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ChronicleSink sink1 = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
         System.out.println("Sink1 reading first 50 items then stopping");
@@ -296,7 +296,7 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
         sink1.checkCounts(1, 1);
 
         //now resume the tailer to get the first 50 items
-        final InProcessChronicleSink sink2 = new InProcessChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ChronicleSink sink2 = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
 
         //Take the tailer to the last index (item 50) and start reading from there.
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();

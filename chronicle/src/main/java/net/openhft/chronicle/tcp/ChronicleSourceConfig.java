@@ -21,15 +21,28 @@ import net.openhft.lang.model.constraints.NotNull;
 public class ChronicleSourceConfig implements Cloneable {
     public static final ChronicleSourceConfig DEFAULT = new ChronicleSourceConfig();
 
+    private int maxMessages;
     private int minBufferSize;
+    private long heartbeatInterval;
 
     private ChronicleSourceConfig() {
         minBufferSize = 256 * 1024;
+        heartbeatInterval = 2500;
+        maxMessages = 128;
     }
 
     // *************************************************************************
     //
     // *************************************************************************
+
+    public ChronicleSourceConfig maxMessages(int maxMessages) {
+        this.maxMessages = maxMessages;
+        return this;
+    }
+
+    public int maxMessages() {
+        return this.maxMessages;
+    }
 
     public ChronicleSourceConfig minBufferSize(int minBufferSize) {
         this.minBufferSize = minBufferSize;
@@ -38,6 +51,15 @@ public class ChronicleSourceConfig implements Cloneable {
 
     public int minBufferSize() {
         return this.minBufferSize;
+    }
+
+    public ChronicleSourceConfig heartbeatInterval(long heartbeatInterval) {
+        this.heartbeatInterval = heartbeatInterval;
+        return this;
+    }
+
+    public long heartbeatInterval() {
+        return this.heartbeatInterval;
     }
 
     // *************************************************************************

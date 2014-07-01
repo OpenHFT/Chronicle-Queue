@@ -36,7 +36,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 101;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -82,7 +82,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 102;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -123,7 +123,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
 
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -167,7 +167,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final int items = 1000000;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         try {
@@ -223,7 +223,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 105;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
@@ -256,7 +256,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final int port = BASE_PORT + 106;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = inMemoryIndexedChronicleSink("localhost", port);
+        final Chronicle sink = inMemoryChronicleSink("localhost", port);
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();

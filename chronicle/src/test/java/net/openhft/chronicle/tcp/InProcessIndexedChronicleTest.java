@@ -55,7 +55,7 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         final int messages = 5 * 1000 * 1000;
 
         final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -114,7 +114,7 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -156,7 +156,7 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -201,7 +201,7 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();

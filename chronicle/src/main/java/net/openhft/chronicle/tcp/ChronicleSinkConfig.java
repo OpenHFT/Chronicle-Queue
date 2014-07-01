@@ -26,7 +26,7 @@ public class ChronicleSinkConfig implements Cloneable {
 
     private ChronicleSinkConfig() {
         minBufferSize = 256 * 1024;
-        reconnectDelay = 500; // milliseconds
+        reconnectDelay = 500;
     }
 
     // *************************************************************************
@@ -48,7 +48,7 @@ public class ChronicleSinkConfig implements Cloneable {
     }
 
     public long reconnectDelay() {
-        return this.minBufferSize;
+        return this.reconnectDelay;
     }
 
     // *************************************************************************

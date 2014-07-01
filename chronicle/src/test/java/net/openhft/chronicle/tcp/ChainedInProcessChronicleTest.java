@@ -15,23 +15,14 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.IndexedChronicleTestBase;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * @author peter.lawrey
  */
 public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
 
+    /*
     @Ignore
     @Test
     public void testChained() throws IOException {
@@ -41,8 +32,8 @@ public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
 
         Chronicle source1 = new ChronicleSource(new IndexedChronicle(basePath1), 61111);
         Chronicle source2 = new ChronicleSource( new IndexedChronicle(basePath2), 62222);
-        Chronicle sink2 = new InProcessChronicleSink(source2, "localhost", 61111);
-        Chronicle sink3 = new InProcessChronicleSink(new IndexedChronicle(basePath3), "localhost", 62222);
+        Chronicle sink2 = new ChronicleSink(source2, "localhost", 61111);
+        Chronicle sink3 = new ChronicleSink(new IndexedChronicle(basePath3), "localhost", 62222);
 
         ExcerptAppender excerpt1 = source1.createAppender();
         ExcerptTailer excerpt2 = sink2.createTailer();
@@ -93,7 +84,7 @@ public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
         // create the 'slave' chronicle
 
         Chronicle source1 = new ChronicleSource(new IndexedChronicle(basePath2), 62222);
-        Chronicle sink1 = new InProcessChronicleSink(source1, "localhost", 61111);
+        Chronicle sink1 = new ChronicleSink(source1, "localhost", 61111);
 
         //try to read current data from the 'slave' chronicle
 
@@ -122,7 +113,7 @@ public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
         // Observe that we don't call ChronicleTools.deleteOnExit(file) -
         // the new instance will re-open the existing chronicle file
         Chronicle source2 = new ChronicleSource(new IndexedChronicle(basePath2), 63333);
-        Chronicle sink2 = new InProcessChronicleSink(source2, "localhost", 61111);
+        Chronicle sink2 = new ChronicleSink(source2, "localhost", 61111);
 
         ExcerptTailer tailer2 = sink2.createTailer();
         long nextIndex2 = 0;
@@ -141,4 +132,5 @@ public class ChainedInProcessChronicleTest extends IndexedChronicleTestBase {
         assertClean(basePath1);
         assertClean(basePath2);
     }
+    */
 }

@@ -39,6 +39,14 @@ public class InMemoryChronicleTestBase {
     //
     // *************************************************************************
 
+    protected Chronicle inMemoryChronicleSink( String host, int port) throws IOException {
+        return new ChronicleSink(host, port);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
         ChronicleTools.deleteOnExit(path);
@@ -51,10 +59,6 @@ public class InMemoryChronicleTestBase {
         ChronicleTools.deleteOnExit(path);
 
         return path;
-    }
-
-    protected Chronicle inMemoryIndexedChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.INDEXED, host, port);
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
@@ -87,10 +91,6 @@ public class InMemoryChronicleTestBase {
         }
 
         return path;
-    }
-
-    protected Chronicle inMemoryVanillaChronicleSink( String host, int port) throws IOException {
-        return new InMemoryChronicleSink(ChronicleSink.ChronicleType.VANILLA, host, port);
     }
 
     protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {

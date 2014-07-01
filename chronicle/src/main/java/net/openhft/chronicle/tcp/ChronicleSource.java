@@ -48,8 +48,8 @@ public class ChronicleSource implements Chronicle {
     static final int IN_SYNC_LEN = -128;
     static final int PADDED_LEN = -127;
     static final int SYNC_IDX_LEN = -126;
-    static final int MAX_MESSAGE = 128;
-    static final long HEARTBEAT_INTERVAL_MS = 2500;
+    //static final int MAX_MESSAGE = 128;
+    //static final long HEARTBEAT_INTERVAL_MS = 2500;
 
     @NotNull
     private final Chronicle chronicle;
@@ -65,6 +65,7 @@ public class ChronicleSource implements Chronicle {
     private static final long busyWaitTimeNS = 100 * 1000;
     protected volatile boolean closed = false;
     private long lastUnpausedNS = 0;
+    private int maxMessages;
 
     public ChronicleSource(@NotNull final Chronicle chronicle, final int port) throws IOException {
         this(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
@@ -90,6 +91,7 @@ public class ChronicleSource implements Chronicle {
         this.logger = LoggerFactory.getLogger(getClass().getName() + "." + name);
         this.service = Executors.newCachedThreadPool(new NamedThreadFactory(name, true));
         this.service.execute(new Acceptor());
+        this.maxMessages = sourceConfig.maxMessages();
     }
 
     @Override
@@ -163,7 +165,7 @@ public class ChronicleSource implements Chronicle {
             return;
         try {
             synchronized (notifier) {
-                notifier.wait(HEARTBEAT_INTERVAL_MS / 2);
+                notifier.wait(sourceConfig.heartbeatInterval() / 2);
             }
         }
         catch (InterruptedException ie) {
@@ -294,11 +296,11 @@ public class ChronicleSource implements Chronicle {
         }
 
         protected void setLastHeartbeatTime() {
-            this.lastHeartbeatTime = System.currentTimeMillis() + HEARTBEAT_INTERVAL_MS;
+            this.lastHeartbeatTime = System.currentTimeMillis() + sourceConfig.heartbeatInterval();
         }
 
         protected void setLastHeartbeatTime(long from) {
-            this.lastHeartbeatTime = from + HEARTBEAT_INTERVAL_MS;
+            this.lastHeartbeatTime = from + sourceConfig.heartbeatInterval();
         }
 
         protected abstract void onSelectResult(final Set<SelectionKey> keys) throws IOException;
@@ -403,7 +405,7 @@ public class ChronicleSource implements Chronicle {
                 buffer.limit((int) remaining);
                 tailer.read(buffer);
                 int count = 1;
-                while (tailer.index(index + 1) && count++ < MAX_MESSAGE) {
+                while (tailer.index(index + 1) && count++ < maxMessages) {
                     if(!tailer.wasPadding()) {
                         if (tailer.capacity() + TcpUtil.HEADER_SIZE >= (buffer.capacity() - buffer.position())) {
                             break;
@@ -535,7 +537,7 @@ public class ChronicleSource implements Chronicle {
                 buffer.limit((int) remaining);
                 tailer.read(buffer);
                 int count = 1;
-                while (count++ < MAX_MESSAGE) {
+                while (count++ < maxMessages) {
                     if (tailer.nextIndex()) {
                         if (tailer.wasPadding()) {
                             throw new AssertionError("Entry should not be padding - remove");
