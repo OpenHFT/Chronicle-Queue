@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
 
@@ -41,7 +42,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final ExcerptAppender appender = source.createAppender();
 
         try {
-            for (int i = 0; i < items; i++) {
+            for (long i = 1; i <= items; i++) {
                 appender.startExcerpt(8);
                 appender.writeLong(i);
                 appender.finish();
@@ -50,19 +51,23 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
             appender.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
-            for (long i = 0; i < items; i++) {
-                assertEquals(i, tailer1.index());
+            assertEquals(-1,tailer1.index());
+
+            for (long i = 1; i <= items; i++) {
+                assertTrue(tailer1.nextIndex());
+                assertEquals(i - 1, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
-
-                if(i < items - 1) {
-                    assertTrue(tailer1.nextIndex());
-                } else {
-                    assertFalse(tailer1.nextIndex());
-                }
             }
 
+            assertFalse(tailer1.nextIndex());
             tailer1.close();
+
+            final ExcerptTailer tailer2 = sink.createTailer().toEnd();
+            assertEquals(items - 1, tailer2.index());
+            assertEquals(items, tailer2.readLong());
+            assertFalse(tailer2.nextIndex());
+            tailer2.close();
 
             sink.close();
             sink.clear();
@@ -82,23 +87,23 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         try {
             final ExcerptAppender appender = source.createAppender();
             appender.startExcerpt(8);
-            appender.writeLong(0);
+            appender.writeLong(1);
             appender.finish();
             appender.startExcerpt(8);
-            appender.writeLong(1);
+            appender.writeLong(2);
             appender.finish();
 
             final ExcerptTailer tailer = sink.createTailer().toEnd();
             assertFalse(tailer.nextIndex());
 
             appender.startExcerpt(8);
-            appender.writeLong(2);
+            appender.writeLong(3);
             appender.finish();
 
             while(!tailer.nextIndex());
 
             assertEquals(2, tailer.index());
-            assertEquals(2, tailer.readLong());
+            assertEquals(3, tailer.readLong());
             tailer.finish();
             tailer.close();
 
@@ -124,7 +129,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final ExcerptAppender appender = source.createAppender();
 
         try {
-            for (int i = 0; i < items; i++) {
+            for (int i = 0; i <= items; i++) {
                 appender.startExcerpt(8);
                 appender.writeLong(i);
                 appender.finish();
@@ -133,8 +138,8 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
             appender.close();
 
             final ExcerptTailer tailer = sink.createTailer();
-
             final Random r = new Random();
+
             for(int i=0;i<1000;i++) {
                 int index = r.nextInt(items);
 
@@ -257,7 +262,7 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
         final ExcerptAppender appender = source.createAppender();
 
         try {
-            for (int i = 0; i < items; i++) {
+            for (int i=1; i <= items; i++) {
                 appender.startExcerpt(8);
                 appender.writeLong(i);
                 appender.finish();
@@ -266,14 +271,16 @@ public class InMemoryIndexedChronicleTest extends InMemoryChronicleTestBase {
             appender.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
+            assertEquals(-1,tailer1.index());
+            assertTrue(tailer1.nextIndex());
             assertEquals(0, tailer1.index());
-            assertEquals(0, tailer1.readLong());
+            assertEquals(1, tailer1.readLong());
             tailer1.finish();
             tailer1.close();
 
             final ExcerptTailer tailer2 = sink.createTailer().toEnd();
             assertEquals(items - 1, tailer2.index());
-            assertEquals(items - 1, tailer2.readLong());
+            assertEquals(items, tailer2.readLong());
             tailer2.finish();
             tailer2.close();
 

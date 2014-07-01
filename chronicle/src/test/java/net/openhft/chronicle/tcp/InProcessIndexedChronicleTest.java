@@ -83,12 +83,16 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         ExcerptTailer excerpt = sink.createTailer();
         int count = 0;
         for (int i = 1; i <= messages; i++) {
-            while (!excerpt.nextIndex())
+            while (!excerpt.nextIndex()) {
                 count++;
+            }
+
             long n = excerpt.readLong();
             String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
-            if (i != n)
+            if (i != n) {
                 assertEquals('\'' + text + '\'', i, n);
+            }
+
             excerpt.finish();
         }
 
@@ -131,8 +135,9 @@ public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
         }
 
         long mid = System.nanoTime();
-        while (count.get() < prices)
+        while (count.get() < prices) {
             reader.read();
+        }
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
