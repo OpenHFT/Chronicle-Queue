@@ -50,7 +50,7 @@ public class VanillaChronicleConfig {
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
     private long indexBlockSize = 16L << 20; // 16 MB
-    private long dataBlockSize = 64L << 20; // 16 MB
+    private long dataBlockSize = 64L << 20; // 64 MB
     private int defaultMessageSize = 128 << 10; // 128 KB.
     private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
     private boolean synchronous = false;

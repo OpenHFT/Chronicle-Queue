@@ -42,23 +42,6 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         final GUIUpdaterThread updater = new GUIUpdaterThread();
         updater.start();
 
-        startButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (startButton.getText().equals("Start")) {
-                    startButton.setText("Stop");
-                    resetButton.setEnabled(false);
-                    updater.go();
-                    controller.start((String) cbRate.getSelectedItem());
-                } else {
-                    startButton.setText("Start");
-                    resetButton.setEnabled(true);
-                    controller.stop();
-                    updater.pause();
-                }
-            }
-        });
-
         resetButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -75,11 +58,28 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         cbRate.addItem("3,000,000");
         cbRate.addItem("MAX");
 
-        cbRate.setSelectedItem("3,000,000");
+        cbRate.setSelectedItem("1,000,000");
 
         reset();
 
         controller = new ChronicleController(this, demo_path);
+
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (startButton.getText().equals("Start")) {
+                    startButton.setText("Stop");
+                    resetButton.setEnabled(false);
+                    updater.go();
+                    controller.start((String) cbRate.getSelectedItem());
+                } else {
+                    startButton.setText("Start");
+                    resetButton.setEnabled(true);
+                    controller.stop();
+                    updater.pause();
+                }
+            }
+        });
     }
 
     public void reset() {
@@ -109,7 +109,7 @@ public class ChronicleDashboard implements ChronicleUpdatable {
             fileNames += files.get(i);
         }
         tpFiles.setText(fileNames);
-        System.out.println("Setting files " + fileNames);
+//        System.out.println("Setting files " + fileNames);
     }
 
     @Override
@@ -118,13 +118,18 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     }
 
     @Override
-    public void messageRead() {
-        messagesRead.addAndGet(1);
+    public void incrMessageRead() {
+        messagesRead.incrementAndGet();
     }
 
     @Override
-    public void tcpMessageRead() {
-        tcpMessagesProduced.addAndGet(1);
+    public void incrTcpMessageRead() {
+        tcpMessagesProduced.incrementAndGet();
+    }
+
+    @Override
+    public AtomicLong tcpMessageRead() {
+        return tcpMessagesProduced;
     }
 
     public String getBytesAsGB(long bytes) {

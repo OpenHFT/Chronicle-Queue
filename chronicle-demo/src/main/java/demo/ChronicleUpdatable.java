@@ -11,9 +11,11 @@ public interface ChronicleUpdatable {
 
     public void addTimeMillis(long l);
 
-    public void messageRead();
+    public void incrMessageRead();
 
-    public void tcpMessageRead();
+    public void incrTcpMessageRead();
+
+    AtomicLong tcpMessageRead();
 
     AtomicLong count1();
 

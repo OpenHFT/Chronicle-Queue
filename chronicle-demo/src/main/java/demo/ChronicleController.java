@@ -1,8 +1,8 @@
 package demo;
 
-import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.VanillaChronicleConfig;
 import net.openhft.chronicle.tcp.VanillaChronicleSink;
 import net.openhft.chronicle.tcp.VanillaChronicleSource;
 
@@ -30,10 +30,10 @@ public class ChronicleController {
     private TimerThread timerThread;
 
     public ChronicleController(ChronicleUpdatable updatable, File demo_path) throws IOException {
-        BASE_PATH = demo_path+"/source";
-        BASE_PATH_SINK = demo_path+"/sink";
+        BASE_PATH = demo_path + "/source";
+        BASE_PATH_SINK = demo_path + "/sink";
         this.updatable = updatable;
-                                    reset();
+        reset();
 
         writerThread1 = new WriterThread("EURUSD", updatable.count1());
         writerThread1.start();
@@ -50,7 +50,10 @@ public class ChronicleController {
     public void reset() {
 
         try {
-            chronicle = new VanillaChronicle(BASE_PATH);
+            VanillaChronicleConfig config = new VanillaChronicleConfig();
+            config.indexBlockSize(32 << 20);
+            config.dataBlockSize(128 << 20);
+            chronicle = new VanillaChronicle(BASE_PATH, config);
             VanillaChronicleSource source = new VanillaChronicleSource(chronicle, 0);
             VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
             chronicle.clear();
@@ -115,6 +118,8 @@ public class ChronicleController {
     }
 
     private class WriterThread extends Thread {
+        private static final int BATCH = 10;
+        public static final int ELASTICITY = 1000000;
         private final String symbol;
         private final AtomicBoolean isRunning = new AtomicBoolean(false);
         private final AtomicLong count;
@@ -124,36 +129,51 @@ public class ChronicleController {
         public WriterThread(String symbol, AtomicLong count) throws IOException {
             this.symbol = symbol;
             this.count = count;
-                appender = chronicle.createAppender();
+            appender = chronicle.createAppender();
         }
 
 
         public void run() {
             Price price = new Price(symbol, 1.1234, 2000000, 1.1244, 3000000, true);
-            ExcerptAppender appender;
-
-
-            while (true) {
-                if (isRunning.get()) {
-                    if (rate != Integer.MAX_VALUE) {
-                        long startTime = System.currentTimeMillis();
-                        for (int i = 0; i < rate; i++) {
-                            writeMessage(price);
-                        }
-                        long timeToFinishBatch = System.currentTimeMillis() - startTime;
-
-                        if (timeToFinishBatch < 1000) {
-                            msleep(1000 - (int) timeToFinishBatch);
-                        }
-                    } else {
-                        double v = (count.get() & 15) / 1e4;
-                        price.askPrice = 1.1234 + v;
-                        price.bidPrice = 1.1244 + v;
-                        writeMessage(price);
-                    }
-                } else {
+            long startTime = 0/*, reportTime = 0, lastCount = 0*/;
+            while (!Thread.interrupted()) {
+                if (!isRunning.get()) {
                     msleep(100);
+                    continue;
+                } else if (startTime == 0) {
+                    startTime = System.currentTimeMillis();
+//                    reportTime = startTime + 1000;
                 }
+                long countWritten = count.get();
+                for (int i = 0; i < BATCH; i++) {
+                    double v = ((countWritten + i) & 15) / 1e4;
+                    price.askPrice = 1.1234 + v;
+                    price.bidPrice = 1.1244 + v;
+                    writeMessage(price);
+                }
+                countWritten += BATCH;
+
+                // give the replication a break.
+                long diff = countWritten * 2 - updatable.tcpMessageRead().get();
+                if (diff > ELASTICITY) {
+                    msleep(1);
+                    continue;
+                }
+
+                if (rate == Integer.MAX_VALUE)
+                    continue;
+
+                long now = System.currentTimeMillis();
+//                if (now >= reportTime) {
+//                    long countDone = countWritten - lastCount;
+////                    System.out.println(countDone);
+//                    lastCount = countWritten;
+//                    reportTime += 1000;
+//                }
+                long runtime = now - startTime;
+                long targetCount = runtime * rate / 1000;
+                if (countWritten > targetCount)
+                    msleep(1);
             }
         }
 
@@ -181,12 +201,10 @@ public class ChronicleController {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
 
         public void run() {
-            Price p = new Price();
             while (true) {
                 if (isRunning.get()) {
                     if (tailer.nextIndex()) {
-                        p.readMarshallable(tailer);
-                        updatable.messageRead();
+                        updatable.incrMessageRead();
                     }
                 } else {
                     msleep(100);
@@ -207,11 +225,12 @@ public class ChronicleController {
         private AtomicBoolean isRunning = new AtomicBoolean(false);
 
         public void run() {
+            Price p = new Price();
             while (true) {
                 if (isRunning.get()) {
                     if (tcpTailer.nextIndex()) {
-                        long val = tcpTailer.readLong();
-                        updatable.tcpMessageRead();
+                        p.readMarshallable(tcpTailer);
+                        updatable.incrTcpMessageRead();
                     }
                 } else {
                     msleep(100);

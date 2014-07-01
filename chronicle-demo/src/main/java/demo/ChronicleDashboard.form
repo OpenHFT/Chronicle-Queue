@@ -186,6 +186,8 @@
               </grid>
             </constraints>
             <properties>
+              <editable value="false"/>
+              <enabled value="true"/>
               <text value="0"/>
             </properties>
           </component>
@@ -233,7 +235,10 @@
                 <preferred-size width="150" height="-1"/>
               </grid>
             </constraints>
-            <properties/>
+            <properties>
+              <editable value="false"/>
+              <enabled value="true"/>
+            </properties>
           </component>
         </children>
       </grid>
