@@ -52,11 +52,8 @@ public class InProcessVanillaChronicleTest extends InProcessChronicleTestBase {
                 long value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                while(true){
-                  if(tailer.nextIndex()) {
-                      break;
-                  }
-                }
+
+                while(!tailer.nextIndex());
 
                 long val = tailer.parseLong();
                 //System.out.println("" + val);

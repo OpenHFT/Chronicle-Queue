@@ -456,7 +456,7 @@ public class ChronicleSource implements Chronicle {
                         if(this.index == -1) {
                             this.nextIndex = true;
                             this.tailer = tailer.toStart();
-                            this.index = tailer.index();
+                            this.index = -1;
                         } else if(this.index == -2) {
                             this.nextIndex = false;
                             this.tailer = tailer.toEnd();

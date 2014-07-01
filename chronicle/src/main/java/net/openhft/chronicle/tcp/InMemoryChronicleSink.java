@@ -412,7 +412,6 @@ public class InMemoryChronicleSink extends ChronicleSink {
             this.index = index;
             this.lastSize = 0;
 
-            boolean skip = true;
             try {
                 if(!isChannelOpen()) {
                     openChannel();
@@ -420,38 +419,25 @@ public class InMemoryChronicleSink extends ChronicleSink {
 
                 if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
                     while (readFromChannel(TcpUtil.HEADER_SIZE)) {
-                        buffer.mark();
-                        int excerptSize = buffer.getInt();
+                        int receivedSize = buffer.getInt();
                         long receivedIndex = buffer.getLong();
 
-                        if(excerptSize == ChronicleSource.SYNC_IDX_LEN) {
-                            if(index == -1 || index == -2) {
-                                index = receivedIndex;
-                            }
+                        switch(receivedSize) {
+                            case ChronicleSource.SYNC_IDX_LEN:
+                                if(index == -1) {
+                                    return receivedIndex == -1;
+                                } else if(index == -2) {
+                                    return advanceIndex();
+                                } else {
+                                    return (index == receivedIndex) ? advanceIndex() : false;
+                                }
+                            case ChronicleSource.PADDED_LEN:
+                            case ChronicleSource.IN_SYNC_LEN:
+                                return false;
+                        }
 
-                            skip = false;
-                        } else {
-                            switch (excerptSize) {
-                                case ChronicleSource.IN_SYNC_LEN:
-                                case ChronicleSource.PADDED_LEN:
-                                    return false;
-                            }
-
-                            if (!skip) {
-                                buffer.reset();
-                                if (nextIndex()) {
-                                    finish();
-                                    lastSize = 0;
-                                    return true;
-                                }
-                                else {
-                                    return false;
-                                }
-                            } else {
-                                if (buffer.remaining() >= excerptSize) {
-                                    buffer.position(buffer.position() + excerptSize);
-                                }
-                            }
+                        if (buffer.remaining() >= receivedSize) {
+                            buffer.position(buffer.position() + receivedSize);
                         }
                     }
                 }
@@ -498,6 +484,7 @@ public class InMemoryChronicleSink extends ChronicleSink {
                 positionAddr = startAddr + buffer.position();
                 limitAddr = startAddr + buffer.limit();
                 lastSize = excerptSize;
+                finished = false;
             } catch (IOException e) {
                 close();
                 return false;
