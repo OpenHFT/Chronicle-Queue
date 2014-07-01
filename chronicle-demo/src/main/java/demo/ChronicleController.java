@@ -29,8 +29,8 @@ public class ChronicleController {
     private TimerThread timerThread;
 
     public ChronicleController(ChronicleUpdatable updatable){
-        BASE_PATH = System.getProperty("java.io.tmpdir") + "demo";
-        BASE_PATH_SINK = System.getProperty("java.io.tmpdir") + "demo/sink";
+        BASE_PATH = System.getProperty("java.io.tmpdir") + "/demo/source";
+        BASE_PATH_SINK = System.getProperty("java.io.tmpdir") + "/demo/sink";
         this.updatable = updatable;
         writerThread = new WriterThread();
         writerThread.start();
