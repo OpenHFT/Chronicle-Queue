@@ -196,20 +196,123 @@ public class ChronicleSink implements Chronicle {
     }
 
     // *************************************************************************
+    //
+    // *************************************************************************
+
+    private final class SinkConnector {
+        private final ByteBuffer buffer;
+        private SocketChannel channel;
+
+        public SinkConnector() {
+            this.channel = null;
+            this.buffer = TcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
+        }
+
+        public ByteBuffer buffer() {
+            return buffer;
+        }
+
+        public void close() throws IOException {
+            if(channel != null) {
+                channel.close();
+                channel = null;
+            }
+        }
+
+        public boolean open() {
+            while (!closed) {
+                try {
+                    buffer.clear();
+                    buffer.limit(0);
+
+                    this.channel = SocketChannel.open(address);
+                    this.channel .socket().setReceiveBufferSize(sinkConfig.minBufferSize());
+                    logger.info("Connected to " + address);
+
+                    return true;
+                } catch (IOException e) {
+                    logger.info("Failed to connect to {}, retrying", address, e);
+                }
+
+                try {
+                    Thread.sleep(sinkConfig.reconnectDelay());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            return false;
+        }
+
+        public boolean isOpen() {
+            return !closed && channel!= null && channel.isOpen();
+        }
+
+        public boolean isClosed() {
+            return !isOpen();
+        }
+
+        public boolean write(final ByteBuffer buffer) {
+            try {
+                TcpUtil.writeAllOrEOF(channel, buffer);
+            } catch (IOException e) {
+                return false;
+            }
+
+            return true;
+        }
+
+        public boolean read() throws IOException {
+            if (channel.read(buffer) < 0) {
+                throw new EOFException();
+            }
+
+            return true;
+        }
+
+        public boolean read(int size) throws IOException {
+            return read(size, size);
+        }
+
+        public boolean read(int threshod, int size) throws IOException {
+            if(!closed) {
+                if (buffer.remaining() < threshod) {
+                    if (buffer.remaining() == 0) {
+                        buffer.clear();
+                    } else {
+                        buffer.compact();
+                    }
+
+                    while (buffer.position() < size) {
+                        if (channel.read(buffer) < 0) {
+                            channel.close();
+                            return false;
+                        }
+                    }
+
+                    buffer.flip();
+                }
+            }
+
+            return !closed;
+        }
+    }
+
+    // *************************************************************************
     // TCP/DISK based replication
     // *************************************************************************
 
     private abstract class AbstractPersistentSinkExcerpt<T extends Chronicle>  extends WrappedExcerpt {
         protected final T chronicleImpl;
         protected final ByteBuffer buffer;
-        private SocketChannel socketChannel;
+        protected final SinkConnector connector;
         protected long lastLocalIndex;
 
         public AbstractPersistentSinkExcerpt(ExcerptCommon excerptCommon) {
             super(excerptCommon);
             this.chronicleImpl = (T)chronicle;
-            this.socketChannel = null;
-            this.buffer = TcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
+            this.connector = new SinkConnector();
+            this.buffer = this.connector.buffer();
             this.lastLocalIndex = -1;
         }
 
@@ -225,12 +328,10 @@ public class ChronicleSink implements Chronicle {
 
         @Override
         public synchronized void close() {
-            if(socketChannel != null) {
-                try {
-                    socketChannel.close();
-                } catch (IOException e) {
-                    logger.warn("Error closing socket", e);
-                }
+            try {
+                connector.close();
+            } catch (IOException e) {
+                logger.warn("Error closing socket", e);
             }
 
             excerpts.remove(this);
@@ -239,46 +340,24 @@ public class ChronicleSink implements Chronicle {
         }
 
         private boolean readNext() {
-            if (socketChannel == null || !socketChannel.isOpen()) {
-                socketChannel = createConnection();
-            }
-
-            return socketChannel != null && readNextExcerpt(socketChannel);
-        }
-
-        private SocketChannel createConnection() {
-            while (!closed) {
-                try {
-                    buffer.clear();
-                    buffer.limit(0);
-
-                    SocketChannel sc = SocketChannel.open(address);
-                    sc.socket().setReceiveBufferSize(sinkConfig.minBufferSize());
-                    logger.info("Connected to " + address);
-
-                    lastLocalIndex = lastIndex();
-
-                    ByteBuffer bb = ByteBuffer.allocate(8);
-                    bb.putLong(0, lastLocalIndex);
-                    TcpUtil.writeAllOrEOF(sc, bb);
-
-                    return sc;
-                } catch (IOException e) {
-                    logger.info("Failed to connect to {} retrying", address, e);
-                }
-
-                try {
-                    Thread.sleep(sinkConfig.reconnectDelay());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return null;
+            if (!connector.isOpen()) {
+                if(connector.open()) {
+                    long lastIndex = lastLocalIndex();
+                    if(connector.write(ByteBuffer.allocate(8).putLong(0, lastIndex))) {
+                        lastLocalIndex = lastIndex;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
                 }
             }
-            return null;
+
+            return connector.isOpen() && readNextExcerpt();
         }
 
-        protected abstract long lastIndex();
-        protected abstract boolean readNextExcerpt(final SocketChannel channel);
+        protected abstract long lastLocalIndex();
+        protected abstract boolean readNextExcerpt();
     }
 
     /**
@@ -295,53 +374,34 @@ public class ChronicleSink implements Chronicle {
         }
 
         @Override
-        protected long lastIndex()  {
+        protected long lastLocalIndex()  {
             return chronicle.lastWrittenIndex();
         }
 
         @Override
-        protected boolean readNextExcerpt(@NotNull final SocketChannel sc) {
+        protected boolean readNextExcerpt() {
             try {
-                if (closed) return false;
-
-                if (buffer.remaining() < TcpUtil.HEADER_SIZE) {
-                    if (buffer.remaining() == 0) {
-                        buffer.clear();
-                    } else {
-                        buffer.compact();
-                    }
-
-                    int minSize = TcpUtil.HEADER_SIZE + 8;
-                    while (buffer.position() < minSize) {
-                        if (sc.read(buffer) < 0) {
-                            sc.close();
-                            return false;
-                        }
-                    }
-                    buffer.flip();
+                if(!closed && !connector.read(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
+                    return false;
                 }
 
-                int size = buffer.getInt();
+                final int size = buffer.getInt();
+                final long scIndex = buffer.getLong();
+
                 switch (size) {
                     case ChronicleSource.IN_SYNC_LEN:
-                        buffer.getLong();
                         return false;
                     case ChronicleSource.PADDED_LEN:
                         appender.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
-                        buffer.getLong();
                         return true;
                     case ChronicleSource.SYNC_IDX_LEN:
-                        buffer.getLong();
                         //Sync IDX message, re-try
-                        return readNextExcerpt(sc);
-                    default:
-                        break;
+                        return readNextExcerpt();
                 }
 
-                if (size > 128 << 20 || size < 0)
+                if (size > 128 << 20 || size < 0) {
                     throw new StreamCorruptedException("size was " + size);
-
-                final long scIndex = buffer.getLong();
+                }
                 if (scIndex != chronicle.size()) {
                     throw new StreamCorruptedException("Expected index " + chronicle.size() + " but got " + scIndex);
                 }
@@ -363,8 +423,7 @@ public class ChronicleSink implements Chronicle {
                     buffer.clear();
                     int size3 = (int) Math.min(buffer.capacity(), remaining);
                     buffer.limit(size3);
-                    if (sc.read(buffer) < 0)
-                        throw new EOFException();
+                    connector.read();
                     buffer.flip();
                     remaining -= buffer.remaining();
                     appender.write(buffer);
@@ -374,10 +433,11 @@ public class ChronicleSink implements Chronicle {
             } catch (IOException e) {
                 logger.info("Lost connection to {} retrying", address, e);
                 try {
-                    sc.close();
+                    connector.close();
                 } catch (IOException ignored) {
                 }
             }
+
             return true;
         }
     }
@@ -396,38 +456,19 @@ public class ChronicleSink implements Chronicle {
         }
 
         @Override
-        protected long lastIndex()  {
+        protected long lastLocalIndex()  {
             return chronicleImpl.lastIndex();
         }
 
         @Override
-        protected boolean readNextExcerpt(@NotNull final SocketChannel sc) {
+        protected boolean readNextExcerpt() {
             try {
-                if (closed) {
+                if(!closed && !connector.read(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
-                // Check if there is enogh data (header plus some more data)
-                if (buffer.remaining() < TcpUtil.HEADER_SIZE) {
-                    if (buffer.remaining() == 0){
-                        buffer.clear();
-                    } else {
-                        buffer.compact();
-                    }
-
-                    // Waith till some more data has been readed
-                    while (buffer.position() < TcpUtil.HEADER_SIZE + 8) {
-                        if (sc.read(buffer) < 0) {
-                            sc.close();
-                            return false;
-                        }
-                    }
-
-                    buffer.flip();
-                }
-
-                int size = buffer.getInt();
-                long scIndex = buffer.getLong();
+                final int size = buffer.getInt();
+                final long scIndex = buffer.getLong();
 
                 switch (size) {
                     case ChronicleSource.IN_SYNC_LEN:
@@ -438,9 +479,7 @@ public class ChronicleSink implements Chronicle {
                         return false;
                     case ChronicleSource.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
-                        return readNextExcerpt(sc);
-                    default:
-                        break;
+                        return readNextExcerpt();
                 }
 
                 if (size > 128 << 20 || size < 0) {
@@ -448,7 +487,6 @@ public class ChronicleSink implements Chronicle {
                 }
 
                 if(lastLocalIndex != scIndex) {
-
                     int cycle = (int) (scIndex >>> chronicleImpl.getEntriesForCycleBits());
 
                     appender.startExcerpt(size, cycle);
@@ -467,8 +505,7 @@ public class ChronicleSink implements Chronicle {
                         buffer.clear();
                         int size3 = (int) Math.min(buffer.capacity(), remaining);
                         buffer.limit(size3);
-                        if (sc.read(buffer) < 0)
-                            throw new EOFException();
+                        connector.read();
                         buffer.flip();
                         remaining -= buffer.remaining();
                         appender.write(buffer);
@@ -477,12 +514,12 @@ public class ChronicleSink implements Chronicle {
                     appender.finish();
                 } else {
                     buffer.position(buffer.position() + size);
-                    return readNextExcerpt(sc);
+                    return readNextExcerpt();
                 }
             } catch (IOException e) {
                 logger.info("Lost connection to {} retrying ",address, e);
                 try {
-                    sc.close();
+                    connector.close();
                 } catch (IOException ignored) {
                 }
             }
@@ -497,22 +534,22 @@ public class ChronicleSink implements Chronicle {
     // *************************************************************************
 
     private class InMemoryExcerptTailer extends NativeBytes implements ExcerptTailer {
-        protected final Logger logger;
-        protected long index;
-        protected int lastSize;
-        protected final ByteBuffer buffer;
-        private SocketChannel channel;
+        private final Logger logger;
+        private long index;
+        private int lastSize;
+        private final ByteBuffer buffer;
+        private final SinkConnector connector;
 
         public InMemoryExcerptTailer() {
             super(NO_PAGE, NO_PAGE);
 
-            this.buffer = TcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
-            this.startAddr = ((DirectBuffer) this.buffer).address();
-            this.capacityAddr = this.startAddr + sinkConfig.minBufferSize();
             this.index = -1;
             this.lastSize = 0;
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + address.toString());
-            this.channel = null;
+            this.connector = new SinkConnector();
+            this.buffer = this.connector.buffer();
+            this.startAddr = ((DirectBuffer) this.buffer).address();
+            this.capacityAddr = this.startAddr + sinkConfig.minBufferSize();
         }
 
         @Override
@@ -528,13 +565,10 @@ public class ChronicleSink implements Chronicle {
 
         @Override
         public void close() {
-            if (channel != null) {
-                try {
-                    channel.close();
-                    channel = null;
-                } catch (IOException e) {
-                    logger.warn("Error closing socket", e);
-                }
+            try {
+                connector.close();
+            } catch (IOException e) {
+                logger.warn("Error closing socket", e);
             }
 
             excerpts.remove(this);
@@ -578,12 +612,12 @@ public class ChronicleSink implements Chronicle {
             this.lastSize = 0;
 
             try {
-                if(!isChannelOpen()) {
-                    openChannel();
+                if(!connector.isOpen()) {
+                    connector.open();
                 }
 
-                if (writeToChannel(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                    while (readFromChannel(TcpUtil.HEADER_SIZE)) {
+                if (connector.write(ByteBuffer.allocate(8).putLong(0, this.index))) {
+                    while (connector.read(TcpUtil.HEADER_SIZE)) {
                         int receivedSize = buffer.getInt();
                         long receivedIndex = buffer.getLong();
 
@@ -616,11 +650,11 @@ public class ChronicleSink implements Chronicle {
         @Override
         public boolean nextIndex() {
             try {
-                if(!isChannelOpen()) {
+                if(!connector.isOpen()) {
                     return index(this.index);
                 }
 
-                if(!readFromChannel(TcpUtil.HEADER_SIZE + 8)) {
+                if(!connector.read(TcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -632,7 +666,7 @@ public class ChronicleSink implements Chronicle {
                     case ChronicleSource.PADDED_LEN:
                         return false;
                     case ChronicleSource.SYNC_IDX_LEN:
-                        return nextIndex();
+                        return false;//nextIndex();
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
@@ -640,7 +674,7 @@ public class ChronicleSink implements Chronicle {
                 }
 
                 if(buffer.remaining() < excerptSize) {
-                    if(!readFromChannel(buffer.remaining() - excerptSize)) {
+                    if(!connector.read(buffer.remaining() - excerptSize)) {
                         return false;
                     }
                 }
@@ -656,66 +690,6 @@ public class ChronicleSink implements Chronicle {
             }
 
             return true;
-        }
-
-        protected void openChannel() {
-            while (!closed) {
-                try {
-                    buffer.clear();
-                    buffer.limit(0);
-
-                    channel = SocketChannel.open(address);
-                    channel.socket().setReceiveBufferSize(sinkConfig.minBufferSize());
-                    logger.info("Connected to " + address);
-
-                    return;
-                } catch (IOException e) {
-                    logger.info("Failed to connect to {}, retrying", address, e);
-                }
-
-                try {
-                    Thread.sleep(sinkConfig.reconnectDelay());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-
-        protected boolean isChannelOpen() {
-            return !closed && channel!= null && channel.isOpen();
-        }
-
-        protected boolean writeToChannel(final ByteBuffer buffer) {
-            try {
-                TcpUtil.writeAllOrEOF(channel, buffer);
-            } catch (IOException e) {
-                return false;
-            }
-
-            return true;
-        }
-
-        protected boolean readFromChannel(int size) throws IOException {
-            if(!closed) {
-                if (buffer.remaining() < size) {
-                    if (buffer.remaining() == 0) {
-                        buffer.clear();
-                    } else {
-                        buffer.compact();
-                    }
-
-                    while (buffer.position() < size) {
-                        if (channel.read(buffer) < 0) {
-                            channel.close();
-                            return false;
-                        }
-                    }
-
-                    buffer.flip();
-                }
-            }
-
-            return !closed;
         }
 
         protected boolean advanceIndex() throws IOException {
