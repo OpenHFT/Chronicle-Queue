@@ -510,10 +510,10 @@ public class VanillaChronicle implements Chronicle {
             int offset = (int) (startAddr - dataBytes.address());
             long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+
             lastWrittenIndex = indexValue;
             try {
-                final boolean appendDone = (indexBytes != null) && VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
-                if (!appendDone) {
+                if (!VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous)) {
                     if (indexBytes != null) {
                         indexBytes.release();
                         indexBytes = null;

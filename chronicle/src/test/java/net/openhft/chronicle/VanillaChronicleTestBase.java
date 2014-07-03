@@ -19,6 +19,8 @@ import net.openhft.lang.io.IOTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import java.lang.management.ManagementFactory;
+
 public class VanillaChronicleTestBase {
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
@@ -37,5 +39,17 @@ public class VanillaChronicleTestBase {
         IOTools.deleteDir(path);
 
         return path;
+    }
+
+    protected int getPID() {
+        final String name = ManagementFactory.getRuntimeMXBean().getName();
+        return Integer.parseInt(name.split("@")[0]);
+    }
+
+    protected void sleep(long timeout) {
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+        }
     }
 }

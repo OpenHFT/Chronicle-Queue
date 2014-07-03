@@ -19,8 +19,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
@@ -90,6 +95,69 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             appender.close();
 
             chronicle.checkCounts(1,1);
+        } catch(Exception e) {
+            e.printStackTrace();
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
+    }
+
+    @Test
+    public void testResourcesCleanup3() throws Exception {
+        final int nbThreads = 5;
+        final int nbAppend = 10;
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
+
+        System.out.println("BaseDir : " + baseDir);
+        System.out.println("PID : " + getPID());
+
+        final VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.entriesPerCycle(1L << 20);
+        config.cycleLength(1000, false);
+        config.cycleFormat("yyyyMMddHHmmss");
+        config.indexBlockSize(64);
+        config.dataBlockSize(64);
+        config.dataCacheCapacity(nbThreads + 1);
+        config.indexCacheCapacity(2);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
+        chronicle.clear();
+
+        try {
+            final ExecutorService es = Executors.newFixedThreadPool(nbThreads);
+            final CountDownLatch latch = new CountDownLatch(nbThreads);
+
+            for(int i=0;i<nbThreads;i++) {
+                es.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            final ExcerptAppender appender = chronicle.createAppender();
+                            for (int counter = 0; counter < nbAppend; counter++) {
+                                appender.startExcerpt(4);
+                                appender.writeInt(counter);
+                                appender.finish();
+
+                                sleep(2000);
+                            }
+
+                            appender.close();
+                            latch.countDown();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+
+            es.shutdown();
+            latch.await();
+
+            chronicle.checkCounts(1, 1);
         } catch(Exception e) {
             e.printStackTrace();
         } finally {

@@ -41,7 +41,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
-        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
+        this(basePath, blockBits, dateCache, config.indexCacheCapacity(), config.cleanupOnClose());
     }
 
     public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
@@ -130,20 +130,22 @@ public class VanillaIndexCache implements Closeable {
         // As a result, the position could step backwards when this method is called concurrently,
         // but the compareAndSwapLong call ensures that data is never overwritten.
 
-        boolean endOfFile = false;
-        while (!endOfFile) {
-            final long position = bytes.position();
-            endOfFile = (bytes.limit() - position) < 8;
-            if (!endOfFile) {
-                if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
-                    if (synchronous) {
-                        bytes.force();
+        if(bytes != null) {
+            boolean endOfFile = false;
+            while (!endOfFile) {
+                final long position = bytes.position();
+                endOfFile = (bytes.limit() - position) < 8;
+                if (!endOfFile) {
+                    if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
+                        if (synchronous) {
+                            bytes.force();
+                        }
+
+                        return true;
                     }
 
-                    return true;
+                    bytes.position(position + 8);
                 }
-
-                bytes.position(position + 8);
             }
         }
 
