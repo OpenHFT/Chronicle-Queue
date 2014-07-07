@@ -3,8 +3,8 @@ package demo;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.VanillaChronicleConfig;
-import net.openhft.chronicle.tcp.VanillaChronicleSink;
-import net.openhft.chronicle.tcp.VanillaChronicleSource;
+import net.openhft.chronicle.tcp.ChronicleSink;
+import net.openhft.chronicle.tcp.ChronicleSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,8 +54,8 @@ public class ChronicleController {
             config.indexBlockSize(32 << 20);
             config.dataBlockSize(128 << 20);
             chronicle = new VanillaChronicle(BASE_PATH, config);
-            VanillaChronicleSource source = new VanillaChronicleSource(chronicle, 0);
-            VanillaChronicleSink sink = new VanillaChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
+            ChronicleSource source = new ChronicleSource(chronicle, 0);
+            ChronicleSink sink = new ChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
             chronicle.clear();
             sink.clear();
 
