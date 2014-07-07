@@ -16,7 +16,14 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptComparator;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -117,7 +124,9 @@ public class ChronicleSink implements Chronicle {
         }
 
         if(excerpt != null) {
-            excerpts.add(excerpt);
+            synchronized (excerpts) {
+                excerpts.add(excerpt);
+            }
         }
 
         return excerpt;
@@ -141,7 +150,9 @@ public class ChronicleSink implements Chronicle {
         }
 
         if(excerpt != null) {
-            excerpts.add(excerpt);
+            synchronized (excerpts) {
+                excerpts.add(excerpt);
+            }
         }
 
         return excerpt;
@@ -175,8 +186,10 @@ public class ChronicleSink implements Chronicle {
         if(!closed) {
             closed = true;
 
-            for (ExcerptCommon excerpt : excerpts) {
-                excerpt.close();
+            synchronized (excerpts) {
+                for (ExcerptCommon excerpt : excerpts) {
+                    excerpt.close();
+                }
             }
 
             try {
@@ -334,7 +347,9 @@ public class ChronicleSink implements Chronicle {
                 logger.warn("Error closing socket", e);
             }
 
-            excerpts.remove(this);
+            synchronized (excerpts) {
+                excerpts.remove(this);
+            }
 
             super.close();
         }
@@ -564,14 +579,16 @@ public class ChronicleSink implements Chronicle {
         }
 
         @Override
-        public void close() {
+        public synchronized void close() {
             try {
                 connector.close();
             } catch (IOException e) {
                 logger.warn("Error closing socket", e);
             }
 
-            excerpts.remove(this);
+            synchronized (excerpts) {
+                excerpts.remove(this);
+            }
         }
 
         @Override
