@@ -30,7 +30,7 @@
     <artifactId>chronicle-demo</artifactId>
 
     <name>OpenHFT/Java-Chronicle/chronicle-demo</name>
-    <version>3.1.2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
     <dependencyManagement>
@@ -47,7 +47,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>3.1.2-SNAPSHOT</version>
+                <version>3.2.0-SNAPSHOT</version>
             </dependency>
 
         </dependencies>
@@ -64,7 +64,25 @@
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.jgoodies</groupId>
+            <artifactId>jgoodies-forms</artifactId>
+            <version>1.6.0</version>
+        </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgument>-Xlint:deprecation</compilerArgument>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
