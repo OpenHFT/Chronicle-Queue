@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,16 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle;
+package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.tcp.InProcessChronicleSink;
-import net.openhft.chronicle.tcp.InProcessChronicleSource;
-import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,21 +41,21 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
-public class InProcessChronicleTest extends IndexedChronicleTestBase {
+public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
 
     public static final int PORT = 12345;
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -74,34 +83,38 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         ExcerptTailer excerpt = sink.createTailer();
         int count = 0;
         for (int i = 1; i <= messages; i++) {
-            while (!excerpt.nextIndex())
+            while (!excerpt.nextIndex()) {
                 count++;
+            }
+
             long n = excerpt.readLong();
             String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
-            if (i != n)
+            if (i != n) {
                 assertEquals('\'' + text + '\'', i, n);
+            }
+
             excerpt.finish();
         }
 
         sink.close();
-        System.out.println("There were " + count + " isSync messages");
+        System.out.println("There were " + count + " InSynk messages");
         t.join();
 
         source.close();
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing1() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -122,8 +135,9 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         }
 
         long mid = System.nanoTime();
-        while (count.get() < prices)
+        while (count.get() < prices) {
             reader.read();
+        }
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
@@ -132,17 +146,17 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -177,17 +191,17 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     @Test
     public void testPricePublishing3() throws IOException, InterruptedException {
-        final String basePathSource = getTestPath("-source");
-        final String basePathSink = getTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new InProcessChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
-        final Chronicle sink = new InProcessChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
+        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -220,8 +234,8 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         source.close();
         sink.close();
 
-        assertClean(basePathSource);
-        assertClean(basePathSink);
+        assertIndexedClean(basePathSource);
+        assertIndexedClean(basePathSink);
     }
 
     // Took an average of 2.8 us to write and 7.6 us to read (Java 7)
@@ -292,8 +306,10 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         }
 
         public boolean read() {
-            if (!excerpt.nextIndex()) return false;
-//            System.out.println("ei: "+excerpt.index());
+            if (!excerpt.nextIndex()) {
+                return false;
+            }
+
             char ch = (char) excerpt.readByte();
             switch (ch) {
                 case 'P': {
@@ -327,7 +343,7 @@ public class InProcessChronicleTest extends IndexedChronicleTestBase {
         config.indexFileExcerpts(512);
 //        config.dataBlockSize(4096);
 //        config.indexBlockSize(4096);
-        final Chronicle source = new InProcessChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
+        final Chronicle source = new ChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {

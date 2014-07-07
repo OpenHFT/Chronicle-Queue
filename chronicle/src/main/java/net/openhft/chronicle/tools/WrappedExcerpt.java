@@ -16,9 +16,17 @@
 
 package net.openhft.chronicle.tools;
 
-import net.openhft.chronicle.*;
-import net.openhft.lang.io.*;
-import net.openhft.lang.io.serialization.BytesMarshallerFactory;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptComparator;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.lang.io.ByteStringAppender;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.MutableDecimal;
+import net.openhft.lang.io.RandomDataInput;
+import net.openhft.lang.io.StopCharTester;
 import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
@@ -531,6 +539,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public OutputStream outputStream() {
         return common.outputStream();
+    }
+
+    @Override
+    public ObjectSerializer objectSerializer() {
+        return common.objectSerializer();
     }
 
     @Override
@@ -1254,10 +1267,5 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public boolean compareAndSwapDouble(long offset, double expected, double x) {
         return common.compareAndSwapDouble(offset, expected, x);
-    }
-
-    @Override
-    public ObjectSerializer objectSerializer() {
-        return common.objectSerializer();
     }
 }

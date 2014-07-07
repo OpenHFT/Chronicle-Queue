@@ -31,10 +31,11 @@ class DateCache {
     private final DateValue[] values = new DateValue[SIZE];
     private final int cycleLength;
 
-    public DateCache(String formatStr, int cycleLength) {
+    public DateCache(final String formatStr, int cycleLength) {
         this.cycleLength = cycleLength;
-        format = new SimpleDateFormat(formatStr);
-        format.setTimeZone(GMT);
+
+        this.format = new SimpleDateFormat(formatStr);
+        this.format.setTimeZone(GMT);
     }
 
     /**
@@ -59,7 +60,9 @@ class DateCache {
     }
 
     public long parseCount(String name) throws ParseException {
-        return format.parse(name).getTime() / cycleLength;
+        synchronized (format) {
+            return format.parse(name).getTime() / cycleLength;
+        }
     }
 
     static class DateValue {
