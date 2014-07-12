@@ -95,15 +95,17 @@ public class VanillaIndexCache implements Closeable {
 
     int lastIndexFile(int cycle, int defaultCycle) {
         int maxIndex = -1;
-        File cyclePath = new File(baseFile, dateCache.formatFor(cycle));
-        File[] files = cyclePath.listFiles();
+
+        final File cyclePath = new File(baseFile, dateCache.formatFor(cycle));
+        final File[] files = cyclePath.listFiles();
         if (files != null) {
-            for (File file : files) {
+            for (final File file : files) {
                 String name = file.getName();
                 if (name.startsWith(FILE_NAME_PREFIX)) {
                     int index = Integer.parseInt(name.substring(FILE_NAME_PREFIX.length()));
-                    if (maxIndex < index)
+                    if (maxIndex < index) {
                         maxIndex = index;
+                    }
                 }
             }
         }
@@ -120,6 +122,7 @@ public class VanillaIndexCache implements Closeable {
 
             vmb.release();
         }
+
         throw new AssertionError();
     }
 

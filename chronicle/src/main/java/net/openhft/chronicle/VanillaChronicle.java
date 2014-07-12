@@ -393,9 +393,11 @@ public class VanillaChronicle implements Chronicle {
         public void close() {
             if(indexBytes != null) {
                 indexBytes.release();
+                indexBytes = null;
             }
             if(dataBytes != null) {
                 dataBytes.release();
+                dataBytes = null;
             }
 
             super.close();

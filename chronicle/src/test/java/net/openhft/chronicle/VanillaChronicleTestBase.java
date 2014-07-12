@@ -16,9 +16,13 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 
 public class VanillaChronicleTestBase {
@@ -42,14 +46,40 @@ public class VanillaChronicleTestBase {
     }
 
     protected int getPID() {
+        return Integer.parseInt(getPIDAsString());
+    }
+
+    protected String getPIDAsString() {
         final String name = ManagementFactory.getRuntimeMXBean().getName();
-        return Integer.parseInt(name.split("@")[0]);
+        return name.split("@")[0];
     }
 
     protected void sleep(long timeout) {
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {
+        }
+    }
+
+    public void lsof(final String pid) throws Exception {
+        lsof(pid, null);
+    }
+
+    public void lsof(final String pid, final String pattern) throws Exception {
+        if(new File("/usr/sbin/lsof").exists()) {
+            final ProcessBuilder pb = new ProcessBuilder("/usr/sbin/lsof", "-p", pid);
+            final Process proc = pb.start();
+            final BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+            String line;
+            while((line = br.readLine()) != null) {
+                if(StringUtils.isBlank(pattern) || line.matches(pattern) || line.contains(pattern)) {
+                    System.out.println(line);
+                }
+            }
+
+           br.close();
+           proc.destroy();
         }
     }
 }
