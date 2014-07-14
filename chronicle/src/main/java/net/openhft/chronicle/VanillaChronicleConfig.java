@@ -17,10 +17,11 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.util.concurrent.TimeUnit;
 
-public class VanillaChronicleConfig {
+public class VanillaChronicleConfig implements Cloneable {
     public static final VanillaChronicleConfig DEFAULT = new VanillaChronicleConfig();
 
     public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
@@ -57,6 +58,7 @@ public class VanillaChronicleConfig {
     private boolean cleanupOnClose = false;
     private int dataCacheCapacity = 32;
     private int indexCacheCapacity = 32;
+    private boolean useCheckedExcerpt = false;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
         this.cycleFormat = cycleFormat;
@@ -153,5 +155,26 @@ public class VanillaChronicleConfig {
 
     public int indexCacheCapacity() {
         return this.indexCacheCapacity;
+    }
+
+    //TODO: document
+    public boolean useCheckedExcerpt() {
+        return useCheckedExcerpt;
+    }
+
+    //TODO: document
+    public void useCheckedExcerpt(boolean useCheckedExcerpt) {
+        this.useCheckedExcerpt = useCheckedExcerpt;
+    }
+
+    @NotNull
+    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+    @Override
+    public VanillaChronicleConfig clone() {
+        try {
+            return (VanillaChronicleConfig) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError(e);
+        }
     }
 }
