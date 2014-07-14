@@ -22,7 +22,7 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.0</version>
+        <version>1.1.1-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -40,7 +40,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.0</version>
+                <version>3.4.1-SNAPSHOT</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
@@ -68,6 +68,11 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
