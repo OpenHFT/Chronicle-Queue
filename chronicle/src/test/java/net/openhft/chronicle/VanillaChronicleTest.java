@@ -1018,4 +1018,52 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertFalse(new File(baseDir).exists());
         }
     }
+
+    @Test
+    public void testLastIndex() throws Exception {
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
+
+        // Create with small index size to ensure multiple index files are created
+        final VanillaChronicleConfig config = new VanillaChronicleConfig();
+        config.indexBlockSize(64);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
+        chronicle.clear();
+
+        try {
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            final long index0 = chronicle.lastIndex();
+            assertEquals(-1, index0);
+
+            appendValues(appender, 1, 3);
+            final long index1 = chronicle.lastIndex();
+            assertTrue(index1 > index0);
+
+            appendValues(appender, 1, 5);
+            final long index2 = chronicle.lastIndex();
+            assertTrue(index2 > index1);
+
+            // The index file will hold 8 entries, so this call will create a new index file
+            appendValues(appender, 1, 2);
+            final long index3 = chronicle.lastIndex();
+            assertTrue(index3 > index2);
+
+            appendValues(appender, 1, 20);
+            final long index4 = chronicle.lastIndex();
+            assertTrue(index4 > index3);
+
+            appender.close();
+
+            chronicle.checkCounts(1, 1);
+
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
+    }
+
 }
