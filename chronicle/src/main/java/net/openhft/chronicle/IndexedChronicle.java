@@ -358,7 +358,7 @@ public class IndexedChronicle implements Chronicle {
         }
 
         protected ExcerptCommon toEndForRead0() {
-            index = IndexedChronicle.this.size();
+            index = IndexedChronicle.this.size() - 1;
             try {
                 indexForRead(index);
             } catch (IOException e) {

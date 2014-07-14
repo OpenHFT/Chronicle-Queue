@@ -26,7 +26,7 @@
         <relativePath/>
     </parent>
 
-    <version>3.1.2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <name>OpenHFT/Java-Chronicle/chronicle-sandbox</name>
     <artifactId>chronicle-sandbox</artifactId>
@@ -45,7 +45,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>3.1.2-SNAPSHOT</version>
+                <version>3.2.0-SNAPSHOT</version>
             </dependency>
 
         </dependencies>
