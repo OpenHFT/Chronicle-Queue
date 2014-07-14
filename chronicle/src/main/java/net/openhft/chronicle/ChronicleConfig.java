@@ -103,9 +103,7 @@ public class ChronicleConfig implements Cloneable {
     private int dataBlockSize;
     private int indexBlockSize;
     private int messageCapacity = 128 * 1024;
-    private long safeBufferSize = 128 * 1024; //TODO: increase
-    private boolean useSafeBuffer = false;
-    private boolean leazySafeBuffer = true;
+    private boolean useCheckedExcerpt = false;
 
     private ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint, int dataBlockSize) {
         this.indexFileCapacity = indexFileCapacity;
@@ -343,33 +341,13 @@ public class ChronicleConfig implements Cloneable {
     }
 
     //TODO: document
-    public long safeBufferSize() {
-        return safeBufferSize;
+    public boolean useCheckedExcerpt() {
+        return useCheckedExcerpt;
     }
 
     //TODO: document
-    public void safeBufferSize(long safeBufferSize) {
-        this.safeBufferSize = safeBufferSize;
-    }
-
-    //TODO: document
-    public boolean useSafeBuffer() {
-        return useSafeBuffer;
-    }
-
-    //TODO: document
-    public void useSafeBuffer(boolean useSafeBuffer) {
-        this.useSafeBuffer = useSafeBuffer;
-    }
-
-    //TODO: document
-    public boolean leazySafeBuffer() {
-        return leazySafeBuffer;
-    }
-
-    //TODO: document
-    public void leazySafeBuffer(boolean leazySafeBuffer) {
-        this.leazySafeBuffer = leazySafeBuffer;
+    public void useCheckedExcerpt(boolean useCheckedExcerpt) {
+        this.useCheckedExcerpt = useCheckedExcerpt;
     }
 
     /**
