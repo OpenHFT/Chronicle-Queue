@@ -17,6 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
+import net.openhft.chronicle.tools.CheckedExcerpt;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
@@ -98,12 +99,6 @@ public class VanillaChronicle implements Chronicle {
         return entriesForCycleBits;
     }
 
-    @NotNull
-    @Override
-    public Excerpt createExcerpt() throws IOException {
-        return new VanillaExcerpt();
-    }
-
     BytesMarshallerFactory acquireBMF() {
         WeakReference<BytesMarshallerFactory> bmfRef = marshallersCache.get();
         BytesMarshallerFactory bmf = null;
@@ -150,6 +145,7 @@ public class VanillaChronicle implements Chronicle {
     public ExcerptTailer createTailer() throws IOException {
         WeakReference<VanillaTailer> ref = tailerCache.get();
         VanillaTailer tailer = null;
+
         if (ref != null) {
             tailer = ref.get();
             if(tailer != null && tailer.unampped()) {
@@ -161,11 +157,12 @@ public class VanillaChronicle implements Chronicle {
             tailer = createTailer0();
             tailerCache.set(new WeakReference<VanillaTailer>(tailer));
         }
+
         return tailer;
     }
 
     private VanillaTailer createTailer0() {
-        return new VanillaTailer();
+        return new VanillaTailerImpl();
     }
 
     @NotNull
@@ -173,21 +170,38 @@ public class VanillaChronicle implements Chronicle {
     public VanillaAppender createAppender() throws IOException {
         WeakReference<VanillaAppender> ref = appenderCache.get();
         VanillaAppender appender = null;
+
         if (ref != null) {
             appender = ref.get();
             if(appender != null && appender.unampped()) {
                 appender = null;
             }
         }
+
         if (appender == null) {
             appender = createAppender0();
             appenderCache.set(new WeakReference<VanillaAppender>(appender));
         }
+
         return appender;
     }
 
     private VanillaAppender createAppender0() {
-        return new VanillaAppender();
+        final VanillaAppender appender = new VanillaAppenderImpl();
+
+        return !config.useCheckedExcerpt()
+            ? appender
+            : new VanillaCheckedAppender(appender);
+    }
+
+    @NotNull
+    @Override
+    public Excerpt createExcerpt() throws IOException {
+        final VanillaExcerpt excerpt = new VanillaExcerpt();
+
+        return !config.useCheckedExcerpt()
+            ? excerpt
+            : new VanillaCheckedExcerpt(excerpt);
     }
 
     @Override
@@ -219,7 +233,26 @@ public class VanillaChronicle implements Chronicle {
         dataCache.checkCounts(min, max);
     }
 
-    abstract class AbstractVanillaExcerpt extends NativeBytes implements ExcerptCommon {
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public interface VanillaExcerptCommon extends ExcerptCommon {
+        public boolean unampped();
+    }
+
+    public interface VanillaAppender extends VanillaExcerptCommon, ExcerptAppender {
+        public void startExcerpt(long capacity, int cycle);
+    }
+
+    public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastDailyCount = Integer.MIN_VALUE;
@@ -236,7 +269,8 @@ public class VanillaChronicle implements Chronicle {
             dataBytes = null;
         }
 
-        boolean unampped() {
+        @Override
+        public boolean unampped() {
             return (indexBytes != null && dataBytes != null)
                 ? indexBytes.unmapped() && dataBytes.unmapped()
                 : true;
@@ -428,14 +462,14 @@ public class VanillaChronicle implements Chronicle {
         }
     }
 
-    public class VanillaAppender extends AbstractVanillaExcerpt implements ExcerptAppender {
+    public class VanillaAppenderImpl extends AbstractVanillaExcerpt implements VanillaAppender {
         private int lastCycle;
         private int lastThreadId;
         private int appenderCycle;
         private int appenderThreadId;
         private boolean nextSynchronous;
 
-        VanillaAppender() {
+        VanillaAppenderImpl() {
             super();
             lastCycle = Integer.MIN_VALUE;
             lastThreadId = Integer.MIN_VALUE;
@@ -445,6 +479,7 @@ public class VanillaChronicle implements Chronicle {
         public void startExcerpt() {
             startExcerpt(config.defaultMessageSize());
         }
+
         @Override
         public void startExcerpt(long capacity) {
             startExcerpt(capacity, cycle());
@@ -543,7 +578,7 @@ public class VanillaChronicle implements Chronicle {
         }
     }
 
-    class VanillaTailer extends AbstractVanillaExcerpt implements ExcerptTailer {
+    class VanillaTailerImpl extends AbstractVanillaExcerpt implements VanillaTailer {
 
         @NotNull
         @Override
@@ -563,6 +598,33 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public long capacity() {
             return limitAddr - startAddr;
+        }
+    }
+
+    final class VanillaCheckedExcerpt extends CheckedExcerpt implements VanillaExcerptCommon {
+        public VanillaCheckedExcerpt(@NotNull VanillaExcerptCommon common) {
+            super(common);
+        }
+
+        @Override
+        public boolean unampped() {
+            return ((VanillaExcerptCommon)common).unampped();
+        }
+    }
+
+    final class VanillaCheckedAppender extends CheckedExcerpt implements VanillaAppender {
+        public VanillaCheckedAppender(@NotNull VanillaAppender common) {
+            super(common);
+        }
+
+        @Override
+        public boolean unampped() {
+            return ((VanillaExcerptCommon)common).unampped();
+        }
+
+        @Override
+        public void startExcerpt(long capacity, int cycle) {
+            ((VanillaAppender)common).startExcerpt(capacity, cycle);
         }
     }
 }

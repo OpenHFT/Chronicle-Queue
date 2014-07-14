@@ -103,6 +103,7 @@ public class ChronicleConfig implements Cloneable {
     private int dataBlockSize;
     private int indexBlockSize;
     private int messageCapacity = 128 * 1024;
+    private boolean useCheckedExcerpt = false;
 
     private ChronicleConfig(int indexFileCapacity, int indexFileExcerpts, boolean minimiseFootprint, int dataBlockSize) {
         this.indexFileCapacity = indexFileCapacity;
@@ -337,6 +338,16 @@ public class ChronicleConfig implements Cloneable {
      */
     public int messageCapacity() {
         return messageCapacity;
+    }
+
+    //TODO: document
+    public boolean useCheckedExcerpt() {
+        return useCheckedExcerpt;
+    }
+
+    //TODO: document
+    public void useCheckedExcerpt(boolean useCheckedExcerpt) {
+        this.useCheckedExcerpt = useCheckedExcerpt;
     }
 
     /**
