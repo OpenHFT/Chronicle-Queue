@@ -41,7 +41,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
-        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
+        this(basePath, blockBits, dateCache, config.indexCacheCapacity(), config.cleanupOnClose());
     }
 
     public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
