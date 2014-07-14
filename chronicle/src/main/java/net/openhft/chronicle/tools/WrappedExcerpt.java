@@ -42,10 +42,10 @@ import java.util.Map;
  * @author peter.lawrey
  */
 public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
-    private ExcerptTailer tailer;
-    private ExcerptAppender appender;
-    private ExcerptCommon common;
-    private Excerpt excerpt;
+    protected ExcerptTailer tailer;
+    protected ExcerptAppender appender;
+    protected ExcerptCommon common;
+    protected Excerpt excerpt;
 
     public WrappedExcerpt(ExcerptCommon excerptCommon) {
         setExcerpt(excerptCommon);

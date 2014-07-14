@@ -18,20 +18,22 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.CheckedExcerpt;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class IndexedChronicle3Test extends IndexedChronicleTestBase {
+public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
     @Test
-    public void testCheckedIndexedExcerpt_001() throws IOException {
-        final ChronicleConfig cfg = ChronicleConfig.DEFAULT.clone();
+    public void testCheckedVanillaExcerpt_001() throws IOException {
+        final VanillaChronicleConfig cfg = VanillaChronicleConfig.DEFAULT.clone();
         cfg.useCheckedExcerpt(true);
 
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath,cfg);
+        final VanillaChronicle chronicle = new VanillaChronicle(basePath,cfg);
         final ExcerptAppender appender = chronicle.createAppender();
 
         assertTrue(appender instanceof CheckedExcerpt);
@@ -51,9 +53,12 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
             appender.finish();
         } finally {
             appender.close();
-            chronicle.close();
 
-            assertClean(basePath);
+            chronicle.checkCounts(1, 1);
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(basePath).exists());
         }
     }
 
