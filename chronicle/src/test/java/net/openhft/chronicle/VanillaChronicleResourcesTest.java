@@ -180,13 +180,14 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     @Ignore
     @Test
     public void testResourcesCleanup4() throws Exception {
+        final String pid = getPIDAsString();
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
         System.out.println("BaseDir : " + baseDir);
-        System.out.println("PID : " + getPID());
+        System.out.println("PID : " + pid);
 
-        final int runs = 30 * 5;
+        final int runs = 60 * 10; // 10 mins
         final int nbThreads = Runtime.getRuntime().availableProcessors()*2;
         final byte[] data = new byte[4096];
         Arrays.fill(data, (byte) 'x');
@@ -210,23 +211,24 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             es.execute(new ResourcesCleanup4Task(chronicle, runs, data));
         }
 
-        for(int i=0;i<6;i++) {
-            Thread.sleep(31 * 1000);
-            System.out.println("After " + (31 * (i + 1)) + " seconds");
-            lsof(getPIDAsString(), ".* txt .*testResourcesCleanup4.*");
+        for(int i=0;i<10;i++) {
+            sleep(1,TimeUnit.MINUTES);
+
+            System.out.println("After " + i + " minutes");
+            lsof(pid, ".*testResourcesCleanup4.*");
         }
 
         es.shutdown();
         es.awaitTermination(30, TimeUnit.SECONDS);
 
         System.out.println("Before close:");
-        lsof(getPIDAsString(), ".*testResourcesCleanup4.*");
+        lsof(pid, ".*testResourcesCleanup4.*");
 
         chronicle.checkCounts(1, 1);
         chronicle.close();
 
         System.out.println("After close:");
-        lsof(getPIDAsString(), ".*testResourcesCleanup4.*");
+        lsof(pid, ".*testResourcesCleanup4.*");
 
         chronicle.clear();
     }
@@ -251,10 +253,8 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
                     appender.startExcerpt(data.length);
                     appender.write(data);
                     appender.finish();
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                    }
+
+                    sleep(1,TimeUnit.SECONDS);
                 }
 
                 if(appender != null) {

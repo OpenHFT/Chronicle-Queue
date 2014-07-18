@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
+import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleTestBase {
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
@@ -52,6 +53,10 @@ public class VanillaChronicleTestBase {
     protected String getPIDAsString() {
         final String name = ManagementFactory.getRuntimeMXBean().getName();
         return name.split("@")[0];
+    }
+
+    protected void sleep(long timeout, TimeUnit unit) {
+        sleep(TimeUnit.MILLISECONDS.convert(timeout,unit));
     }
 
     protected void sleep(long timeout) {
