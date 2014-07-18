@@ -47,8 +47,10 @@ public class VanillaChronicle implements Chronicle {
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
-    private final int indexBlockLongsBits, indexBlockLongsMask;
-    private final int dataBlockSizeBits, dataBlockSizeMask;
+    private final int indexBlockLongsBits;
+    private final int indexBlockLongsMask;
+    private final int dataBlockSizeBits;
+    private final int dataBlockSizeMask;
     private final int entriesForCycleBits;
     private final long entriesForCycleMask;
 

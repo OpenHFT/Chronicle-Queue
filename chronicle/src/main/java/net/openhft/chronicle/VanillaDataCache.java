@@ -32,6 +32,8 @@ public class VanillaDataCache implements Closeable {
     private final int blockBits;
     private final DateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
+    private int lastCycle = -1;
+    private int lastCount = -1;
 
     public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
         this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
@@ -106,7 +108,7 @@ public class VanillaDataCache implements Closeable {
         return vmb;
     }
 
-    private void findEndOfData(VanillaMappedBytes buffer) {
+    private void findEndOfData(final VanillaMappedBytes buffer) {
         for (int i = 0, max = 1 << blockBits; i < max; i += 4) {
             int len = buffer.readInt(buffer.position());
             if (len == 0) {
@@ -131,9 +133,6 @@ public class VanillaDataCache implements Closeable {
         this.cache.close();
     }
 
-    private int lastCycle = -1;
-    private int lastCount = -1;
-
     public VanillaMappedBytes dataForLast(int cycle, int threadId) throws IOException {
         String cycleStr = dateCache.formatFor(cycle);
         String cyclePath = basePath + "/" + cycleStr;
@@ -145,8 +144,9 @@ public class VanillaDataCache implements Closeable {
                 for (File file : files) {
                     if (file.getName().startsWith(dataPrefix)) {
                         int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
-                        if (maxCount < count)
+                        if (maxCount < count) {
                             maxCount = count;
+                        }
                     }
                 }
             }
