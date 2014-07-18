@@ -254,6 +254,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
                     appender.write(data);
                     appender.finish();
 
+
                     sleep(1,TimeUnit.SECONDS);
                 }
 

@@ -71,8 +71,15 @@ public class VanillaChronicleTestBase {
     }
 
     public void lsof(final String pid, final String pattern) throws Exception {
+        String cmd = null;
         if(new File("/usr/sbin/lsof").exists()) {
-            final ProcessBuilder pb = new ProcessBuilder("/usr/sbin/lsof", "-p", pid);
+            cmd = "/usr/sbin/lsof";
+        } else if(new File("/usr/bin/lsof").exists()) {
+            cmd = "/usr/bin/lsof";
+        }
+
+        if(cmd != null) {
+            final ProcessBuilder pb = new ProcessBuilder(cmd, "-p", pid);
             final Process proc = pb.start();
             final BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
