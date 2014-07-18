@@ -182,15 +182,15 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     public void testResourcesCleanup4() throws Exception {
         final String pid = getPIDAsString();
         final String baseDir = getTestPath();
-        assertNotNull(baseDir);
-
-        System.out.println("BaseDir : " + baseDir);
-        System.out.println("PID : " + pid);
 
         final int runs = 60 * 10; // 10 mins
         final int nbThreads = Runtime.getRuntime().availableProcessors()*2;
         final byte[] data = new byte[4096];
         Arrays.fill(data, (byte) 'x');
+
+        System.out.println("BaseDir   : " + baseDir);
+        System.out.println("PID       : " + pid);
+        System.out.println("NbThreads : " + nbThreads);
 
         final VanillaChronicle chronicle = new VanillaChronicle(
             baseDir,
@@ -208,11 +208,33 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
         final ExecutorService es = Executors.newCachedThreadPool();
         for (int i=0; i<nbThreads; i++) {
-            es.execute(new ResourcesCleanup4Task(chronicle, runs, data));
+            es.execute(new Runnable() {
+                public void run() {
+                    try {
+                        ExcerptAppender appender = null;
+
+                        for (int i=0; i<runs; i++) {
+                            appender = chronicle.createAppender();
+                            appender.startExcerpt(data.length);
+                            appender.write(data);
+                            appender.finish();
+
+
+                            sleep(1,TimeUnit.SECONDS);
+                        }
+
+                        if(appender != null) {
+                            appender.close();
+                        }
+                    } catch (IOException e) {
+
+                    }
+                }
+            });
         }
 
         for(int i=0;i<10;i++) {
-            sleep(1,TimeUnit.MINUTES);
+            sleep(1, TimeUnit.MINUTES);
 
             System.out.println("After " + i + " minutes");
             lsof(pid, ".*testResourcesCleanup4.*");
@@ -233,38 +255,72 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         chronicle.clear();
     }
 
-    private final class ResourcesCleanup4Task implements Runnable {
-        private final Chronicle chronicle;
-        private final byte[] data;
-        private final int runs;
+    @Ignore
+    @Test
+    public void testResourcesCleanup5() throws Exception {
+        final String pid = getPIDAsString();
+        final String baseDir = getTestPath();
+        final int runs = 60 * 10; // 10 mins
+        final int nbThreads = Runtime.getRuntime().availableProcessors()*2;
+        final byte[] data = new byte[4096];
+        Arrays.fill(data, (byte) 'x');
 
-        public ResourcesCleanup4Task(final Chronicle chronicle, int runs, final byte[] data) {
-            this.runs = runs;
-            this.chronicle = chronicle;
-            this.data = data;
+        System.out.println("BaseDir   : " + baseDir);
+        System.out.println("PID       : " + pid);
+        System.out.println("NbThreads : " + nbThreads);
+
+        final VanillaChronicle chronicle = new VanillaChronicle(
+            baseDir,
+            new VanillaChronicleConfig()
+                .cycleFormat("yyyyMMdd/HHmmss")
+                .cycleLength(30 * 1000, false) //every 30 seconds
+                .defaultMessageSize(data.length)
+                .entriesPerCycle(4000000)
+                .dataCacheCapacity(nbThreads + 2)
+                .dataBlockSize(data.length * 15)
+                .indexCacheCapacity(2)
+                .indexBlockSize(1024));
+
+        chronicle.clear();
+
+        final ExecutorService es = Executors.newCachedThreadPool();
+        for(int i=0;i<runs;i++) {
+            for(int t=0; t<nbThreads; t++) {
+                es.execute(new Runnable() {
+                    public void run() {
+                        try {
+                            final ExcerptAppender appender = chronicle.createAppender();
+                            appender.startExcerpt(data.length);
+                            appender.write(data);
+                            appender.finish();
+                            appender.close();
+                        }
+                        catch (IOException e) {
+                        }
+                    }
+                });
+            }
+
+            sleep(1, TimeUnit.SECONDS);
+
+            if(i % 60 == 0) {
+                System.out.println("After " + ((i / 60) + 1) + " minutes");
+                lsof(pid, ".*testResourcesCleanup5.*");
+            }
         }
 
-        public void run() {
-            try {
-                ExcerptAppender appender = null;
+        es.shutdown();
+        es.awaitTermination(30, TimeUnit.SECONDS);
 
-                for (int i=0; i<runs; i++) {
-                    appender = chronicle.createAppender();
-                    appender.startExcerpt(data.length);
-                    appender.write(data);
-                    appender.finish();
+        System.out.println("Before close:");
+        lsof(pid, ".*testResourcesCleanup5.*");
 
+        chronicle.checkCounts(1, 1);
+        chronicle.close();
 
-                    sleep(1,TimeUnit.SECONDS);
-                }
+        System.out.println("After close:");
+        lsof(pid, ".*testResourcesCleanup5.*");
 
-                if(appender != null) {
-                    appender.close();
-                }
-            }
-            catch (IOException e) {
-
-            }
-        }
+        chronicle.clear();
     }
 }
