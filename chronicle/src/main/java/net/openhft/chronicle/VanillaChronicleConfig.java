@@ -59,6 +59,7 @@ public class VanillaChronicleConfig implements Cloneable {
     private int dataCacheCapacity = 32;
     private int indexCacheCapacity = 32;
     private boolean useCheckedExcerpt = false;
+    private boolean useExcerptClenup = false;
 
     public VanillaChronicleConfig cycleFormat(String cycleFormat) {
         this.cycleFormat = cycleFormat;
@@ -163,8 +164,20 @@ public class VanillaChronicleConfig implements Cloneable {
     }
 
     //TODO: document
-    public void useCheckedExcerpt(boolean useCheckedExcerpt) {
+    public VanillaChronicleConfig useCheckedExcerpt(boolean useCheckedExcerpt) {
         this.useCheckedExcerpt = useCheckedExcerpt;
+        return this;
+    }
+
+    //TODO: document
+    public boolean useExcerptClenup() {
+        return useExcerptClenup;
+    }
+
+    //TODO: document
+    public VanillaChronicleConfig useExcerptClenup(boolean useExcerptClenup) {
+        this.useExcerptClenup = useExcerptClenup;
+        return this;
     }
 
     @NotNull

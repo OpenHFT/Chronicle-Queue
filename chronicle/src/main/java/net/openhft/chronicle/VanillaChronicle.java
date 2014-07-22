@@ -18,6 +18,7 @@ package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.tools.CheckedExcerpt;
+import net.openhft.chronicle.tools.ExcerptCleanupDaemon;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
@@ -158,6 +159,10 @@ public class VanillaChronicle implements Chronicle {
         if (tailer == null) {
             tailer = createTailer0();
             tailerCache.set(new WeakReference<VanillaTailer>(tailer));
+
+            if(config.useExcerptClenup()) {
+                ExcerptCleanupDaemon.get().track(tailer);
+            }
         }
 
         return tailer;
@@ -183,6 +188,10 @@ public class VanillaChronicle implements Chronicle {
         if (appender == null) {
             appender = createAppender0();
             appenderCache.set(new WeakReference<VanillaAppender>(appender));
+
+            if(config.useExcerptClenup()) {
+                ExcerptCleanupDaemon.get().track(appender);
+            }
         }
 
         return appender;
@@ -199,11 +208,15 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        final VanillaExcerpt excerpt = new VanillaExcerpt();
+        final Excerpt excerpt = config.useCheckedExcerpt()
+            ? new VanillaExcerpt()
+            : new VanillaCheckedExcerpt(new VanillaExcerpt());
 
-        return !config.useCheckedExcerpt()
-            ? excerpt
-            : new VanillaCheckedExcerpt(excerpt);
+        if(config.useExcerptClenup()) {
+            ExcerptCleanupDaemon.get().track(excerpt);
+        }
+
+        return excerpt;
     }
 
     @Override

@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
@@ -35,7 +34,6 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     @Test
     public void testResourcesCleanup1() throws IOException {
         final String baseDir = getTestPath();
-        assertNotNull(baseDir);
 
         final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
         chronicle.clear();
@@ -77,13 +75,14 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     @Test
     public void testResourcesCleanup2() throws Exception {
         final String baseDir = getTestPath();
-        assertNotNull(baseDir);
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.dataBlockSize(64);
-        config.indexBlockSize(64);
+        final VanillaChronicle chronicle = new VanillaChronicle(
+            baseDir,
+            VanillaChronicleConfig.DEFAULT.clone()
+                .dataBlockSize(64)
+                .indexBlockSize(64)
+        );
 
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
 
         try {
@@ -113,21 +112,21 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         final int nbThreads = 5;
         final int nbAppend = 10;
         final String baseDir = getTestPath();
-        assertNotNull(baseDir);
 
         System.out.println("BaseDir : " + baseDir);
         System.out.println("PID : " + getPID());
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000, false);
-        config.cycleFormat("yyyyMMddHHmmss");
-        config.indexBlockSize(64);
-        config.dataBlockSize(64);
-        config.dataCacheCapacity(nbThreads + 1);
-        config.indexCacheCapacity(2);
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir,
+            VanillaChronicleConfig.DEFAULT.clone()
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(64)
+                .dataBlockSize(64)
+                .dataCacheCapacity(nbThreads + 1)
+                .indexCacheCapacity(2)
+        );
 
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir, config);
         chronicle.clear();
 
         try {
@@ -322,5 +321,46 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         lsof(pid, ".*testResourcesCleanup5.*");
 
         chronicle.clear();
+    }
+
+    @Ignore
+    @Test
+    public void testResourcesCleanup6() throws Exception {
+        final String baseDir = getTestPath();
+
+        final VanillaChronicle chronicle = new VanillaChronicle(
+            baseDir,
+            VanillaChronicleConfig.DEFAULT.clone()
+                .useExcerptClenup(true)
+        );
+
+        chronicle.clear();
+
+        try {
+            ExcerptAppender appender = chronicle.createAppender();
+            appender.startExcerpt(8);
+            appender.writeLong(1L);
+            appender.finish();
+
+            ExcerptTailer tailer = chronicle.createTailer().toStart();
+            tailer.nextIndex();
+            tailer.readLong();
+            tailer.finish();
+
+            appender = null;
+            tailer = null;
+
+            System.gc();
+
+            sleep(5, TimeUnit.SECONDS);
+
+            chronicle.checkCounts(1,1);
+
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
     }
 }
