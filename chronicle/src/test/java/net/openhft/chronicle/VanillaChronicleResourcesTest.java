@@ -327,12 +327,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     @Test
     public void testResourcesCleanup6() throws Exception {
         final String baseDir = getTestPath();
-
-        final VanillaChronicle chronicle = new VanillaChronicle(
-            baseDir,
-            VanillaChronicleConfig.DEFAULT.clone()
-                .useExcerptClenup(true)
-        );
+        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
 
         chronicle.clear();
 

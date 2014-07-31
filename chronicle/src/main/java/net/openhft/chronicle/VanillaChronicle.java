@@ -18,7 +18,6 @@ package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.tools.CheckedExcerpt;
-import net.openhft.chronicle.tools.ExcerptCleanupDaemon;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
@@ -32,9 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
-import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_BITS;
-import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_MASK;
-import static net.openhft.chronicle.VanillaChronicleConfig.THREAD_ID_MASK;
+import static net.openhft.chronicle.VanillaChronicleConfig.*;
 
 /**
  * Created by peter
@@ -159,10 +156,6 @@ public class VanillaChronicle implements Chronicle {
         if (tailer == null) {
             tailer = createTailer0();
             tailerCache.set(new WeakReference<VanillaTailer>(tailer));
-
-            if(config.useExcerptClenup()) {
-                ExcerptCleanupDaemon.get().track(tailer);
-            }
         }
 
         return tailer;
@@ -188,10 +181,6 @@ public class VanillaChronicle implements Chronicle {
         if (appender == null) {
             appender = createAppender0();
             appenderCache.set(new WeakReference<VanillaAppender>(appender));
-
-            if(config.useExcerptClenup()) {
-                ExcerptCleanupDaemon.get().track(appender);
-            }
         }
 
         return appender;
@@ -211,10 +200,6 @@ public class VanillaChronicle implements Chronicle {
         final Excerpt excerpt = config.useCheckedExcerpt()
             ? new VanillaExcerpt()
             : new VanillaCheckedExcerpt(new VanillaExcerpt());
-
-        if(config.useExcerptClenup()) {
-            ExcerptCleanupDaemon.get().track(excerpt);
-        }
 
         return excerpt;
     }
@@ -451,6 +436,12 @@ public class VanillaChronicle implements Chronicle {
 
             super.close();
         }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
+        }
     }
 
     class VanillaExcerpt extends AbstractVanillaExcerpt implements Excerpt {
@@ -625,6 +616,12 @@ public class VanillaChronicle implements Chronicle {
         public boolean unampped() {
             return ((VanillaExcerptCommon)common).unampped();
         }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
+        }
     }
 
     final class VanillaCheckedAppender extends CheckedExcerpt implements VanillaAppender {
@@ -640,6 +637,12 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public void startExcerpt(long capacity, int cycle) {
             ((VanillaAppender)common).startExcerpt(capacity, cycle);
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
         }
     }
 }
