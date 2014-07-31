@@ -1,4 +1,4 @@
-![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
+![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png) #Chronicle Queue
 ## How Chronicle Works
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications. 
 
