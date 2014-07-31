@@ -344,8 +344,10 @@ public class ChronicleSink implements Chronicle {
                 logger.warn("Error closing socket", e);
             }
 
-            synchronized (excerpts) {
-                excerpts.remove(this);
+            if(!closed) {
+                synchronized (excerpts) {
+                    excerpts.remove(this);
+                }
             }
 
             super.close();
