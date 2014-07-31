@@ -22,7 +22,7 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.0</version>
+        <version>1.1.1</version>
         <relativePath/>
     </parent>
 
@@ -38,14 +38,14 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.0</version>
+                <version>3.4.6</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle</artifactId>
-                <version>3.2.0-SNAPSHOT</version>
+                <version>${project.version}</version>
             </dependency>
 
         </dependencies>

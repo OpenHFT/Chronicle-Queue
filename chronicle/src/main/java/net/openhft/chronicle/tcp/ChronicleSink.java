@@ -41,6 +41,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Collections;
 
 /**
  * This listens to a ChronicleSource and copies new entries. This Sink can be any number of excerpt behind the source
@@ -98,7 +99,7 @@ public class ChronicleSink implements Chronicle {
         this.sinkConfig = sinkConfig;
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.getHostName() + '@' + address.getPort());
-        this.excerpts = new LinkedList<ExcerptCommon>();
+        this.excerpts = Collections.synchronizedList(new LinkedList<ExcerptCommon>());
     }
 
     @Override
@@ -124,9 +125,7 @@ public class ChronicleSink implements Chronicle {
         }
 
         if(excerpt != null) {
-            synchronized (excerpts) {
-                excerpts.add(excerpt);
-            }
+            excerpts.add(excerpt);
         }
 
         return excerpt;
@@ -150,9 +149,7 @@ public class ChronicleSink implements Chronicle {
         }
 
         if(excerpt != null) {
-            synchronized (excerpts) {
-                excerpts.add(excerpt);
-            }
+            excerpts.add(excerpt);
         }
 
         return excerpt;
@@ -187,7 +184,7 @@ public class ChronicleSink implements Chronicle {
             closed = true;
 
             synchronized (excerpts) {
-                for (ExcerptCommon excerpt : excerpts) {
+                for (final ExcerptCommon excerpt : excerpts) {
                     excerpt.close();
                 }
             }
@@ -347,8 +344,10 @@ public class ChronicleSink implements Chronicle {
                 logger.warn("Error closing socket", e);
             }
 
-            synchronized (excerpts) {
-                excerpts.remove(this);
+            if(!closed) {
+                synchronized (excerpts) {
+                    excerpts.remove(this);
+                }
             }
 
             super.close();
