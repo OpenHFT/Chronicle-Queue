@@ -1,3 +1,4 @@
+![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
 # Chronicle
 
 Persisted low latency logging and IPC messaging
