@@ -24,24 +24,30 @@ public class VanillaChronicleConfigTest extends VanillaChronicleTestBase {
     @Test
     public void testVanillaChronicleConfig()  {
         try {
+            System.out.print("Check entriesPerCycle >= 256: ");
             new VanillaChronicleConfig().entriesPerCycle(128);
-            fail("expected IllegalArgumentException");
+            fail("expected IllegalArgumentException (entriesPerCycle >= 256");
         } catch(IllegalArgumentException e) {
-            System.out.println(e.getMessage());
+            System.out.print(" OK\n");
         }
 
         try {
+            System.out.print("Check entriesPerCycle <= 1L << 48: ");
             new VanillaChronicleConfig().entriesPerCycle(1L << 56);
-            fail("expected IllegalArgumentException");
+            fail("expected IllegalArgumentException (entriesPerCycle <= 1L << 48)");
         } catch(IllegalArgumentException e) {
-            System.out.println(e.getMessage());
+            System.out.print(" OK\n");
         }
 
         try {
+            System.out.print("Check entriesPerCycle is a power of 2: ");
             new VanillaChronicleConfig().entriesPerCycle(257);
-            fail("expected IllegalArgumentException");
+            fail("expected IllegalArgumentException (entriesPerCycle power of 2)");
         } catch(IllegalArgumentException e) {
-            System.out.println(e.getMessage());
+            System.out.print(" OK\n");
         }
+
+        new VanillaChronicleConfig().entriesPerCycle(512);
+        new VanillaChronicleConfig().entriesPerCycle(1024);
     }
 }
