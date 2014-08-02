@@ -104,6 +104,18 @@ public class VanillaChronicleConfig implements Cloneable {
     }
 
     public VanillaChronicleConfig entriesPerCycle(long entriesPerCycle) {
+        if(entriesPerCycle < 256) {
+            throw new IllegalArgumentException("EntriesPerCycle must be at least 256");
+        }
+
+        if(entriesPerCycle > 1L << 48) {
+            throw new IllegalArgumentException("EntriesPerCycle must not exceed 1L << 48 (" + (1L << 48) + ")");
+        }
+
+        if(!((entriesPerCycle & -entriesPerCycle) == entriesPerCycle)) {
+            throw new IllegalArgumentException("EntriesPerCycle must be a power of 2");
+        }
+
         this.entriesPerCycle = entriesPerCycle;
         return this;
     }
