@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.2.1-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle/chronicle</name>
@@ -44,7 +44,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.5-SNAPSHOT</version>
+                <version>6.4.6-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
