@@ -26,10 +26,10 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-public class InMemoryChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("InMemoryChronicleTest");
+public class VolatileChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("VolarileChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "in-memory-";
+    protected static final String PREFIX    = "ch-volatile-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
@@ -39,7 +39,7 @@ public class InMemoryChronicleTestBase {
     //
     // *************************************************************************
 
-    protected Chronicle inMemoryChronicleSink( String host, int port) throws IOException {
+    protected Chronicle volatileChronicleSink(String host, int port) throws IOException {
         return new ChronicleSink(host, port);
     }
 

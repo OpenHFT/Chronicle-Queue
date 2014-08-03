@@ -35,13 +35,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Collections;
 
 /**
  * This listens to a ChronicleSource and copies new entries. This Sink can be any number of excerpt behind the source
@@ -59,12 +58,13 @@ public class ChronicleSink implements Chronicle {
     private final ChronicleSinkConfig sinkConfig;
 
     @NotNull
-    private final SocketAddress address;
+    private final InetSocketAddress address;
 
     private final List<ExcerptCommon> excerpts;
 
     private final Logger logger;
     private volatile boolean closed = false;
+    private final boolean isLocal;
 
     public ChronicleSink(String hostname, int port) throws IOException {
         this(null, ChronicleSinkConfig.DEFAULT, new InetSocketAddress(hostname, port));
@@ -100,6 +100,7 @@ public class ChronicleSink implements Chronicle {
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.getHostName() + '@' + address.getPort());
         this.excerpts = Collections.synchronizedList(new LinkedList<ExcerptCommon>());
+        this.isLocal = sinkConfig.sharedChronicle() && ChronicleTcpUtil.isLocalhost(this.address.getAddress());
     }
 
     @Override
@@ -113,19 +114,9 @@ public class ChronicleSink implements Chronicle {
         Excerpt excerpt = null;
 
         if(chronicle == null) {
-            excerpt = new InMemoryExcerpt();
+            excerpt = new VolatileExcerpt();
         } else {
-            if (!excerpts.isEmpty()) {
-                throw new UnsupportedOperationException("An Excerpt has already been created");
-            }
-
-            excerpt = (chronicle instanceof IndexedChronicle)
-                ? new PersistentIndexedSinkExcerpt(chronicle.createExcerpt())
-                : new PersistentVanillaSinkExcerpt(chronicle.createExcerpt());
-        }
-
-        if(excerpt != null) {
-            excerpts.add(excerpt);
+            excerpt = (Excerpt)createPersistedExcerpt();
         }
 
         return excerpt;
@@ -137,15 +128,9 @@ public class ChronicleSink implements Chronicle {
         ExcerptTailer excerpt = null;
 
         if(chronicle == null) {
-            excerpt = new InMemoryExcerptTailer();
+            excerpt = new VolatileExcerptTailer();
         } else {
-            if (!excerpts.isEmpty()) {
-                throw new UnsupportedOperationException("An Excerpt has already been created");
-            }
-
-            excerpt = (chronicle instanceof IndexedChronicle)
-                ? new PersistentIndexedSinkExcerpt(chronicle.createTailer())
-                : new PersistentVanillaSinkExcerpt(chronicle.createExcerpt());
+            excerpt = createPersistedExcerpt();
         }
 
         if(excerpt != null) {
@@ -205,6 +190,27 @@ public class ChronicleSink implements Chronicle {
         }
     }
 
+    private ExcerptTailer createPersistedExcerpt() throws IOException {
+        if (!excerpts.isEmpty()) {
+            throw new UnsupportedOperationException("An Excerpt has already been created");
+        }
+
+        ExcerptTailer excerpt = (chronicle instanceof IndexedChronicle)
+            ? isLocal
+                ? new PersistentIndexedLocalSinkExcerpt(chronicle.createTailer())
+                : new PersistentIndexedSinkExcerpt(chronicle.createTailer())
+            : isLocal
+                ? new PersistentVanillaLocalSinkExcerpt(chronicle.createTailer())
+                : new PersistentVanillaSinkExcerpt(chronicle.createExcerpt());
+
+
+        if(excerpt != null) {
+            excerpts.add(excerpt);
+        }
+
+        return excerpt;
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -215,7 +221,7 @@ public class ChronicleSink implements Chronicle {
 
         public SinkConnector() {
             this.channel = null;
-            this.buffer = TcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
+            this.buffer = ChronicleTcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
         }
 
         public ByteBuffer buffer() {
@@ -264,7 +270,7 @@ public class ChronicleSink implements Chronicle {
 
         public boolean write(final ByteBuffer buffer) {
             try {
-                TcpUtil.writeAllOrEOF(channel, buffer);
+                ChronicleTcpUtil.writeAllOrEOF(channel, buffer);
             } catch (IOException e) {
                 return false;
             }
@@ -356,8 +362,15 @@ public class ChronicleSink implements Chronicle {
         private boolean readNext() {
             if (!connector.isOpen()) {
                 if(connector.open()) {
-                    long lastIndex = lastLocalIndex();
-                    if(connector.write(ByteBuffer.allocate(8).putLong(0, lastIndex))) {
+                    final long lastIndex = lastLocalIndex();
+
+                    final ByteBuffer command = ChronicleTcp.Command.newCommand(
+                        !isLocal
+                            ? ChronicleTcp.Command.ACTION_SUBSCRIBE
+                            : ChronicleTcp.Command.ACTION_QUERY,
+                        lastIndex);
+
+                    if(connector.write(command)) {
                         lastLocalIndex = lastIndex;
                     } else {
                         return false;
@@ -375,6 +388,48 @@ public class ChronicleSink implements Chronicle {
     }
 
     /**
+     * Local IndexedChronicle synk
+     */
+    private class PersistentIndexedLocalSinkExcerpt extends AbstractPersistentSinkExcerpt<IndexedChronicle> {
+        @SuppressWarnings("unchecked")
+        public PersistentIndexedLocalSinkExcerpt(@NotNull final ExcerptCommon excerpt) throws IOException {
+            super(excerpt);
+        }
+
+        @Override
+        protected long lastLocalIndex()  {
+            return chronicleImpl.lastWrittenIndex();
+        }
+
+        @Override
+        protected boolean readNextExcerpt() {
+            try {
+                if (!closed && connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
+                    final int size = buffer.getInt();
+                    final long scIndex = buffer.getLong();
+
+                    switch (size) {
+                        case ChronicleSource.IN_SYNC_LEN:
+                            return false;
+                        case ChronicleSource.PADDED_LEN:
+                            return false;
+                        case ChronicleSource.SYNC_IDX_LEN:
+                            return true;
+                    }
+                }
+            } catch (IOException e) {
+                logger.info("Lost connection to {} retrying", address, e);
+                try {
+                    connector.close();
+                } catch (IOException ignored) {
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /**
      * IndexedChronicle sink
      */
     private final class PersistentIndexedSinkExcerpt extends AbstractPersistentSinkExcerpt<IndexedChronicle> {
@@ -389,13 +444,13 @@ public class ChronicleSink implements Chronicle {
 
         @Override
         protected long lastLocalIndex()  {
-            return chronicle.lastWrittenIndex();
+            return chronicleImpl.lastWrittenIndex();
         }
 
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if(!closed && !connector.read(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
+                if(!closed && !connector.read(ChronicleTcpUtil.HEADER_SIZE, ChronicleTcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -457,6 +512,48 @@ public class ChronicleSink implements Chronicle {
     }
 
     /**
+     * Local VanillaChronicle synk
+     */
+    private class PersistentVanillaLocalSinkExcerpt extends AbstractPersistentSinkExcerpt<VanillaChronicle> {
+        @SuppressWarnings("unchecked")
+        public PersistentVanillaLocalSinkExcerpt(@NotNull final ExcerptCommon excerpt) throws IOException {
+            super(excerpt);
+        }
+
+        @Override
+        protected long lastLocalIndex()  {
+            return chronicleImpl.lastIndex();
+        }
+
+        @Override
+        protected boolean readNextExcerpt() {
+            try {
+                if (!closed && connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
+                    final int size = buffer.getInt();
+                    final long scIndex = buffer.getLong();
+
+                    switch (size) {
+                        case ChronicleSource.IN_SYNC_LEN:
+                            return false;
+                        case ChronicleSource.PADDED_LEN:
+                            return false;
+                        case ChronicleSource.SYNC_IDX_LEN:
+                            return true;
+                    }
+                }
+            } catch (IOException e) {
+                logger.info("Lost connection to {} retrying", address, e);
+                try {
+                    connector.close();
+                } catch (IOException ignored) {
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /**
      * VanillaChronicle sink
      */
     private final class PersistentVanillaSinkExcerpt extends AbstractPersistentSinkExcerpt<VanillaChronicle> {
@@ -477,7 +574,7 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if(!closed && !connector.read(TcpUtil.HEADER_SIZE, TcpUtil.HEADER_SIZE + 8)) {
+                if(!closed && !connector.read(ChronicleTcpUtil.HEADER_SIZE, ChronicleTcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -544,17 +641,17 @@ public class ChronicleSink implements Chronicle {
 
 
     // *************************************************************************
-    // TCP/MEMORY based replication
+    // TCP/VOLATILE based replication
     // *************************************************************************
 
-    private class InMemoryExcerptTailer extends NativeBytes implements ExcerptTailer {
+    private class VolatileExcerptTailer extends NativeBytes implements ExcerptTailer {
         private final Logger logger;
         private long index;
         private int lastSize;
         private final ByteBuffer buffer;
         private final SinkConnector connector;
 
-        public InMemoryExcerptTailer() {
+        public VolatileExcerptTailer() {
             super(NO_PAGE, NO_PAGE);
 
             this.index = -1;
@@ -633,7 +730,7 @@ public class ChronicleSink implements Chronicle {
                 }
 
                 if (connector.write(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                    while (connector.read(TcpUtil.HEADER_SIZE)) {
+                    while (connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
                         int receivedSize = buffer.getInt();
                         long receivedIndex = buffer.getLong();
 
@@ -670,7 +767,7 @@ public class ChronicleSink implements Chronicle {
                     return index(this.index);
                 }
 
-                if(!connector.read(TcpUtil.HEADER_SIZE + 8)) {
+                if(!connector.read(ChronicleTcpUtil.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -718,7 +815,7 @@ public class ChronicleSink implements Chronicle {
         }
     }
 
-    private class InMemoryExcerpt extends InMemoryExcerptTailer implements Excerpt {
+    private class VolatileExcerpt extends VolatileExcerptTailer implements Excerpt {
         @Override
         public long findMatch(@NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();

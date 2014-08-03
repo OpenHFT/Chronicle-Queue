@@ -20,6 +20,8 @@ import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
@@ -27,7 +29,7 @@ import java.nio.channels.SocketChannel;
 /**
  * @author peter.lawrey
  */
-public enum TcpUtil {
+public enum ChronicleTcpUtil {
     ;
     public static final int HEADER_SIZE = 12;
     private static final int INITIAL_BUFFER_SIZE = 64 * 1024;
@@ -41,23 +43,44 @@ public enum TcpUtil {
     public static void writeAllOrEOF(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
         writeAll(sc, bb);
 
-        if (bb.remaining() > 0) throw new EOFException();
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
     }
 
     public static void writeAll(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
-        while (bb.remaining() > 0)
-            if (sc.write(bb) < 0)
+        while (bb.remaining() > 0) {
+            if (sc.write(bb) < 0) {
                 break;
+            }
+        }
     }
 
     public static void readFullyOrEOF(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
         readAvailable(socket, bb);
-        if (bb.remaining() > 0) throw new EOFException();
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
     }
 
     private static void readAvailable(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
-        while (bb.remaining() > 0)
-            if (socket.read(bb) < 0)
+        while (bb.remaining() > 0) {
+            if (socket.read(bb) < 0) {
                 break;
+            }
+        }
+    }
+
+    public static boolean isLocalhost(final InetAddress address) {
+        if(address.isLoopbackAddress()) {
+            return true;
+        }
+
+        try {
+            return NetworkInterface.getByInetAddress(address) != null;
+        } catch(Exception e)  {
+        }
+
+        return false;
     }
 }
