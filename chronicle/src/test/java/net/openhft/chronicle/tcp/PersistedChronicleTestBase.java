@@ -33,14 +33,26 @@ import java.io.IOException;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class InProcessChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("InProcessChronicleTest");
+public class PersistedChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("PersistedChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "in-process-";
+    protected static final String PREFIX    = "ch-persisted-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
     public final TestName testName = new TestName();
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected Chronicle localChronicleSink(final Chronicle chronicle, String host, int port) throws IOException {
+        return new ChronicleSink(
+            chronicle,
+            ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
+            host,
+            port);
+    }
 
     // *************************************************************************
     //
@@ -60,11 +72,11 @@ public class InProcessChronicleTestBase {
         return path;
     }
 
-    protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
+    protected ChronicleSource indexedChronicleSource(String basePath, int port) throws IOException {
         return new ChronicleSource(new IndexedChronicle(basePath), port);
     }
 
-    protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
+    protected ChronicleSource indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
         return new ChronicleSource(new IndexedChronicle(basePath, config), port);
     }
 

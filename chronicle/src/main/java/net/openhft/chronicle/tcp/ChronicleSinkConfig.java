@@ -23,10 +23,12 @@ public class ChronicleSinkConfig implements Cloneable {
 
     private int minBufferSize;
     private long reconnectDelay;
+    private boolean sharedChronicle;
 
     private ChronicleSinkConfig() {
         minBufferSize = 256 * 1024;
         reconnectDelay = 500;
+        sharedChronicle = false;
     }
 
     // *************************************************************************
@@ -49,6 +51,15 @@ public class ChronicleSinkConfig implements Cloneable {
 
     public long reconnectDelay() {
         return this.reconnectDelay;
+    }
+
+    public boolean sharedChronicle() {
+        return  this.sharedChronicle;
+    }
+
+    public ChronicleSinkConfig sharedChronicle(boolean sharedChronicle) {
+        this.sharedChronicle = sharedChronicle;
+        return this;
     }
 
     // *************************************************************************
