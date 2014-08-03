@@ -18,20 +18,21 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBase {
-    @Test
-    public void testPersistedLocalIndexedSink_001() throws Exception {
-        final int port = BASE_PORT + 201;
-        final String basePath = getIndexedTestPath();
+public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBase {
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+    @Test
+    public void testPersistedLocalVanillaSink_001() throws Exception {
+        final int port = BASE_PORT + 301;
+        final String basePath = getVanillaTestPath();
+
+        final Chronicle chronicle = new VanillaChronicle(basePath);
         final ChronicleSourceConfig sourceCfg = ChronicleSourceConfig.DEFAULT.selectTimeout(1000);
         final ChronicleSource source = new ChronicleSource(chronicle, sourceCfg, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
@@ -49,12 +50,9 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
             appender.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
-            assertEquals(-1,tailer1.index());
-
 
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
-                assertEquals(i - 1, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
             }
@@ -63,7 +61,6 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
             tailer1.close();
 
             final ExcerptTailer tailer2 = sink.createTailer().toEnd();
-            assertEquals(items - 1, tailer2.index());
             assertEquals(items, tailer2.readLong());
             assertFalse(tailer2.nextIndex());
             tailer2.close();
@@ -76,14 +73,12 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
         }
     }
 
-
-
     @Test
-    public void testPersistedLocalIndexedSink_002() throws Exception {
-        final int port = BASE_PORT + 202;
-        final String basePath = getIndexedTestPath();
+    public void testPersistedLocalVanillaSink_002() throws Exception {
+        final int port = BASE_PORT + 302;
+        final String basePath = getVanillaTestPath();
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = new VanillaChronicle(basePath);
         final ChronicleSourceConfig sourceCfg = ChronicleSourceConfig.DEFAULT.selectTimeout(1000);
         final ChronicleSource source = new ChronicleSource(chronicle, sourceCfg, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
@@ -106,7 +101,6 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
 
             while(!tailer.nextIndex());
 
-            assertEquals(2, tailer.index());
             assertEquals(3, tailer.readLong());
             tailer.finish();
             tailer.close();

@@ -100,7 +100,7 @@ public class ChronicleSink implements Chronicle {
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.getHostName() + '@' + address.getPort());
         this.excerpts = Collections.synchronizedList(new LinkedList<ExcerptCommon>());
-        this.isLocal = sinkConfig.sharedChronicle() && ChronicleTcpUtil.isLocalhost(this.address.getAddress());
+        this.isLocal = sinkConfig.sharedChronicle() && ChronicleTcp.isLocalhost(this.address.getAddress());
     }
 
     @Override
@@ -117,6 +117,10 @@ public class ChronicleSink implements Chronicle {
             excerpt = new VolatileExcerpt();
         } else {
             excerpt = (Excerpt)createPersistedExcerpt();
+        }
+
+        if(excerpt != null) {
+            excerpts.add(excerpt);
         }
 
         return excerpt;
@@ -195,20 +199,15 @@ public class ChronicleSink implements Chronicle {
             throw new UnsupportedOperationException("An Excerpt has already been created");
         }
 
-        ExcerptTailer excerpt = (chronicle instanceof IndexedChronicle)
-            ? isLocal
+        if(isLocal) {
+            return (chronicle instanceof IndexedChronicle)
                 ? new PersistentIndexedLocalSinkExcerpt(chronicle.createTailer())
-                : new PersistentIndexedSinkExcerpt(chronicle.createTailer())
-            : isLocal
-                ? new PersistentVanillaLocalSinkExcerpt(chronicle.createTailer())
-                : new PersistentVanillaSinkExcerpt(chronicle.createExcerpt());
-
-
-        if(excerpt != null) {
-            excerpts.add(excerpt);
+                : new PersistentVanillaLocalSinkExcerpt(chronicle.createTailer());
+        } else {
+            return (chronicle instanceof IndexedChronicle)
+                ? new PersistentIndexedSinkExcerpt(chronicle.createTailer())
+                : new PersistentVanillaSinkExcerpt(chronicle.createTailer());
         }
-
-        return excerpt;
     }
 
     // *************************************************************************
@@ -221,7 +220,7 @@ public class ChronicleSink implements Chronicle {
 
         public SinkConnector() {
             this.channel = null;
-            this.buffer = ChronicleTcpUtil.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
+            this.buffer = ChronicleTcp.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
         }
 
         public ByteBuffer buffer() {
@@ -242,7 +241,8 @@ public class ChronicleSink implements Chronicle {
                     buffer.limit(0);
 
                     this.channel = SocketChannel.open(address);
-                    this.channel .socket().setReceiveBufferSize(sinkConfig.minBufferSize());
+                    this.channel.socket().setTcpNoDelay(true);
+                    this.channel.socket().setReceiveBufferSize(sinkConfig.minBufferSize());
                     logger.info("Connected to " + address);
 
                     return true;
@@ -270,7 +270,7 @@ public class ChronicleSink implements Chronicle {
 
         public boolean write(final ByteBuffer buffer) {
             try {
-                ChronicleTcpUtil.writeAllOrEOF(channel, buffer);
+                ChronicleTcp.writeAllOrEOF(channel, buffer);
             } catch (IOException e) {
                 return false;
             }
@@ -362,17 +362,16 @@ public class ChronicleSink implements Chronicle {
         private boolean readNext() {
             if (!connector.isOpen()) {
                 if(connector.open()) {
-                    final long lastIndex = lastLocalIndex();
-
-                    final ByteBuffer command = ChronicleTcp.Command.newCommand(
+                    final ChronicleTcp.Command command = ChronicleTcp.Command.make(
                         !isLocal
                             ? ChronicleTcp.Command.ACTION_SUBSCRIBE
                             : ChronicleTcp.Command.ACTION_QUERY,
-                        lastIndex);
+                        lastLocalIndex());
 
-                    if(connector.write(command)) {
-                        lastLocalIndex = lastIndex;
-                    } else {
+                    try {
+                        command.write(connector.channel);
+                        lastLocalIndex = command.data();
+                    } catch(IOException e) {
                         return false;
                     }
                 } else {
@@ -404,7 +403,7 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if (!closed && connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
+                if (!closed && connector.read(ChronicleTcp.HEADER_SIZE)) {
                     final int size = buffer.getInt();
                     final long scIndex = buffer.getLong();
 
@@ -450,7 +449,7 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if(!closed && !connector.read(ChronicleTcpUtil.HEADER_SIZE, ChronicleTcpUtil.HEADER_SIZE + 8)) {
+                if(!closed && !connector.read(ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -528,7 +527,7 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if (!closed && connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
+                if (!closed && connector.read(ChronicleTcp.HEADER_SIZE)) {
                     final int size = buffer.getInt();
                     final long scIndex = buffer.getLong();
 
@@ -574,7 +573,7 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if(!closed && !connector.read(ChronicleTcpUtil.HEADER_SIZE, ChronicleTcpUtil.HEADER_SIZE + 8)) {
+                if(!closed && !connector.read(ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -638,7 +637,6 @@ public class ChronicleSink implements Chronicle {
             return true;
         }
     }
-
 
     // *************************************************************************
     // TCP/VOLATILE based replication
@@ -729,8 +727,12 @@ public class ChronicleSink implements Chronicle {
                     connector.open();
                 }
 
-                if (connector.write(ByteBuffer.allocate(8).putLong(0, this.index))) {
-                    while (connector.read(ChronicleTcpUtil.HEADER_SIZE)) {
+                final ChronicleTcp.Command command = ChronicleTcp.Command.make(
+                    ChronicleTcp.Command.ACTION_SUBSCRIBE,
+                    this.index);
+
+                if(command.write(connector.channel)) {
+                    while (connector.read(ChronicleTcp.HEADER_SIZE)) {
                         int receivedSize = buffer.getInt();
                         long receivedIndex = buffer.getLong();
 
@@ -767,7 +769,7 @@ public class ChronicleSink implements Chronicle {
                     return index(this.index);
                 }
 
-                if(!connector.read(ChronicleTcpUtil.HEADER_SIZE + 8)) {
+                if(!connector.read(ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 

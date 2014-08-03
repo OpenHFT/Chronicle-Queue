@@ -246,7 +246,7 @@ public class ChronicleSource implements Chronicle {
             this.socket.socket().setTcpNoDelay(true);
             this.selector = Selector.open();
             this.tailer = chronicle.createTailer();
-            this.buffer = ChronicleTcpUtil.createBuffer(1, ByteOrder.nativeOrder());
+            this.buffer = ChronicleTcp.createBuffer(1, ByteOrder.nativeOrder());
             this.index = -1;
             this.lastHeartbeatTime = 0;
             this.command = new ChronicleTcp.Command();
@@ -258,10 +258,18 @@ public class ChronicleSource implements Chronicle {
                 socket.register(selector, SelectionKey.OP_READ);
 
                 while(!closed) {
-                    if (selector.select(1000) > 0) {
-                        logger.info("select data");
+                    if (selector.select(sourceConfig.selectTimeout()) > 0) {
                         final Set<SelectionKey> keys = selector.selectedKeys();
-                        onSelectResult(keys);
+                        for (final Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
+                            final SelectionKey key = it.next();
+
+                            if (!onSelect(key)) {
+                                keys.clear();
+                                break;
+                            } else {
+                                it.remove();
+                            }
+                        }
                     } else {
                         logger.info("select timeout");
                     }
@@ -274,9 +282,9 @@ public class ChronicleSource implements Chronicle {
                         (msg.contains("reset by peer")
                             || msg.contains("Broken pipe")
                             || msg.contains("was aborted by"))) {
-                        logger.info("Connect {} closed from the other end", socket, e);
+                        logger.info("Connection {} closed from the other end: ", socket, e.getMessage());
                     } else {
-                        logger.info("Connect {} died",socket, e);
+                        logger.info("Connection {} died",socket, e);
                     }
 
                     try {
@@ -302,7 +310,7 @@ public class ChronicleSource implements Chronicle {
             this.lastHeartbeatTime = from + sourceConfig.heartbeatInterval();
         }
 
-        protected abstract void onSelectResult(final Set<SelectionKey> keys) throws IOException;
+        protected abstract boolean onSelect(final SelectionKey key) throws IOException;
     }
 
     // *************************************************************************
@@ -315,71 +323,67 @@ public class ChronicleSource implements Chronicle {
         }
 
         @Override
-        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
-            for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
-                final SelectionKey key = it.next();
-                it.remove();
+        public boolean onSelect(final SelectionKey key) throws IOException {
+            if(key.isReadable()) {
+                try {
+                    command.read(socket);
 
-                if(key.isReadable()) {
-                    try {
-                        command.read(socket);
+                    if(command.isSubscribe()) {
+                        this.index = command.data();
+                        if (this.index == -1) {
+                            this.index = -1;
+                        }
+                        else if (this.index == -2) {
+                            this.index = tailer.toEnd().index();
+                        }
 
-                        if(command.isSubscribe()) {
-                            this.index = command.read(socket).data();
-                            if (this.index == -1) {
-                                this.index = -1;
-                            }
-                            else if (this.index == -2) {
-                                this.index = tailer.toEnd().index();
-                            }
+                        buffer.clear();
+                        buffer.putInt(SYNC_IDX_LEN);
+                        buffer.putLong(this.index);
+                        buffer.flip();
+                        ChronicleTcp.writeAll(socket, buffer);
 
+                        setLastHeartbeatTime();
+
+                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        return false;
+                    } else if(command.isQuery()) {
+                        tailer.index(command.data());
+                        if(tailer.nextIndex()) {
                             buffer.clear();
                             buffer.putInt(SYNC_IDX_LEN);
-                            buffer.putLong(this.index);
+                            buffer.putLong(tailer.index());
                             buffer.flip();
-                            ChronicleTcpUtil.writeAll(socket, buffer);
-
-                            setLastHeartbeatTime();
-
-                            key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                            keys.clear();
-                            return;
-                        } else if(command.isQuery()) {
-                            tailer.index(command.data());
-                            if(tailer.nextIndex()) {
-                                buffer.clear();
-                                buffer.putInt(SYNC_IDX_LEN);
-                                buffer.putLong(tailer.index());
-                                buffer.flip();
-                                ChronicleTcpUtil.writeAll(socket, buffer);
-                            } else {
-                                buffer.clear();
-                                buffer.putInt(IN_SYNC_LEN);
-                                buffer.putLong(tailer.index());
-                                buffer.flip();
-                                ChronicleTcpUtil.writeAll(socket, buffer);
-                            }
+                            ChronicleTcp.writeAll(socket, buffer);
                         } else {
-                            throw new IOException("Unknown action received (" + command.action() + ")");
-                        }
-                    } catch(EOFException e) {
-                        key.selector().close();
-                        throw e;
-                    }
-                } else if(key.isWritable()) {
-                    final long now = System.currentTimeMillis();
-                    if(!closed && !publishData()) {
-                        if (lastHeartbeatTime <= now) {
                             buffer.clear();
                             buffer.putInt(IN_SYNC_LEN);
-                            buffer.putLong(0L);
+                            buffer.putLong(tailer.index());
                             buffer.flip();
-                            ChronicleTcpUtil.writeAll(socket, buffer);
-                            setLastHeartbeatTime(now);
+                            ChronicleTcp.writeAll(socket, buffer);
                         }
+                    } else {
+                        throw new IOException("Unknown action received (" + command.action() + ")");
+                    }
+                } catch(EOFException e) {
+                    key.selector().close();
+                    throw e;
+                }
+            } else if(key.isWritable()) {
+                final long now = System.currentTimeMillis();
+                if(!closed && !publishData()) {
+                    if (lastHeartbeatTime <= now) {
+                        buffer.clear();
+                        buffer.putInt(IN_SYNC_LEN);
+                        buffer.putLong(0L);
+                        buffer.flip();
+                        ChronicleTcp.writeAll(socket, buffer);
+                        setLastHeartbeatTime(now);
                     }
                 }
             }
+
+            return true;
         }
 
         private boolean publishData() throws IOException {
@@ -390,7 +394,7 @@ public class ChronicleSource implements Chronicle {
                         buffer.putInt(PADDED_LEN);
                         buffer.putLong(tailer.index());
                         buffer.flip();
-                        ChronicleTcpUtil.writeAll(socket, buffer);
+                        ChronicleTcp.writeAll(socket, buffer);
                     }
 
                     index++;
@@ -406,7 +410,7 @@ public class ChronicleSource implements Chronicle {
             pauseReset();
 
             final long size = tailer.capacity();
-            long remaining = size + ChronicleTcpUtil.HEADER_SIZE;
+            long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             buffer.clear();
             buffer.putInt((int) size);
@@ -420,7 +424,7 @@ public class ChronicleSource implements Chronicle {
                     tailer.read(buffer);
                     buffer.flip();
                     remaining -= buffer.remaining();
-                    ChronicleTcpUtil.writeAll(socket, buffer);
+                    ChronicleTcp.writeAll(socket, buffer);
                 }
             } else {
                 buffer.limit((int) remaining);
@@ -428,13 +432,13 @@ public class ChronicleSource implements Chronicle {
                 int count = 1;
                 while (tailer.index(index + 1) && count++ < maxMessages) {
                     if(!tailer.wasPadding()) {
-                        if (tailer.capacity() + ChronicleTcpUtil.HEADER_SIZE >= (buffer.capacity() - buffer.position())) {
+                        if (tailer.capacity() + ChronicleTcp.HEADER_SIZE >= (buffer.capacity() - buffer.position())) {
                             break;
                         }
 
                         // if there is free space, copy another one.
                         int size2 = (int) tailer.capacity();
-                        buffer.limit(buffer.position() + size2 + ChronicleTcpUtil.HEADER_SIZE);
+                        buffer.limit(buffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                         buffer.putInt(size2);
                         buffer.putLong(tailer.index());
                         tailer.read(buffer);
@@ -445,7 +449,7 @@ public class ChronicleSource implements Chronicle {
                 }
 
                 buffer.flip();
-                ChronicleTcpUtil.writeAll(socket, buffer);
+                ChronicleTcp.writeAll(socket, buffer);
             }
 
             if (buffer.remaining() > 0) {
@@ -466,80 +470,74 @@ public class ChronicleSource implements Chronicle {
         }
 
         @Override
-        public void onSelectResult(final Set<SelectionKey> keys) throws IOException {
-            final Iterator<SelectionKey> it = keys.iterator();
+        public boolean onSelect(final SelectionKey key) throws IOException {
+            if(key.isReadable()) {
+                try {
+                    command.read(socket);
 
-            while (it.hasNext()) {
-                final SelectionKey key = it.next();
-                it.remove();
+                    if(command.isSubscribe()) {
+                        this.index = command.data();
+                        if (this.index == -1) {
+                            this.nextIndex = true;
+                            this.tailer = tailer.toStart();
+                            this.index = -1;
+                        }
+                        else if (this.index == -2) {
+                            this.nextIndex = false;
+                            this.tailer = tailer.toEnd();
+                            this.index = tailer.index();
+                        }
+                        else {
+                            this.nextIndex = false;
+                        }
 
-                if(key.isReadable()) {
-                    try {
-                        command.read(socket);
+                        buffer.clear();
+                        buffer.putInt(SYNC_IDX_LEN);
+                        buffer.putLong(this.index);
+                        buffer.flip();
+                        ChronicleTcp.writeAll(socket, buffer);
 
-                        if(command.isSubscribe()) {
-                            this.index = command.data();
-                            if (this.index == -1) {
-                                this.nextIndex = true;
-                                this.tailer = tailer.toStart();
-                                this.index = -1;
-                            }
-                            else if (this.index == -2) {
-                                this.nextIndex = false;
-                                this.tailer = tailer.toEnd();
-                                this.index = tailer.index();
-                            }
-                            else {
-                                this.nextIndex = false;
-                            }
+                        setLastHeartbeatTime();
 
+                        key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        return false;
+                    } else if(command.isQuery()) {
+                        tailer.index(command.data());
+                        if(tailer.nextIndex()) {
                             buffer.clear();
                             buffer.putInt(SYNC_IDX_LEN);
-                            buffer.putLong(this.index);
+                            buffer.putLong(tailer.index());
                             buffer.flip();
-                            ChronicleTcpUtil.writeAll(socket, buffer);
-
-                            setLastHeartbeatTime();
-
-                            key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                            keys.clear();
-                            break;
-                        } else if(command.isQuery()) {
-                            tailer.index(command.data());
-                            if(tailer.nextIndex()) {
-                                buffer.clear();
-                                buffer.putInt(SYNC_IDX_LEN);
-                                buffer.putLong(tailer.index());
-                                buffer.flip();
-                                ChronicleTcpUtil.writeAll(socket, buffer);
-                            } else {
-                                buffer.clear();
-                                buffer.putInt(IN_SYNC_LEN);
-                                buffer.putLong(tailer.index());
-                                buffer.flip();
-                                ChronicleTcpUtil.writeAll(socket, buffer);
-                            }
+                            ChronicleTcp.writeAll(socket, buffer);
                         } else {
-                            throw new IOException("Unknown action received (" + command.action() + ")");
-                        }
-                    } catch(EOFException e) {
-                        key.selector().close();
-                        throw e;
-                    }
-                } else if(key.isWritable()) {
-                    final long now = System.currentTimeMillis();
-                    if(!closed && !publishData()) {
-                        if (lastHeartbeatTime <= now) {
                             buffer.clear();
                             buffer.putInt(IN_SYNC_LEN);
-                            buffer.putLong(0L);
+                            buffer.putLong(tailer.index());
                             buffer.flip();
-                            ChronicleTcpUtil.writeAll(socket, buffer);
-                            setLastHeartbeatTime(now);
+                            ChronicleTcp.writeAll(socket, buffer);
                         }
+                    } else {
+                        throw new IOException("Unknown action received (" + command.action() + ")");
+                    }
+                } catch(EOFException e) {
+                    key.selector().close();
+                    throw e;
+                }
+            } else if(key.isWritable()) {
+                final long now = System.currentTimeMillis();
+                if(!closed && !publishData()) {
+                    if (lastHeartbeatTime <= now) {
+                        buffer.clear();
+                        buffer.putInt(IN_SYNC_LEN);
+                        buffer.putLong(0L);
+                        buffer.flip();
+                        ChronicleTcp.writeAll(socket, buffer);
+                        setLastHeartbeatTime(now);
                     }
                 }
             }
+
+            return true;
         }
 
         private boolean publishData() throws IOException {
@@ -561,7 +559,7 @@ public class ChronicleSource implements Chronicle {
             pauseReset();
 
             final long size = tailer.capacity();
-            long remaining = size + ChronicleTcpUtil.HEADER_SIZE;
+            long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             buffer.clear();
             buffer.putInt((int) size);
@@ -575,7 +573,7 @@ public class ChronicleSource implements Chronicle {
                     tailer.read(buffer);
                     buffer.flip();
                     remaining -= buffer.remaining();
-                    ChronicleTcpUtil.writeAll(socket, buffer);
+                    ChronicleTcp.writeAll(socket, buffer);
                 }
             } else {
                 buffer.limit((int) remaining);
@@ -587,13 +585,13 @@ public class ChronicleSource implements Chronicle {
                             throw new AssertionError("Entry should not be padding - remove");
                         }
 
-                        if (tailer.capacity() + ChronicleTcpUtil.HEADER_SIZE >= buffer.capacity() - buffer.position()) {
+                        if (tailer.capacity() + ChronicleTcp.HEADER_SIZE >= buffer.capacity() - buffer.position()) {
                             break;
                         }
 
                         // if there is free space, copy another one.
                         int size2 = (int) tailer.capacity();
-                        buffer.limit(buffer.position() + size2 + ChronicleTcpUtil.HEADER_SIZE);
+                        buffer.limit(buffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                         buffer.putInt(size2);
                         buffer.putLong(tailer.index());
                         tailer.read(buffer);
@@ -601,7 +599,7 @@ public class ChronicleSource implements Chronicle {
                 }
 
                 buffer.flip();
-                ChronicleTcpUtil.writeAll(socket, buffer);
+                ChronicleTcp.writeAll(socket, buffer);
             }
 
             if (buffer.remaining() > 0) {

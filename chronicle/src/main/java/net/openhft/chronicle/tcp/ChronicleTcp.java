@@ -15,16 +15,27 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 
 public class ChronicleTcp {
     public static final Logger LOG = LoggerFactory.getLogger(ChronicleTcp.class);
+
+    public static final int HEADER_SIZE = 12;
+    private static final int INITIAL_BUFFER_SIZE = 64 * 1024;
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     public static final class Command {
         public static final long ACTION_SUBSCRIBE = 1;
@@ -35,9 +46,18 @@ public class ChronicleTcp {
         private long data;
 
         public Command() {
-            this.buffer = ByteBuffer.allocate(16).order(ByteOrder.nativeOrder());
-            this.action = 0;
-            this.data = 0;
+            this(0, 0);
+        }
+
+        private Command(long action, long data) {
+            this.action = action;
+            this.data = data;
+
+            this.buffer = ByteBuffer
+                .allocate(16)
+                .order(ByteOrder.nativeOrder())
+                .putLong(action)
+                .putLong(data);
         }
 
         public long action() {
@@ -48,21 +68,23 @@ public class ChronicleTcp {
             return this.data;
         }
 
-        public Command read(final SocketChannel channel) throws IOException {
+        public boolean read(final SocketChannel channel) throws IOException {
             this.buffer.clear();
 
-            LOG.info("ChronicleTcp.Command.Read");
+            readFullyOrEOF(channel, this.buffer);
 
-            ChronicleTcpUtil.readFullyOrEOF(channel, this.buffer);
-
+            this.buffer.flip();
 
             this.action = buffer.getLong();
             this.data   = buffer.getLong();
 
-            LOG.info("action " + action);
-            LOG.info("data " + data);
+            return true;
+        }
 
-            return this;
+        public boolean write(final SocketChannel channel) throws IOException {
+            buffer.flip();
+            writeAllOrEOF(channel, this.buffer);
+            return true;
         }
 
         public boolean isSubscribe() {
@@ -73,8 +95,62 @@ public class ChronicleTcp {
             return this.action == ACTION_QUERY;
         }
 
-        public static ByteBuffer newCommand(long action, long data) {
-            return ByteBuffer.allocate(16).order(ByteOrder.nativeOrder()).putLong(action).putLong(data);
+        public static Command make(long action, long data) {
+            return new Command(action, data);
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
+        int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
+        return ByteBuffer.allocateDirect(newSize).order(byteOrder);
+    }
+
+
+    public static void writeAllOrEOF(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
+        writeAll(sc, bb);
+
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
+    }
+
+    public static void writeAll(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
+        while (bb.remaining() > 0) {
+            if (sc.write(bb) < 0) {
+                break;
+            }
+        }
+    }
+
+    public static void readFullyOrEOF(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
+        readAvailable(socket, bb);
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
+    }
+
+    private static void readAvailable(@NotNull SocketChannel socket, @NotNull ByteBuffer bb) throws IOException {
+        while (bb.remaining() > 0) {
+            if (socket.read(bb) < 0) {
+                break;
+            }
+        }
+    }
+
+    public static boolean isLocalhost(final InetAddress address) {
+        if(address.isLoopbackAddress()) {
+            return true;
+        }
+
+        try {
+            return NetworkInterface.getByInetAddress(address) != null;
+        } catch(Exception e)  {
+        }
+
+        return false;
     }
 }
