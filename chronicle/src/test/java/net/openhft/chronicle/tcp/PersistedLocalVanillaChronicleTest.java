@@ -21,8 +21,10 @@ import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.VanillaChronicle;
 import org.junit.Test;
 
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBase {
@@ -33,79 +35,49 @@ public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBa
         final String basePath = getVanillaTestPath();
 
         final Chronicle chronicle = new VanillaChronicle(basePath);
-        final ChronicleSourceConfig sourceCfg = ChronicleSourceConfig.DEFAULT.selectTimeout(1000);
-        final ChronicleSource source = new ChronicleSource(chronicle, sourceCfg, port);
+        final ChronicleSource source = new ChronicleSource(chronicle, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
+        final CountDownLatch latch = new CountDownLatch(5);
+        final Random random = new Random();
 
-        final int items = 1000000;
+        final int items = 100;
         final ExcerptAppender appender = source.createAppender();
 
         try {
-            for (long i = 1; i <= items; i++) {
-                appender.startExcerpt(8);
-                appender.writeLong(i);
-                appender.finish();
-            }
+            Thread appenderThread = new Thread() {
+                public void run() {
+                    for (long i = 1; i <= items; i++) {
+                        if(latch.getCount() > 0) {
+                            latch.countDown();
+                        }
 
-            appender.close();
+                        appender.startExcerpt(8);
+                        appender.writeLong(i);
+                        appender.finish();
+
+                        try {
+                            sleep(300 + random.nextInt(200));
+                        } catch(Exception e) {
+                        }
+                    }
+
+                    appender.close();
+                }
+            };
+
+            appenderThread.start();
+            latch.await();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
-
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
             }
 
-            assertFalse(tailer1.nextIndex());
             tailer1.close();
 
-            final ExcerptTailer tailer2 = sink.createTailer().toEnd();
-            assertEquals(items, tailer2.readLong());
-            assertFalse(tailer2.nextIndex());
-            tailer2.close();
-
-            sink.close();
-            sink.clear();
-        } finally {
-            source.close();
-            source.clear();
-        }
-    }
-
-    @Test
-    public void testPersistedLocalVanillaSink_002() throws Exception {
-        final int port = BASE_PORT + 302;
-        final String basePath = getVanillaTestPath();
-
-        final Chronicle chronicle = new VanillaChronicle(basePath);
-        final ChronicleSourceConfig sourceCfg = ChronicleSourceConfig.DEFAULT.selectTimeout(1000);
-        final ChronicleSource source = new ChronicleSource(chronicle, sourceCfg, port);
-        final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
-
-        try {
-            final ExcerptAppender appender = source.createAppender();
-            appender.startExcerpt(8);
-            appender.writeLong(1);
-            appender.finish();
-            appender.startExcerpt(8);
-            appender.writeLong(2);
-            appender.finish();
-
-            final ExcerptTailer tailer = sink.createTailer().toEnd();
-            assertFalse(tailer.nextIndex());
-
-            appender.startExcerpt(8);
-            appender.writeLong(3);
-            appender.finish();
-
-            while(!tailer.nextIndex());
-
-            assertEquals(3, tailer.readLong());
-            tailer.finish();
-            tailer.close();
-
-            appender.close();
+            appenderThread.join();
 
             sink.close();
             sink.clear();

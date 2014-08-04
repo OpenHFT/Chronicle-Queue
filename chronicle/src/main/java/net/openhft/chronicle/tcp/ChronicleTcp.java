@@ -31,7 +31,10 @@ public class ChronicleTcp {
     public static final Logger LOG = LoggerFactory.getLogger(ChronicleTcp.class);
 
     public static final int HEADER_SIZE = 12;
-    private static final int INITIAL_BUFFER_SIZE = 64 * 1024;
+    public static final int INITIAL_BUFFER_SIZE = 64 * 1024;
+    public static final int IN_SYNC_LEN = -128;
+    public static final int PADDED_LEN = -127;
+    public static final int SYNC_IDX_LEN = -126;
 
     // *************************************************************************
     //
@@ -97,6 +100,10 @@ public class ChronicleTcp {
 
         public static Command make(long action, long data) {
             return new Command(action, data);
+        }
+
+        public static boolean makeAndSend(long action, long data, final SocketChannel channel) throws IOException {
+            return new Command(action, data).write(channel);
         }
     }
 

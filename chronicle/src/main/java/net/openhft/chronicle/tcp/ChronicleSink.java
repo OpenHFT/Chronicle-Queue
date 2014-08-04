@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
@@ -43,8 +42,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * This listens to a ChronicleSource and copies new entries. This Sink can be any number of excerpt behind the source
- * and can be restart many times without losing data.
+ * This listens to a ChronicleSource and copies new entries. This Sink can be any
+ * number of excerpt behind the source and can be restart many times without
+ * losing data.
  *
  * <p>Can be used as a component with lower over head than ChronicleSink
  *
@@ -55,7 +55,7 @@ public class ChronicleSink implements Chronicle {
     private final Chronicle chronicle;
 
     @NotNull
-    private final ChronicleSinkConfig sinkConfig;
+    private final ChronicleSinkConfig config;
 
     @NotNull
     private final InetSocketAddress address;
@@ -90,17 +90,17 @@ public class ChronicleSink implements Chronicle {
         this(chronicle, ChronicleSinkConfig.DEFAULT, address);
     }
 
-    public ChronicleSink(@NotNull final ChronicleSinkConfig sinkConfig, @NotNull final InetSocketAddress address) throws IOException {
-        this(null, sinkConfig, address);
+    public ChronicleSink(@NotNull final ChronicleSinkConfig config, @NotNull final InetSocketAddress address) throws IOException {
+        this(null, config, address);
     }
 
-    public ChronicleSink(@NotNull final Chronicle chronicle, @NotNull final ChronicleSinkConfig sinkConfig, @NotNull final InetSocketAddress address) throws IOException {
+    public ChronicleSink(@NotNull final Chronicle chronicle, @NotNull final ChronicleSinkConfig config, @NotNull final InetSocketAddress address) throws IOException {
         this.chronicle = chronicle;
-        this.sinkConfig = sinkConfig;
+        this.config = config;
         this.address = address;
         this.logger = LoggerFactory.getLogger(getClass().getName() + '.' + address.getHostName() + '@' + address.getPort());
         this.excerpts = Collections.synchronizedList(new LinkedList<ExcerptCommon>());
-        this.isLocal = sinkConfig.sharedChronicle() && ChronicleTcp.isLocalhost(this.address.getAddress());
+        this.isLocal = config.sharedChronicle() && ChronicleTcp.isLocalhost(this.address.getAddress());
     }
 
     @Override
@@ -210,6 +210,18 @@ public class ChronicleSink implements Chronicle {
         }
     }
 
+    protected Chronicle chronicle() {
+        return this.chronicle;
+    }
+
+    protected boolean closed() {
+        return this.closed;
+    }
+
+    protected ChronicleSinkConfig config() {
+        return this.config;
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -220,7 +232,7 @@ public class ChronicleSink implements Chronicle {
 
         public SinkConnector() {
             this.channel = null;
-            this.buffer = ChronicleTcp.createBuffer(sinkConfig.minBufferSize(), ByteOrder.nativeOrder());
+            this.buffer = ChronicleTcp.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
         }
 
         public ByteBuffer buffer() {
@@ -242,7 +254,7 @@ public class ChronicleSink implements Chronicle {
 
                     this.channel = SocketChannel.open(address);
                     this.channel.socket().setTcpNoDelay(true);
-                    this.channel.socket().setReceiveBufferSize(sinkConfig.minBufferSize());
+                    this.channel.socket().setReceiveBufferSize(config.minBufferSize());
                     logger.info("Connected to " + address);
 
                     return true;
@@ -251,7 +263,7 @@ public class ChronicleSink implements Chronicle {
                 }
 
                 try {
-                    Thread.sleep(sinkConfig.reconnectDelay());
+                    Thread.sleep(config.reconnectDelay());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -359,20 +371,20 @@ public class ChronicleSink implements Chronicle {
             super.close();
         }
 
-        private boolean readNext() {
+        protected boolean readNext() {
             if (!connector.isOpen()) {
                 if(connector.open()) {
-                    final ChronicleTcp.Command command = ChronicleTcp.Command.make(
-                        !isLocal
-                            ? ChronicleTcp.Command.ACTION_SUBSCRIBE
-                            : ChronicleTcp.Command.ACTION_QUERY,
-                        lastLocalIndex());
-
-                    try {
-                        command.write(connector.channel);
-                        lastLocalIndex = command.data();
-                    } catch(IOException e) {
-                        return false;
+                    if(!isLocal) {
+                        final ChronicleTcp.Command command =
+                            ChronicleTcp.Command.make(
+                                ChronicleTcp.Command.ACTION_SUBSCRIBE,
+                                lastLocalIndex());
+                        try {
+                            command.write(connector.channel);
+                            lastLocalIndex = command.data();
+                        } catch (IOException e) {
+                            return false;
+                        }
                     }
                 } else {
                     return false;
@@ -403,17 +415,25 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if (!closed && connector.read(ChronicleTcp.HEADER_SIZE)) {
-                    final int size = buffer.getInt();
-                    final long scIndex = buffer.getLong();
+                if (!closed) {
+                    ChronicleTcp.Command.makeAndSend(
+                        ChronicleTcp.Command.ACTION_QUERY,
+                        lastLocalIndex(),
+                        connector.channel
+                    );
 
-                    switch (size) {
-                        case ChronicleSource.IN_SYNC_LEN:
-                            return false;
-                        case ChronicleSource.PADDED_LEN:
-                            return false;
-                        case ChronicleSource.SYNC_IDX_LEN:
-                            return true;
+                    if (connector.read(ChronicleTcp.HEADER_SIZE)) {
+                        final int size = buffer.getInt();
+                        final long scIndex = buffer.getLong();
+
+                        switch (size) {
+                            case ChronicleTcp.IN_SYNC_LEN:
+                                return false;
+                            case ChronicleTcp.PADDED_LEN:
+                                return false;
+                            case ChronicleTcp.SYNC_IDX_LEN:
+                                return true;
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -457,12 +477,12 @@ public class ChronicleSink implements Chronicle {
                 final long scIndex = buffer.getLong();
 
                 switch (size) {
-                    case ChronicleSource.IN_SYNC_LEN:
+                    case ChronicleTcp.IN_SYNC_LEN:
                         return false;
-                    case ChronicleSource.PADDED_LEN:
+                    case ChronicleTcp.PADDED_LEN:
                         appender.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
                         return true;
-                    case ChronicleSource.SYNC_IDX_LEN:
+                    case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
                 }
@@ -527,17 +547,25 @@ public class ChronicleSink implements Chronicle {
         @Override
         protected boolean readNextExcerpt() {
             try {
-                if (!closed && connector.read(ChronicleTcp.HEADER_SIZE)) {
-                    final int size = buffer.getInt();
-                    final long scIndex = buffer.getLong();
+                if (!closed) {
+                    ChronicleTcp.Command.makeAndSend(
+                        ChronicleTcp.Command.ACTION_QUERY,
+                        lastLocalIndex(),
+                        connector.channel
+                    );
 
-                    switch (size) {
-                        case ChronicleSource.IN_SYNC_LEN:
-                            return false;
-                        case ChronicleSource.PADDED_LEN:
-                            return false;
-                        case ChronicleSource.SYNC_IDX_LEN:
-                            return true;
+                    if (connector.read(ChronicleTcp.HEADER_SIZE)) {
+                        final int size = buffer.getInt();
+                        final long scIndex = buffer.getLong();
+
+                        switch (size) {
+                            case ChronicleTcp.IN_SYNC_LEN:
+                                return false;
+                            case ChronicleTcp.PADDED_LEN:
+                                return false;
+                            case ChronicleTcp.SYNC_IDX_LEN:
+                                return true;
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -581,13 +609,13 @@ public class ChronicleSink implements Chronicle {
                 final long scIndex = buffer.getLong();
 
                 switch (size) {
-                    case ChronicleSource.IN_SYNC_LEN:
+                    case ChronicleTcp.IN_SYNC_LEN:
                         //Heartbeat message ignore and return false
                         return false;
-                    case ChronicleSource.PADDED_LEN:
+                    case ChronicleTcp.PADDED_LEN:
                         //Padded message, should not happen
                         return false;
-                    case ChronicleSource.SYNC_IDX_LEN:
+                    case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
                 }
@@ -658,7 +686,7 @@ public class ChronicleSink implements Chronicle {
             this.connector = new SinkConnector();
             this.buffer = this.connector.buffer();
             this.startAddr = ((DirectBuffer) this.buffer).address();
-            this.capacityAddr = this.startAddr + sinkConfig.minBufferSize();
+            this.capacityAddr = this.startAddr + config.minBufferSize();
         }
 
         @Override
@@ -737,7 +765,7 @@ public class ChronicleSink implements Chronicle {
                         long receivedIndex = buffer.getLong();
 
                         switch(receivedSize) {
-                            case ChronicleSource.SYNC_IDX_LEN:
+                            case ChronicleTcp.SYNC_IDX_LEN:
                                 if(index == -1) {
                                     return receivedIndex == -1;
                                 } else if(index == -2) {
@@ -745,8 +773,8 @@ public class ChronicleSink implements Chronicle {
                                 } else {
                                     return (index == receivedIndex) ? advanceIndex() : false;
                                 }
-                            case ChronicleSource.PADDED_LEN:
-                            case ChronicleSource.IN_SYNC_LEN:
+                            case ChronicleTcp.PADDED_LEN:
+                            case ChronicleTcp.IN_SYNC_LEN:
                                 return false;
                         }
 
@@ -777,10 +805,10 @@ public class ChronicleSink implements Chronicle {
                 long receivedIndex = buffer.getLong();
 
                 switch (excerptSize) {
-                    case ChronicleSource.IN_SYNC_LEN:
-                    case ChronicleSource.PADDED_LEN:
+                    case ChronicleTcp.IN_SYNC_LEN:
+                    case ChronicleTcp.PADDED_LEN:
                         return false;
-                    case ChronicleSource.SYNC_IDX_LEN:
+                    case ChronicleTcp.SYNC_IDX_LEN:
                         return false;//nextIndex();
                 }
 
