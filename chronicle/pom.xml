@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.2.1-SNAPSHOT</version>
+    <version>3.2.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Java-Chronicle/chronicle</name>
@@ -44,12 +44,12 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.6-SNAPSHOT</version>
+                <version>6.4.6</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
-                <version>2.1.1-SNAPSHOT</version>
+                <version>2.1.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -119,6 +119,21 @@
 
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-publish-plugin</artifactId>
+                <configuration>
+                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc</checkoutDirectory>
+                    <checkinComment>Publishing javadoc for ${project.artifactId}:${project.version}
+                    </checkinComment>
+                    <content>${project.reporting.outputDirectory}</content>
+                    <skipDeletedFiles>true</skipDeletedFiles>
+                    <pubScmUrl>scm:git:git@github.com:OpenHFT/Java-Chronicle</pubScmUrl>
+                    <scmBranch>gh-pages</scmBranch>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
@@ -145,31 +160,6 @@
             </plugin>
         </plugins>
     </build>
-
-    <!-- todo remove once next parent pom is adopted -->
-    <!-- If you're not quite yet ready to release the artifacts and do not want the artifacts to
-    sync to Maven Central, you could reference the staging repository. After successfully deploying
-    the artifacts to maven.java.net, you need to first close the repository so artifacts are moved
-    to the staging repository. See instructions here to close artifacts to the staging repository.
-    After closing the repository, the artifacts will be available in
-    https://maven.java.net/content/repositories/staging/. You could set this URL in the repository
-    element in $MAVEN_HOME/.m2/settings.xml to test the artifact before closing the artifacts to the
-     release repository. See option 1 above for specifying the repository in settings.xml file.
-     If you don't want to release the artifact to Maven Central, you could drop the artifacts in
-     the staging repository and redeploy. See instructions here to drop artifacts in the staging
-      repository. Keep in mind that once the artifact is released and sync'd to Maven Central,
-      you cannot redeploy the same version again. The staging repository is very helpful when you
-      want to test the promoted artifacts before actually releasing to Maven Central. -->
-    <repositories>
-        <repository>
-            <id>sonatype-nexus-staging</id>
-            <url>https://oss.sonatype.org/content/repositories/staging</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
-
 
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</url>
