@@ -29,23 +29,17 @@ import java.io.IOException;
 import java.util.ConcurrentModificationException;
 
 /**
- * IndexedChronicle is a single-writer-multiple-reader
- * {@link net.openhft.chronicle.Chronicle} that you can put huge numbers of objects in,
- * having different sizes.
+ * IndexedChronicle is a single-writer-multiple-reader {@link net.openhft.chronicle.Chronicle} that you can put huge
+ * numbers of objects in, having different sizes.
  *
- * <p>For each record, IndexedChronicle holds the memory-offset in another index cache
- * for random access. This means IndexedChronicle "knows" where the Nth object resides at
- * in memory, thus the name "Indexed". But this index is just sequential index,
- * first object has index 0, second object has index 1, and so on. If you want to access
- * objects with other logical keys you have to manage your own mapping from logical key
- * to index.</p>
+ * <p>For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means
+ * IndexedChronicle "knows" where the Nth object resides at in memory, thus the name "Indexed". But this index is just
+ * sequential index, first object has index 0, second object has index 1, and so on. If you want to access objects with
+ * other logical keys you have to manage your own mapping from logical key to index.</p>
  *
- * Indexing and data storage are achieved using two backing (memory-mapped) files:
- * <ul>
- * <li>a data file called &#60;base file name&#62;.data</li>
- * <li>an index file called &#60;base file name&#62;.index</li>
- * </ul>
- * , <tt>base file name</tt> (or <tt>basePath</tt>) is provided on construction.
+ * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data file called &#60;base
+ * file name&#62;.data</li> <li>an index file called &#60;base file name&#62;.index</li> </ul> , <tt>base file name</tt>
+ * (or <tt>basePath</tt>) is provided on construction.
  *
  * @author peter.lawrey
  */
@@ -64,30 +58,28 @@ public class IndexedChronicle implements Chronicle {
     private volatile boolean closed = false;
 
     /**
-     * Creates a new instance of IndexedChronicle having the specified <tt>basePath</tt> (the base name
-     * of the two backing files).
+     * Creates a new instance of IndexedChronicle having the specified <tt>basePath</tt> (the base name of the two
+     * backing files).
      *
      * @param basePath the base name of the files backing this IndexChronicle
-     *
-     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing,
-     * writable regular file and a new regular file of that name cannot be created, or if some
-     * other error occurs while opening or creating the file
+     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing, writable regular file
+     *                               and a new regular file of that name cannot be created, or if some other error
+     *                               occurs while opening or creating the file
      */
     public IndexedChronicle(@NotNull String basePath) throws IOException {
         this(basePath, ChronicleConfig.DEFAULT);
     }
 
     /**
-     * Creates a new instance of IndexedChronicle as specified by the provided
-     * {@link net.openhft.chronicle.ChronicleConfig} and having the specified <tt>basePath</tt> (the base name
-     * of the two backing files).
+     * Creates a new instance of IndexedChronicle as specified by the provided {@link
+     * net.openhft.chronicle.ChronicleConfig} and having the specified <tt>basePath</tt> (the base name of the two
+     * backing files).
      *
      * @param basePath the base name of the files backing this IndexChronicle
-     * @param config the ChronicleConfig based on which the current IndexChronicle should be constructed
-     *
-     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing,
-     * writable regular file and a new regular file of that name cannot be created, or if some
-     * other error occurs while opening or creating the file
+     * @param config   the ChronicleConfig based on which the current IndexChronicle should be constructed
+     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing, writable regular file
+     *                               and a new regular file of that name cannot be created, or if some other error
+     *                               occurs while opening or creating the file
      */
     public IndexedChronicle(@NotNull String basePath, @NotNull ChronicleConfig config) throws IOException {
         this.basePath = basePath;
@@ -98,15 +90,15 @@ public class IndexedChronicle implements Chronicle {
             parentFile.mkdirs();
         }
 
-        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"),config.indexBlockSize());
-        this.dataFileCache  = VanillaMappedBlocks.readWrite(new File(basePath + ".data" ),config.dataBlockSize());
+        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"), config.indexBlockSize());
+        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"), config.dataBlockSize());
 
         findTheLastIndex();
     }
 
     /**
-     * Checks if this instance of IndexedChronicle is closed or not.
-     * If closed an {@link java.lang.IllegalStateException} will be thrown.
+     * Checks if this instance of IndexedChronicle is closed or not. If closed an {@link
+     * java.lang.IllegalStateException} will be thrown.
      *
      * @throws java.lang.IllegalStateException if this IndexChronicle is close
      */
@@ -115,8 +107,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the {@link net.openhft.chronicle.ChronicleConfig} that has been used to create
-     * the current instance of IndexedChronicle
+     * Returns the {@link net.openhft.chronicle.ChronicleConfig} that has been used to create the current instance of
+     * IndexedChronicle
      *
      * @return the ChronicleConfig used to create this IndexChronicle
      */
@@ -125,17 +117,16 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously
-     * written into this {@link net.openhft.chronicle.Chronicle}. Basically the same value as
-     * returned by {@link IndexedChronicle#lastWrittenIndex()}, but does it by looking at the
-     * content of the backing files and figuring it out from there.
+     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously written into this {@link
+     * net.openhft.chronicle.Chronicle}. Basically the same value as returned by {@link
+     * IndexedChronicle#lastWrittenIndex()}, but does it by looking at the content of the backing files and figuring it
+     * out from there.
      *
-     * <p>A side effect of the method is that it also stores the obtained value and it can and
-     * will be used by subsequent calls of {@link IndexedChronicle#lastWrittenIndex()}.</p>
+     * <p>A side effect of the method is that it also stores the obtained value and it can and will be used by
+     * subsequent calls of {@link IndexedChronicle#lastWrittenIndex()}.</p>
      *
-     * <p>The constructors of IndexedChronicle automatically call
-     * this method so they properly handle the backing file being both empty or non-empty at the
-     * start.</p>
+     * <p>The constructors of IndexedChronicle automatically call this method so they properly handle the backing file
+     * being both empty or non-empty at the start.</p>
      *
      * @return the index of the most recent Excerpt written into this Chronicle
      */
@@ -148,7 +139,7 @@ public class IndexedChronicle implements Chronicle {
 
         try {
             size = indexFileCache.size();
-        } catch(Exception e) {
+        } catch (Exception e) {
             return -1;
         }
 
@@ -189,8 +180,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the number of {@link net.openhft.chronicle.Excerpt}s that have been written
-     * into this {@link net.openhft.chronicle.Chronicle}.
+     * Returns the number of {@link net.openhft.chronicle.Excerpt}s that have been written into this {@link
+     * net.openhft.chronicle.Chronicle}.
      *
      * @return the number of Excerpts previously written into this Chronicle
      */
@@ -206,11 +197,10 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the base file name backing this instance of IndexChronicle. Index chronicle uses two files:
-     * <ul>
-     * <li>a data file called &#60;base file name&#62;.data</li>
-     * <li>an index file called &#60;base file name&#62;.index</li>
+     * Returns the base file name backing this instance of IndexChronicle. Index chronicle uses two files: <ul> <li>a
+     * data file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file name&#62;.index</li>
      * </ul>
+     *
      * @return the base file name backing this IndexChronicle
      */
     @Override
@@ -231,11 +221,10 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.Excerpt} which can be used
-     * for random access to the data stored in this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.Excerpt} which can be used for random access to the data
+     * stored in this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.Excerpt} for this Chronicle
-     *
      * @throws IOException if an I/O error occurs
      */
     @NotNull
@@ -244,16 +233,15 @@ public class IndexedChronicle implements Chronicle {
         final Excerpt excerpt = new IndexedExcerpt();
 
         return !config.useCheckedExcerpt()
-            ? excerpt
-            : new CheckedExcerpt(excerpt);
+                ? excerpt
+                : new CheckedExcerpt(excerpt);
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.ExcerptTailer} which can be used
-     * for sequential reads from this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.ExcerptTailer} which can be used for sequential reads from
+     * this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.ExcerptTailer} for this Chronicle
-     *
      * @throws IOException if an I/O error occurs
      */
     @NotNull
@@ -263,11 +251,10 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.ExcerptAppender} which can be used
-     * for sequential writes into this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.ExcerptAppender} which can be used for sequential writes
+     * into this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.ExcerptAppender} for this Chronicle
-     *
      * @throws IOException if an I/O error occurs
      */
     @NotNull
@@ -276,13 +263,13 @@ public class IndexedChronicle implements Chronicle {
         final ExcerptAppender appender = new IndexedExcerptAppender();
 
         return !config.useCheckedExcerpt()
-            ? appender
-            : new CheckedExcerpt(appender);
+                ? appender
+                : new CheckedExcerpt(appender);
     }
 
     /**
-     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously
-     * written into this {@link net.openhft.chronicle.Chronicle}. Basically <tt>size() - 1</tt>.
+     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously written into this {@link
+     * net.openhft.chronicle.Chronicle}. Basically <tt>size() - 1</tt>.
      *
      * @return the index of the most recent Excerpt written into this Chronicle
      */
@@ -329,6 +316,25 @@ public class IndexedChronicle implements Chronicle {
         long indexPositionAddr;
         boolean padding = true;
 
+        public String dumpState() {
+            return "{" +
+                    "cacheLineMask=" + cacheLineMask +
+                    "\ndataBlockSize=" + dataBlockSize +
+                    "\nindexBlockSize=" + indexBlockSize +
+                    "\nindexEntriesPerLine=" + indexEntriesPerLine +
+                    "\nindexEntriesPerBlock=" + indexEntriesPerBlock +
+                    "\ncacheLineSize=" + cacheLineSize +
+                    "\nindex=" + index +
+                    "\nindexStartAddr=" + indexStartAddr +
+                    "\nindexStartOffset=" + indexStartOffset +
+                    "\nindexBaseForLine=" + indexBaseForLine +
+                    "\ndataStartAddr=" + dataStartAddr +
+                    "\ndataStartOffset=" + dataStartOffset +
+                    "\nindexPositionAddr=" + indexPositionAddr +
+                    "\npadding=" + padding +
+                    '}';
+        }
+
         // the start of this entry
         // inherited - long startAddr;
         // inherited - long positionAddr;
@@ -360,11 +366,7 @@ public class IndexedChronicle implements Chronicle {
 
         protected ExcerptCommon toEndForRead0() {
             index = IndexedChronicle.this.size() - 1;
-            try {
-                indexForRead(index);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+            indexForRead(index);
             return this;
         }
 
@@ -378,50 +380,54 @@ public class IndexedChronicle implements Chronicle {
             return this;
         }
 
-        boolean indexForRead(long l) throws IOException {
-            if (l < 0) {
-                setIndexBuffer(0, true);
-                index = -1;
-                padding = true;
-                return false;
-            }
-            long indexLookup = l / indexEntriesPerBlock;
-            setIndexBuffer(indexLookup, true);
+        boolean indexForRead(long l) {
+            try {
+                if (l < 0) {
+                    setIndexBuffer(0, true);
+                    index = -1;
+                    padding = true;
+                    return false;
+                }
+                long indexLookup = l / indexEntriesPerBlock;
+                long indexLookupMod = l % indexEntriesPerBlock;
 
-            long indexLookupMod = l % indexEntriesPerBlock;
-            int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
-            int indexLineStart = (int) (indexLookupMod / indexEntriesPerLine * cacheLineSize);
-            int inLine = (indexLineEntry << 2) + 8;
+                setIndexBuffer(indexLookup, true);
 
-            int dataOffsetEnd = UNSAFE.getInt(indexStartAddr + indexLineStart + inLine);
+                int indexLineEntry = (int) (indexLookupMod % indexEntriesPerLine);
+                int indexLineStart = (int) (indexLookupMod / indexEntriesPerLine * cacheLineSize);
+                int inLine = (indexLineEntry << 2) + 8;
 
-            indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
-            indexPositionAddr = indexStartAddr + indexLineStart + inLine;
+                int dataOffsetEnd = UNSAFE.getInt(indexStartAddr + indexLineStart + inLine);
 
-            long dataOffsetStart = inLine == 0
-                ? indexBaseForLine
-                : (indexBaseForLine + Math.abs(UNSAFE.getInt(indexPositionAddr - 4)));
+                indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
+                indexPositionAddr = indexStartAddr + indexLineStart + inLine;
 
-            long dataLookup = dataOffsetStart / dataBlockSize;
-            long dataLookupMod = dataOffsetStart % dataBlockSize;
-            setDataBuffer(dataLookup);
+                long dataOffsetStart = inLine == 0
+                        ? indexBaseForLine
+                        : (indexBaseForLine + Math.abs(UNSAFE.getInt(indexPositionAddr - 4)));
 
-            startAddr = positionAddr = dataStartAddr + dataLookupMod;
-            index = l;
-            if (dataOffsetEnd > 0) {
-                limitAddr = dataStartAddr + (indexBaseForLine + dataOffsetEnd - dataLookup * dataBlockSize);
-                indexPositionAddr += 4;
-                padding = false;
-                return true;
-            }
-            else if (dataOffsetEnd == 0) {
-                limitAddr = startAddr;
-                padding = false;
-                return false;
-            }
-            else /* if (dataOffsetEnd < 0) */ {
-                padding = true;
-                return false;
+                long dataLookup = dataOffsetStart / dataBlockSize;
+                long dataLookupMod = dataOffsetStart % dataBlockSize;
+                setDataBuffer(dataLookup);
+                this.dataStartOffset = dataLookup * dataBlockSize;
+
+                startAddr = positionAddr = dataStartAddr + dataLookupMod;
+                index = l;
+                if (dataOffsetEnd > 0) {
+                    limitAddr = dataStartAddr + (indexBaseForLine + dataOffsetEnd - dataStartOffset);
+                    indexPositionAddr += 4;
+                    padding = false;
+                    return true;
+                } else if (dataOffsetEnd == 0) {
+                    limitAddr = startAddr;
+                    padding = false;
+                    return false;
+                } else /* if (dataOffsetEnd < 0) */ {
+                    padding = true;
+                    return false;
+                }
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
             }
         }
 
@@ -432,13 +438,13 @@ public class IndexedChronicle implements Chronicle {
 
             indexBuffer = IndexedChronicle.this.indexFileCache.acquire(index);
             indexPositionAddr = indexStartAddr = indexBuffer.address();
+            indexStartOffset = index * indexBlockSize;
         }
 
         void indexForAppender(long l) throws IOException {
             if (l < 0) {
                 throw new IndexOutOfBoundsException("index: " + l);
-            }
-            else if (l == 0) {
+            } else if (l == 0) {
                 indexStartOffset = 0;
                 loadIndexBuffer();
                 dataStartOffset = 0;
@@ -583,11 +589,8 @@ public class IndexedChronicle implements Chronicle {
         @Override
         public boolean index(long l) {
             checkNotClosed();
-            try {
-                return indexForRead(l);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+
+            return indexForRead(l);
         }
 
         @Override
@@ -666,7 +669,7 @@ public class IndexedChronicle implements Chronicle {
                     return indexForRead(index() + 1);
                 }
                 return false;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 return false;
             }
         }
@@ -717,13 +720,11 @@ public class IndexedChronicle implements Chronicle {
                     lo1 = mid + 1;
                     if (both)
                         lo2 = lo1;
-                }
-                else if (cmp > 0) {
+                } else if (cmp > 0) {
                     hi1 = mid - 1;
                     if (both)
                         hi2 = hi1;
-                }
-                else {
+                } else {
                     hi1 = mid - 1;
                     if (both)
                         lo2 = mid + 1;
@@ -744,8 +745,7 @@ public class IndexedChronicle implements Chronicle {
 
                 if (cmp <= 0) {
                     lo2 = mid + 1;
-                }
-                else {
+                } else {
                     hi2 = mid - 1;
                 }
             }
@@ -775,7 +775,7 @@ public class IndexedChronicle implements Chronicle {
 
             if (capacity >= IndexedChronicle.this.config.dataBlockSize()) {
                 throw new IllegalArgumentException(
-                    "Capacity too large " + capacity + " >= " + IndexedChronicle.this.config.dataBlockSize());
+                        "Capacity too large " + capacity + " >= " + IndexedChronicle.this.config.dataBlockSize());
             }
 
             // if the capacity is to large, roll the previous entry, and there was one
@@ -855,7 +855,7 @@ public class IndexedChronicle implements Chronicle {
             super.finish();
             if (index != IndexedChronicle.this.size())
                 throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
-                    + chronicle().size());
+                        + chronicle().size());
 
             // push out the entry is available. This is what the reader polls.
             // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
@@ -935,11 +935,8 @@ public class IndexedChronicle implements Chronicle {
         @Override
         public boolean index(long l) {
             checkNotClosed();
-            try {
-                return indexForRead(l);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
+
+            return indexForRead(l);
         }
 
         @NotNull
@@ -962,9 +959,9 @@ public class IndexedChronicle implements Chronicle {
             long offset = UNSAFE.getInt(null, indexPositionAddr);
             if (offset == 0) {
                 offset = UNSAFE.getIntVolatile(null, indexPositionAddr);
-            }
-            if (offset == 0) {
-                return false;
+                if (offset == 0) {
+                    return false;
+                }
             }
 
             index++;
