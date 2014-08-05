@@ -169,14 +169,13 @@ public class VanillaChronicleConfig implements Cloneable {
         return this.indexCacheCapacity;
     }
 
-    //TODO: document
     public boolean useCheckedExcerpt() {
         return useCheckedExcerpt;
     }
 
-    //TODO: document
-    public void useCheckedExcerpt(boolean useCheckedExcerpt) {
+    public VanillaChronicleConfig useCheckedExcerpt(boolean useCheckedExcerpt) {
         this.useCheckedExcerpt = useCheckedExcerpt;
+        return this;
     }
 
     @NotNull
