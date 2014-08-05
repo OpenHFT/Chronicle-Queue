@@ -138,29 +138,51 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
 
         try {
-            final ExcerptAppender appender = source.createAppender();
-            final ExcerptTailer tailer = sink.createTailer();
+            final Thread at = new Thread("th-appender") {
+                public void run() {
+                    try {
+                        final ExcerptAppender appender = source.createAppender();
+                        for (int i = 0; i < RUNS; i++) {
+                            appender.startExcerpt();
 
-            for (int i = 0; i < RUNS; i++) {
-                appender.startExcerpt();
-                long value = 1000000000 + i;
-                appender.append(value).append(' ');
-                appender.finish();
-                Thread.sleep(10);
+                            long value = 1000000000 + i;
+                            appender.append(value).append(' ');
+                            appender.finish();
 
-                // busy loop
-                while(!tailer.nextIndex());
+                            sleep(10);
+                        }
 
-                assertEquals("i: " + i, value, tailer.parseLong());
-                assertEquals("i: " + i, 0, tailer.remaining());
-                tailer.finish();
-            }
+                        appender.close();
+                    } catch(Exception e) {
+                    }
+                }
+            };
 
-            appender.close();
-            tailer.close();
+            final Thread tt = new Thread("th-tailer") {
+                public void run() {
+                    try {
+                        final ExcerptTailer tailer = sink.createTailer();
+                        for (int i = 0; i < RUNS; i++) {
+                            while (!tailer.nextIndex()) ;
 
-            sink.checkCounts(1, 1);
-            source.checkCounts(1, 1);
+                            long value = 1000000000 + i;
+                            assertEquals("i: " + i, value, tailer.parseLong());
+                            assertEquals("i: " + i, 0, tailer.remaining());
+
+                            tailer.finish();
+                        }
+
+                        tailer.close();
+                    } catch(Exception e) {
+                    }
+                }
+            };
+
+            at.start();
+            tt.start();
+
+            at.join();
+            tt.join();
         } finally {
             sink.close();
             sink.clear();
@@ -186,59 +208,6 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
             .cycleFormat("yyyyMMddHHmmss")
             .indexBlockSize(16L << 10);
 
-        final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 0);
-        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
-
-        try {
-            final ExcerptAppender appender = source.createAppender();
-            final ExcerptTailer tailer = sink.createTailer();
-
-            for (int i = 0; i < RUNS; i++) {
-                appender.startExcerpt();
-                long value = 1000000000 + i;
-                appender.append(value).append(' ');
-                appender.finish();
-                Thread.sleep(100);
-
-                // busy loop
-                while(!tailer.nextIndex());
-
-                assertEquals("i: " + i, value, tailer.parseLong());
-                assertEquals("i: " + i, 0, tailer.remaining());
-                tailer.finish();
-            }
-
-            appender.close();
-            tailer.close();
-
-            sink.checkCounts(1, 1);
-            source.checkCounts(1, 1);
-        } finally {
-            sink.close();
-            sink.clear();
-
-            source.close();
-            source.clear();
-
-            assertFalse(new File(sinkBasePath).exists());
-            assertFalse(new File(sourceBasePath).exists());
-        }
-    }
-
-    @Ignore
-    @Test
-    public void testReplicationWithRolling3() throws Exception {
-        final int RUNS = 100;
-
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
-
-        final VanillaChronicleConfig config = new VanillaChronicleConfig()
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10);
-
         final ChronicleSource source = new ChronicleSource(
             new VanillaChronicle(sourceBasePath, config), 0);
 
@@ -246,29 +215,51 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
             new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
 
         try {
-            final ExcerptAppender appender = source.createAppender();
-            final ExcerptTailer tailer = sink.createTailer();
+            final Thread at = new Thread("th-appender") {
+                public void run() {
+                    try {
+                        final ExcerptAppender appender = source.createAppender();
+                        for (int i = 0; i < RUNS; i++) {
+                            appender.startExcerpt();
 
-            for (int i = 0; i < RUNS; i++) {
-                appender.startExcerpt();
-                long value = 1000000000 + i;
-                appender.append(value).append(' ');
-                appender.finish();
-                Thread.sleep(100);
+                            long value = 1000000000 + i;
+                            appender.append(value).append(' ');
+                            appender.finish();
 
-                // busy loop
-                while(!tailer.nextIndex());
+                            sleep(100);
+                        }
 
-                assertEquals("i: " + i, value, tailer.parseLong());
-                assertEquals("i: " + i, 0, tailer.remaining());
-                tailer.finish();
-            }
+                        appender.close();
+                    } catch(Exception e) {
+                    }
+                }
+            };
 
-            appender.close();
-            tailer.close();
+            final Thread tt = new Thread("th-tailer") {
+                public void run() {
+                    try {
+                        final ExcerptTailer tailer = sink.createTailer();
+                        for (int i = 0; i < RUNS; i++) {
+                            while (!tailer.nextIndex()) ;
 
-            sink.checkCounts(1, 1);
-            source.checkCounts(1, 1);
+                            long value = 1000000000 + i;
+                            assertEquals("i: " + i, value, tailer.parseLong());
+                            assertEquals("i: " + i, 0, tailer.remaining());
+
+                            tailer.finish();
+                        }
+
+                        tailer.close();
+                    } catch(Exception e) {
+                    }
+                }
+            };
+
+            at.start();
+            tt.start();
+
+            at.join();
+            tt.join();
         } finally {
             sink.close();
             sink.clear();
