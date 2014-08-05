@@ -30,7 +30,7 @@ public class ChronicleSourceConfig implements Cloneable {
         minBufferSize = 256 * 1024;
         heartbeatInterval = 2500;
         maxMessages = 128;
-        selectTimeout = 0;
+        selectTimeout = 1000;
     }
 
     // *************************************************************************

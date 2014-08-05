@@ -15,19 +15,16 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
 
@@ -37,9 +34,6 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
 
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
-        assertNotNull(sourceBasePath);
-        assertNotNull(sinkBasePath);
-
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath), 0);
         final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
 
@@ -57,8 +51,8 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
 
                 long val = tailer.parseLong();
                 //System.out.println("" + val);
-                Assert.assertEquals("i: " + i, value, val);
-                Assert.assertEquals("i: " + i, 0, tailer.remaining());
+                assertEquals("i: " + i, value, val);
+                assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
 
@@ -106,8 +100,8 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
                 assertTrue(tailer.nextIndex());
                 long val = tailer.parseLong();
                 //System.out.println(val);
-                Assert.assertEquals("i: " + i, value, val);
-                Assert.assertEquals("i: " + i, 0, tailer.remaining());
+                assertEquals("i: " + i, value, val);
+                assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
 
@@ -133,14 +127,12 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
 
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
-        assertNotNull(sourceBasePath);
-        assertNotNull(sinkBasePath);
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000, false);
-        config.cycleFormat("yyyyMMddHHmmss");
-        config.indexBlockSize(16L << 10);
+        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10);
 
         final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 0);
         final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
@@ -159,20 +151,21 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
                 // busy loop
                 while(!tailer.nextIndex());
 
-                Assert.assertEquals("i: " + i, value, tailer.parseLong());
-                Assert.assertEquals("i: " + i, 0, tailer.remaining());
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
 
             appender.close();
             tailer.close();
+
+            sink.checkCounts(1, 1);
+            source.checkCounts(1, 1);
         } finally {
             sink.close();
-            sink.checkCounts(1, 1);
             sink.clear();
 
             source.close();
-            source.checkCounts(1, 1);
             source.clear();
 
             assertFalse(new File(sourceBasePath).exists());
@@ -180,24 +173,21 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         }
     }
 
-
     @Test
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
 
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
-        assertNotNull(sourceBasePath);
-        assertNotNull(sinkBasePath);
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000, false);
-        config.cycleFormat("yyyyMMddHHmmss");
-        config.indexBlockSize(16L << 10);
+        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10);
 
-        final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 55555);
-        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 55555);
+        final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 0);
+        final ChronicleSink sink = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -213,25 +203,81 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
                 // busy loop
                 while(!tailer.nextIndex());
 
-                long val = tailer.parseLong();
-                Assert.assertEquals("i: " + i, value, val);
-                Assert.assertEquals("i: " + i, 0, tailer.remaining());
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
                 tailer.finish();
             }
 
             appender.close();
             tailer.close();
+
+            sink.checkCounts(1, 1);
+            source.checkCounts(1, 1);
         } finally {
             sink.close();
-            sink.checkCounts(1, 1);
             sink.clear();
 
             source.close();
-            source.checkCounts(1, 1);
             source.clear();
 
-            assertFalse(new File(sourceBasePath).exists());
             assertFalse(new File(sinkBasePath).exists());
+            assertFalse(new File(sourceBasePath).exists());
+        }
+    }
+
+    @Ignore
+    @Test
+    public void testReplicationWithRolling3() throws Exception {
+        final int RUNS = 100;
+
+        final String sourceBasePath = getVanillaTestPath("-source");
+        final String sinkBasePath = getVanillaTestPath("-sink");
+
+        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10);
+
+        final ChronicleSource source = new ChronicleSource(
+            new VanillaChronicle(sourceBasePath, config), 0);
+
+        final ChronicleSink sink = new ChronicleSink(
+            new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
+
+        try {
+            final ExcerptAppender appender = source.createAppender();
+            final ExcerptTailer tailer = sink.createTailer();
+
+            for (int i = 0; i < RUNS; i++) {
+                appender.startExcerpt();
+                long value = 1000000000 + i;
+                appender.append(value).append(' ');
+                appender.finish();
+                Thread.sleep(100);
+
+                // busy loop
+                while(!tailer.nextIndex());
+
+                assertEquals("i: " + i, value, tailer.parseLong());
+                assertEquals("i: " + i, 0, tailer.remaining());
+                tailer.finish();
+            }
+
+            appender.close();
+            tailer.close();
+
+            sink.checkCounts(1, 1);
+            source.checkCounts(1, 1);
+        } finally {
+            sink.close();
+            sink.clear();
+
+            source.close();
+            source.clear();
+
+            assertFalse(new File(sinkBasePath).exists());
+            assertFalse(new File(sourceBasePath).exists());
         }
     }
 
@@ -284,7 +330,7 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         System.out.println("Sink1 reading first 50 items then stopping");
         for( int count=0; count < 50 ;) {
             if(tailer1.nextIndex()) {
-                Assert.assertEquals(1000000000 + count, tailer1.parseLong());
+                assertEquals(1000000000 + count, tailer1.parseLong());
                 tailer1.finish();
 
                 count++;
@@ -300,13 +346,13 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
 
         //Take the tailer to the last index (item 50) and start reading from there.
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
-        Assert.assertEquals(1000000000 + 49, tailer2.parseLong());
+        assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
         
         System.out.println("Sink2 restarting to continue to read the next 50 items");
         for(int count=50 ; count < 100 ; ) {
             if(tailer2.nextIndex()) {
-                Assert.assertEquals(1000000000 + count, tailer2.parseLong());
+                assertEquals(1000000000 + count, tailer2.parseLong());
                 tailer2.finish();
 
                 count++;

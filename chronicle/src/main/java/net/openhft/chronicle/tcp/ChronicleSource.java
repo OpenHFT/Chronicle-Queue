@@ -29,6 +29,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +51,7 @@ public class ChronicleSource implements Chronicle {
     private volatile boolean closed;
     private long lastUnpausedNS = 0;
     private int maxMessages;
+    private List<ChronicleSourceSocketHandler> handlers;
 
     public ChronicleSource(@NotNull final Chronicle chronicle, final int port) throws IOException {
         this(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
@@ -109,10 +111,11 @@ public class ChronicleSource implements Chronicle {
         closed = true;
 
         try {
-            chronicle.close();
             server.close();
             service.shutdownNow();
-            service.awaitTermination(10000, TimeUnit.MILLISECONDS);
+            service.awaitTermination(10, TimeUnit.SECONDS);
+
+            chronicle.close();
         } catch (IOException e) {
             logger.warn("Error closing server port", e);
         } catch (InterruptedException ie) {
@@ -164,7 +167,7 @@ public class ChronicleSource implements Chronicle {
         }
     }
 
-    protected Runnable createSocketHandler(SocketChannel channel) throws IOException {
+    protected Runnable createSocketHandler(final SocketChannel channel) throws IOException {
         return (chronicle instanceof IndexedChronicle)
             ? new IndexedSocketHandler(channel)
             : new VanillaSocketHandler(channel);
@@ -193,8 +196,9 @@ public class ChronicleSource implements Chronicle {
             try {
                 while (!closed) {
                     selector.select();
-                    Set<SelectionKey> keys = selector.keys();
-                    for (SelectionKey key : keys) {
+
+                    final Set<SelectionKey> keys = selector.keys();
+                    for (final SelectionKey key : keys) {
                         if (key.isAcceptable()) {
                             final SocketChannel socket = server.accept();
                             socket.configureBlocking(true);
