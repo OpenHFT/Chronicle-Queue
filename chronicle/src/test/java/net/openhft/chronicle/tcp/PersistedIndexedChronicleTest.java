@@ -41,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author peter.lawrey
  */
-public class InProcessIndexedChronicleTest extends InProcessChronicleTestBase {
+public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
 
     public static final int PORT = 12345;
 

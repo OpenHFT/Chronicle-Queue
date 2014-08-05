@@ -24,11 +24,13 @@ public class ChronicleSourceConfig implements Cloneable {
     private int maxMessages;
     private int minBufferSize;
     private long heartbeatInterval;
+    private long selectTimeout;
 
     private ChronicleSourceConfig() {
         minBufferSize = 256 * 1024;
         heartbeatInterval = 2500;
         maxMessages = 128;
+        selectTimeout = 0;
     }
 
     // *************************************************************************
@@ -60,6 +62,19 @@ public class ChronicleSourceConfig implements Cloneable {
 
     public long heartbeatInterval() {
         return this.heartbeatInterval;
+    }
+
+    public ChronicleSourceConfig selectTimeout(long selectTimeout) {
+        if(selectTimeout < 0) {
+            throw new IllegalArgumentException("SelectTimeout must be >= 0");
+        }
+
+        this.selectTimeout = selectTimeout;
+        return this;
+    }
+
+    public long selectTimeout() {
+        return this.selectTimeout;
     }
 
     // *************************************************************************
