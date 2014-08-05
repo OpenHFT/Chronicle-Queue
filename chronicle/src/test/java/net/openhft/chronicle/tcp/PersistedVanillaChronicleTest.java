@@ -16,8 +16,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
