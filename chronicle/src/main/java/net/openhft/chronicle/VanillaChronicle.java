@@ -31,9 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
-import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_BITS;
-import static net.openhft.chronicle.VanillaChronicleConfig.INDEX_DATA_OFFSET_MASK;
-import static net.openhft.chronicle.VanillaChronicleConfig.THREAD_ID_MASK;
+import static net.openhft.chronicle.VanillaChronicleConfig.*;
 
 /**
  * Created by peter
@@ -47,8 +45,10 @@ public class VanillaChronicle implements Chronicle {
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
-    private final int indexBlockLongsBits, indexBlockLongsMask;
-    private final int dataBlockSizeBits, dataBlockSizeMask;
+    private final int indexBlockLongsBits;
+    private final int indexBlockLongsMask;
+    private final int dataBlockSizeBits;
+    private final int dataBlockSizeMask;
     private final int entriesForCycleBits;
     private final long entriesForCycleMask;
 
@@ -197,11 +197,11 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        final VanillaExcerpt excerpt = new VanillaExcerpt();
+        final Excerpt excerpt = config.useCheckedExcerpt()
+            ? new VanillaExcerpt()
+            : new VanillaCheckedExcerpt(new VanillaExcerpt());
 
-        return !config.useCheckedExcerpt()
-            ? excerpt
-            : new VanillaCheckedExcerpt(excerpt);
+        return excerpt;
     }
 
     @Override
@@ -427,12 +427,20 @@ public class VanillaChronicle implements Chronicle {
         public void close() {
             if(indexBytes != null) {
                 indexBytes.release();
+                indexBytes = null;
             }
             if(dataBytes != null) {
                 dataBytes.release();
+                dataBytes = null;
             }
 
             super.close();
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
         }
     }
 
@@ -545,10 +553,10 @@ public class VanillaChronicle implements Chronicle {
             int offset = (int) (startAddr - dataBytes.address());
             long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+
             lastWrittenIndex = indexValue;
             try {
-                final boolean appendDone = (indexBytes != null) && VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
-                if (!appendDone) {
+                if (!VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous)) {
                     if (indexBytes != null) {
                         indexBytes.release();
                         indexBytes = null;
@@ -608,6 +616,12 @@ public class VanillaChronicle implements Chronicle {
         public boolean unampped() {
             return ((VanillaExcerptCommon)common).unampped();
         }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
+        }
     }
 
     final class VanillaCheckedAppender extends CheckedExcerpt implements VanillaAppender {
@@ -623,6 +637,12 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public void startExcerpt(long capacity, int cycle) {
             ((VanillaAppender)common).startExcerpt(capacity, cycle);
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            close();
+            super.finalize();
         }
     }
 }
