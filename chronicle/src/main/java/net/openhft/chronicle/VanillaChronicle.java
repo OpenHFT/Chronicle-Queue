@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.VanillaChronicleConfig.*;
 
@@ -53,7 +54,7 @@ public class VanillaChronicle implements Chronicle {
     private final long entriesForCycleMask;
 
     //    private volatile int cycle;
-    private volatile long lastWrittenIndex;
+    private final AtomicLong lastWrittenIndex = new AtomicLong(-1L);
     private volatile boolean closed = false;
 
     public VanillaChronicle(String basePath) {
@@ -206,12 +207,12 @@ public class VanillaChronicle implements Chronicle {
 
     @Override
     public long lastWrittenIndex() {
-        return lastWrittenIndex;
+        return lastWrittenIndex.get();
     }
 
     @Override
     public long size() {
-        return lastWrittenIndex + 1;
+        return lastWrittenIndex.get() + 1;
     }
 
     @Override
@@ -258,6 +259,7 @@ public class VanillaChronicle implements Chronicle {
         private int lastDailyCount = Integer.MIN_VALUE;
         private int lastThreadId = Integer.MIN_VALUE;
         private int lastDataCount = Integer.MIN_VALUE;
+        private long lastWrittenIndex = 0;
 
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
@@ -286,6 +288,8 @@ public class VanillaChronicle implements Chronicle {
             return index;
         }
 
+        protected void setIndex(long index) { this.index = index; }
+
         /**
          * Return the last index written by the appender.
          *
@@ -294,7 +298,16 @@ public class VanillaChronicle implements Chronicle {
          */
         @Override
         public long lastWrittenIndex() {
-            return VanillaChronicle.this.lastWrittenIndex();
+            return lastWrittenIndex;
+        }
+
+        protected void setLastWrittenIndex(long lastWrittenIndex) {
+            this.lastWrittenIndex = lastWrittenIndex;
+            for(;;) {
+                long lwi=VanillaChronicle.this.lastWrittenIndex();
+                if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex))
+                    break;
+            }
         }
 
         @Override
@@ -474,6 +487,7 @@ public class VanillaChronicle implements Chronicle {
         private int appenderCycle;
         private int appenderThreadId;
         private boolean nextSynchronous;
+        private long[] positionArr = { 0L };
 
         VanillaAppenderImpl() {
             super();
@@ -554,19 +568,23 @@ public class VanillaChronicle implements Chronicle {
             long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
 
-            lastWrittenIndex = indexValue;
             try {
-                if (!VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous)) {
+                long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
+                if (position < 0) {
                     if (indexBytes != null) {
                         indexBytes.release();
                         indexBytes = null;
                     }
 
-                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous);
+                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
+                    setLastWrittenIndex(indexFrom(appenderCycle, positionArr[0]));
+                } else {
+                    setLastWrittenIndex(indexFrom(appenderCycle, position));
                 }
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+            setIndex(lastWrittenIndex()+1);
 
             dataBytes.positionAddr(positionAddr);
             dataBytes.alignPositionAddr(4);
@@ -574,6 +592,10 @@ public class VanillaChronicle implements Chronicle {
             if (nextSynchronous) {
                 dataBytes.force();
             }
+        }
+
+        private long indexFrom(int appenderCycle, long position) {
+            return ((long) appenderCycle <<entriesForCycleBits) + (position >> 3);
         }
 
         @NotNull

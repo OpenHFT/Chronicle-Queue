@@ -113,10 +113,12 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
-    public VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous) throws IOException {
+    public VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
         for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
             VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
-            if (append(vmb, indexValue, synchronous)) {
+            long position0 = append(vmb, indexValue, synchronous);
+            if (position0 >= 0) {
+                position[0] = position0;
                 return vmb;
             }
 
@@ -126,7 +128,7 @@ public class VanillaIndexCache implements Closeable {
         throw new AssertionError();
     }
 
-    public static boolean append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
+    public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
 
         // Position can be changed by another thread, so take a snapshot each loop so that
         // buffer overflows are not generated when advancing to the next position.
@@ -144,7 +146,7 @@ public class VanillaIndexCache implements Closeable {
                             bytes.force();
                         }
 
-                        return true;
+                        return position;
                     }
 
                     bytes.position(position + 8);
@@ -152,7 +154,7 @@ public class VanillaIndexCache implements Closeable {
             }
         }
 
-        return false;
+        return -1;
     }
 
     public static long countIndices(final VanillaMappedBytes buffer) {
