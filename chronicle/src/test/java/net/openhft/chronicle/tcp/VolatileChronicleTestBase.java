@@ -93,11 +93,11 @@ public class VolatileChronicleTestBase {
         return path;
     }
 
-    protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
+    protected ChronicleSource vanillaChronicleSource(String basePath, int port) throws IOException {
         return new ChronicleSource(new VanillaChronicle(basePath), port);
     }
 
-    protected Chronicle vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
+    protected ChronicleSource vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
         return new ChronicleSource(new VanillaChronicle(basePath, config), port);
     }
 }

@@ -220,7 +220,7 @@ public class ChronicleSource implements Chronicle {
 
 
     private final class SourceExcerpt extends WrappedExcerpt {
-        public SourceExcerpt(ExcerptCommon excerptCommon) {
+        public SourceExcerpt(final ExcerptCommon excerptCommon) {
             super(excerptCommon);
         }
 

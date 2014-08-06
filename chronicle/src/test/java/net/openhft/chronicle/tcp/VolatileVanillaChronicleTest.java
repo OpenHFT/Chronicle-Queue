@@ -21,6 +21,7 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -72,6 +73,8 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
         } finally {
             source.close();
             source.clear();
+
+            assertFalse(new File(basePathSource).exists());
         }
     }
 
@@ -111,6 +114,8 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
         } finally {
             source.close();
             source.clear();
+
+            assertFalse(new File(basePathSource).exists());
         }
     }
 
@@ -166,6 +171,8 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
         } finally {
             source.close();
             source.clear();
+
+            assertFalse(new File(basePathSource).exists());
         }
     }
 
@@ -173,7 +180,7 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
     public void testVanillaVolatileSink_005() throws Exception {
         final int port = BASE_PORT + 205;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+        final ChronicleSource source = vanillaChronicleSource(basePathSource, port);
         final Chronicle sink = volatileChronicleSink("localhost", port);
 
         final int items = 1000;
@@ -196,17 +203,20 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
 
             appender.close();
             tailer.close();
+            st.close();
 
             sink.close();
             sink.clear();
         } finally {
             source.close();
             source.clear();
+
+            assertFalse(new File(basePathSource).exists());
         }
     }
 
     @Test
-    public void testIndexedVolatileSink_006() throws Exception {
+    public void testVanillaVolatileSink_006() throws Exception {
         final int port = BASE_PORT + 206;
         final String basePathSource = getVanillaTestPath("-source");
         final Chronicle source = vanillaChronicleSource(basePathSource, port);
@@ -236,6 +246,7 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
             }
 
             appender.close();
+            st.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
             assertEquals(-1,tailer1.index());
@@ -256,6 +267,8 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
         } finally {
             source.close();
             source.clear();
+
+            assertFalse(new File(basePathSource).exists());
         }
     }
 }
