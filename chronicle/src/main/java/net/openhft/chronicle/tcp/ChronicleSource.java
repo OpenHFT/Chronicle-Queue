@@ -51,7 +51,6 @@ public class ChronicleSource implements Chronicle {
     private volatile boolean closed;
     private long lastUnpausedNS = 0;
     private int maxMessages;
-    private List<ChronicleSourceSocketHandler> handlers;
 
     public ChronicleSource(@NotNull final Chronicle chronicle, final int port) throws IOException {
         this(chronicle, ChronicleSourceConfig.DEFAULT, new InetSocketAddress(port));
