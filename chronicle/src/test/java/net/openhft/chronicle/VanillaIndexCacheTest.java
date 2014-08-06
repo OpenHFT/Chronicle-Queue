@@ -200,7 +200,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             public Void call() throws Exception {
                 long counter = startValue;
                 while (counter < endValue) {
-                    final VanillaMappedBytes vmb = cache.append(cycle, counter, false);
+                    final VanillaMappedBytes vmb = cache.append(cycle, counter, false, new long[1]);
                     if(vmb != null) {
                         vmb.release();
                     }
