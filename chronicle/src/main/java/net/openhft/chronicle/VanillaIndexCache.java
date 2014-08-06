@@ -238,5 +238,12 @@ public class VanillaIndexCache implements Closeable {
                 throw new AssertionError(e);
             }
         }
+
+        @Override
+        public String toString() {
+            return "IndexKey ["
+                + "cycle="       + cycle      + ","
+                + "indexCount="  + indexCount + "]";
+        }
     }
 }

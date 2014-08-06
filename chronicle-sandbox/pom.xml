@@ -26,7 +26,7 @@
         <relativePath/>
     </parent>
 
-    <version>3.2.1-SNAPSHOT</version>
+    <version>3.2.2-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
     <name>OpenHFT/Java-Chronicle/chronicle-sandbox</name>
     <artifactId>chronicle-sandbox</artifactId>
