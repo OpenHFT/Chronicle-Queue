@@ -528,6 +528,15 @@ public class ChronicleSink implements Chronicle {
 
             return true;
         }
+
+        @Override
+        public void close() {
+            if(this.appender != null) {
+                this.appender.close();
+            }
+
+            super.close();
+        }
     }
 
     /**
@@ -663,6 +672,15 @@ public class ChronicleSink implements Chronicle {
             }
 
             return true;
+        }
+
+        @Override
+        public void close() {
+            if(this.appender != null) {
+                this.appender.close();
+            }
+
+            super.close();
         }
     }
 

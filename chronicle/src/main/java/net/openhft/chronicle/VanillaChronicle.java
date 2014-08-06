@@ -547,32 +547,35 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
-            int length = ~(int) (positionAddr - startAddr);
-            NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
-            // position of the start not the end.
-            int offset = (int) (startAddr - dataBytes.address());
-            long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
-            long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+            if(dataBytes != null) {
+                int length = ~(int) (positionAddr - startAddr);
+                NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
 
-            lastWrittenIndex = indexValue;
-            try {
-                if (!VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous)) {
-                    if (indexBytes != null) {
-                        indexBytes.release();
-                        indexBytes = null;
+                // position of the start not the end.
+                int offset = (int) (startAddr - dataBytes.address());
+                long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
+                long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+
+                lastWrittenIndex = indexValue;
+                try {
+                    if (!VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous)) {
+                        if (indexBytes != null) {
+                            indexBytes.release();
+                            indexBytes = null;
+                        }
+
+                        indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous);
                     }
-
-                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous);
+                } catch (IOException e) {
+                    throw new AssertionError(e);
                 }
-            } catch (IOException e) {
-                throw new AssertionError(e);
-            }
 
-            dataBytes.positionAddr(positionAddr);
-            dataBytes.alignPositionAddr(4);
+                dataBytes.positionAddr(positionAddr);
+                dataBytes.alignPositionAddr(4);
 
-            if (nextSynchronous) {
-                dataBytes.force();
+                if (nextSynchronous) {
+                    dataBytes.force();
+                }
             }
         }
 

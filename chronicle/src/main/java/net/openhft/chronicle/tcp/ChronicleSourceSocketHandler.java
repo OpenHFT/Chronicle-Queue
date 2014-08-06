@@ -15,10 +15,13 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,30 +32,32 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-public abstract class ChronicleSourceSocketHandler implements Runnable {
-    private final ChronicleSource chronicle;
-    private final ChronicleSourceConfig config;
+public abstract class ChronicleSourceSocketHandler implements Runnable, Closeable {
     private final Logger logger;
+    private final Chronicle chronicle;
+    private final ChronicleSource source;
+    private final ChronicleSourceConfig config;
 
     protected final SocketChannel socket;
     protected final Selector selector;
     protected final ByteBuffer buffer;
+
     protected ExcerptTailer tailer;
     protected long lastHeartbeat;
     protected ChronicleTcp.Command command;
 
     protected ChronicleSourceSocketHandler(
-        final @NotNull ChronicleSource chronicle,
+        final @NotNull ChronicleSource source,
         final @NotNull SocketChannel socket,
         final @NotNull Logger logger) throws IOException {
-
-        this.chronicle = chronicle;
-        this.config = this.chronicle.config();
         this.logger = logger;
-        this.tailer = this.chronicle.createTailer();
+        this.source = source;
+        this.chronicle = this.source.chronicle();
+        this.config = this.source.config();
+        this.tailer = null;
         this.buffer = ChronicleTcp.createBuffer(1, ByteOrder.nativeOrder());
-        this.lastHeartbeat = 0;
         this.command = new ChronicleTcp.Command();
+        this.lastHeartbeat = 0;
 
         this.socket = socket;
         this.socket.configureBlocking(false);
@@ -63,17 +68,28 @@ public abstract class ChronicleSourceSocketHandler implements Runnable {
     }
 
     @Override
+    public void close() throws IOException {
+        if(this.tailer != null) {
+            this.tailer.close();
+            this.tailer = null;
+        }
+
+        if(this.socket.isOpen()) {
+            this.socket.close();
+        }
+    }
+
+    @Override
     public void run() {
         try {
+            tailer = chronicle.createTailer();
             socket.register(selector, SelectionKey.OP_READ);
 
-            while(!chronicle.closed()) {
+            while(!this.source.closed() && !Thread.currentThread().isInterrupted()) {
                 if (selector.select(this.config.selectTimeout()) > 0) {
                     final Set<SelectionKey> keys = selector.selectedKeys();
                     for (final Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
                         final SelectionKey key = it.next();
-                        final boolean stop = false;
-
                         if(key.isReadable()) {
                             if (!onRead(key)) {
                                 keys.clear();
@@ -88,13 +104,14 @@ public abstract class ChronicleSourceSocketHandler implements Runnable {
                             } else {
                                 it.remove();
                             }
+                        } else {
+                            it.remove();
                         }
                     }
                 }
             }
-
         } catch (Exception e) {
-            if (!chronicle.closed()) {
+            if (!this.source.closed()) {
                 String msg = e.getMessage();
                 if (msg != null &&
                     (msg.contains("reset by peer")
@@ -104,19 +121,13 @@ public abstract class ChronicleSourceSocketHandler implements Runnable {
                 } else {
                     logger.info("Connection {} died",socket, e);
                 }
-
-                try {
-                    if(this.socket.isOpen()) {
-                        this.socket.close();
-                    }
-                } catch(IOException ioe) {
-                    logger.warn("",e);
-                }
             }
         }
 
-        if(tailer != null) {
-            tailer.close();
+        try {
+            close();
+        } catch(IOException e) {
+            logger.warn("",e);
         }
     }
 
@@ -183,7 +194,7 @@ public abstract class ChronicleSourceSocketHandler implements Runnable {
 
     protected boolean onWrite(final SelectionKey key) throws IOException {
         final long now = System.currentTimeMillis();
-        if(!chronicle.closed() && !publishData()) {
+        if(!this.source.closed() && !publishData()) {
             if (lastHeartbeat <= now) {
                 sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
             }

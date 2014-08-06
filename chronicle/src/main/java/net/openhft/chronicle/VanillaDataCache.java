@@ -195,5 +195,13 @@ public class VanillaDataCache implements Closeable {
                 throw new AssertionError(e);
             }
         }
+
+        @Override
+        public String toString() {
+            return "DataKey ["
+                + "cycle="     + cycle     + ","
+                + "threadId="  + threadId  + ","
+                + "dataCount=" + dataCount + "]";
+        }
     }
 }
