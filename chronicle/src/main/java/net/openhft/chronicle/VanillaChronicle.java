@@ -561,10 +561,14 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
-            if(dataBytes != null) {
-                int length = ~(int) (positionAddr - startAddr);
-                NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
-                long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+            if(dataBytes == null)
+                return;
+            int length = ~(int) (positionAddr - startAddr);
+            NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
+            // position of the start not the end.
+            int offset = (int) (startAddr - dataBytes.address());
+            long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
+            long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
 
             try {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
@@ -584,12 +588,11 @@ public class VanillaChronicle implements Chronicle {
             }
             setIndex(lastWrittenIndex()+1);
 
-                dataBytes.positionAddr(positionAddr);
-                dataBytes.alignPositionAddr(4);
+            dataBytes.positionAddr(positionAddr);
+            dataBytes.alignPositionAddr(4);
 
-                if (nextSynchronous) {
-                    dataBytes.force();
-                }
+            if (nextSynchronous) {
+                dataBytes.force();
             }
         }
 
