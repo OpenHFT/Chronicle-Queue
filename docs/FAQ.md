@@ -1,6 +1,6 @@
 # Frequently Asked Questions about Chronicle
 
-## With a tight reader loop I see 100% utilization, will be no more processing capability left for anything else ?
+## With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
 ####  Question
 I looked at the demo and demo2 samples and noticed that the reader thread usually goes in tight loops, continually trying to read the next excerpt. As a result I noticed that one processor (the one doing the reading presumably) has a close to 100% utilization. If I have N processes each with one such reader thread then I assume N processors will have 100% utilization. If N exceeds the number of processors then the CPU utilization will be 100% and there will be no more processing capability left for anything else. Do you see any flaw in my reasoning?
