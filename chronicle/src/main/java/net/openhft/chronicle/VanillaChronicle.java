@@ -440,10 +440,13 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public void close() {
+            finished = true;
+
             if(indexBytes != null) {
                 indexBytes.release();
                 indexBytes = null;
             }
+
             if(dataBytes != null) {
                 dataBytes.release();
                 dataBytes = null;
@@ -507,6 +510,7 @@ public class VanillaChronicle implements Chronicle {
             startExcerpt(capacity, cycle());
         }
 
+        @Override
         public void startExcerpt(long capacity, int cycle) {
             checkNotClosed();
             try {
@@ -524,9 +528,13 @@ public class VanillaChronicle implements Chronicle {
                         indexBytes = null;
                     }
 
-                    dataBytes = dataCache.dataForLast(appenderCycle, appenderThreadId);
+
                     lastCycle = appenderCycle;
                     lastThreadId = appenderThreadId;
+                }
+
+                if(dataBytes == null || indexBytes == null) {
+                    dataBytes = dataCache.dataForLast(appenderCycle, appenderThreadId);
                 }
 
                 if (dataBytes.remaining() < capacity + 4) {

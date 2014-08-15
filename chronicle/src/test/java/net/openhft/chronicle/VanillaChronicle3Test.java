@@ -24,11 +24,54 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class VanillaChronicle3Test extends VanillaChronicleTestBase {
+
+
+    @Test
+    public void testFinishAfterClose() throws IOException {
+
+        final String basePath = getTestPath();
+        final VanillaChronicle chronicle = new VanillaChronicle(basePath);
+        final ExcerptAppender appender = chronicle.createAppender();
+        final ExcerptTailer tailer = chronicle.createTailer();
+
+        try {
+            appender.startExcerpt(8);
+            appender.writeLong(1);
+            appender.close();
+
+            assertTrue(appender.isFinished());
+
+            for(long i=0;i<5;i++) {
+                appender.startExcerpt(8);
+                appender.writeLong(i);
+                appender.close();
+            }
+
+            appender.startExcerpt(8);
+            appender.writeLong(999);
+            appender.finish();
+            appender.close();
+
+            assertTrue(tailer.nextIndex());
+            assertEquals(999, tailer.readLong());
+            tailer.finish();
+
+            assertFalse(tailer.nextIndex());
+            tailer.close();
+        } finally {
+            chronicle.checkCounts(1, 1);
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(basePath).exists());
+        }
+    }
 
     @Test
     public void testCheckedVanillaExcerpt_001() throws IOException {
