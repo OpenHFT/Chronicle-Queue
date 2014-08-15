@@ -1,5 +1,13 @@
 # Frequently Asked Questions about Chronicle
 
+## With a tight reader loop I see 100% utilization, will be no more processing capability left for anything else ?
+
+####  Question: I looked at the demo and demo2 samples and noticed that the reader thread usually goes in tight loops, continually trying to read the next excerpt. As a result I noticed that one processor (the one doing the reading presumably) has a close to 100% utilization. If I have N processes each with one such reader thread then I assume N processors will have 100% utilization. If N exceeds the number of processors then the CPU utilization will be 100% and there will be no more processing capability left for anything else. Do you see any flaw in my reasoning?
+
+#### Answer : Your reasoning is fine. If you want to minimise latency you want to have a small number of dedicated cpus. Most applications only need a small number of these critical threads. In fact 6 is the most I have ever seen for a tuned system and you can easily buy a server with much more cores than this.
+Part of the reason you don't need more cpus because by this point your bottleneck has moved somewhere else such as the memory bandwidth (in synthetic test) but more often its something on the network or an upstream/downstream services over which you have no control eg an exchange.
+
+
 ## What is Chronicle designed for?
 
 Chronicle is design to be a record everything of interest logger and persisted IPC.
