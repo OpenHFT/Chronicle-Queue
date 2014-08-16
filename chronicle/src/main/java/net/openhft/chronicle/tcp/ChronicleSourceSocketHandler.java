@@ -113,6 +113,10 @@ public abstract class ChronicleSourceSocketHandler implements Runnable, Closeabl
                     }
                 }
             }
+        } catch (EOFException e) {
+            if (!this.source.closed()) {
+                logger.info("Connection {} died",socket);
+            }
         } catch (Exception e) {
             if (!this.source.closed()) {
                 String msg = e.getMessage();
