@@ -125,7 +125,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testDataForLast() throws Exception {
+    public void testFindNextDataCount() throws Exception {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -137,9 +137,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
             final int threadId = AffinitySupport.getThreadId();
 
             // Check that the data file count starts at 0 when the data directory is empty
-            final VanillaMappedBytes vanillaBuffer0 = cache.dataForLast(cycle, threadId);
-            assertEquals("data-" + threadId + "-0", cache.fileFor(cycle, threadId).getName());
-            vanillaBuffer0.release();
+            assertEquals(0, cache.findNextDataCount(cycle, threadId));
 
             // Add some more data files into the directory - use discontinuous numbers to test reading
             VanillaMappedBytes vanillaBuffer1 = cache.dataFor(cycle, threadId, 1, true);
@@ -157,9 +155,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
             // Open a new cache and check that it reads the existing data files that were created above
             final VanillaDataCache cache2 = new VanillaDataCache(baseDir, 10 + 6, dateCache);
 
-            final VanillaMappedBytes lastVanillaBuffer = cache2.dataForLast(cycle, threadId);
-            assertEquals("data-" + threadId + "-4", cache2.fileFor(cycle, threadId).getName());
-            lastVanillaBuffer.release();
+            assertEquals(5, cache2.findNextDataCount(cycle, threadId));
 
             cache.checkCounts(1, 1);
             cache2.close();
