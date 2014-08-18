@@ -126,15 +126,16 @@ public class VanillaChronicle implements Chronicle {
      */
     public long lastIndex() {
         int cycle = (int) indexCache.lastCycle();
-        int lastIndexFile = indexCache.lastIndexFile(cycle, -1);
-        if (lastIndexFile >= 0) {
+        int lastIndexCount = indexCache.lastIndexFile(cycle, -1);
+        if (lastIndexCount >= 0) {
             try {
-                final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexFile, false);
+                final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexCount, false);
                 final long indices = VanillaIndexCache.countIndices(buffer);
-
                 buffer.release();
 
-                return ((cycle * config.entriesPerCycle()) + ((indices > 0) ? indices - 1 : 0));
+                final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
+                return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
+
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
