@@ -177,9 +177,9 @@
     </build>
 
     <scm>
-        <url>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</url>
-        <connection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</connection>
-        <developerConnection>scm:git:git@github.com:OpenHFT/Java-Chronicle.git</developerConnection>
+        <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
+        <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
+        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
         <tag>master</tag>
     </scm>
 
