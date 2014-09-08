@@ -144,7 +144,7 @@
                     </checkinComment>
                     <content>${project.reporting.outputDirectory}</content>
                     <skipDeletedFiles>true</skipDeletedFiles>
-                    <pubScmUrl>scm:git:git@github.com:OpenHFT/Java-Chronicle</pubScmUrl>
+                    <pubScmUrl>scm:git:git@github.com:OpenHFT/Chronicle-Queue</pubScmUrl>
                     <scmBranch>gh-pages</scmBranch>
                 </configuration>
             </plugin>
