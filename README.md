@@ -18,7 +18,7 @@ For working examples, have a look at the unit tests and demo module.
 
 
 ###  JavaDoc
-Check out our documentation at [JavaDoc] (http://openhft.github.io/Java-Chronicle/apidocs/)
+Check out our documentation at [JavaDoc] (http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ###  Support
 
