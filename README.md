@@ -1,6 +1,6 @@
 # Chronicle Queue
 
-Chronicle Queue sub milliseconds latency for Inter Process Comunication ( IPC ) yet is able to store every mesage:
+Chronicle Queue offers - Inter Process Comunication ( IPC ) with sub milliseconds latency yet it's able to store every mesage:
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_004_b.jpg)
 
