@@ -34,3 +34,5 @@ See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/
 [Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)
 
 [Forum for those learning about OpenHFT](https://groups.google.com/forum/?hl=en-GB#!forum/open-hft)
+
+[Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
