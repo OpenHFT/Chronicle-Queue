@@ -1,5 +1,5 @@
 # Chronicle Queue
-Micro second messaging , which stores to disk a complete history of all your messages.
+
 ![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
 Chronicle Queue sub milliseconds latency for Inter Process Comunication ( IPC ) yet is able to store every mesage:
 ![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_004_b.jpg)
