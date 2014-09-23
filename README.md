@@ -3,7 +3,10 @@ Micro second messaging , which stores to disk a complete history of all your mes
 
 ![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
 
-Persisted low latency logging and IPC messaging
+## Persisted low latency IPC messaging
+Chronicle Queue Stores every message.
+
+![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_004_b.jpg)
 
 It is available on maven central as
 
