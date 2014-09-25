@@ -2,7 +2,7 @@
 
 Inter Process Comunication ( IPC ) with sub millisecond latency and able to store every mesage:
 
-![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_004_b.jpg)
+![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
 It is available on maven central as
 
