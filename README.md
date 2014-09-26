@@ -1,3 +1,5 @@
+If you are running this in production and wish to have professionally supported code, please see http://openhft.net/support/
+
 # Chronicle Queue
 
 Inter Process Comunication ( IPC ) with sub millisecond latency and able to store every mesage:
