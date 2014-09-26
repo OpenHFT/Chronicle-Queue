@@ -1,4 +1,4 @@
-If you are running this in production and wish to have professionally supported code, please see http://openhft.net/support/
+If you are running this in production and wish to have professionally supported code - see http://openhft.net/support/
 
 # Chronicle Queue
 
