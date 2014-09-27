@@ -31,7 +31,7 @@
 
     <artifactId>chronicle-demo</artifactId>
 
-    <name>OpenHFT/Java-Chronicle/chronicle-demo</name>
+    <name>OpenHFT/Chronicle-Queue/chronicle-demo</name>
     <version>3.2.2-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
@@ -42,7 +42,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.6</version>
+                <version>3.4.7</version>
                 <scope>import</scope>
             </dependency>
 

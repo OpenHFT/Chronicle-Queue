@@ -33,7 +33,7 @@
     <version>3.2.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
-    <name>OpenHFT/Java-Chronicle/chronicle-test</name>
+    <name>OpenHFT/Chronicle-Queue/chronicle-test</name>
     <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <dependencyManagement>
@@ -42,7 +42,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.6</version>
+                <version>3.4.7</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
