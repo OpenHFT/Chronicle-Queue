@@ -8,14 +8,21 @@ Inter Process Comunication ( IPC ) with sub millisecond latency and able to stor
 
 It is available on maven central as
 
-<pre>
-&lt;dependency>
-    &lt;groupId>net.openhft&lt;/groupId>
-    &lt;artifactId>chronicle&lt;/artifactId>
-    &lt;version>2.0.3&lt;/version>
-&lt;/dependency>
-</pre>
+ 
+ 
+ 
+ 
+ ```xml
+<dependency>
+  <groupId>net.openhft</groupId>
+  <artifactId>chronicle</artifactId>
+  <version><!--replace with the latest version--></version>
+</dependency>
+```
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
+
+ 
 For working examples, have a look at the unit tests and demo module.
 
 
