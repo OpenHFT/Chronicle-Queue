@@ -8,10 +8,6 @@ Inter Process Comunication ( IPC ) with sub millisecond latency and able to stor
 
 It is available on maven central as
 
- 
- 
- 
- 
  ```xml
 <dependency>
   <groupId>net.openhft</groupId>
@@ -24,8 +20,6 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
 
  
 For working examples, have a look at the unit tests and demo module.
-
-
 
 ###  JavaDoc
 Check out our documentation at [JavaDoc] (http://openhft.github.io/Chronicle-Queue/apidocs/)
