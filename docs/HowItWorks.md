@@ -27,7 +27,7 @@ Appender is something like Iterator in Chronicle environment. You add data appen
 
 HashMap is more performant and lower GC than a B-Tree.  The advantage of a b-Tree is that it is sorted.  If you don't need this, use a hash map of some kind.
 
-## How it Really Works
+## Getting Started
 Lets see Chronicle in action with an example. In this example we simply will: Create a Chronicle, Put a record to chronicle and Read the record from chronicle.
 
 
