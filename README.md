@@ -33,7 +33,7 @@ See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/
 
 ---
 
-[Chronicle Wiki](https://github.com/OpenHFT/Java-Chronicle/wiki)
+[Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
 
 
 [Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)
