@@ -53,6 +53,7 @@ public class KafkaTestMain {
         ExcerptAppender e = chronicle.createAppender();
         int count = 50 * 1000 * 1000;
         for (int i = 0; i < count; i += batch_size) {
+            // tune for very large messages.
             e.startExcerpt(batch_size * (message_size + 4));
             for (int j = 0; j < batch_size; j++) {
                 e.writeInt(bytes.length);
