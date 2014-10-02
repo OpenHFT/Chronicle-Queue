@@ -24,14 +24,14 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.1</version>
-        <relativePath />
+        <relativePath>../../java-parent-pom/pom.xml</relativePath>
     </parent>
 
     <artifactId>chronicle</artifactId>
     <version>3.2.3-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
-    <name>OpenHTF/Java-Chronicle/chronicle</name>
+    <name>OpenHTF/Chronicle-Queue/chronicle</name>
     <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <dependencyManagement>

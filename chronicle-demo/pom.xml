@@ -31,8 +31,8 @@
 
     <artifactId>chronicle-demo</artifactId>
 
-    <name>OpenHFT/Java-Chronicle/chronicle-demo</name>
-    <version>3.2.2-SNAPSHOT</version>
+    <name>OpenHFT/Chronicle-Queue/chronicle-demo</name>
+    <version>3.2.3-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
     <dependencyManagement>

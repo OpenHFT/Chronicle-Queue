@@ -30,10 +30,10 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle-test</artifactId>
-    <version>3.2.2-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
-    <name>OpenHFT/Java-Chronicle/chronicle-test</name>
+    <name>OpenHFT/Chronicle-Queue/chronicle-test</name>
     <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <dependencyManagement>
@@ -249,7 +249,7 @@
             </activation>
             <properties>
                 <openhft.java.home>${env.JAVA_HOME_8}</openhft.java.home>
-                <openhft.java.version>1.7</openhft.java.version>
+                <openhft.java.version>1.8</openhft.java.version>
             </properties>
         </profile>
 
