@@ -1,4 +1,6 @@
-*Using Chronicle in production and wish to have professionally supported code - [find out more..](http://openhft.net/support/)*
+*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - [Contact Us](sales@higherfrequencytrading.com)*
+
+*Or you may already be using Chronicle and just want some help - [find out more..](http://openhft.net/support/)*
 
 # Chronicle Queue
 
@@ -8,17 +10,18 @@ Inter Process Comunication ( IPC ) with sub millisecond latency and able to stor
 
 It is available on maven central as
 
-<pre>
-&lt;dependency>
-    &lt;groupId>net.openhft&lt;/groupId>
-    &lt;artifactId>chronicle&lt;/artifactId>
-    &lt;version>2.0.3&lt;/version>
-&lt;/dependency>
-</pre>
+ ```xml
+<dependency>
+  <groupId>net.openhft</groupId>
+  <artifactId>chronicle</artifactId>
+  <version><!--replace with the latest version--></version>
+</dependency>
+```
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
+
+ 
 For working examples, have a look at the unit tests and demo module.
-
-
 
 ###  JavaDoc
 Check out our documentation at [JavaDoc] (http://openhft.github.io/Chronicle-Queue/apidocs/)
@@ -30,7 +33,7 @@ See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/
 
 ---
 
-[Chronicle Wiki](https://github.com/OpenHFT/Java-Chronicle/wiki)
+[Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
 
 
 [Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)

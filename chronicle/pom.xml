@@ -24,7 +24,7 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.1</version>
-        <relativePath />
+        <relativePath>../../java-parent-pom/pom.xml</relativePath>
     </parent>
 
     <artifactId>chronicle</artifactId>
