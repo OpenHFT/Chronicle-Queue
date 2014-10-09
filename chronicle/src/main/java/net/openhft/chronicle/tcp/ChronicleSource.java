@@ -32,7 +32,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -254,6 +253,7 @@ public class ChronicleSource implements Chronicle {
                 this.index = tailer.toEnd().index();
             }
 
+
             sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, this.index);
 
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
@@ -262,6 +262,7 @@ public class ChronicleSource implements Chronicle {
 
         @Override
         protected boolean publishData() throws IOException {
+            logger.info("publishData {}", index);
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
@@ -286,6 +287,7 @@ public class ChronicleSource implements Chronicle {
             buffer.clear();
             buffer.putInt((int) size);
             buffer.putLong(tailer.index());
+            logger.info("Sending {}", tailer.index());
 
             // for large objects send one at a time.
             if (size > buffer.capacity() / 2) {
