@@ -32,7 +32,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -253,6 +252,7 @@ public class ChronicleSource implements Chronicle {
             } else if (this.index == -2) {
                 this.index = tailer.toEnd().index();
             }
+
 
             sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, this.index);
 

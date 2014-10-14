@@ -815,7 +815,11 @@ public class ChronicleSink implements Chronicle {
         public boolean nextIndex() {
             try {
                 if(!connector.isOpen()) {
-                    return index(this.index);
+                    if(index(this.index)) {
+                        return nextIndex();
+                    } else {
+                        return false;
+                    }
                 }
 
                 if(!connector.read(ChronicleTcp.HEADER_SIZE + 8)) {
