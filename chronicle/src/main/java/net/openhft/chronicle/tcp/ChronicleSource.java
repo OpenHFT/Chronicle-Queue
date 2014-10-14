@@ -262,7 +262,6 @@ public class ChronicleSource implements Chronicle {
 
         @Override
         protected boolean publishData() throws IOException {
-            logger.info("publishData {}", index);
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
@@ -287,7 +286,6 @@ public class ChronicleSource implements Chronicle {
             buffer.clear();
             buffer.putInt((int) size);
             buffer.putLong(tailer.index());
-            logger.info("Sending {}", tailer.index());
 
             // for large objects send one at a time.
             if (size > buffer.capacity() / 2) {

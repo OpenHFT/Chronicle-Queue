@@ -307,7 +307,6 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
         ExcerptTailer tailer = null;
 
         try {
-            /*
             sink = volatileChronicleSink("localhost", port);
             tailer = sink.createTailer();
             assertFalse(tailer.nextIndex());
@@ -316,7 +315,6 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
             sink.close();
             sink.clear();
             sink = null;
-            */
 
             final ExcerptAppender appender = source.createAppender();
             appender.startExcerpt(8);
@@ -326,29 +324,24 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            /*
             sink = volatileChronicleSink("localhost", port);
             tailer = sink.createTailer().toStart();
             assertTrue("nextIndex should return true", tailer.nextIndex());
             assertEquals(1L, tailer.readLong());
+            tailer.finish();
+            assertTrue("nextIndex should return true", tailer.nextIndex());
+            assertEquals(2L, tailer.readLong());
+            tailer.finish();
             tailer.close();
+            tailer = null;
 
             sink.close();
             sink.clear();
             sink = null;
-            */
 
             sink = volatileChronicleSink("localhost", port);
             tailer = sink.createTailer().toEnd();
             assertFalse("nextIndex should return false", tailer.nextIndex());
-
-            appender.startExcerpt(8);
-            appender.writeLong(3);
-            appender.finish();
-
-            assertTrue("nextIndex should return true", tailer.nextIndex());
-            assertEquals(3L, tailer.readLong());
-            tailer.close();
 
             sink.close();
             sink.clear();
