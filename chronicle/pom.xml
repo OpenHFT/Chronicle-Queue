@@ -23,12 +23,12 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.1</version>
-        <relativePath>../../java-parent-pom/pom.xml</relativePath>
+        <version>1.1.2</version>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.2.3-SNAPSHOT</version>
+    <version>3.2.5-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
@@ -138,7 +138,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-scm-publish-plugin</artifactId>
                 <configuration>
-                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc</checkoutDirectory>
+                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc
+                    </checkoutDirectory>
                     <checkinComment>Publishing javadoc for ${project.artifactId}:${project.version}
                     </checkinComment>
                     <content>${project.reporting.outputDirectory}</content>
@@ -215,7 +216,8 @@
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
-        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
+        </developerConnection>
         <tag>master</tag>
     </scm>
 
