@@ -15,16 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle.tcp2;
 
-public class ChronicleTCP2 {
-
-    public static class TcpConnection {
-    }
-
-    public static class TcpInitiator {
-    }
-
-    public static class TcpAcceptor {
-    }
+public class ChronicleTcp2 {
+    public static final int HEADER_SIZE = 12;
+    public static final int INITIAL_BUFFER_SIZE = 64 * 1024;
+    public static final int IN_SYNC_LEN = -128;
+    public static final int PADDED_LEN = -127;
+    public static final int SYNC_IDX_LEN = -126;
 }
