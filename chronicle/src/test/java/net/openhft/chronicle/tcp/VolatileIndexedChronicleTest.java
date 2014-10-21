@@ -19,16 +19,27 @@
 package net.openhft.chronicle.tcp;
 
 
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshaller;
+import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
+
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
@@ -297,60 +308,31 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
 
     }
 
+    // *************************************************************************
+    // JIRA
+    // *************************************************************************
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
+     */
     @Test
-    public void testIndexedVolatileSink_007() throws Exception {
+    public void testIndexedJiraChron74() throws Exception {
         final int port = BASE_PORT + 107;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        Chronicle sink = null;
-        ExcerptTailer tailer = null;
+        testJiraChron74(port, source);
+    }
 
-        try {
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer();
-            assertFalse(tailer.nextIndex());
-            tailer.close();
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
+     */
+    @Test
+    public void testIndexedJiraChron75() throws Exception {
+        final int port = BASE_PORT + 108;
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            final ExcerptAppender appender = source.createAppender();
-            appender.startExcerpt(8);
-            appender.writeLong(1);
-            appender.finish();
-            appender.startExcerpt(8);
-            appender.writeLong(2);
-            appender.finish();
-
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer().toStart();
-            assertTrue("nextIndex should return true", tailer.nextIndex());
-            assertEquals(1L, tailer.readLong());
-            tailer.finish();
-            assertTrue("nextIndex should return true", tailer.nextIndex());
-            assertEquals(2L, tailer.readLong());
-            tailer.finish();
-            tailer.close();
-            tailer = null;
-
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer().toEnd();
-            assertFalse("nextIndex should return false", tailer.nextIndex());
-
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            appender.close();
-        } finally {
-            source.close();
-            source.clear();
-        }
+        testJiraChron75(port, source);
     }
 }
