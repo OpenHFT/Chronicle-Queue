@@ -19,16 +19,27 @@
 package net.openhft.chronicle.tcp;
 
 
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshaller;
+import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
+
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
@@ -348,6 +359,86 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
             sink = null;
 
             appender.close();
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+    @Test
+    public void testIndexedChron75() throws Exception {
+        final int port = BASE_PORT + 108;
+        final int items = 1000000;
+        final int clients = 3;
+        final int warmup = 100;
+
+        final ExecutorService executor = Executors.newFixedThreadPool(clients);
+        final CountDownLatch latch = new CountDownLatch(warmup);
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+
+        try {
+            for(int i=0;i<clients;i++) {
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            final long threadId = Thread.currentThread().getId();
+                            final Chronicle sink = new ChronicleSink("localhost", port);
+                            final ExcerptTailer tailer = sink.createTailer().toStart();
+
+                            latch.await();
+
+                            LOGGER.info("Start ChronicleSink on thread {}", threadId);
+                            int lastK = 0;
+                            for(int cnt=0; cnt<items;) {
+                                if(tailer.nextIndex()) {
+                                    Jira75Quote quote = tailer.readObject(Jira75Quote.class);
+                                    tailer.finish();
+
+                                    assertEquals(cnt, quote.getQuantity(), 0);
+                                    assertEquals(cnt, quote.getPrice(), 0);
+                                    assertEquals("instr-" + cnt, quote.getInstrument());
+                                    assertEquals('f' , quote.getEntryType());
+
+                                    /*
+                                    if(cnt == (lastK + 1)*1000 ) {
+                                        lastK = lastK + 1;
+                                        LOGGER.info("read: {}k (thread: {})", lastK, threadId);
+                                    }
+                                    */
+
+                                    cnt++;
+                                }
+                            }
+
+                            tailer.close();
+                            sink.close();
+                        } catch(Exception e) {
+                            LOGGER.warn("Exception", e);
+                        }
+                    }
+                });
+            }
+
+            LOGGER.info("Write {} elements to the source", items);
+            final ExcerptAppender appender = source.createAppender();
+            for(int i=0;i<items;i++) {
+                appender.startExcerpt(1000);
+                appender.writeObject(new Jira75Quote(i,i,DateTime.now(),"instr-" + i,'f'));
+                appender.finish();
+
+                if(i < warmup) {
+                    latch.countDown();
+                }
+            }
+
+            appender.close();
+
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+        } catch(Exception e) {
+            LOGGER.warn("Exception", e);
         } finally {
             source.close();
             source.clear();
