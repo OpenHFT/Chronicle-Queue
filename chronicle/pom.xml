@@ -40,18 +40,18 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.6</version>
+                <version>3.4.8</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.6</version>
+                <version>6.4.10</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
-                <version>2.1.1</version>
+                <version>2.1.2</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>

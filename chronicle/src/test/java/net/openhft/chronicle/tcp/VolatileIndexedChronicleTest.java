@@ -308,140 +308,31 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
 
     }
 
+    // *************************************************************************
+    // JIRA
+    // *************************************************************************
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
+     */
     @Test
-    public void testIndexedVolatileSink_007() throws Exception {
+    public void testIndexedJiraChron74() throws Exception {
         final int port = BASE_PORT + 107;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        Chronicle sink = null;
-        ExcerptTailer tailer = null;
-
-        try {
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer();
-            assertFalse(tailer.nextIndex());
-            tailer.close();
-
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            final ExcerptAppender appender = source.createAppender();
-            appender.startExcerpt(8);
-            appender.writeLong(1);
-            appender.finish();
-            appender.startExcerpt(8);
-            appender.writeLong(2);
-            appender.finish();
-
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer().toStart();
-            assertTrue("nextIndex should return true", tailer.nextIndex());
-            assertEquals(1L, tailer.readLong());
-            tailer.finish();
-            assertTrue("nextIndex should return true", tailer.nextIndex());
-            assertEquals(2L, tailer.readLong());
-            tailer.finish();
-            tailer.close();
-            tailer = null;
-
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            sink = volatileChronicleSink("localhost", port);
-            tailer = sink.createTailer().toEnd();
-            assertFalse("nextIndex should return false", tailer.nextIndex());
-
-            sink.close();
-            sink.clear();
-            sink = null;
-
-            appender.close();
-        } finally {
-            source.close();
-            source.clear();
-        }
+        testJiraChron74(port, source);
     }
 
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
+     */
     @Test
-    public void testIndexedChron75() throws Exception {
+    public void testIndexedJiraChron75() throws Exception {
         final int port = BASE_PORT + 108;
-        final int items = 1000000;
-        final int clients = 3;
-        final int warmup = 100;
-
-        final ExecutorService executor = Executors.newFixedThreadPool(clients);
-        final CountDownLatch latch = new CountDownLatch(warmup);
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        try {
-            for(int i=0;i<clients;i++) {
-                executor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            final long threadId = Thread.currentThread().getId();
-                            final Chronicle sink = new ChronicleSink("localhost", port);
-                            final ExcerptTailer tailer = sink.createTailer().toStart();
-
-                            latch.await();
-
-                            LOGGER.info("Start ChronicleSink on thread {}", threadId);
-                            int lastK = 0;
-                            for(int cnt=0; cnt<items;) {
-                                if(tailer.nextIndex()) {
-                                    Jira75Quote quote = tailer.readObject(Jira75Quote.class);
-                                    tailer.finish();
-
-                                    assertEquals(cnt, quote.getQuantity(), 0);
-                                    assertEquals(cnt, quote.getPrice(), 0);
-                                    assertEquals("instr-" + cnt, quote.getInstrument());
-                                    assertEquals('f' , quote.getEntryType());
-
-                                    /*
-                                    if(cnt == (lastK + 1)*1000 ) {
-                                        lastK = lastK + 1;
-                                        LOGGER.info("read: {}k (thread: {})", lastK, threadId);
-                                    }
-                                    */
-
-                                    cnt++;
-                                }
-                            }
-
-                            tailer.close();
-                            sink.close();
-                        } catch(Exception e) {
-                            LOGGER.warn("Exception", e);
-                        }
-                    }
-                });
-            }
-
-            LOGGER.info("Write {} elements to the source", items);
-            final ExcerptAppender appender = source.createAppender();
-            for(int i=0;i<items;i++) {
-                appender.startExcerpt(1000);
-                appender.writeObject(new Jira75Quote(i,i,DateTime.now(),"instr-" + i,'f'));
-                appender.finish();
-
-                if(i < warmup) {
-                    latch.countDown();
-                }
-            }
-
-            appender.close();
-
-            executor.shutdown();
-            executor.awaitTermination(1, TimeUnit.MINUTES);
-        } catch(Exception e) {
-            LOGGER.warn("Exception", e);
-        } finally {
-            source.close();
-            source.clear();
-        }
+        testJiraChron75(port, source);
     }
 }

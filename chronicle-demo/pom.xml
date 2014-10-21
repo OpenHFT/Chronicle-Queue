@@ -25,14 +25,14 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.1</version>
+        <version>1.1.2</version>
         <relativePath/>
     </parent>
 
     <artifactId>chronicle-demo</artifactId>
 
     <name>OpenHFT/Chronicle-Queue/chronicle-demo</name>
-    <version>3.2.3-SNAPSHOT</version>
+    <version>3.2.5-SNAPSHOT</version>
     <description>Demo Processing Engine</description>
 
     <dependencyManagement>
