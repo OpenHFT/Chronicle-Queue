@@ -307,7 +307,8 @@ public class ChronicleSink implements Chronicle {
 
         public boolean read(int threshod, int size) throws IOException {
             if(!closed) {
-                if (buffer.remaining() < threshod) {
+                int rem = buffer.remaining();
+                if (rem < threshod) {
                     if (buffer.remaining() == 0) {
                         buffer.clear();
                     } else {
@@ -815,7 +816,11 @@ public class ChronicleSink implements Chronicle {
         public boolean nextIndex() {
             try {
                 if(!connector.isOpen()) {
-                    return index(this.index);
+                    if(index(this.index)) {
+                        return nextIndex();
+                    } else {
+                        return false;
+                    }
                 }
 
                 if(!connector.read(ChronicleTcp.HEADER_SIZE + 8)) {
@@ -828,9 +833,8 @@ public class ChronicleSink implements Chronicle {
                 switch (excerptSize) {
                     case ChronicleTcp.IN_SYNC_LEN:
                     case ChronicleTcp.PADDED_LEN:
-                        return false;
                     case ChronicleTcp.SYNC_IDX_LEN:
-                        return false;//nextIndex();
+                        return false;
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
@@ -838,14 +842,14 @@ public class ChronicleSink implements Chronicle {
                 }
 
                 if(buffer.remaining() < excerptSize) {
-                    if(!connector.read(buffer.remaining() - excerptSize)) {
+                    if(!connector.read(excerptSize)) {
                         return false;
                     }
                 }
 
                 index = receivedIndex;
                 positionAddr = startAddr + buffer.position();
-                limitAddr = startAddr + buffer.limit();
+                limitAddr = positionAddr + excerptSize;
                 lastSize = excerptSize;
                 finished = false;
             } catch (IOException e) {

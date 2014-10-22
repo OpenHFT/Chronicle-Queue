@@ -19,15 +19,27 @@
 package net.openhft.chronicle.tcp;
 
 
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshaller;
+import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
+
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
@@ -293,6 +305,34 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
             source.close();
             source.clear();
         }
+
     }
 
+    // *************************************************************************
+    // JIRA
+    // *************************************************************************
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
+     */
+    @Test
+    public void testIndexedJiraChron74() throws Exception {
+        final int port = BASE_PORT + 107;
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+
+        testJiraChron74(port, source);
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
+     */
+    @Test
+    public void testIndexedJiraChron75() throws Exception {
+        final int port = BASE_PORT + 108;
+        final String basePathSource = getIndexedTestPath("-source");
+        final Chronicle source = indexedChronicleSource(basePathSource, port);
+
+        testJiraChron75(port, source);
+    }
 }

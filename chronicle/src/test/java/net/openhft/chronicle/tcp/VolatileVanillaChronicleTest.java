@@ -22,9 +22,11 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import org.joda.time.DateTime;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -273,5 +275,33 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
 
             assertFalse(new File(basePathSource).exists());
         }
+    }
+
+    // *************************************************************************
+    // JIRA
+    // *************************************************************************
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
+     */
+    @Test
+    public void testVanillaJiraChron74() throws Exception {
+        final int port = BASE_PORT + 107;
+        final String basePathSource = getVanillaTestPath("-source");
+        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+
+        testJiraChron74(port, source);
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
+     */
+    @Test
+    public void tesVanillaJiraChron75() throws Exception {
+        final int port = BASE_PORT + 108;
+        final String basePathSource = getVanillaTestPath("-source");
+        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+
+        testJiraChron75(port, source);
     }
 }

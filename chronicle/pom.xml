@@ -23,12 +23,12 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.1</version>
-        <relativePath>../../java-parent-pom/pom.xml</relativePath>
+        <version>1.1.2</version>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.2.3-SNAPSHOT</version>
+    <version>3.2.6-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
@@ -40,18 +40,23 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.7</version>
+                <version>3.4.8</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.6</version>
+                <version>6.4.10</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>affinity</artifactId>
-                <version>2.1.1</version>
+                <version>2.1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>2.5</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -117,6 +122,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
     </dependencies>
 
     <build>
@@ -138,7 +150,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-scm-publish-plugin</artifactId>
                 <configuration>
-                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc</checkoutDirectory>
+                    <checkoutDirectory>${project.build.directory}/scmpublish/javadoc
+                    </checkoutDirectory>
                     <checkinComment>Publishing javadoc for ${project.artifactId}:${project.version}
                     </checkinComment>
                     <content>${project.reporting.outputDirectory}</content>
@@ -215,7 +228,8 @@
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
-        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
+        </developerConnection>
         <tag>master</tag>
     </scm>
 
