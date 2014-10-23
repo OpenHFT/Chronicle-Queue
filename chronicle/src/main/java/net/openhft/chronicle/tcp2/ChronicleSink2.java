@@ -35,9 +35,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class ChronicleSink2 extends WrappedChronicle {
-    private final ChronicleSink2Support.TcpSink cnx;
+    private final ChronicleSink2Support.TcpConnection cnx;
 
-    public ChronicleSink2(final Chronicle chronicle, final ChronicleSink2Support.TcpSink cnx) {
+    public ChronicleSink2(final Chronicle chronicle, final ChronicleSink2Support.TcpConnection cnx) {
         super(chronicle);
         this.cnx = cnx;
     }
@@ -72,23 +72,23 @@ public class ChronicleSink2 extends WrappedChronicle {
         private final ByteBuffer writeBuffer;
         private final ByteBuffer readBuffer;
         private final ChronicleSinkConfig config;
-        private final ChronicleSink2Support.TcpSink tcpSink;
+        private final ChronicleSink2Support.TcpConnection connection;
 
         private long index;
         private int lastSize;
 
-        public VolatileExcerptTailer(final ChronicleSink2Support.TcpSink tcpSink) {
-            this(ChronicleSinkConfig.DEFAULT, tcpSink);
+        public VolatileExcerptTailer(final ChronicleSink2Support.TcpConnection connection) {
+            this(ChronicleSinkConfig.DEFAULT, connection);
         }
 
-        public VolatileExcerptTailer(final ChronicleSinkConfig config, final ChronicleSink2Support.TcpSink tcpSink) {
+        public VolatileExcerptTailer(final ChronicleSinkConfig config, final ChronicleSink2Support.TcpConnection connection) {
             super(NO_PAGE, NO_PAGE);
 
             this.index = -1;
             this.lastSize = 0;
             this.config = config;
-            this.tcpSink = tcpSink;
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + tcpSink.name());
+            this.connection = connection;
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.name());
             this.writeBuffer = ChronicleTcp2.createBuffer(16, ByteOrder.nativeOrder());
             this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
@@ -130,7 +130,7 @@ public class ChronicleSink2 extends WrappedChronicle {
         @Override
         public synchronized void close() {
             try {
-                tcpSink.close();
+                connection.close();
             } catch (IOException e) {
                 logger.warn("Error closing socketChannel", e);
             }
@@ -155,11 +155,8 @@ public class ChronicleSink2 extends WrappedChronicle {
             this.lastSize = 0;
 
             try {
-                if(!tcpSink.isOpen()) {
-                    tcpSink.open();
-                    tcpSink.channel().socket().setTcpNoDelay(true);
-                    tcpSink.channel().socket().setReceiveBufferSize(config.minBufferSize());
-
+                if(!connection.isOpen()) {
+                    connection.open();
                     readBuffer.clear();
                     readBuffer.limit(0);
                 }
@@ -169,9 +166,9 @@ public class ChronicleSink2 extends WrappedChronicle {
                 writeBuffer.putLong(this.index);
                 writeBuffer.flip();
 
-                tcpSink.writeAllOrEOF(writeBuffer);
+                connection.writeAllOrEOF(writeBuffer);
 
-                while (tcpSink.read(readBuffer, ChronicleTcp2.HEADER_SIZE)) {
+                while (connection.read(readBuffer, ChronicleTcp2.HEADER_SIZE)) {
                     int receivedSize = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
 
@@ -203,7 +200,7 @@ public class ChronicleSink2 extends WrappedChronicle {
         @Override
         public boolean nextIndex() {
             try {
-                if(!this.tcpSink.isOpen()) {
+                if(!this.connection.isOpen()) {
                     if(index(this.index)) {
                         return nextIndex();
                     } else {
@@ -211,7 +208,7 @@ public class ChronicleSink2 extends WrappedChronicle {
                     }
                 }
 
-                if(!this.tcpSink.read(this.readBuffer, ChronicleTcp.HEADER_SIZE + 8)) {
+                if(!this.connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -230,7 +227,7 @@ public class ChronicleSink2 extends WrappedChronicle {
                 }
 
                 if(this.readBuffer.remaining() < excerptSize) {
-                    if(!this.tcpSink.read(this.readBuffer, excerptSize)) {
+                    if(!this.connection.read(this.readBuffer, excerptSize)) {
                         return false;
                     }
                 }

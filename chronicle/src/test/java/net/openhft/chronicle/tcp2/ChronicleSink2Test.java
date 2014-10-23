@@ -18,14 +18,11 @@
 package net.openhft.chronicle.tcp2;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.tcp.ChronicleSink;
 import net.openhft.chronicle.tcp.ChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -34,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -110,8 +106,8 @@ public class ChronicleSink2Test {
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            ChronicleSink2Support.TcpSink cnx =
-                                new ChronicleSink2Support.TcpSinkInitiator(
+                            ChronicleSink2Support.TcpConnection cnx =
+                                new ChronicleSink2Support.TcpConnectionInitiator(
                                     "sink2-" + threadId,
                                     new InetSocketAddress("localhost", port)
                             );
@@ -135,6 +131,8 @@ public class ChronicleSink2Test {
                                     cnt++;
                                 }
                             }
+
+                            assertEquals(items, cnt);
 
                             tailer.close();
                             sink.close();

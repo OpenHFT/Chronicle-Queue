@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.chronicle.tcp.ChronicleSinkConfig;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,14 +36,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChronicleSink2Support {
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     /*
      * TODO: review boolean return for open/close operations
      */
-    public static class TcpSink {
+    public static class TcpConnection {
         protected final Logger logger;
         protected final String name;
         protected InetSocketAddress bindAddress;
@@ -54,12 +51,14 @@ public class ChronicleSink2Support {
         protected TimeUnit selectTimeoutUnit;
         protected SocketChannel socketChannel;
         protected int maxOpenAttempts;
+        protected int receiveBufferSize;
+        protected boolean tcpNoDelay;
 
-        public TcpSink(String name, final InetSocketAddress connectAddress) {
+        public TcpConnection(String name, final InetSocketAddress connectAddress) {
             this(name, null, connectAddress);
         }
 
-        public TcpSink(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {
+        public TcpConnection(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {
             this.name = name;
             this.logger = LoggerFactory.getLogger(this.name);
             this.bindAddress = bindAddress;
@@ -71,6 +70,8 @@ public class ChronicleSink2Support {
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.socketChannel = null;
             this.maxOpenAttempts = Integer.MAX_VALUE;
+            this.receiveBufferSize = ChronicleSinkConfig.DEFAULT.minBufferSize();
+            this.tcpNoDelay = true;
         }
 
         public String name() {
@@ -91,11 +92,11 @@ public class ChronicleSink2Support {
             return true;
         }
 
-        public void setBindAddress(final @NotNull InetSocketAddress bindAddress) {
+        public void bindAddress(final @NotNull InetSocketAddress bindAddress) {
             this.bindAddress = bindAddress;
         }
 
-        public void setReconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
+        public void reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
             if(reconnectTimeout < 0) {
                 throw new IllegalArgumentException("ReconnectTimeout must be >= 0");
             }
@@ -104,7 +105,7 @@ public class ChronicleSink2Support {
             this.reconnectTimeoutUnit = reconnectTimeoutUnit;
         }
 
-        public void setSelectTimeout(long selectTimeout, TimeUnit selectTimeoutUnit) {
+        public void selectTimeout(long selectTimeout, TimeUnit selectTimeoutUnit) {
             if(selectTimeout < 0) {
                 throw new IllegalArgumentException("SelectTimeout must be >= 0");
             }
@@ -121,16 +122,24 @@ public class ChronicleSink2Support {
             this.maxOpenAttempts = maxOpenAttempts;
         }
 
+        public void receiveBufferSize(int receiveBufferSize) {
+            if(receiveBufferSize <= 0) {
+                throw new IllegalArgumentException("ReceiveBufferSize must be > 0");
+            }
+
+            this.receiveBufferSize = receiveBufferSize;
+        }
+
+        public void tcpNoDelay(boolean tcpNoDelay) {
+            this.tcpNoDelay = tcpNoDelay;
+        }
+
         public boolean isOpen() {
             if(this.socketChannel != null) {
                 return this.socketChannel.isOpen();
             }
 
             return false;
-        }
-
-        public SocketChannel channel() {
-            return this.socketChannel;
         }
 
         public boolean write(ByteBuffer buffer) throws IOException {
@@ -180,8 +189,8 @@ public class ChronicleSink2Support {
         }
     }
 
-    public static class TcpSinkInitiator extends TcpSink {
-        public TcpSinkInitiator(String name, final InetSocketAddress connectAddress) {
+    public static class TcpConnectionInitiator extends TcpConnection {
+        public TcpConnectionInitiator(String name, final InetSocketAddress connectAddress) {
             super(name + "-sink-initiator", connectAddress);
         }
 
@@ -190,39 +199,35 @@ public class ChronicleSink2Support {
             running.set(true);
             socketChannel = null;
 
-            final Selector selector = Selector.open();
+            for (int i = 0; i < maxOpenAttempts && this.running.get() && socketChannel == null; i++) {
+                try {
+                    final SocketChannel channel = SocketChannel.open();
+                    channel.configureBlocking(true);
 
-            final SocketChannel channel = SocketChannel.open();
-            channel.configureBlocking(false);
-
-            if(bindAddress != null) {
-                channel.bind(bindAddress);
-            }
-
-            channel.register(selector, SelectionKey.OP_CONNECT);
-            channel.connect(connectAddress);
-
-            for (int i=0; i< maxOpenAttempts && this.running.get() && socketChannel == null; i++) {
-                if(selector.select(selectTimeoutUnit.toMillis(selectTimeout)) > 0) {
-                    final Set<SelectionKey> keys = selector.selectedKeys();
-                    for (final SelectionKey key : keys) {
-                        if (key.isConnectable()) {
-                            if(channel.finishConnect()) {
-                                socketChannel = channel;
-                                logger.info("Connected to " + socketChannel.getRemoteAddress() + " from " + socketChannel.getLocalAddress());
-                                break;
-                            }
-                        }
+                    if(bindAddress != null) {
+                        channel.bind(bindAddress);
                     }
 
-                    keys.clear();
-                } else {
-                    logger.info("Failed to connect to {}, retrying", connectAddress);
+                    channel.connect(connectAddress);
+
+                    socketChannel = channel;
+                    logger.info("Connected to " + socketChannel.getRemoteAddress() + " from " + socketChannel.getLocalAddress());
+                } catch(IOException e) {
                     socketChannel = null;
+                    logger.info("Failed to connect to {}, retrying", connectAddress);
+
+                    try {
+                        Thread.sleep(reconnectTimeoutUnit.toMillis(reconnectTimeout));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
 
             if(socketChannel != null) {
+                socketChannel.configureBlocking(false);
+                socketChannel.socket().setTcpNoDelay(this.tcpNoDelay);
+                socketChannel.socket().setReceiveBufferSize(this.receiveBufferSize);
                 running.set(false);
                 return false;
             }
@@ -231,8 +236,8 @@ public class ChronicleSink2Support {
         }
     }
 
-    public static class TcpSinkAcceptor extends TcpSink {
-        public TcpSinkAcceptor(String name, final InetSocketAddress bindAddress) {
+    public static class TcpConnectionAcceptor extends TcpConnection {
+        public TcpConnectionAcceptor(String name, final InetSocketAddress bindAddress) {
             super(name + "-sink-acceptor", bindAddress);
         }
 
@@ -257,6 +262,8 @@ public class ChronicleSink2Support {
                             logger.info("Accepted connection from: " + socketChannel.getRemoteAddress());
 
                             break;
+                        } else {
+                            socketChannel = null;
                         }
                     }
 
@@ -271,21 +278,13 @@ public class ChronicleSink2Support {
             server.close();
 
             if(socketChannel != null) {
+                socketChannel.socket().setTcpNoDelay(this.tcpNoDelay);
+                socketChannel.socket().setReceiveBufferSize(this.receiveBufferSize);
                 running.set(false);
                 return false;
             }
 
             return true;
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static class PersistedSinkExcerpt {
-    }
-
-    public static class VolatileSinkExcerpt {
     }
 }
