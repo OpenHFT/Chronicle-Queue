@@ -363,7 +363,7 @@ public class ChronicleSink implements Chronicle {
             try {
                 connector.close();
             } catch (IOException e) {
-                logger.warn("Error closing socket", e);
+                logger.warn("Error closing socketChannel", e);
             }
 
             if(!closed) {
@@ -727,7 +727,7 @@ public class ChronicleSink implements Chronicle {
             try {
                 connector.close();
             } catch (IOException e) {
-                logger.warn("Error closing socket", e);
+                logger.warn("Error closing socketChannel", e);
             }
 
             synchronized (excerpts) {

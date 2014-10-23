@@ -17,10 +17,39 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.lang.model.constraints.NotNull;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.SocketChannel;
+
 public class ChronicleTcp2 {
     public static final int HEADER_SIZE = 12;
     public static final int INITIAL_BUFFER_SIZE = 64 * 1024;
     public static final int IN_SYNC_LEN = -128;
     public static final int PADDED_LEN = -127;
     public static final int SYNC_IDX_LEN = -126;
+
+    public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
+        int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
+        return ByteBuffer.allocateDirect(newSize).order(byteOrder);
+    }
+
+    public static void writeAllOrEOF(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
+        writeAll(sc, bb);
+
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
+    }
+
+    public static void writeAll(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
+        while (bb.remaining() > 0) {
+            if (sc.write(bb) < 0) {
+                break;
+            }
+        }
+    }
 }

@@ -21,68 +21,44 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.tcp.ChronicleSinkConfig;
+import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tools.WrappedChronicle;
+import net.openhft.lang.io.NativeBytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
+import java.io.StreamCorruptedException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-public class ChronicleSink2 implements Chronicle {
-    private final Chronicle chronicle;
-    private final ChronicleSink2Support.TcpSink tcpSink;
+public class ChronicleSink2 extends WrappedChronicle {
+    private final ChronicleSink2Support.TcpSink cnx;
 
-    public ChronicleSink2(final Chronicle chronicle, final ChronicleSink2Support.TcpSink tcpSink) {
-        this.tcpSink = tcpSink;
-        this.chronicle = chronicle;
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Override
-    public String name() {
-        return this.chronicle != null ? this.chronicle.name() : "<noname>";
-    }
-
-    @Override
-    public long lastWrittenIndex() {
-        return this.chronicle != null ? this.chronicle.lastWrittenIndex() : -1;
-    }
-
-    @Override
-    public long size() {
-        return this.chronicle != null ? this.chronicle.size() : -1;
-    }
-
-    @Override
-    public void clear() {
-        // TODO: check that clear is not invoked on a running chronicle
-        if(this.chronicle != null) {
-            this.chronicle.clear();
-        }
+    public ChronicleSink2(final Chronicle chronicle, final ChronicleSink2Support.TcpSink cnx) {
+        super(chronicle);
+        this.cnx = cnx;
     }
 
     @Override
     public void close() throws IOException {
-        if(this.tcpSink != null) {
-            this.tcpSink.close();
+        if(this.cnx != null) {
+            this.cnx.close();
         }
 
-        if(this.chronicle != null) {
-            this.chronicle.close();
-        }
+        super.close();
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return null;
+        return new VolatileExcerptTailer(this.cnx);
     }
 
     @Override
@@ -90,7 +66,195 @@ public class ChronicleSink2 implements Chronicle {
         throw new UnsupportedOperationException();
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
+    private class VolatileExcerptTailer extends NativeBytes implements ExcerptTailer {
+
+        private final Logger logger;
+        private final ByteBuffer writeBuffer;
+        private final ByteBuffer readBuffer;
+        private final ChronicleSinkConfig config;
+        private final ChronicleSink2Support.TcpSink tcpSink;
+
+        private long index;
+        private int lastSize;
+
+        public VolatileExcerptTailer(final ChronicleSink2Support.TcpSink tcpSink) {
+            this(ChronicleSinkConfig.DEFAULT, tcpSink);
+        }
+
+        public VolatileExcerptTailer(final ChronicleSinkConfig config, final ChronicleSink2Support.TcpSink tcpSink) {
+            super(NO_PAGE, NO_PAGE);
+
+            this.index = -1;
+            this.lastSize = 0;
+            this.config = config;
+            this.tcpSink = tcpSink;
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + tcpSink.name());
+            this.writeBuffer = ChronicleTcp2.createBuffer(16, ByteOrder.nativeOrder());
+            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
+            this.startAddr = ((DirectBuffer) this.readBuffer).address();
+            this.capacityAddr = this.startAddr + config.minBufferSize();
+        }
+
+        @Override
+        public boolean wasPadding() {
+            return false;
+        }
+
+        @Override
+        public long index() {
+            return index;
+        }
+
+        @Override
+        public long lastWrittenIndex() {
+            return index;
+        }
+
+        @Override
+        public ExcerptTailer toStart() {
+            index(-1);
+            return this;
+        }
+
+        @Override
+        public ExcerptTailer toEnd() {
+            index(-2);
+            return this;
+        }
+
+        @Override
+        public Chronicle chronicle() {
+            return ChronicleSink2.this;
+        }
+
+        @Override
+        public synchronized void close() {
+            try {
+                tcpSink.close();
+            } catch (IOException e) {
+                logger.warn("Error closing socketChannel", e);
+            }
+
+            super.close();
+        }
+
+        @Override
+        public void finish() {
+            if(!isFinished()) {
+                if (lastSize > 0) {
+                    readBuffer.position(readBuffer.position() + lastSize);
+                }
+
+                super.finish();
+            }
+        }
+
+        @Override
+        public boolean index(long index) {
+            this.index = index;
+            this.lastSize = 0;
+
+            try {
+                if(!tcpSink.isOpen()) {
+                    tcpSink.open();
+                    tcpSink.channel().socket().setTcpNoDelay(true);
+                    tcpSink.channel().socket().setReceiveBufferSize(config.minBufferSize());
+
+                    readBuffer.clear();
+                    readBuffer.limit(0);
+                }
+
+                writeBuffer.clear();
+                writeBuffer.putLong(ChronicleTcp.Command.ACTION_SUBSCRIBE);
+                writeBuffer.putLong(this.index);
+                writeBuffer.flip();
+
+                tcpSink.writeAllOrEOF(writeBuffer);
+
+                while (tcpSink.read(readBuffer, ChronicleTcp2.HEADER_SIZE)) {
+                    int receivedSize = readBuffer.getInt();
+                    long receivedIndex = readBuffer.getLong();
+
+                    switch(receivedSize) {
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                            if(index == -1) {
+                                return receivedIndex == -1;
+                            } else if(index == -2) {
+                                return advanceIndex();
+                            } else {
+                                return (index == receivedIndex) ? advanceIndex() : false;
+                            }
+                        case ChronicleTcp.PADDED_LEN:
+                        case ChronicleTcp.IN_SYNC_LEN:
+                            return false;
+                    }
+
+                    if (readBuffer.remaining() >= receivedSize) {
+                        readBuffer.position(readBuffer.position() + receivedSize);
+                    }
+                }
+            } catch (IOException e) {
+                logger.warn("",e);
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean nextIndex() {
+            try {
+                if(!this.tcpSink.isOpen()) {
+                    if(index(this.index)) {
+                        return nextIndex();
+                    } else {
+                        return false;
+                    }
+                }
+
+                if(!this.tcpSink.read(this.readBuffer, ChronicleTcp.HEADER_SIZE + 8)) {
+                    return false;
+                }
+
+                int excerptSize = this.readBuffer.getInt();
+                long receivedIndex = this.readBuffer.getLong();
+
+                switch (excerptSize) {
+                    case ChronicleTcp.IN_SYNC_LEN:
+                    case ChronicleTcp.PADDED_LEN:
+                    case ChronicleTcp.SYNC_IDX_LEN:
+                        return false;
+                }
+
+                if (excerptSize > 128 << 20 || excerptSize < 0) {
+                    throw new StreamCorruptedException("Size was " + excerptSize);
+                }
+
+                if(this.readBuffer.remaining() < excerptSize) {
+                    if(!this.tcpSink.read(this.readBuffer, excerptSize)) {
+                        return false;
+                    }
+                }
+
+                index = receivedIndex;
+                positionAddr = startAddr + this.readBuffer.position();
+                limitAddr = positionAddr + excerptSize;
+                lastSize = excerptSize;
+                finished = false;
+            } catch (IOException e) {
+                close();
+                return false;
+            }
+
+            return true;
+        }
+
+        protected boolean advanceIndex() throws IOException {
+            if(nextIndex()) {
+                finish();
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
 }

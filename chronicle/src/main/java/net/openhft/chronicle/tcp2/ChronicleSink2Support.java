@@ -21,8 +21,10 @@ import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -50,7 +52,7 @@ public class ChronicleSink2Support {
         protected TimeUnit reconnectTimeoutUnit;
         protected long selectTimeout;
         protected TimeUnit selectTimeoutUnit;
-        protected SocketChannel socket;
+        protected SocketChannel socketChannel;
         protected int maxOpenAttempts;
 
         public TcpSink(String name, final InetSocketAddress connectAddress) {
@@ -67,8 +69,12 @@ public class ChronicleSink2Support {
             this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.selectTimeout = 1000;
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
-            this.socket = null;
+            this.socketChannel = null;
             this.maxOpenAttempts = Integer.MAX_VALUE;
+        }
+
+        public String name() {
+            return this.name;
         }
 
         public boolean open() throws IOException {
@@ -78,8 +84,8 @@ public class ChronicleSink2Support {
         public boolean close()  throws IOException {
             this.running.set(false);
 
-            if(socket != null) {
-                socket.close();
+            if(socketChannel != null) {
+                socketChannel.close();
             }
 
             return true;
@@ -116,15 +122,61 @@ public class ChronicleSink2Support {
         }
 
         public boolean isOpen() {
-            if(this.socket != null) {
-                return this.socket.isOpen();
+            if(this.socketChannel != null) {
+                return this.socketChannel.isOpen();
             }
 
             return false;
         }
 
         public SocketChannel channel() {
-            return this.socket;
+            return this.socketChannel;
+        }
+
+        public boolean write(ByteBuffer buffer) throws IOException {
+            return true;
+        }
+
+        public void writeAllOrEOF(ByteBuffer bb) throws IOException {
+            writeAll(bb);
+
+            if (bb.remaining() > 0) {
+                throw new EOFException();
+            }
+        }
+
+        public void writeAll(ByteBuffer bb) throws IOException {
+            while (bb.remaining() > 0) {
+                if (this.socketChannel.write(bb) < 0) {
+                    break;
+                }
+            }
+        }
+
+        public boolean read(ByteBuffer buffer, int size) throws IOException {
+            return read(buffer, size, size);
+        }
+
+        public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException {
+            int rem = buffer.remaining();
+            if (rem < threshod) {
+                if (buffer.remaining() == 0) {
+                    buffer.clear();
+                } else {
+                    buffer.compact();
+                }
+
+                while (buffer.position() < size) {
+                    if (this.socketChannel.read(buffer) < 0) {
+                        this.socketChannel.close();
+                        return false;
+                    }
+                }
+
+                buffer.flip();
+            }
+
+            return true;
         }
     }
 
@@ -136,7 +188,7 @@ public class ChronicleSink2Support {
         @Override
         public boolean open() throws IOException {
             running.set(true);
-            socket = null;
+            socketChannel = null;
 
             final Selector selector = Selector.open();
 
@@ -150,25 +202,27 @@ public class ChronicleSink2Support {
             channel.register(selector, SelectionKey.OP_CONNECT);
             channel.connect(connectAddress);
 
-            for (int i=0; i< maxOpenAttempts && this.running.get() && socket == null; i++) {
+            for (int i=0; i< maxOpenAttempts && this.running.get() && socketChannel == null; i++) {
                 if(selector.select(selectTimeoutUnit.toMillis(selectTimeout)) > 0) {
-                    final Set<SelectionKey> keys = selector.keys();
+                    final Set<SelectionKey> keys = selector.selectedKeys();
                     for (final SelectionKey key : keys) {
                         if (key.isConnectable()) {
-                            logger.info("Connected to " + socket.getRemoteAddress() + " from " + socket.getLocalAddress());
-                            socket = channel;
-                            break;
+                            if(channel.finishConnect()) {
+                                socketChannel = channel;
+                                logger.info("Connected to " + socketChannel.getRemoteAddress() + " from " + socketChannel.getLocalAddress());
+                                break;
+                            }
                         }
                     }
 
                     keys.clear();
                 } else {
                     logger.info("Failed to connect to {}, retrying", connectAddress);
-                    socket = null;
+                    socketChannel = null;
                 }
             }
 
-            if(socket != null) {
+            if(socketChannel != null) {
                 running.set(false);
                 return false;
             }
@@ -196,11 +250,11 @@ public class ChronicleSink2Support {
             server.register(selector, SelectionKey.OP_ACCEPT);
             for (int i=0; i< maxOpenAttempts && this.running.get(); i++) {
                 if(selector.select(selectTimeoutUnit.toMillis(selectTimeout)) > 0) {
-                    final Set<SelectionKey> keys = selector.keys();
+                    final Set<SelectionKey> keys = selector.selectedKeys();
                     for (final SelectionKey key : keys) {
                         if (key.isAcceptable()) {
-                            socket = server.accept();
-                            logger.info("Accepted connection from: " + socket.getRemoteAddress());
+                            socketChannel = server.accept();
+                            logger.info("Accepted connection from: " + socketChannel.getRemoteAddress());
 
                             break;
                         }
@@ -209,14 +263,14 @@ public class ChronicleSink2Support {
                     keys.clear();
                 } else {
                     logger.info("No incoming gonnections to {}, wait", connectAddress);
-                    socket = null;
+                    socketChannel = null;
                 }
             }
 
             selector.close();
             server.close();
 
-            if(socket != null) {
+            if(socketChannel != null) {
                 running.set(false);
                 return false;
             }
