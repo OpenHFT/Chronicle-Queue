@@ -17,13 +17,11 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tcp.ChronicleSinkConfig;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.ByteOrder;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChronicleQueueBuilder {
 
