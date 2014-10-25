@@ -18,6 +18,8 @@
 package net.openhft.chronicle.tcp2;
 
 import net.openhft.chronicle.*;
+import net.openhft.chronicle.tcp.ChronicleSink;
+import net.openhft.chronicle.tcp.ChronicleSinkConfig;
 import net.openhft.chronicle.tcp.ChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
@@ -78,15 +80,15 @@ public class ChronicleSink2Test {
     // *************************************************************************
 
     @Test
-    public void testIndexedJiraChron75() throws Exception {
+    public void testIndexedChron2_001() throws Exception {
         final int port = BASE_PORT + 108;
         final String basePathSource = getIndexedTestPath("-source");
         final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        testJiraChron75(port, source);
+        testIndexedChron2(port, source, basePathSource);
     }
 
-    protected void testJiraChron75(final int port, final Chronicle source) throws Exception {
+    protected void testIndexedChron2(final int port, final Chronicle source) throws Exception {
         final int items = 1000000;
         final int clients = 1;
         final int warmup = 100;
@@ -111,7 +113,7 @@ public class ChronicleSink2Test {
                                 new InetSocketAddress("localhost", port)
                             );
 
-                            sink = new ChronicleSink2(null, cnx);
+                            sink = new ChronicleSink2(null, ChronicleSinkConfig.DEFAULT.clone(), cnx);
                             tailer = sink.createTailer().toStart();
 
                             latch.await();
@@ -150,6 +152,93 @@ public class ChronicleSink2Test {
 
                 if(i < warmup) {
                     latch.countDown();
+                }
+            }
+
+            appender.close();
+
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+        } catch(Exception e) {
+            LOGGER.warn("Exception", e);
+        } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+
+
+    protected void testIndexedChron2(final int port, final Chronicle source, final String path) throws Exception {
+        final int items = 100;
+        final int clients = 1;
+        final int warmup = 5;
+
+        final ExecutorService executor = Executors.newFixedThreadPool(clients);
+        final CountDownLatch latch = new CountDownLatch(warmup);
+
+        try {
+            for(int i=0;i<clients;i++) {
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        int cnt = 0;
+                        ExcerptTailer tailer = null;
+                        Chronicle sink = null;
+
+                        try {
+                            final long threadId = Thread.currentThread().getId();
+
+                            TcpConnection cnx = new SinkTcpConnectionInitiator(
+                                "s-" + threadId,
+                                new InetSocketAddress("localhost", port)
+                            );
+
+                            sink = new ChronicleSink2(
+                                new IndexedChronicle(path),
+                                ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
+                                cnx);
+
+                            tailer = sink.createTailer().toStart();
+
+                            latch.await();
+
+                            LOGGER.info("Start ChronicleSink on thread {}", threadId);
+                            for(cnt=0; cnt<items;) {
+                                if(tailer.nextIndex()) {
+                                    Jira75Quote quote = tailer.readObject(Jira75Quote.class);
+                                    tailer.finish();
+
+                                    assertEquals(cnt, quote.getQuantity(), 0);
+                                    assertEquals(cnt, quote.getPrice(), 0);
+                                    assertEquals("instr-" + cnt, quote.getInstrument());
+
+                                    cnt++;
+                                }
+                            }
+
+                            assertEquals(items, cnt);
+
+                            tailer.close();
+                            sink.close();
+                        } catch(Exception e) {
+                            LOGGER.warn("Exception {}", cnt, e);
+                        }
+                    }
+                });
+            }
+
+            LOGGER.info("Write {} elements to the source", items);
+            final ExcerptAppender appender = source.createAppender();
+            for(int i=0;i<items;i++) {
+                appender.startExcerpt(1000);
+                appender.writeObject(new Jira75Quote(i, i, "instr-" + i));
+                appender.finish();
+
+                if(i < warmup) {
+                    latch.countDown();
+                } else {
+                    Thread.sleep(250);
                 }
             }
 

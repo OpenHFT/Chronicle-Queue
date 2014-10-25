@@ -18,7 +18,9 @@
 package net.openhft.chronicle.tcp2;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.nio.channels.SocketChannel;
 
 public class SinkTcpConnectionInitiator extends SinkTcpConnection {
@@ -68,4 +70,19 @@ public class SinkTcpConnectionInitiator extends SinkTcpConnection {
 
         return channel;
     }
+
+    @Override
+    public boolean isLocalhost() {
+        if(connectAddress.getAddress().isLoopbackAddress()) {
+            return true;
+        }
+
+        try {
+            return NetworkInterface.getByInetAddress(connectAddress.getAddress()) != null;
+        } catch(Exception e)  {
+        }
+
+        return false;
+    }
+
 }

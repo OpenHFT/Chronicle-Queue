@@ -67,4 +67,9 @@ public class SinkTcpConnectionAcceptor extends SinkTcpConnection {
 
         return channel;
     }
+
+    @Override
+    public boolean isLocalhost() {
+        return true;
+    }
 }

@@ -25,6 +25,7 @@ public interface TcpConnection {
     public boolean open() throws IOException;
     public boolean close() throws IOException;
     public boolean isOpen();
+    public boolean isLocalhost();
 
     public boolean write(ByteBuffer buffer) throws IOException;
     public void writeAllOrEOF(ByteBuffer bb) throws IOException;
