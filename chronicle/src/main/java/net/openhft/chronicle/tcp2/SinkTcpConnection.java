@@ -18,17 +18,13 @@
 package net.openhft.chronicle.tcp2;
 
 import net.openhft.chronicle.tcp.ChronicleSinkConfig;
-import net.openhft.chronicle.tcp.ChronicleTcp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,7 +43,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
     protected TimeUnit selectTimeoutUnit;
     protected int maxOpenAttempts;
     protected int receiveBufferSize;
-    protected boolean tcpNoDelay;
 
     private SocketChannel socketChannel;
 
@@ -64,7 +59,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         this.socketChannel = null;
         this.maxOpenAttempts = Integer.MAX_VALUE;
         this.receiveBufferSize = ChronicleSinkConfig.DEFAULT.minBufferSize();
-        this.tcpNoDelay = true;
     }
 
     public void reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
@@ -101,10 +95,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         this.receiveBufferSize = receiveBufferSize;
     }
 
-    public void tcpNoDelay(boolean tcpNoDelay) {
-        this.tcpNoDelay = tcpNoDelay;
-    }
-
     @Override
     public String toString() {
         return this.name;
@@ -118,7 +108,7 @@ public abstract class SinkTcpConnection implements TcpConnection {
         socketChannel = openSocketChannel();
         if(socketChannel != null) {
             socketChannel.configureBlocking(false);
-            socketChannel.socket().setTcpNoDelay(this.tcpNoDelay);
+            socketChannel.socket().setTcpNoDelay(true);
             socketChannel.socket().setReceiveBufferSize(this.receiveBufferSize);
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
