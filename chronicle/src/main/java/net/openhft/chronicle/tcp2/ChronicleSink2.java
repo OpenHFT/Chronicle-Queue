@@ -1,14 +1,14 @@
 /*
  * Copyright 2014 Higher Frequency Trading
- * <p/>
+ *
  * http://www.higherfrequencytrading.com
- * <p/>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p/>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,9 +35,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class ChronicleSink2 extends WrappedChronicle {
-    private final ChronicleSink2Support.TcpConnection cnx;
+    private final TcpConnection cnx;
 
-    public ChronicleSink2(final Chronicle chronicle, final ChronicleSink2Support.TcpConnection cnx) {
+    public ChronicleSink2(final Chronicle chronicle, final TcpConnection cnx) {
         super(chronicle);
         this.cnx = cnx;
     }
@@ -72,23 +72,23 @@ public class ChronicleSink2 extends WrappedChronicle {
         private final ByteBuffer writeBuffer;
         private final ByteBuffer readBuffer;
         private final ChronicleSinkConfig config;
-        private final ChronicleSink2Support.TcpConnection connection;
+        private final TcpConnection connection;
 
         private long index;
         private int lastSize;
 
-        public VolatileExcerptTailer(final ChronicleSink2Support.TcpConnection connection) {
+        public VolatileExcerptTailer(final TcpConnection connection) {
             this(ChronicleSinkConfig.DEFAULT, connection);
         }
 
-        public VolatileExcerptTailer(final ChronicleSinkConfig config, final ChronicleSink2Support.TcpConnection connection) {
+        public VolatileExcerptTailer(final ChronicleSinkConfig config, final TcpConnection connection) {
             super(NO_PAGE, NO_PAGE);
 
             this.index = -1;
             this.lastSize = 0;
             this.config = config;
             this.connection = connection;
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.name());
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = ChronicleTcp2.createBuffer(16, ByteOrder.nativeOrder());
             this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
