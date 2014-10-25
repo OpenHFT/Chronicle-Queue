@@ -31,6 +31,7 @@ public interface TcpConnection {
     public void writeAllOrEOF(ByteBuffer bb) throws IOException;
     public void writeAll(ByteBuffer bb) throws IOException;
 
+    public boolean read(ByteBuffer buffer) throws IOException ;
     public boolean read(ByteBuffer buffer, int size) throws IOException ;
     public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException;
 }

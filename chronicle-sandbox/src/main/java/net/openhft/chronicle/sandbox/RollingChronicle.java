@@ -101,6 +101,11 @@ public class RollingChronicle implements Chronicle {
     }
 
     @Override
+    public long lastIndex() {
+        return lastWrittenIndex();
+    }
+
+    @Override
     public long lastWrittenIndex() {
         return lastWriitenIndex;
     }

@@ -93,6 +93,11 @@ public class ChronicleSource implements Chronicle {
     }
 
     @Override
+    public long lastIndex() {
+        return chronicle.lastIndex();
+    }
+
+    @Override
     public long lastWrittenIndex() {
         return chronicle.lastWrittenIndex();
     }

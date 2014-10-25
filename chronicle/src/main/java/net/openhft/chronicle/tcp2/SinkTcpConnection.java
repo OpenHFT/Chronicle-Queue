@@ -177,6 +177,15 @@ public abstract class SinkTcpConnection implements TcpConnection {
     }
 
     @Override
+    public boolean read(ByteBuffer buffer) throws IOException {
+        if (this.socketChannel.read(buffer) < 0) {
+            throw new EOFException();
+        }
+
+        return true;
+    }
+
+    @Override
     public boolean read(ByteBuffer buffer, int size) throws IOException {
         return read(buffer, size, size);
     }

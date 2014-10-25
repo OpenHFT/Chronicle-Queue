@@ -17,6 +17,13 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.lang.model.constraints.NotNull;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -55,4 +62,56 @@ public class ChronicleTcp2 {
 
         return sb.toString();
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static interface AppenderAdapter {
+        public boolean handlePadding();
+        public void startExcerpt(long capacity, long index);
+    }
+
+    public static class IndexedAppenderAdaper implements AppenderAdapter {
+        private final IndexedChronicle chronicle;
+        private final ExcerptAppender appender;
+
+        public IndexedAppenderAdaper(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            this.chronicle = (IndexedChronicle)chronicle;
+            this.appender = appender;
+        }
+
+        @Override
+        public boolean handlePadding() {
+            appender.startExcerpt(chronicle.config().dataBlockSize() - 1);
+            return true;
+        }
+
+        @Override
+        public void startExcerpt(long capacity, long index) {
+            this.appender.startExcerpt(capacity);
+        }
+    }
+
+    public static class VanillaAppenderAdaper implements AppenderAdapter {
+        private final VanillaChronicle chronicle;
+        private final VanillaChronicle.VanillaAppender appender;
+
+        public VanillaAppenderAdaper(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            this.chronicle = (VanillaChronicle)chronicle;
+            this.appender = (VanillaChronicle.VanillaAppender)appender;
+        }
+
+        @Override
+        public boolean handlePadding() {
+            return false;
+        }
+
+        @Override
+        public void startExcerpt(long capacity, long index) {
+            int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
+            this.appender.startExcerpt(capacity, cycle);
+        }
+    }
 }
+

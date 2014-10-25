@@ -280,6 +280,11 @@ public class IndexedChronicle implements Chronicle {
         return lastWrittenIndex;
     }
 
+    @Override
+    public long lastIndex() {
+        return findTheLastIndex0();
+    }
+
     void incrSize() {
         lastWrittenIndex++;
     }

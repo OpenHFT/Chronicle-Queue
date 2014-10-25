@@ -97,6 +97,11 @@ public class DailyRollingChronicle implements Chronicle {
     }
 
     @Override
+    public long lastIndex() {
+        return lastWrittenIndex();
+    }
+
+    @Override
     public long lastWrittenIndex() {
         if (lastWrittenIndex < 0)
             findLastIndex();

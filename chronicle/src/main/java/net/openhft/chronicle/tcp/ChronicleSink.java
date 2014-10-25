@@ -154,6 +154,11 @@ public class ChronicleSink implements Chronicle {
     }
 
     @Override
+    public long lastIndex() {
+        return (chronicle != null) ? chronicle.lastIndex() : -1;
+    }
+
+    @Override
     public long lastWrittenIndex() {
         return (chronicle != null) ? chronicle.lastWrittenIndex() : -1;
     }

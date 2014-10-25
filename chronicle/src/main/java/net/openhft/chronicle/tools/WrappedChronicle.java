@@ -26,53 +26,58 @@ import java.io.IOException;
 
 public class WrappedChronicle implements Chronicle {
 
-    protected final Chronicle chronicle;
+    protected final Chronicle delegatedChronicle;
 
-    public WrappedChronicle(final Chronicle chronicle) {
-        this.chronicle = chronicle;
+    public WrappedChronicle(final Chronicle delegatedChronicle) {
+        this.delegatedChronicle = delegatedChronicle;
     }
 
     @Override
     public String name() {
-        return this.chronicle != null ? this.chronicle.name() : "<noname>";
+        return this.delegatedChronicle != null ? this.delegatedChronicle.name() : "<noname>";
+    }
+
+    @Override
+    public long lastIndex() {
+        return this.delegatedChronicle != null ? this.delegatedChronicle.lastIndex() : -1;
     }
 
     @Override
     public long lastWrittenIndex() {
-        return this.chronicle != null ? this.chronicle.lastWrittenIndex() : -1;
+        return this.delegatedChronicle != null ? this.delegatedChronicle.lastWrittenIndex() : -1;
     }
 
     @Override
     public long size() {
-        return this.chronicle != null ? this.chronicle.size() : -1;
+        return this.delegatedChronicle != null ? this.delegatedChronicle.size() : -1;
     }
 
     @Override
     public void clear() {
-        if(this.chronicle != null) {
-            this.chronicle.clear();
+        if(this.delegatedChronicle != null) {
+            this.delegatedChronicle.clear();
         }
     }
 
     @Override
     public void close() throws IOException {
-        if(this.chronicle != null) {
-            this.chronicle.close();
+        if(this.delegatedChronicle != null) {
+            this.delegatedChronicle.close();
         }
     }
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return this.chronicle != null ? this.chronicle.createExcerpt() : null;
+        return this.delegatedChronicle != null ? this.delegatedChronicle.createExcerpt() : null;
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return this.chronicle != null ? this.chronicle.createTailer() : null;
+        return this.delegatedChronicle != null ? this.delegatedChronicle.createTailer() : null;
     }
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return this.chronicle != null ? this.chronicle.createAppender() : null;
+        return this.delegatedChronicle != null ? this.delegatedChronicle.createAppender() : null;
     }
 }

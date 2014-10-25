@@ -118,32 +118,6 @@ public class VanillaChronicle implements Chronicle {
         return new VanillaBytesMarshallerFactory();
     }
 
-    /**
-     * This method returns the very last index in the chronicle.  Not to be confused with lastWrittenIndex(),
-     * this method returns the actual last index by scanning the underlying data even the appender has not
-     * been activated.
-     * @return The last index in the file
-     */
-    public long lastIndex() {
-        int cycle = (int) indexCache.lastCycle();
-        int lastIndexCount = indexCache.lastIndexFile(cycle, -1);
-        if (lastIndexCount >= 0) {
-            try {
-                final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexCount, false);
-                final long indices = VanillaIndexCache.countIndices(buffer);
-                buffer.release();
-
-                final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
-                return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
-
-            } catch (IOException e) {
-                throw new AssertionError(e);
-            }
-        } else {
-            return -1;
-        }
-    }
-
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
@@ -211,6 +185,33 @@ public class VanillaChronicle implements Chronicle {
     @Override
     public long lastWrittenIndex() {
         return lastWrittenIndex.get();
+    }
+
+    /**
+     * This method returns the very last index in the chronicle.  Not to be confused with lastWrittenIndex(),
+     * this method returns the actual last index by scanning the underlying data even the appender has not
+     * been activated.
+     * @return The last index in the file
+     */
+    @Override
+    public long lastIndex() {
+        int cycle = (int) indexCache.lastCycle();
+        int lastIndexCount = indexCache.lastIndexFile(cycle, -1);
+        if (lastIndexCount >= 0) {
+            try {
+                final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexCount, false);
+                final long indices = VanillaIndexCache.countIndices(buffer);
+                buffer.release();
+
+                final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
+                return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
+
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        } else {
+            return -1;
+        }
     }
 
     @Override
@@ -639,7 +640,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public boolean unmapped() {
-            return ((VanillaExcerptCommon) common).unmapped();
+            return ((VanillaExcerptCommon) delegatedCommon).unmapped();
         }
 
         @Override
@@ -656,12 +657,12 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public boolean unmapped() {
-            return ((VanillaExcerptCommon) common).unmapped();
+            return ((VanillaExcerptCommon) delegatedCommon).unmapped();
         }
 
         @Override
         public void startExcerpt(long capacity, int cycle) {
-            ((VanillaAppender) common).startExcerpt(capacity, cycle);
+            ((VanillaAppender) delegatedCommon).startExcerpt(capacity, cycle);
         }
 
         @Override
