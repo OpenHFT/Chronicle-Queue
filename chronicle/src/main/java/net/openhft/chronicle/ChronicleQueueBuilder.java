@@ -18,9 +18,14 @@
 package net.openhft.chronicle;
 
 
+import net.openhft.chronicle.tcp.ChronicleSinkConfig;
+import net.openhft.chronicle.tcp2.*;
+
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteOrder;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 
 public class ChronicleQueueBuilder {
@@ -31,14 +36,35 @@ public class ChronicleQueueBuilder {
     private final VanillaConfig vanillaConfig;
     private final ReplicaConfig replicaConfig;
 
+    private final ReplicaType replicaType;
+
     private boolean synchonous;
     private boolean useCheckedExcerpt;
 
-
-
+    /**
+     * @param type
+     * @param path
+     */
     private ChronicleQueueBuilder(ChronicleQueueType type, File path) {
         this.type = type;
         this.path = path;
+        this.replicaType = null;
+        this.synchonous = false;
+        this.useCheckedExcerpt = false;
+        this.indexedConfig = new IndexedConfig();
+        this.vanillaConfig = new VanillaConfig();
+        this.replicaConfig = new ReplicaConfig();
+    }
+
+    /**
+     * @param type
+     * @param path
+     * @param replicaType
+     */
+    private ChronicleQueueBuilder(ChronicleQueueType type, File path, ReplicaType replicaType) {
+        this.type = type;
+        this.path = path;
+        this.replicaType = replicaType;
         this.synchonous = false;
         this.useCheckedExcerpt = false;
         this.indexedConfig = new IndexedConfig();
@@ -90,9 +116,81 @@ public class ChronicleQueueBuilder {
         return this;
     }
 
+    public Chronicle build() throws IOException {
+        if(replicaType == null) {
+            if(replicaType == ReplicaType.SINK) {
+                return buildSinkChronicle();
+            } if(replicaType == ReplicaType.SOURCE) {
+                return buildSourceChronicle();
+            }
+        } else {
+            if(type == ChronicleQueueType.INDEXED) {
+                return buildIndexedChronicle();
+            } if(type == ChronicleQueueType.VANILLA) {
+                return buildVanillaChronicle();
+            }
+
+        }
+
+        return null;
+    }
+
+    private Chronicle buildIndexedChronicle() throws IOException {
+        Chronicle chronicle = new IndexedChronicle(this.path.getAbsolutePath());
+        return chronicle;
+    }
+
+    private Chronicle buildVanillaChronicle() throws IOException {
+        Chronicle chronicle = new VanillaChronicle(this.path.getAbsolutePath());
+        return chronicle;
+    }
+
+    private Chronicle buildSinkChronicle() throws IOException {
+        SinkTcpConnection cnx = null;
+        Chronicle chron = null;
+
+        if(this.replicaConfig.bindAddress != null && this.replicaConfig.connectAddress != null) {
+            // INITIATOR
+            cnx = new SinkTcpConnectionInitiator(replicaConfig.connectAddress, replicaConfig.bindAddress);
+            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
+            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
+            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
+            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
+        } else if(this.replicaConfig.connectAddress != null){
+            // INITIATOR
+            cnx = new SinkTcpConnectionAcceptor(replicaConfig.bindAddress);
+            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
+            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
+            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
+            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
+        } else if(this.replicaConfig.bindAddress != null){
+            // ACCEPTOR
+            cnx = new SinkTcpConnectionAcceptor(replicaConfig.bindAddress);
+            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
+            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
+            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
+            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
+        }
+
+        if(type != null) {
+            if (type == ChronicleQueueType.INDEXED) {
+                chron = buildIndexedChronicle();
+            } else if (type == ChronicleQueueType.VANILLA) {
+                chron = buildVanillaChronicle();
+            }
+        }
+
+        return new ChronicleSink2(chron, ChronicleSinkConfig.DEFAULT.clone() , cnx);
+    }
+
+    private Chronicle buildSourceChronicle() throws IOException {
+        return null;
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
+
 
     public static ChronicleQueueBuilder of(ChronicleQueueType type, File path) {
         return new ChronicleQueueBuilder(type, path);
@@ -108,6 +206,52 @@ public class ChronicleQueueBuilder {
 
     public static ChronicleQueueBuilder of(ChronicleQueueType type, File parent, String child) {
         return of(type, new File(parent, child));
+    }
+
+
+    public static ChronicleQueueBuilder sink(ChronicleQueueType type, File path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return new ChronicleQueueBuilder(type, path, ReplicaType.SINK)
+            .bindAddress(bindAddress)
+            .connectAddress(connectAddress);
+    }
+
+    public static ChronicleQueueBuilder sink(ChronicleQueueType type, String path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return sink(type, new File(path), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder sink(ChronicleQueueType type, String parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return sink(type, new File(parent, child), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder sink(ChronicleQueueType type, File parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return sink(type, new File(parent, child), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder sink(InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return sink(null, (File) null, bindAddress, connectAddress);
+    }
+
+
+    public static ChronicleQueueBuilder source(ChronicleQueueType type, File path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return new ChronicleQueueBuilder(type, path, ReplicaType.SOURCE)
+            .bindAddress(bindAddress)
+            .connectAddress(connectAddress);
+    }
+
+    public static ChronicleQueueBuilder source(ChronicleQueueType type, String path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return source(type, new File(path), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder source(ChronicleQueueType type, String parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return source(type, new File(parent, child), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder source(ChronicleQueueType type, File parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return source(type, new File(parent, child), bindAddress, connectAddress);
+    }
+
+    public static ChronicleQueueBuilder source(InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
+        return source(null, (File) null, bindAddress, connectAddress);
     }
 
     // *************************************************************************
@@ -146,5 +290,10 @@ public class ChronicleQueueBuilder {
         protected TimeUnit selectTimeoutUnit = TimeUnit.MILLISECONDS;
         protected int maxOpenAttempts = Integer.MAX_VALUE;
         protected int receiveBufferSize = 256 * 1024;
+    }
+
+    private enum ReplicaType {
+        SINK,
+        SOURCE
     }
 }
