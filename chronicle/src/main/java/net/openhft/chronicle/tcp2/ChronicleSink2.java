@@ -31,14 +31,13 @@ import sun.nio.ch.DirectBuffer;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class ChronicleSink2 extends WrappedChronicle {
     private final TcpConnection connection;
     private final ChronicleSinkConfig config;
     private final boolean isLocal;
     private volatile boolean closed;
-    private ExcerptTailer tailer;
+    private ExcerptCommon excerpt;
 
     public ChronicleSink2(final Chronicle chronicle, final ChronicleSinkConfig config, final TcpConnection connection) {
         super(chronicle);
@@ -46,7 +45,7 @@ public class ChronicleSink2 extends WrappedChronicle {
         this.config = config;
         this.closed = false;
         this.isLocal = config.sharedChronicle() && connection.isLocalhost();
-        this.tailer = null;
+        this.excerpt = null;
     }
 
     @Override
@@ -63,22 +62,32 @@ public class ChronicleSink2 extends WrappedChronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        throw new UnsupportedOperationException();
+        if( this.excerpt != null) {
+            throw new IllegalStateException("An excerpt has already been created");
+        }
+
+        this.excerpt = delegatedChronicle == null
+            ? new VolatileExcerpt()
+            : isLocal
+            ? new PersistentLocalSinkExcerpt(delegatedChronicle.createTailer())
+            : new PersistentSinkExcerpt(delegatedChronicle.createTailer());
+
+        return (Excerpt)this.excerpt;
     }
 
     @Override
     public synchronized ExcerptTailer createTailer() throws IOException {
-        if( this.tailer != null) {
+        if( this.excerpt != null) {
             throw new IllegalStateException("A tailer has already been created");
         }
 
-        this.tailer = delegatedChronicle == null
+        this.excerpt = delegatedChronicle == null
             ? new VolatileExcerptTailer()
             : isLocal
                 ? new PersistentLocalSinkExcerpt(delegatedChronicle.createTailer())
                 : new PersistentSinkExcerpt(delegatedChronicle.createTailer());
 
-        return this.tailer;
+        return (ExcerptTailer)this.excerpt;
     }
 
     @Override
@@ -92,8 +101,6 @@ public class ChronicleSink2 extends WrappedChronicle {
 
     private abstract class AbstractPersistentSinkExcerpt extends WrappedExcerpt {
         protected final Logger logger;
-        protected long lastLocalIndex;
-
         protected final ByteBuffer writeBuffer;
         protected final ByteBuffer readBuffer;
 
@@ -101,9 +108,8 @@ public class ChronicleSink2 extends WrappedChronicle {
             super(excerptCommon);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp2.createBuffer(16, ByteOrder.nativeOrder());
-            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
-            this.lastLocalIndex = -1;
+            this.writeBuffer = ChronicleTcp2.createBuffer(16);
+            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize());
         }
 
         @Override
@@ -125,25 +131,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             }
 
             super.close();
-        }
-
-        protected boolean readNext() {
-            if (!closed && !connection.isOpen()) {
-                try {
-                    connection.open();
-                    readBuffer.clear();
-                    readBuffer.limit(0);
-
-                    if (!isLocal) {
-                        subscribe(lastLocalIndex = delegatedChronicle.lastIndex());
-                    }
-                } catch (IOException e) {
-                    logger.warn("Error closing socketChannel", e);
-                    return false;
-                }
-            }
-
-            return connection.isOpen() && readNextExcerpt();
+            ChronicleSink2.this.excerpt = null;
         }
 
         protected void subscribe(long index) throws IOException {
@@ -164,8 +152,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             connection.writeAllOrEOF(writeBuffer);
         }
 
-        protected abstract boolean readNextExcerpt();
-
+        protected abstract boolean readNext();
     }
 
     private class PersistentLocalSinkExcerpt extends AbstractPersistentSinkExcerpt {
@@ -174,7 +161,22 @@ public class ChronicleSink2 extends WrappedChronicle {
         }
 
         @Override
-        protected boolean readNextExcerpt() {
+        protected boolean readNext() {
+            if (!closed && !connection.isOpen()) {
+                try {
+                    connection.open();
+                    readBuffer.clear();
+                    readBuffer.limit(0);
+                } catch (IOException e) {
+                    logger.warn("Error closing socketChannel", e);
+                    return false;
+                }
+            }
+
+            return connection.isOpen() && readNextExcerpt();
+        }
+
+        private boolean readNextExcerpt() {
             try {
                 if (!closed) {
                     query(delegatedChronicle.lastIndex());
@@ -207,25 +209,44 @@ public class ChronicleSink2 extends WrappedChronicle {
 
         private ExcerptAppender appender;
         private ChronicleTcp2.AppenderAdapter adapter;
+        private long lastLocalIndex;
 
         public PersistentSinkExcerpt(final ExcerptCommon excerptCommon) {
             super(excerptCommon);
 
             this.appender = null;
             this.adapter = null;
+            this.lastLocalIndex = -1;
         }
 
         @Override
-        protected boolean readNextExcerpt() {
-            try {
-                if(this.appender == null) {
-                    this.appender = delegatedChronicle.createAppender();
-                    this.adapter =
-                        delegatedChronicle instanceof IndexedChronicle
-                            ? new ChronicleTcp2.IndexedAppenderAdaper(delegatedChronicle, this.appender)
-                            : new ChronicleTcp2.VanillaAppenderAdaper(delegatedChronicle, this.appender);
-                }
+        protected boolean readNext() {
+            if (!closed && !connection.isOpen()) {
+                try {
+                    connection.open();
+                    readBuffer.clear();
+                    readBuffer.limit(0);
 
+                    if(this.appender == null) {
+                        this.appender = delegatedChronicle.createAppender();
+                        this.adapter =
+                            delegatedChronicle instanceof IndexedChronicle
+                                ? new ChronicleTcp2.IndexedAppenderAdaper(delegatedChronicle, this.appender)
+                                : new ChronicleTcp2.VanillaAppenderAdaper(delegatedChronicle, this.appender);
+                    }
+
+                    subscribe(lastLocalIndex = delegatedChronicle.lastIndex());
+                } catch (IOException e) {
+                    logger.warn("Error closing socketChannel", e);
+                    return false;
+                }
+            }
+
+            return connection.isOpen() && readNextExcerpt();
+        }
+
+        private boolean readNextExcerpt() {
+            try {
                 if(!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
@@ -319,8 +340,8 @@ public class ChronicleSink2 extends WrappedChronicle {
             this.index = -1;
             this.lastSize = 0;
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp2.createBuffer(16, ByteOrder.nativeOrder());
-            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize(), ByteOrder.nativeOrder());
+            this.writeBuffer = ChronicleTcp2.createBuffer(16);
+            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
             this.capacityAddr = this.startAddr + config.minBufferSize();
         }
@@ -366,6 +387,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             }
 
             super.close();
+            ChronicleSink2.this.excerpt = null;
         }
 
         @Override

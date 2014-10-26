@@ -23,7 +23,6 @@ import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.lang.model.constraints.NotNull;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -36,6 +35,10 @@ public class ChronicleTcp2 {
     public static final int SYNC_IDX_LEN = -126;
     public static final long ACTION_SUBSCRIBE = 1;
     public static final long ACTION_QUERY     = 2;
+
+    public static ByteBuffer createBuffer(int minSize) {
+        return createBuffer(minSize,  ByteOrder.nativeOrder());
+    }
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
         int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;

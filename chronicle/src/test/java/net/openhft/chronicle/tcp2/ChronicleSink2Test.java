@@ -23,6 +23,7 @@ import net.openhft.chronicle.tcp.ChronicleSinkConfig;
 import net.openhft.chronicle.tcp.ChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Rule;
@@ -43,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 public class ChronicleSink2Test {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("ChronicleSink2Test");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-synk2-";
+    protected static final String PREFIX    = "ch-snk2-";
     protected static final int    BASE_PORT = 13000;
 
     @Rule
@@ -323,5 +324,68 @@ public class ChronicleSink2Test {
             out.writeDouble(quantity);
             out.writeUTFΔ(instrument);
         }
+    }
+
+    @Test
+    public void testOverTCP() throws IOException, InterruptedException {
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
+
+        // NOTE: the sink and source must have different chronicle files.
+        // TODO, make more robust.
+        final int messages = 5 * 1000 * 1000;
+
+        TcpConnection cnx = new SinkTcpConnectionInitiator(new InetSocketAddress("localhost", 9876));
+
+        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), 9876);
+        final Chronicle sink = new ChronicleSink2(new IndexedChronicle(basePathSink), ChronicleSinkConfig.DEFAULT, cnx);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ExcerptAppender excerpt = source.createAppender();
+                    for (int i = 1; i <= messages; i++) {
+                        // use a size which will cause mis-alignment.
+                        excerpt.startExcerpt();
+                        excerpt.writeLong(i);
+                        excerpt.append(' ');
+                        excerpt.append(i);
+                        excerpt.append('\n');
+                        excerpt.finish();
+                    }
+                    System.out.println(System.currentTimeMillis() + ": Finished writing messages");
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            }
+        });
+
+        long start = System.nanoTime();
+        t.start();
+        ExcerptTailer excerpt = sink.createTailer();
+        int count = 0;
+        for (int i = 1; i <= messages; i++) {
+            while (!excerpt.nextIndex()) {
+                count++;
+            }
+
+            long n = excerpt.readLong();
+            String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
+            if (i != n) {
+                assertEquals('\'' + text + '\'', i, n);
+            }
+
+            excerpt.finish();
+        }
+
+        sink.close();
+        System.out.println("There were " + count + " InSynk messages");
+        t.join();
+
+        source.close();
+        long time = System.nanoTime() - start;
+        System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+
     }
 }
