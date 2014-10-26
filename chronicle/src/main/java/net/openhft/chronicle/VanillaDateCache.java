@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-class DateCache {
+class VanillaDateCache {
     private static final int SIZE = 32;
     private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
 
@@ -33,7 +33,7 @@ class DateCache {
     private final DateValue[] values = new DateValue[SIZE];
     private final int cycleLength;
 
-    public DateCache(final String formatStr, int cycleLength) {
+    public VanillaDateCache(final String formatStr, int cycleLength) {
         this.cycleLength = cycleLength;
 
         this.format = new SimpleDateFormat(formatStr);

@@ -100,7 +100,7 @@ public class ChronicleConfig implements Cloneable {
     // optional parameters, turn on for benchmarks.
     private boolean useUnsafe = false;
     private boolean synchronousMode = false;
-    private ByteOrder byteOrder = ByteOrder.nativeOrder();
+    //private ByteOrder byteOrder = ByteOrder.nativeOrder();
     private int cacheLineSize = 64;
     private int dataBlockSize;
     private int indexBlockSize;
@@ -167,9 +167,9 @@ public class ChronicleConfig implements Cloneable {
      *
      * @param minimiseFootprint if the footprint should be kept to a minimum or not
      */
-    public void minimiseFootprint(boolean minimiseFootprint) {
-        this.minimiseFootprint = minimiseFootprint;
-    }
+    //public void minimiseFootprint(boolean minimiseFootprint) {
+    //    this.minimiseFootprint = minimiseFootprint;
+    //}
 
     /**
      * Returns the flag specifying if the footprint of the backing files should be kept
@@ -179,9 +179,9 @@ public class ChronicleConfig implements Cloneable {
      * @return the flag specifying if the footprint of the backing files should be kept
      * to a minimum or not
      */
-    public boolean minimiseFootprint() {
-        return minimiseFootprint;
-    }
+    //public boolean minimiseFootprint() {
+    //    return minimiseFootprint;
+    //}
 
     /**
      * Specifies if Unsafe should be used by the {@link net.openhft.chronicle.Chronicle} instance being configured.
@@ -234,19 +234,19 @@ public class ChronicleConfig implements Cloneable {
      *
      * @return the same instance of ChronicleConfig that the method was called upon
      */
-    public ChronicleConfig byteOrder(ByteOrder byteOrder) {
-        this.byteOrder = byteOrder;
-        return this;
-    }
+    //public ChronicleConfig byteOrder(ByteOrder byteOrder) {
+    //    this.byteOrder = byteOrder;
+    //    return this;
+    //}
 
     /**
      * Returns the byte order being used when serializing (into/from the backing files). Defaults to <b>native order</b>.
      *
      * @return the byte order used when serializing
      */
-    public ByteOrder byteOrder() {
-        return byteOrder;
-    }
+    //public ByteOrder byteOrder() {
+    //    return byteOrder;
+    //}
 
     /**
      * Sets the size of the index cache lines. Index caches (files) consist of fixed size lines, each line having

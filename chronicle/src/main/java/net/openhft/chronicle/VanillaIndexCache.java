@@ -34,23 +34,23 @@ public class VanillaIndexCache implements Closeable {
     private final File baseFile;
     private final IndexKey key = new IndexKey();
     private final int blockBits;
-    private final DateCache dateCache;
+    private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
 
 
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache) {
         this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
     }
 
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull VanillaChronicleConfig config) {
         this(basePath, blockBits, dateCache, config.indexCacheCapacity(), config.cleanupOnClose());
     }
 
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity) {
         this(basePath, blockBits, dateCache, capacity, false);
     }
 
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity, boolean cleanupOnClose) {
+    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.baseFile = new File(basePath);
         this.blockBits = blockBits;

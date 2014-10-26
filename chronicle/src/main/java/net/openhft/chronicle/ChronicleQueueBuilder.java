@@ -18,25 +18,16 @@
 package net.openhft.chronicle;
 
 
-import net.openhft.chronicle.tcp.ChronicleSinkConfig;
-import net.openhft.chronicle.tcp2.*;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteOrder;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 
-public class ChronicleQueueBuilder {
+public abstract class ChronicleQueueBuilder {
 
     private final File path;
-    private final ChronicleQueueType type;
-    private final IndexedConfig indexedConfig;
-    private final VanillaConfig vanillaConfig;
-    private final ReplicaConfig replicaConfig;
-
-    private final ReplicaType replicaType;
+    private final Class<? extends Chronicle> type;
 
     private boolean synchonous;
     private boolean useCheckedExcerpt;
@@ -45,42 +36,41 @@ public class ChronicleQueueBuilder {
      * @param type
      * @param path
      */
-    private ChronicleQueueBuilder(ChronicleQueueType type, File path) {
+    private ChronicleQueueBuilder(Class<? extends Chronicle> type, File path) {
         this.type = type;
         this.path = path;
-        this.replicaType = null;
         this.synchonous = false;
         this.useCheckedExcerpt = false;
-        this.indexedConfig = new IndexedConfig();
-        this.vanillaConfig = new VanillaConfig();
-        this.replicaConfig = new ReplicaConfig();
+    }
+
+    protected Class<? extends Chronicle> type() {
+        return this.type;
+    }
+
+    protected File path() {
+        return this.path;
     }
 
     /**
-     * @param type
-     * @param path
-     * @param replicaType
-     */
-    private ChronicleQueueBuilder(ChronicleQueueType type, File path, ReplicaType replicaType) {
-        this.type = type;
-        this.path = path;
-        this.replicaType = replicaType;
-        this.synchonous = false;
-        this.useCheckedExcerpt = false;
-        this.indexedConfig = new IndexedConfig();
-        this.vanillaConfig = new VanillaConfig();
-        this.replicaConfig = new ReplicaConfig();
-    }
-
-    /**
+     * Sets the synchronous mode to be used. Enabling synchronous mode means that
+     * {@link ExcerptCommon#finish()} will force a persistence every time.
      *
-     * @param synchonous
+     * @param synchonous If synchronous mode should be used or not.
      *
      * @return this builder object back
      */
     public ChronicleQueueBuilder synchonous(boolean synchonous) {
         this.synchonous = synchonous;
         return this;
+    }
+
+    /**
+     * Checks if synchronous mode is enabled or not.
+     *
+     * @return true if synchronous mode is enabled, false otherwise.
+     */
+    protected boolean synchonous() {
+        return this.synchonous;
     }
 
     /**
@@ -94,182 +84,170 @@ public class ChronicleQueueBuilder {
         return this;
     }
 
-    /**
-     *
-     * @param bindAddress
-     *
-     * @return this builder object back
-     */
-    public ChronicleQueueBuilder bindAddress(InetSocketAddress bindAddress) {
-        this.replicaConfig.bindAddress = bindAddress;
-        return this;
+    protected boolean useCheckedExcerpt() {
+        return this.useCheckedExcerpt;
     }
 
-    /**
-     *
-     * @param connectAddress
-     *
-     * @return this builder object back
-     */
-    public ChronicleQueueBuilder connectAddress(InetSocketAddress connectAddress) {
-        this.replicaConfig.connectAddress = connectAddress;
-        return this;
+    public abstract Chronicle build() throws IOException;
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static IndexedChronicleQueueBuilder indexed(File path) {
+        return new IndexedChronicleQueueBuilder(path);
     }
 
-    public Chronicle build() throws IOException {
-        if(replicaType == null) {
-            if(replicaType == ReplicaType.SINK) {
-                return buildSinkChronicle();
-            } if(replicaType == ReplicaType.SOURCE) {
-                return buildSourceChronicle();
-            }
-        } else {
-            if(type == ChronicleQueueType.INDEXED) {
-                return buildIndexedChronicle();
-            } if(type == ChronicleQueueType.VANILLA) {
-                return buildVanillaChronicle();
-            }
-
-        }
-
-        return null;
+    public static IndexedChronicleQueueBuilder indexed(String path) {
+        return indexed(new File(path));
     }
 
-    private Chronicle buildIndexedChronicle() throws IOException {
-        Chronicle chronicle = new IndexedChronicle(this.path.getAbsolutePath());
-        return chronicle;
+    public static IndexedChronicleQueueBuilder indexed(String parent, String child) {
+        return indexed(new File(parent, child));
     }
 
-    private Chronicle buildVanillaChronicle() throws IOException {
-        Chronicle chronicle = new VanillaChronicle(this.path.getAbsolutePath());
-        return chronicle;
+    public static IndexedChronicleQueueBuilder indexed(File parent, String child) {
+        return indexed(new File(parent, child));
     }
 
-    private Chronicle buildSinkChronicle() throws IOException {
-        SinkTcpConnection cnx = null;
-        Chronicle chron = null;
 
-        if(this.replicaConfig.bindAddress != null && this.replicaConfig.connectAddress != null) {
-            // INITIATOR
-            cnx = new SinkTcpConnectionInitiator(replicaConfig.connectAddress, replicaConfig.bindAddress);
-            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
-            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
-            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
-            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
-        } else if(this.replicaConfig.connectAddress != null){
-            // INITIATOR
-            cnx = new SinkTcpConnectionAcceptor(replicaConfig.bindAddress);
-            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
-            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
-            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
-            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
-        } else if(this.replicaConfig.bindAddress != null){
-            // ACCEPTOR
-            cnx = new SinkTcpConnectionAcceptor(replicaConfig.bindAddress);
-            cnx.receiveBufferSize(replicaConfig.receiveBufferSize);
-            cnx.reconnectTimeout(replicaConfig.reconnectTimeout, replicaConfig.reconnectTimeoutUnit);
-            cnx.selectTimeout(replicaConfig.selectTimeout, replicaConfig.selectTimeoutUnit);
-            cnx.maxOpenAttempts(replicaConfig.maxOpenAttempts);
-        }
-
-        if(type != null) {
-            if (type == ChronicleQueueType.INDEXED) {
-                chron = buildIndexedChronicle();
-            } else if (type == ChronicleQueueType.VANILLA) {
-                chron = buildVanillaChronicle();
-            }
-        }
-
-        return new ChronicleSink2(chron, ChronicleSinkConfig.DEFAULT.clone() , cnx);
+    public static VanillaChronicleQueueBuilder vanilla(File path) {
+        return new VanillaChronicleQueueBuilder(path);
     }
 
-    private Chronicle buildSourceChronicle() throws IOException {
-        return null;
+    public static ChronicleQueueBuilder vanilla(String path) {
+        return vanilla(new File(path));
+    }
+
+    public static ChronicleQueueBuilder vanilla(String parent, String child) {
+        return vanilla(new File(parent, child));
+    }
+
+    public static ChronicleQueueBuilder vanilla(File parent, String child) {
+        return vanilla(new File(parent, child));
     }
 
     // *************************************************************************
     //
     // *************************************************************************
 
-
-    public static ChronicleQueueBuilder of(ChronicleQueueType type, File path) {
-        return new ChronicleQueueBuilder(type, path);
-    }
-
-    public static ChronicleQueueBuilder of(ChronicleQueueType type, String path) {
-        return of(type, new File(path));
-    }
-
-    public static ChronicleQueueBuilder of(ChronicleQueueType type, String parent, String child) {
-        return of(type, new File(parent, child));
-    }
-
-    public static ChronicleQueueBuilder of(ChronicleQueueType type, File parent, String child) {
-        return of(type, new File(parent, child));
-    }
-
-
-    public static ChronicleQueueBuilder sink(ChronicleQueueType type, File path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return new ChronicleQueueBuilder(type, path, ReplicaType.SINK)
-            .bindAddress(bindAddress)
-            .connectAddress(connectAddress);
-    }
-
-    public static ChronicleQueueBuilder sink(ChronicleQueueType type, String path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return sink(type, new File(path), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder sink(ChronicleQueueType type, String parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return sink(type, new File(parent, child), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder sink(ChronicleQueueType type, File parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return sink(type, new File(parent, child), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder sink(InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return sink(null, (File) null, bindAddress, connectAddress);
-    }
-
-
-    public static ChronicleQueueBuilder source(ChronicleQueueType type, File path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return new ChronicleQueueBuilder(type, path, ReplicaType.SOURCE)
-            .bindAddress(bindAddress)
-            .connectAddress(connectAddress);
-    }
-
-    public static ChronicleQueueBuilder source(ChronicleQueueType type, String path, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return source(type, new File(path), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder source(ChronicleQueueType type, String parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return source(type, new File(parent, child), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder source(ChronicleQueueType type, File parent, String child, InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return source(type, new File(parent, child), bindAddress, connectAddress);
-    }
-
-    public static ChronicleQueueBuilder source(InetSocketAddress bindAddress, InetSocketAddress connectAddress) {
-        return source(null, (File) null, bindAddress, connectAddress);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private class IndexedConfig {
-        private int indexFileCapacity = 16 * 1024;
-        private int indexFileExcerpts  = 16 * 1024 * 1024;
+    private static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder {
         private int cacheLineSize = 64;
         private int dataBlockSize = 512 * 1024 * 1024;
         private int messageCapacity = 128 * 1024;
         private int indexBlockSize = Math.max(4096, this.dataBlockSize / 4);;
         private boolean minimiseFootprint = false;
-        private ByteOrder byteOrder = ByteOrder.nativeOrder();
+
+        private IndexedChronicleQueueBuilder(File path) {
+            super(IndexedChronicle.class, path);
+        }
+
+        /**
+         * Sets the size of the index cache lines. Index caches (files) consist
+         * of fixed size lines, each line having ultiple index entries on it. This
+         * param specifies the size of such a multi entry line.
+         *
+         * Default value is <b>64</b>.
+         *
+         * @param cacheLineSize the size of the cache lines making up index files
+         *
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder cacheLineSize(int cacheLineSize) {
+            this.cacheLineSize = cacheLineSize;
+            return this;
+        }
+
+        /**
+         * The size of the index cache lines (index caches are made up of multiple
+         * fixed length lines, each line contains multiple index entries).
+         *
+         * Default value is <b>64</b>.
+         *
+         * @return the size of the index cache lines
+         */
+        protected int cacheLineSize() {
+            return this.cacheLineSize;
+        }
+
+        /**
+         * Sets the size to be used for data blocks. The method also has a side
+         * effect. If the data block size specified is smaller than twice the
+         * message capacity, then the message capacity will be adjusted to equal
+         * half of the new data block size.
+         *
+         * @param dataBlockSize the size of the data blocks
+         *
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder dataBlockSize(int dataBlockSize) {
+            this.dataBlockSize = dataBlockSize;
+            return this;
+        }
+
+        /**
+         * Returns the size of the data blocks.
+         *
+         * @return the size of the data blocks
+         */
+        protected int dataBlockSize() {
+            return this.dataBlockSize;
+        }
+
+        /**
+         * Sets the size to be used for index blocks. Is capped to the bigger
+         * value among <b>4096</b> and a <b>quarter of the <tt>data block size</tt></b>.
+         *
+         * @param indexBlockSize the size of the index blocks
+         *
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder indexBlockSize(int indexBlockSize) {
+            this.indexBlockSize = indexBlockSize;
+            return this;
+        }
+
+        /**
+         * Returns the size of the index blocks.
+         *
+         * @return the size of the index blocks
+         */
+        protected int indexBlockSize() {
+            return this.indexBlockSize;
+        }
+
+        /**
+         * The maximum size a message stored in a {@link net.openhft.chronicle.Chronicle}
+         * instance can have. Defaults to <b>128K</b>. Is limited by the <tt>data block size</tt>,
+         * can't be bigger than half of the data block size.
+         *
+         * @param messageCapacity the maximum message size that can be stored
+         *
+         * @return tthis builder object back
+         */
+        public IndexedChronicleQueueBuilder messageCapacity(int messageCapacity) {
+            this.messageCapacity = messageCapacity;
+            return this;
+        }
+
+        /**
+         * The maximum size of the message that can be stored in the {@link net.openhft.chronicle.Chronicle}
+         * instance to be configured. Defaults to <b>128K</b>. Can't be bigger
+         * than half of the <tt>data block size</tt>.
+         *
+         * @return the maximum message size that can be stored
+         */
+        protected int messageCapacity() {
+            return this.messageCapacity;
+        }
+
+        @Override
+        public Chronicle build() throws IOException {
+            return null;
+        }
     }
 
-    private class VanillaConfig {
+    private static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
         private String cycleFormat = "yyyyMMdd";
         private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
         private int defaultMessageSize = 128 << 10; // 128 KB.
@@ -279,8 +257,18 @@ public class ChronicleQueueBuilder {
         private long dataBlockSize = 64L << 20; // 64 MB
         private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
         private boolean cleanupOnClose = false;
+
+        private VanillaChronicleQueueBuilder(File path) {
+            super(VanillaChronicle.class, path);
+        }
+
+        @Override
+        public Chronicle build() throws IOException {
+            return null;
+        }
     }
 
+    /*
     private class ReplicaConfig {
         protected InetSocketAddress bindAddress = null;
         protected InetSocketAddress connectAddress = null;
@@ -291,9 +279,5 @@ public class ChronicleQueueBuilder {
         protected int maxOpenAttempts = Integer.MAX_VALUE;
         protected int receiveBufferSize = 256 * 1024;
     }
-
-    private enum ReplicaType {
-        SINK,
-        SOURCE
-    }
+    */
 }

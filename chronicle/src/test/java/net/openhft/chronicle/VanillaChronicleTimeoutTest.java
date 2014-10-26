@@ -82,7 +82,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     @Test(timeout = 31000)
     public void testDataCacheTimeout() throws Exception {
         final String baseDir = getTestPath();
-        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
         final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000);
 
         try {

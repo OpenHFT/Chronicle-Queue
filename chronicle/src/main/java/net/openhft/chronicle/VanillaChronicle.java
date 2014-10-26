@@ -71,7 +71,7 @@ public class VanillaChronicle implements Chronicle {
         this.config = config;
         this.name = new File(basePath).getName();
 
-        DateCache dateCache = new DateCache(config.cycleFormat(), config.cycleLength());
+        VanillaDateCache dateCache = new VanillaDateCache(config.cycleFormat(), config.cycleLength());
         int indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
         int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
 

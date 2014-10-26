@@ -32,22 +32,22 @@ public class VanillaDataCache implements Closeable {
     private final String basePath;
     private final DataKey key = new DataKey();
     private final int blockBits;
-    private final DateCache dateCache;
+    private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache) {
         this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
     }
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, @NotNull VanillaChronicleConfig config) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull VanillaChronicleConfig config) {
         this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
     }
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity) {
         this(basePath, blockBits, dateCache, capacity, false);
     }
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull DateCache dateCache, int capacity, boolean cleanupOnClose) {
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;
