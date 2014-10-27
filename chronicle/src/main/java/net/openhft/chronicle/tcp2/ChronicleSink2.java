@@ -32,6 +32,9 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
+import net.openhft.chronicle.tcp2.AppenderAdapters.IndexedAppenderAdaper;
+import net.openhft.chronicle.tcp2.AppenderAdapters.VanillaAppenderAdaper;
+
 public class ChronicleSink2 extends WrappedChronicle {
     private final TcpConnection connection;
     private final ChronicleSinkConfig config;
@@ -208,7 +211,7 @@ public class ChronicleSink2 extends WrappedChronicle {
     private final class PersistentSinkExcerpt extends AbstractPersistentSinkExcerpt {
 
         private ExcerptAppender appender;
-        private ChronicleTcp2.AppenderAdapter adapter;
+        private AppenderAdapter adapter;
         private long lastLocalIndex;
 
         public PersistentSinkExcerpt(final ExcerptCommon excerptCommon) {
@@ -231,8 +234,8 @@ public class ChronicleSink2 extends WrappedChronicle {
                         this.appender = delegatedChronicle.createAppender();
                         this.adapter =
                             delegatedChronicle instanceof IndexedChronicle
-                                ? new ChronicleTcp2.IndexedAppenderAdaper(delegatedChronicle, this.appender)
-                                : new ChronicleTcp2.VanillaAppenderAdaper(delegatedChronicle, this.appender);
+                                ? new IndexedAppenderAdaper(delegatedChronicle, this.appender)
+                                : new VanillaAppenderAdaper(delegatedChronicle, this.appender);
                     }
 
                     subscribe(lastLocalIndex = delegatedChronicle.lastIndex());

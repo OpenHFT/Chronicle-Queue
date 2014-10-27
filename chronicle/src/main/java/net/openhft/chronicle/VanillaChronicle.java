@@ -494,7 +494,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public void startExcerpt() {
-            startExcerpt(config.defaultMessageSize());
+            startExcerpt(config.defaultMessageSize(), cycle());
         }
 
         @Override
