@@ -18,18 +18,18 @@
 package net.openhft.chronicle;
 
 
+import net.openhft.lang.Jvm;
+import net.openhft.lang.model.constraints.NotNull;
+
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteOrder;
-import java.util.concurrent.TimeUnit;
 
-public abstract class ChronicleQueueBuilder {
+public abstract class ChronicleQueueBuilder implements Cloneable {
 
     private final File path;
     private final Class<? extends Chronicle> type;
 
-    private boolean synchonous;
+    private boolean synchronous;
     private boolean useCheckedExcerpt;
 
     /**
@@ -39,7 +39,7 @@ public abstract class ChronicleQueueBuilder {
     private ChronicleQueueBuilder(Class<? extends Chronicle> type, File path) {
         this.type = type;
         this.path = path;
-        this.synchonous = false;
+        this.synchronous = false;
         this.useCheckedExcerpt = false;
     }
 
@@ -55,12 +55,12 @@ public abstract class ChronicleQueueBuilder {
      * Sets the synchronous mode to be used. Enabling synchronous mode means that
      * {@link ExcerptCommon#finish()} will force a persistence every time.
      *
-     * @param synchonous If synchronous mode should be used or not.
+     * @param synchronous If synchronous mode should be used or not.
      *
      * @return this builder object back
      */
-    public ChronicleQueueBuilder synchonous(boolean synchonous) {
-        this.synchonous = synchonous;
+    public ChronicleQueueBuilder synchronous(boolean synchronous) {
+        this.synchronous = synchronous;
         return this;
     }
 
@@ -69,8 +69,8 @@ public abstract class ChronicleQueueBuilder {
      *
      * @return true if synchronous mode is enabled, false otherwise.
      */
-    protected boolean synchonous() {
-        return this.synchonous;
+    public boolean synchronous() {
+        return this.synchronous;
     }
 
     /**
@@ -84,7 +84,7 @@ public abstract class ChronicleQueueBuilder {
         return this;
     }
 
-    protected boolean useCheckedExcerpt() {
+    public boolean useCheckedExcerpt() {
         return this.useCheckedExcerpt;
     }
 
@@ -131,15 +131,20 @@ public abstract class ChronicleQueueBuilder {
     //
     // *************************************************************************
 
-    private static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder {
-        private int cacheLineSize = 64;
-        private int dataBlockSize = 512 * 1024 * 1024;
-        private int messageCapacity = 128 * 1024;
-        private int indexBlockSize = Math.max(4096, this.dataBlockSize / 4);;
-        private boolean minimiseFootprint = false;
+    public static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder implements Cloneable {
 
-        private IndexedChronicleQueueBuilder(File path) {
+        private int cacheLineSize;
+        private int dataBlockSize;
+        private int messageCapacity;
+        private int indexBlockSize;
+
+        private IndexedChronicleQueueBuilder(final File path) {
             super(IndexedChronicle.class, path);
+
+            this.cacheLineSize   = 64;
+            this.dataBlockSize   = Jvm.is64Bit() ? 128 * 1024 * 1024 : 16 * 1024 * 1024;
+            this.indexBlockSize  = Math.max(4096, this.dataBlockSize / 4);
+            this.messageCapacity = 128 * 1024;
         }
 
         /**
@@ -166,7 +171,7 @@ public abstract class ChronicleQueueBuilder {
          *
          * @return the size of the index cache lines
          */
-        protected int cacheLineSize() {
+        public int cacheLineSize() {
             return this.cacheLineSize;
         }
 
@@ -182,6 +187,10 @@ public abstract class ChronicleQueueBuilder {
          */
         public IndexedChronicleQueueBuilder dataBlockSize(int dataBlockSize) {
             this.dataBlockSize = dataBlockSize;
+            if (messageCapacity > dataBlockSize / 2) {
+                messageCapacity = dataBlockSize / 2;
+            }
+
             return this;
         }
 
@@ -190,7 +199,7 @@ public abstract class ChronicleQueueBuilder {
          *
          * @return the size of the data blocks
          */
-        protected int dataBlockSize() {
+        public int dataBlockSize() {
             return this.dataBlockSize;
         }
 
@@ -212,7 +221,7 @@ public abstract class ChronicleQueueBuilder {
          *
          * @return the size of the index blocks
          */
-        protected int indexBlockSize() {
+        public int indexBlockSize() {
             return this.indexBlockSize;
         }
 
@@ -237,13 +246,92 @@ public abstract class ChronicleQueueBuilder {
          *
          * @return the maximum message size that can be stored
          */
-        protected int messageCapacity() {
+        public int messageCapacity() {
             return this.messageCapacity;
+        }
+
+        /**
+         * A pre-defined ChronicleBuilder for small {@link net.openhft.chronicle.Chronicle} instances.
+         *
+         * It has the following params:
+         * <ul>
+         * <li>data block size <b>16M</b></li>
+         * </ul>
+         */
+        public IndexedChronicleQueueBuilder small() {
+            dataBlockSize(16 * 1024 * 1024);
+            return this;
+        }
+
+        /**
+         * A pre-defined ChronicleBuilder for medium {@link net.openhft.chronicle.Chronicle} instances.
+         *
+         * It has the following params:
+         * <ul>
+         * <li>data block size <b>128M</b></li>
+         * </ul>
+         */
+        public IndexedChronicleQueueBuilder medium() {
+            dataBlockSize(128 * 1024 * 1024);
+            return this;
+        }
+
+        /**
+         * A pre-defined ChronicleBuilder for large {@link net.openhft.chronicle.Chronicle} instances.
+         *
+         * It has the following params:
+         * <ul>
+         * <li>data block size <b>512M</b></li>
+         * </ul>
+         */
+        public IndexedChronicleQueueBuilder large() {
+            dataBlockSize(512 * 1024 * 1024);
+            return this;
+        }
+
+        /**
+         * A pre-defined ChronicleBuilder for test {@link net.openhft.chronicle.Chronicle} instances.
+         *
+         * It has the following params:
+         * <ul>
+         * <li>data block size <b>8k</b></li>
+         * </ul>
+         */
+        public IndexedChronicleQueueBuilder test() {
+            dataBlockSize(8 * 1024);
+            return this;
+        }
+
+        /**
+         * The default ChronicleConfig used by various {@link net.openhft.chronicle.Chronicle}
+         * implementations if not otherwise specified.
+         *
+         * On 64 bit JVMs it delegates to {@link net.openhft.chronicle.ChronicleQueueBuilder.IndexedChronicleQueueBuilder#medium()},
+         * On 32 bit JVMs it delegates to {@link net.openhft.chronicle.ChronicleQueueBuilder.IndexedChronicleQueueBuilder#small()},
+         */
+        public IndexedChronicleQueueBuilder standard() {
+            return Jvm.is64Bit() ? medium() : small();
         }
 
         @Override
         public Chronicle build() throws IOException {
-            return null;
+            return new IndexedChronicle(this);
+        }
+
+        /**
+         * Makes IndexedChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this IndexedChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public IndexedChronicleQueueBuilder clone() {
+            try {
+                return (IndexedChronicleQueueBuilder) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 
@@ -280,4 +368,18 @@ public abstract class ChronicleQueueBuilder {
         protected int receiveBufferSize = 256 * 1024;
     }
     */
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * Makes ChronicleQueueBuilder cloneable.
+     *
+     * @return a cloned copy of this ChronicleConfig instance
+     */
+    @Override
+    public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
+        return (ChronicleQueueBuilder) super.clone();
+    }
 }

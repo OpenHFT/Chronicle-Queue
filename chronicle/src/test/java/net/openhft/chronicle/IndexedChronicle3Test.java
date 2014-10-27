@@ -30,11 +30,13 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
 
     @Test
     public void testCheckedIndexedExcerpt_001() throws IOException {
-        final ChronicleConfig cfg = ChronicleConfig.DEFAULT.clone();
-        cfg.useCheckedExcerpt(true);
-
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath,cfg);
+
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+            .standard()
+            .useCheckedExcerpt(true)
+            .build();
+
         final ExcerptAppender appender = chronicle.createAppender();
 
         assertTrue(appender instanceof CheckedExcerpt);

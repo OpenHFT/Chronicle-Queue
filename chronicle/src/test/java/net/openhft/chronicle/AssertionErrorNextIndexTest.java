@@ -58,18 +58,29 @@ public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         // shrink the chronicle chunks to trigger error earlier
-        final ChronicleConfig config = ChronicleConfig.TEST;
-        config.indexBlockSize(1024 * 1024);
-        config.dataBlockSize(4 * 1024);
+        //final ChronicleConfig config = ChronicleConfig.TEST;
+        //config.indexBlockSize(1024 * 1024);
+        //config.dataBlockSize(4 * 1024);
 
-        Chronicle chronicle1 = new IndexedChronicle(basePath, config);
+        Chronicle chronicle1 = ChronicleQueueBuilder.indexed(basePath)
+            .test()
+            .indexBlockSize(1024 * 1024)
+            .dataBlockSize(4 * 1024)
+            .build();
+
         ExcerptAppender appender = chronicle1.createAppender();
         for (int i = 0; i < 100; i++) {
             writeToChronicle(appender, i);
         }
         chronicle1.close();
+
         {
-            Chronicle chronicle = new IndexedChronicle(basePath, config);
+            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+                .test()
+                .indexBlockSize(1024 * 1024)
+                .dataBlockSize(4 * 1024)
+                .build();
+
             ExcerptTailer tailer = chronicle.createTailer();
             int counter = 0;
             while (tailer.nextIndex()) {
@@ -88,7 +99,12 @@ public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
         long counter = 0;
 
         while (counter < 100) {
-            Chronicle chronicle = new IndexedChronicle(basePath, config);
+            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+                .test()
+                .indexBlockSize(1024 * 1024)
+                .dataBlockSize(4 * 1024)
+                .build();
+
             ExcerptTailer tailer = chronicle.createTailer();
             System.out.println("index(" + (lastIndex - 1) + ")");
             boolean ok = tailer.index(lastIndex - 1);

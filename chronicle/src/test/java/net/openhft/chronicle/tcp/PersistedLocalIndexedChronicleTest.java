@@ -18,10 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import org.junit.Test;
 
 import java.util.Random;
@@ -36,7 +33,7 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
         final int port = BASE_PORT + 201;
         final String basePath = getIndexedTestPath();
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         final ChronicleSource source = new ChronicleSource(chronicle, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
         final CountDownLatch latch = new CountDownLatch(5);

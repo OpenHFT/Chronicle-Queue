@@ -36,7 +36,7 @@ class AppenderAdapters {
 
         @Override
         public boolean handlePadding() {
-            appender.startExcerpt(chronicle.config().dataBlockSize() - 1);
+            appender.startExcerpt(chronicle.builder().dataBlockSize() - 1);
             return true;
         }
 

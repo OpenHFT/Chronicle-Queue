@@ -19,6 +19,7 @@
 package net.openhft.chronicle.examples;
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -40,7 +41,7 @@ public class PagingLatencyTest {
         String path = new File(TMP, "test-paging-latency").getAbsolutePath();
 
         ChronicleTools.deleteOnExit(path);
-        Chronicle chronicle = new IndexedChronicle(path);
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(path).build();
 
         long start = System.currentTimeMillis();
         double max = 0;

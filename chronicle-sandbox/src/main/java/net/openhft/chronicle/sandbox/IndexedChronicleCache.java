@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.sandbox;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.IndexedChronicle;
 
 import java.io.IOException;
@@ -29,20 +31,20 @@ import java.io.IOException;
  */
 public class IndexedChronicleCache {
     private final String basePath;
-    private IndexedChronicle chronicle;
+    private Chronicle chronicle;
     private int chronicleIndex = -1;
 
     public IndexedChronicleCache(String basePath) {
         this.basePath = basePath;
     }
 
-    public IndexedChronicle acquireChronicle(int index) throws IOException {
+    public Chronicle acquireChronicle(int index) throws IOException {
         if (index == chronicleIndex)
             return chronicle;
         chronicleIndex = index;
         String basePath2 = basePath + "/" + index;
 //        System.out.println("Opening " + basePath2);
-        return chronicle = new IndexedChronicle(basePath2);
+        return chronicle = ChronicleQueueBuilder.indexed(basePath2).build();
     }
 
     public void close() throws IOException {

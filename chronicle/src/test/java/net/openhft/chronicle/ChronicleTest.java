@@ -87,7 +87,7 @@ public class ChronicleTest  {
 
     @Test
     public void testIndexedChronicleToStartToEndBehavior()  throws IOException {
-       final Chronicle ch = new IndexedChronicle(getIndexedTestPath());
+       final Chronicle ch = ChronicleQueueBuilder.indexed(getIndexedTestPath()).build();
 
         testChronicleToStartToEndBehavior(ch);
 

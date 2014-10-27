@@ -69,12 +69,12 @@ public class ChronicleSink2Test {
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath), port);
+        return new ChronicleSource(ChronicleQueueBuilder.indexed(basePath).build(), port);
     }
 
-    protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    }
+    //protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
+    //    return new ChronicleSource(new IndexedChronicle(basePath, config), port);
+    //}
 
     // *************************************************************************
     //
@@ -196,7 +196,7 @@ public class ChronicleSink2Test {
                             );
 
                             sink = new ChronicleSink2(
-                                new IndexedChronicle(path),
+                                ChronicleQueueBuilder.indexed(path).build(),
                                 ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
                                 cnx);
 
@@ -337,8 +337,8 @@ public class ChronicleSink2Test {
 
         TcpConnection cnx = new SinkTcpConnectionInitiator(new InetSocketAddress("localhost", 9876));
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), 9876);
-        final Chronicle sink = new ChronicleSink2(new IndexedChronicle(basePathSink), ChronicleSinkConfig.DEFAULT, cnx);
+        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), 9876);
+        final Chronicle sink = new ChronicleSink2(ChronicleQueueBuilder.indexed(basePathSink).build(), ChronicleSinkConfig.DEFAULT, cnx);
 
         Thread t = new Thread(new Runnable() {
             @Override

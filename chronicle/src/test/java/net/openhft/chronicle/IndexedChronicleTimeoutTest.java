@@ -35,7 +35,7 @@ public class IndexedChronicleTimeoutTest extends IndexedChronicleTestBase {
     @Test(timeout = 1000)
     public void testAppendTimeout() throws IOException {
         final String baseDir = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(baseDir);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(baseDir).build();
 
         try {
             final ExcerptAppender appender = chronicle.createAppender();
@@ -58,7 +58,7 @@ public class IndexedChronicleTimeoutTest extends IndexedChronicleTestBase {
     @Test(timeout = 500)
     public void testWriteTimeout() throws IOException {
         final String baseDir = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(baseDir);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(baseDir).build();
 
         try {
             final ExcerptAppender appender = chronicle.createAppender();
@@ -81,7 +81,7 @@ public class IndexedChronicleTimeoutTest extends IndexedChronicleTestBase {
     @Test(timeout = 500)
     public void testWriteReadTimeout() throws IOException {
         final String baseDir = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(baseDir);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(baseDir).build();
 
         try {
             final ExcerptAppender appender = chronicle.createAppender();

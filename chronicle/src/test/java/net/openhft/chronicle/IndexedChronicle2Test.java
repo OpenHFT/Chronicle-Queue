@@ -34,7 +34,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
     @Test
     public void testIndexedChronicle_001() throws IOException {
         final String basePath = getTestPath();
-        final Chronicle ch1 = new IndexedChronicle(basePath);
+        final Chronicle ch1 = ChronicleQueueBuilder.indexed(basePath).build();
 
         ExcerptAppender app = ch1.createAppender();
         for(long i=0;i<100;i++) {
@@ -55,7 +55,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
         tail1.close();
 
-        final Chronicle ch2 = new IndexedChronicle(basePath);
+        final Chronicle ch2 = ChronicleQueueBuilder.indexed(basePath).build();
         ExcerptTailer tail2 = ch1.createTailer().toStart();
         for(long i=0;i<100;i++) {
             assertTrue(tail2.nextIndex());
@@ -74,12 +74,13 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
     @Test
     public void testIndexedChronicle_002() throws IOException {
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.indexBlockSize(64);
-        config.dataBlockSize(64);
-
         final String basePath = getTestPath();
-        final Chronicle ch1 = new IndexedChronicle(basePath,config);
+
+        final Chronicle ch1 = ChronicleQueueBuilder.indexed(basePath)
+            .test()
+            .indexBlockSize(64)
+            .dataBlockSize(64)
+            .build();
 
         ExcerptAppender app = ch1.createAppender();
         for(long i=0;i<100;i++) {
@@ -100,7 +101,12 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
         tail1.close();
 
-        final Chronicle ch2 = new IndexedChronicle(basePath,config);
+        final Chronicle ch2 = ChronicleQueueBuilder.indexed(basePath)
+            .test()
+            .indexBlockSize(64)
+            .dataBlockSize(64)
+            .build();
+
         ExcerptTailer tail2 = ch1.createTailer().toStart();
         for(long i=0;i<100;i++) {
             assertTrue(tail2.nextIndex());
@@ -122,7 +128,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         final long nb = 50 * 1000 * 1000;
-        final Chronicle ch = new IndexedChronicle(basePath);
+        final Chronicle ch = ChronicleQueueBuilder.indexed(basePath).build();
         final ExcerptAppender ap = ch.createAppender();
 
         for(long i=0; i < nb; i++) {

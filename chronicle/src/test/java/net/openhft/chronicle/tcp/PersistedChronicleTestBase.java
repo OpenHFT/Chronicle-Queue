@@ -19,11 +19,7 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -76,12 +72,12 @@ public class PersistedChronicleTestBase {
     }
 
     protected ChronicleSource indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath), port);
+        return new ChronicleSource(ChronicleQueueBuilder.indexed(basePath).build(), port);
     }
 
-    protected ChronicleSource indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    }
+    //protected ChronicleSource indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
+    //    return new ChronicleSource(new IndexedChronicle(basePath, config), port);
+    //}
 
     protected static void assertIndexedClean(String path) {
         assertNotNull(path);

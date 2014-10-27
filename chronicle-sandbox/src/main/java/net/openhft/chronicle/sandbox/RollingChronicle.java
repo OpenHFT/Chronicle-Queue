@@ -137,7 +137,7 @@ public class RollingChronicle implements Chronicle {
         private final Type type;
         private final int indexFileExcerpts = config().indexFileExcerpts();
         private long chronicleIndexBase = Long.MIN_VALUE;
-        private IndexedChronicle chronicle;
+        private Chronicle chronicle;
 
         public RollingExcerpt(Type type) {
             super(null);

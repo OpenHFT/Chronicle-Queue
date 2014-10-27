@@ -489,7 +489,7 @@ public class ChronicleSink implements Chronicle {
                     case ChronicleTcp.IN_SYNC_LEN:
                         return false;
                     case ChronicleTcp.PADDED_LEN:
-                        appender.startExcerpt(((IndexedChronicle) chronicle).config().dataBlockSize() - 1);
+                        appender.startExcerpt(((IndexedChronicle) chronicle).builder().dataBlockSize() - 1);
                         return true;
                     case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try

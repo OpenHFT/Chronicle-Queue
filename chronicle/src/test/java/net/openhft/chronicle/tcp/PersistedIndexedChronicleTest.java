@@ -18,10 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
@@ -57,8 +54,8 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
+        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), PORT + 1);
+        final Chronicle sink = new ChronicleSink(ChronicleQueueBuilder.indexed(basePathSink).build(), "localhost", PORT + 1);
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -116,8 +113,8 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
+        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), PORT + 2);
+        final Chronicle sink = new ChronicleSink(ChronicleQueueBuilder.indexed(basePathSink).build(), "localhost", PORT + 2);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -158,8 +155,8 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
+        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), PORT + 3);
+        final Chronicle sink = new ChronicleSink(ChronicleQueueBuilder.indexed(basePathSink).build(), "localhost", PORT + 3);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -203,8 +200,8 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
+        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), PORT + 4);
+        final Chronicle sink = new ChronicleSink(ChronicleQueueBuilder.indexed(basePathSink).build(), "localhost", PORT + 4);
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();

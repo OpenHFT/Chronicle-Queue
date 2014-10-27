@@ -150,13 +150,15 @@ class ChronicleWarmup {
     private static final String TMP = System.getProperty("java.io.tmpdir");
 
     static {
-        ChronicleConfig cc = ChronicleConfig.DEFAULT.clone();
-        cc.dataBlockSize(64);
-        cc.indexBlockSize(64);
         String basePath = TMP + "/warmup-" + Math.random();
         ChronicleTools.deleteOnExit(basePath);
         try {
-            IndexedChronicle ic = new IndexedChronicle(basePath, cc);
+            Chronicle ic = ChronicleQueueBuilder.indexed(basePath)
+                .standard()
+                .dataBlockSize(64)
+                .indexBlockSize(64)
+                .build();
+
             ExcerptAppender appender = ic.createAppender();
             ExcerptTailer tailer = ic.createTailer();
             for (int i = 0; i < WARMUP_ITER; i++) {

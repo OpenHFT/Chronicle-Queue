@@ -66,7 +66,7 @@ public class Jira57 {
         ChronicleConfig chronicleConfig = ChronicleConfig.SMALL;   // 599168, 917501
 //        ChronicleConfig chronicleConfig = ChronicleConfig.MEDIUM;   // 4793472
 //        ChronicleConfig chronicleConfig = ChronicleConfig.LARGE;   // 19173960
-        IndexedChronicle writeChronicle = new IndexedChronicle(basePath, chronicleConfig);
+        Chronicle writeChronicle = ChronicleQueueBuilder.indexed(basePath).small().build();
 //        VanillaChronicleConfig chronicleConfig = VanillaChronicleConfig.DEFAULT;
 //        VanillaChronicle writeChronicle = new VanillaChronicle(basePath, chronicleConfig);
         ExcerptAppender appender = writeChronicle.createAppender();
@@ -80,7 +80,7 @@ public class Jira57 {
         }
         writeChronicle.close();
 
-        IndexedChronicle readChronicle = new IndexedChronicle(basePath, chronicleConfig);
+        Chronicle readChronicle = ChronicleQueueBuilder.indexed(basePath).small().build();
 //        VanillaChronicle readChronicle = new VanillaChronicle(basePath, chronicleConfig);
         Excerpt excerpt = readChronicle.createExcerpt();
         ExcerptTailer tailer = readChronicle.createTailer();

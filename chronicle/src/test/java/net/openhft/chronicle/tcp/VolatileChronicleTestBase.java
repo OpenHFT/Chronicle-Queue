@@ -81,12 +81,12 @@ public class VolatileChronicleTestBase {
     }
 
     protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath), port);
+        return new ChronicleSource(ChronicleQueueBuilder.indexed(basePath).build(), port);
     }
 
-    protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    }
+    //protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
+    //    return new ChronicleSource(new IndexedChronicle(basePath, config), port);
+    //}
 
     // *************************************************************************
     //
