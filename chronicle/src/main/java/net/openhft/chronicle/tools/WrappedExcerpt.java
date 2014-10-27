@@ -306,6 +306,34 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public void write(byte[] bytes) {
         common.write(bytes);
+    }    @Override
+    public void write(char[] chars) {
+        common.write(chars);
+    }
+
+    @Override
+    public void write(@NotNull char[] data, int off, int len) {
+        write(data, off, len);
+    }
+
+    @Override
+    public ByteBuffer sliceAsByteBuffer(@Nullable ByteBuffer toReuse) {
+        return common.sliceAsByteBuffer(toReuse);
+    }
+
+    @Override
+    public void readFully(@NotNull char[] data) {
+common.readFully(data);
+    }
+
+    @Override
+    public void readFully(@NotNull char[] data, int off, int len) {
+common.readFully(data, off, len);
+    }
+
+    @Override
+    public void writeChars(@NotNull CharSequence cs) {
+        common.writeChars(cs);
     }
 
     @Override
@@ -1266,5 +1294,25 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @Override
     public File file() {
         return common.file();
+    }
+
+    @Override
+    public boolean tryRWReadLock(long offset, long timeOutNS) throws IllegalStateException {
+        return common.tryRWReadLock(offset, timeOutNS);
+    }
+
+    @Override
+    public boolean tryRWWriteLock(long offset, long timeOutNS) throws IllegalStateException {
+        return common.tryRWWriteLock(offset, timeOutNS);
+    }
+
+    @Override
+    public void unlockRWReadLock(long offset) throws IllegalStateException {
+        common.unlockRWReadLock(offset);
+    }
+
+    @Override
+    public void unlockRWWriteLock(long offset) throws IllegalStateException {
+        common.unlockRWWriteLock(offset);
     }
 }

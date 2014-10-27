@@ -147,7 +147,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
                                 appender.writeInt(counter);
                                 appender.finish();
 
-                                sleep(2000);
+                                sleep(500);
                             }
 
                             appender.close();
