@@ -44,27 +44,28 @@ public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBa
         final Random random = new Random();
 
         final int items = 100;
-        final ExcerptAppender appender = source.createAppender();
 
         try {
             Thread appenderThread = new Thread() {
                 public void run() {
-                    for (long i = 1; i <= items; i++) {
-                        if(latch.getCount() > 0) {
-                            latch.countDown();
-                        }
+                    try {
+                        final ExcerptAppender appender = source.createAppender();
+                        for (long i = 1; i <= items; i++) {
+                            if (latch.getCount() > 0) {
+                                latch.countDown();
+                            }
 
-                        appender.startExcerpt(8);
-                        appender.writeLong(i);
-                        appender.finish();
+                            appender.startExcerpt(8);
+                            appender.writeLong(i);
+                            appender.finish();
 
-                        try {
-                            sleep(300 + random.nextInt(200));
-                        } catch(Exception e) {
+                            sleep(10 + random.nextInt(80));
+
+                            appender.close();
                         }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-
-                    appender.close();
                 }
             };
 

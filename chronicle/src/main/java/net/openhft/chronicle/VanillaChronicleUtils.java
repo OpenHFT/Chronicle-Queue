@@ -26,7 +26,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class VanillaChronicleUtils {
-    private static final Logger LOGGER = LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
+
+    private static Logger getLogger() {
+        return LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
+    }
 
     public static File mkFiles(String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
         File dir = new File(basePath, cycleStr);
@@ -41,14 +44,14 @@ public class VanillaChronicleUtils {
 
         if (!dir.isDirectory()) {
             boolean created = dir.mkdirs();
-            LOGGER.trace("Created {} is {}",dir,created);
+            getLogger().trace("Created {} is {}", dir, created);
         }
 
         File file = new File(dir, name);
         if (file.exists()) {
-             LOGGER.trace("Opening {}", file);
+             getLogger().trace("Opening {}", file);
         } else if (forAppend) {
-             LOGGER.trace("Creating {}", file);
+             getLogger().trace("Creating {}", file);
         } else {
             throw new FileNotFoundException(file.getAbsolutePath());
         }

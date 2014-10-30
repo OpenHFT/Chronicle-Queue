@@ -49,7 +49,7 @@ class VanillaDateCache {
      */
     public String formatFor(int cycle) {
         long millis = (long) cycle * cycleLength;
-        int hash = Maths.hash(millis) & (SIZE - 1);
+        int hash = (int) Maths.hash(millis) & (SIZE - 1);
         DateValue dv = values[hash];
         if (dv == null || dv.millis != millis) {
             synchronized (format) {

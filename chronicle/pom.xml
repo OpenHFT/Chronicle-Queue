@@ -46,7 +46,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.10</version>
+                <version>6.4.11</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
@@ -206,7 +206,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-site-plugin</artifactId>
-            <!--<version>3.3</version>-->
+            <version>3.4</version>
             <configuration>
               <reportPlugins>
                 <plugin>

@@ -640,7 +640,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public boolean unmapped() {
-            return ((VanillaExcerptCommon) delegatedCommon).unmapped();
+            return ((VanillaExcerptCommon) wrappedCommon).unmapped();
         }
 
         @Override
@@ -657,12 +657,12 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public boolean unmapped() {
-            return ((VanillaExcerptCommon) delegatedCommon).unmapped();
+            return ((VanillaExcerptCommon) wrappedCommon).unmapped();
         }
 
         @Override
         public void startExcerpt(long capacity, int cycle) {
-            ((VanillaAppender) delegatedCommon).startExcerpt(capacity, cycle);
+            ((VanillaAppender) wrappedCommon).startExcerpt(capacity, cycle);
         }
 
         @Override

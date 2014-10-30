@@ -69,11 +69,11 @@ public class ChronicleSink2 extends WrappedChronicle {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
-        this.excerpt = delegatedChronicle == null
+        this.excerpt = wrappedChronicle == null
             ? new VolatileExcerpt()
             : isLocal
-            ? new PersistentLocalSinkExcerpt(delegatedChronicle.createTailer())
-            : new PersistentSinkExcerpt(delegatedChronicle.createTailer());
+            ? new PersistentLocalSinkExcerpt(wrappedChronicle.createTailer())
+            : new PersistentSinkExcerpt(wrappedChronicle.createTailer());
 
         return (Excerpt)this.excerpt;
     }
@@ -84,11 +84,11 @@ public class ChronicleSink2 extends WrappedChronicle {
             throw new IllegalStateException("A tailer has already been created");
         }
 
-        this.excerpt = delegatedChronicle == null
+        this.excerpt = wrappedChronicle == null
             ? new VolatileExcerptTailer()
             : isLocal
-                ? new PersistentLocalSinkExcerpt(delegatedChronicle.createTailer())
-                : new PersistentSinkExcerpt(delegatedChronicle.createTailer());
+                ? new PersistentLocalSinkExcerpt(wrappedChronicle.createTailer())
+                : new PersistentSinkExcerpt(wrappedChronicle.createTailer());
 
         return (ExcerptTailer)this.excerpt;
     }
@@ -182,7 +182,7 @@ public class ChronicleSink2 extends WrappedChronicle {
         private boolean readNextExcerpt() {
             try {
                 if (!closed) {
-                    query(delegatedChronicle.lastIndex());
+                    query(wrappedChronicle.lastIndex());
 
                     if (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
                         final int size = readBuffer.getInt();
@@ -231,14 +231,14 @@ public class ChronicleSink2 extends WrappedChronicle {
                     readBuffer.limit(0);
 
                     if(this.appender == null) {
-                        this.appender = delegatedChronicle.createAppender();
+                        this.appender = wrappedChronicle.createAppender();
                         this.adapter =
-                            delegatedChronicle instanceof IndexedChronicle
-                                ? new IndexedAppenderAdaper(delegatedChronicle, this.appender)
-                                : new VanillaAppenderAdaper(delegatedChronicle, this.appender);
+                            wrappedChronicle instanceof IndexedChronicle
+                                ? new IndexedAppenderAdaper(wrappedChronicle, this.appender)
+                                : new VanillaAppenderAdaper(wrappedChronicle, this.appender);
                     }
 
-                    subscribe(lastLocalIndex = delegatedChronicle.lastIndex());
+                    subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
                 } catch (IOException e) {
                     logger.warn("Error closing socketChannel", e);
                     return false;
