@@ -59,7 +59,7 @@ public class ExampleCacheMain {
     }
 
     public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
-        chronicle = ChronicleQueueBuilder.indexed(basePath).standard().build();
+        chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         appender = chronicle.createAppender();
         reader = chronicle.createExcerpt();
         _maxObjSize = maxObjSize;

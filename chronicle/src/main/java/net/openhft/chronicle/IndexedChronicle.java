@@ -51,7 +51,6 @@ public class IndexedChronicle implements Chronicle {
     final VanillaMappedBlocks indexFileCache;
     @NotNull
     final VanillaMappedBlocks dataFileCache;
-
     @NotNull
     final ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder;
 

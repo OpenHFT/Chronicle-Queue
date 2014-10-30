@@ -18,10 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.*;
 import org.junit.Test;
 
 import java.util.Random;
@@ -37,7 +34,7 @@ public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBa
         final int port = BASE_PORT + 301;
         final String basePath = getVanillaTestPath();
 
-        final Chronicle chronicle = new VanillaChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
         final ChronicleSource source = new ChronicleSource(chronicle, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
         final CountDownLatch latch = new CountDownLatch(5);

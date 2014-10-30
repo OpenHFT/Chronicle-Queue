@@ -97,7 +97,7 @@ public class ChronicleTest  {
 
     @Test
     public void testVanillaChronicleToStartToEndBehavior()  throws IOException {
-        final Chronicle ch = new VanillaChronicle(getVanillaTestPath());
+        final Chronicle ch = ChronicleQueueBuilder.vanilla(getVanillaTestPath()).build();
 
         testChronicleToStartToEndBehavior(ch);
 

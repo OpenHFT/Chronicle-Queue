@@ -43,7 +43,7 @@ public class PEMain {
 
         String pePath = tmp + "/demo/pe";
         ChronicleTools.deleteDirOnExit(pePath);
-        Chronicle pe2gw = ChronicleQueueBuilder.indexed(pePath).standard().build();
+        Chronicle pe2gw = ChronicleQueueBuilder.indexed(pePath).build();
         ExcerptAppender excerpt = pe2gw.createAppender();
         final Pe2GwWriter pe2GwWriter = new Pe2GwWriter(excerpt);
 
@@ -55,7 +55,7 @@ public class PEMain {
             String gw2pePath = tmp + "/demo/gw2pe" + sourceId;
             ChronicleTools.deleteDirOnExit(gw2pePath);
 
-            gw2pe[i]   = ChronicleQueueBuilder.indexed(gw2pePath).standard().build();
+            gw2pe[i]   = ChronicleQueueBuilder.indexed(gw2pePath).build();
             readers[i] = new Gw2PeReader(sourceId, gw2pe[i].createTailer(), listener);
         }
 

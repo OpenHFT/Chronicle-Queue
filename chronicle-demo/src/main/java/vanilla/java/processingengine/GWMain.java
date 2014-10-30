@@ -108,10 +108,10 @@ class GWMain {
         //ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
-        Chronicle gw2pe = ChronicleQueueBuilder.indexed(gw2pePath).standard().build();
+        Chronicle gw2pe = ChronicleQueueBuilder.indexed(gw2pePath).build();
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
-        Chronicle pe2gw = ChronicleQueueBuilder.indexed(pePath).standard().build();
+        Chronicle pe2gw = ChronicleQueueBuilder.indexed(pePath).build();
         final long[] times = new long[ORDERS];
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {

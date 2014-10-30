@@ -154,7 +154,6 @@ class ChronicleWarmup {
         ChronicleTools.deleteOnExit(basePath);
         try {
             Chronicle ic = ChronicleQueueBuilder.indexed(basePath)
-                .standard()
                 .dataBlockSize(64)
                 .indexBlockSize(64)
                 .build();

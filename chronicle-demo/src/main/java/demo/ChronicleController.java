@@ -18,9 +18,7 @@
 
 package demo;
 
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tcp.ChronicleSink;
 import net.openhft.chronicle.tcp.ChronicleSource;
 
@@ -36,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by daniel on 19/06/2014.
  */
 public class ChronicleController {
-    private VanillaChronicle chronicle;
+    private Chronicle chronicle;
     private ExcerptTailer tailer;
     private ExcerptTailer tcpTailer;
     private ChronicleUpdatable updatable;
@@ -71,9 +69,17 @@ public class ChronicleController {
             VanillaChronicleConfig config = new VanillaChronicleConfig();
             config.indexBlockSize(32 << 20);
             config.dataBlockSize(128 << 20);
-            chronicle = new VanillaChronicle(BASE_PATH, config);
+            chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
+                .indexBlockSize(32 << 20)
+                .dataBlockSize(128 << 20)
+                .build();
+
             ChronicleSource source = new ChronicleSource(chronicle, 0);
-            ChronicleSink sink = new ChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
+            ChronicleSink sink = new ChronicleSink(
+                ChronicleQueueBuilder.vanilla(BASE_PATH_SINK).build(),
+                "localhost",
+                source.getLocalPort());
+
             chronicle.clear();
             sink.clear();
 
@@ -141,7 +147,7 @@ public class ChronicleController {
         private final String symbol;
         private final AtomicBoolean isRunning = new AtomicBoolean(false);
         private final AtomicLong count;
-        private final VanillaChronicle.VanillaAppender appender;
+        private final ExcerptAppender appender;
         private int rate;
 
         public WriterThread(String symbol, AtomicLong count) throws IOException {

@@ -18,9 +18,7 @@
 
 package net.openhft.chronicle.examples;
 
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -43,11 +41,11 @@ public class WriteReadDatedMessages2Main {
         System.out.println("indexBlockSize " + config.indexBlockSize());
         System.out.println("synchronous " + config.synchronous());
 
-        VanillaChronicle chronicle = new VanillaChronicle(basePath);
+        Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
         long messages = 10 * 1000 * 1000L;// 1000 * 50000;
         chronicle.clear();
         long start = System.nanoTime();
-        VanillaChronicle.VanillaAppender appender = chronicle.createAppender();
+        ExcerptAppender appender = chronicle.createAppender();
         String msg = "writer1 " + new Date();
         for (long i = 0; i < messages; i++) {
             appender.startExcerpt();

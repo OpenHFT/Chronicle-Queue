@@ -66,6 +66,12 @@
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.jgoodies</groupId>
             <artifactId>jgoodies-forms</artifactId>

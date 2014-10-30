@@ -38,7 +38,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     @Test(timeout = 500)
     public void testAppendTimeout() throws IOException {
         final String baseDir = getTestPath();
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir).build();
 
         try {
             final ExcerptAppender appender = chronicle.createAppender();
@@ -60,7 +60,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     @Test(timeout = 500)
     public void testWriteTimeout() throws IOException {
         final String baseDir = getTestPath();
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir).build();
 
         try {
             final ExcerptAppender appender = chronicle.createAppender();
@@ -83,15 +83,15 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     public void testDataCacheTimeout() throws Exception {
         final String baseDir = getTestPath();
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaDataCache cache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000);
+        final VanillaDataCache dataCache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000, false);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
             for (int j = 0; j < 5; j++) {
                 int runs = 10000;
                 for (int i = 0; i < runs; i++) {
-                    VanillaMappedBytes buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
-                    File file = cache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
+                    VanillaMappedBytes buffer = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
+                    File file = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
 
                     buffer.release(); // held by VanillaMappedCache
                     buffer.release(); // VanillaDataCache always call ackquire()
@@ -101,7 +101,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
                 }
             }
         } finally {
-            cache.close();
+            dataCache.close();
             IOTools.deleteDir(baseDir);
 
             assertFalse(new File(baseDir).exists());

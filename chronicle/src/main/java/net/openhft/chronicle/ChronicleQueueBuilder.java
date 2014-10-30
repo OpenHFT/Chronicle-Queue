@@ -115,15 +115,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return new VanillaChronicleQueueBuilder(path);
     }
 
-    public static ChronicleQueueBuilder vanilla(String path) {
+    public static VanillaChronicleQueueBuilder vanilla(String path) {
         return vanilla(new File(path));
     }
 
-    public static ChronicleQueueBuilder vanilla(String parent, String child) {
+    public static VanillaChronicleQueueBuilder vanilla(String parent, String child) {
         return vanilla(new File(parent, child));
     }
 
-    public static ChronicleQueueBuilder vanilla(File parent, String child) {
+    public static VanillaChronicleQueueBuilder vanilla(File parent, String child) {
         return vanilla(new File(parent, child));
     }
 
@@ -138,6 +138,17 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int messageCapacity;
         private int indexBlockSize;
 
+        /**
+         * On 64 bit JVMs it has the following params:
+         * <ul>
+         * <li>data block size <b>128M</b></li>
+         * </ul>
+         *
+         * On 32 bit JVMs it has the following params:
+         * <ul>
+         * <li>data block size <b>16M</b></li>
+         * </ul>
+         */
         private IndexedChronicleQueueBuilder(final File path) {
             super(IndexedChronicle.class, path);
 
@@ -302,17 +313,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this;
         }
 
-        /**
-         * The default ChronicleConfig used by various {@link net.openhft.chronicle.Chronicle}
-         * implementations if not otherwise specified.
-         *
-         * On 64 bit JVMs it delegates to {@link net.openhft.chronicle.ChronicleQueueBuilder.IndexedChronicleQueueBuilder#medium()},
-         * On 32 bit JVMs it delegates to {@link net.openhft.chronicle.ChronicleQueueBuilder.IndexedChronicleQueueBuilder#small()},
-         */
-        public IndexedChronicleQueueBuilder standard() {
-            return Jvm.is64Bit() ? medium() : small();
-        }
-
         @Override
         public Chronicle build() throws IOException {
             return new IndexedChronicle(this);
@@ -335,24 +335,152 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
-    private static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
-        private String cycleFormat = "yyyyMMdd";
-        private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
-        private int defaultMessageSize = 128 << 10; // 128 KB.
-        private int dataCacheCapacity = 32;
-        private int indexCacheCapacity = 32;
-        private long indexBlockSize = 16L << 20; // 16 MB
-        private long dataBlockSize = 64L << 20; // 64 MB
-        private long entriesPerCycle = 1L << 40; // one trillion per day or per hour.
-        private boolean cleanupOnClose = false;
+    public static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
+        private String cycleFormat;
+        private int cycleLength;
+        private int defaultMessageSize;
+        private int dataCacheCapacity;
+        private int indexCacheCapacity;
+        private long indexBlockSize;
+        private long dataBlockSize;
+        private long entriesPerCycle;
+        private boolean cleanupOnClose;
 
         private VanillaChronicleQueueBuilder(File path) {
             super(VanillaChronicle.class, path);
+
+            this.cycleFormat = "yyyyMMdd";
+            this.cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
+            this.defaultMessageSize = 128 << 10; // 128 KB.
+            this.dataCacheCapacity = 32;
+            this.indexCacheCapacity = 32;
+            this.indexBlockSize = 16L << 20; // 16 MB
+            this.dataBlockSize = 64L << 20; // 64 MB
+            this.entriesPerCycle = 1L << 40; // one trillion per day or per hour.
+            this.cleanupOnClose = false;
+        }
+
+        public VanillaChronicleQueueBuilder cycleFormat(String cycleFormat) {
+            this.cycleFormat = cycleFormat;
+            return this;
+        }
+
+        public String cycleFormat() {
+            return cycleFormat;
+        }
+
+        public VanillaChronicleQueueBuilder cycleLength(int cycleLength) {
+            return cycleLength(cycleLength, true);
+        }
+
+        public VanillaChronicleQueueBuilder cycleLength(int cycleLength, boolean check) {
+            if (check && cycleLength < VanillaChronicle.MIN_CYCLE_LENGTH) {
+                throw new IllegalArgumentException(
+                    "Cycle length can't be less than " + VanillaChronicle.MIN_CYCLE_LENGTH + " ms!");
+            }
+
+            this.cycleLength = cycleLength;
+            return this;
+        }
+
+        public int cycleLength() {
+            return cycleLength;
+        }
+
+        public VanillaChronicleQueueBuilder indexBlockSize(long indexBlockSize) {
+            this.indexBlockSize = indexBlockSize;
+            return this;
+        }
+
+        public long indexBlockSize() {
+            return indexBlockSize;
+        }
+
+        public long dataBlockSize() {
+            return dataBlockSize;
+        }
+
+        public VanillaChronicleQueueBuilder dataBlockSize(int dataBlockSize) {
+            this.dataBlockSize = dataBlockSize;
+            return this;
+        }
+
+        public VanillaChronicleQueueBuilder entriesPerCycle(long entriesPerCycle) {
+            if(entriesPerCycle < 256) {
+                throw new IllegalArgumentException("EntriesPerCycle must be at least 256");
+            }
+
+            if(entriesPerCycle > 1L << 48) {
+                throw new IllegalArgumentException("EntriesPerCycle must not exceed 1L << 48 (" + (1L << 48) + ")");
+            }
+
+            if(!((entriesPerCycle & -entriesPerCycle) == entriesPerCycle)) {
+                throw new IllegalArgumentException("EntriesPerCycle must be a power of 2");
+            }
+
+            this.entriesPerCycle = entriesPerCycle;
+            return this;
+        }
+
+        public long entriesPerCycle() {
+            return entriesPerCycle;
+        }
+
+        public VanillaChronicleQueueBuilder defaultMessageSize(int defaultMessageSize) {
+            this.defaultMessageSize = defaultMessageSize;
+            return this;
+        }
+
+        public int defaultMessageSize() {
+            return defaultMessageSize;
+        }
+
+        public VanillaChronicleQueueBuilder cleanupOnClose(boolean cleanupOnClose) {
+            this.cleanupOnClose = cleanupOnClose;
+            return this;
+        }
+
+        public boolean cleanupOnClose() {
+            return cleanupOnClose;
+        }
+
+        public VanillaChronicleQueueBuilder dataCacheCapacity(int dataCacheCapacity) {
+            this.dataCacheCapacity = dataCacheCapacity;
+            return this;
+        }
+
+        public int dataCacheCapacity() {
+            return this.dataCacheCapacity;
+        }
+
+        public VanillaChronicleQueueBuilder indexCacheCapacity(int indexCacheCapacity) {
+            this.indexCacheCapacity = indexCacheCapacity;
+            return this;
+        }
+
+        public int indexCacheCapacity() {
+            return this.indexCacheCapacity;
         }
 
         @Override
         public Chronicle build() throws IOException {
-            return null;
+            return new VanillaChronicle(this);
+        }
+
+        /**
+         * Makes VanillaChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this IndexedChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public VanillaChronicleQueueBuilder clone() {
+            try {
+                return (VanillaChronicleQueueBuilder) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 

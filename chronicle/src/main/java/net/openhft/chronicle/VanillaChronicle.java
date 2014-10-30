@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.tools.CheckedExcerpt;
+import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
@@ -32,17 +33,38 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.VanillaChronicleConfig.*;
 
 /**
  * Created by peter
  */
 public class VanillaChronicle implements Chronicle {
+    public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
+
+    /**
+     * Number of most-significant bits used to hold the thread id in index entries.
+     * The remaining least-significant bits of the index entry are used for the data offset info.
+     */
+    public static final int THREAD_ID_BITS = Integer.getInteger("os.max.pid.bits", Jvm.PID_BITS);
+
+    /**
+     * Mask used to validate that the thread id does not exceed the allocated number of bits.
+     */
+    public static final long THREAD_ID_MASK = -1L >>> -THREAD_ID_BITS;
+
+    /**
+     * Number of least-significant bits used to hold the data offset info in index entries.
+     */
+    public static final int INDEX_DATA_OFFSET_BITS = 64 - THREAD_ID_BITS;
+
+    /**
+     * Mask used to extract the data offset info from an index entry.
+     */
+    public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
+
     private final String name;
-    private final String basePath;
-    private final VanillaChronicleConfig config;
     private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
@@ -59,37 +81,47 @@ public class VanillaChronicle implements Chronicle {
     private final AtomicLong lastWrittenIndex = new AtomicLong(-1L);
     private volatile boolean closed = false;
 
-    public VanillaChronicle(String basePath) {
-        this(basePath, VanillaChronicleConfig.DEFAULT);
-    }
+    @NotNull
+    final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
 
-    public VanillaChronicle(String basePath, VanillaChronicleConfig config) {
+    VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
+        this.builder = builder.clone();
         this.marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
         this.tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
         this.appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
-        this.basePath = basePath;
-        this.config = config;
-        this.name = new File(basePath).getName();
+        this.name = builder.path().getName();
 
-        VanillaDateCache dateCache = new VanillaDateCache(config.cycleFormat(), config.cycleLength());
-        int indexBlockSizeBits = Maths.intLog2(config.indexBlockSize());
+        VanillaDateCache dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
+        int indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
         int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
 
-        this.indexCache = new VanillaIndexCache(basePath, indexBlockSizeBits, dateCache, config);
+        this.indexCache = new VanillaIndexCache(
+            builder.path().getAbsolutePath(),
+            indexBlockSizeBits,
+            dateCache,
+            builder.indexCacheCapacity(),
+            builder.cleanupOnClose());
+
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
 
-        this.dataBlockSizeBits = Maths.intLog2(config.dataBlockSize());
+        this.dataBlockSizeBits = Maths.intLog2(builder.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
-        this.dataCache = new VanillaDataCache(basePath, dataBlockSizeBits, dateCache, config);
 
-        this.entriesForCycleBits = Maths.intLog2(config.entriesPerCycle());
+        this.dataCache = new VanillaDataCache(
+            builder.path().getAbsolutePath(),
+            dataBlockSizeBits,
+            dateCache,
+            builder.indexCacheCapacity(),
+            builder.cleanupOnClose());
+
+        this.entriesForCycleBits = Maths.intLog2(builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
     }
 
     void checkNotClosed() {
         if (closed) {
-            throw new IllegalStateException(basePath + " is closed");
+            throw new IllegalStateException(builder.path() + " is closed");
         }
     }
 
@@ -167,7 +199,7 @@ public class VanillaChronicle implements Chronicle {
     private VanillaAppender createAppender0() {
         final VanillaAppender appender = new VanillaAppenderImpl();
 
-        return !config.useCheckedExcerpt()
+        return !builder.useCheckedExcerpt()
             ? appender
             : new VanillaCheckedAppender(appender);
     }
@@ -175,7 +207,7 @@ public class VanillaChronicle implements Chronicle {
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        final Excerpt excerpt = config.useCheckedExcerpt()
+        final Excerpt excerpt = builder.useCheckedExcerpt()
             ? new VanillaExcerpt()
             : new VanillaCheckedExcerpt(new VanillaExcerpt());
 
@@ -230,7 +262,7 @@ public class VanillaChronicle implements Chronicle {
     public void clear() {
         indexCache.close();
         dataCache.close();
-        IOTools.deleteDir(basePath);
+        IOTools.deleteDir(builder.path().getAbsolutePath());
     }
 
     public void checkCounts(int min, int max) {
@@ -320,7 +352,7 @@ public class VanillaChronicle implements Chronicle {
         }
 
         public int cycle() {
-            return (int) (System.currentTimeMillis() / config.cycleLength());
+            return (int) (System.currentTimeMillis() / builder.cycleLength());
         }
 
         public boolean index(long nextIndex) {
@@ -404,11 +436,11 @@ public class VanillaChronicle implements Chronicle {
                 if (found)
                     return true;
 
-                int cycle = (int) (nextIndex / config.entriesPerCycle());
+                int cycle = (int) (nextIndex / builder.entriesPerCycle());
                 if (cycle >= cycle())
                     return false;
 
-                nextIndex = (cycle + 1) * config.entriesPerCycle();
+                nextIndex = (cycle + 1) * builder.entriesPerCycle();
             }
         }
 
@@ -416,7 +448,7 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptCommon toStart() {
             int cycle = (int) indexCache.firstCycle();
             if (cycle >= 0) {
-                index = (cycle * config.entriesPerCycle()) - 1;
+                index = (cycle * builder.entriesPerCycle()) - 1;
             }
 
             return this;
@@ -494,7 +526,7 @@ public class VanillaChronicle implements Chronicle {
 
         @Override
         public void startExcerpt() {
-            startExcerpt(config.defaultMessageSize(), cycle());
+            startExcerpt(builder.defaultMessageSize(), cycle());
         }
 
         @Override
@@ -538,7 +570,7 @@ public class VanillaChronicle implements Chronicle {
 
                 startAddr = positionAddr = dataBytes.positionAddr() + 4;
                 limitAddr = startAddr + capacity;
-                nextSynchronous = config.synchronous();
+                nextSynchronous = builder.synchronous();
                 finished = false;
             } catch (IOException e) {
                 throw new AssertionError(e);
@@ -569,7 +601,7 @@ public class VanillaChronicle implements Chronicle {
             NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
             // position of the start not the end.
             int offset = (int) (startAddr - dataBytes.address());
-            long dataOffset = dataBytes.index() * config.dataBlockSize() + offset;
+            long dataOffset = dataBytes.index() * builder.dataBlockSize() + offset;
             long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
 
             try {

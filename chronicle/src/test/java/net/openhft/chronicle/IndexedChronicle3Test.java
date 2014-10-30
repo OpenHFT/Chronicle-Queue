@@ -33,7 +33,6 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-            .standard()
             .useCheckedExcerpt(true)
             .build();
 

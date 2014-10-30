@@ -34,9 +34,8 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
     @Test
     public void testFinishAfterClose() throws IOException {
-
         final String basePath = getTestPath();
-        final VanillaChronicle chronicle = new VanillaChronicle(basePath);
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath).build();
         final ExcerptAppender appender = chronicle.createAppender();
         final ExcerptTailer tailer = chronicle.createTailer();
 
@@ -75,11 +74,11 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
     @Test
     public void testCheckedVanillaExcerpt_001() throws IOException {
-        final VanillaChronicleConfig cfg = VanillaChronicleConfig.DEFAULT.clone();
-        cfg.useCheckedExcerpt(true);
-
         final String basePath = getTestPath();
-        final VanillaChronicle chronicle = new VanillaChronicle(basePath,cfg);
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath)
+            .useCheckedExcerpt(true)
+            .build();
+
         final ExcerptAppender appender = chronicle.createAppender();
 
         assertTrue(appender instanceof CheckedExcerpt);

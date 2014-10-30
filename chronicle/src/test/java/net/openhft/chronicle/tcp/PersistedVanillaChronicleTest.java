@@ -36,9 +36,9 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("-sink");
 
         final ChronicleSource source = new ChronicleSource(
-            new VanillaChronicle(sourceBasePath), 0);
+            ChronicleQueueBuilder.vanilla(sourceBasePath).build(), 0);
         final ChronicleSink sink = new ChronicleSink(
-            new VanillaChronicle(sinkBasePath), "localhost", source.getLocalPort());
+            ChronicleQueueBuilder.vanilla(sinkBasePath).build(), "localhost", source.getLocalPort());
 
         try {
 
@@ -103,16 +103,24 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+        final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
             .entriesPerCycle(1L << 20)
             .cycleLength(1000, false)
             .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10);
+            .indexBlockSize(16L << 10)
+            .build();
+
+        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10)
+            .build();
 
         final ChronicleSource source = new ChronicleSource(
-            new VanillaChronicle(sourceBasePath, config), 0);
+            sourceChronicle, 0);
         final ChronicleSink sink = new ChronicleSink(
-            new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
+            sinkChronicle, "localhost", source.getLocalPort());
 
         try {
             final Thread at = new Thread("th-appender") {
@@ -179,16 +187,24 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
 
-        final VanillaChronicleConfig config = new VanillaChronicleConfig()
+        final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
             .entriesPerCycle(1L << 20)
             .cycleLength(1000, false)
             .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10);
+            .indexBlockSize(16L << 10)
+            .build();
+
+        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10)
+            .build();
 
         final ChronicleSource source = new ChronicleSource(
-            new VanillaChronicle(sourceBasePath, config), 0);
+            sourceChronicle, 0);
         final ChronicleSink sink = new ChronicleSink(
-            new VanillaChronicle(sinkBasePath, config), "localhost", source.getLocalPort());
+            sinkChronicle, "localhost", source.getLocalPort());
 
         try {
             final Thread at = new Thread("th-appender") {
@@ -260,18 +276,20 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
     @Test
     public void testSourceSinkStartResumeRollingEverySecond() throws Exception {
         //This is the config that is required to make the VanillaChronicle roll every second
-        final VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.entriesPerCycle(1L << 20);
-        config.cycleLength(1000, false);
-        config.cycleFormat("yyyyMMddHHmmss");
-        config.indexBlockSize(16L << 10);
 
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
-        final ChronicleSource source = new ChronicleSource(new VanillaChronicle(sourceBasePath, config), 8888);
+        final ChronicleSource source = new ChronicleSource(
+            ChronicleQueueBuilder.vanilla(sourceBasePath)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build(),
+            8888);
 
         ExcerptAppender appender = source.createAppender();
         System.out.print("writing 100 items will take take 10 seconds.");
@@ -291,7 +309,16 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         System.out.print("\n");
 
         //create a tailer to get the first 50 items then exit the tailer
-        final ChronicleSink sink1 = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ChronicleSink sink1 = new ChronicleSink(
+            ChronicleQueueBuilder.vanilla(sinkBasePath)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build(),
+            "localhost",
+            8888);
+
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
         System.out.println("Sink1 reading first 50 items then stopping");
@@ -309,7 +336,15 @@ public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
         sink1.checkCounts(1, 1);
 
         //now resume the tailer to get the first 50 items
-        final ChronicleSink sink2 = new ChronicleSink(new VanillaChronicle(sinkBasePath, config), "localhost", 8888);
+        final ChronicleSink sink2 = new ChronicleSink(
+            ChronicleQueueBuilder.vanilla(sinkBasePath)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build(),
+            "localhost",
+            8888);
 
         //Take the tailer to the last index (item 50) and start reading from there.
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();

@@ -71,14 +71,6 @@ public class PersistedChronicleTestBase {
         return path;
     }
 
-    protected ChronicleSource indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(ChronicleQueueBuilder.indexed(basePath).build(), port);
-    }
-
-    //protected ChronicleSource indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-    //    return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    //}
-
     protected static void assertIndexedClean(String path) {
         assertNotNull(path);
         assertTrue(new File(path + ".index").delete());
@@ -107,13 +99,5 @@ public class PersistedChronicleTestBase {
         }
 
         return path;
-    }
-
-    protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath), port);
-    }
-
-    protected Chronicle vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath, config), port);
     }
 }

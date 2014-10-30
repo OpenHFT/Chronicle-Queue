@@ -34,12 +34,12 @@ public class ClientMain {
 
         String c2sPath = tmp + "/demo/c2s";
         ChronicleTools.deleteDirOnExit(c2sPath);
-        Chronicle c2s = ChronicleQueueBuilder.indexed(c2sPath).standard().build();
+        Chronicle c2s = ChronicleQueueBuilder.indexed(c2sPath).build();
         ExcerptAppender appender = c2s.createAppender();
         C2SWriter c2sWriter = new C2SWriter(appender);
 
         String s2cPath = tmp + "/demo/s2c";
-        Chronicle s2c = ChronicleQueueBuilder.indexed(s2cPath).standard().build();
+        Chronicle s2c = ChronicleQueueBuilder.indexed(s2cPath).build();
         ExcerptTailer tailer = s2c.createTailer();
         final AtomicInteger received = new AtomicInteger();
         S2CReader s2cReader = new S2CReader(new IClient() {

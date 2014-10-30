@@ -37,20 +37,7 @@ public class VanillaIndexCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
 
-
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache) {
-        this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
-    }
-
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull VanillaChronicleConfig config) {
-        this(basePath, blockBits, dateCache, config.indexCacheCapacity(), config.cleanupOnClose());
-    }
-
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity) {
-        this(basePath, blockBits, dateCache, capacity, false);
-    }
-
-    public VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
+    VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.baseFile = new File(basePath);
         this.blockBits = blockBits;

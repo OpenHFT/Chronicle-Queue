@@ -35,19 +35,18 @@ public class VanillaDataCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache) {
-        this(basePath, blockBits, dateCache, VanillaChronicleConfig.DEFAULT);
-    }
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull VanillaChronicleConfig config) {
-        this(basePath, blockBits, dateCache, config.dataCacheCapacity(), config.cleanupOnClose());
+    /*
+    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
+        this(basePath, blockBits, dateCache, builder.dataCacheCapacity(), builder.cleanupOnClose());
     }
 
     public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity) {
         this(basePath, blockBits, dateCache, capacity, false);
     }
+    */
 
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
+    VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
         this.blockBits = blockBits;
         this.dateCache = dateCache;

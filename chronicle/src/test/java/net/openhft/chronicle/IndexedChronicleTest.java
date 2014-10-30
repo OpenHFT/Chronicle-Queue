@@ -307,7 +307,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         final int dataBlockSize = 1 << 26;
 
         Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-            .standard()
             .dataBlockSize(dataBlockSize)
             .indexBlockSize(dataBlockSize / 4)
             .build();
@@ -323,7 +322,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             public void run() {
                 try {
                     final Chronicle c = ChronicleQueueBuilder.indexed(basePath)
-                        .standard()
                         .dataBlockSize(dataBlockSize)
                         .indexBlockSize(dataBlockSize / 4)
                         .build();
@@ -416,7 +414,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).standard().build();
+                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).build();
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         w.startExcerpt();
@@ -437,11 +435,11 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).standard().build();
+                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).build();
                     final ExcerptTailer r = chronicle.createTailer();
                     Chronicle chronicle2 = null;
                     try {
-                        chronicle2 = ChronicleQueueBuilder.indexed(basePath2).standard().build();
+                        chronicle2 = ChronicleQueueBuilder.indexed(basePath2).build();
                     } catch (FileNotFoundException e) {
                         System.in.read();
                     }
@@ -466,7 +464,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         }, "t2");
         t2.start();
 
-        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath2).standard().build();
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath2).build();
         final ExcerptTailer r = chronicle.createTailer();
 
         for (int i = 0; i < runs; i += size) {

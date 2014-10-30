@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.comparison;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -48,7 +50,7 @@ public class KafkaTestMain {
         ChronicleTools.deleteDirOnExit(basePath);
         long start = System.nanoTime();
         long lastUpdate = System.currentTimeMillis();
-        VanillaChronicle chronicle = new VanillaChronicle(basePath);
+        Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
         byte[] bytes = new byte[message_size];
         ExcerptAppender e = chronicle.createAppender();
         int count = 50 * 1000 * 1000;
