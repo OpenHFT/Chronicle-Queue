@@ -17,9 +17,10 @@
  */
 package net.openhft.chronicle.tcp2;
 
-import net.openhft.chronicle.*;
-import net.openhft.chronicle.tcp.ChronicleSink;
-import net.openhft.chronicle.tcp.ChronicleSinkConfig;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tcp.ChronicleSource;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
@@ -109,12 +110,10 @@ public class ChronicleSink2Test {
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            TcpConnection cnx = new SinkTcpConnectionInitiator(
-                                "s-" + threadId,
-                                new InetSocketAddress("localhost", port)
-                            );
+                            sink = ChronicleQueueBuilder.sink(null)
+                                .connectAddress(new InetSocketAddress("localhost", port))
+                                .build();
 
-                            sink = new ChronicleSink2(null, ChronicleSinkConfig.DEFAULT.clone(), cnx);
                             tailer = sink.createTailer().toStart();
 
                             latch.await();
@@ -190,15 +189,11 @@ public class ChronicleSink2Test {
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            TcpConnection cnx = new SinkTcpConnectionInitiator(
-                                "s-" + threadId,
-                                new InetSocketAddress("localhost", port)
-                            );
-
-                            sink = new ChronicleSink2(
-                                ChronicleQueueBuilder.indexed(path).build(),
-                                ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
-                                cnx);
+                            sink = ChronicleQueueBuilder.indexed(path)
+                                .sink()
+                                    .connectAddress(new InetSocketAddress("localhost", port))
+                                    .sharedChronicle(true)
+                                .build();
 
                             tailer = sink.createTailer().toStart();
 
@@ -338,7 +333,11 @@ public class ChronicleSink2Test {
         TcpConnection cnx = new SinkTcpConnectionInitiator(new InetSocketAddress("localhost", 9876));
 
         final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), 9876);
-        final Chronicle sink = new ChronicleSink2(ChronicleQueueBuilder.indexed(basePathSink).build(), ChronicleSinkConfig.DEFAULT, cnx);
+
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+                .connectAddress(new InetSocketAddress("localhost", 9876))
+            .build();
 
         Thread t = new Thread(new Runnable() {
             @Override

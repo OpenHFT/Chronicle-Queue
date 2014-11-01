@@ -18,75 +18,20 @@
 package net.openhft.chronicle;
 
 
+import net.openhft.chronicle.tcp2.ChronicleSink2;
+import net.openhft.chronicle.tcp2.ChronicleSource2;
+import net.openhft.chronicle.tcp2.SinkTcpConnectionAcceptor;
+import net.openhft.chronicle.tcp2.SinkTcpConnectionInitiator;
+import net.openhft.chronicle.tcp2.TcpConnection;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
-
-    private final File path;
-    private final Class<? extends Chronicle> type;
-
-    private boolean synchronous;
-    private boolean useCheckedExcerpt;
-
-    /**
-     * @param type
-     * @param path
-     */
-    private ChronicleQueueBuilder(Class<? extends Chronicle> type, File path) {
-        this.type = type;
-        this.path = path;
-        this.synchronous = false;
-        this.useCheckedExcerpt = false;
-    }
-
-    protected Class<? extends Chronicle> type() {
-        return this.type;
-    }
-
-    protected File path() {
-        return this.path;
-    }
-
-    /**
-     * Sets the synchronous mode to be used. Enabling synchronous mode means that
-     * {@link ExcerptCommon#finish()} will force a persistence every time.
-     *
-     * @param synchronous If synchronous mode should be used or not.
-     *
-     * @return this builder object back
-     */
-    public ChronicleQueueBuilder synchronous(boolean synchronous) {
-        this.synchronous = synchronous;
-        return this;
-    }
-
-    /**
-     * Checks if synchronous mode is enabled or not.
-     *
-     * @return true if synchronous mode is enabled, false otherwise.
-     */
-    public boolean synchronous() {
-        return this.synchronous;
-    }
-
-    /**
-     *
-     * @param useCheckedExcerpt
-     *
-     * @return this builder object back
-     */
-    public ChronicleQueueBuilder useCheckedExcerpt(boolean useCheckedExcerpt) {
-        this.useCheckedExcerpt = useCheckedExcerpt;
-        return this;
-    }
-
-    public boolean useCheckedExcerpt() {
-        return this.useCheckedExcerpt;
-    }
 
     public abstract Chronicle build() throws IOException;
 
@@ -127,11 +72,25 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return vanilla(new File(parent, child));
     }
 
+
+    public static ReplicaChronicleQueueBuilder sink(Chronicle chronicle) {
+        return new SinkChronicleQueueBuilder(chronicle);
+    }
+
+    public static ReplicaChronicleQueueBuilder source(Chronicle chronicle) {
+        return new SourceChronicleQueueBuilder(chronicle);
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
 
     public static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder implements Cloneable {
+
+        private final File path;
+
+        private boolean synchronous;
+        private boolean useCheckedExcerpt;
 
         private int cacheLineSize;
         private int dataBlockSize;
@@ -150,12 +109,59 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          * </ul>
          */
         private IndexedChronicleQueueBuilder(final File path) {
-            super(IndexedChronicle.class, path);
-
-            this.cacheLineSize   = 64;
-            this.dataBlockSize   = Jvm.is64Bit() ? 128 * 1024 * 1024 : 16 * 1024 * 1024;
-            this.indexBlockSize  = Math.max(4096, this.dataBlockSize / 4);
+            this.path  = path;
+            this.synchronous = false;
+            this.useCheckedExcerpt = false;
+            this.cacheLineSize = 64;
+            this.dataBlockSize = Jvm.is64Bit() ? 128 * 1024 * 1024 : 16 * 1024 * 1024;
+            this.indexBlockSize = Math.max(4096, this.dataBlockSize / 4);
             this.messageCapacity = 128 * 1024;
+        }
+
+
+        protected File path() {
+            return this.path;
+        }
+
+        /**
+         * Sets the synchronous mode to be used. Enabling synchronous mode means that
+         * {@link ExcerptCommon#finish()} will force a persistence every time.
+         *
+         * @param synchronous If synchronous mode should be used or not.
+         *
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder synchronous(boolean synchronous) {
+            this.synchronous = synchronous;
+            return this;
+        }
+
+        /**
+         * Checks if synchronous mode is enabled or not.
+         *
+         * @return true if synchronous mode is enabled, false otherwise.
+         */
+        public boolean synchronous() {
+            return this.synchronous;
+        }
+
+        /**
+         *
+         * @param useCheckedExcerpt
+         *
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder useCheckedExcerpt(boolean useCheckedExcerpt) {
+            this.useCheckedExcerpt = useCheckedExcerpt;
+            return this;
+        }
+
+        /**
+         *
+         * @return true if useCheckedExcerpt mode is enabled, false otherwise.
+         */
+        public boolean useCheckedExcerpt() {
+            return this.useCheckedExcerpt;
         }
 
         /**
@@ -313,6 +319,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this;
         }
 
+        public ReplicaChronicleQueueBuilder sink() {
+            return new SinkChronicleQueueBuilder(this);
+        }
+
+        public ReplicaChronicleQueueBuilder source() {
+            return new SourceChronicleQueueBuilder(this);
+        }
+
         @Override
         public Chronicle build() throws IOException {
             return new IndexedChronicle(this);
@@ -336,6 +350,11 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
     }
 
     public static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
+        private final File path;
+
+        private boolean synchronous;
+        private boolean useCheckedExcerpt;
+
         private String cycleFormat;
         private int cycleLength;
         private int defaultMessageSize;
@@ -347,8 +366,9 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private boolean cleanupOnClose;
 
         private VanillaChronicleQueueBuilder(File path) {
-            super(VanillaChronicle.class, path);
-
+            this.path  = path;
+            this.synchronous = false;
+            this.useCheckedExcerpt = false;
             this.cycleFormat = "yyyyMMdd";
             this.cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
             this.defaultMessageSize = 128 << 10; // 128 KB.
@@ -358,6 +378,51 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.dataBlockSize = 64L << 20; // 64 MB
             this.entriesPerCycle = 1L << 40; // one trillion per day or per hour.
             this.cleanupOnClose = false;
+        }
+
+        protected File path() {
+            return this.path;
+        }
+
+        /**
+         * Sets the synchronous mode to be used. Enabling synchronous mode means that
+         * {@link ExcerptCommon#finish()} will force a persistence every time.
+         *
+         * @param synchronous If synchronous mode should be used or not.
+         *
+         * @return this builder object back
+         */
+        public VanillaChronicleQueueBuilder synchronous(boolean synchronous) {
+            this.synchronous = synchronous;
+            return this;
+        }
+
+        /**
+         * Checks if synchronous mode is enabled or not.
+         *
+         * @return true if synchronous mode is enabled, false otherwise.
+         */
+        public boolean synchronous() {
+            return this.synchronous;
+        }
+
+        /**
+         *
+         * @param useCheckedExcerpt
+         *
+         * @return this builder object back
+         */
+        public VanillaChronicleQueueBuilder useCheckedExcerpt(boolean useCheckedExcerpt) {
+            this.useCheckedExcerpt = useCheckedExcerpt;
+            return this;
+        }
+
+        /**
+         *
+         * @return true if useCheckedExcerpt mode is enabled, false otherwise.
+         */
+        public boolean useCheckedExcerpt() {
+            return this.useCheckedExcerpt;
         }
 
         public VanillaChronicleQueueBuilder cycleFormat(String cycleFormat) {
@@ -462,6 +527,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.indexCacheCapacity;
         }
 
+        public ReplicaChronicleQueueBuilder sink() {
+            return new SinkChronicleQueueBuilder(this);
+        }
+
+        public ReplicaChronicleQueueBuilder source() {
+            return new SourceChronicleQueueBuilder(this);
+        }
+
         @Override
         public Chronicle build() throws IOException {
             return new VanillaChronicle(this);
@@ -470,7 +543,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * Makes VanillaChronicleQueueBuilder cloneable.
          *
-         * @return a cloned copy of this IndexedChronicleQueueBuilder instance
+         * @return a cloned copy of this VanillaChronicleQueueBuilder instance
          */
         @NotNull
         @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
@@ -484,18 +557,255 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
-    /*
-    private class ReplicaConfig {
-        protected InetSocketAddress bindAddress = null;
-        protected InetSocketAddress connectAddress = null;
-        protected long reconnectTimeout = 500;
-        protected TimeUnit reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
-        protected long selectTimeout = 1000;
-        protected TimeUnit selectTimeoutUnit = TimeUnit.MILLISECONDS;
-        protected int maxOpenAttempts = Integer.MAX_VALUE;
-        protected int receiveBufferSize = 256 * 1024;
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder {
+        private final ChronicleQueueBuilder builder;
+        private Chronicle chronicle;
+
+        private InetSocketAddress bindAddress;
+        private InetSocketAddress connectAddress;
+        private long reconnectTimeout;
+        private TimeUnit reconnectTimeoutUnit;
+        private long selectTimeout;
+        private TimeUnit selectTimeoutUnit;
+        private int maxOpenAttempts;
+        private int receiveBufferSize;
+        private int minBufferSize;
+        private boolean sharedChronicle;
+        private long heartbeatInterval;
+        private TimeUnit heartbeatIntervalUnit;
+
+        private ReplicaChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
+            this.builder = builder;
+            this.chronicle = chronicle;
+
+            this.bindAddress = null;
+            this.connectAddress = null;
+            this.reconnectTimeout = 500;
+            this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
+            this.selectTimeout = 1000;
+            this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
+            this.heartbeatInterval = 2500;
+            this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
+            this.maxOpenAttempts = Integer.MAX_VALUE;
+            this.receiveBufferSize = 256 * 1024;
+            this.minBufferSize = this.receiveBufferSize;
+            this.sharedChronicle = false;
+        }
+
+        public InetSocketAddress bindAddress() {
+            return bindAddress;
+        }
+
+        public ReplicaChronicleQueueBuilder bindAddress(InetSocketAddress bindAddress) {
+            this.bindAddress = bindAddress;
+            return this;
+        }
+
+        public InetSocketAddress connectAddress() {
+            return connectAddress;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddress(InetSocketAddress connectAddress) {
+            this.connectAddress = connectAddress;
+            return this;
+        }
+
+        public long reconnectTimeout() {
+            return reconnectTimeout;
+        }
+
+        public ReplicaChronicleQueueBuilder reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
+            this.reconnectTimeout = reconnectTimeout;
+            this.reconnectTimeoutUnit = reconnectTimeoutUnit;
+            return this;
+        }
+
+        public TimeUnit getReconnectTimeoutUnit() {
+            return this.reconnectTimeoutUnit;
+        }
+
+        public long selectTimeout() {
+            return selectTimeout;
+        }
+
+        public ReplicaChronicleQueueBuilder selectTimeout(long selectTimeout, TimeUnit selectTimeoutUnit) {
+            this.selectTimeout = selectTimeout;
+            this.selectTimeoutUnit = selectTimeoutUnit;
+            return this;
+        }
+
+        public TimeUnit getSelectTimeoutUnit() {
+            return this.selectTimeoutUnit;
+        }
+
+        public ReplicaChronicleQueueBuilder heartbeatInterval(long heartbeatInterval, TimeUnit heartbeatIntervalUnit) {
+            this.heartbeatInterval = heartbeatInterval;
+            this.heartbeatIntervalUnit = heartbeatIntervalUnit;
+            return this;
+        }
+
+        public long heartbeatInterval() {
+            return this.heartbeatInterval;
+        }
+
+        public TimeUnit heartbeatIntervalUnit() {
+            return this.heartbeatIntervalUnit;
+        }
+
+        public int getMaxOpenAttempts() {
+            return maxOpenAttempts;
+        }
+
+        public ReplicaChronicleQueueBuilder maxOpenAttempts(int maxOpenAttempts) {
+            this.maxOpenAttempts = maxOpenAttempts;
+            return this;
+        }
+
+        public int receiveBufferSize() {
+            return receiveBufferSize;
+        }
+
+        public ReplicaChronicleQueueBuilder receiveBufferSize(int receiveBufferSize) {
+            this.receiveBufferSize = receiveBufferSize;
+            return this;
+        }
+
+        public int minBufferSize() {
+            return minBufferSize;
+        }
+
+        public ReplicaChronicleQueueBuilder minBufferSize(int minBufferSize) {
+            this.minBufferSize = minBufferSize;
+            return this;
+        }
+
+        public boolean sharedChronicle() {
+            return this.sharedChronicle;
+        }
+
+        public ReplicaChronicleQueueBuilder sharedChronicle(boolean sharedChronicle) {
+            this.sharedChronicle = sharedChronicle;
+            return this;
+        }
+
+        public Chronicle chronicle() {
+            return this.chronicle;
+        }
+
+        @Override
+        public Chronicle build() throws IOException {
+            if(this.builder != null) {
+                this.chronicle = this.builder.build();
+            }
+
+            return doBuild();
+        }
+
+        protected abstract Chronicle doBuild() throws IOException;
+
+        /**
+         * Makes ReplicaChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this ReplicaChronicleQueueBuilder instance
+         */
+        @NotNull
+        @Override
+        public ReplicaChronicleQueueBuilder clone() throws CloneNotSupportedException{
+            return (ReplicaChronicleQueueBuilder) super.clone();
+        }
     }
-    */
+
+    private static class SinkChronicleQueueBuilder extends ReplicaChronicleQueueBuilder {
+
+        private SinkChronicleQueueBuilder() {
+            super(null, null);
+        }
+
+        private SinkChronicleQueueBuilder(@NotNull ChronicleQueueBuilder builder) {
+            super(null, builder);
+        }
+
+        private SinkChronicleQueueBuilder(@NotNull Chronicle chronicle) {
+            super(chronicle, null);
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            TcpConnection cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = new SinkTcpConnectionAcceptor(bindAddress());
+            } else if(connectAddress() != null) {
+                cnx = new SinkTcpConnectionInitiator(bindAddress(),connectAddress());
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new ChronicleSink2(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public SinkChronicleQueueBuilder clone() {
+            try {
+                return (SinkChronicleQueueBuilder) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
+        }
+    }
+
+    private static class SourceChronicleQueueBuilder extends ReplicaChronicleQueueBuilder {
+
+        private SourceChronicleQueueBuilder(@NotNull ChronicleQueueBuilder builder) {
+            super(null, builder);
+        }
+
+        private SourceChronicleQueueBuilder(@NotNull Chronicle chronicle) {
+            super(chronicle, null);
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            TcpConnection cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = null;
+            } else if(connectAddress() != null) {
+                cnx = null;
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new ChronicleSource2(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("SourceChronicleQueueBuilder")
+        @Override
+        public SourceChronicleQueueBuilder clone() {
+            try {
+                return (SourceChronicleQueueBuilder) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
+        }
+    }
 
     // *************************************************************************
     //
