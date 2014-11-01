@@ -17,9 +17,17 @@
  */
 package net.openhft.chronicle.tcp2;
 
-import net.openhft.chronicle.*;
-import net.openhft.chronicle.tcp.ChronicleSinkConfig;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.ExcerptComparator;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tcp2.AppenderAdapters.IndexedAppenderAdaper;
+import net.openhft.chronicle.tcp2.AppenderAdapters.VanillaAppenderAdaper;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.NativeBytes;
@@ -32,22 +40,19 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-import net.openhft.chronicle.tcp2.AppenderAdapters.IndexedAppenderAdaper;
-import net.openhft.chronicle.tcp2.AppenderAdapters.VanillaAppenderAdaper;
-
 public class ChronicleSink2 extends WrappedChronicle {
     private final TcpConnection connection;
-    private final ChronicleSinkConfig config;
+    private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public ChronicleSink2(final Chronicle chronicle, final ChronicleSinkConfig config, final TcpConnection connection) {
-        super(chronicle);
+    public ChronicleSink2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final TcpConnection connection) {
+        super(builder.chronicle());
         this.connection = connection;
-        this.config = config;
+        this.builder = builder;
         this.closed = false;
-        this.isLocal = config.sharedChronicle() && connection.isLocalhost();
+        this.isLocal = builder.sharedChronicle() && connection.isLocalhost();
         this.excerpt = null;
     }
 
@@ -65,32 +70,12 @@ public class ChronicleSink2 extends WrappedChronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        if( this.excerpt != null) {
-            throw new IllegalStateException("An excerpt has already been created");
-        }
-
-        this.excerpt = wrappedChronicle == null
-            ? new VolatileExcerpt()
-            : isLocal
-            ? new PersistentLocalSinkExcerpt(wrappedChronicle.createTailer())
-            : new PersistentSinkExcerpt(wrappedChronicle.createTailer());
-
-        return (Excerpt)this.excerpt;
+        return (Excerpt)createExcerpt0();
     }
 
     @Override
     public synchronized ExcerptTailer createTailer() throws IOException {
-        if( this.excerpt != null) {
-            throw new IllegalStateException("A tailer has already been created");
-        }
-
-        this.excerpt = wrappedChronicle == null
-            ? new VolatileExcerptTailer()
-            : isLocal
-                ? new PersistentLocalSinkExcerpt(wrappedChronicle.createTailer())
-                : new PersistentSinkExcerpt(wrappedChronicle.createTailer());
-
-        return (ExcerptTailer)this.excerpt;
+        return (ExcerptTailer)createExcerpt0();
     }
 
     @Override
@@ -98,21 +83,36 @@ public class ChronicleSink2 extends WrappedChronicle {
         throw new UnsupportedOperationException();
     }
 
+
+    private ExcerptCommon createExcerpt0() throws IOException {
+        if( this.excerpt != null) {
+            throw new IllegalStateException("An excerpt has already been created");
+        }
+
+        this.excerpt = wrappedChronicle == null
+            ? new StatelessExcerpt()
+            : isLocal
+            ? new StatefullLocalExcerpt(wrappedChronicle.createTailer())
+            : new StatefullExcerpt(wrappedChronicle.createTailer());
+
+        return this.excerpt;
+    }
+
     // *************************************************************************
-    // PERSISTED
+    // STATEFULL
     // *************************************************************************
 
-    private abstract class AbstractPersistentSinkExcerpt extends WrappedExcerpt {
+    private abstract class AbstractStatefullExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ByteBuffer writeBuffer;
         protected final ByteBuffer readBuffer;
 
-        protected AbstractPersistentSinkExcerpt(final ExcerptCommon excerptCommon) {
-            super(excerptCommon);
+        protected AbstractStatefullExcerpt(final ExcerptCommon excerpt) {
+            super(excerpt);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = ChronicleTcp2.createBuffer(16);
-            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize());
+            this.readBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
         }
 
         @Override
@@ -158,9 +158,10 @@ public class ChronicleSink2 extends WrappedChronicle {
         protected abstract boolean readNext();
     }
 
-    private class PersistentLocalSinkExcerpt extends AbstractPersistentSinkExcerpt {
-        public PersistentLocalSinkExcerpt(final ExcerptCommon excerptCommon) {
-            super(excerptCommon);
+    private class StatefullLocalExcerpt extends AbstractStatefullExcerpt {
+
+        public StatefullLocalExcerpt(final ExcerptCommon common) {
+            super(common);
         }
 
         @Override
@@ -208,14 +209,14 @@ public class ChronicleSink2 extends WrappedChronicle {
         }
     }
 
-    private final class PersistentSinkExcerpt extends AbstractPersistentSinkExcerpt {
+    private final class StatefullExcerpt extends AbstractStatefullExcerpt {
 
         private ExcerptAppender appender;
         private AppenderAdapter adapter;
         private long lastLocalIndex;
 
-        public PersistentSinkExcerpt(final ExcerptCommon excerptCommon) {
-            super(excerptCommon);
+        public StatefullExcerpt(final ExcerptCommon common) {
+            super(common);
 
             this.appender = null;
             this.adapter = null;
@@ -325,10 +326,10 @@ public class ChronicleSink2 extends WrappedChronicle {
     }
 
     // *************************************************************************
-    // VOLATILE
+    // STATELESS
     // *************************************************************************
 
-    private class VolatileExcerptTailer extends NativeBytes implements ExcerptTailer {
+    private class StatelessExcerpt extends NativeBytes implements Excerpt {
 
         private final Logger logger;
         private final ByteBuffer writeBuffer;
@@ -337,16 +338,16 @@ public class ChronicleSink2 extends WrappedChronicle {
         private long index;
         private int lastSize;
 
-        public VolatileExcerptTailer() {
+        public StatelessExcerpt() {
             super(NO_PAGE, NO_PAGE);
 
             this.index = -1;
             this.lastSize = 0;
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = ChronicleTcp2.createBuffer(16);
-            this.readBuffer = ChronicleTcp2.createBuffer(config.minBufferSize());
+            this.readBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
-            this.capacityAddr = this.startAddr + config.minBufferSize();
+            this.capacityAddr = this.startAddr + builder.minBufferSize();
         }
 
         @Override
@@ -365,13 +366,13 @@ public class ChronicleSink2 extends WrappedChronicle {
         }
 
         @Override
-        public ExcerptTailer toStart() {
+        public Excerpt toStart() {
             index(-1);
             return this;
         }
 
         @Override
-        public ExcerptTailer toEnd() {
+        public Excerpt toEnd() {
             index(-2);
             return this;
         }
@@ -508,12 +509,6 @@ public class ChronicleSink2 extends WrappedChronicle {
                 return false;
             }
         }
-    }
-
-    private class VolatileExcerpt extends VolatileExcerptTailer implements Excerpt {
-        public VolatileExcerpt() {
-            super();
-        }
 
         @Override
         public long findMatch(@NotNull ExcerptComparator comparator) {
@@ -523,18 +518,6 @@ public class ChronicleSink2 extends WrappedChronicle {
         @Override
         public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Excerpt toStart() {
-            super.toStart();
-            return this;
-        }
-
-        @Override
-        public Excerpt toEnd() {
-            super.toEnd();
-            return this;
         }
     }
 }
