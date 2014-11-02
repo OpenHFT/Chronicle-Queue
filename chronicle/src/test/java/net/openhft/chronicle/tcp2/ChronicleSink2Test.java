@@ -330,7 +330,7 @@ public class ChronicleSink2Test {
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
-        TcpConnection cnx = new SinkTcpConnectionInitiator(new InetSocketAddress("localhost", 9876));
+        TcpConnection cnx = new SinkTcpInitiator(new InetSocketAddress("localhost", 9876));
 
         final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), 9876);
 

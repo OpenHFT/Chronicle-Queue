@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.tools;
+package net.openhft.chronicle.sandbox.tools;
+
+import net.openhft.chronicle.sandbox.MasterIndexFile;
 
 import java.io.File;
 import java.io.PrintWriter;

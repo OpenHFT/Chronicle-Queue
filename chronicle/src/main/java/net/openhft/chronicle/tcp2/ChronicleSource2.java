@@ -30,14 +30,14 @@ import java.io.IOException;
 public class ChronicleSource2 extends WrappedChronicle {
     private static final long BUSY_WAIT_TIME_NS = 100 * 1000;
 
-    private final TcpConnection connection;
+    private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final Object notifier;
     private volatile boolean closed;
     private long lastUnpausedNS;
     private long pauseWait;
 
-    public ChronicleSource2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final TcpConnection connection) {
+    public ChronicleSource2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder;
@@ -52,7 +52,7 @@ public class ChronicleSource2 extends WrappedChronicle {
         if(!closed) {
             closed = true;
             if (this.connection != null) {
-                this.connection.close();
+                //this.connection.close();
             }
         }
 

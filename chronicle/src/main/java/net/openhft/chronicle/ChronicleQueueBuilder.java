@@ -18,11 +18,7 @@
 package net.openhft.chronicle;
 
 
-import net.openhft.chronicle.tcp2.ChronicleSink2;
-import net.openhft.chronicle.tcp2.ChronicleSource2;
-import net.openhft.chronicle.tcp2.SinkTcpConnectionAcceptor;
-import net.openhft.chronicle.tcp2.SinkTcpConnectionInitiator;
-import net.openhft.chronicle.tcp2.TcpConnection;
+import net.openhft.chronicle.tcp2.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
 
@@ -578,6 +574,12 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private long heartbeatInterval;
         private TimeUnit heartbeatIntervalUnit;
 
+        private int acceptorMaxBacklog;
+        private int acceptorDefaultThreads;
+        private int acceptorMaxThreads;
+        private long acceptorThreadPoolkeepAliveTime;
+        private TimeUnit acceptorThreadPoolkeepAliveTimeUnit;
+
         private ReplicaChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
             this.builder = builder;
             this.chronicle = chronicle;
@@ -594,6 +596,11 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.receiveBufferSize = 256 * 1024;
             this.minBufferSize = this.receiveBufferSize;
             this.sharedChronicle = false;
+            this.acceptorMaxBacklog = 50;
+            this.acceptorDefaultThreads = 0;
+            this.acceptorMaxThreads = Integer.MAX_VALUE;
+            this.acceptorThreadPoolkeepAliveTime = 60L;
+            this.acceptorThreadPoolkeepAliveTimeUnit = TimeUnit.SECONDS;
         }
 
         public InetSocketAddress bindAddress() {
@@ -618,6 +625,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return reconnectTimeout;
         }
 
+        public long reconnectTimeoutMillis() {
+            return this.reconnectTimeoutUnit.toMillis(this.reconnectTimeout);
+        }
+
         public ReplicaChronicleQueueBuilder reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
             this.reconnectTimeout = reconnectTimeout;
             this.reconnectTimeoutUnit = reconnectTimeoutUnit;
@@ -632,13 +643,17 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return selectTimeout;
         }
 
+        public long selectTimeoutMillis() {
+            return this.selectTimeoutUnit.toMillis(this.selectTimeout);
+        }
+
         public ReplicaChronicleQueueBuilder selectTimeout(long selectTimeout, TimeUnit selectTimeoutUnit) {
             this.selectTimeout = selectTimeout;
             this.selectTimeoutUnit = selectTimeoutUnit;
             return this;
         }
 
-        public TimeUnit getSelectTimeoutUnit() {
+        public TimeUnit selectTimeoutUnit() {
             return this.selectTimeoutUnit;
         }
 
@@ -652,11 +667,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.heartbeatInterval;
         }
 
+        public long heartbeatIntervalMillis() {
+            return this.heartbeatIntervalUnit.toMillis(this.heartbeatInterval);
+        }
+
         public TimeUnit heartbeatIntervalUnit() {
             return this.heartbeatIntervalUnit;
         }
 
-        public int getMaxOpenAttempts() {
+        public int maxOpenAttempts() {
             return maxOpenAttempts;
         }
 
@@ -690,6 +709,51 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public ReplicaChronicleQueueBuilder sharedChronicle(boolean sharedChronicle) {
             this.sharedChronicle = sharedChronicle;
             return this;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorMaxBacklog(int acceptorMaxBacklog) {
+            this.acceptorMaxBacklog = acceptorMaxBacklog;
+            return this;
+        }
+
+        public int acceptorMaxBacklog() {
+            return this.acceptorMaxBacklog;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorDefaultThreads(int acceptorDefaultThreads) {
+            this.acceptorDefaultThreads = acceptorDefaultThreads;
+            return this;
+        }
+
+        public int acceptorDefaultThreads() {
+            return this.acceptorDefaultThreads;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorMaxThreads(int acceptorMaxThreads) {
+            this.acceptorMaxThreads = acceptorMaxThreads;
+            return this;
+        }
+
+        public int acceptorMaxThreads() {
+            return this.acceptorMaxThreads;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAlive(long acceptorThreadPoolkeepAlive, TimeUnit acceptorThreadPoolkeepAliveUnit) {
+            this.acceptorThreadPoolkeepAliveTime = acceptorThreadPoolkeepAlive;
+            this.acceptorThreadPoolkeepAliveTimeUnit = acceptorThreadPoolkeepAliveUnit;
+            return this;
+        }
+
+        public long acceptorThreadPoolkeepAliveTime() {
+            return this.acceptorThreadPoolkeepAliveTime;
+        }
+
+        public TimeUnit acceptorThreadPoolkeepAliveTimeUnit() {
+            return this.acceptorThreadPoolkeepAliveTimeUnit;
+        }
+
+        public long acceptorThreadPoolkeepAliveTimeMillis() {
+            return this.acceptorThreadPoolkeepAliveTimeUnit.toMillis(this.acceptorThreadPoolkeepAliveTime);
         }
 
         public Chronicle chronicle() {
@@ -735,12 +799,12 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         @Override
         public Chronicle doBuild() throws IOException {
-            TcpConnection cnx;
+            SinkTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpConnectionAcceptor(bindAddress());
+                cnx = new SinkTcpAcceptor(this);
             } else if(connectAddress() != null) {
-                cnx = new SinkTcpConnectionInitiator(bindAddress(),connectAddress());
+                cnx = new SinkTcpInitiator(this);
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -777,7 +841,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         @Override
         public Chronicle doBuild() throws IOException {
-            TcpConnection cnx;
+            SourceTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
                 cnx = null;

@@ -17,48 +17,37 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.chronicle.ChronicleQueueBuilder;
+
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.nio.channels.SocketChannel;
 
-public class SinkTcpConnectionInitiator extends SinkTcpConnection {
-    public SinkTcpConnectionInitiator(final InetSocketAddress connectAddress) {
-        super("sink-initiator", null, connectAddress);
-    }
-
-    public SinkTcpConnectionInitiator(String name, final InetSocketAddress connectAddress) {
-        super(name + "-sink-initiator", null, connectAddress);
-    }
-
-    public SinkTcpConnectionInitiator(final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {
-        super("sink-initiator", bindAddress, connectAddress);
-    }
-
-    public SinkTcpConnectionInitiator(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {
-        super(name + "-sink-initiator", bindAddress, connectAddress);
+public class SinkTcpInitiator extends SinkTcp {
+    public SinkTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
+        super("sink-initiator", builder);
     }
 
     @Override
     public SocketChannel openSocketChannel() throws IOException {
         SocketChannel channel = null;
-        for (int i = 0; i < maxOpenAttempts && this.running.get() && channel == null; i++) {
+        for (int i = 0; i < this.builder.maxOpenAttempts() && this.running.get() && channel == null; i++) {
             try {
                 channel = SocketChannel.open();
                 channel.configureBlocking(true);
 
-                if(bindAddress != null) {
-                    channel.bind(bindAddress);
+                if(this.builder.bindAddress() != null) {
+                    channel.bind(this.builder.bindAddress());
                 }
 
-                channel.connect(connectAddress);
+                channel.connect(this.builder.connectAddress());
 
-                logger.info("Connected to " + channel.getRemoteAddress() + " from " + channel.getLocalAddress());
+                logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
             } catch(IOException e) {
-                logger.info("Failed to connect to {}, retrying", connectAddress);
+                logger.info("Failed to connect to {}, retrying", this.builder.connectAddress());
 
                 try {
-                    Thread.sleep(reconnectTimeoutUnit.toMillis(reconnectTimeout));
+                    Thread.sleep(this.builder.reconnectTimeoutMillis());
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
@@ -72,12 +61,12 @@ public class SinkTcpConnectionInitiator extends SinkTcpConnection {
 
     @Override
     public boolean isLocalhost() {
-        if(connectAddress.getAddress().isLoopbackAddress()) {
+        if(this.builder.connectAddress().getAddress().isLoopbackAddress()) {
             return true;
         }
 
         try {
-            return NetworkInterface.getByInetAddress(connectAddress.getAddress()) != null;
+            return NetworkInterface.getByInetAddress(this.builder.connectAddress().getAddress()) != null;
         } catch(Exception e)  {
         }
 

@@ -17,21 +17,18 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.chronicle.ChronicleQueueBuilder;
+
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
 
-public class SinkTcpConnectionAcceptor extends SinkTcpConnection {
-    public SinkTcpConnectionAcceptor(final InetSocketAddress bindAddress) {
-        super("sink-acceptor", bindAddress, null);
-    }
-
-    public SinkTcpConnectionAcceptor(String name, final InetSocketAddress bindAddress) {
-        super(name + "-sink-acceptor", bindAddress, null);
+public class SinkTcpAcceptor extends SinkTcp {
+    public SinkTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
+        super("sink-acceptor", builder);
     }
 
     @Override
@@ -40,13 +37,13 @@ public class SinkTcpConnectionAcceptor extends SinkTcpConnection {
 
         final ServerSocketChannel server = ServerSocketChannel.open();
         server.socket().setReuseAddress(true);
-        server.socket().bind(this.bindAddress);
+        server.socket().bind(this.builder.bindAddress());
         server.configureBlocking(false);
         server.register(selector, SelectionKey.OP_ACCEPT);
 
         SocketChannel channel = null;
-        for (int i=0; i< maxOpenAttempts && this.running.get() && channel == null; i++) {
-            if(selector.select(selectTimeoutUnit.toMillis(selectTimeout)) > 0) {
+        for (int i=0; i< this.builder.maxOpenAttempts() && this.running.get() && channel == null; i++) {
+            if(selector.select(this.builder.selectTimeoutMillis()) > 0) {
                 final Set<SelectionKey> keys = selector.selectedKeys();
                 for (final SelectionKey key : keys) {
                     if (key.isAcceptable()) {
@@ -58,7 +55,7 @@ public class SinkTcpConnectionAcceptor extends SinkTcpConnection {
 
                 keys.clear();
             } else {
-                logger.info("No incoming connections on {}, wait", bindAddress);
+                logger.info("No incoming connections on {}, wait", this.builder.bindAddress());
             }
         }
 

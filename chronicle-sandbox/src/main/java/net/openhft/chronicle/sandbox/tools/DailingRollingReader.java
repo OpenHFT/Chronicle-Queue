@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.tools;
+package net.openhft.chronicle.sandbox.tools;
 
 import java.io.FileInputStream;
 import java.io.IOException;

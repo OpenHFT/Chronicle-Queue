@@ -17,82 +17,31 @@
  */
 package net.openhft.chronicle.tcp2;
 
-import net.openhft.chronicle.tcp.ChronicleSinkConfig;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public abstract class SinkTcpConnection implements TcpConnection {
+public abstract class SinkTcp {
     protected final Logger logger;
     protected final String name;
-    protected final InetSocketAddress bindAddress;
-    protected final InetSocketAddress connectAddress;
     protected final AtomicBoolean running;
-
-    protected long reconnectTimeout;
-    protected TimeUnit reconnectTimeoutUnit;
-    protected long selectTimeout;
-    protected TimeUnit selectTimeoutUnit;
-    protected int maxOpenAttempts;
-    protected int receiveBufferSize;
+    protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
 
     private SocketChannel socketChannel;
 
-    protected SinkTcpConnection(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {
-        this.name = ChronicleTcp2.connectionName(name, bindAddress, connectAddress);
+    protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
+        this.builder = builder;
+        this.name = ChronicleTcp2.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
-        this.bindAddress = bindAddress;
-        this.connectAddress = connectAddress;
         this.running = new AtomicBoolean(false);
-        this.reconnectTimeout = 500;
-        this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
-        this.selectTimeout = 1000;
-        this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
-        this.socketChannel = null;
-        this.maxOpenAttempts = Integer.MAX_VALUE;
-        this.receiveBufferSize = ChronicleSinkConfig.DEFAULT.minBufferSize();
-    }
-
-    public void reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
-        if(reconnectTimeout < 0) {
-            throw new IllegalArgumentException("ReconnectTimeout must be >= 0");
-        }
-
-        this.reconnectTimeout = reconnectTimeout;
-        this.reconnectTimeoutUnit = reconnectTimeoutUnit;
-    }
-
-    public void selectTimeout(long selectTimeout, TimeUnit selectTimeoutUnit) {
-        if(selectTimeout < 0) {
-            throw new IllegalArgumentException("SelectTimeout must be >= 0");
-        }
-
-        this.selectTimeout = selectTimeout;
-        this.selectTimeoutUnit = selectTimeoutUnit;
-    }
-
-    public void maxOpenAttempts(int maxOpenAttempts) {
-        if(maxOpenAttempts <= 0) {
-            throw new IllegalArgumentException("MaxOpenAttempts must be > 0");
-        }
-
-        this.maxOpenAttempts = maxOpenAttempts;
-    }
-
-    public void receiveBufferSize(int receiveBufferSize) {
-        if(receiveBufferSize <= 0) {
-            throw new IllegalArgumentException("ReceiveBufferSize must be > 0");
-        }
-
-        this.receiveBufferSize = receiveBufferSize;
     }
 
     @Override
@@ -100,7 +49,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return this.name;
     }
 
-    @Override
     public boolean open() throws IOException {
         close();
         running.set(true);
@@ -109,7 +57,7 @@ public abstract class SinkTcpConnection implements TcpConnection {
         if(socketChannel != null) {
             socketChannel.configureBlocking(false);
             socketChannel.socket().setTcpNoDelay(true);
-            socketChannel.socket().setReceiveBufferSize(this.receiveBufferSize);
+            socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
         }
@@ -119,7 +67,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return socketChannel != null;
     }
 
-    @Override
     public boolean close()  throws IOException {
         this.running.set(false);
 
@@ -134,7 +81,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return true;
     }
 
-    @Override
     public boolean isOpen() {
         if(this.socketChannel != null) {
             return this.socketChannel.isOpen();
@@ -143,12 +89,10 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return false;
     }
 
-    @Override
     public boolean write(ByteBuffer buffer) throws IOException {
         return true;
     }
 
-    @Override
     public void writeAllOrEOF(ByteBuffer bb) throws IOException {
         writeAll(bb);
 
@@ -157,7 +101,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         }
     }
 
-    @Override
     public void writeAll(ByteBuffer bb) throws IOException {
         while (bb.remaining() > 0) {
             if (this.socketChannel.write(bb) < 0) {
@@ -166,7 +109,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         }
     }
 
-    @Override
     public boolean read(ByteBuffer buffer) throws IOException {
         if (this.socketChannel.read(buffer) < 0) {
             throw new EOFException();
@@ -175,12 +117,10 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return true;
     }
 
-    @Override
     public boolean read(ByteBuffer buffer, int size) throws IOException {
         return read(buffer, size, size);
     }
 
-    @Override
     public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException {
         int rem = buffer.remaining();
         if (rem < threshod) {
@@ -203,5 +143,6 @@ public abstract class SinkTcpConnection implements TcpConnection {
         return true;
     }
 
+    public abstract boolean isLocalhost();
     protected abstract SocketChannel openSocketChannel() throws IOException;
 }

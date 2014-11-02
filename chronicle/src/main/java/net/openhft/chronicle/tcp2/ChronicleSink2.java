@@ -39,13 +39,13 @@ import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
 public class ChronicleSink2 extends WrappedChronicle {
-    private final TcpConnection connection;
+    private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public ChronicleSink2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final TcpConnection connection) {
+    public ChronicleSink2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder;
