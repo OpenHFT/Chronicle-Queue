@@ -31,7 +31,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>Chronicle-Queue</artifactId>
-    <version>3.2.2-SNAPSHOT</version>
+    <version>3.2.6-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>OpenHFT/Chronicle-Queue</name>

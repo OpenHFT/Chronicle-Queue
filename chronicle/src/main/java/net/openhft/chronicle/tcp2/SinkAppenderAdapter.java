@@ -17,7 +17,7 @@
  */
 package net.openhft.chronicle.tcp2;
 
-interface AppenderAdapter {
-    public boolean handlePadding();
+interface SinkAppenderAdapter {
+    public boolean addPaddedEntry();
     public void startExcerpt(long capacity, long index);
 }

@@ -22,21 +22,25 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-class AppenderAdapters {
+class SinkAppenderAdapters {
 
-    static class IndexedAppenderAdaper implements AppenderAdapter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SinkAppenderAdapters.class);
+
+    static final class Indexed implements SinkAppenderAdapter {
         private final IndexedChronicle chronicle;
         private final ExcerptAppender appender;
 
-        public IndexedAppenderAdaper(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+        public Indexed(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             this.chronicle = (IndexedChronicle)chronicle;
             this.appender = appender;
         }
 
         @Override
-        public boolean handlePadding() {
-            appender.startExcerpt(chronicle.builder().dataBlockSize() - 1);
+        public boolean addPaddedEntry() {
+            appender.addPaddedEntry();
             return true;
         }
 
@@ -46,17 +50,18 @@ class AppenderAdapters {
         }
     }
 
-    static class VanillaAppenderAdaper implements AppenderAdapter {
+    static final class Vanilla implements SinkAppenderAdapter {
         private final VanillaChronicle chronicle;
         private final VanillaChronicle.VanillaAppender appender;
 
-        public VanillaAppenderAdaper(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+        public Vanilla(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             this.chronicle = (VanillaChronicle)chronicle;
             this.appender = (VanillaChronicle.VanillaAppender)appender;
         }
 
         @Override
-        public boolean handlePadding() {
+        public boolean addPaddedEntry() {
+            LOGGER.warn("VanillaChronicle should not receive padded entry");
             return false;
         }
 

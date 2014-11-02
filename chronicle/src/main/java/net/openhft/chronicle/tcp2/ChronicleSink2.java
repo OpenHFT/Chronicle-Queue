@@ -26,8 +26,6 @@ import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
-import net.openhft.chronicle.tcp2.AppenderAdapters.IndexedAppenderAdaper;
-import net.openhft.chronicle.tcp2.AppenderAdapters.VanillaAppenderAdaper;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.NativeBytes;
@@ -212,7 +210,7 @@ public class ChronicleSink2 extends WrappedChronicle {
     private final class StatefullExcerpt extends AbstractStatefullExcerpt {
 
         private ExcerptAppender appender;
-        private AppenderAdapter adapter;
+        private SinkAppenderAdapter adapter;
         private long lastLocalIndex;
 
         public StatefullExcerpt(final ExcerptCommon common) {
@@ -235,8 +233,8 @@ public class ChronicleSink2 extends WrappedChronicle {
                         this.appender = wrappedChronicle.createAppender();
                         this.adapter =
                             wrappedChronicle instanceof IndexedChronicle
-                                ? new IndexedAppenderAdaper(wrappedChronicle, this.appender)
-                                : new VanillaAppenderAdaper(wrappedChronicle, this.appender);
+                                ? new SinkAppenderAdapters.Indexed(wrappedChronicle, this.appender)
+                                : new SinkAppenderAdapters.Vanilla(wrappedChronicle, this.appender);
                     }
 
                     subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
@@ -263,7 +261,7 @@ public class ChronicleSink2 extends WrappedChronicle {
                         //Heartbeat message ignore and return false
                         return false;
                     case ChronicleTcp.PADDED_LEN:
-                        return this.adapter.handlePadding();
+                        return this.adapter.addPaddedEntry();
                     case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
