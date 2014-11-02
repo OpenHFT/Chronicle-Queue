@@ -21,84 +21,59 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
-public class SourceTcpInitiator extends SourceTcp {
-
-    private final ExecutorService executor;
+public final class SourceTcpInitiator extends SourceTcp {
 
     public SourceTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
-        super("source-acceptor", builder);
-        this.executor = Executors.newSingleThreadExecutor();
+        super(
+            "source-acceptor",
+            builder,
+            new ThreadPoolExecutor(
+                1,
+                1,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>())
+        );
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @Override
-    public boolean open() throws IOException {
-        this.running.set(true);
-        this.executor.execute(new Handler());
-
-        return this.running.get();
-    }
-
-    @Override
-    public boolean close()  throws IOException {
-        running.set(false);
-        executor.shutdown();
-
-        try {
-            executor.awaitTermination(
-                builder.selectTimeout() * 2,
-                builder.selectTimeoutUnit());
-        } catch(InterruptedException e) {
-            // Ignored
-        }
-
-        return !running.get();
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private class Handler implements Runnable {
-        @Override
-        public void run() {
-            while(running.get()) {
-                SocketChannel channel = null;
-                for (int i = 0; i < builder.maxOpenAttempts() && running.get() && channel == null; i++) {
-                    try {
-                        channel = SocketChannel.open();
-                        channel.configureBlocking(true);
-
-                        if (builder.bindAddress() != null) {
-                            channel.bind(builder.bindAddress());
-                        }
-
-                        channel.connect(builder.connectAddress());
-
-                        logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
-                    } catch (IOException e) {
-                        logger.info("Failed to connect to {}, retrying", builder.connectAddress());
-
+    protected Runnable createHandler() {
+        return new Runnable() {
+            @Override
+            public void run() {
+                while (running.get()) {
+                    SocketChannel channel = null;
+                    for (int i = 0; i < builder.maxOpenAttempts() && running.get() && channel == null; i++) {
                         try {
-                            Thread.sleep(builder.reconnectTimeoutMillis());
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
+                            channel = SocketChannel.open();
+                            channel.configureBlocking(true);
 
-                        channel = null;
+                            if (builder.bindAddress() != null) {
+                                channel.bind(builder.bindAddress());
+                            }
+
+                            channel.connect(builder.connectAddress());
+
+                            logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
+                        } catch (IOException e) {
+                            logger.info("Failed to connect to {}, retrying", builder.connectAddress());
+
+                            try {
+                                Thread.sleep(builder.reconnectTimeoutMillis());
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                            }
+
+                            channel = null;
+                        }
+                    }
+
+                    if (channel != null) {
+                        createSessionHandler(channel).run();
                     }
                 }
-
-                if(channel != null) {
-                    createServerSessionHandler(channel).run();
-                }
             }
-        }
+        };
     }
 }

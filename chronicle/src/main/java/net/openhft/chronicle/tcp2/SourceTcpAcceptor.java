@@ -26,102 +26,62 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
-public class SourceTcpAcceptor extends SourceTcp {
-
-    private final ThreadPoolExecutor executor;
+public final class SourceTcpAcceptor extends SourceTcp {
 
     public SourceTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
-        super("source-acceptor", builder);
-
-        this.executor = new ThreadPoolExecutor(
-            builder.acceptorDefaultThreads() + 1,
-            Math.max(builder.acceptorMaxThreads(), builder.acceptorMaxThreads() + 1),
-            builder.acceptorThreadPoolkeepAliveTime(),
-            builder.acceptorThreadPoolkeepAliveTimeUnit(),
-            new SynchronousQueue<Runnable>(),
-            new NamedThreadFactory("chronicle-source", true),
-            new ServerSessionRejectedHandler());
+        super(
+            "source-acceptor",
+            builder,
+                new ThreadPoolExecutor(
+                builder.acceptorDefaultThreads() + 1,
+                Math.max(builder.acceptorMaxThreads(), builder.acceptorMaxThreads() + 1),
+                builder.acceptorThreadPoolkeepAliveTime(),
+                builder.acceptorThreadPoolkeepAliveTimeUnit(),
+                new SynchronousQueue<Runnable>(),
+                new NamedThreadFactory("chronicle-source", true))
+        );
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
+    protected Runnable createHandler() {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Selector selector = Selector.open();
 
-    @Override
-    public boolean open() throws IOException {
-        this.running.set(true);
-        this.executor.execute(new Handler());
+                    final ServerSocketChannel server = ServerSocketChannel.open();
+                    server.socket().setReuseAddress(true);
+                    server.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
+                    server.configureBlocking(false);
+                    server.register(selector, SelectionKey.OP_ACCEPT);
 
-        return this.running.get();
-    }
+                    while (running.get()) {
+                        if (selector.select(builder.selectTimeoutMillis()) > 0) {
+                            final Set<SelectionKey> keys = selector.selectedKeys();
+                            for (final SelectionKey key : keys) {
+                                if (key.isAcceptable()) {
+                                    SocketChannel channel = server.accept();
+                                    logger.info("Accepted connection from: {}", channel.getRemoteAddress());
 
-    @Override
-    public boolean close()  throws IOException {
-        running.set(false);
-        executor.shutdown();
-
-        try {
-            executor.awaitTermination(
-                builder.selectTimeout() * 2,
-                builder.selectTimeoutUnit());
-        } catch(InterruptedException e) {
-            // Ignored
-        }
-
-        return !running.get();
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private class ServerSessionRejectedHandler implements RejectedExecutionHandler {
-        @Override
-        public void rejectedExecution(final Runnable r, final ThreadPoolExecutor executor) {
-            logger.info("No room for a new sessions <{}>", r);
-        }
-    }
-
-    private class Handler implements Runnable {
-
-        @Override
-        public void run() {
-            try {
-                final Selector selector = Selector.open();
-
-                final ServerSocketChannel server = ServerSocketChannel.open();
-                server.socket().setReuseAddress(true);
-                server.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
-                server.configureBlocking(false);
-                server.register(selector, SelectionKey.OP_ACCEPT);
-
-                while(running.get()) {
-                    if (selector.select(builder.selectTimeoutMillis()) > 0) {
-                        final Set<SelectionKey> keys = selector.selectedKeys();
-                        for (final SelectionKey key : keys) {
-                            if (key.isAcceptable()) {
-                                SocketChannel channel = server.accept();
-                                logger.info("Accepted connection from: {}",  channel.getRemoteAddress());
-
-                                executor.execute(createServerSessionHandler(channel));
+                                    executor.execute(createSessionHandler(channel));
+                                }
                             }
+
+                            keys.clear();
+                        } else {
+                            logger.info("No incoming connections on {}, wait", builder.bindAddress());
                         }
-
-                        keys.clear();
-                    } else {
-                        logger.info("No incoming connections on {}, wait", builder.bindAddress());
                     }
-                }
 
-                selector.close();
-                server.close();
-            } catch(IOException e) {
-                logger.warn("", e);
+                    selector.close();
+                    server.close();
+                } catch (IOException e) {
+                    logger.warn("", e);
+                }
             }
-        }
+        };
     }
 }

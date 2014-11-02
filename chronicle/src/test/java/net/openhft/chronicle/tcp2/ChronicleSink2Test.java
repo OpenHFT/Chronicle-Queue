@@ -329,9 +329,6 @@ public class ChronicleSink2Test {
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
-
-        TcpConnection cnx = new SinkTcpInitiator(new InetSocketAddress("localhost", 9876));
-
         final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), 9876);
 
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
