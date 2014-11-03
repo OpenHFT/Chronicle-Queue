@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.tcp2;
 
+import net.openhft.lang.model.constraints.NotNull;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -112,5 +114,20 @@ class TcpConnection {
         }
 
         return true;
+    }
+
+    public void readFullyOrEOF(@NotNull ByteBuffer bb) throws IOException {
+        readAvailable(bb);
+        if (bb.remaining() > 0) {
+            throw new EOFException();
+        }
+    }
+
+    public void readAvailable(@NotNull ByteBuffer bb) throws IOException {
+        while (bb.remaining() > 0) {
+            if (this.socketChannel.read(bb) < 0) {
+                break;
+            }
+        }
     }
 }

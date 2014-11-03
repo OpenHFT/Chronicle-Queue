@@ -124,12 +124,16 @@ public abstract class SourceTcp {
      */
     private abstract class SessionHandler implements Runnable, Closeable {
         private final SocketChannel socketChannel;
+        private final TcpConnection connection;
 
         protected ExcerptTailer tailer;
+        protected long lastHeartbeat;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
+            this.connection = new TcpConnection(socketChannel);
             this.tailer = null;
+            this.lastHeartbeat = 0;
         }
 
         @Override
@@ -206,47 +210,59 @@ public abstract class SourceTcp {
             }
         }
 
+        protected void setLastHeartbeat() {
+            this.lastHeartbeat = System.currentTimeMillis() + builder.heartbeatIntervalMillis();
+        }
+
+        protected void setLastHeartbeat(long from) {
+            this.lastHeartbeat = from + builder.heartbeatIntervalMillis();
+        }
+
+        protected void sendSizeAndIndex(int size, long index) throws IOException {
+            writeBuffer.clear();
+            writeBuffer.putInt(size);
+            writeBuffer.putLong(index);
+            writeBuffer.flip();
+            connection.writeAllOrEOF(writeBuffer);
+            setLastHeartbeat();
+        }
+
         protected boolean onRead(final SelectionKey key) throws IOException {
-            /*
             try {
+                readBuffer.clear();
+                connection.readFullyOrEOF(readBuffer);
+                readBuffer.flip();
 
-                command.read(socket);
+                long action = readBuffer.getLong();
+                long data   = readBuffer.getLong();
 
-                if(command.isSubscribe()) {
-                    return handleSubscribe(key);
-                } else if(command.isQuery()) {
-                    return handleQuery(key);
+                if(action == ChronicleTcp2.ACTION_SUBSCRIBE) {
+                    return onSubscribe(key, data);
+                } else if(action == ChronicleTcp2.ACTION_QUERY) {
+                    return onQuery(key, data);
                 } else {
-                    throw new IOException("Unknown action received (" + command.action() + ")");
+                    throw new IOException("Unknown action received (" + action + ")");
                 }
             } catch(EOFException e) {
                 key.selector().close();
                 throw e;
             }
-            */
-            return true;
         }
 
         protected boolean onWrite(final SelectionKey key) throws IOException {
-            /*
             final long now = System.currentTimeMillis();
-            if(!this.source.closed() && !publishData()) {
+            if(!running.get() && !write()) {
                 if (lastHeartbeat <= now) {
-                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
+                    sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
                 }
             }
-            */
 
             return true;
         }
 
-        protected boolean onSubscribe(final SelectionKey key) throws IOException {
-            return false;
-        }
-
-        protected boolean onQuery(final SelectionKey key) throws IOException {
-            return false;
-        }
+        protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
+        protected abstract boolean onQuery(final SelectionKey key, long data) throws IOException;
+        protected abstract boolean write() throws IOException;
     }
 
     /**
@@ -258,7 +274,18 @@ public abstract class SourceTcp {
         }
 
         @Override
-        public void run() {
+        protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
+            return false;
+        }
+
+        @Override
+        protected boolean onQuery(final SelectionKey key, long data) throws IOException {
+            return false;
+        }
+
+        @Override
+        protected boolean write() throws IOException {
+            return false;
         }
     }
 
@@ -271,7 +298,18 @@ public abstract class SourceTcp {
         }
 
         @Override
-        public void run() {
+        protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
+            return false;
+        }
+
+        @Override
+        protected boolean onQuery(final SelectionKey key, long data) throws IOException {
+            return false;
+        }
+
+        @Override
+        protected boolean write() throws IOException {
+            return false;
         }
     }
 }
