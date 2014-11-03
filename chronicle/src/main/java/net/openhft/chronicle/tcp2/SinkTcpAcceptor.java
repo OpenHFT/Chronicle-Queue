@@ -37,13 +37,13 @@ public class SinkTcpAcceptor extends SinkTcp {
 
         final ServerSocketChannel server = ServerSocketChannel.open();
         server.socket().setReuseAddress(true);
-        server.socket().bind(this.builder.bindAddress());
+        server.socket().bind(builder.bindAddress());
         server.configureBlocking(false);
         server.register(selector, SelectionKey.OP_ACCEPT);
 
         SocketChannel channel = null;
-        for (int i=0; i< this.builder.maxOpenAttempts() && this.running.get() && channel == null; i++) {
-            if(selector.select(this.builder.selectTimeoutMillis()) > 0) {
+        for (int i = 0; (i < builder.maxOpenAttempts() || -1 == builder.maxOpenAttempts())  && running.get() && channel == null; i++) {
+            if(selector.select(builder.selectTimeoutMillis()) > 0) {
                 final Set<SelectionKey> keys = selector.selectedKeys();
                 for (final SelectionKey key : keys) {
                     if (key.isAcceptable()) {
@@ -55,7 +55,7 @@ public class SinkTcpAcceptor extends SinkTcp {
 
                 keys.clear();
             } else {
-                logger.info("No incoming connections on {}, wait", this.builder.bindAddress());
+                logger.info("No incoming connections on {}, wait", builder.bindAddress());
             }
         }
 

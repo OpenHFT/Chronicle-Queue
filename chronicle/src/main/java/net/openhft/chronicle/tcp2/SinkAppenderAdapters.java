@@ -21,47 +21,75 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 class SinkAppenderAdapters {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SinkAppenderAdapters.class);
 
-    static final class Indexed implements SinkAppenderAdapter {
+    /**
+     * Creates a SinkAppenderAdapter.
+     *
+     * @param chronicle     the Chronicle
+     * @return              the SinkAppenderAdapter
+     * @throws IOException
+     */
+    public static SinkAppenderAdapter adapt(final @NotNull Chronicle chronicle) throws IOException {
+        if(chronicle instanceof IndexedChronicle) {
+            return new SinkAppenderAdapters.Indexed(chronicle, chronicle.createAppender());
+        }
+
+        if(chronicle instanceof VanillaChronicle) {
+            return new SinkAppenderAdapters.Vanilla(chronicle, chronicle.createAppender());
+        }
+
+        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private static final class Indexed extends WrappedExcerptAppender implements SinkAppenderAdapter {
         private final IndexedChronicle chronicle;
-        private final ExcerptAppender appender;
 
         public Indexed(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            super(appender);
+
             this.chronicle = (IndexedChronicle)chronicle;
-            this.appender = appender;
         }
 
         @Override
-        public boolean addPaddedEntry() {
-            appender.addPaddedEntry();
+        public boolean writePaddedEntry() {
+            super.warappedAppender.addPaddedEntry();
             return true;
         }
 
         @Override
         public void startExcerpt(long capacity, long index) {
-            this.appender.startExcerpt(capacity);
+            super.warappedAppender.startExcerpt(capacity);
         }
     }
 
-    static final class Vanilla implements SinkAppenderAdapter {
+    private static final class Vanilla extends WrappedExcerptAppender implements SinkAppenderAdapter {
         private final VanillaChronicle chronicle;
         private final VanillaChronicle.VanillaAppender appender;
 
         public Vanilla(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            super(appender);
+
             this.chronicle = (VanillaChronicle)chronicle;
             this.appender = (VanillaChronicle.VanillaAppender)appender;
         }
 
         @Override
-        public boolean addPaddedEntry() {
-            LOGGER.warn("VanillaChronicle should not receive padded entry");
+        public boolean writePaddedEntry() {
+            LOGGER.warn("VanillaChronicle should not receive padded entries");
             return false;
         }
 

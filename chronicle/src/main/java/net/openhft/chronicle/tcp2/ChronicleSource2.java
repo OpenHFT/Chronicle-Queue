@@ -26,6 +26,7 @@ import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class ChronicleSource2 extends WrappedChronicle {
     private static final long BUSY_WAIT_TIME_NS = 100 * 1000;
@@ -33,7 +34,9 @@ public class ChronicleSource2 extends WrappedChronicle {
     private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final Object notifier;
+
     private volatile boolean closed;
+
     private long lastUnpausedNS;
     private long pauseWait;
 

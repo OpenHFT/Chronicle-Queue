@@ -592,7 +592,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.heartbeatInterval = 2500;
             this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
-            this.maxOpenAttempts = Integer.MAX_VALUE;
+            this.maxOpenAttempts = -1;
             this.receiveBufferSize = 256 * 1024;
             this.minBufferSize = this.receiveBufferSize;
             this.sharedChronicle = false;

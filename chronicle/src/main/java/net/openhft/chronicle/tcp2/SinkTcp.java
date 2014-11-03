@@ -21,21 +21,16 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.EOFException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public abstract class SinkTcp {
+public abstract class SinkTcp extends TcpConnection {
     protected final Logger logger;
     protected final String name;
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
-
-    private SocketChannel socketChannel;
 
     protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         this.builder = builder;
@@ -49,98 +44,27 @@ public abstract class SinkTcp {
         return this.name;
     }
 
-    public boolean open() throws IOException {
+    public void open() throws IOException {
         close();
         running.set(true);
 
-        socketChannel = openSocketChannel();
+        SocketChannel socketChannel = openSocketChannel();
         if(socketChannel != null) {
             socketChannel.configureBlocking(false);
             socketChannel.socket().setTcpNoDelay(true);
             socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
+
+            super.setSocketChannel(socketChannel);
         }
 
         running.set(false);
-
-        return socketChannel != null;
     }
 
-    public boolean close()  throws IOException {
+    public void close() throws IOException {
         this.running.set(false);
-
-        if(socketChannel != null) {
-            if(socketChannel.isOpen()) {
-                socketChannel.close();
-            }
-        }
-
-        socketChannel = null;
-
-        return true;
-    }
-
-    public boolean isOpen() {
-        if(this.socketChannel != null) {
-            return this.socketChannel.isOpen();
-        }
-
-        return false;
-    }
-
-    public boolean write(ByteBuffer buffer) throws IOException {
-        return true;
-    }
-
-    public void writeAllOrEOF(ByteBuffer bb) throws IOException {
-        writeAll(bb);
-
-        if (bb.remaining() > 0) {
-            throw new EOFException();
-        }
-    }
-
-    public void writeAll(ByteBuffer bb) throws IOException {
-        while (bb.remaining() > 0) {
-            if (this.socketChannel.write(bb) < 0) {
-                break;
-            }
-        }
-    }
-
-    public boolean read(ByteBuffer buffer) throws IOException {
-        if (this.socketChannel.read(buffer) < 0) {
-            throw new EOFException();
-        }
-
-        return true;
-    }
-
-    public boolean read(ByteBuffer buffer, int size) throws IOException {
-        return read(buffer, size, size);
-    }
-
-    public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException {
-        int rem = buffer.remaining();
-        if (rem < threshod) {
-            if (buffer.remaining() == 0) {
-                buffer.clear();
-            } else {
-                buffer.compact();
-            }
-
-            while (buffer.position() < size) {
-                if (this.socketChannel.read(buffer) < 0) {
-                    this.socketChannel.close();
-                    return false;
-                }
-            }
-
-            buffer.flip();
-        }
-
-        return true;
+        super.close();
     }
 
     public abstract boolean isLocalhost();

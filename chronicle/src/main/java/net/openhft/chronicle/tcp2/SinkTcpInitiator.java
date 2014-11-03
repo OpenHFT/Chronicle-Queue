@@ -31,23 +31,23 @@ public class SinkTcpInitiator extends SinkTcp {
     @Override
     public SocketChannel openSocketChannel() throws IOException {
         SocketChannel channel = null;
-        for (int i = 0; i < this.builder.maxOpenAttempts() && this.running.get() && channel == null; i++) {
+        for (int i = 0; (i < builder.maxOpenAttempts() || -1 == builder.maxOpenAttempts())  && running.get() && channel == null; i++) {
             try {
                 channel = SocketChannel.open();
                 channel.configureBlocking(true);
 
-                if(this.builder.bindAddress() != null) {
-                    channel.bind(this.builder.bindAddress());
+                if(builder.bindAddress() != null) {
+                    channel.bind(builder.bindAddress());
                 }
 
-                channel.connect(this.builder.connectAddress());
+                channel.connect(builder.connectAddress());
 
                 logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
             } catch(IOException e) {
-                logger.info("Failed to connect to {}, retrying", this.builder.connectAddress());
+                logger.info("Failed to connect to {}, retrying", builder.connectAddress());
 
                 try {
-                    Thread.sleep(this.builder.reconnectTimeoutMillis());
+                    Thread.sleep(builder.reconnectTimeoutMillis());
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
@@ -61,12 +61,12 @@ public class SinkTcpInitiator extends SinkTcp {
 
     @Override
     public boolean isLocalhost() {
-        if(this.builder.connectAddress().getAddress().isLoopbackAddress()) {
+        if(builder.connectAddress().getAddress().isLoopbackAddress()) {
             return true;
         }
 
         try {
-            return NetworkInterface.getByInetAddress(this.builder.connectAddress().getAddress()) != null;
+            return NetworkInterface.getByInetAddress(builder.connectAddress().getAddress()) != null;
         } catch(Exception e)  {
         }
 

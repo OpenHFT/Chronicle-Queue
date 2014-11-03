@@ -209,14 +209,14 @@ public class ChronicleSink2 extends WrappedChronicle {
 
     private final class StatefullExcerpt extends AbstractStatefullExcerpt {
 
-        private ExcerptAppender appender;
+        //private ExcerptAppender appender;
         private SinkAppenderAdapter adapter;
         private long lastLocalIndex;
 
         public StatefullExcerpt(final ExcerptCommon common) {
             super(common);
 
-            this.appender = null;
+            //this.appender = null;
             this.adapter = null;
             this.lastLocalIndex = -1;
         }
@@ -229,12 +229,8 @@ public class ChronicleSink2 extends WrappedChronicle {
                     readBuffer.clear();
                     readBuffer.limit(0);
 
-                    if(this.appender == null) {
-                        this.appender = wrappedChronicle.createAppender();
-                        this.adapter =
-                            wrappedChronicle instanceof IndexedChronicle
-                                ? new SinkAppenderAdapters.Indexed(wrappedChronicle, this.appender)
-                                : new SinkAppenderAdapters.Vanilla(wrappedChronicle, this.appender);
+                    if(this.adapter == null) {
+                        this.adapter = SinkAppenderAdapters.adapt(wrappedChronicle);
                     }
 
                     subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
@@ -261,7 +257,7 @@ public class ChronicleSink2 extends WrappedChronicle {
                         //Heartbeat message ignore and return false
                         return false;
                     case ChronicleTcp.PADDED_LEN:
-                        return this.adapter.addPaddedEntry();
+                        return this.adapter.writePaddedEntry();
                     case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
@@ -280,7 +276,7 @@ public class ChronicleSink2 extends WrappedChronicle {
 
                     remaining -= size2;
                     readBuffer.limit(readBuffer.position() + size2);
-                    appender.write(readBuffer);
+                    adapter.write(readBuffer);
                     // reset the limit;
                     readBuffer.limit(limit);
 
@@ -294,10 +290,10 @@ public class ChronicleSink2 extends WrappedChronicle {
 
                         readBuffer.flip();
                         remaining -= readBuffer.remaining();
-                        appender.write(readBuffer);
+                        adapter.write(readBuffer);
                     }
 
-                    appender.finish();
+                    adapter.finish();
                 } else {
                     readBuffer.position(readBuffer.position() + size);
                     return readNextExcerpt();
@@ -312,10 +308,8 @@ public class ChronicleSink2 extends WrappedChronicle {
 
         @Override
         public void close() {
-            if(this.appender != null) {
-                this.appender.close();
-
-                this.appender = null;
+            if(this.adapter != null) {
+                this.adapter.close();
                 this.adapter = null;
             }
 

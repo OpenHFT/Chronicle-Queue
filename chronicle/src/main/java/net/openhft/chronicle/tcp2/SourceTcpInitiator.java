@@ -44,7 +44,7 @@ public final class SourceTcpInitiator extends SourceTcp {
             public void run() {
                 while (running.get()) {
                     SocketChannel channel = null;
-                    for (int i = 0; i < builder.maxOpenAttempts() && running.get() && channel == null; i++) {
+                    for (int i = 0; (i < builder.maxOpenAttempts() || -1 == builder.maxOpenAttempts())  && running.get() && channel == null; i++) {
                         try {
                             channel = SocketChannel.open();
                             channel.configureBlocking(true);
