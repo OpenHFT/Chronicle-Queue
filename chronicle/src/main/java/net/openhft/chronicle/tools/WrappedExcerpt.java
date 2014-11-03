@@ -1160,6 +1160,12 @@ common.readFully(data, off, len);
     }
 
     @Override
+    public Bytes zeroOut(long start, long end, boolean ifNotZero) {
+        common.zeroOut(start, end, ifNotZero);
+        return this;
+    }
+
+    @Override
     public Bytes zeroOut(long start, long end) {
         common.zeroOut(start, end);
         return this;
