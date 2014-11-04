@@ -26,17 +26,13 @@ import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public class ChronicleSource2 extends WrappedChronicle {
-    private static final long BUSY_WAIT_TIME_NS = 100 * 1000;
-
     private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final Object notifier;
 
     private volatile boolean closed;
-
 
     public ChronicleSource2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
@@ -46,6 +42,7 @@ public class ChronicleSource2 extends WrappedChronicle {
 
         this.connection = connection;
         this.connection.notifier(this.notifier);
+        this.connection.open();
     }
 
     @Override
@@ -53,7 +50,7 @@ public class ChronicleSource2 extends WrappedChronicle {
         if(!closed) {
             closed = true;
             if (this.connection != null) {
-                //this.connection.close();
+                this.connection.close();
             }
         }
 
@@ -75,20 +72,10 @@ public class ChronicleSource2 extends WrappedChronicle {
         return new SourceExcerpt(wrappedChronicle.createAppender());
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private void wakeSessionHandlers() {
-        synchronized (notifier) {
-            notifier.notifyAll();
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
+    /**
+     * This excerpt notifies the replication engine that something has been done
+     * on the underlying chronicle.
+     */
     private final class SourceExcerpt extends WrappedExcerpt {
         public SourceExcerpt(final ExcerptCommon excerptCommon) {
             super(excerptCommon);
@@ -97,7 +84,10 @@ public class ChronicleSource2 extends WrappedChronicle {
         @Override
         public void finish() {
             super.finish();
-            wakeSessionHandlers();
+
+            synchronized (notifier) {
+                notifier.notifyAll();
+            }
         }
     }
 }

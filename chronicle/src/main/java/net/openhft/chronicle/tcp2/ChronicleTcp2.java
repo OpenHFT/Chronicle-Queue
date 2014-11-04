@@ -31,13 +31,21 @@ public class ChronicleTcp2 {
     public static final long ACTION_SUBSCRIBE = 1;
     public static final long ACTION_QUERY     = 2;
 
+    public static ByteBuffer createBufferOfSize(int size) {
+        return createBufferOfSize(size,  ByteOrder.nativeOrder());
+    }
+
+    public static ByteBuffer createBufferOfSize(int minSize, ByteOrder byteOrder) {
+        return ByteBuffer.allocateDirect(minSize).order(byteOrder);
+    }
+
     public static ByteBuffer createBuffer(int minSize) {
         return createBuffer(minSize,  ByteOrder.nativeOrder());
     }
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
         int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
-        return ByteBuffer.allocateDirect(newSize).order(byteOrder);
+        return createBufferOfSize(newSize, byteOrder);
     }
 
     public static String connectionName(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {

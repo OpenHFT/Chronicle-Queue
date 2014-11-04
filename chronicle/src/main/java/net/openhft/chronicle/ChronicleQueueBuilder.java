@@ -855,9 +855,9 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             SourceTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = null;
+                cnx = new SourceTcpAcceptor(this);
             } else if(connectAddress() != null) {
-                cnx = null;
+                cnx = new SourceTcpInitiator(this);
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }

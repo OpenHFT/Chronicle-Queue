@@ -22,7 +22,6 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +56,7 @@ public abstract class SourceTcp {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
-        this.readBuffer = ChronicleTcp2.createBuffer(16);
+        this.readBuffer = ChronicleTcp2.createBufferOfSize(16);
         this.writeBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
     }
 
@@ -69,7 +68,7 @@ public abstract class SourceTcp {
         return this.notifier;
     }
 
-    public boolean open() throws IOException {
+    public boolean open() {
         this.running.set(true);
 
         readBuffer.clear();
@@ -83,7 +82,7 @@ public abstract class SourceTcp {
         return this.running.get();
     }
 
-    public boolean close()  throws IOException {
+    public boolean close()  {
         running.set(false);
         executor.shutdown();
 
@@ -176,7 +175,7 @@ public abstract class SourceTcp {
                 tailer = builder.chronicle().createTailer();
                 socketChannel.register(selector, SelectionKey.OP_READ);
 
-                while(!running.get() && !Thread.currentThread().isInterrupted()) {
+                while(running.get() && !Thread.currentThread().isInterrupted()) {
                     if (selector.select(builder.selectTimeoutMillis()) > 0) {
                         final Set<SelectionKey> keys = selector.selectedKeys();
                         for (final Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
@@ -275,8 +274,10 @@ public abstract class SourceTcp {
                 long data   = readBuffer.getLong();
 
                 if(action == ChronicleTcp2.ACTION_SUBSCRIBE) {
+                    logger.info("ACTION_SUBSCRIBE - index={}", data);
                     return onSubscribe(key, data);
                 } else if(action == ChronicleTcp2.ACTION_QUERY) {
+                    logger.info("ACTION_QUERY - index={}", data);
                     return onQuery(key, data);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
@@ -289,7 +290,7 @@ public abstract class SourceTcp {
 
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
-            if(!running.get() && !write()) {
+            if(running.get() && !write()) {
                 if (lastHeartbeat <= now) {
                     sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
                 }
@@ -348,11 +349,10 @@ public abstract class SourceTcp {
                 this.index = tailer.toEnd().index();
             }
 
-
             sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, this.index);
 
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-            return false;
+            return true;
         }
 
         @Override

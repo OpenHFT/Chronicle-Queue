@@ -340,7 +340,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             this.index = -1;
             this.lastSize = 0;
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp2.createBuffer(16);
+            this.writeBuffer = ChronicleTcp2.createBufferOfSize(16);
             this.readBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
             this.capacityAddr = this.startAddr + builder.minBufferSize();

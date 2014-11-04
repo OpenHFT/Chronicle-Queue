@@ -329,7 +329,11 @@ public class ChronicleSink2Test {
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
-        final Chronicle source = new ChronicleSource(ChronicleQueueBuilder.indexed(basePathSource).build(), 9876);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(new InetSocketAddress("localhost", 9876))
+            .build();
 
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
@@ -382,6 +386,60 @@ public class ChronicleSink2Test {
         source.close();
         long time = System.nanoTime() - start;
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+
+    }
+
+
+
+    @Test
+    public void testOverTCP2() throws IOException, InterruptedException {
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
+
+        final int messages = 10;
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+            .bindAddress(new InetSocketAddress("localhost", 9876))
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+            .connectAddress(new InetSocketAddress("localhost", 9876))
+            .build();
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ExcerptAppender excerpt = source.createAppender();
+                    for (int i = 1; i <= messages; i++) {
+                        excerpt.startExcerpt(8);
+                        excerpt.writeLong(i);
+                        excerpt.finish();
+                    }
+                    System.out.println(System.currentTimeMillis() + ": Finished writing messages");
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            }
+        });
+
+        t.start();
+        ExcerptTailer excerpt = sink.createTailer();
+        for (int i = 1; i <= messages;) {
+            if(excerpt.nextIndex()) {
+                assertEquals(i, excerpt.readLong());
+                excerpt.finish();
+
+                i++;
+            }
+        }
+
+        sink.close();
+        t.join();
+
+        source.close();
 
     }
 }
