@@ -22,6 +22,7 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,15 +48,25 @@ public abstract class SourceTcp {
 
     protected final ByteBuffer writeBuffer;
     protected final ByteBuffer readBuffer;
+    protected Object notifier;
 
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
         this.builder = builder;
+        this.notifier = null;
         this.name = ChronicleTcp2.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
         this.readBuffer = ChronicleTcp2.createBuffer(16);
         this.writeBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
+    }
+
+    void notifier(Object notifier) {
+        this.notifier = notifier;
+    }
+
+    Object notifier() {
+        return this.notifier;
     }
 
     public boolean open() throws IOException {
@@ -124,8 +135,11 @@ public abstract class SourceTcp {
      */
     private abstract class SessionHandler implements Runnable, Closeable {
         private final SocketChannel socketChannel;
-        private final TcpConnection connection;
 
+        private long lastUnpausedNS;
+        private long pauseWait;
+
+        protected final TcpConnection connection;
         protected ExcerptTailer tailer;
         protected long lastHeartbeat;
 
@@ -134,6 +148,8 @@ public abstract class SourceTcp {
             this.connection = new TcpConnection(socketChannel);
             this.tailer = null;
             this.lastHeartbeat = 0;
+            this.lastUnpausedNS = 0;
+            this.pauseWait = builder.heartbeatIntervalUnit().toMillis(builder.heartbeatInterval()) / 2;
         }
 
         @Override
@@ -210,6 +226,28 @@ public abstract class SourceTcp {
             }
         }
 
+        protected boolean hasRoomForExcerpt(ByteBuffer buffer, ExcerptTailer tailer) {
+            return (tailer.capacity() + ChronicleTcp2.HEADER_SIZE) < (buffer.capacity() - buffer.position());
+        }
+
+        protected void pauseReset() {
+            lastUnpausedNS = System.nanoTime();
+        }
+
+        protected void pause() {
+            if (lastUnpausedNS + ChronicleTcp2.BUSY_WAIT_TIME_NS > System.nanoTime()) {
+                return;
+            }
+
+            try {
+                synchronized (notifier) {
+                    notifier.wait(pauseWait);
+                }
+            } catch (InterruptedException ie) {
+                //logger.warn("Interrupt ignored");
+            }
+        }
+
         protected void setLastHeartbeat() {
             this.lastHeartbeat = System.currentTimeMillis() + builder.heartbeatIntervalMillis();
         }
@@ -260,32 +298,134 @@ public abstract class SourceTcp {
             return true;
         }
 
+        protected boolean onQuery(final SelectionKey key, long data) throws IOException {
+            if(tailer.index(data)) {
+                final long now = System.currentTimeMillis();
+                setLastHeartbeat(now);
+
+                while (true) {
+                    if (tailer.nextIndex()) {
+                        sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, tailer.index());
+                        break;
+                    } else {
+                        if (lastHeartbeat <= now) {
+                            sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
+            }
+
+            return true;
+        }
+
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
-        protected abstract boolean onQuery(final SelectionKey key, long data) throws IOException;
         protected abstract boolean write() throws IOException;
+
+
     }
 
     /**
      * IndexedChronicle session handler
      */
     private class IndexedSessionHandler extends SessionHandler {
+        private long index;
+
         private IndexedSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
+
+            this.index = -1;
         }
 
         @Override
         protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
-            return false;
-        }
+            this.index = data;
+            if (this.index == -1) {
+                this.index = -1;
+            } else if (this.index == -2) {
+                this.index = tailer.toEnd().index();
+            }
 
-        @Override
-        protected boolean onQuery(final SelectionKey key, long data) throws IOException {
+
+            sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, this.index);
+
+            key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             return false;
         }
 
         @Override
         protected boolean write() throws IOException {
-            return false;
+            if (!tailer.index(index)) {
+                if (tailer.wasPadding()) {
+                    if (index >= 0) {
+                        sendSizeAndIndex(ChronicleTcp2.PADDED_LEN, tailer.index());
+                    }
+
+                    index++;
+                }
+
+                pause();
+
+                if(!running.get() && !tailer.index(index)) {
+                    return false;
+                }
+            }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining = size + ChronicleTcp2.HEADER_SIZE;
+
+            writeBuffer.clear();
+            writeBuffer.putInt((int) size);
+            writeBuffer.putLong(tailer.index());
+
+            // for large objects send one at a time.
+            if (size > writeBuffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, writeBuffer.capacity());
+                    writeBuffer.limit(size2);
+                    tailer.read(writeBuffer);
+                    writeBuffer.flip();
+                    remaining -= writeBuffer.remaining();
+
+                    connection.writeAll(writeBuffer);
+                }
+            } else {
+                writeBuffer.limit((int) remaining);
+                tailer.read(writeBuffer);
+                for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
+                    if(!tailer.wasPadding()) {
+                        if (hasRoomForExcerpt(writeBuffer, tailer)) {
+                            // if there is free space, copy another one.
+                            int size2 = (int) tailer.capacity();
+                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp2.HEADER_SIZE);
+                            writeBuffer.putInt(size2);
+                            writeBuffer.putLong(tailer.index());
+                            tailer.read(writeBuffer);
+
+                            index++;
+                            count--;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        index++;
+                    }
+                }
+
+                writeBuffer.flip();
+                connection.writeAll(writeBuffer);
+            }
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + index);
+            }
+
+            index++;
+            return true;
         }
     }
 
@@ -293,23 +433,104 @@ public abstract class SourceTcp {
      * VanillaChronicle session handler
      */
     private class VanillaSessionHandler extends SessionHandler {
+        private boolean nextIndex;
+        private long index;
+
         private VanillaSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
+
+            this.nextIndex = true;
+            this.index = -1;
         }
 
         @Override
         protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
-            return false;
-        }
+            this.index = data;
+            if (this.index == -1) {
+                this.nextIndex = true;
+                this.tailer = tailer.toStart();
+                this.index = -1;
+            } else if (this.index == -2) {
+                this.nextIndex = false;
+                this.tailer = tailer.toEnd();
+                this.index = tailer.index();
+            } else {
+                this.nextIndex = false;
+            }
 
-        @Override
-        protected boolean onQuery(final SelectionKey key, long data) throws IOException {
+            sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, this.index);
+
+            key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             return false;
         }
 
         @Override
         protected boolean write() throws IOException {
-            return false;
+            if(nextIndex) {
+                if (!tailer.nextIndex()) {
+                    pause();
+                    if (!running.get() && !tailer.nextIndex()) {
+                        return false;
+                    }
+                }
+            } else {
+                if(!tailer.index(this.index)) {
+                    return false;
+                } else {
+                    this.nextIndex = true;
+                }
+            }
+
+            pauseReset();
+
+            final long size = tailer.capacity();
+            long remaining = size + ChronicleTcp2.HEADER_SIZE;
+
+            writeBuffer.clear();
+            writeBuffer.putInt((int) size);
+            writeBuffer.putLong(tailer.index());
+
+            // for large objects send one at a time.
+            if (size > writeBuffer.capacity() / 2) {
+                while (remaining > 0) {
+                    int size2 = (int) Math.min(remaining, writeBuffer.capacity());
+                    writeBuffer.limit(size2);
+                    tailer.read(writeBuffer);
+                    writeBuffer.flip();
+                    remaining -= writeBuffer.remaining();
+                    connection.writeAll(writeBuffer);
+                }
+            } else {
+                writeBuffer.limit((int) remaining);
+                tailer.read(writeBuffer);
+                for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
+                    if (!tailer.wasPadding()) {
+                        if (!hasRoomForExcerpt(writeBuffer, tailer)) {
+                            // if there is free space, copy another one.
+                            int size2 = (int) tailer.capacity();
+                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp2.HEADER_SIZE);
+                            writeBuffer.putInt(size2);
+                            writeBuffer.putLong(tailer.index());
+                            tailer.read(writeBuffer);
+
+                            count--;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        throw new AssertionError("Entry should not be padding - remove");
+                    }
+                }
+
+                writeBuffer.flip();
+                connection.writeAll(writeBuffer);
+            }
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + tailer.index());
+            }
+
+            return true;
         }
     }
 }

@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class ChronicleTcp2 {
+    public static final long BUSY_WAIT_TIME_NS = 100 * 1000;
     public static final int HEADER_SIZE = 12;
     public static final int INITIAL_BUFFER_SIZE = 64 * 1024;
     public static final int IN_SYNC_LEN = -128;

@@ -567,12 +567,13 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private TimeUnit reconnectTimeoutUnit;
         private long selectTimeout;
         private TimeUnit selectTimeoutUnit;
-        private int maxOpenAttempts;
+        private int maxOpenAttempts; // TODO rename
         private int receiveBufferSize;
         private int minBufferSize;
         private boolean sharedChronicle;
         private long heartbeatInterval;
         private TimeUnit heartbeatIntervalUnit;
+        private int maxExcerptsPerMessage;
 
         private int acceptorMaxBacklog;
         private int acceptorDefaultThreads;
@@ -601,6 +602,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.acceptorMaxThreads = Integer.MAX_VALUE;
             this.acceptorThreadPoolkeepAliveTime = 60L;
             this.acceptorThreadPoolkeepAliveTimeUnit = TimeUnit.SECONDS;
+            this.maxExcerptsPerMessage = 128;
         }
 
         public InetSocketAddress bindAddress() {
@@ -699,6 +701,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder minBufferSize(int minBufferSize) {
             this.minBufferSize = minBufferSize;
+            return this;
+        }
+
+        public int maxExcerptsPerMessage() {
+            return this.maxExcerptsPerMessage;
+        }
+
+        public ReplicaChronicleQueueBuilder maxExcerptsPerMessage(int maxExcerptsPerMessage) {
+            this.maxExcerptsPerMessage = maxExcerptsPerMessage;
             return this;
         }
 

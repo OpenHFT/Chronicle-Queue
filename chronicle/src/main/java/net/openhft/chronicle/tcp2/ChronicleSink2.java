@@ -25,9 +25,11 @@ import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
+import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
@@ -39,6 +41,8 @@ import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
 public class ChronicleSink2 extends WrappedChronicle {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink2.class);
+
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
@@ -210,7 +214,7 @@ public class ChronicleSink2 extends WrappedChronicle {
     private final class StatefullExcerpt extends AbstractStatefullExcerpt {
 
         //private ExcerptAppender appender;
-        private SinkAppenderAdapter adapter;
+        private AppenderAdapter adapter;
         private long lastLocalIndex;
 
         public StatefullExcerpt(final ExcerptCommon common) {
@@ -230,7 +234,7 @@ public class ChronicleSink2 extends WrappedChronicle {
                     readBuffer.limit(0);
 
                     if(this.adapter == null) {
-                        this.adapter = SinkAppenderAdapters.adapt(wrappedChronicle);
+                        this.adapter = createAppenderAdapter();
                     }
 
                     subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
@@ -510,6 +514,90 @@ public class ChronicleSink2 extends WrappedChronicle {
         @Override
         public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    // *************************************************************************
+    // Appender adapters
+    // *************************************************************************
+
+    /**
+     * Creates a SinkAppenderAdapter.
+     *
+     * @return  the SinkAppenderAdapter
+     * @throws  java.io.IOException
+     */
+    private AppenderAdapter createAppenderAdapter() throws IOException {
+        if(wrappedChronicle instanceof IndexedChronicle) {
+            return new IndexedAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
+        }
+
+        if(wrappedChronicle instanceof VanillaChronicle) {
+            return new VanillaAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
+        }
+
+        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
+    }
+
+
+    private abstract class AppenderAdapter extends WrappedExcerptAppender {
+
+        public AppenderAdapter(@NotNull ExcerptAppender appender) {
+            super(appender);
+        }
+
+        public abstract boolean writePaddedEntry();
+        public abstract void startExcerpt(long capacity, long index);
+    }
+
+    /**
+     * IndexedChronicle AppenderAdapter
+     */
+    private final class IndexedAppenderAdapter extends AppenderAdapter {
+        private final IndexedChronicle chronicle;
+
+        public IndexedAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            super(appender);
+
+            this.chronicle = (IndexedChronicle)chronicle;
+        }
+
+        @Override
+        public boolean writePaddedEntry() {
+            super.warappedAppender.addPaddedEntry();
+            return true;
+        }
+
+        @Override
+        public void startExcerpt(long capacity, long index) {
+            super.warappedAppender.startExcerpt(capacity);
+        }
+    }
+
+    /**
+     * VanillaChronicle AppenderAdapter
+     */
+    private final class VanillaAppenderAdapter extends AppenderAdapter {
+        private final VanillaChronicle chronicle;
+        private final VanillaChronicle.VanillaAppender appender;
+
+        public VanillaAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
+            super(appender);
+
+            this.chronicle = (VanillaChronicle)chronicle;
+            this.appender = (VanillaChronicle.VanillaAppender)appender;
+        }
+
+        @Override
+        public boolean writePaddedEntry() {
+            LOGGER.warn("VanillaChronicle should not receive padded entries");
+            return false;
+        }
+
+        @Override
+        public void startExcerpt(long capacity, long index) {
+            int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
+            this.appender.startExcerpt(capacity, cycle);
         }
     }
 }

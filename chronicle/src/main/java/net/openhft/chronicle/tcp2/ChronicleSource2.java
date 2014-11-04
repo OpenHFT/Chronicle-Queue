@@ -37,17 +37,15 @@ public class ChronicleSource2 extends WrappedChronicle {
 
     private volatile boolean closed;
 
-    private long lastUnpausedNS;
-    private long pauseWait;
 
     public ChronicleSource2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
-        this.connection = connection;
         this.builder = builder;
         this.notifier = new Object();
         this.closed = false;
-        this.lastUnpausedNS = 0;
-        this.pauseWait = builder.heartbeatIntervalUnit().toMillis(builder.heartbeatInterval()) / 2;
+
+        this.connection = connection;
+        this.connection.notifier(this.notifier);
     }
 
     @Override
@@ -80,24 +78,6 @@ public class ChronicleSource2 extends WrappedChronicle {
     // *************************************************************************
     //
     // *************************************************************************
-
-    private void pauseReset() {
-        lastUnpausedNS = System.nanoTime();
-    }
-
-    private void pause() {
-        if (lastUnpausedNS + BUSY_WAIT_TIME_NS > System.nanoTime()) {
-            return;
-        }
-
-        try {
-            synchronized (notifier) {
-                notifier.wait(pauseWait);
-            }
-        } catch (InterruptedException ie) {
-            //logger.warn("Interrupt ignored");
-        }
-    }
 
     private void wakeSessionHandlers() {
         synchronized (notifier) {
