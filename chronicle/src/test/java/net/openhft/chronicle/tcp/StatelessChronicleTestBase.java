@@ -48,7 +48,7 @@ import static org.junit.Assert.assertTrue;
 public class StatelessChronicleTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-volatile-";
+    protected static final String PREFIX    = "ch-stateless-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
@@ -67,10 +67,6 @@ public class StatelessChronicleTestBase {
 
         return path;
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getVanillaTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();

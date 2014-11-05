@@ -19,7 +19,6 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -27,35 +26,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class StatefulChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("PersistedChronicleTest");
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-persisted-";
+    protected static final String PREFIX    = "ch-statefull-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
     public final TestName testName = new TestName();
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    protected Chronicle localChronicleSink(final Chronicle chronicle, String host, int port) throws IOException {
-        return new ChronicleSink(
-            chronicle,
-            ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
-            host,
-            port);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -76,10 +58,6 @@ public class StatefulChronicleTestBase {
         assertTrue(new File(path + ".index").delete());
         assertTrue(new File(path + ".data").delete());
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getVanillaTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();

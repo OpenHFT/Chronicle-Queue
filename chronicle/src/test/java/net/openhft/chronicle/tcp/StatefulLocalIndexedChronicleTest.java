@@ -34,8 +34,15 @@ public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase
         final String basePath = getIndexedTestPath();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
-        final ChronicleSource source = new ChronicleSource(chronicle, port);
-        final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.source(chronicle)
+            .bindAddress("localhost", port)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
+            .sharedChronicle(true)
+            .connectAddress("localhost", port)
+            .build();
+
         final CountDownLatch latch = new CountDownLatch(5);
         final Random random = new Random();
 
