@@ -100,6 +100,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
+    //TODO fix it
     @Test
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
@@ -186,6 +187,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
+    //TODO fix it
     @Test
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
