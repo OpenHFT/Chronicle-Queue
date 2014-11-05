@@ -26,7 +26,6 @@ import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
@@ -113,8 +112,8 @@ public class ChronicleSink extends WrappedChronicle {
             super(excerpt);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp2.createBuffer(16);
-            this.readBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
+            this.writeBuffer = ChronicleTcp.createBuffer(16);
+            this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
         }
 
         @Override
@@ -141,7 +140,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         protected void subscribe(long index) throws IOException {
             writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp2.ACTION_SUBSCRIBE);
+            writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
             writeBuffer.putLong(index);
             writeBuffer.flip();
 
@@ -150,7 +149,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         protected void query(long index) throws IOException {
             writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp2.ACTION_QUERY);
+            writeBuffer.putLong(ChronicleTcp.ACTION_QUERY);
             writeBuffer.putLong(index);
             writeBuffer.flip();
 
@@ -187,17 +186,17 @@ public class ChronicleSink extends WrappedChronicle {
                 if (!closed) {
                     query(wrappedChronicle.lastIndex());
 
-                    if (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
+                    if (connection.read(readBuffer, net.openhft.chronicle.tcp.ChronicleTcp.HEADER_SIZE)) {
                         final int size = readBuffer.getInt();
                         final long scIndex = readBuffer.getLong();
 
                         switch (size) {
-                            case ChronicleTcp.IN_SYNC_LEN:
+                            case net.openhft.chronicle.tcp.ChronicleTcp.IN_SYNC_LEN:
                                 return false;
-                            case ChronicleTcp.PADDED_LEN:
+                            case net.openhft.chronicle.tcp.ChronicleTcp.PADDED_LEN:
                                 //TODO: Indexed Vs Vanilla
                                 return false;
-                            case ChronicleTcp.SYNC_IDX_LEN:
+                            case net.openhft.chronicle.tcp.ChronicleTcp.SYNC_IDX_LEN:
                                 return true;
                         }
                     }
@@ -249,7 +248,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         private boolean readNextExcerpt() {
             try {
-                if(!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
+                if(!closed && !connection.read(readBuffer, net.openhft.chronicle.tcp.ChronicleTcp.HEADER_SIZE, net.openhft.chronicle.tcp.ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -257,12 +256,12 @@ public class ChronicleSink extends WrappedChronicle {
                 final long scIndex = readBuffer.getLong();
 
                 switch (size) {
-                    case ChronicleTcp.IN_SYNC_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.IN_SYNC_LEN:
                         //Heartbeat message ignore and return false
                         return false;
-                    case ChronicleTcp.PADDED_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.PADDED_LEN:
                         return this.adapter.writePaddedEntry();
-                    case ChronicleTcp.SYNC_IDX_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
                 }
@@ -340,8 +339,8 @@ public class ChronicleSink extends WrappedChronicle {
             this.index = -1;
             this.lastSize = 0;
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp2.createBufferOfSize(16);
-            this.readBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
+            this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
             this.capacityAddr = this.startAddr + builder.minBufferSize();
         }
@@ -363,13 +362,13 @@ public class ChronicleSink extends WrappedChronicle {
 
         @Override
         public Excerpt toStart() {
-            index(-1);
+            index(ChronicleTcp.IDX_TO_START);
             return this;
         }
 
         @Override
         public Excerpt toEnd() {
-            index(-2);
+            index(ChronicleTcp.IDX_TO_END);
             return this;
         }
 
@@ -414,27 +413,27 @@ public class ChronicleSink extends WrappedChronicle {
                 }
 
                 writeBuffer.clear();
-                writeBuffer.putLong(ChronicleTcp2.ACTION_SUBSCRIBE);
+                writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
                 writeBuffer.putLong(this.index);
                 writeBuffer.flip();
 
                 connection.writeAllOrEOF(writeBuffer);
 
-                while (connection.read(readBuffer, ChronicleTcp2.HEADER_SIZE)) {
+                while (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
                     int receivedSize = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
 
                     switch(receivedSize) {
-                        case ChronicleTcp.SYNC_IDX_LEN:
-                            if(index == -1) {
+                        case net.openhft.chronicle.tcp.ChronicleTcp.SYNC_IDX_LEN:
+                            if(index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
-                            } else if(index == -2) {
+                            } else if(index == ChronicleTcp.IDX_TO_END) {
                                 return advanceIndex();
                             } else {
                                 return (index == receivedIndex) ? advanceIndex() : false;
                             }
-                        case ChronicleTcp.PADDED_LEN:
-                        case ChronicleTcp.IN_SYNC_LEN:
+                        case net.openhft.chronicle.tcp.ChronicleTcp.PADDED_LEN:
+                        case net.openhft.chronicle.tcp.ChronicleTcp.IN_SYNC_LEN:
                             return false;
                     }
 
@@ -460,7 +459,7 @@ public class ChronicleSink extends WrappedChronicle {
                     }
                 }
 
-                if(!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE + 8)) {
+                if(!connection.read(this.readBuffer, net.openhft.chronicle.tcp.ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -468,9 +467,9 @@ public class ChronicleSink extends WrappedChronicle {
                 long receivedIndex = this.readBuffer.getLong();
 
                 switch (excerptSize) {
-                    case ChronicleTcp.IN_SYNC_LEN:
-                    case ChronicleTcp.PADDED_LEN:
-                    case ChronicleTcp.SYNC_IDX_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.IN_SYNC_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.PADDED_LEN:
+                    case net.openhft.chronicle.tcp.ChronicleTcp.SYNC_IDX_LEN:
                         return false;
                 }
 

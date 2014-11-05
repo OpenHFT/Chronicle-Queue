@@ -34,7 +34,7 @@ public abstract class SinkTcp extends TcpConnection {
 
     protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         this.builder = builder;
-        this.name = ChronicleTcp2.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
+        this.name = ChronicleTcp.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
     }

@@ -52,12 +52,12 @@ public abstract class SourceTcp {
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
         this.builder = builder;
         this.notifier = null;
-        this.name = ChronicleTcp2.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
+        this.name = ChronicleTcp.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
-        this.readBuffer = ChronicleTcp2.createBufferOfSize(16);
-        this.writeBuffer = ChronicleTcp2.createBuffer(builder.minBufferSize());
+        this.readBuffer = ChronicleTcp.createBufferOfSize(16);
+        this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
     }
 
     void notifier(Object notifier) {
@@ -226,7 +226,7 @@ public abstract class SourceTcp {
         }
 
         protected boolean hasRoomForExcerpt(ByteBuffer buffer, ExcerptTailer tailer) {
-            return (tailer.capacity() + ChronicleTcp2.HEADER_SIZE) < (buffer.capacity() - buffer.position());
+            return (tailer.capacity() + ChronicleTcp.HEADER_SIZE) < (buffer.capacity() - buffer.position());
         }
 
         protected void pauseReset() {
@@ -234,7 +234,7 @@ public abstract class SourceTcp {
         }
 
         protected void pause() {
-            if (lastUnpausedNS + ChronicleTcp2.BUSY_WAIT_TIME_NS > System.nanoTime()) {
+            if (lastUnpausedNS + ChronicleTcp.BUSY_WAIT_TIME_NS > System.nanoTime()) {
                 return;
             }
 
@@ -273,9 +273,9 @@ public abstract class SourceTcp {
                 long action = readBuffer.getLong();
                 long data   = readBuffer.getLong();
 
-                if(action == ChronicleTcp2.ACTION_SUBSCRIBE) {
+                if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     return onSubscribe(key, data);
-                } else if(action == ChronicleTcp2.ACTION_QUERY) {
+                } else if(action == ChronicleTcp.ACTION_QUERY) {
                     return onQuery(key, data);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
@@ -290,7 +290,7 @@ public abstract class SourceTcp {
             final long now = System.currentTimeMillis();
             if(running.get() && !write()) {
                 if (lastHeartbeat <= now) {
-                    sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
+                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
                 }
             }
 
@@ -304,17 +304,17 @@ public abstract class SourceTcp {
 
                 while (true) {
                     if (tailer.nextIndex()) {
-                        sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, tailer.index());
+                        sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, tailer.index());
                         break;
                     } else {
                         if (lastHeartbeat <= now) {
-                            sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
+                            sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
                             break;
                         }
                     }
                 }
             } else {
-                sendSizeAndIndex(ChronicleTcp2.IN_SYNC_LEN, 0L);
+                sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
             }
 
             return true;
@@ -341,13 +341,13 @@ public abstract class SourceTcp {
         @Override
         protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
             this.index = data;
-            if (this.index == -1) {
+            if (this.index == ChronicleTcp.IDX_TO_START) {
                 this.index = -1;
-            } else if (this.index == -2) {
+            } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.index = tailer.toEnd().index();
             }
 
-            sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, this.index);
+            sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, this.index);
 
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             return true;
@@ -358,7 +358,7 @@ public abstract class SourceTcp {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
-                        sendSizeAndIndex(ChronicleTcp2.PADDED_LEN, tailer.index());
+                        sendSizeAndIndex(ChronicleTcp.PADDED_LEN, tailer.index());
                     }
 
                     index++;
@@ -374,7 +374,7 @@ public abstract class SourceTcp {
             pauseReset();
 
             final long size = tailer.capacity();
-            long remaining = size + ChronicleTcp2.HEADER_SIZE;
+            long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
             writeBuffer.putInt((int) size);
@@ -399,7 +399,7 @@ public abstract class SourceTcp {
                         if (hasRoomForExcerpt(writeBuffer, tailer)) {
                             // if there is free space, copy another one.
                             int size2 = (int) tailer.capacity();
-                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp2.HEADER_SIZE);
+                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                             writeBuffer.putInt(size2);
                             writeBuffer.putLong(tailer.index());
                             tailer.read(writeBuffer);
@@ -444,11 +444,11 @@ public abstract class SourceTcp {
         @Override
         protected boolean onSubscribe(final SelectionKey key, long data) throws IOException  {
             this.index = data;
-            if (this.index == -1) {
+            if (this.index == ChronicleTcp.IDX_TO_START) {
                 this.nextIndex = true;
                 this.tailer = tailer.toStart();
                 this.index = -1;
-            } else if (this.index == -2) {
+            } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.nextIndex = false;
                 this.tailer = tailer.toEnd();
                 this.index = tailer.index();
@@ -456,7 +456,7 @@ public abstract class SourceTcp {
                 this.nextIndex = false;
             }
 
-            sendSizeAndIndex(ChronicleTcp2.SYNC_IDX_LEN, this.index);
+            sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, this.index);
 
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             return false;
@@ -482,7 +482,7 @@ public abstract class SourceTcp {
             pauseReset();
 
             final long size = tailer.capacity();
-            long remaining = size + ChronicleTcp2.HEADER_SIZE;
+            long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
             writeBuffer.putInt((int) size);
@@ -503,10 +503,10 @@ public abstract class SourceTcp {
                 tailer.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
-                        if (!hasRoomForExcerpt(writeBuffer, tailer)) {
+                        if (hasRoomForExcerpt(writeBuffer, tailer)) {
                             // if there is free space, copy another one.
                             int size2 = (int) tailer.capacity();
-                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp2.HEADER_SIZE);
+                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                             writeBuffer.putInt(size2);
                             writeBuffer.putLong(tailer.index());
                             tailer.read(writeBuffer);
