@@ -20,13 +20,12 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.joda.time.DateTime;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -35,14 +34,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
+public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
     @Test
     public void testVanillaVolatileSink_001() throws Exception {
         final int port = BASE_PORT + 201;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -87,8 +93,15 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
     public void testVanillaVolatileSink_002() throws Exception {
         final int port = BASE_PORT + 202;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -130,8 +143,16 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
         final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
+
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         try {
@@ -185,8 +206,15 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
     public void testVanillaVolatileSink_005() throws Exception {
         final int port = BASE_PORT + 205;
         final String basePathSource = getVanillaTestPath("-source");
-        final ChronicleSource source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
@@ -224,8 +252,15 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
     public void testVanillaVolatileSink_006() throws Exception {
         final int port = BASE_PORT + 206;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -288,20 +323,28 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
     public void testVanillaJiraChron74() throws Exception {
         final int port = BASE_PORT + 107;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
 
-        testJiraChron74(port, source);
+        testJiraChron74(port,
+            ChronicleQueueBuilder.vanilla(basePathSource)
+                .source()
+                    .bindAddress(port)
+                .build()
+        );
     }
 
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
      */
     @Test
-    public void tesVanillaJiraChron75() throws Exception {
+    public void testVanillaJiraChron75() throws Exception {
         final int port = BASE_PORT + 108;
         final String basePathSource = getVanillaTestPath("-source");
-        final Chronicle source = vanillaChronicleSource(basePathSource, port);
 
-        testJiraChron75(port, source);
+        testJiraChron75(port,
+            ChronicleQueueBuilder.vanilla(basePathSource)
+                .source()
+                    .bindAddress(port)
+                .build()
+        );
     }
 }

@@ -27,14 +27,14 @@ import net.openhft.chronicle.tools.WrappedExcerpt;
 
 import java.io.IOException;
 
-public class ChronicleSource2 extends WrappedChronicle {
+public class ChronicleSource extends WrappedChronicle {
     private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final Object notifier;
 
     private volatile boolean closed;
 
-    public ChronicleSource2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
+    public ChronicleSource(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
         this.builder = builder;
         this.notifier = new Object();

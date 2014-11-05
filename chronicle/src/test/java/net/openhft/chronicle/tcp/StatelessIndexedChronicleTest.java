@@ -19,39 +19,37 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.lang.model.constraints.NotNull;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.serialization.BytesMarshaller;
-import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
 
 import org.junit.Test;
 
-import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.CountDownLatch;
-
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
-public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
+public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
 
     @Test
     public void testIndexedVolatileSink_001() throws Exception {
         final int port = BASE_PORT + 101;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -96,8 +94,15 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
     public void testIndexedVolatileSink_002() throws Exception {
         final int port = BASE_PORT + 102;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -137,8 +142,14 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
         final int port = BASE_PORT + 103;
         final String basePathSource = getIndexedTestPath("-source");
 
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -181,8 +192,17 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
         final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
+
+
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         try {
@@ -237,8 +257,15 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
     public void testIndexedVolatileSink_005() throws Exception {
         final int port = BASE_PORT + 105;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
@@ -270,8 +297,15 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
     public void testIndexedVolatileSink_006() throws Exception {
         final int port = BASE_PORT + 106;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+                .bindAddress(port)
+            .build();
+
+        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -319,9 +353,13 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
     public void testIndexedJiraChron74() throws Exception {
         final int port = BASE_PORT + 107;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        testJiraChron74(port, source);
+        testJiraChron74(port,
+            ChronicleQueueBuilder.indexed(basePathSource)
+                .source()
+                    .bindAddress(port)
+                .build()
+        );
     }
 
     /*
@@ -331,8 +369,12 @@ public class VolatileIndexedChronicleTest extends VolatileChronicleTestBase {
     public void testIndexedJiraChron75() throws Exception {
         final int port = BASE_PORT + 108;
         final String basePathSource = getIndexedTestPath("-source");
-        final Chronicle source = indexedChronicleSource(basePathSource, port);
 
-        testJiraChron75(port, source);
+        testJiraChron75(port,
+            ChronicleQueueBuilder.indexed(basePathSource)
+                .source()
+                    .bindAddress(port)
+                .build()
+        );
     }
 }

@@ -40,8 +40,8 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-public class ChronicleSink2 extends WrappedChronicle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink2.class);
+public class ChronicleSink extends WrappedChronicle {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink.class);
 
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
@@ -49,7 +49,7 @@ public class ChronicleSink2 extends WrappedChronicle {
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public ChronicleSink2(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
+    public ChronicleSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder;
@@ -94,8 +94,8 @@ public class ChronicleSink2 extends WrappedChronicle {
         this.excerpt = wrappedChronicle == null
             ? new StatelessExcerpt()
             : isLocal
-            ? new StatefullLocalExcerpt(wrappedChronicle.createTailer())
-            : new StatefullExcerpt(wrappedChronicle.createTailer());
+            ? new StatefulLocalExcerpt(wrappedChronicle.createTailer())
+            : new StatefulExcerpt(wrappedChronicle.createTailer());
 
         return this.excerpt;
     }
@@ -104,12 +104,12 @@ public class ChronicleSink2 extends WrappedChronicle {
     // STATEFULL
     // *************************************************************************
 
-    private abstract class AbstractStatefullExcerpt extends WrappedExcerpt {
+    private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ByteBuffer writeBuffer;
         protected final ByteBuffer readBuffer;
 
-        protected AbstractStatefullExcerpt(final ExcerptCommon excerpt) {
+        protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
             super(excerpt);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
@@ -136,7 +136,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             }
 
             super.close();
-            ChronicleSink2.this.excerpt = null;
+            ChronicleSink.this.excerpt = null;
         }
 
         protected void subscribe(long index) throws IOException {
@@ -160,9 +160,9 @@ public class ChronicleSink2 extends WrappedChronicle {
         protected abstract boolean readNext();
     }
 
-    private class StatefullLocalExcerpt extends AbstractStatefullExcerpt {
+    private class StatefulLocalExcerpt extends AbstractStatefulExcerpt {
 
-        public StatefullLocalExcerpt(final ExcerptCommon common) {
+        public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
         }
 
@@ -211,13 +211,13 @@ public class ChronicleSink2 extends WrappedChronicle {
         }
     }
 
-    private final class StatefullExcerpt extends AbstractStatefullExcerpt {
+    private final class StatefulExcerpt extends AbstractStatefulExcerpt {
 
         //private ExcerptAppender appender;
         private AppenderAdapter adapter;
         private long lastLocalIndex;
 
-        public StatefullExcerpt(final ExcerptCommon common) {
+        public StatefulExcerpt(final ExcerptCommon common) {
             super(common);
 
             //this.appender = null;
@@ -375,7 +375,7 @@ public class ChronicleSink2 extends WrappedChronicle {
 
         @Override
         public Chronicle chronicle() {
-            return ChronicleSink2.this;
+            return ChronicleSink.this;
         }
 
         @Override
@@ -387,7 +387,7 @@ public class ChronicleSink2 extends WrappedChronicle {
             }
 
             super.close();
-            ChronicleSink2.this.excerpt = null;
+            ChronicleSink.this.excerpt = null;
         }
 
         @Override

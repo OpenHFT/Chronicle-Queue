@@ -413,12 +413,12 @@ public class ChronicleSink2Test {
             public void run() {
                 try {
                     ExcerptAppender excerpt = source.createAppender();
-                    for (int i = 1; i <= messages; i++) {
+                    for (long i = 1; i <= messages; i++) {
                         excerpt.startExcerpt(8);
                         excerpt.writeLong(i);
                         excerpt.finish();
                     }
-                    System.out.println(System.currentTimeMillis() + ": Finished writing messages");
+                    LOGGER.info("{} : Finished writing messages", System.currentTimeMillis());
                 } catch (Exception e) {
                     throw new AssertionError(e);
                 }
@@ -426,10 +426,11 @@ public class ChronicleSink2Test {
         });
 
         t.start();
-        ExcerptTailer excerpt = sink.createTailer();
-        for (int i = 1; i <= messages;) {
+        ExcerptTailer excerpt = sink.createTailer().toStart();
+        for (long i = 1; i <= messages;) {
             if(excerpt.nextIndex()) {
-                assertEquals(i, excerpt.readLong());
+                long r = excerpt.readLong();
+                assertEquals(i, r);
                 excerpt.finish();
 
                 i++;

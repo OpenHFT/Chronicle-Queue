@@ -27,14 +27,13 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBase {
-
+public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
-    public void testPersistedLocalVanillaSink_001() throws Exception {
-        final int port = BASE_PORT + 301;
-        final String basePath = getVanillaTestPath();
+    public void testPersistedLocalIndexedSink_001() throws Exception {
+        final int port = BASE_PORT + 201;
+        final String basePath = getIndexedTestPath();
 
-        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         final ChronicleSource source = new ChronicleSource(chronicle, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
         final CountDownLatch latch = new CountDownLatch(5);
@@ -57,12 +56,11 @@ public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBa
                             appender.finish();
 
                             sleep(10 + random.nextInt(80));
-
-                            appender.close();
                         }
+                        appender.close();
                     } catch (Exception e) {
-                        e.printStackTrace();
                     }
+
                 }
             };
 
@@ -72,6 +70,7 @@ public class PersistedLocalVanillaChronicleTest extends PersistedChronicleTestBa
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
+                assertEquals(i - 1, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
             }

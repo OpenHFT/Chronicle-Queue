@@ -26,7 +26,7 @@ import java.io.File;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
-public class PersistedVanillaChronicleTest extends PersistedChronicleTestBase {
+public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testReplication1() throws Exception {

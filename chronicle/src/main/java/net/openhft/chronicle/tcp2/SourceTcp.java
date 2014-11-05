@@ -274,10 +274,8 @@ public abstract class SourceTcp {
                 long data   = readBuffer.getLong();
 
                 if(action == ChronicleTcp2.ACTION_SUBSCRIBE) {
-                    logger.info("ACTION_SUBSCRIBE - index={}", data);
                     return onSubscribe(key, data);
                 } else if(action == ChronicleTcp2.ACTION_QUERY) {
-                    logger.info("ACTION_QUERY - index={}", data);
                     return onQuery(key, data);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
@@ -368,7 +366,7 @@ public abstract class SourceTcp {
 
                 pause();
 
-                if(!running.get() && !tailer.index(index)) {
+                if(running.get() && !tailer.index(index)) {
                     return false;
                 }
             }
@@ -469,7 +467,7 @@ public abstract class SourceTcp {
             if(nextIndex) {
                 if (!tailer.nextIndex()) {
                     pause();
-                    if (!running.get() && !tailer.nextIndex()) {
+                    if (running.get() && !tailer.nextIndex()) {
                         return false;
                     }
                 }

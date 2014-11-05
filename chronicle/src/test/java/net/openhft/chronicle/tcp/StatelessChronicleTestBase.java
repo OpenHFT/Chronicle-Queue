@@ -33,9 +33,9 @@ import org.slf4j.LoggerFactory;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import java.net.InetSocketAddress;
 import java.util.Date;
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,26 +45,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class VolatileChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("VolatileChronicleTestBase");
+public class StatelessChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "ch-volatile-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
     public final TestName testName = new TestName();
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    protected Chronicle volatileChronicleSink(String host, int port) throws IOException {
-        return new ChronicleSink(host, port);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -79,14 +67,6 @@ public class VolatileChronicleTestBase {
 
         return path;
     }
-
-    protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(ChronicleQueueBuilder.indexed(basePath).build(), port);
-    }
-
-    //protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-    //    return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    //}
 
     // *************************************************************************
     //
@@ -112,14 +92,6 @@ public class VolatileChronicleTestBase {
         return path;
     }
 
-    protected ChronicleSource vanillaChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(ChronicleQueueBuilder.vanilla(basePath).build(), port);
-    }
-
-    protected ChronicleSource vanillaChronicleSource(int port, ChronicleQueueBuilder builder) throws IOException {
-        return new ChronicleSource(builder.build(), port);
-    }
-
     // *************************************************************************
     //
     // *************************************************************************
@@ -129,7 +101,10 @@ public class VolatileChronicleTestBase {
         ExcerptTailer tailer = null;
 
         try {
-            sink = volatileChronicleSink("localhost", port);
+            sink = ChronicleQueueBuilder.sink(null)
+                .connectAddress(new InetSocketAddress("localhost", port))
+                .build();
+
             tailer = sink.createTailer();
             assertFalse(tailer.nextIndex());
             tailer.close();
@@ -146,7 +121,10 @@ public class VolatileChronicleTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            sink = volatileChronicleSink("localhost", port);
+            sink =ChronicleQueueBuilder.sink(null)
+                .connectAddress("localhost", port)
+                .build();
+
             tailer = sink.createTailer().toStart();
             assertTrue("nextIndex should return true", tailer.nextIndex());
             assertEquals(1L, tailer.readLong());
@@ -161,7 +139,10 @@ public class VolatileChronicleTestBase {
             sink.clear();
             sink = null;
 
-            sink = volatileChronicleSink("localhost", port);
+            sink = ChronicleQueueBuilder.sink(null)
+                .connectAddress("localhost", port)
+                .build();
+
             tailer = sink.createTailer().toEnd();
             assertFalse("nextIndex should return false", tailer.nextIndex());
 

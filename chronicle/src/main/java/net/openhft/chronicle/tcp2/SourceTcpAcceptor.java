@@ -71,9 +71,9 @@ public final class SourceTcpAcceptor extends SourceTcp {
                             }
 
                             keys.clear();
-                        } else {
+                        } /* else {
                             logger.info("No incoming connections on {}, wait", builder.bindAddress());
-                        }
+                        } */
                     }
 
                     selector.close();

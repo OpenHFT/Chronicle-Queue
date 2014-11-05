@@ -32,7 +32,7 @@ import java.io.IOException;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedChronicleTestBase {
+public class StatefulChronicleTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("PersistedChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "ch-persisted-";

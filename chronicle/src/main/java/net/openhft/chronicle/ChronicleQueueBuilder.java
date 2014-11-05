@@ -614,6 +614,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this;
         }
 
+        public ReplicaChronicleQueueBuilder bindAddress(int port) {
+            return bindAddress(new InetSocketAddress(port));
+        }
+
+        public ReplicaChronicleQueueBuilder bindAddress(String host, int port) {
+            return bindAddress(new InetSocketAddress(host, port));
+        }
+
         public InetSocketAddress connectAddress() {
             return connectAddress;
         }
@@ -621,6 +629,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public ReplicaChronicleQueueBuilder connectAddress(InetSocketAddress connectAddress) {
             this.connectAddress = connectAddress;
             return this;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddress(String host, int port) {
+            return connectAddress(new InetSocketAddress(host, port));
         }
 
         public long reconnectTimeout() {
@@ -820,7 +832,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSink2(this, cnx);
+            return new ChronicleSink(this, cnx);
         }
 
         /**
@@ -862,7 +874,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSource2(this, cnx);
+            return new ChronicleSource(this, cnx);
         }
 
         /**

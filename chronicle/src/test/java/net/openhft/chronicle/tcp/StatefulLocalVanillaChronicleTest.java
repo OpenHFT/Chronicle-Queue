@@ -27,13 +27,14 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBase {
-    @Test
-    public void testPersistedLocalIndexedSink_001() throws Exception {
-        final int port = BASE_PORT + 201;
-        final String basePath = getIndexedTestPath();
+public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase {
 
-        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+    @Test
+    public void testPersistedLocalVanillaSink_001() throws Exception {
+        final int port = BASE_PORT + 301;
+        final String basePath = getVanillaTestPath();
+
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
         final ChronicleSource source = new ChronicleSource(chronicle, port);
         final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
         final CountDownLatch latch = new CountDownLatch(5);
@@ -56,11 +57,12 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
                             appender.finish();
 
                             sleep(10 + random.nextInt(80));
-                        }
-                        appender.close();
-                    } catch (Exception e) {
-                    }
 
+                            appender.close();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             };
 
@@ -70,7 +72,6 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
-                assertEquals(i - 1, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
             }
