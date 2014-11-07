@@ -306,8 +306,6 @@ public class IndexedChronicle implements Chronicle {
         // relatively static
         // the start of the index block, as an address
         long indexStartAddr;
-        // which index does this refer to?
-        private long indexStartOffset;
         // the offset in data referred to the start of the line
         long indexBaseForLine;
         // the start of the data block, as an address
@@ -317,6 +315,27 @@ public class IndexedChronicle implements Chronicle {
         // the position currently writing to in the index.
         long indexPositionAddr;
         boolean padding = true;
+        // which index does this refer to?
+        private long indexStartOffset;
+
+        protected AbstractIndexedExcerpt() throws IOException {
+            super(NO_PAGE, NO_PAGE);
+            cacheLineSize = IndexedChronicle.this.config.cacheLineSize();
+            cacheLineMask = (cacheLineSize - 1);
+            dataBlockSize = IndexedChronicle.this.config.dataBlockSize();
+            indexBlockSize = IndexedChronicle.this.config.indexBlockSize();
+            indexEntriesPerLine = (cacheLineSize - 8) / 4;
+            indexEntriesPerBlock = indexBlockSize * indexEntriesPerLine / cacheLineSize;
+            loadIndexBuffer();
+            loadDataBuffer();
+
+            finished = true;
+        }
+
+        // the start of this entry
+        // inherited - long startAddr;
+        // inherited - long positionAddr;
+        // inherited - long limitAddr;
 
         public String dumpState() {
             return "{" +
@@ -335,25 +354,6 @@ public class IndexedChronicle implements Chronicle {
                     "\nindexPositionAddr=" + indexPositionAddr +
                     "\npadding=" + padding +
                     '}';
-        }
-
-        // the start of this entry
-        // inherited - long startAddr;
-        // inherited - long positionAddr;
-        // inherited - long limitAddr;
-
-        protected AbstractIndexedExcerpt() throws IOException {
-            super(NO_PAGE, NO_PAGE);
-            cacheLineSize = IndexedChronicle.this.config.cacheLineSize();
-            cacheLineMask = (cacheLineSize - 1);
-            dataBlockSize = IndexedChronicle.this.config.dataBlockSize();
-            indexBlockSize = IndexedChronicle.this.config.indexBlockSize();
-            indexEntriesPerLine = (cacheLineSize - 8) / 4;
-            indexEntriesPerBlock = indexBlockSize * indexEntriesPerLine / cacheLineSize;
-            loadIndexBuffer();
-            loadDataBuffer();
-
-            finished = true;
         }
 
         @Override

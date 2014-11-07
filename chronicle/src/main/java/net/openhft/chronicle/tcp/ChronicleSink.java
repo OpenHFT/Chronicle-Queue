@@ -18,14 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptComparator;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -66,8 +59,8 @@ public class ChronicleSink implements Chronicle {
     private final List<ExcerptCommon> excerpts;
 
     private final Logger logger;
-    private volatile boolean closed = false;
     private final boolean isLocal;
+    private volatile boolean closed = false;
 
     public ChronicleSink(String hostname, int port) throws IOException {
         this(null, ChronicleSinkConfig.DEFAULT, new InetSocketAddress(hostname, port));
@@ -694,10 +687,10 @@ public class ChronicleSink implements Chronicle {
 
     private class VolatileExcerptTailer extends NativeBytes implements ExcerptTailer {
         private final Logger logger;
-        private long index;
-        private int lastSize;
         private final ByteBuffer buffer;
         private final SinkConnector connector;
+        private long index;
+        private int lastSize;
 
         public VolatileExcerptTailer() {
             super(NO_PAGE, NO_PAGE);

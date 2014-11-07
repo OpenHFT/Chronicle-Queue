@@ -113,6 +113,11 @@ public enum ChronicleTools {
         return sb.toString();
     }
 
+    public static void warmup() {
+        //noinspection UnusedDeclaration needed to laod class.
+        boolean done = ChronicleWarmup.DONE;
+    }
+
     enum DeleteStatic {
         INSTANCE;
         @SuppressWarnings("TypeMayBeWeakened")
@@ -136,11 +141,6 @@ public enum ChronicleTools {
             toDeleteList.add(dirPath);
         }
 
-    }
-
-    public static void warmup() {
-        //noinspection UnusedDeclaration needed to laod class.
-        boolean done = ChronicleWarmup.DONE;
     }
 }
 
