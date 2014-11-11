@@ -86,7 +86,7 @@ public class VanillaDataCache implements Closeable {
         key.dataCount = dataCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
-        if(vmb == null) {
+        if(vmb == null || vmb.refCount() < 1) {
             vmb = this.cache.put(
                 key.clone(),
                 VanillaChronicleUtils.mkFiles(

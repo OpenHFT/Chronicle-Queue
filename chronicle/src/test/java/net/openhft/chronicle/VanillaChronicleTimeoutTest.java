@@ -88,13 +88,13 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
             for (int j = 0; j < 5; j++) {
-                int runs = 10000;
+                int runs = 2000;
                 for (int i = 0; i < runs; i++) {
                     VanillaMappedBytes buffer = cache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
                     File file = cache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
 
                     buffer.release(); // held by VanillaMappedCache
-                    buffer.release(); // VanillaDataCache always call ackquire()
+                    buffer.release(); // VanillaDataCache always call acquire()
                     buffer.close();
 
                     assertTrue(file.delete());
