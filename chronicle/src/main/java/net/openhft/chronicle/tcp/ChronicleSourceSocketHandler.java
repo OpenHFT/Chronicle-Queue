@@ -58,7 +58,7 @@ public abstract class ChronicleSourceSocketHandler implements Runnable, Closeabl
         this.chronicle = this.source.chronicle();
         this.config = this.source.config();
         this.tailer = null;
-        this.buffer = ChronicleTcp.createBuffer(1, ByteOrder.nativeOrder());
+        this.buffer = ChronicleTcp.createBuffer(this.config.minBufferSize(), ByteOrder.nativeOrder());
         this.command = new ChronicleTcp.Command();
         this.lastHeartbeat = 0;
 

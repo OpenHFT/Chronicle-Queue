@@ -19,6 +19,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
@@ -35,10 +36,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -437,5 +441,28 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
             ap = in.readDouble();
             aq = in.readInt();
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira77() throws IOException{
+        final int BYTES_LENGTH = 66000;
+        String basePath = getIndexedTestPath();
+
+        Chronicle chronicleSrc = new IndexedChronicle(basePath + "-src");
+        chronicleSrc.clear();
+
+        Chronicle chronicleTarget = new IndexedChronicle(basePath + "-target");
+        chronicleTarget.clear();
+
+        testJira77(30100, chronicleSrc, chronicleTarget);
     }
 }
