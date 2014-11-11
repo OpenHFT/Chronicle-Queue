@@ -304,4 +304,16 @@ public class VolatileVanillaChronicleTest extends VolatileChronicleTestBase {
 
         testJiraChron75(port, source);
     }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-78
+     */
+    @Test
+    public void testVanillaJiraChron78() throws Exception {
+        final int port = BASE_PORT + 109;
+        final String basePathSource = getVanillaTestPath("-source");
+        final Chronicle source = vanillaChronicleSource(basePathSource, port);
+
+        testJiraChron78(port, source);
+    }
 }
