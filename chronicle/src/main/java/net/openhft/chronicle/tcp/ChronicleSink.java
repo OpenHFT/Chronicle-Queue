@@ -702,6 +702,7 @@ public class ChronicleSink implements Chronicle {
             this.buffer = this.connector.buffer();
             this.startAddr = ((DirectBuffer) this.buffer).address();
             this.capacityAddr = this.startAddr + config.minBufferSize();
+            this.finished = true;
         }
 
         @Override
@@ -807,6 +808,8 @@ public class ChronicleSink implements Chronicle {
 
         @Override
         public boolean nextIndex() {
+            finish();
+
             try {
                 if(!connector.isOpen()) {
                     if(index(this.index)) {
