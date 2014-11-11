@@ -537,6 +537,7 @@ public class VanillaChronicle implements Chronicle {
 
                 startAddr = positionAddr = dataBytes.positionAddr() + 4;
                 limitAddr = startAddr + capacity;
+                capacityAddr = limitAddr;
                 nextSynchronous = config.synchronous();
                 finished = false;
             } catch (IOException e) {
