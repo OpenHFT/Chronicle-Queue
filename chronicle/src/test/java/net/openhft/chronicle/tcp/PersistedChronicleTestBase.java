@@ -21,18 +21,24 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.VanillaChronicleConfig;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Random;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -119,5 +125,50 @@ public class PersistedChronicleTestBase {
 
     protected Chronicle vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
         return new ChronicleSource(new VanillaChronicle(basePath, config), port);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public void testJira77(int port, Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
+        final int BYTES_LENGTH = 66000;
+        String basePath = getIndexedTestPath();
+        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+
+        Random random = new Random();
+        ChronicleSourceConfig sourceConfig = ChronicleSourceConfig.DEFAULT.clone();
+        sourceConfig.minBufferSize(2 * BYTES_LENGTH);
+
+        ChronicleSource chronicleSource = new ChronicleSource(chronicleSrc, sourceConfig, port);
+        ChronicleSinkConfig sinkConfig = ChronicleSinkConfig.DEFAULT.clone();
+        sinkConfig.minBufferSize(2 * BYTES_LENGTH);
+        ChronicleSink chronicleSink = new ChronicleSink(chronicleTarget, sinkConfig, new InetSocketAddress(port));
+
+        ExcerptAppender app = chronicleSrc.createAppender();
+        byte[] bytes = new byte[BYTES_LENGTH];
+        random.nextBytes(bytes);
+        app.startExcerpt(4 + 4 + bytes.length);
+        app.writeInt(bytes.length);
+        app.write(bytes);
+        app.finish();
+
+        ExcerptTailer vtail = chronicleSink.createTailer();
+        byte[] bytes2 = null;
+        while (vtail.nextIndex()) {
+            int bytesLength = vtail.readInt();
+            bytes2 = new byte[bytesLength];
+            vtail.read(bytes2);
+            vtail.finish();
+        }
+
+        assertArrayEquals(bytes, bytes2);
+
+        app.close();
+        vtail.close();
+
+        chronicleSrc.close();
+        chronicleSource.close();
+        chronicleSink.close();
     }
 }
