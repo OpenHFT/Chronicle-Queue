@@ -203,6 +203,7 @@ public class ChronicleSource implements Chronicle {
                         if (key.isAcceptable()) {
                             final SocketChannel socket = server.accept();
                             socket.configureBlocking(true);
+                            socket.socket().setTcpNoDelay(true);
                             logger.info("Accepted connection from: " + socket.getRemoteAddress());
                             service.execute(createSocketHandler(socket));
                         }
