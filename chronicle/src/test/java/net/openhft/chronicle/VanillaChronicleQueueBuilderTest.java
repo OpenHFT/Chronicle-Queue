@@ -22,13 +22,17 @@ import org.junit.Test;
 
 import static org.junit.Assert.fail;
 
-public class VanillaChronicleConfigTest extends VanillaChronicleTestBase {
+public class VanillaChronicleQueueBuilderTest extends VanillaChronicleTestBase {
 
     @Test
     public void testVanillaChronicleConfig()  {
+        ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(
+            System.getProperty("java.io.tmpdir")
+        );
+
         try {
             System.out.print("Check entriesPerCycle >= 256: ");
-            new VanillaChronicleConfig().entriesPerCycle(128);
+            builder.entriesPerCycle(128);
             fail("expected IllegalArgumentException (entriesPerCycle >= 256");
         } catch(IllegalArgumentException e) {
             System.out.print(" OK\n");
@@ -36,7 +40,7 @@ public class VanillaChronicleConfigTest extends VanillaChronicleTestBase {
 
         try {
             System.out.print("Check entriesPerCycle <= 1L << 48: ");
-            new VanillaChronicleConfig().entriesPerCycle(1L << 56);
+            builder.entriesPerCycle(1L << 56);
             fail("expected IllegalArgumentException (entriesPerCycle <= 1L << 48)");
         } catch(IllegalArgumentException e) {
             System.out.print(" OK\n");
@@ -44,13 +48,13 @@ public class VanillaChronicleConfigTest extends VanillaChronicleTestBase {
 
         try {
             System.out.print("Check entriesPerCycle is a power of 2: ");
-            new VanillaChronicleConfig().entriesPerCycle(257);
+            builder.entriesPerCycle(257);
             fail("expected IllegalArgumentException (entriesPerCycle power of 2)");
         } catch(IllegalArgumentException e) {
             System.out.print(" OK\n");
         }
 
-        new VanillaChronicleConfig().entriesPerCycle(512);
-        new VanillaChronicleConfig().entriesPerCycle(1024);
+        builder.entriesPerCycle(512);
+        builder.entriesPerCycle(1024);
     }
 }

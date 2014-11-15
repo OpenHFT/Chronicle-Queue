@@ -33,10 +33,10 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
 
 	package net.openhft.chronicle.examples;
 	import java.io.IOException;
-	import net.openhft.chronicle.ChronicleConfig;
     import net.openhft.chronicle.Excerpt;
     import net.openhft.chronicle.ExcerptAppender;
-    import net.openhft.chronicle.IndexedChronicle;
+    import net.openhft.chronicle.Chronicle;
+    import net.openhft.chronicle.ChronicleQueueBuilder;
     import net.openhft.chronicle.tools.ChronicleTools;
 
     public class ExampleCacheMain {
@@ -45,7 +45,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
             String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
             ChronicleTools.deleteOnExit(basePath);
 
-            IndexedChronicle chronicle = new IndexedChronicle(basePath);
+            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
 
             // write one object
             ExcerptAppender appender = chronicle.createAppender();

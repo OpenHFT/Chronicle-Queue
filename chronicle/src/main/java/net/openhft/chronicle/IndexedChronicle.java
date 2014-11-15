@@ -97,8 +97,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the {@link net.openhft.chronicle.ChronicleConfig} that has been used to create the current instance of
-     * IndexedChronicle
+     * Returns the {@link net.openhft.chronicle.ChronicleQueueBuilder} that has been used
+     * to create the current instance of IndexedChronicle
      *
      * @return the ChronicleConfig used to create this IndexChronicle
      */

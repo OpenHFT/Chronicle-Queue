@@ -20,12 +20,17 @@ package vanilla.java.processingengine;
 
 import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
 import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.model.constraints.NotNull;
-import vanilla.java.processingengine.api.*;
+import vanilla.java.processingengine.api.Gw2PeEvents;
+import vanilla.java.processingengine.api.Gw2PeWriter;
+import vanilla.java.processingengine.api.MetaData;
+import vanilla.java.processingengine.api.Pe2GwEvents;
+import vanilla.java.processingengine.api.Pe2GwReader;
+import vanilla.java.processingengine.api.Side;
+import vanilla.java.processingengine.api.SmallCommand;
+import vanilla.java.processingengine.api.SmallReport;
 
 import java.io.IOException;
 import java.util.Arrays;

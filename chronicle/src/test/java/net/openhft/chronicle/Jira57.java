@@ -63,7 +63,7 @@ public class Jira57 {
         String dir = System.getProperty("java.io.tmpdir");
         String basePath = dir + "/test123";
         ChronicleTools.deleteOnExit(basePath);
-        ChronicleConfig chronicleConfig = ChronicleConfig.SMALL;   // 599168, 917501
+        //ChronicleConfig chronicleConfig = ChronicleConfig.SMALL;   // 599168, 917501
 //        ChronicleConfig chronicleConfig = ChronicleConfig.MEDIUM;   // 4793472
 //        ChronicleConfig chronicleConfig = ChronicleConfig.LARGE;   // 19173960
         Chronicle writeChronicle = ChronicleQueueBuilder.indexed(basePath).small().build();

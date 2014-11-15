@@ -66,9 +66,6 @@ public class ChronicleController {
     public void reset() {
 
         try {
-            VanillaChronicleConfig config = new VanillaChronicleConfig();
-            config.indexBlockSize(32 << 20);
-            config.dataBlockSize(128 << 20);
             chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
                 .indexBlockSize(32 << 20)
                 .dataBlockSize(128 << 20)

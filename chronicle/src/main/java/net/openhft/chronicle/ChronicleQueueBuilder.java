@@ -901,7 +901,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
     /**
      * Makes ChronicleQueueBuilder cloneable.
      *
-     * @return a cloned copy of this ChronicleConfig instance
+     * @return a cloned copy of this ChronicleQueueBuilder instance
      */
     @Override
     public ChronicleQueueBuilder clone() throws CloneNotSupportedException {

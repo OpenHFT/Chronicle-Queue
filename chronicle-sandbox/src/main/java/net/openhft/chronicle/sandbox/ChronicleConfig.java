@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle;
+package net.openhft.chronicle.sandbox;
 
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
-
-import java.nio.ByteOrder;
 
 /**
  * @author peter.lawrey
@@ -90,7 +88,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * The default ChronicleConfig used by various {@link net.openhft.chronicle.Chronicle} implementations if not otherwise specified.
-     * On 64 bit JVMs it delegates to {@link net.openhft.chronicle.ChronicleConfig#MEDIUM}, on 32 bit ones to {@link net.openhft.chronicle.ChronicleConfig#SMALL}.
+     * On 64 bit JVMs it delegates to {@link ChronicleConfig#MEDIUM}, on 32 bit ones to {@link ChronicleConfig#SMALL}.
      */
     public static final ChronicleConfig DEFAULT = Jvm.is64Bit() ? MEDIUM : SMALL;
 
@@ -208,7 +206,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * Sets the synchronous mode to be used. Enabling synchronous mode means that
-     * {@link ExcerptCommon#finish()} will force a persistence every time.
+     * {@link net.openhft.chronicle.ExcerptCommon#finish()} will force a persistence every time.
      *
      * @param synchronousMode If synchronous mode should be used or not.
      *
