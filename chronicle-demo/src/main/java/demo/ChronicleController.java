@@ -24,6 +24,7 @@ import net.openhft.chronicle.tcp.ChronicleSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,23 +67,25 @@ public class ChronicleController {
     public void reset() {
 
         try {
+            InetSocketAddress address = new InetSocketAddress("localhost", 10123);
+
             chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
                 .indexBlockSize(32 << 20)
                 .dataBlockSize(128 << 20)
                 .build();
 
-            ChronicleSource source = new ChronicleSource(chronicle, 0);
-            ChronicleSink sink = new ChronicleSink(
-                ChronicleQueueBuilder.vanilla(BASE_PATH_SINK).build(),
-                "localhost",
-                source.getLocalPort());
+            Chronicle source = ChronicleQueueBuilder.source(chronicle)
+                    .bindAddress(address)
+                    .build();
+            Chronicle sink = ChronicleQueueBuilder.vanilla(BASE_PATH_SINK)
+                    .sink()
+                    .connectAddress(address)
+                    .build();
 
             chronicle.clear();
             sink.clear();
 
             tailer = chronicle.createTailer();
-
-
             tcpTailer = sink.createTailer();
         } catch (IOException e) {
             e.printStackTrace();

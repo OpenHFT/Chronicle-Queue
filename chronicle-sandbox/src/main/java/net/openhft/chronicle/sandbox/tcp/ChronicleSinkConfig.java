@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle.sandbox.tcp;
 
 
 import net.openhft.lang.model.constraints.NotNull;

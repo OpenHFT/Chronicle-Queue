@@ -25,7 +25,6 @@ import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,7 +172,7 @@ public class StatelessChronicleTestBase {
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            sink = new ChronicleSink("localhost", port);
+                            sink = ChronicleQueueBuilder.sink(null).connectAddress("localhost", port).build();
                             tailer = sink.createTailer().toStart();
 
                             latch.await();

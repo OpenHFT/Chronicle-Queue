@@ -18,7 +18,7 @@
 package net.openhft.chronicle;
 
 
-import net.openhft.chronicle.tcp2.*;
+import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
 

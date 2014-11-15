@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tcp2;
+package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
 
