@@ -22,6 +22,7 @@ import net.openhft.chronicle.tools.CheckedExcerpt;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
+import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
 
@@ -223,8 +224,8 @@ public class IndexedChronicle implements Chronicle {
         final Excerpt excerpt = new IndexedExcerpt();
 
         return !builder.useCheckedExcerpt()
-                ? excerpt
-                : new CheckedExcerpt(excerpt);
+            ? excerpt
+            : new CheckedExcerpt(excerpt);
     }
 
     /**
@@ -253,8 +254,8 @@ public class IndexedChronicle implements Chronicle {
         final ExcerptAppender appender = new IndexedExcerptAppender();
 
         return !builder.useCheckedExcerpt()
-                ? appender
-                : new CheckedExcerpt(appender);
+            ? appender
+            : new CheckedExcerpt(appender);
     }
 
     /**
@@ -336,7 +337,7 @@ public class IndexedChronicle implements Chronicle {
         // inherited - long limitAddr;
 
         protected AbstractIndexedExcerpt() throws IOException {
-            super(NO_PAGE, NO_PAGE);
+            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
             cacheLineSize = IndexedChronicle.this.builder.cacheLineSize();
             cacheLineMask = (cacheLineSize - 1);
             dataBlockSize = IndexedChronicle.this.builder.dataBlockSize();
