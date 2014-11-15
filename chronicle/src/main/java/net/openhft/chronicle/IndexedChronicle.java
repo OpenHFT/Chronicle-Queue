@@ -103,7 +103,7 @@ public class IndexedChronicle implements Chronicle {
      * @return the ChronicleConfig used to create this IndexChronicle
      */
     public ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder() {
-        return this.builder; //todo: would be better to return a copy/clone, because like this the config can be changed from the outside
+        return this.builder;
     }
 
     /**

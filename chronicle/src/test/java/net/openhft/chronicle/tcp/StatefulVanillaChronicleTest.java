@@ -19,6 +19,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
+import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
 import java.io.File;
@@ -100,7 +101,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
-    //TODO fix it
     @Test
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
@@ -115,7 +115,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             .indexBlockSize(16L << 10)
             .build();
 
-        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
             .entriesPerCycle(1L << 20)
             .cycleLength(1000, false)
             .cycleFormat("yyyyMMddHHmmss")
@@ -187,7 +187,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
-    //TODO fix it
     @Test
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
@@ -202,7 +201,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             .indexBlockSize(16L << 10)
             .build();
 
-        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
             .entriesPerCycle(1L << 20)
             .cycleLength(1000, false)
             .cycleFormat("yyyyMMddHHmmss")
@@ -344,7 +343,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         tailer1.close();
         sink1.close();
-        //TODO: fix sink1.checkCounts(1, 1);
+        ChronicleTools.checkCount(sink1,1,1);
 
         //now resume the tailer to get the first 50 items
         final Chronicle sink2 = ChronicleQueueBuilder.sink(
@@ -373,13 +372,13 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
 
         tailer2.close();
-        sink2.close();
-        //TODO: fix sink2.checkCounts(1, 1);
 
+        sink2.close();
+        ChronicleTools.checkCount(sink2,1,1);
         sink2.clear();
 
         source.close();
-        //TODO: fix source.checkCounts(1, 1);
+        ChronicleTools.checkCount(source,1,1);
         source.clear();
 
         assertFalse(new File(sourceBasePath).exists());

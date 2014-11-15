@@ -342,12 +342,10 @@ public class ChronicleConfig implements Cloneable {
         return messageCapacity;
     }
 
-    //TODO: document
     public boolean useCheckedExcerpt() {
         return useCheckedExcerpt;
     }
 
-    //TODO: document
     public void useCheckedExcerpt(boolean useCheckedExcerpt) {
         this.useCheckedExcerpt = useCheckedExcerpt;
     }

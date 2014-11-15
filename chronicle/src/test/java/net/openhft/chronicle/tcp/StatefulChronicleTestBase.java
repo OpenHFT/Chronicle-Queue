@@ -20,6 +20,7 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.io.IOTools;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
@@ -61,20 +62,14 @@ public class StatefulChronicleTestBase {
 
     protected synchronized String getVanillaTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
+        IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getVanillaTestPath(String suffix) {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
+        IOTools.deleteDir(path);
 
         return path;
     }

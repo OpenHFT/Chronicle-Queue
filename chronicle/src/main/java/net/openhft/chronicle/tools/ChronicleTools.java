@@ -140,39 +140,12 @@ public enum ChronicleTools {
 
     public static void warmup() {
         //noinspection UnusedDeclaration needed to laod class.
-        boolean done = ChronicleWarmup.DONE;
+        boolean done = ChronicleWarmup.Indexed.DONE;
     }
-}
 
-class ChronicleWarmup {
-    public static final boolean DONE;
-    private static final int WARMUP_ITER = 200000;
-    private static final String TMP = System.getProperty("java.io.tmpdir");
-
-    static {
-        String basePath = TMP + "/warmup-" + Math.random();
-        ChronicleTools.deleteOnExit(basePath);
-        try {
-            Chronicle ic = ChronicleQueueBuilder.indexed(basePath)
-                .dataBlockSize(64)
-                .indexBlockSize(64)
-                .build();
-
-            ExcerptAppender appender = ic.createAppender();
-            ExcerptTailer tailer = ic.createTailer();
-            for (int i = 0; i < WARMUP_ITER; i++) {
-                appender.startExcerpt();
-                appender.writeInt(i);
-                appender.finish();
-                boolean b = tailer.nextIndex() || tailer.nextIndex();
-                tailer.readInt();
-                tailer.finish();
-            }
-            ic.close();
-            System.gc();
-            DONE = true;
-        } catch (IOException e) {
-            throw new AssertionError();
+    public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
+        if(chronicle instanceof VanillaChronicle) {
+            ((VanillaChronicle)chronicle).checkCounts(min, max);
         }
     }
-}
+ }
