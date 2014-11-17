@@ -44,6 +44,7 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     private JTextField tfRunningTime;
     private JTextField tfDiskSpace;
     private JTextField tfTCPReads;
+    private JTextArea thisTestApplicationHasTextArea;
     private AtomicLong messagesProduced1 = new AtomicLong(0);
     private AtomicLong messagesProduced2 = new AtomicLong(0);
     private AtomicLong messagesRead = new AtomicLong(0);
@@ -89,8 +90,13 @@ public class ChronicleDashboard implements ChronicleUpdatable {
                     startButton.setText("Stop");
                     resetButton.setEnabled(false);
                     updater.go();
-                    controller.start((String) cbRate.getSelectedItem());
+                    try {
+                        controller.start((String) cbRate.getSelectedItem());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
                 } else {
+                    startButton.setEnabled(false);
                     startButton.setText("Start");
                     resetButton.setEnabled(true);
                     controller.stop();
@@ -114,8 +120,8 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         tfMessagesRead.setText("0");
         tfTCPReads.setText("0");
         tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
-        if (controller != null)
-            controller.reset();
+        tpFiles.setText("");
+        startButton.setEnabled(true);
     }
 
 
@@ -127,7 +133,6 @@ public class ChronicleDashboard implements ChronicleUpdatable {
             fileNames += files.get(i);
         }
         tpFiles.setText(fileNames);
-//        System.out.println("Setting files " + fileNames);
     }
 
     @Override

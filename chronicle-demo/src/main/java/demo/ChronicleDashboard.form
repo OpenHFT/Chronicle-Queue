@@ -18,7 +18,7 @@
     <colspec value="left:4dlu:noGrow"/>
     <colspec value="fill:d:grow"/>
     <constraints>
-      <xy x="18" y="20" width="877" height="525"/>
+      <xy x="18" y="20" width="1036" height="525"/>
     </constraints>
     <properties/>
     <border type="none" title="Chronicle Dashboard"/>
@@ -32,12 +32,19 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="5ccf0" class="javax.swing.JLabel">
+          <component id="72649" class="javax.swing.JTextArea" binding="thisTestApplicationHasTextArea" default-binding="true">
             <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="50"/>
+              </grid>
             </constraints>
             <properties>
-              <text value="This is a visual demonstration of OpenHFT Chronicle running on your machine"/>
+              <background color="-7296243"/>
+              <editable value="false"/>
+              <enabled value="true"/>
+              <lineWrap value="false"/>
+              <rows value="10"/>
+              <text value="This test application has been built to demonstrate how ChronicleQueue might perform on your machine.&#10;Messages (price objects consisting of 1 String, 4 ints, 1 boolean) are written by 2 threads to ChronicleQueue.  &#10;The messages are also TCP replicated (allbeit on  localhost) and then read.&#10;Even an average laptop should be able to process 1.5m messages / second."/>
             </properties>
           </component>
         </children>
