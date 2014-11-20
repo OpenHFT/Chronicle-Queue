@@ -23,7 +23,7 @@
     <properties/>
     <border type="none" title="Chronicle Dashboard"/>
     <children>
-      <grid id="d17bd" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="d17bd" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="10" left="0" bottom="20" right="0"/>
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="3" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
@@ -44,7 +44,15 @@
               <enabled value="true"/>
               <lineWrap value="false"/>
               <rows value="10"/>
-              <text value="This test application has been built to demonstrate how ChronicleQueue might perform on your machine.&#10;Messages (price objects consisting of 1 String, 4 ints, 1 boolean) are written by 2 threads to ChronicleQueue.  &#10;The messages are also TCP replicated (allbeit on  localhost) and then read.&#10;Even an average laptop should be able to process 1.5m messages / second."/>
+              <text value="This test application has been built to demonstrate how ChronicleQueue might &#10;perform on your machine.&#10;Messages (prices consisting of 1 String, 4 ints, 1 boolean) flow round a system&#10;topology described by the diagram below.&#10;An average laptop should be able to process 1.5m messages / second."/>
+            </properties>
+          </component>
+          <component id="e86ed" class="javax.swing.JLabel" binding="lblDiagram">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value=""/>
             </properties>
           </component>
         </children>
@@ -144,13 +152,13 @@
               <grid row="2" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Actual writes (per/second)"/>
+              <text value="Writes (p/s)"/>
             </properties>
           </component>
           <component id="adf63" class="javax.swing.JTextField" binding="tfMessagesRead">
             <constraints>
               <grid row="0" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
@@ -172,13 +180,13 @@
               <grid row="3" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Actual reads (per/second)"/>
+              <text value="Local reads (p/s)"/>
             </properties>
           </component>
           <component id="d8213" class="javax.swing.JTextField" binding="tfActualReadRate">
             <constraints>
               <grid row="3" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
@@ -189,7 +197,7 @@
           <component id="5f2fa" class="javax.swing.JTextField" binding="tfMessagesWritten">
             <constraints>
               <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
@@ -201,7 +209,7 @@
           <component id="e608f" class="javax.swing.JTextField" binding="tfActualWriteRate">
             <constraints>
               <grid row="2" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
@@ -220,7 +228,7 @@
           <component id="742f7" class="javax.swing.JTextField" binding="tfTCPMessages">
             <constraints>
               <grid row="1" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
@@ -233,13 +241,13 @@
               <grid row="4" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Actual TCP reads (per/second)"/>
+              <text value="TCP reads (p/s)"/>
             </properties>
           </component>
           <component id="f1572" class="javax.swing.JTextField" binding="tfTCPReads">
             <constraints>
               <grid row="4" column="8" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
+                <preferred-size width="100" height="-1"/>
               </grid>
             </constraints>
             <properties>
