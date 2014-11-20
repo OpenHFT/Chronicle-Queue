@@ -23,7 +23,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-
 import org.junit.Test;
 
 import java.util.Random;
@@ -31,9 +30,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
 
@@ -212,10 +212,11 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                     public void run() {
                         try {
                             final ExcerptTailer tailer = sink.createTailer().toStart();
-                            for (int i = 0; i < items; ) {
+                            for (long i = 0; i < items; ) {
                                 if (tailer.nextIndex()) {
-                                    assertEquals(i, tailer.index());
-                                    assertEquals(i, tailer.readLong());
+                                    errorCollector.checkThat("index", i, equalTo(tailer.index()));
+                                    errorCollector.checkThat("value", i, equalTo(tailer.readLong()));
+
                                     tailer.finish();
 
                                     i++;
@@ -223,8 +224,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                             }
 
                             tailer.close();
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                         }
                     }
                 });

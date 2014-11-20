@@ -21,6 +21,7 @@ package net.openhft.chronicle;
 import net.openhft.lang.io.IOTools;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,9 @@ public class VanillaChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getTestPath() {
         final String path = TMP_DIR + "/vc-" + testName.getMethodName();

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.tcp;
 
 
@@ -30,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -161,9 +161,9 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                     public void run() {
                         try {
                             final ExcerptTailer tailer = sink.createTailer().toStart();
-                            for (int i = 1; i <= items; ) {
+                            for (long i = 1; i <= items; ) {
                                 if (tailer.nextIndex()) {
-                                    assertEquals(i, tailer.readLong());
+                                    errorCollector.checkThat("index", i, equalTo(tailer.index()));
                                     tailer.finish();
 
                                     i++;

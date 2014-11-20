@@ -166,7 +166,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         try {
             long start = System.nanoTime();
 
-            ExecutorService es = Executors.newFixedThreadPool(N_THREADS);
+            final ExecutorService es = Executors.newFixedThreadPool(N_THREADS);
             for (int t = 0; t < N_THREADS; t++) {
                 final int finalT = t;
                 es.submit(new Runnable() {

@@ -45,8 +45,6 @@ public abstract class SourceTcp {
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final ThreadPoolExecutor executor;
 
-    protected final ByteBuffer writeBuffer;
-    protected final ByteBuffer readBuffer;
     protected Object notifier;
 
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
@@ -56,8 +54,6 @@ public abstract class SourceTcp {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
-        this.readBuffer = ChronicleTcp.createBufferOfSize(16);
-        this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
     }
 
     void notifier(Object notifier) {
@@ -70,12 +66,6 @@ public abstract class SourceTcp {
 
     public boolean open() {
         this.running.set(true);
-
-        readBuffer.clear();
-        readBuffer.limit(16);
-
-        writeBuffer.clear();
-        writeBuffer.limit(0);
 
         this.executor.execute(createHandler());
 
@@ -142,6 +132,9 @@ public abstract class SourceTcp {
         protected ExcerptTailer tailer;
         protected long lastHeartbeat;
 
+        protected final ByteBuffer writeBuffer;
+        protected final ByteBuffer readBuffer;
+
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
             this.connection = new TcpConnection(socketChannel);
@@ -149,6 +142,14 @@ public abstract class SourceTcp {
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
             this.pauseWait = builder.heartbeatIntervalUnit().toMillis(builder.heartbeatInterval()) / 2;
+            this.readBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
+
+            this.readBuffer.clear();
+            this.readBuffer.limit(16);
+
+            this.writeBuffer.clear();
+            this.writeBuffer.limit(0);
         }
 
         @Override

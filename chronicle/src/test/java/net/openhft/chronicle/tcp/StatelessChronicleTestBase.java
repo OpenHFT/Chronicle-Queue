@@ -19,27 +19,31 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
-import net.openhft.chronicle.tools.ChronicleTools;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Date;
-import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -52,6 +56,9 @@ public class StatelessChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -154,14 +161,15 @@ public class StatelessChronicleTestBase {
 
     protected void testJiraChron75(final int port, final Chronicle source) throws Exception {
         final int items = 1000000;
-        final int clients = 1;
+        final int clients = 4;
+        final int warmup = 100;
 
-        final ExecutorService executor = Executors.newFixedThreadPool(clients);
-        final CountDownLatch latch = new CountDownLatch(100);
+        final CountDownLatch latch = new CountDownLatch(warmup);
+        final ExecutorService executorService = Executors.newFixedThreadPool(clients);
 
         try {
-            for(int i=0;i<clients;i++) {
-                executor.submit(new Runnable() {
+            for(int i=0; i<clients; i++) {
+                executorService.submit(new Runnable() {
                     @Override
                     public void run() {
                         int cnt = 0;
@@ -179,15 +187,14 @@ public class StatelessChronicleTestBase {
                             LOGGER.info("Start ChronicleSink on thread {}", threadId);
 
                             Jira75Quote quote = null;
-                            for(cnt=0; cnt<items;) {
-                                if(tailer.nextIndex()) {
+                            for (cnt = 0; cnt < items; ) {
+                                if (tailer.nextIndex()) {
                                     quote = tailer.readObject(Jira75Quote.class);
                                     tailer.finish();
-
-                                    assertEquals(cnt, quote.getQuantity(), 0);
-                                    assertEquals(cnt, quote.getPrice(), 0);
-                                    assertEquals("instr-" + cnt, quote.getInstrument());
-                                    assertEquals('f' , quote.getEntryType());
+                                    errorCollector.checkThat("quantity", (double)cnt, equalTo(quote.getQuantity()));
+                                    errorCollector.checkThat("price", (double) cnt, equalTo(quote.getPrice()));
+                                    errorCollector.checkThat("instraument", "instr-" + cnt, equalTo(quote.getInstrument()));
+                                    errorCollector.checkThat("getEntryType", 'f', equalTo(quote.getEntryType()));
 
                                     cnt++;
                                 }
@@ -195,11 +202,11 @@ public class StatelessChronicleTestBase {
 
                             tailer.close();
                             sink.close();
-                        } catch(Exception e) {
+
+                            LOGGER.info("Done ({})", threadId);
+                        } catch (Exception e) {
                             LOGGER.warn("Exception cnt={}", cnt, e);
                         }
-
-                        assertEquals(items, cnt);
                     }
                 });
             }
@@ -218,10 +225,12 @@ public class StatelessChronicleTestBase {
 
             appender.close();
 
-            Thread.sleep(5000);
+            Thread.sleep(1000);
 
-            executor.shutdown();
-            executor.awaitTermination(1, TimeUnit.MINUTES);
+            executorService.shutdown();
+            executorService.awaitTermination(1, TimeUnit.MINUTES);
+
+            assertEquals(0, latch.getCount());
         } catch(Exception e) {
             LOGGER.warn("Exception", e);
         } finally {

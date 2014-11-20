@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 
 import java.io.File;
@@ -33,6 +34,9 @@ public class IndexedChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getTestPath() {
         final String path = TMP_DIR + "/ic-" + testName.getMethodName();
