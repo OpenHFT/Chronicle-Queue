@@ -30,6 +30,7 @@ import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -334,7 +335,7 @@ public class ChronicleSink extends WrappedChronicle {
         private int lastSize;
 
         public StatelessExcerpt() {
-            super(NO_PAGE, NO_PAGE);
+            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
 
             this.index = -1;
             this.lastSize = 0;

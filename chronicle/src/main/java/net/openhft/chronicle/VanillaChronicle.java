@@ -414,6 +414,7 @@ public class VanillaChronicle implements Chronicle {
                     throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
                 startAddr = positionAddr = dataBytes.startAddr() + dataOffset;
                 limitAddr = startAddr + ~len;
+
                 index = nextIndex;
                 finished = false;
                 return true;

@@ -22,6 +22,8 @@ import net.openhft.lang.io.IOTools;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,6 +32,7 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleTestBase {
+    protected static final Logger LOGGER  = LoggerFactory.getLogger("VanillaChronicleTest");
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
     @Rule

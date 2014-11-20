@@ -154,11 +154,10 @@ public class StatelessChronicleTestBase {
 
     protected void testJiraChron75(final int port, final Chronicle source) throws Exception {
         final int items = 1000000;
-        final int clients = 3;
-        final int warmup = 100;
+        final int clients = 1;
 
         final ExecutorService executor = Executors.newFixedThreadPool(clients);
-        final CountDownLatch latch = new CountDownLatch(warmup);
+        final CountDownLatch latch = new CountDownLatch(100);
 
         try {
             for(int i=0;i<clients;i++) {
@@ -172,16 +171,17 @@ public class StatelessChronicleTestBase {
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            sink = ChronicleQueueBuilder.sink(null).connectAddress("localhost", port).build();
-                            tailer = sink.createTailer().toStart();
-
                             latch.await();
 
+                            sink = ChronicleQueueBuilder.sink(null).connectAddress("localhost", port).build();
+                            tailer = sink.createTailer();//.toStart();
+
                             LOGGER.info("Start ChronicleSink on thread {}", threadId);
-                            int lastK = 0;
+
+                            Jira75Quote quote = null;
                             for(cnt=0; cnt<items;) {
                                 if(tailer.nextIndex()) {
-                                    Jira75Quote quote = tailer.readObject(Jira75Quote.class);
+                                    quote = tailer.readObject(Jira75Quote.class);
                                     tailer.finish();
 
                                     assertEquals(cnt, quote.getQuantity(), 0);
@@ -196,8 +196,10 @@ public class StatelessChronicleTestBase {
                             tailer.close();
                             sink.close();
                         } catch(Exception e) {
-                            LOGGER.warn("Exception {}", cnt, e);
+                            LOGGER.warn("Exception cnt={}", cnt, e);
                         }
+
+                        assertEquals(items, cnt);
                     }
                 });
             }
@@ -205,16 +207,18 @@ public class StatelessChronicleTestBase {
             LOGGER.info("Write {} elements to the source", items);
             final ExcerptAppender appender = source.createAppender();
             for(int i=0;i<items;i++) {
-                appender.startExcerpt(1000);
-                appender.writeObject(new Jira75Quote(i,i,DateTime.now(),"instr-" + i,'f'));
+                appender.startExcerpt();
+                appender.writeObject(new Jira75Quote(i, i, DateTime.now(), "instr-" + i,'f'));
                 appender.finish();
 
-                if(i < warmup) {
+                if(latch.getCount() > 0) {
                     latch.countDown();
                 }
             }
 
             appender.close();
+
+            Thread.sleep(5000);
 
             executor.shutdown();
             executor.awaitTermination(1, TimeUnit.MINUTES);

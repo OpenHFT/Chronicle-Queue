@@ -201,11 +201,11 @@ public abstract class SourceTcp {
                     }
                 }
             } catch (EOFException e) {
-                if (!running.get()) {
+                if (running.get()) {
                     logger.info("Connection {} died", socketChannel);
                 }
             } catch (Exception e) {
-                if (!running.get()) {
+                if (running.get()) {
                     String msg = e.getMessage();
                     if (msg != null &&
                         (msg.contains("reset by peer")
