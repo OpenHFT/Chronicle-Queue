@@ -261,7 +261,8 @@ public class ChronicleSink extends WrappedChronicle {
                         //Heartbeat message ignore and return false
                         return false;
                     case ChronicleTcp.PADDED_LEN:
-                        return this.adapter.writePaddedEntry();
+                        this.adapter.writePaddedEntry();
+                        return readNextExcerpt();
                     case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
                         return readNextExcerpt();
@@ -469,9 +470,10 @@ public class ChronicleSink extends WrappedChronicle {
 
                 switch (excerptSize) {
                     case ChronicleTcp.IN_SYNC_LEN:
-                    case ChronicleTcp.PADDED_LEN:
-                    case ChronicleTcp.SYNC_IDX_LEN:
                         return false;
+                    case ChronicleTcp.SYNC_IDX_LEN:
+                    case ChronicleTcp.PADDED_LEN:
+                        return nextIndex();
                 }
 
                 if (excerptSize > 128 << 20 || excerptSize < 0) {
@@ -547,7 +549,7 @@ public class ChronicleSink extends WrappedChronicle {
             super(appender);
         }
 
-        public abstract boolean writePaddedEntry();
+        public abstract void writePaddedEntry();
         public abstract void startExcerpt(long capacity, long index);
     }
 
@@ -564,9 +566,8 @@ public class ChronicleSink extends WrappedChronicle {
         }
 
         @Override
-        public boolean writePaddedEntry() {
+        public void writePaddedEntry() {
             super.warappedAppender.addPaddedEntry();
-            return true;
         }
 
         @Override
@@ -590,9 +591,8 @@ public class ChronicleSink extends WrappedChronicle {
         }
 
         @Override
-        public boolean writePaddedEntry() {
+        public void writePaddedEntry() {
             LOGGER.warn("VanillaChronicle should not receive padded entries");
-            return false;
         }
 
         @Override
