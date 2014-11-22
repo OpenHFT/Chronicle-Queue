@@ -25,11 +25,9 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -37,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
     @Test
-    public void testVanillaVolatileSink_001() throws Exception {
+    public void testVanillaStatelessSink_001() throws Exception {
         final int port = BASE_PORT + 201;
         final String basePathSource = getVanillaTestPath("-source");
 
@@ -90,7 +88,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testVanillaVolatileSink_002() throws Exception {
+    public void testVanillaStatelessSink_002() throws Exception {
         final int port = BASE_PORT + 202;
         final String basePathSource = getVanillaTestPath("-source");
 
@@ -138,7 +136,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testVanillaVolatileSink_004() throws Exception {
+    public void testVanillaStatelessSink_004() throws Exception {
         final int port = BASE_PORT + 204;
         final int tailers = 4;
         final int items = 1000000;
@@ -153,17 +151,17 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             .connectAddress("localhost", port)
             .build();
 
-        final ExecutorService executor = Executors.newFixedThreadPool(tailers);
+        final List<Thread> threads = new ArrayList<>(tailers);
 
         try {
             for(int i=0;i<tailers;i++) {
-                executor.submit(new Runnable() {
+                threads.add(new Thread() {
                     public void run() {
                         try {
                             final ExcerptTailer tailer = sink.createTailer().toStart();
                             for (long i = 1; i <= items; ) {
                                 if (tailer.nextIndex()) {
-                                    errorCollector.checkThat("index", i, equalTo(tailer.index()));
+                                    assertEquals(i, tailer.readLong());
                                     tailer.finish();
 
                                     i++;
@@ -172,9 +170,14 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
                             tailer.close();
                         } catch (Exception e) {
+                            throw new RuntimeException(e);
                         }
                     }
                 });
+            }
+
+            for(final Thread thread : threads) {
+                thread.start();
             }
 
             Thread.sleep(100);
@@ -189,8 +192,9 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
             appender.close();
 
-            executor.shutdown();
-            executor.awaitTermination(30, TimeUnit.SECONDS);
+            for(final Thread thread : threads) {
+                thread.join();
+            }
 
             sink.close();
             sink.clear();
@@ -203,7 +207,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testVanillaVolatileSink_005() throws Exception {
+    public void testVanillaStatelessSink_005() throws Exception {
         final int port = BASE_PORT + 205;
         final String basePathSource = getVanillaTestPath("-source");
 
@@ -249,7 +253,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testVanillaVolatileSink_006() throws Exception {
+    public void testVanillaStatelessSink_006() throws Exception {
         final int port = BASE_PORT + 206;
         final String basePathSource = getVanillaTestPath("-source");
 

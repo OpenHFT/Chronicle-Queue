@@ -30,17 +30,16 @@ import net.openhft.lang.model.constraints.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Rule;
-import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -56,9 +55,6 @@ public class StatelessChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
-
-    @Rule
-    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -165,11 +161,11 @@ public class StatelessChronicleTestBase {
         final int warmup = 100;
 
         final CountDownLatch latch = new CountDownLatch(warmup);
-        final ExecutorService executorService = Executors.newFixedThreadPool(clients);
+        final List<Thread> threads = new ArrayList<>(clients);
 
         try {
             for(int i=0; i<clients; i++) {
-                executorService.submit(new Runnable() {
+                threads.add(new Thread() {
                     @Override
                     public void run() {
                         int cnt = 0;
@@ -191,10 +187,10 @@ public class StatelessChronicleTestBase {
                                 if (tailer.nextIndex()) {
                                     quote = tailer.readObject(Jira75Quote.class);
                                     tailer.finish();
-                                    errorCollector.checkThat("quantity", (double)cnt, equalTo(quote.getQuantity()));
-                                    errorCollector.checkThat("price", (double) cnt, equalTo(quote.getPrice()));
-                                    errorCollector.checkThat("instraument", "instr-" + cnt, equalTo(quote.getInstrument()));
-                                    errorCollector.checkThat("getEntryType", 'f', equalTo(quote.getEntryType()));
+                                    assertEquals(cnt, quote.getQuantity(), 0);
+                                    assertEquals(cnt, quote.getPrice(), 0);
+                                    assertEquals("instr-" + cnt, quote.getInstrument());
+                                    assertEquals('f', quote.getEntryType());
 
                                     cnt++;
                                 }
@@ -211,6 +207,10 @@ public class StatelessChronicleTestBase {
                 });
             }
 
+            for(final Thread thread : threads) {
+                thread.start();
+            }
+
             LOGGER.info("Write {} elements to the source", items);
             final ExcerptAppender appender = source.createAppender();
             for(int i=0;i<items;i++) {
@@ -225,10 +225,9 @@ public class StatelessChronicleTestBase {
 
             appender.close();
 
-            Thread.sleep(1000);
-
-            executorService.shutdown();
-            executorService.awaitTermination(1, TimeUnit.MINUTES);
+            for(final Thread thread : threads) {
+                thread.join();
+            }
 
             assertEquals(0, latch.getCount());
         } catch(Exception e) {

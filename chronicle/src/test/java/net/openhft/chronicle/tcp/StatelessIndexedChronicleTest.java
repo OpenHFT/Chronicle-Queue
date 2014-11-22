@@ -25,12 +25,10 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -38,7 +36,8 @@ import static org.junit.Assert.assertTrue;
 public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
 
     @Test
-    public void testIndexedVolatileSink_001() throws Exception {
+    public void testIndexedStatelessSink_001() throws Exception {
+
         final int port = BASE_PORT + 101;
         final String basePathSource = getIndexedTestPath("-source");
 
@@ -91,7 +90,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testIndexedVolatileSink_002() throws Exception {
+    public void testIndexedStatelessSink_002() throws Exception {
         final int port = BASE_PORT + 102;
         final String basePathSource = getIndexedTestPath("-source");
 
@@ -138,7 +137,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testIndexedVolatileSink_003() throws Exception {
+    public void testIndexedStatelessSink_003() throws Exception {
         final int port = BASE_PORT + 103;
         final String basePathSource = getIndexedTestPath("-source");
 
@@ -187,7 +186,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testIndexedVolatileSink_004() throws Exception {
+    public void testIndexedStatelessSink_004() throws Exception {
         final int port = BASE_PORT + 104;
         final int tailers = 4;
         final int items = 1000000;
@@ -203,19 +202,19 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
 
-        final ExecutorService executor = Executors.newFixedThreadPool(tailers);
+        final List<Thread> threads = new ArrayList<>(tailers);
 
         try {
 
             for(int i=0;i<tailers;i++) {
-                executor.submit(new Runnable() {
+                threads.add(new Thread() {
                     public void run() {
                         try {
                             final ExcerptTailer tailer = sink.createTailer().toStart();
                             for (long i = 0; i < items; ) {
                                 if (tailer.nextIndex()) {
-                                    errorCollector.checkThat("index", i, equalTo(tailer.index()));
-                                    errorCollector.checkThat("value", i, equalTo(tailer.readLong()));
+                                    assertEquals(i, tailer.index());
+                                    assertEquals(i, tailer.readLong());
 
                                     tailer.finish();
 
@@ -230,6 +229,10 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 });
             }
 
+            for(final Thread thread : threads) {
+                thread.start();
+            }
+
             Thread.sleep(100);
 
             final ExcerptAppender appender = source.createAppender();
@@ -242,8 +245,9 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
 
             appender.close();
 
-            executor.shutdown();
-            executor.awaitTermination(30, TimeUnit.SECONDS);
+            for(final Thread thread : threads) {
+                thread.join();
+            }
 
             sink.close();
             sink.clear();
@@ -254,7 +258,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testIndexedVolatileSink_005() throws Exception {
+    public void testIndexedStatelessSink_005() throws Exception {
         final int port = BASE_PORT + 105;
         final String basePathSource = getIndexedTestPath("-source");
 
@@ -294,7 +298,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testIndexedVolatileSink_006() throws Exception {
+    public void testIndexedStatelessSink_006() throws Exception {
         final int port = BASE_PORT + 106;
         final String basePathSource = getIndexedTestPath("-source");
 
