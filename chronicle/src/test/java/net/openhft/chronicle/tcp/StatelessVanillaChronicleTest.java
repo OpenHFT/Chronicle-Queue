@@ -141,23 +141,22 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
         final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getVanillaTestPath("-source");
+        final List<Thread> threads = new ArrayList<>(tailers);
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
             .source()
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
-            .connectAddress("localhost", port)
-            .build();
-
-        final List<Thread> threads = new ArrayList<>(tailers);
-
         try {
             for(int i=0;i<tailers;i++) {
                 threads.add(new Thread() {
                     public void run() {
                         try {
+                            final Chronicle sink = ChronicleQueueBuilder.sink(null)
+                                .connectAddress("localhost", port)
+                                .build();
+
                             final ExcerptTailer tailer = sink.createTailer().toStart();
                             for (long i = 1; i <= items; ) {
                                 if (tailer.nextIndex()) {
@@ -169,6 +168,9 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                             }
 
                             tailer.close();
+
+                            sink.close();
+                            sink.clear();
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -195,9 +197,6 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             for(final Thread thread : threads) {
                 thread.join();
             }
-
-            sink.close();
-            sink.clear();
         } finally {
             source.close();
             source.clear();

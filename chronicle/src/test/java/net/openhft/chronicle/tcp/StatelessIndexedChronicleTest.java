@@ -191,25 +191,22 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getIndexedTestPath("-source");
+        final List<Thread> threads = new ArrayList<>(tailers);
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
-            .connectAddress("localhost", port)
-            .build();
-
-
-        final List<Thread> threads = new ArrayList<>(tailers);
-
         try {
-
             for(int i=0;i<tailers;i++) {
                 threads.add(new Thread() {
                     public void run() {
                         try {
+                            final Chronicle sink = ChronicleQueueBuilder.sink(null)
+                                .connectAddress("localhost", port)
+                                .build();
+
                             final ExcerptTailer tailer = sink.createTailer().toStart();
                             for (long i = 0; i < items; ) {
                                 if (tailer.nextIndex()) {
@@ -223,7 +220,11 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                             }
 
                             tailer.close();
+
+                            sink.close();
+                            sink.clear();
                         } catch (Exception e) {
+                            throw  new RuntimeException(e);
                         }
                     }
                 });
@@ -248,9 +249,6 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             for(final Thread thread : threads) {
                 thread.join();
             }
-
-            sink.close();
-            sink.clear();
         } finally {
             source.close();
             source.clear();
