@@ -27,6 +27,7 @@ import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.WrappedChronicle;
+
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.NativeBytes;
@@ -345,6 +346,7 @@ public class ChronicleSink extends WrappedChronicle {
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.startAddr = ((DirectBuffer) this.readBuffer).address();
             this.capacityAddr = this.startAddr + builder.minBufferSize();
+            this.finished = true;
         }
 
         @Override
@@ -452,6 +454,8 @@ public class ChronicleSink extends WrappedChronicle {
 
         @Override
         public boolean nextIndex() {
+            finish();
+
             try {
                 if(!connection.isOpen()) {
                     if(index(this.index)) {

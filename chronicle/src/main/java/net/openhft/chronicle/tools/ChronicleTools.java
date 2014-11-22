@@ -113,6 +113,11 @@ public enum ChronicleTools {
         return sb.toString();
     }
 
+    public static void warmup() {
+        //noinspection UnusedDeclaration needed to laod class.
+        boolean done = ChronicleWarmup.Indexed.DONE;
+    }
+
     enum DeleteStatic {
         INSTANCE;
         @SuppressWarnings("TypeMayBeWeakened")
@@ -138,14 +143,9 @@ public enum ChronicleTools {
 
     }
 
-    public static void warmup() {
-        //noinspection UnusedDeclaration needed to laod class.
-        boolean done = ChronicleWarmup.Indexed.DONE;
-    }
-
     public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
-        if(chronicle instanceof VanillaChronicle) {
-            ((VanillaChronicle)chronicle).checkCounts(min, max);
+        if (chronicle instanceof VanillaChronicle) {
+            ((VanillaChronicle) chronicle).checkCounts(min, max);
         }
     }
- }
+}

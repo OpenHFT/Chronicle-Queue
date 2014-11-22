@@ -300,8 +300,6 @@ public class IndexedChronicle implements Chronicle {
         // relatively static
         // the start of the index block, as an address
         long indexStartAddr;
-        // which index does this refer to?
-        private long indexStartOffset;
         // the offset in data referred to the start of the line
         long indexBaseForLine;
         // the start of the data block, as an address
@@ -311,6 +309,13 @@ public class IndexedChronicle implements Chronicle {
         // the position currently writing to in the index.
         long indexPositionAddr;
         boolean padding = true;
+        // which index does this refer to?
+        private long indexStartOffset;
+
+        // the start of this entry
+        // inherited - long startAddr;
+        // inherited - long positionAddr;
+        // inherited - long limitAddr;
 
         public String dumpState() {
             return "{" +

@@ -183,7 +183,14 @@ public class WrappedExcerptAppender implements ExcerptAppender {
     }
 
     public Bytes zeroOut(long start, long end) {
-        return warappedAppender.zeroOut(start, end);
+        warappedAppender.zeroOut(start, end);
+        return this;
+    }
+
+    @Override
+    public Bytes zeroOut(long start, long end, boolean ifNotZero) {
+        warappedAppender.zeroOut(start, end, ifNotZero);
+        return this;
     }
 
     public void writeShort(int v) {

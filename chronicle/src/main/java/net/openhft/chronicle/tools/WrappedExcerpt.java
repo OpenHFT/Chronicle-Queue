@@ -1164,6 +1164,12 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     }
 
     @Override
+    public Bytes zeroOut(long start, long end, boolean ifNotZero) {
+        wrappedCommon.zeroOut(start, end, ifNotZero);
+        return this;
+    }
+
+    @Override
     public Bytes zeroOut(long start, long end) {
         wrappedCommon.zeroOut(start, end);
         return this;

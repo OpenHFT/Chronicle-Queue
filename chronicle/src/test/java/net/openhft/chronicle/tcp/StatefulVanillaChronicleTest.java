@@ -23,6 +23,7 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
@@ -383,5 +384,27 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         assertFalse(new File(sourceBasePath).exists());
         assertFalse(new File(sinkBasePath).exists());
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
+     *
+     * @throws java.io.IOException
+     */
+    @Test
+    public void testVanillaJira77() throws IOException {
+        String basePath = getVanillaTestPath();
+
+        Chronicle chronicleSrc = ChronicleQueueBuilder.vanilla(basePath + "-src").build();
+        chronicleSrc.clear();
+
+        Chronicle chronicleTarget = ChronicleQueueBuilder.vanilla(basePath + "-target").build();
+        chronicleTarget.clear();
+
+        testJira77(30101, chronicleSrc, chronicleTarget);
     }
 }

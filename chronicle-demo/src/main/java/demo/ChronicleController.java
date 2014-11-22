@@ -18,17 +18,18 @@
 
 package demo;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.tcp.ChronicleSink;
 import net.openhft.chronicle.tcp.ChronicleSource;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -36,8 +37,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ChronicleController {
     private Chronicle chronicle;
-    private ExcerptTailer tailer;
-    private ExcerptTailer tcpTailer;
     private ChronicleUpdatable updatable;
     private WriterThread writerThread1, writerThread2;
     private ReaderThread readerThread;
@@ -50,11 +49,18 @@ public class ChronicleController {
         BASE_PATH = demo_path + "/source";
         BASE_PATH_SINK = demo_path + "/sink";
         this.updatable = updatable;
-        reset();
+    }
 
-        writerThread1 = new WriterThread("EURUSD", updatable.count1());
+    public void start(String srate) throws IOException {
+        chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
+            .indexBlockSize(32 << 20)
+            .dataBlockSize(128 << 20)
+            .build();
+
+        int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
+        writerThread1 = new WriterThread("EURUSD", updatable.count1(), rate/2);
         writerThread1.start();
-        writerThread2 = new WriterThread("USDCHF", updatable.count2());
+        writerThread2 = new WriterThread("USDCHF", updatable.count2(), rate/2);
         writerThread2.start();
         readerThread = new ReaderThread();
         readerThread.start();
@@ -62,44 +68,7 @@ public class ChronicleController {
         tcpReaderThread.start();
         timerThread = new TimerThread();
         timerThread.start();
-    }
-
-    public void reset() {
-
-        try {
-            InetSocketAddress address = new InetSocketAddress("localhost", 10123);
-
-            chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
-                .indexBlockSize(32 << 20)
-                .dataBlockSize(128 << 20)
-                .build();
-
-            Chronicle source = ChronicleQueueBuilder.source(chronicle)
-                    .bindAddress(address)
-                    .build();
-            Chronicle sink = ChronicleQueueBuilder.vanilla(BASE_PATH_SINK)
-                    .sink()
-                    .connectAddress(address)
-                    .build();
-
-            chronicle.clear();
-            sink.clear();
-
-            tailer = chronicle.createTailer();
-            tcpTailer = sink.createTailer();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        updateFileNames();
-    }
-
-    public void start(String srate) {
-        if (chronicle == null) reset();
-        int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
-        writerThread1.setRate(rate / 2);
         writerThread1.go();
-        writerThread2.setRate(rate / 2);
         writerThread2.go();
         readerThread.go();
         tcpReaderThread.go();
@@ -107,16 +76,18 @@ public class ChronicleController {
     }
 
     public void stop() {
-        writerThread1.pause();
-        writerThread2.pause();
-        timerThread.pause();
-        readerThread.pause();
-        tcpReaderThread.pause();
-    }
+        writerThread1.exit();
+        writerThread2.exit();
+        readerThread.exit();
+        tcpReaderThread.exit();
+        timerThread.exit();
+        chronicle.clear();
 
-    public void updateFileNames() {
-        Path dir = FileSystems.getDefault().getPath(BASE_PATH);
-        updatable.setFileNames(getFileNames(new ArrayList<String>(), dir));
+        try {
+            chronicle.close();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private List<String> getFileNames(List<String> fileNames, Path dir) {
@@ -141,69 +112,54 @@ public class ChronicleController {
         return fileNames;
     }
 
-    private class WriterThread extends Thread {
+    private class WriterThread extends ControlledThread{
         private static final int BATCH = 16;
         public static final int ELASTICITY = 1000000;
-        private final String symbol;
-        private final AtomicBoolean isRunning = new AtomicBoolean(false);
         private final AtomicLong count;
         private final ExcerptAppender appender;
         private int rate;
+        private Price price = null;
+        private long startTime = 0;
 
-        public WriterThread(String symbol, AtomicLong count) throws IOException {
-            this.symbol = symbol;
+        public WriterThread(String symbol, AtomicLong count, int rate) throws IOException {
+            this.rate = rate;
             this.count = count;
             appender = chronicle.createAppender();
+            price = new Price(symbol, 1.1234, 2000000, 1.1244, 3000000, true);
         }
+        @Override
+        public void loop(){
+            if(startTime== 0)startTime = System.currentTimeMillis();
 
+            long countWritten = count.get();
+            for (int i = 0; i < BATCH; i++) {
+                double v = ((countWritten + i) & 31) / 1e4;
+                price.askPrice = 1.1234 + v;
+                price.bidPrice = 1.1244 + v;
+                writeMessage(price);
+            }
+            countWritten = count.addAndGet(BATCH);
 
-        public void run() {
-            Price price = new Price(symbol, 1.1234, 2000000, 1.1244, 3000000, true);
-            long startTime = 0/*, reportTime = 0, lastCount = 0*/;
-            while (!Thread.interrupted()) {
-                if (!isRunning.get()) {
-                    msleep(100);
-                    continue;
-                } else if (startTime == 0) {
-                    startTime = System.currentTimeMillis();
-//                    reportTime = startTime + 1000;
-                }
-                long countWritten = count.get();
-                for (int i = 0; i < BATCH; i++) {
-                    double v = ((countWritten + i) & 31) / 1e4;
-                    price.askPrice = 1.1234 + v;
-                    price.bidPrice = 1.1244 + v;
-                    writeMessage(price);
-                }
-                countWritten = count.addAndGet(BATCH);
+            // give the replication a break.
+            long diff = countWritten * 2 - updatable.tcpMessageRead().get();
+            if (diff > ELASTICITY) {
+                pause(diff - ELASTICITY);
+            }
 
-                // give the replication a break.
-                long diff = countWritten * 2 - updatable.tcpMessageRead().get();
-                if (diff > ELASTICITY) {
-                    pause(diff - ELASTICITY);
-                }
+            if (rate == Integer.MAX_VALUE) return;
 
-                if (rate == Integer.MAX_VALUE)
-                    continue;
+            long now = System.currentTimeMillis();
 
-                long now = System.currentTimeMillis();
-//                if (now >= reportTime) {
-//                    long countDone = countWritten - lastCount;
-////                    System.out.println(countDone);
-//                    lastCount = countWritten;
-//                    reportTime += 1000;
-//                }
-                long runtime = now - startTime;
-                long targetCount = runtime * rate / 990;
-                if (countWritten > targetCount) {
-                    pause(countWritten - targetCount - 100);
-                }
+            long runtime = now - startTime;
+            long targetCount = runtime * rate / 990;
+            if (countWritten > targetCount) {
+                pause(countWritten - targetCount - 100);
             }
         }
 
         private void pause(long overrun) {
             if (overrun > 0)
-                msleep(1);
+                sleepnx(5);
             else
                 Thread.yield();
         }
@@ -214,110 +170,87 @@ public class ChronicleController {
             appender.finish();
         }
 
-        public void pause() {
-            isRunning.set(false);
-        }
-
-        public void go() {
-            isRunning.set(true);
-        }
-
-        public void setRate(int rate) {
-            this.rate = rate;
+        @Override
+        public void cleanup() {
+            appender.close();
         }
     }
 
-    private class ReaderThread extends Thread {
-        private AtomicBoolean isRunning = new AtomicBoolean(false);
+    private class ReaderThread extends ControlledThread {
+        private ExcerptTailer tailer = null;
 
-        public void run() {
-            while (true) {
-                if (isRunning.get()) {
-                    if (tailer.nextIndex()) {
-                        updatable.incrMessageRead();
-                    }
-                } else {
-                    msleep(100);
-                }
+        public ReaderThread() throws IOException{
+            tailer = chronicle.createTailer();
+        }
+
+        @Override
+        public void loop() {
+            if (tailer.nextIndex()) {
+                updatable.incrMessageRead();
             }
         }
 
-        public void pause() {
-            isRunning.set(false);
-        }
-
-        public void go() {
-            isRunning.set(true);
+        @Override
+        public void cleanup() {
+            tailer.close();
         }
     }
 
-    private class TCPReaderThread extends Thread {
-        private AtomicBoolean isRunning = new AtomicBoolean(false);
+    private class TCPReaderThread extends ControlledThread {
+        private Price p = new Price();
+        private ExcerptTailer tcpTailer = null;
+        private Chronicle sink = null;
+        private Chronicle source = null;
 
-        public void run() {
-            Price p = new Price();
-            while (true) {
-                if (isRunning.get()) {
-                    if (tcpTailer.nextIndex()) {
-                        p.readMarshallable(tcpTailer);
-                        updatable.incrTcpMessageRead();
-                    }
-                } else {
-                    msleep(100);
-                }
+        public TCPReaderThread() throws IOException{
+            source = ChronicleQueueBuilder.source(chronicle).bindAddress("localhost", 10987).build();
+            sink = ChronicleQueueBuilder.vanilla(BASE_PATH_SINK).sink().connectAddress("localhost", 10987).build();
+            tcpTailer = sink.createTailer();
+        }
+
+        @Override
+        public void loop() {
+            if (tcpTailer.nextIndex()) {
+                p.readMarshallable(tcpTailer);
+                updatable.incrTcpMessageRead();
             }
         }
 
-        public void pause() {
-            isRunning.set(false);
-        }
+        @Override
+        public void cleanup() {
+            tcpTailer.close();
+            sink.clear();
+            source.clear();
 
-        public void go() {
-            isRunning.set(true);
+            try {
+                sink.close();
+                source.close();
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private class TimerThread extends Thread {
-        private AtomicBoolean isRunning = new AtomicBoolean(false);
-        private boolean restart = true;
+    private class TimerThread extends ControlledThread {
         private int count = 0;
+        Path dir = FileSystems.getDefault().getPath(BASE_PATH);
 
-        public void run() {
-            while (true) {
-                if (isRunning.get()) {
-                    long startTime = System.currentTimeMillis();
-                    msleep(100);
+        @Override
+        public void loop() {
+            long startTime = System.currentTimeMillis();
+            sleepnx(100);
 
-                    if (restart || count % 50 == 0) {
-                        count = 0;
-                        updateFileNames();
-                        restart = false;
-                    }
-                    count++;
-
-                    updatable.addTimeMillis(System.currentTimeMillis() - startTime);
-                } else {
-                    msleep(100);
-                }
+            if (count % 50 == 0) {
+                count = 0;
+                updatable.setFileNames(getFileNames(new ArrayList<String>(), dir));
             }
+            count++;
+            updatable.addTimeMillis(System.currentTimeMillis() - startTime);
         }
 
-        public void pause() {
-            isRunning.set(false);
-        }
+        @Override
+        public void cleanup() {
 
-        public void go() {
-            restart = true;
-            isRunning.set(true);
-        }
-    }
-
-
-    public void msleep(int time) {
-        try {
-            Thread.sleep(time);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 }

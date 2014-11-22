@@ -18,9 +18,11 @@
 
 package demo;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -44,6 +46,8 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     private JTextField tfRunningTime;
     private JTextField tfDiskSpace;
     private JTextField tfTCPReads;
+    private JTextArea thisTestApplicationHasTextArea;
+    private JLabel lblDiagram;
     private AtomicLong messagesProduced1 = new AtomicLong(0);
     private AtomicLong messagesProduced2 = new AtomicLong(0);
     private AtomicLong messagesRead = new AtomicLong(0);
@@ -89,8 +93,13 @@ public class ChronicleDashboard implements ChronicleUpdatable {
                     startButton.setText("Stop");
                     resetButton.setEnabled(false);
                     updater.go();
-                    controller.start((String) cbRate.getSelectedItem());
+                    try {
+                        controller.start((String) cbRate.getSelectedItem());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
                 } else {
+                    startButton.setEnabled(false);
                     startButton.setText("Start");
                     resetButton.setEnabled(true);
                     controller.stop();
@@ -114,8 +123,8 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         tfMessagesRead.setText("0");
         tfTCPReads.setText("0");
         tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
-        if (controller != null)
-            controller.reset();
+        tpFiles.setText("");
+        startButton.setEnabled(true);
     }
 
 
@@ -127,7 +136,6 @@ public class ChronicleDashboard implements ChronicleUpdatable {
             fileNames += files.get(i);
         }
         tpFiles.setText(fileNames);
-//        System.out.println("Setting files " + fileNames);
     }
 
     @Override
@@ -160,10 +168,11 @@ public class ChronicleDashboard implements ChronicleUpdatable {
         try {
             JFrame frame = new JFrame("ChronicleDashboard");
             ChronicleDashboard chronicleDashboard = new ChronicleDashboard();
+            chronicleDashboard.createUIComponents();
             frame.setContentPane(chronicleDashboard.mainPanel);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.pack();
-            frame.setSize(800, 500);
+            frame.setSize(520, 820);
             frame.setVisible(true);
 
             chronicleDashboard.init();
@@ -174,7 +183,16 @@ public class ChronicleDashboard implements ChronicleUpdatable {
     }
 
     private void createUIComponents() {
-        // TODO: place custom component creation code here
+        BufferedImage myPicture = null;
+        try {
+            myPicture = ImageIO.read(new File("Chronicle-Queue/chronicle-demo/src/main/java/demo/Diagram.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        lblDiagram.setIcon(new ImageIcon(myPicture));
+        //mainPanel.add(lblDiagram);
+
+        mainPanel.repaint();
     }
 
     @Override

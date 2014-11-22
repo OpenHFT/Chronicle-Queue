@@ -19,6 +19,10 @@
 package net.openhft.chronicle.tcp;
 
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
 import org.junit.Rule;
@@ -27,7 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Random;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -72,5 +79,51 @@ public class StatefulChronicleTestBase {
         IOTools.deleteDir(path);
 
         return path;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public void testJira77(int port, Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
+        final int BYTES_LENGTH = 66000;
+
+        Random random = new Random();
+
+        Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleSrc)
+            .minBufferSize(2 * BYTES_LENGTH)
+            .bindAddress(port)
+            .build();
+
+        Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
+            .minBufferSize(2 * BYTES_LENGTH)
+            .connectAddress("localhost", port)
+            .build();
+
+        ExcerptAppender app = chronicleSrc.createAppender();
+        byte[] bytes = new byte[BYTES_LENGTH];
+        random.nextBytes(bytes);
+        app.startExcerpt(4 + 4 + bytes.length);
+        app.writeInt(bytes.length);
+        app.write(bytes);
+        app.finish();
+
+        ExcerptTailer vtail = chronicleSink.createTailer();
+        byte[] bytes2 = null;
+        while (vtail.nextIndex()) {
+            int bytesLength = vtail.readInt();
+            bytes2 = new byte[bytesLength];
+            vtail.read(bytes2);
+            vtail.finish();
+        }
+
+        assertArrayEquals(bytes, bytes2);
+
+        app.close();
+        vtail.close();
+
+        chronicleSrc.close();
+        chronicleSource.close();
+        chronicleSink.close();
     }
 }

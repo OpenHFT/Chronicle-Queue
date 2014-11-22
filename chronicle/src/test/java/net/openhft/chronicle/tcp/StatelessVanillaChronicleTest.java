@@ -344,7 +344,23 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
         testJiraChron75(port,
             ChronicleQueueBuilder.vanilla(basePathSource)
                 .source()
-                    .bindAddress(port)
+                .bindAddress(port)
+                .build()
+        );
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-78
+     */
+    @Test
+    public void testVanillaJiraChron78() throws Exception {
+        final int port = BASE_PORT + 109;
+        final String basePathSource = getVanillaTestPath("-source");
+
+        testJiraChron78(port,
+            ChronicleQueueBuilder.vanilla(basePathSource)
+                .source()
+                .bindAddress(port)
                 .build()
         );
     }

@@ -18,7 +18,11 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
@@ -390,5 +394,27 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             ap = in.readDouble();
             aq = in.readInt();
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira77() throws IOException{
+        String basePath = getIndexedTestPath();
+
+        Chronicle chronicleSrc = ChronicleQueueBuilder.indexed(basePath + "-src").build();
+        chronicleSrc.clear();
+
+        Chronicle chronicleTarget = ChronicleQueueBuilder.indexed(basePath + "-target").build();
+        chronicleTarget.clear();
+
+        testJira77(30100, chronicleSrc, chronicleTarget);
     }
 }

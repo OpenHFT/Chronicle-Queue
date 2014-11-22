@@ -1121,6 +1121,12 @@ public class WrappedExcerptTailer implements ExcerptTailer {
     }
 
     @Override
+    public Bytes zeroOut(long start, long end, boolean ifNotZero) {
+        wrappedTailer.zeroOut(start, end, ifNotZero);
+        return this;
+    }
+
+    @Override
     public long limit() {
         return wrappedTailer.limit();
     }

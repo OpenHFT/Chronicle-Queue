@@ -372,7 +372,23 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         testJiraChron75(port,
             ChronicleQueueBuilder.indexed(basePathSource)
                 .source()
-                    .bindAddress(port)
+                .bindAddress(port)
+                .build()
+        );
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-78
+     */
+    @Test
+    public void testIndexedJiraChron78() throws Exception {
+        final int port = BASE_PORT + 109;
+        final String basePathSource = getIndexedTestPath("-source");
+
+        testJiraChron78(port,
+            ChronicleQueueBuilder.indexed(basePathSource)
+                .source()
+                .bindAddress(port)
                 .build()
         );
     }
