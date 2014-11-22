@@ -27,10 +27,14 @@ public class ChronicleTestRunListener extends RunListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("HFT");
 
     public void testStarted(Description description) throws Exception {
-        LOGGER.info("TestStarted >> {}::{}", description.getClassName(), description.getMethodName());
+        if(Boolean.getBoolean("hft.test.printTestStarted")) {
+            LOGGER.info("TestStarted >> {}::{}", description.getClassName(), description.getMethodName());
+        }
     }
 
     public void testFinished(Description description) throws Exception {
-        LOGGER.info("TestFinished << {}::{}", description.getClassName(), description.getMethodName());
+        if(Boolean.getBoolean("hft.test.printTestFinished")) {
+            LOGGER.info("TestFinished << {}::{}", description.getClassName(), description.getMethodName());
+        }
     }
 }

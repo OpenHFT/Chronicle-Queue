@@ -42,7 +42,7 @@ public class SinkTcpAcceptor extends SinkTcp {
         server.register(selector, SelectionKey.OP_ACCEPT);
 
         SocketChannel channel = null;
-        for (int i = 0; (i < builder.maxOpenAttempts() || -1 == builder.maxOpenAttempts())  && running.get() && channel == null; i++) {
+        while(running.get() && channel == null) {
             if(selector.select(builder.selectTimeoutMillis()) > 0) {
                 final Set<SelectionKey> keys = selector.selectedKeys();
                 for (final SelectionKey key : keys) {

@@ -31,7 +31,7 @@ public class SinkTcpInitiator extends SinkTcp {
     @Override
     public SocketChannel openSocketChannel() throws IOException {
         SocketChannel channel = null;
-        for (int i = 0; (i < builder.maxOpenAttempts() || -1 == builder.maxOpenAttempts())  && running.get() && channel == null; i++) {
+        while (running.get() && channel == null) {
             try {
                 channel = SocketChannel.open();
                 channel.configureBlocking(true);
