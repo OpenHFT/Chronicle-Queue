@@ -19,6 +19,7 @@
 package net.openhft.chronicle.tcp;
 
 
+import junit.framework.AssertionFailedError;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
@@ -30,16 +31,22 @@ import net.openhft.lang.model.constraints.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.ExtendedSSLSession;
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -55,6 +62,9 @@ public class StatelessChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -161,16 +171,16 @@ public class StatelessChronicleTestBase {
         final int warmup = 100;
 
         final CountDownLatch latch = new CountDownLatch(warmup);
-        final List<Thread> threads = new ArrayList<>(clients);
+        final ExecutorService executor = Executors.newFixedThreadPool(clients);
 
         try {
             for(int i=0; i<clients; i++) {
-                threads.add(new Thread() {
+                executor.submit(new Runnable() {
                     @Override
                     public void run() {
                         int cnt = 0;
-                        ExcerptTailer tailer = null;
                         Chronicle sink = null;
+                        ExcerptTailer tailer = null;
 
                         try {
                             final long threadId = Thread.currentThread().getId();
@@ -183,7 +193,7 @@ public class StatelessChronicleTestBase {
                             LOGGER.info("Start ChronicleSink on thread {}", threadId);
 
                             Jira75Quote quote = null;
-                            for (cnt = 0; cnt < items; ) {
+                            while (cnt < items) {
                                 if (tailer.nextIndex()) {
                                     quote = tailer.readObject(Jira75Quote.class);
                                     tailer.finish();
@@ -196,19 +206,27 @@ public class StatelessChronicleTestBase {
                                 }
                             }
 
-                            tailer.close();
-                            sink.close();
+                            assertEquals('f', quote.getEntryType());
 
                             LOGGER.info("Done ({})", threadId);
                         } catch (Exception e) {
-                            LOGGER.warn("Exception cnt={}", cnt, e);
+                            errorCollector.addError(e);
+                        } catch (AssertionError ae) {
+                            errorCollector.addError(ae);
+                        } finally {
+                            try {
+                                if(tailer != null) {
+                                    tailer.close();
+                                }
+                                if(sink != null) {
+                                    sink.close();
+                                }
+                            } catch (IOException ioe) {
+                                errorCollector.addError(ioe);
+                            }
                         }
                     }
                 });
-            }
-
-            for(final Thread thread : threads) {
-                thread.start();
             }
 
             LOGGER.info("Write {} elements to the source", items);
@@ -225,9 +243,8 @@ public class StatelessChronicleTestBase {
 
             appender.close();
 
-            for(final Thread thread : threads) {
-                thread.join();
-            }
+            executor.shutdown();
+            executor.awaitTermination(30, TimeUnit.SECONDS);
 
             assertEquals(0, latch.getCount());
         } catch(Exception e) {

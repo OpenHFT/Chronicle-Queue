@@ -25,8 +25,9 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -141,7 +142,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
         final int tailers = 4;
         final int items = 1000000;
         final String basePathSource = getVanillaTestPath("-source");
-        final List<Thread> threads = new ArrayList<>(tailers);
+        final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
             .source()
@@ -150,7 +151,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
         try {
             for(int i=0;i<tailers;i++) {
-                threads.add(new Thread() {
+                executor.submit(new Runnable() {
                     public void run() {
                         try {
                             final Chronicle sink = ChronicleQueueBuilder.sink(null)
@@ -172,14 +173,12 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                             sink.close();
                             sink.clear();
                         } catch (Exception e) {
-                            throw new RuntimeException(e);
+                            errorCollector.addError(e);
+                        } catch (AssertionError e) {
+                            errorCollector.addError(e);
                         }
                     }
                 });
-            }
-
-            for(final Thread thread : threads) {
-                thread.start();
             }
 
             Thread.sleep(100);
@@ -194,9 +193,8 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
 
             appender.close();
 
-            for(final Thread thread : threads) {
-                thread.join();
-            }
+            executor.shutdown();
+            executor.awaitTermination(30, TimeUnit.SECONDS);
         } finally {
             source.close();
             source.clear();
