@@ -5,11 +5,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -38,20 +37,25 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         new ChronicleDashboard2();
     }
     public ChronicleDashboard2() throws IOException{
+        URL url = this.getClass().getResource("Diagram.png");
+        //Image image = ImageIO.read(ChronicleDashboard2.class.getResourceAsStream("/demo/Diagram.png"));
+        Image image = ImageIO.read(new File("Chronicle-Queue/chronicle-demo/src/main/java/demo/diagram.jpg"));
+
         final GUIUpdaterThread updater = new GUIUpdaterThread();
+        updater.setLoopTime(100);
         updater.start();
         controller = new ChronicleController(this, demo_path);
 
         JFrame frame = new JFrame("ChronicleDashboard");
-        BackgroundPanel bg = new BackgroundPanel();
+        BackgroundPanel bg = new BackgroundPanel(image);
 
         JTextArea info = new JTextArea();
-        info.setText("This demonstrates how ChronicleQueue\n" +
+        info.setText("This demonstrates how ChronicleQueue " +
                      "might perform on your machine.\n" +
-                     "Messages (prices consisting of 1 String,\n" +
-                     "4 ints, 1 bool) flow round the system\n" +
+                     "Messages (prices consisting of 1 String, " +
+                     "4 ints, 1 bool) flow round the system " +
                      "topology described by the diagram.\n" +
-                     "An average laptop should be able to\n" +
+                     "An average laptop should be able to " +
                      "process 1.5m messages/second.");
 
         final JButton startButton = new JButton("Start Demo");
@@ -114,39 +118,39 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         cbRate.setLocation(120, 25);
         cbRate.setSize(140, 25);
 
-        lblRateWritten.setLocation(60, 180);
+        lblRateWritten.setLocation(90, 180);
         lblRateWritten.setSize(100, 18);
-        tfWriteRate.setLocation(170, 180);
+        tfWriteRate.setLocation(200, 180);
         tfWriteRate.setSize(80, 18);
         tfWriteRate.setEditable(false);
 
-        lblEventsWritten.setLocation(60, 200);
+        lblEventsWritten.setLocation(90, 200);
         lblEventsWritten.setSize(100, 18);
-        tfTotalWrites.setLocation(170, 200);
+        tfTotalWrites.setLocation(200, 200);
         tfTotalWrites.setSize(80, 18);
         tfTotalWrites.setEditable(false);
 
-        lblRateRead.setLocation(110, 320);
+        lblRateRead.setLocation(160, 320);
         lblRateRead.setSize(100, 18);
-        tfReadRate.setLocation(220, 320);
+        tfReadRate.setLocation(270, 320);
         tfReadRate.setSize(80, 18);
         tfReadRate.setEditable(false);
 
-        lblEventsRead.setLocation(110, 340);
+        lblEventsRead.setLocation(160, 340);
         lblEventsRead.setSize(100, 18);
-        tfTotalReads.setLocation(220, 340);
+        tfTotalReads.setLocation(270, 340);
         tfTotalReads.setSize(80, 18);
         tfTotalReads.setEditable(false);
 
-        lblRateTCP.setLocation(560, 100);
+        lblRateTCP.setLocation(610, 100);
         lblRateTCP.setSize(100, 18);
-        tfTCPRate.setLocation(670, 100);
+        tfTCPRate.setLocation(720, 100);
         tfTCPRate.setSize(80, 18);
         tfTCPRate.setEditable(false);
 
-        lblEventsTCP.setLocation(560, 120);
+        lblEventsTCP.setLocation(610, 120);
         lblEventsTCP.setSize(100, 18);
-        tfTotalTCP.setLocation(670, 120);
+        tfTotalTCP.setLocation(720, 120);
         tfTotalTCP.setSize(80, 18);
         tfTotalTCP.setEditable(false);
 
@@ -156,25 +160,30 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         tfRunningTime.setSize(100, 18);
         tfRunningTime.setEditable(false);
 
-        lblFilesCreated.setLocation(440, 320);
+        int dx = 510;
+        int dy = 350;
+
+        lblFilesCreated.setLocation(dx, dy);
         lblFilesCreated.setSize(200, 18);
 
-        scrollPane.setLocation(440, 340);
+        scrollPane.setLocation(dx, dy+20);
         scrollPane.setSize(320, 150);
         scrollPane.setEnabled(false);
 
-        lblDiskSpace.setLocation(440, 493);
+        lblDiskSpace.setLocation(dx, dy+175);
         lblDiskSpace.setSize(140, 18);
 
-        tfDiskSpace.setLocation(580, 493);
+        tfDiskSpace.setLocation(dx+140, dy+175);
         tfDiskSpace.setSize(100, 18);
+        tfDiskSpace.setEditable(false);
 
-        info.setLocation(5, 380);
-        info.setSize(255, 125);
+        info.setLocation(60, 380);
+        info.setSize(215, 145);
         info.setEditable(false);
-        info.setForeground(Color.DARK_GRAY);
-        info.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY,1));
-
+        info.setOpaque(false);
+        info.setFont(info.getFont().deriveFont(12.0f));
+        info.setLineWrap(true);
+        info.setWrapStyleWord(true);
 
         pBar.setLocation(5, 60);
         pBar.setSize(250, 10);
@@ -273,12 +282,12 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
     }
     private static class BackgroundPanel extends JPanel
     {
-        private BufferedImage image;
-        public BackgroundPanel()
+        private Image image;
+        public BackgroundPanel(Image image)
         {
             try
             {
-                image = ImageIO.read(getClass().getResourceAsStream("/demo/Diagram.png"));
+                this.image = image;
 
                 Dimension size = new Dimension(image.getWidth(null), image.getHeight(null));
                 setPreferredSize(size);
@@ -299,47 +308,31 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         }
     }
 
-    private class GUIUpdaterThread extends Thread {
-        private AtomicBoolean isRunning = new AtomicBoolean(false);
-
+    private class GUIUpdaterThread extends ControlledThread {
         private long count = 0;
 
-        public void run() {
-            while (true) {
-                try {
-                    Thread.sleep(250);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                if (isRunning.get()) {
-                    tfTotalTCP.setText(String.format("%,d K", tcpMessagesProduced.get() / 1000));
-                    tfTotalReads.setText(String.format("%,d K", messagesRead.get() / 1000));
-                    long totalMessage = messagesProduced1.get() + messagesProduced2.get();
-                    tfTotalWrites.setText(String.format("%,d K", totalMessage / 1000));
-                    long runningTime = ChronicleDashboard2.this.runningTime.get();
-                    tfRunningTime.setText(String.format("%.3f", runningTime / 1000.0));
-                    if (runningTime != 0) {
-                        tfReadRate.setText(String.format("%,d K", messagesRead.get() / runningTime));
-                        tfTCPRate.setText(String.format("%,d K", tcpMessagesProduced.get() / runningTime));
-                        tfWriteRate.setText(String.format("%,d K", totalMessage / runningTime));
-                    }
-                    if (count % 5 == 0) {
-                        //Once a second read file space
-                        tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
-                    }
-                    count++;
-                }
-
+        @Override
+        public void loop() {
+            tfTotalTCP.setText(String.format("%,d K", tcpMessagesProduced.get() / 1000));
+            tfTotalReads.setText(String.format("%,d K", messagesRead.get() / 1000));
+            long totalMessage = messagesProduced1.get() + messagesProduced2.get();
+            tfTotalWrites.setText(String.format("%,d K", totalMessage / 1000));
+            long runningTime = ChronicleDashboard2.this.runningTime.get();
+            tfRunningTime.setText(String.format("%.3f", runningTime / 1000.0));
+            if (runningTime != 0) {
+                tfReadRate.setText(String.format("%,d K", messagesRead.get() / runningTime));
+                tfTCPRate.setText(String.format("%,d K", tcpMessagesProduced.get() / runningTime));
+                tfWriteRate.setText(String.format("%,d K", totalMessage / runningTime));
             }
+            if (count % 5 == 0) {
+                //Once a second read file space
+                tfDiskSpace.setText(getBytesAsGB(demo_path.getUsableSpace()));
+            }
+            count++;
         }
 
-        public void pause() {
-            isRunning.set(false);
-        }
-
-        public void go() {
-            isRunning.set(true);
+        @Override
+        public void cleanup() {
         }
     }
 }
