@@ -7,7 +7,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -37,9 +36,7 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         new ChronicleDashboard2();
     }
     public ChronicleDashboard2() throws IOException{
-        URL url = this.getClass().getResource("Diagram.png");
-        //Image image = ImageIO.read(ChronicleDashboard2.class.getResourceAsStream("/demo/Diagram.png"));
-        Image image = ImageIO.read(new File("Chronicle-Queue/chronicle-demo/src/main/java/demo/diagram.jpg"));
+        Image image = ImageIO.read(ChronicleDashboard2.class.getResourceAsStream("/diagram.jpg"));
 
         final GUIUpdaterThread updater = new GUIUpdaterThread();
         updater.setLoopTime(100);
