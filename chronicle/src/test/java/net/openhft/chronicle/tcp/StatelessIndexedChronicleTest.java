@@ -47,7 +47,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -100,7 +100,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -147,7 +147,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -204,7 +204,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 executor.submit(new Runnable() {
                     public void run() {
                         try {
-                            final Chronicle sink = ChronicleQueueBuilder.sink(null)
+                            final Chronicle sink = ChronicleQueueBuilder.statelessSink()
                                 .connectAddress("localhost", port)
                                 .build();
 
@@ -262,7 +262,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -302,7 +302,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 

@@ -45,7 +45,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -98,7 +98,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -154,7 +154,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 executor.submit(new Runnable() {
                     public void run() {
                         try {
-                            final Chronicle sink = ChronicleQueueBuilder.sink(null)
+                            final Chronicle sink = ChronicleQueueBuilder.statelessSink()
                                 .connectAddress("localhost", port)
                                 .build();
 
@@ -213,7 +213,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 
@@ -259,7 +259,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 .bindAddress(port)
             .build();
 
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 

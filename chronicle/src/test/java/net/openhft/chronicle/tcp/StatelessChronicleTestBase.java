@@ -109,7 +109,7 @@ public class StatelessChronicleTestBase {
         ExcerptTailer tailer = null;
 
         try {
-            sink = ChronicleQueueBuilder.sink(null)
+            sink = ChronicleQueueBuilder.statelessSink()
                 .connectAddress(new InetSocketAddress("localhost", port))
                 .build();
 
@@ -129,7 +129,7 @@ public class StatelessChronicleTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            sink =ChronicleQueueBuilder.sink(null)
+            sink =ChronicleQueueBuilder.statelessSink()
                 .connectAddress("localhost", port)
                 .build();
 
@@ -147,7 +147,7 @@ public class StatelessChronicleTestBase {
             sink.clear();
             sink = null;
 
-            sink = ChronicleQueueBuilder.sink(null)
+            sink = ChronicleQueueBuilder.statelessSink()
                 .connectAddress("localhost", port)
                 .build();
 
@@ -187,7 +187,7 @@ public class StatelessChronicleTestBase {
 
                             latch.await();
 
-                            sink = ChronicleQueueBuilder.sink(null).connectAddress("localhost", port).build();
+                            sink = ChronicleQueueBuilder.statelessSink().connectAddress("localhost", port).build();
                             tailer = sink.createTailer();//.toStart();
 
                             LOGGER.info("Start ChronicleSink on thread {}", threadId);
@@ -256,7 +256,7 @@ public class StatelessChronicleTestBase {
     }
 
     protected void testJiraChron78(final int port, final Chronicle source) throws Exception {
-        final Chronicle sink = ChronicleQueueBuilder.sink(null)
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
             .connectAddress("localhost", port)
             .build();
 

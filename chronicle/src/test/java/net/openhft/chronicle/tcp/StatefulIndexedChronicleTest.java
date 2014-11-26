@@ -58,11 +58,11 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-                .bindAddress(BASE_PORT + 1)
+            .bindAddress(BASE_PORT + 1)
             .build();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-                .connectAddress("localhost", BASE_PORT + 1)
+            .connectAddress("localhost", BASE_PORT + 1)
             .build();
 
         Thread t = new Thread(new Runnable() {
@@ -123,11 +123,11 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-                .bindAddress(BASE_PORT + 2)
+            .bindAddress(BASE_PORT + 2)
             .build();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-                .connectAddress("localhost", BASE_PORT + 2)
+            .connectAddress("localhost", BASE_PORT + 2)
             .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -155,7 +155,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -205,7 +205,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
 
         source.close();
@@ -255,7 +255,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Tailer%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -287,7 +287,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.1f us to write and %.1f us to read%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 
     // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
@@ -406,7 +406,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      * @throws IOException
      */
     @Test
-    public void testIndexedJira77() throws IOException{
+    public void testIndexedJira77() throws IOException {
         String basePath = getIndexedTestPath();
 
         Chronicle chronicleSrc = ChronicleQueueBuilder.indexed(basePath + "-src").build();
@@ -416,5 +416,20 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(30100, chronicleSrc, chronicleTarget);
+    }
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira80() throws IOException {
+        String basePath = getIndexedTestPath();
+
+        testJira80(30101,
+            ChronicleQueueBuilder.indexed(basePath + "-master"),
+            ChronicleQueueBuilder.indexed(basePath + "-slave")
+        );
     }
 }

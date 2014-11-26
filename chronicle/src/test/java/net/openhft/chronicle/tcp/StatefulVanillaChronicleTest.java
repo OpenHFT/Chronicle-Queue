@@ -407,4 +407,19 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         testJira77(30101, chronicleSrc, chronicleTarget);
     }
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testVanillaJira80() throws IOException {
+        String basePath = getVanillaTestPath();
+
+        testJira80(30101,
+            ChronicleQueueBuilder.vanilla(basePath + "-master"),
+            ChronicleQueueBuilder.vanilla(basePath + "-slave")
+        );
+    }
 }

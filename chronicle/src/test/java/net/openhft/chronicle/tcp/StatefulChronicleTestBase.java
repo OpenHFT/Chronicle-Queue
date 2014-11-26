@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -100,7 +101,7 @@ public class StatefulChronicleTestBase {
             .connectAddress("localhost", port)
             .build();
 
-        ExcerptAppender app = chronicleSrc.createAppender();
+        ExcerptAppender app = chronicleSource.createAppender();
         byte[] bytes = new byte[BYTES_LENGTH];
         random.nextBytes(bytes);
         app.startExcerpt(4 + 4 + bytes.length);
@@ -125,5 +126,50 @@ public class StatefulChronicleTestBase {
         chronicleSrc.close();
         chronicleSource.close();
         chronicleSink.close();
+    }
+
+    public void testJira80(int port, ChronicleQueueBuilder chronicleMasterBuilder, ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
+        final long chunks = 4;
+        final long itemsPerChunk = 100000;
+
+        Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMasterBuilder.build())
+            .bindAddress(port)
+            .build();
+
+        chronicleSource.clear();
+
+        final ExcerptAppender appender = chronicleSource.createAppender();
+        for (long i = 0; i < (chunks * itemsPerChunk); i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.append(' ');
+            appender.append(i);
+            appender.append('\n');
+            appender.finish();
+        }
+
+        appender.close();
+
+        for(long i=0; i <= chunks; i++) {
+            Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleSlaveBuilder.build())
+                .connectAddress("localhost", port)
+                .build();
+
+            if(i == 0) {
+                chronicleSink.clear();
+            }
+
+            final ExcerptTailer tailer = chronicleSink.createTailer();
+            for(long c=0; c < (i * itemsPerChunk); c++) {
+                while (!tailer.nextIndex()) { }
+                long n = tailer.readLong();
+                assertEquals(c, n);
+                tailer.finish();
+            }
+
+            chronicleSink.close();
+        }
+
+        chronicleSource.close();
     }
 }

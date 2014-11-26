@@ -68,6 +68,9 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return vanilla(new File(parent, child));
     }
 
+    public static ReplicaChronicleQueueBuilder statelessSink() {
+        return sink(null);
+    }
 
     public static ReplicaChronicleQueueBuilder sink(Chronicle chronicle) {
         return new SinkChronicleQueueBuilder(chronicle);
