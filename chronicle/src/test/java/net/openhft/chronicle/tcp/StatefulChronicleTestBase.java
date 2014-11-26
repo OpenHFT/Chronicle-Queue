@@ -25,6 +25,7 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
+import net.openhft.lang.io.StopCharTesters;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
@@ -128,11 +129,12 @@ public class StatefulChronicleTestBase {
         chronicleSink.close();
     }
 
-    public void testJira80(int port, ChronicleQueueBuilder chronicleMasterBuilder, ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
+    public void testJira80(int port, final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
         final long chunks = 4;
         final long itemsPerChunk = 100000;
 
-        Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMasterBuilder.build())
+        final Chronicle chronicleMaster = chronicleMasterBuilder.build();
+        final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMaster)
             .bindAddress(port)
             .build();
 
@@ -142,7 +144,7 @@ public class StatefulChronicleTestBase {
         for (long i = 0; i < (chunks * itemsPerChunk); i++) {
             appender.startExcerpt();
             appender.writeLong(i);
-            appender.append(' ');
+            appender.writeChar('=');
             appender.append(i);
             appender.append('\n');
             appender.finish();
@@ -162,14 +164,43 @@ public class StatefulChronicleTestBase {
             final ExcerptTailer tailer = chronicleSink.createTailer();
             for(long c=0; c < (i * itemsPerChunk); c++) {
                 while (!tailer.nextIndex()) { }
-                long n = tailer.readLong();
-                assertEquals(c, n);
+                long n1 = tailer.readLong();
+                char ch = tailer.readChar();
+                long n2 = tailer.parseLong();
+
+                assertEquals(c , n1);
+                assertEquals(ch, '=');
+                assertEquals(c , n2);
+
                 tailer.finish();
             }
 
+            tailer.close();
             chronicleSink.close();
         }
 
+        // compare source and sink
+        final Chronicle slave  = chronicleSlaveBuilder.build();
+        final ExcerptTailer slaveTailer = slave.createTailer().toStart();
+
+        final ExcerptTailer masterTailer = chronicleMaster.createTailer().toStart();
+
+        for (long i = 0; i < (chunks * itemsPerChunk); i++) {
+            assertTrue(masterTailer.nextIndex());
+            assertTrue(slaveTailer.nextIndex());
+
+            assertEquals(masterTailer.readLong() , slaveTailer.readLong());
+            assertEquals(masterTailer.readChar() , slaveTailer.readChar());
+            assertEquals(masterTailer.parseLong(), slaveTailer.parseLong());
+
+            masterTailer.finish();
+            slaveTailer.finish();
+        }
+
+        masterTailer.close();
+        slaveTailer.close();
+
+        slave.close();
         chronicleSource.close();
     }
 }
