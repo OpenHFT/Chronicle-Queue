@@ -290,6 +290,38 @@ public class StatelessChronicleTestBase {
         }
     }
 
+    protected void testJiraChron81(final int port, final Chronicle source) throws Exception {
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+            .connectAddress("localhost", port)
+            .build();
+
+        try {
+            final ExcerptTailer tailer = sink.createTailer().toEnd();
+            final ExcerptAppender appender = source.createAppender();
+
+            assertFalse(tailer.nextIndex());
+
+            appender.startExcerpt(8);
+            appender.writeLong(1L);
+            appender.finish();
+
+            assertTrue("", tailer.nextIndex());
+            assertEquals(1L, tailer.readLong());
+            tailer.finish();
+
+            assertFalse(tailer.nextIndex());
+
+            tailer.close();
+            appender.close();
+        } finally {
+            sink.close();
+            sink.clear();
+
+            source.close();
+            source.clear();
+        }
+    }
+
     // *************************************************************************
     //
     // *************************************************************************

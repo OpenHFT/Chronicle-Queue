@@ -453,6 +453,12 @@ public abstract class SourceTcp {
                 this.nextIndex = false;
                 this.tailer = tailer.toEnd();
                 this.index = tailer.index();
+
+                if(this.index == -1) {
+                    this.nextIndex = true;
+                    this.tailer = tailer.toStart();
+                    this.index = -1;
+                }
             } else {
                 this.nextIndex = false;
             }

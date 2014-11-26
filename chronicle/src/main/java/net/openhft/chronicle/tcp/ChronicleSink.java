@@ -465,7 +465,7 @@ public class ChronicleSink extends WrappedChronicle {
                     }
                 }
 
-                if(!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE + 8)) {
+                if(!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 

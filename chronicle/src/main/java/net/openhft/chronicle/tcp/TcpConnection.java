@@ -18,6 +18,8 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -76,7 +78,8 @@ class TcpConnection {
 
     public void writeAll(ByteBuffer bb) throws IOException {
         while (bb.remaining() > 0) {
-            if (this.socketChannel.write(bb) < 0) {
+            int bw = this.socketChannel.write(bb);
+            if (bw < 0) {
                 break;
             }
         }
@@ -95,6 +98,7 @@ class TcpConnection {
     }
 
     public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException {
+        Logger l = LoggerFactory.getLogger(this.getClass());
         int rem = buffer.remaining();
         if (rem < threshod) {
             if (buffer.remaining() == 0) {
@@ -103,8 +107,10 @@ class TcpConnection {
                 buffer.compact();
             }
 
-            while (buffer.position() < size) {
-                if (this.socketChannel.read(buffer) < 0) {
+            int targetPosition = buffer.position() + size;
+            while (buffer.position() < targetPosition) {
+                int rb = this.socketChannel.read(buffer);
+                if (rb < 0) {
                     this.socketChannel.close();
                     return false;
                 }
