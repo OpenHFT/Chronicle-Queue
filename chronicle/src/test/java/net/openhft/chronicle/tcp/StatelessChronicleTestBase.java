@@ -301,6 +301,10 @@ public class StatelessChronicleTestBase {
 
             assertFalse(tailer.nextIndex());
 
+            for(int i=0;i<1000;i++) {
+                Thread.sleep(10000);
+            }
+
             appender.startExcerpt(8);
             appender.writeLong(1L);
             appender.finish();

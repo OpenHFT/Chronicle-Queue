@@ -25,6 +25,8 @@ import net.openhft.lang.model.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -146,6 +148,19 @@ public enum ChronicleTools {
     public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
         if (chronicle instanceof VanillaChronicle) {
             ((VanillaChronicle) chronicle).checkCounts(min, max);
+        }
+    }
+
+    public static ClassLoader getSystemClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
         }
     }
 }
