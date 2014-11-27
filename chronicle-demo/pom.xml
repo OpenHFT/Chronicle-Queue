@@ -57,20 +57,9 @@
     </dependencyManagement>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.sun.java</groupId>
-            <artifactId>tools</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jgoodies</groupId>
-            <artifactId>jgoodies-forms</artifactId>
-            <version>1.6.0</version>
         </dependency>
     </dependencies>
 
@@ -91,7 +80,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>demo.ChronicleDashboard</mainClass>
+                            <mainClass>demo.ChronicleDashboard2</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
