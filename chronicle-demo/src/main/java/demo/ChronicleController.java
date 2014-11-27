@@ -86,7 +86,7 @@ public class ChronicleController {
 
     private List<String> getFileNames(List<String> fileNames, Path dir) {
         try {
-            DirectoryStream<Path> stream = null;
+            DirectoryStream<Path> stream;
             try {
                 stream = Files.newDirectoryStream(dir);
             } catch (NoSuchFileException nsfe) {

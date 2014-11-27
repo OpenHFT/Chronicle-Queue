@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Created by daniel on 24/11/2014.
+ * Demo application for Chronicle
  */
 public class ChronicleDashboard2 implements ChronicleUpdatable{
 
@@ -47,13 +47,12 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         BackgroundPanel bg = new BackgroundPanel(image);
 
         JTextArea info = new JTextArea();
-        info.setText("This demonstrates how ChronicleQueue " +
-                     "might perform on your machine.\n" +
+        info.setText("This demonstrates a typical system topology for ChronicleQueue.\n" +
                      "Messages (prices consisting of 1 String, " +
-                     "4 ints, 1 bool) flow round the system " +
-                     "topology described by the diagram.\n" +
-                     "An average laptop should be able to " +
-                     "process 1.5m messages/second.");
+                     "4 Ints, 1 Bool) are created by two producer threads " +
+                     "and read by local and remote (TCP loopback) consumers. All messages are persisted to disk and available for replay.\n" +
+                     "Even an average laptop should be able to " +
+                     "process 1,500,000 messages/second.");
 
         final JButton startButton = new JButton("Start Demo");
         JLabel lblRate = new JLabel("Select event rate/s:");
@@ -127,15 +126,15 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         tfTotalWrites.setSize(80, 18);
         tfTotalWrites.setEditable(false);
 
-        lblRateRead.setLocation(160, 320);
+        lblRateRead.setLocation(160, 310);
         lblRateRead.setSize(100, 18);
-        tfReadRate.setLocation(270, 320);
+        tfReadRate.setLocation(270, 310);
         tfReadRate.setSize(80, 18);
         tfReadRate.setEditable(false);
 
-        lblEventsRead.setLocation(160, 340);
+        lblEventsRead.setLocation(160, 330);
         lblEventsRead.setSize(100, 18);
-        tfTotalReads.setLocation(270, 340);
+        tfTotalReads.setLocation(270, 330);
         tfTotalReads.setSize(80, 18);
         tfTotalReads.setEditable(false);
 
@@ -174,8 +173,8 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         tfDiskSpace.setSize(100, 18);
         tfDiskSpace.setEditable(false);
 
-        info.setLocation(60, 380);
-        info.setSize(215, 145);
+        info.setLocation(45, 370);
+        info.setSize(215, 190);
         info.setEditable(false);
         info.setOpaque(false);
         info.setFont(info.getFont().deriveFont(12.0f));
@@ -226,14 +225,14 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         });
 
         frame.setContentPane(bg);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.getContentPane().repaint();
         frame.pack();
         frame.setResizable(false);
         frame.setVisible(true);
     }
 
-    public String getBytesAsGB(long bytes) {
+    private String getBytesAsGB(long bytes) {
         double step = Math.pow(1000, 3);
         if (bytes > step) return String.format("%3.1f %s", bytes / step, "GB");
         return Long.toString(bytes);
