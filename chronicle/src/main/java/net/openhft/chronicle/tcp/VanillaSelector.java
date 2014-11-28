@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Set;
 
 public class VanillaSelector {
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaSelector.class);
@@ -34,7 +35,7 @@ public class VanillaSelector {
     private Selector selector;
 
     public VanillaSelector() {
-        this.selectionKeySet = new VanillaSelectionKeySet();
+        this.selectionKeySet = null;
         this.selector = null;
     }
 
@@ -46,6 +47,8 @@ public class VanillaSelector {
                 Class.forName("sun.nio.ch.SelectorImpl", false, ChronicleTools.getSystemClassLoader());
 
             if (selectorImplClass.isAssignableFrom(this.selector.getClass())) {
+                this.selectionKeySet = new VanillaSelectionKeySet();
+
                 final Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                 selectedKeysField.setAccessible(true);
 
@@ -60,8 +63,8 @@ public class VanillaSelector {
         }
     }
 
-    public void register(SocketChannel channel, int ops, VanillaSelectionKeyConsumer consumer) throws IOException {
-        channel.register(this.selector, ops, consumer);
+    public void register(SocketChannel channel, int ops) throws IOException {
+        channel.register(this.selector, ops);
     }
 
     public void deregister(SocketChannel channel, int ops) throws IOException {
@@ -71,41 +74,22 @@ public class VanillaSelector {
         }
     }
 
-    private void select(int spinLoopCount, long timeout) throws IOException {
+    VanillaSelectionKeySet  vanillaSelectionKeys() {
+        return this.selectionKeySet;
+    }
+
+    Set<SelectionKey> selectionKeys() {
+        return selector.selectedKeys();
+    }
+
+    public int select(int spinLoopCount, long timeout) throws IOException {
         for (int i = 0; i < spinLoopCount; i++) {
-            if (selector.selectNow() != 0) {
-
-                SelectionKey[] keys = selectionKeySet.flip();
-                VanillaSelectionKeyConsumer consumer = null;
-
-                if (keys.length != 0) {
-                    for (int k = 0; ; k++) {
-                        final SelectionKey key = keys[k];
-                        if (key != null) {
-                            consumer = (VanillaSelectionKeyConsumer)key.attachment();
-
-                            if(consumer != null) {
-                                consumer.onKey(key);
-                            }
-                        } else {
-                            break;
-                        }
-
-                        /*
-                        try {
-                            processKey(approxTime, key);
-                        } catch (BufferUnderflowException e) {
-                            if (!isClosed)
-                                LOG.error("", e);
-                        }
-                        */
-                    }
-                }
-
-                return;
+            int nbKeys = selector.selectNow();
+            if(nbKeys != 0) {
+                return nbKeys;
             }
         }
 
-        selector.select(timeout);
+        return selector.select(timeout);
     }
 }

@@ -19,7 +19,6 @@
 package net.openhft.chronicle.tcp;
 
 
-import junit.framework.AssertionFailedError;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
@@ -36,23 +35,16 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.ExtendedSSLSession;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class StatelessChronicleTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
@@ -300,10 +292,6 @@ public class StatelessChronicleTestBase {
             final ExcerptAppender appender = source.createAppender();
 
             assertFalse(tailer.nextIndex());
-
-            for(int i=0;i<1000;i++) {
-                Thread.sleep(10000);
-            }
 
             appender.startExcerpt(8);
             appender.writeLong(1L);

@@ -17,11 +17,7 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +27,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -166,38 +160,48 @@ public abstract class SourceTcp {
 
         @Override
         public void run() {
+            VanillaSelectionKeySet vsks = null;
+
             try {
                 socketChannel.configureBlocking(false);
                 socketChannel.socket().setSendBufferSize(builder.minBufferSize());
                 socketChannel.socket().setTcpNoDelay(true);
 
-                Selector selector = Selector.open();
+                VanillaSelector selector = new VanillaSelector();
+                selector.open();
+                selector.register(socketChannel, SelectionKey.OP_READ);
 
                 tailer = builder.chronicle().createTailer();
-                socketChannel.register(selector, SelectionKey.OP_READ);
+                vsks = selector.vanillaSelectionKeys();
 
                 while(running.get() && !Thread.currentThread().isInterrupted()) {
-                    if (selector.select(builder.selectTimeoutMillis()) > 0) {
-                        final Set<SelectionKey> keys = selector.selectedKeys();
-                        for (final Iterator<SelectionKey> it = keys.iterator(); it.hasNext();) {
-                            final SelectionKey key = it.next();
-                            if(key.isReadable()) {
-                                if (!onRead(key)) {
-                                    keys.clear();
-                                    break;
-                                } else {
-                                    it.remove();
+                    int nbKeys = selector.select(1000, builder.selectTimeoutMillis());
+
+                    if(nbKeys > 0) {
+                        if(vsks != null) {
+                            SelectionKey[] keys = vsks.flip();
+                            for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                                final SelectionKey key = keys[k];
+                                if (key != null) {
+                                    if(!onSelectionKey(key)) {
+                                        break;
+                                    }
                                 }
-                            } else if(key.isWritable()) {
-                                if (!onWrite(key)) {
-                                    keys.clear();
-                                    break;
-                                } else {
-                                    it.remove();
-                                }
-                            } else {
-                                it.remove();
                             }
+
+                            for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                                keys[k] = null;
+                            }
+                        } else {
+                            final Set<SelectionKey> keys = selector.selectionKeys();
+
+                            for(final SelectionKey key : keys) {
+                                if(!onSelectionKey(key)) {
+                                    break;
+                                }
+                            }
+
+                            keys.clear();
                         }
                     }
                 }
@@ -215,6 +219,13 @@ public abstract class SourceTcp {
                         logger.info("Connection {} closed from the other end: ", socketChannel, e.getMessage());
                     } else {
                         logger.info("Connection {} died", socketChannel, e);
+                    }
+                }
+            } finally {
+                if(vsks != null) {
+                    SelectionKey[] keys = vsks.flip();
+                    for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                        keys[k] = null;
                     }
                 }
             }
@@ -265,7 +276,24 @@ public abstract class SourceTcp {
             setLastHeartbeat();
         }
 
+        protected boolean onSelectionKey(final SelectionKey key) throws IOException {
+            if (key != null) {
+                if(key.isReadable()) {
+                    if (!onRead(key)) {
+                        return false;
+                    }
+                } else if(key.isWritable()) {
+                    if (!onWrite(key)) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         protected boolean onRead(final SelectionKey key) throws IOException {
+
             try {
                 readBuffer.clear();
                 connection.readFullyOrEOF(readBuffer);
