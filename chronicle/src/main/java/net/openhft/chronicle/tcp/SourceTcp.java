@@ -179,34 +179,10 @@ public abstract class SourceTcp {
                 tailer = builder.chronicle().createTailer();
                 selectionKeys = selector.vanillaSelectionKeys();
 
-                while(running.get()) {
-                    int nbKeys = selector.select(spinLoopCount, selectTimeout);
-
-                    if(nbKeys > 0) {
-                        if(selectionKeys != null) {
-                            final SelectionKey[] keys = selectionKeys.flip();
-                            for (int k = 0; k < keys.length && keys[k] != null; k++) {
-                                final SelectionKey key = keys[k];
-                                if (key != null) {
-                                    if(!onSelectionKey(key)) {
-                                        break;
-                                    }
-                                }
-                            }
-
-                            selectionKeys.cleanup(keys);
-                        } else {
-                            final Set<SelectionKey> keys = selector.selectionKeys();
-
-                            for(final SelectionKey key : keys) {
-                                if(!onSelectionKey(key)) {
-                                    break;
-                                }
-                            }
-
-                            keys.clear();
-                        }
-                    }
+                if(selectionKeys != null) {
+                    vanillaNioLoop(selector, selectionKeys);
+                } else {
+                    nioLoop(selector);
                 }
             } catch (EOFException e) {
                 if (running.get()) {
@@ -234,6 +210,50 @@ public abstract class SourceTcp {
                 close();
             } catch(IOException e) {
                 logger.warn("",e);
+            }
+        }
+
+        private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException {
+            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final long selectTimeout = builder.selectTimeout();
+
+            while(running.get()) {
+                int nbKeys = selector.select(spinLoopCount, selectTimeout);
+
+                if (nbKeys > 0) {
+                    final SelectionKey[] keys = selectionKeys.flip();
+                    for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                        final SelectionKey key = keys[k];
+                        if (key != null) {
+                            if (!onSelectionKey(key)) {
+                                break;
+                            }
+                        }
+                    }
+
+                    selectionKeys.cleanup(keys);
+                }
+            }
+        }
+
+        private void nioLoop(final VanillaSelector selector) throws IOException {
+            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final long selectTimeout = builder.selectTimeout();
+
+            while(running.get()) {
+                int nbKeys = selector.select(spinLoopCount, selectTimeout);
+
+                if(nbKeys > 0) {
+                    final Set<SelectionKey> keys = selector.selectionKeys();
+
+                    for(final SelectionKey key : keys) {
+                        if(!onSelectionKey(key)) {
+                            break;
+                        }
+                    }
+
+                    keys.clear();
+                }
             }
         }
 
