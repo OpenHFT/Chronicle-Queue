@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class ControlledThread extends Thread {
     private AtomicBoolean isRunning = new AtomicBoolean(false);
     private AtomicBoolean isExit = new AtomicBoolean(false);
+    private int loopTime = 0;
 
     public void run() {
         while (true) {
@@ -16,13 +17,17 @@ public abstract class ControlledThread extends Thread {
                 return;
             }
             if (isRunning.get()) {
+                if(loopTime!=0)sleepnx(loopTime);
                 loop();
             } else {
-                sleepnx(100);
+                sleepnx(200);
             }
         }
     }
 
+    public void setLoopTime(int loopTimeMS){
+        loopTime = loopTimeMS;
+    }
     public abstract void loop();
 
     public abstract void cleanup();

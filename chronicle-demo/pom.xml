@@ -53,30 +53,23 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
+                <version>1.7.6</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.sun.java</groupId>
-            <artifactId>tools</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.jgoodies</groupId>
-            <artifactId>jgoodies-forms</artifactId>
-            <version>1.6.0</version>
+            <artifactId>slf4j-nop</artifactId>
         </dependency>
     </dependencies>
 
@@ -97,7 +90,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>demo.ChronicleDashboard</mainClass>
+                            <mainClass>demo.ChronicleDashboard2</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
