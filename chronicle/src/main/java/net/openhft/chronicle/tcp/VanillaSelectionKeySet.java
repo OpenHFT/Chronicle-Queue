@@ -86,6 +86,17 @@ public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
         }
     }
 
+    void cleanup(SelectionKey[] keys) {
+        for (int i = 0; i < keys.length && keys[i] != null; i++) {
+            keys[i] = null;
+        }
+    }
+
+    void cleanup() {
+        cleanup(keysA);
+        cleanup(keysB);
+    }
+
     @Override
     public int size() {
         if (isA) {

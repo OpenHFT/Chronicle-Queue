@@ -65,11 +65,11 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             .connectAddress("localhost", BASE_PORT + 1)
             .build();
 
-        Thread t = new Thread(new Runnable() {
+        final Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    ExcerptAppender excerpt = source.createAppender();
+                    final ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
                         excerpt.startExcerpt();
@@ -79,6 +79,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                         excerpt.append('\n');
                         excerpt.finish();
                     }
+                    excerpt.close();
                     System.out.println(System.currentTimeMillis() + ": Finished writing messages");
                 } catch (Exception e) {
                     throw new AssertionError(e);
@@ -104,13 +105,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             excerpt.finish();
         }
 
-        sink.close();
-        System.out.println("There were " + count + " InSynk messages");
         t.join();
-
-        source.close();
         long time = System.nanoTime() - start;
+
+        System.out.println("There were " + count + " InSynk messages");
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+
+        sink.close();
+        source.close();
 
         assertIndexedClean(basePathSource);
         assertIndexedClean(basePathSink);

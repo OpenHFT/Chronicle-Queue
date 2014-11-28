@@ -50,34 +50,57 @@ public final class SourceTcpAcceptor extends SourceTcp {
             @Override
             public void run() {
                 try {
-                    final Selector selector = Selector.open();
 
-                    final ServerSocketChannel server = ServerSocketChannel.open();
-                    server.socket().setReuseAddress(true);
-                    server.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
-                    server.configureBlocking(false);
-                    server.register(selector, SelectionKey.OP_ACCEPT);
+                    final ServerSocketChannel socketChannel = ServerSocketChannel.open();
+                    socketChannel.socket().setReuseAddress(true);
+                    socketChannel.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
+                    socketChannel.configureBlocking(false);
+
+                    final VanillaSelector selector = new VanillaSelector()
+                        .open()
+                        .register(socketChannel, SelectionKey.OP_ACCEPT);
+
+                    final long selectTimeout = builder.selectTimeout();
+                    final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
 
                     while (running.get()) {
-                        if (selector.select(builder.selectTimeoutMillis()) > 0) {
-                            final Set<SelectionKey> keys = selector.selectedKeys();
-                            for (final SelectionKey key : keys) {
-                                if (key.isAcceptable()) {
-                                    SocketChannel channel = server.accept();
-                                    logger.info("Accepted connection from: {}", channel.getRemoteAddress());
+                        int nbKeys = selector.select(0, selectTimeout);
 
-                                    executor.execute(createSessionHandler(channel));
+                        if(nbKeys > 0) {
+                            if(selectionKeys != null) {
+                                final SelectionKey[] keys = selectionKeys.flip();
+                                for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                                    final SelectionKey key = keys[k];
+                                    if (key != null) {
+                                        if (key.isAcceptable()) {
+                                            SocketChannel channel = socketChannel.accept();
+                                            logger.info("Accepted connection from: {}", channel.getRemoteAddress());
+
+                                            executor.execute(createSessionHandler(channel));
+                                        }
+                                    }
                                 }
-                            }
 
-                            keys.clear();
-                        } /* else {
-                            logger.info("No incoming connections on {}, wait", builder.bindAddress());
-                        } */
+                                selectionKeys.cleanup(keys);
+                            } else {
+                                final Set<SelectionKey> keys = selector.selectionKeys();
+
+                                for(final SelectionKey key : keys) {
+                                    if (key.isAcceptable()) {
+                                        SocketChannel channel = socketChannel.accept();
+                                        logger.info("Accepted connection from: {}", channel.getRemoteAddress());
+
+                                        executor.execute(createSessionHandler(channel));
+                                    }
+                                }
+
+                                keys.clear();
+                            }
+                        }
                     }
 
                     selector.close();
-                    server.close();
+                    socketChannel.close();
                 } catch (IOException e) {
                     logger.warn("", e);
                 }

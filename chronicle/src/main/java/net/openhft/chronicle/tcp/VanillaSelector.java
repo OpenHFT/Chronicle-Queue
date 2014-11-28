@@ -18,17 +18,19 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Set;
 
-public class VanillaSelector {
+public class VanillaSelector implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaSelector.class);
 
     private VanillaSelectionKeySet selectionKeySet;
@@ -39,7 +41,7 @@ public class VanillaSelector {
         this.selector = null;
     }
 
-    public void open() throws IOException {
+    public VanillaSelector open() throws IOException {
         this.selector = Selector.open();
 
         try {
@@ -61,17 +63,22 @@ public class VanillaSelector {
         } catch (Exception e) {
             LOGGER.error("", e);
         }
+
+        return this;
     }
 
-    public void register(SocketChannel channel, int ops) throws IOException {
+    public VanillaSelector register(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
         channel.register(this.selector, ops);
+        return this;
     }
 
-    public void deregister(SocketChannel channel, int ops) throws IOException {
+    public VanillaSelector deregister(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
         SelectionKey selectionKey = channel.keyFor(this.selector);
         if (selectionKey != null) {
             selectionKey.interestOps(selectionKey.interestOps() & ~ops);
         }
+
+        return this;
     }
 
     VanillaSelectionKeySet  vanillaSelectionKeys() {
@@ -91,5 +98,12 @@ public class VanillaSelector {
         }
 
         return selector.select(timeout);
+    }
+
+    @Override
+    public void close() throws IOException {
+        if(selector != null) {
+            selector.close();
+        }
     }
 }

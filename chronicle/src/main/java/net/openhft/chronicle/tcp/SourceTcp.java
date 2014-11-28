@@ -160,26 +160,31 @@ public abstract class SourceTcp {
 
         @Override
         public void run() {
-            VanillaSelectionKeySet vsks = null;
+            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final long selectTimeout = builder.selectTimeout();
+
+            VanillaSelectionKeySet selectionKeys = null;
 
             try {
                 socketChannel.configureBlocking(false);
                 socketChannel.socket().setSendBufferSize(builder.minBufferSize());
                 socketChannel.socket().setTcpNoDelay(true);
+                socketChannel.socket().setSoTimeout(0);
+                socketChannel.socket().setSoLinger(false, 0);
 
-                VanillaSelector selector = new VanillaSelector();
-                selector.open();
-                selector.register(socketChannel, SelectionKey.OP_READ);
+                final VanillaSelector selector = new VanillaSelector()
+                    .open()
+                    .register(socketChannel, SelectionKey.OP_READ);
 
                 tailer = builder.chronicle().createTailer();
-                vsks = selector.vanillaSelectionKeys();
+                selectionKeys = selector.vanillaSelectionKeys();
 
-                while(running.get() && !Thread.currentThread().isInterrupted()) {
-                    int nbKeys = selector.select(1000, builder.selectTimeoutMillis());
+                while(running.get()) {
+                    int nbKeys = selector.select(spinLoopCount, selectTimeout);
 
                     if(nbKeys > 0) {
-                        if(vsks != null) {
-                            SelectionKey[] keys = vsks.flip();
+                        if(selectionKeys != null) {
+                            final SelectionKey[] keys = selectionKeys.flip();
                             for (int k = 0; k < keys.length && keys[k] != null; k++) {
                                 final SelectionKey key = keys[k];
                                 if (key != null) {
@@ -189,9 +194,7 @@ public abstract class SourceTcp {
                                 }
                             }
 
-                            for (int k = 0; k < keys.length && keys[k] != null; k++) {
-                                keys[k] = null;
-                            }
+                            selectionKeys.cleanup(keys);
                         } else {
                             final Set<SelectionKey> keys = selector.selectionKeys();
 
@@ -222,11 +225,8 @@ public abstract class SourceTcp {
                     }
                 }
             } finally {
-                if(vsks != null) {
-                    SelectionKey[] keys = vsks.flip();
-                    for (int k = 0; k < keys.length && keys[k] != null; k++) {
-                        keys[k] = null;
-                    }
+                if(selectionKeys != null) {
+                    selectionKeys.cleanup();
                 }
             }
 

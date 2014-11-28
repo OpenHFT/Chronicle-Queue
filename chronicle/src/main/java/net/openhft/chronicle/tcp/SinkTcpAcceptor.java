@@ -33,34 +33,53 @@ public class SinkTcpAcceptor extends SinkTcp {
 
     @Override
     public SocketChannel openSocketChannel() throws IOException {
-        final Selector selector = Selector.open();
+        final ServerSocketChannel socketChannel = ServerSocketChannel.open();
+        socketChannel.socket().setReuseAddress(true);
+        socketChannel.socket().bind(builder.bindAddress());
+        socketChannel.configureBlocking(false);
 
-        final ServerSocketChannel server = ServerSocketChannel.open();
-        server.socket().setReuseAddress(true);
-        server.socket().bind(builder.bindAddress());
-        server.configureBlocking(false);
-        server.register(selector, SelectionKey.OP_ACCEPT);
+        final VanillaSelector selector = new VanillaSelector()
+            .open()
+            .register(socketChannel, SelectionKey.OP_ACCEPT);
+
+        final long selectTimeout = builder.selectTimeout();
+        final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
 
         SocketChannel channel = null;
         while(running.get() && channel == null) {
-            if(selector.select(builder.selectTimeoutMillis()) > 0) {
-                final Set<SelectionKey> keys = selector.selectedKeys();
-                for (final SelectionKey key : keys) {
-                    if (key.isAcceptable()) {
-                        channel = server.accept();
-                        logger.info("Accepted connection from: " + channel.getRemoteAddress());
-                        break;
-                    }
-                }
+            int nbKeys = selector.select(0, selectTimeout);
 
-                keys.clear();
-            } else {
-                logger.info("No incoming connections on {}, wait", builder.bindAddress());
+            if(nbKeys > 0) {
+                if(selectionKeys != null) {
+                    final SelectionKey[] keys = selectionKeys.flip();
+                    for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                        final SelectionKey key = keys[k];
+                        if (key != null) {
+                            if (key.isAcceptable()) {
+                                channel = socketChannel.accept();
+                                logger.info("Accepted connection from: " + channel.getRemoteAddress());
+                            }
+                        }
+                    }
+
+                    selectionKeys.cleanup(keys);
+                } else {
+                    final Set<SelectionKey> keys = selector.selectionKeys();
+
+                    for(final SelectionKey key : keys) {
+                        if (key.isAcceptable()) {
+                            channel = socketChannel.accept();
+                            logger.info("Accepted connection from: " + channel.getRemoteAddress());
+                        }
+                    }
+
+                    keys.clear();
+                }
             }
         }
 
         selector.close();
-        server.close();
+        socketChannel.close();
 
         return channel;
     }
