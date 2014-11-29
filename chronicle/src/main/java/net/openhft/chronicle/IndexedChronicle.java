@@ -70,7 +70,7 @@ public class IndexedChronicle implements Chronicle {
      *                               and a new regular file of that name cannot be created, or if some other error
      *                               occurs while opening or creating the file
      */
-    public IndexedChronicle(@NotNull ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder) throws IOException {
+    IndexedChronicle(@NotNull ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder) throws IOException {
 
         //this.config = config.clone();
         this.builder = builder.clone();
