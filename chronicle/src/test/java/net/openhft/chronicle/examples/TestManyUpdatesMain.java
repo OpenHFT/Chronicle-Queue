@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.examples;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -32,7 +34,7 @@ public class TestManyUpdatesMain {
         String basePath = System.getProperty("java.io.tmpdir") + "/updates";
         ChronicleTools.deleteOnExit(basePath);
         long start = System.nanoTime();
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         int count = 10 * 1000 * 1000;
         for (ExcerptAppender e = chronicle.createAppender(); e.index() < count; ) {
             e.startExcerpt();

@@ -19,11 +19,18 @@
 package vanilla.java.processingengine;
 
 import net.openhft.affinity.AffinitySupport;
-import net.openhft.chronicle.ChronicleConfig;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.model.constraints.NotNull;
-import vanilla.java.processingengine.api.*;
+import vanilla.java.processingengine.api.Gw2PeEvents;
+import vanilla.java.processingengine.api.Gw2PeWriter;
+import vanilla.java.processingengine.api.MetaData;
+import vanilla.java.processingengine.api.Pe2GwEvents;
+import vanilla.java.processingengine.api.Pe2GwReader;
+import vanilla.java.processingengine.api.Side;
+import vanilla.java.processingengine.api.SmallCommand;
+import vanilla.java.processingengine.api.SmallReport;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -103,13 +110,13 @@ class GWMain {
         String pePath = tmp + "/demo/pe";
 
         // setup
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+        //ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4 * 1024);
 //        config.indexBlockSize(4 * 1024);
-        IndexedChronicle gw2pe = new IndexedChronicle(gw2pePath, ChronicleConfig.DEFAULT);
+        Chronicle gw2pe = ChronicleQueueBuilder.indexed(gw2pePath).build();
         Gw2PeEvents gw2PeWriter = new Gw2PeWriter(gw2pe.createAppender());
 
-        IndexedChronicle pe2gw = new IndexedChronicle(pePath, ChronicleConfig.DEFAULT);
+        Chronicle pe2gw = ChronicleQueueBuilder.indexed(pePath).build();
         final long[] times = new long[ORDERS];
         final AtomicInteger reportCount = new AtomicInteger(-WARMUP);
         Pe2GwEvents listener = new Pe2GwEvents() {

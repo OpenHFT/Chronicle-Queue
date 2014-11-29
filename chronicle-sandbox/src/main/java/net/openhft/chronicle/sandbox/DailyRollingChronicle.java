@@ -19,7 +19,6 @@
 package net.openhft.chronicle.sandbox;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.tools.MasterIndexFile;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.DirectBytes;
 import net.openhft.lang.io.DirectStore;
@@ -94,6 +93,11 @@ public class DailyRollingChronicle implements Chronicle {
         if (appender == null)
             appender = new DRCExcerptAppender();
         return appender;
+    }
+
+    @Override
+    public long lastIndex() {
+        return lastWrittenIndex();
     }
 
     @Override

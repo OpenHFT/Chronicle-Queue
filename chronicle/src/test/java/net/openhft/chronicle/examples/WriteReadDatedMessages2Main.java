@@ -18,9 +18,7 @@
 
 package net.openhft.chronicle.examples;
 
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.*;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -34,20 +32,22 @@ Reading 1,000,000,000, the chronicle uses 66409812 KB, took 213.442 seconds
 public class WriteReadDatedMessages2Main {
     public static void main(String... ignored) throws IOException, InterruptedException {
         String basePath = "/tmp/index";
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
-        System.out.println("cycleFormat " + config.cycleFormat());
-        System.out.println("cycleLength " + config.cycleLength());
-        System.out.println("dataBlockSize " + config.dataBlockSize());
-        System.out.println("defaultMessageSize " + config.defaultMessageSize());
-        System.out.println("entriesPerCycle " + config.entriesPerCycle());
-        System.out.println("indexBlockSize " + config.indexBlockSize());
-        System.out.println("synchronous " + config.synchronous());
 
-        VanillaChronicle chronicle = new VanillaChronicle(basePath);
+        ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(basePath);
+
+        System.out.println("cycleFormat " + builder.cycleFormat());
+        System.out.println("cycleLength " + builder.cycleLength());
+        System.out.println("dataBlockSize " + builder.dataBlockSize());
+        System.out.println("defaultMessageSize " + builder.defaultMessageSize());
+        System.out.println("entriesPerCycle " + builder.entriesPerCycle());
+        System.out.println("indexBlockSize " + builder.indexBlockSize());
+        System.out.println("synchronous " + builder.synchronous());
+
+        Chronicle chronicle = builder.build();
         long messages = 10 * 1000 * 1000L;// 1000 * 50000;
         chronicle.clear();
         long start = System.nanoTime();
-        VanillaChronicle.VanillaAppender appender = chronicle.createAppender();
+        ExcerptAppender appender = chronicle.createAppender();
         String msg = "writer1 " + new Date();
         for (long i = 0; i < messages; i++) {
             appender.startExcerpt();

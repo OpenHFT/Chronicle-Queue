@@ -19,52 +19,44 @@
 package net.openhft.chronicle.tcp;
 
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
-import net.openhft.chronicle.tools.ChronicleTools;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import java.util.Date;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-public class VolatileChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("VolatileChronicleTestBase");
+public class StatelessChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-volatile-";
+    protected static final String PREFIX    = "ch-stateless-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
     public final TestName testName = new TestName();
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    protected Chronicle volatileChronicleSink(String host, int port) throws IOException {
-        return new ChronicleSink(host, port);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -79,18 +71,6 @@ public class VolatileChronicleTestBase {
 
         return path;
     }
-
-    protected Chronicle indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath), port);
-    }
-
-    protected Chronicle indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getVanillaTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -112,14 +92,6 @@ public class VolatileChronicleTestBase {
         return path;
     }
 
-    protected ChronicleSource vanillaChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath), port);
-    }
-
-    protected ChronicleSource vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath, config), port);
-    }
-
     // *************************************************************************
     //
     // *************************************************************************
@@ -129,7 +101,10 @@ public class VolatileChronicleTestBase {
         ExcerptTailer tailer = null;
 
         try {
-            sink = volatileChronicleSink("localhost", port);
+            sink = ChronicleQueueBuilder.statelessSink()
+                .connectAddress(new InetSocketAddress("localhost", port))
+                .build();
+
             tailer = sink.createTailer();
             assertFalse(tailer.nextIndex());
             tailer.close();
@@ -146,7 +121,10 @@ public class VolatileChronicleTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            sink = volatileChronicleSink("localhost", port);
+            sink =ChronicleQueueBuilder.statelessSink()
+                .connectAddress("localhost", port)
+                .build();
+
             tailer = sink.createTailer().toStart();
             assertTrue("nextIndex should return true", tailer.nextIndex());
             assertEquals(1L, tailer.readLong());
@@ -161,7 +139,10 @@ public class VolatileChronicleTestBase {
             sink.clear();
             sink = null;
 
-            sink = volatileChronicleSink("localhost", port);
+            sink = ChronicleQueueBuilder.statelessSink()
+                .connectAddress("localhost", port)
+                .build();
+
             tailer = sink.createTailer().toEnd();
             assertFalse("nextIndex should return false", tailer.nextIndex());
 
@@ -178,49 +159,63 @@ public class VolatileChronicleTestBase {
 
     protected void testJiraChron75(final int port, final Chronicle source) throws Exception {
         final int items = 1000000;
-        final int clients = 3;
+        final int clients = 4;
         final int warmup = 100;
 
-        final ExecutorService executor = Executors.newFixedThreadPool(clients);
         final CountDownLatch latch = new CountDownLatch(warmup);
+        final ExecutorService executor = Executors.newFixedThreadPool(clients);
 
         try {
-            for(int i=0;i<clients;i++) {
+            for(int i=0; i<clients; i++) {
                 executor.submit(new Runnable() {
                     @Override
                     public void run() {
                         int cnt = 0;
-                        ExcerptTailer tailer = null;
                         Chronicle sink = null;
+                        ExcerptTailer tailer = null;
 
                         try {
                             final long threadId = Thread.currentThread().getId();
 
-                            sink = new ChronicleSink("localhost", port);
-                            tailer = sink.createTailer().toStart();
-
                             latch.await();
 
-                            LOGGER.info("Start ChronicleSink on thread {}", threadId);
-                            int lastK = 0;
-                            for(cnt=0; cnt<items;) {
-                                if(tailer.nextIndex()) {
-                                    Jira75Quote quote = tailer.readObject(Jira75Quote.class);
-                                    tailer.finish();
+                            sink = ChronicleQueueBuilder.statelessSink().connectAddress("localhost", port).build();
+                            tailer = sink.createTailer();//.toStart();
 
+                            LOGGER.info("Start ChronicleSink on thread {}", threadId);
+
+                            Jira75Quote quote = null;
+                            while (cnt < items) {
+                                if (tailer.nextIndex()) {
+                                    quote = tailer.readObject(Jira75Quote.class);
+                                    tailer.finish();
                                     assertEquals(cnt, quote.getQuantity(), 0);
                                     assertEquals(cnt, quote.getPrice(), 0);
                                     assertEquals("instr-" + cnt, quote.getInstrument());
-                                    assertEquals('f' , quote.getEntryType());
+                                    assertEquals('f', quote.getEntryType());
 
                                     cnt++;
                                 }
                             }
 
-                            tailer.close();
-                            sink.close();
-                        } catch(Exception e) {
-                            LOGGER.warn("Exception {}", cnt, e);
+                            assertEquals('f', quote.getEntryType());
+
+                            LOGGER.info("Done ({})", threadId);
+                        } catch (Exception e) {
+                            errorCollector.addError(e);
+                        } catch (AssertionError ae) {
+                            errorCollector.addError(ae);
+                        } finally {
+                            try {
+                                if(tailer != null) {
+                                    tailer.close();
+                                }
+                                if(sink != null) {
+                                    sink.close();
+                                }
+                            } catch (IOException ioe) {
+                                errorCollector.addError(ioe);
+                            }
                         }
                     }
                 });
@@ -229,11 +224,11 @@ public class VolatileChronicleTestBase {
             LOGGER.info("Write {} elements to the source", items);
             final ExcerptAppender appender = source.createAppender();
             for(int i=0;i<items;i++) {
-                appender.startExcerpt(1000);
-                appender.writeObject(new Jira75Quote(i,i,DateTime.now(),"instr-" + i,'f'));
+                appender.startExcerpt();
+                appender.writeObject(new Jira75Quote(i, i, DateTime.now(), "instr-" + i,'f'));
                 appender.finish();
 
-                if(i < warmup) {
+                if(latch.getCount() > 0) {
                     latch.countDown();
                 }
             }
@@ -241,7 +236,9 @@ public class VolatileChronicleTestBase {
             appender.close();
 
             executor.shutdown();
-            executor.awaitTermination(1, TimeUnit.MINUTES);
+            executor.awaitTermination(30, TimeUnit.SECONDS);
+
+            assertEquals(0, latch.getCount());
         } catch(Exception e) {
             LOGGER.warn("Exception", e);
         } finally {
@@ -251,7 +248,9 @@ public class VolatileChronicleTestBase {
     }
 
     protected void testJiraChron78(final int port, final Chronicle source) throws Exception {
-        final Chronicle sink = volatileChronicleSink("localhost", port);
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+            .connectAddress("localhost", port)
+            .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -278,6 +277,38 @@ public class VolatileChronicleTestBase {
             sink.close();
             sink.clear();
         } finally {
+            source.close();
+            source.clear();
+        }
+    }
+
+    protected void testJiraChron81(final int port, final Chronicle source) throws Exception {
+        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+            .connectAddress("localhost", port)
+            .build();
+
+        try {
+            final ExcerptTailer tailer = sink.createTailer().toEnd();
+            final ExcerptAppender appender = source.createAppender();
+
+            assertFalse(tailer.nextIndex());
+
+            appender.startExcerpt(8);
+            appender.writeLong(1L);
+            appender.finish();
+
+            assertTrue("", tailer.nextIndex());
+            assertEquals(1L, tailer.readLong());
+            tailer.finish();
+
+            assertFalse(tailer.nextIndex());
+
+            tailer.close();
+            appender.close();
+        } finally {
+            sink.close();
+            sink.clear();
+
             source.close();
             source.clear();
         }

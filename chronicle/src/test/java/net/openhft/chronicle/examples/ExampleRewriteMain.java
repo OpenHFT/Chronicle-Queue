@@ -20,9 +20,7 @@ package net.openhft.chronicle.examples;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.affinity.AffinityStrategies;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 
 import java.io.File;
@@ -57,7 +55,7 @@ public class ExampleRewriteMain {
                 try {
                     al.acquireLock(AffinityStrategies.DIFFERENT_CORE).bind();
 
-                    final IndexedChronicle chronicle = new IndexedChronicle(basePath);
+                    final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 //                    chronicle.useUnsafe(true); // for benchmarks.
                     final ExcerptAppender excerpt = chronicle.createAppender();
                     for (int i = -warmup; i < repeats; i++) {
@@ -88,7 +86,7 @@ public class ExampleRewriteMain {
         t.start();
 
         //Read
-        final IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 //        chronicle.useUnsafe(true); // for benchmarks.
         final ExcerptTailer excerpt = chronicle.createTailer();
         int[] times = new int[repeats];

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.tools;
+package net.openhft.chronicle.sandbox;
 
 import java.io.*;
 import java.util.ArrayList;

@@ -59,13 +59,10 @@ public class ExampleCacheMain {
     }
 
     public ExampleCacheMain(String basePath, int maxObjSize) throws IOException {
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        chronicle = new IndexedChronicle(basePath, config);
-
+        chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         appender = chronicle.createAppender();
         reader = chronicle.createExcerpt();
         _maxObjSize = maxObjSize;
-
     }
 
     public static void main(String... ignored) throws IOException {

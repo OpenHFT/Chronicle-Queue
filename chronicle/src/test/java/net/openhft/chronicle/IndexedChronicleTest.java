@@ -110,12 +110,14 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     public void testWasPadding() throws IOException {
         final String basePath = getTestPath();
 
-        final ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.dataBlockSize(128);
-        config.indexBlockSize(128);
+        final ChronicleQueueBuilder builder = ChronicleQueueBuilder
+            .indexed(basePath)
+            .test()
+            .dataBlockSize(128)
+            .indexBlockSize(128);
 
-        final Chronicle chronicle1 = new IndexedChronicle(basePath, config);
-        final Chronicle chronicle2 = new IndexedChronicle(basePath, config);
+        final Chronicle chronicle1 = builder.build();
+        final Chronicle chronicle2 = builder.build();
 
         try {
             final ExcerptAppender appender = chronicle1.createAppender();
@@ -209,7 +211,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     public void testClean() throws IOException {
         final String basePath = getTestPath();
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         assertExists(basePath);
 
         chronicle.close();
@@ -222,13 +224,14 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     public void singleThreaded() throws IOException {
         final String basePath = getTestPath();
         final int runs = 50000;
-
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
-        // TODO fix for 4096 !!!
         int dataBlockSize = 4 * 1024;
-        config.dataBlockSize(dataBlockSize);
-        config.indexBlockSize(128 * 1024);
-        IndexedChronicle chronicle = new IndexedChronicle(basePath, config);
+
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+            .test()
+            .dataBlockSize(dataBlockSize)
+            .indexBlockSize(128 * 1024)
+            .build();
+
         int i = 0;
         try {
             ExcerptAppender w = chronicle.createAppender();
@@ -295,13 +298,13 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         }
 
         final String basePath = getTestPath();
+        final int dataBlockSize = 1 << 26;
 
-        final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-        int dataBlockSize = 1 << 26;
-        config.dataBlockSize(dataBlockSize);
-        config.indexBlockSize(dataBlockSize / 4);
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+            .dataBlockSize(dataBlockSize)
+            .indexBlockSize(dataBlockSize / 4)
+            .build();
 
-        final Chronicle chronicle = new IndexedChronicle(basePath, config);
         final ExcerptTailer r = chronicle.createTailer();
 
         // shorten the test for a build server.
@@ -312,7 +315,11 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    final Chronicle c = new IndexedChronicle(basePath, config);
+                    final Chronicle c = ChronicleQueueBuilder.indexed(basePath)
+                        .dataBlockSize(dataBlockSize)
+                        .indexBlockSize(dataBlockSize / 4)
+                        .build();
+
                     final ExcerptAppender w = c.createAppender();
                     for (int i = 0; i < words; i += size) {
                         w.startExcerpt();
@@ -391,7 +398,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         final String basePath1 = getTestPath("-1");
         final String basePath2 = getTestPath("-2");
 
-        final ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 //        config.dataBlockSize(4*1024);
 //        config.indexBlockSize(4 * 1024);
 
@@ -402,7 +408,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath1, config);
+                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).build();
                     final ExcerptAppender w = chronicle.createAppender();
                     for (int i = 0; i < runs; i += size) {
                         w.startExcerpt();
@@ -423,11 +429,11 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             @Override
             public void run() {
                 try {
-                    IndexedChronicle chronicle = new IndexedChronicle(basePath1, config);
+                    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath1).build();
                     final ExcerptTailer r = chronicle.createTailer();
-                    IndexedChronicle chronicle2 = null;
+                    Chronicle chronicle2 = null;
                     try {
-                        chronicle2 = new IndexedChronicle(basePath2, config);
+                        chronicle2 = ChronicleQueueBuilder.indexed(basePath2).build();
                     } catch (FileNotFoundException e) {
                         System.in.read();
                     }
@@ -452,7 +458,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         }, "t2");
         t2.start();
 
-        final IndexedChronicle chronicle = new IndexedChronicle(basePath2, config);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath2).build();
         final ExcerptTailer r = chronicle.createTailer();
 
         for (int i = 0; i < runs; i += size) {
@@ -483,10 +489,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
 
     @Test
     public void testOneAtATime() throws IOException {
-        final ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.indexBlockSize(128); // very small
-        config.dataBlockSize(128);  // very small
-
         final String basePath = getTestPath();
         final File indexFile = new File(basePath + ".index");
 
@@ -495,7 +497,12 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             //    System.out.println("i: " + i);
 
             long indexFileSize = indexFile.length();
-            final Chronicle chronicle = new IndexedChronicle(basePath, config);
+            final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+                .test()
+                .indexBlockSize(128)
+                .dataBlockSize(128)
+                .build();
+
             assertEquals("Index should not grow on open (i=" + i + ")", indexFileSize, indexFile.length());
 
             if (i == 0) {
@@ -556,7 +563,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     public void testFindRange() throws IOException {
         final String basePath = getTestPath();
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         try {
             ExcerptAppender appender = chronicle.createAppender();
             List<Integer> ints = new ArrayList<Integer>();
@@ -627,7 +634,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     @Test
     public void testParseLines() throws IOException {
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender appender = chronicle.createAppender();

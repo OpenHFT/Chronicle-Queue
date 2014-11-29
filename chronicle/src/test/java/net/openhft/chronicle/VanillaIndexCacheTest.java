@@ -38,8 +38,8 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache, 32, false);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
@@ -88,8 +88,8 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
-        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 10 + 3, dateCache, 32, false);
 
         final int cycle = (int) (System.currentTimeMillis() / 1000);
 
@@ -126,10 +126,10 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final DateCache dateCache = new DateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
 
         // Use a small index file size so that the test frequently generates new index files
-        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 5, dateCache);
+        final VanillaIndexCache cache = new VanillaIndexCache(baseDir, 5, dateCache, 32, false);
 
         final int cycle = (int) (System.currentTimeMillis() / 1000);
         final int numberOfTasks = 2;

@@ -18,9 +18,7 @@
 
 package vanilla.java.intserver;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import vanilla.java.intserver.api.C2SWriter;
 import vanilla.java.intserver.api.IClient;
@@ -36,12 +34,12 @@ public class ClientMain {
 
         String c2sPath = tmp + "/demo/c2s";
         ChronicleTools.deleteDirOnExit(c2sPath);
-        IndexedChronicle c2s = new IndexedChronicle(c2sPath);
+        Chronicle c2s = ChronicleQueueBuilder.indexed(c2sPath).build();
         ExcerptAppender appender = c2s.createAppender();
         C2SWriter c2sWriter = new C2SWriter(appender);
 
         String s2cPath = tmp + "/demo/s2c";
-        IndexedChronicle s2c = new IndexedChronicle(s2cPath);
+        Chronicle s2c = ChronicleQueueBuilder.indexed(s2cPath).build();
         ExcerptTailer tailer = s2c.createTailer();
         final AtomicInteger received = new AtomicInteger();
         S2CReader s2cReader = new S2CReader(new IClient() {

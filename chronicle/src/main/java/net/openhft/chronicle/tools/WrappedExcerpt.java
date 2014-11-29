@@ -37,1288 +37,1292 @@ import java.util.Map;
  * @author peter.lawrey
  */
 public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
-    protected ExcerptTailer tailer;
-    protected ExcerptAppender appender;
-    protected ExcerptCommon common;
-    protected Excerpt excerpt;
+    protected ExcerptTailer wrappedTailer;
+    protected ExcerptAppender wrappedAppender;
+    protected ExcerptCommon wrappedCommon;
+    protected Excerpt wrappedExcerpt;
 
     public WrappedExcerpt(ExcerptCommon excerptCommon) {
         setExcerpt(excerptCommon);
     }
 
     protected void setExcerpt(ExcerptCommon excerptCommon) {
-        tailer = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
-        appender = excerptCommon instanceof ExcerptAppender ? (ExcerptAppender) excerptCommon : null;
-        excerpt = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
-        common = excerptCommon;
+        wrappedTailer = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
+        wrappedAppender = excerptCommon instanceof ExcerptAppender ? (ExcerptAppender) excerptCommon : null;
+        wrappedExcerpt = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
+        wrappedCommon = excerptCommon;
     }
 
     @Override
     public <E extends Enum<E>> E parseEnum(@NotNull Class<E> eClass, @NotNull StopCharTester tester) {
-        return common.parseEnum(eClass, tester);
+        return wrappedCommon.parseEnum(eClass, tester);
     }
 
     @Override
     public WrappedExcerpt clear() {
-        common.clear();
+        wrappedCommon.clear();
         return this;
     }
 
     @Override
     public void readObject(Object object, int start, int end) {
-        common.readObject(object, start, end);
+        wrappedCommon.readObject(object, start, end);
     }
 
     @Override
     public void writeObject(Object object, int start, int end) {
-        common.writeObject(object, start, end);
+        wrappedCommon.writeObject(object, start, end);
     }
 
     @Override
     public Chronicle chronicle() {
-        return common.chronicle();
+        return wrappedCommon.chronicle();
     }
 
     @Override
     public long size() {
-        return common.size();
+        return wrappedCommon.size();
     }
 
     @Override
     public boolean nextIndex() {
-        return tailer.nextIndex();
+        return wrappedTailer.nextIndex();
     }
 
     @Override
     public boolean index(long index) throws IndexOutOfBoundsException {
-        return excerpt == null ? tailer.index(index) : excerpt.index(index);
+        return wrappedExcerpt == null ? wrappedTailer.index(index) : wrappedExcerpt.index(index);
     }
 
     @Override
     public void startExcerpt() {
-        appender.startExcerpt();
+        wrappedAppender.startExcerpt();
     }
 
     @Override
     public void startExcerpt(long capacity) {
-        appender.startExcerpt(capacity);
+        wrappedAppender.startExcerpt(capacity);
     }
 
     @Override
     public void addPaddedEntry() {
-        appender.addPaddedEntry();
+        wrappedAppender.addPaddedEntry();
     }
 
     @Override
     public boolean nextSynchronous() {
-        return appender.nextSynchronous();
+        return wrappedAppender.nextSynchronous();
     }
 
     @Override
     public void nextSynchronous(boolean nextSynchronous) {
-        appender.nextSynchronous();
+        wrappedAppender.nextSynchronous();
     }
 
     @Override
     public void finish() {
-        common.finish();
+        wrappedCommon.finish();
     }
 
     @Override
     public long index() {
-        return common.index();
+        return wrappedCommon.index();
     }
 
     @Override
     public long position() {
-        return common.position();
+        return wrappedCommon.position();
     }
 
     @Override
     public Boolean parseBoolean(@NotNull StopCharTester tester) {
-        return common.parseBoolean(tester);
+        return wrappedCommon.parseBoolean(tester);
     }
 
     @Override
     public long capacity() {
-        return common.capacity();
+        return wrappedCommon.capacity();
     }
 
     @Override
     public long remaining() {
-        return common.remaining();
+        return wrappedCommon.remaining();
     }
 
     @Override
     public void readFully(@NotNull byte[] bytes) {
-        common.readFully(bytes);
+        wrappedCommon.readFully(bytes);
     }
 
     @Override
     public int skipBytes(int n) {
-        return common.skipBytes(n);
+        return wrappedCommon.skipBytes(n);
     }
 
     @Override
     public void readFully(@NotNull byte[] b, int off, int len) {
-        common.readFully(b, off, len);
+        wrappedCommon.readFully(b, off, len);
     }
 
     @Override
     public boolean readBoolean() {
-        return common.readBoolean();
+        return wrappedCommon.readBoolean();
     }
 
     @Override
     public boolean readBoolean(long offset) {
-        return common.readBoolean(offset);
+        return wrappedCommon.readBoolean(offset);
     }
 
     @Override
     public int readUnsignedByte() {
-        return common.readUnsignedByte();
+        return wrappedCommon.readUnsignedByte();
     }
 
     @Override
     public int readUnsignedByte(long offset) {
-        return common.readUnsignedByte(offset);
+        return wrappedCommon.readUnsignedByte(offset);
     }
 
     @Override
     public int readUnsignedShort() {
-        return common.readUnsignedShort();
+        return wrappedCommon.readUnsignedShort();
     }
 
     @Override
     public int readUnsignedShort(long offset) {
-        return common.readUnsignedShort(offset);
+        return wrappedCommon.readUnsignedShort(offset);
     }
 
     @Override
     public String readLine() {
-        return common.readLine();
+        return wrappedCommon.readLine();
     }
 
     @NotNull
     @Override
     public String readUTF() {
-        return common.readUTF();
+        return wrappedCommon.readUTF();
     }
 
     @Nullable
     @Override
     public String readUTFΔ() {
-        return common.readUTFΔ();
+        return wrappedCommon.readUTFΔ();
     }
 
     @Nullable
     @Override
     public String readUTFΔ(long offset) throws IllegalStateException {
-        return common.readUTFΔ(offset);
+        return wrappedCommon.readUTFΔ(offset);
     }
 
     @Override
     public boolean readUTFΔ(@NotNull StringBuilder stringBuilder) {
-        return common.readUTFΔ(stringBuilder);
+        return wrappedCommon.readUTFΔ(stringBuilder);
     }
 
     @NotNull
     @Override
     public String parseUTF(@NotNull StopCharTester tester) {
-        return common.parseUTF(tester);
+        return wrappedCommon.parseUTF(tester);
     }
 
     @Override
     public void parseUTF(@NotNull StringBuilder builder, @NotNull StopCharTester tester) {
-        common.parseUTF(builder, tester);
+        wrappedCommon.parseUTF(builder, tester);
     }
 
     @Override
     public short readCompactShort() {
-        return common.readCompactShort();
+        return wrappedCommon.readCompactShort();
     }
 
     @Override
     public int readCompactUnsignedShort() {
-        return common.readCompactUnsignedShort();
+        return wrappedCommon.readCompactUnsignedShort();
     }
 
     @Override
     public int readInt24() {
-        return common.readInt24();
+        return wrappedCommon.readInt24();
     }
 
     @Override
     public int readInt24(long offset) {
-        return common.readInt24(offset);
+        return wrappedCommon.readInt24(offset);
     }
 
     @Override
     public long readUnsignedInt() {
-        return common.readUnsignedInt();
+        return wrappedCommon.readUnsignedInt();
     }
 
     @Override
     public long readUnsignedInt(long offset) {
-        return common.readUnsignedInt(offset);
+        return wrappedCommon.readUnsignedInt(offset);
     }
 
     @Override
     public int readCompactInt() {
-        return common.readCompactInt();
+        return wrappedCommon.readCompactInt();
     }
 
     @Override
     public long readCompactUnsignedInt() {
-        return common.readCompactUnsignedInt();
+        return wrappedCommon.readCompactUnsignedInt();
     }
 
     @Override
     public long readInt48() {
-        return common.readInt48();
+        return wrappedCommon.readInt48();
     }
 
     @Override
     public long readInt48(long offset) {
-        return common.readInt48(offset);
+        return wrappedCommon.readInt48(offset);
     }
 
     @Override
     public long readCompactLong() {
-        return common.readCompactLong();
+        return wrappedCommon.readCompactLong();
     }
 
     @Override
     public long readStopBit() {
-        return common.readStopBit();
+        return wrappedCommon.readStopBit();
     }
 
     @Override
     public double readCompactDouble() {
-        return common.readCompactDouble();
+        return wrappedCommon.readCompactDouble();
     }
 
     @Override
     public void read(@NotNull ByteBuffer bb) {
-        common.read(bb);
+        wrappedCommon.read(bb);
     }
 
     @Override
     public void write(byte[] bytes) {
-        common.write(bytes);
-    }    @Override
-    public void write(char[] chars) {
-        common.write(chars);
+        wrappedCommon.write(bytes);
+    }
+
+    @Override
+    public void write(char[] bytes) {
+        wrappedCommon.write(bytes);
     }
 
     @Override
     public void write(@NotNull char[] data, int off, int len) {
-        write(data, off, len);
+        wrappedCommon.write(data, off, len);
     }
 
     @Override
     public ByteBuffer sliceAsByteBuffer(@Nullable ByteBuffer toReuse) {
-        return common.sliceAsByteBuffer(toReuse);
+        return wrappedCommon.sliceAsByteBuffer(toReuse);
     }
 
     @Override
     public void readFully(@NotNull char[] data) {
-common.readFully(data);
+        wrappedCommon.readFully(data);
     }
 
     @Override
     public void readFully(@NotNull char[] data, int off, int len) {
-common.readFully(data, off, len);
+        wrappedCommon.readFully(data, off, len);
     }
 
     @Override
     public void writeChars(@NotNull CharSequence cs) {
-        common.writeChars(cs);
+        wrappedCommon.writeChars(cs);
     }
 
     @Override
     public void writeBoolean(boolean v) {
-        common.writeBoolean(v);
+        wrappedCommon.writeBoolean(v);
     }
 
     @Override
     public void writeBoolean(long offset, boolean v) {
-        common.writeBoolean(offset, v);
+        wrappedCommon.writeBoolean(offset, v);
     }
 
     @Override
     public void writeBytes(@NotNull String s) {
-        common.writeBytes(s);
+        wrappedCommon.writeBytes(s);
     }
 
     @Override
     public void writeChars(@NotNull String s) {
-        common.writeChars(s);
+        wrappedCommon.writeChars(s);
     }
 
     @Override
     public void writeUTF(@NotNull String s) {
-        common.writeUTF(s);
+        wrappedCommon.writeUTF(s);
     }
 
     @Override
     public void writeUTFΔ(CharSequence str) {
-        common.writeUTFΔ(str);
+        wrappedCommon.writeUTFΔ(str);
     }
 
     @Override
     public void writeUTFΔ(long offset, int maxSize, @Nullable CharSequence s) throws IllegalStateException {
-        common.writeUTFΔ(offset, maxSize, s);
+        wrappedCommon.writeUTFΔ(offset, maxSize, s);
     }
 
     @Override
     public void writeByte(int v) {
-        common.writeByte(v);
+        wrappedCommon.writeByte(v);
     }
 
     @Override
     public void writeUnsignedByte(int v) {
-        common.writeUnsignedByte(v);
+        wrappedCommon.writeUnsignedByte(v);
     }
 
     @Override
     public void writeUnsignedByte(long offset, int v) {
-        common.writeUnsignedByte(offset, v);
+        wrappedCommon.writeUnsignedByte(offset, v);
     }
 
     @Override
     public void write(long offset, byte[] bytes) {
-        common.write(offset, bytes);
+        wrappedCommon.write(offset, bytes);
     }
 
     @Override
     public void write(byte[] bytes, int off, int len) {
-        common.write(bytes, off, len);
+        wrappedCommon.write(bytes, off, len);
     }
 
     @Override
     public void writeUnsignedShort(int v) {
-        common.writeUnsignedShort(v);
+        wrappedCommon.writeUnsignedShort(v);
     }
 
     @Override
     public void writeUnsignedShort(long offset, int v) {
-        common.writeUnsignedShort(offset, v);
+        wrappedCommon.writeUnsignedShort(offset, v);
     }
 
     @Override
     public void writeCompactShort(int v) {
-        common.writeCompactShort(v);
+        wrappedCommon.writeCompactShort(v);
     }
 
     @Override
     public void writeCompactUnsignedShort(int v) {
-        common.writeCompactUnsignedShort(v);
+        wrappedCommon.writeCompactUnsignedShort(v);
     }
 
     @Override
     public void writeInt24(int v) {
-        common.writeInt24(v);
+        wrappedCommon.writeInt24(v);
     }
 
     @Override
     public void writeInt24(long offset, int v) {
-        common.writeInt24(offset, v);
+        wrappedCommon.writeInt24(offset, v);
     }
 
     @Override
     public void writeUnsignedInt(long v) {
-        common.writeUnsignedInt(v);
+        wrappedCommon.writeUnsignedInt(v);
     }
 
     @Override
     public void writeUnsignedInt(long offset, long v) {
-        common.writeUnsignedInt(offset, v);
+        wrappedCommon.writeUnsignedInt(offset, v);
     }
 
     @Override
     public void writeCompactInt(int v) {
-        common.writeCompactInt(v);
+        wrappedCommon.writeCompactInt(v);
     }
 
     @Override
     public void writeCompactUnsignedInt(long v) {
-        common.writeCompactUnsignedInt(v);
+        wrappedCommon.writeCompactUnsignedInt(v);
     }
 
     @Override
     public void writeInt48(long v) {
-        common.writeInt48(v);
+        wrappedCommon.writeInt48(v);
     }
 
     @Override
     public void writeInt48(long offset, long v) {
-        common.writeInt48(offset, v);
+        wrappedCommon.writeInt48(offset, v);
     }
 
     @Override
     public void writeCompactLong(long v) {
-        common.writeCompactLong(v);
+        wrappedCommon.writeCompactLong(v);
     }
 
     @Override
     public void writeCompactDouble(double v) {
-        common.writeCompactDouble(v);
+        wrappedCommon.writeCompactDouble(v);
     }
 
     @Override
     public void write(@NotNull ByteBuffer bb) {
-        common.write(bb);
+        wrappedCommon.write(bb);
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(@NotNull CharSequence s) {
-        common.append(s);
+        wrappedCommon.append(s);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(@NotNull CharSequence s, int start, int end) {
-        common.append(s, start, end);
+        wrappedCommon.append(s, start, end);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(@Nullable Enum value) {
-        common.append(value);
+        wrappedCommon.append(value);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(boolean b) {
-        common.append(b);
+        wrappedCommon.append(b);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(char c) {
-        common.append(c);
+        wrappedCommon.append(c);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(int num) {
-        common.append(num);
+        wrappedCommon.append(num);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(long num) {
-        common.append(num);
+        wrappedCommon.append(num);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(double d) {
-        common.append(d);
+        wrappedCommon.append(d);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(double d, int precision) {
-        common.append(d, precision);
+        wrappedCommon.append(d, precision);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(@NotNull MutableDecimal md) {
-        common.append(md);
+        wrappedCommon.append(md);
         return this;
     }
 
     @Override
     public double parseDouble() {
-        return common.parseDouble();
+        return wrappedCommon.parseDouble();
     }
 
     @Override
     public long parseLong() {
-        return common.parseLong();
+        return wrappedCommon.parseLong();
     }
 
     @NotNull
     @Override
     public InputStream inputStream() {
-        return common.inputStream();
+        return wrappedCommon.inputStream();
     }
 
     @NotNull
     @Override
     public OutputStream outputStream() {
-        return common.outputStream();
+        return wrappedCommon.outputStream();
     }
 
     @Override
     public ObjectSerializer objectSerializer() {
-        return common.objectSerializer();
+        return wrappedCommon.objectSerializer();
     }
 
     @Override
     public <E> void writeEnum(E o) {
-        common.writeEnum(o);
+        wrappedCommon.writeEnum(o);
     }
 
     @Override
     public <E> E readEnum(@NotNull Class<E> aClass) {
-        return common.readEnum(aClass);
+        return wrappedCommon.readEnum(aClass);
     }
 
     @Override
     public <K, V> void writeMap(@NotNull Map<K, V> map) {
-        common.writeMap(map);
+        wrappedCommon.writeMap(map);
     }
 
     @Override
     public <K, V> Map<K, V> readMap(@NotNull Map<K, V> map, @NotNull Class<K> kClass, @NotNull Class<V> vClass) {
-        return common.readMap(map, kClass, vClass);
+        return wrappedCommon.readMap(map, kClass, vClass);
     }
 
     @Override
     public byte readByte() {
-        return common.readByte();
+        return wrappedCommon.readByte();
     }
 
     @Override
     public byte readByte(long offset) {
-        return common.readByte(offset);
+        return wrappedCommon.readByte(offset);
     }
 
     @Override
     public short readShort() {
-        return common.readShort();
+        return wrappedCommon.readShort();
     }
 
     @Override
     public short readShort(long offset) {
-        return common.readShort(offset);
+        return wrappedCommon.readShort(offset);
     }
 
     @Override
     public char readChar() {
-        return common.readChar();
+        return wrappedCommon.readChar();
     }
 
     @Override
     public char readChar(long offset) {
-        return common.readChar(offset);
+        return wrappedCommon.readChar(offset);
     }
 
     @Override
     public int readInt() {
-        return common.readInt();
+        return wrappedCommon.readInt();
     }
 
     @Override
     public int readInt(long offset) {
-        return common.readInt(offset);
+        return wrappedCommon.readInt(offset);
     }
 
     @Override
     public long readLong() {
-        return common.readLong();
+        return wrappedCommon.readLong();
     }
 
     @Override
     public long readLong(long offset) {
-        return common.readLong(offset);
+        return wrappedCommon.readLong(offset);
     }
 
     @Override
     public float readFloat() {
-        return common.readFloat();
+        return wrappedCommon.readFloat();
     }
 
     @Override
     public float readFloat(long offset) {
-        return common.readFloat(offset);
+        return wrappedCommon.readFloat(offset);
     }
 
     @Override
     public double readDouble() {
-        return common.readDouble();
+        return wrappedCommon.readDouble();
     }
 
     @Override
     public double readDouble(long offset) {
-        return common.readDouble(offset);
+        return wrappedCommon.readDouble(offset);
     }
 
     @Override
     public void write(int b) {
-        common.write(b);
+        wrappedCommon.write(b);
     }
 
     @Override
     public void writeByte(long offset, int b) {
-        common.writeByte(offset, b);
+        wrappedCommon.writeByte(offset, b);
     }
 
     @Override
     public void writeShort(int v) {
-        common.writeShort(v);
+        wrappedCommon.writeShort(v);
     }
 
     @Override
     public void writeShort(long offset, int v) {
-        common.writeShort(offset, v);
+        wrappedCommon.writeShort(offset, v);
     }
 
     @Override
     public void writeChar(int v) {
-        common.writeChar(v);
+        wrappedCommon.writeChar(v);
     }
 
     @Override
     public void writeChar(long offset, int v) {
-        common.writeChar(offset, v);
+        wrappedCommon.writeChar(offset, v);
     }
 
     @Override
     public void writeInt(int v) {
-        common.writeInt(v);
+        wrappedCommon.writeInt(v);
     }
 
     @Override
     public void writeInt(long offset, int v) {
-        common.writeInt(offset, v);
+        wrappedCommon.writeInt(offset, v);
     }
 
     @Override
     public void writeLong(long v) {
-        common.writeLong(v);
+        wrappedCommon.writeLong(v);
     }
 
     @Override
     public void writeLong(long offset, long v) {
-        common.writeLong(offset, v);
+        wrappedCommon.writeLong(offset, v);
     }
 
     @Override
     public void writeStopBit(long n) {
-        common.writeStopBit(n);
+        wrappedCommon.writeStopBit(n);
     }
 
     @Override
     public void writeFloat(float v) {
-        common.writeFloat(v);
+        wrappedCommon.writeFloat(v);
     }
 
     @Override
     public void writeFloat(long offset, float v) {
-        common.writeFloat(offset, v);
+        wrappedCommon.writeFloat(offset, v);
     }
 
     @Override
     public void writeDouble(double v) {
-        common.writeDouble(v);
+        wrappedCommon.writeDouble(v);
     }
 
     @Override
     public void writeDouble(long offset, double v) {
-        common.writeDouble(offset, v);
+        wrappedCommon.writeDouble(offset, v);
     }
 
     @Nullable
     @Override
     public Object readObject() {
-        return common.readObject();
+        return wrappedCommon.readObject();
     }
 
     @Override
     public <T> T readObject(Class<T> tClass) throws IllegalStateException {
-        return common.readObject(tClass);
+        return wrappedCommon.readObject(tClass);
     }
 
     @Override
     public int read() {
-        return common.read();
+        return wrappedCommon.read();
     }
 
     @Override
     public int read(@NotNull byte[] bytes) {
-        return common.read(bytes);
+        return wrappedCommon.read(bytes);
     }
 
     @Override
     public int read(@NotNull byte[] bytes, int off, int len) {
-        return common.read(bytes, off, len);
+        return wrappedCommon.read(bytes, off, len);
     }
 
     @Override
     public long skip(long n) {
-        return common.skip(n);
+        return wrappedCommon.skip(n);
     }
 
     @Override
     public int available() {
-        return common.available();
+        return wrappedCommon.available();
     }
 
     @Override
     public void close() {
         try {
-            common.close();
+            wrappedCommon.close();
         } catch (Exception ignored) {
         }
     }
 
     @Override
     public void writeObject(Object obj) {
-        common.writeObject(obj);
+        wrappedCommon.writeObject(obj);
     }
 
     @Override
     public void flush() {
-        common.flush();
+        wrappedCommon.flush();
     }
 
     @Override
     public <E> void writeList(@NotNull Collection<E> list) {
-        common.writeList(list);
+        wrappedCommon.writeList(list);
     }
 
     @Override
     public <E> void readList(@NotNull Collection<E> list, @NotNull Class<E> eClass) {
-        common.readList(list, eClass);
+        wrappedCommon.readList(list, eClass);
     }
 
     @Override
     public long lastWrittenIndex() {
-        return common.lastWrittenIndex();
+        return wrappedCommon.lastWrittenIndex();
     }
 
     @Override
     public boolean stepBackAndSkipTo(@NotNull StopCharTester tester) {
-        return common.stepBackAndSkipTo(tester);
+        return wrappedCommon.stepBackAndSkipTo(tester);
     }
 
     @Override
     public boolean skipTo(@NotNull StopCharTester tester) {
-        return common.skipTo(tester);
+        return wrappedCommon.skipTo(tester);
     }
 
     @NotNull
     @Override
     public MutableDecimal parseDecimal(@NotNull MutableDecimal decimal) {
-        return common.parseDecimal(decimal);
+        return wrappedCommon.parseDecimal(decimal);
     }
 
     @NotNull
     @Override
     public Excerpt toStart() {
-        if (tailer == null)
-            excerpt.toStart();
-        else
-            tailer.toStart();
+        if (wrappedTailer == null) {
+            wrappedExcerpt.toStart();
+        } else {
+            wrappedTailer.toStart();
+        }
+
         return this;
     }
 
     @NotNull
     @Override
     public WrappedExcerpt toEnd() {
-        common.toEnd();
+        wrappedCommon.toEnd();
         return this;
     }
 
     @Override
     public boolean isFinished() {
-        return common.isFinished();
+        return wrappedCommon.isFinished();
     }
 
     @Override
     public boolean wasPadding() {
-        return common.wasPadding();
+        return wrappedCommon.wasPadding();
     }
 
     @NotNull
     @Override
     public ByteStringAppender appendTimeMillis(long timeInMS) {
-        common.appendTimeMillis(timeInMS);
+        wrappedCommon.appendTimeMillis(timeInMS);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender appendDateMillis(long timeInMS) {
-        common.appendDateMillis(timeInMS);
+        wrappedCommon.appendDateMillis(timeInMS);
         return this;
     }
 
     @NotNull
     @Override
     public ByteStringAppender appendDateTimeMillis(long timeInMS) {
-        common.appendDateTimeMillis(timeInMS);
+        wrappedCommon.appendDateTimeMillis(timeInMS);
         return this;
     }
 
     @NotNull
     @Override
     public <E> ByteStringAppender append(@NotNull Iterable<E> list, @NotNull CharSequence seperator) {
-        common.append(list, seperator);
+        wrappedCommon.append(list, seperator);
         return this;
     }
 
     @Override
     public int readVolatileInt() {
-        return common.readVolatileInt();
+        return wrappedCommon.readVolatileInt();
     }
 
     @Override
     public int readVolatileInt(long offset) {
-        return common.readVolatileInt(offset);
+        return wrappedCommon.readVolatileInt(offset);
     }
 
     @Override
     public long readVolatileLong() {
-        return common.readVolatileLong();
+        return wrappedCommon.readVolatileLong();
     }
 
     @Override
     public long readVolatileLong(long offset) {
-        return common.readVolatileLong(offset);
+        return wrappedCommon.readVolatileLong(offset);
     }
 
     @Override
     public void writeOrderedInt(int v) {
-        common.writeOrderedInt(v);
+        wrappedCommon.writeOrderedInt(v);
     }
 
     @Override
     public void writeOrderedInt(long offset, int v) {
-        common.writeOrderedInt(offset, v);
+        wrappedCommon.writeOrderedInt(offset, v);
     }
 
     @Override
     public boolean compareAndSwapInt(long offset, int expected, int x) {
-        return common.compareAndSwapInt(offset, expected, x);
+        return wrappedCommon.compareAndSwapInt(offset, expected, x);
     }
 
     @Override
     public int getAndAdd(long offset, int delta) {
-        return common.getAndAdd(offset, delta);
+        return wrappedCommon.getAndAdd(offset, delta);
     }
 
     @Override
     public int addAndGetInt(long offset, int delta) {
-        return common.addAndGetInt(offset, delta);
+        return wrappedCommon.addAndGetInt(offset, delta);
     }
 
     @Override
     public void writeOrderedLong(long v) {
-        common.writeOrderedLong(v);
+        wrappedCommon.writeOrderedLong(v);
     }
 
     @Override
     public void writeOrderedLong(long offset, long v) {
-        common.writeOrderedLong(offset, v);
+        wrappedCommon.writeOrderedLong(offset, v);
     }
 
     @Override
     public boolean compareAndSwapLong(long offset, long expected, long x) {
-        return common.compareAndSwapLong(offset, expected, x);
+        return wrappedCommon.compareAndSwapLong(offset, expected, x);
     }
 
     @Override
     public WrappedExcerpt position(long position) {
-        common.position(position);
+        wrappedCommon.position(position);
         return this;
     }
 
     @NotNull
     @Override
     public ByteOrder byteOrder() {
-        return common.byteOrder();
+        return wrappedCommon.byteOrder();
     }
 
     @Override
     public void checkEndOfBuffer() throws IndexOutOfBoundsException {
-        common.checkEndOfBuffer();
+        wrappedCommon.checkEndOfBuffer();
     }
 
     @Override
     public boolean tryLockInt(long offset) {
-        return common.tryLockInt(offset);
+        return wrappedCommon.tryLockInt(offset);
     }
 
     @Override
     public boolean tryLockNanosInt(long offset, long nanos) {
-        return common.tryLockNanosInt(offset, nanos);
+        return wrappedCommon.tryLockNanosInt(offset, nanos);
     }
 
     @Override
     public void busyLockInt(long offset) throws InterruptedException, IllegalStateException {
-        common.busyLockInt(offset);
+        wrappedCommon.busyLockInt(offset);
     }
 
     @Override
     public void unlockInt(long offset) throws IllegalStateException {
-        common.unlockInt(offset);
+        wrappedCommon.unlockInt(offset);
     }
 
     @Override
     public boolean tryLockLong(long offset) {
-        return common.tryLockLong(offset);
+        return wrappedCommon.tryLockLong(offset);
     }
 
     @Override
     public boolean tryLockNanosLong(long offset, long nanos) {
-        return common.tryLockNanosLong(offset, nanos);
+        return wrappedCommon.tryLockNanosLong(offset, nanos);
     }
 
     @Override
     public void busyLockLong(long offset) throws InterruptedException, IllegalStateException {
-        common.busyLockLong(offset);
+        wrappedCommon.busyLockLong(offset);
     }
 
     @Override
     public void unlockLong(long offset) throws IllegalStateException {
-        common.unlockLong(offset);
+        wrappedCommon.unlockLong(offset);
     }
 
     @Override
     public float readVolatileFloat(long offset) {
-        return common.readVolatileFloat(offset);
+        return wrappedCommon.readVolatileFloat(offset);
     }
 
     @Override
     public double readVolatileDouble(long offset) {
-        return common.readVolatileDouble(offset);
+        return wrappedCommon.readVolatileDouble(offset);
     }
 
     @Override
     public void writeOrderedFloat(long offset, float v) {
-        common.writeOrderedFloat(offset, v);
+        wrappedCommon.writeOrderedFloat(offset, v);
     }
 
     @Override
     public void writeOrderedDouble(long offset, double v) {
-        common.writeOrderedDouble(offset, v);
+        wrappedCommon.writeOrderedDouble(offset, v);
     }
 
     @Override
     public byte addByte(long offset, byte b) {
-        return common.addByte(offset, b);
+        return wrappedCommon.addByte(offset, b);
     }
 
     @Override
     public int addUnsignedByte(long offset, int i) {
-        return common.addUnsignedByte(offset, i);
+        return wrappedCommon.addUnsignedByte(offset, i);
     }
 
     @Override
     public short addShort(long offset, short s) {
-        return common.addShort(offset, s);
+        return wrappedCommon.addShort(offset, s);
     }
 
     @Override
     public int addUnsignedShort(long offset, int i) {
-        return common.addUnsignedShort(offset, i);
+        return wrappedCommon.addUnsignedShort(offset, i);
     }
 
     @Override
     public int addInt(long offset, int i) {
-        return common.addInt(offset, i);
+        return wrappedCommon.addInt(offset, i);
     }
 
     @Override
     public long addUnsignedInt(long offset, long i) {
-        return common.addUnsignedInt(offset, i);
+        return wrappedCommon.addUnsignedInt(offset, i);
     }
 
     @Override
     public long addLong(long offset, long i) {
-        return common.addLong(offset, i);
+        return wrappedCommon.addLong(offset, i);
     }
 
     @Override
     public float addFloat(long offset, float f) {
-        return common.addFloat(offset, f);
+        return wrappedCommon.addFloat(offset, f);
     }
 
     @Override
     public double addDouble(long offset, double d) {
-        return common.addDouble(offset, d);
+        return wrappedCommon.addDouble(offset, d);
     }
 
     @Override
     public int addAtomicInt(long offset, int i) {
-        return common.addAtomicInt(offset, i);
+        return wrappedCommon.addAtomicInt(offset, i);
     }
 
     @Override
     public long addAtomicLong(long offset, long l) {
-        return common.addAtomicLong(offset, l);
+        return wrappedCommon.addAtomicLong(offset, l);
     }
 
     @Override
     public float addAtomicFloat(long offset, float f) {
-        return common.addAtomicFloat(offset, f);
+        return wrappedCommon.addAtomicFloat(offset, f);
     }
 
     @Override
     public double addAtomicDouble(long offset, double d) {
-        return common.addAtomicDouble(offset, d);
+        return wrappedCommon.addAtomicDouble(offset, d);
     }
 
     @Override
     public long findMatch(@NotNull ExcerptComparator comparator) {
-        return excerpt.findMatch(comparator);
+        return wrappedExcerpt.findMatch(comparator);
     }
 
     @Override
     public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
-        excerpt.findRange(startEnd, comparator);
+        wrappedExcerpt.findRange(startEnd, comparator);
     }
 
     @NotNull
     @Override
     public ByteStringAppender append(long l, int base) {
-        common.append(l, base);
+        wrappedCommon.append(l, base);
         return this;
     }
 
     @Override
     public long parseLong(int base) {
-        return common.parseLong(base);
+        return wrappedCommon.parseLong(base);
     }
 
     @Override
     public void write(RandomDataInput bytes, long position, long length) {
-        common.write(bytes, position, length);
+        wrappedCommon.write(bytes, position, length);
     }
 
     @Override
     public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
-        common.readMarshallable(in);
+        wrappedCommon.readMarshallable(in);
     }
 
     @Override
     public void writeMarshallable(@NotNull Bytes out) {
-        common.writeMarshallable(out);
+        wrappedCommon.writeMarshallable(out);
     }
 
     @Override
     public int length() {
-        return common.length();
+        return wrappedCommon.length();
     }
 
     @Override
     public char charAt(int index) {
-        return common.charAt(index);
+        return wrappedCommon.charAt(index);
     }
 
     @Override
     public CharSequence subSequence(int start, int end) {
-        return common.subSequence(start, end);
+        return wrappedCommon.subSequence(start, end);
     }
 
     @Override
     public Bytes flip() {
-        return common.flip();
+        return wrappedCommon.flip();
     }
 
     @NotNull
     @Override
     public <T> T readInstance(@NotNull Class<T> objClass, T obj) {
-        return common.readInstance(objClass, obj);
+        return wrappedCommon.readInstance(objClass, obj);
     }
 
     @Override
     public boolean startsWith(RandomDataInput keyBytes) {
-        return common.startsWith(keyBytes);
+        return wrappedCommon.startsWith(keyBytes);
     }
 
     @Override
     public void write(RandomDataInput bytes) {
-        common.write(bytes);
+        wrappedCommon.write(bytes);
     }
 
     @Override
     public <OBJ> void writeInstance(@NotNull Class<OBJ> objClass, @NotNull OBJ obj) {
-        common.writeInstance(objClass, obj);
+        wrappedCommon.writeInstance(objClass, obj);
     }
 
     @Override
     public Bytes zeroOut() {
-        common.zeroOut();
+        wrappedCommon.zeroOut();
         return this;
     }
 
     @Override
     public Bytes zeroOut(long start, long end, boolean ifNotZero) {
-        common.zeroOut(start, end, ifNotZero);
+        wrappedCommon.zeroOut(start, end, ifNotZero);
         return this;
     }
 
     @Override
     public Bytes zeroOut(long start, long end) {
-        common.zeroOut(start, end);
+        wrappedCommon.zeroOut(start, end);
         return this;
     }
 
     @Override
     public long limit() {
-        return common.limit();
+        return wrappedCommon.limit();
     }
 
     @Override
     public Bytes limit(long limit) {
-        common.limit(limit);
+        wrappedCommon.limit(limit);
         return this;
     }
 
     @Override
     public Bytes load() {
-        common.load();
+        wrappedCommon.load();
         return this;
     }
 
     @Override
     public Bytes slice() {
-        return common.slice();
+        return wrappedCommon.slice();
     }
 
     @Override
     public Bytes slice(long offset, long length) {
-        return common.slice(offset, length);
+        return wrappedCommon.slice(offset, length);
     }
 
     @Override
     public Bytes bytes() {
-        return common.bytes();
+        return wrappedCommon.bytes();
     }
 
     @Override
     public Bytes bytes(long offset, long length) {
-        return common.bytes(offset, length);
+        return wrappedCommon.bytes(offset, length);
     }
 
     @Override
     public long address() {
-        return common.address();
+        return wrappedCommon.address();
     }
 
     @Override
     public void free() {
-        common.free();
+        wrappedCommon.free();
     }
 
     @Override
     public void resetLockInt(long offset) {
-        common.resetLockInt(offset);
+        wrappedCommon.resetLockInt(offset);
     }
 
     @Override
     public int threadIdForLockInt(long offset) {
-        return common.threadIdForLockInt(offset);
+        return wrappedCommon.threadIdForLockInt(offset);
     }
 
     @Override
     public void resetLockLong(long offset) {
-        common.resetLockLong(offset);
+        wrappedCommon.resetLockLong(offset);
     }
 
     @Override
     public long threadIdForLockLong(long offset) {
-        return common.threadIdForLockLong(offset);
+        return wrappedCommon.threadIdForLockLong(offset);
     }
 
     @Override
     public void reserve() {
-        common.reserve();
+        wrappedCommon.reserve();
     }
 
     @Override
     public void release() {
-        common.release();
+        wrappedCommon.release();
     }
 
     @Override
     public int refCount() {
-        return common.refCount();
+        return wrappedCommon.refCount();
     }
 
     @Override
     public void toString(Appendable sb, long start, long position, long end) {
-        common.toString(sb, start, position, end);
+        wrappedCommon.toString(sb, start, position, end);
     }
 
     @Override
     public void alignPositionAddr(int alignment) {
-        common.alignPositionAddr(alignment);
+        wrappedCommon.alignPositionAddr(alignment);
     }
 
     @Override
     public void asString(Appendable appendable) {
-        common.asString(appendable);
+        wrappedCommon.asString(appendable);
     }
 
     @Override
     public CharSequence asString() {
-        return common.asString();
+        return wrappedCommon.asString();
     }
 
     @Override
     public void selfTerminating(boolean selfTerminate) {
-        common.selfTerminating(selfTerminate);
+        wrappedCommon.selfTerminating(selfTerminate);
     }
 
     @Override
     public boolean selfTerminating() {
-        return common.selfTerminating();
+        return wrappedCommon.selfTerminating();
     }
 
     @Override
     public int readUnsignedByteOrThrow() throws BufferUnderflowException {
-        return common.readUnsignedByteOrThrow();
+        return wrappedCommon.readUnsignedByteOrThrow();
     }
 
     public String toDebugString() {
-        return common.toDebugString();
+        return wrappedCommon.toDebugString();
     }
 
     @Override
     public boolean compareAndSwapDouble(long offset, double expected, double x) {
-        return common.compareAndSwapDouble(offset, expected, x);
+        return wrappedCommon.compareAndSwapDouble(offset, expected, x);
     }
 
     @Override
     public File file() {
-        return common.file();
+        return wrappedCommon.file();
     }
 
     @Override
     public boolean tryRWReadLock(long offset, long timeOutNS) throws IllegalStateException {
-        return common.tryRWReadLock(offset, timeOutNS);
+        return wrappedCommon.tryRWReadLock(offset, timeOutNS);
     }
 
     @Override
     public boolean tryRWWriteLock(long offset, long timeOutNS) throws IllegalStateException {
-        return common.tryRWWriteLock(offset, timeOutNS);
+        return wrappedCommon.tryRWWriteLock(offset, timeOutNS);
     }
 
     @Override
     public void unlockRWReadLock(long offset) throws IllegalStateException {
-        common.unlockRWReadLock(offset);
+        wrappedCommon.unlockRWReadLock(offset);
     }
 
     @Override
     public void unlockRWWriteLock(long offset) throws IllegalStateException {
-        common.unlockRWWriteLock(offset);
+        wrappedCommon.unlockRWWriteLock(offset);
     }
 }

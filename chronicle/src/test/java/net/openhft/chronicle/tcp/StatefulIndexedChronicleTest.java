@@ -19,10 +19,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
@@ -36,21 +35,16 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
  * @author peter.lawrey
  */
-public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
-
-    public static final int PORT = 12345;
+public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
@@ -61,14 +55,20 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 1);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 1);
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+            .bindAddress(BASE_PORT + 1)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+            .connectAddress("localhost", BASE_PORT + 1)
+            .build();
 
-        Thread t = new Thread(new Runnable() {
+        final Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    ExcerptAppender excerpt = source.createAppender();
+                    final ExcerptAppender excerpt = source.createAppender();
                     for (int i = 1; i <= messages; i++) {
                         // use a size which will cause mis-alignment.
                         excerpt.startExcerpt();
@@ -78,6 +78,7 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
                         excerpt.append('\n');
                         excerpt.finish();
                     }
+                    excerpt.close();
                     System.out.println(System.currentTimeMillis() + ": Finished writing messages");
                 } catch (Exception e) {
                     throw new AssertionError(e);
@@ -103,13 +104,14 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
             excerpt.finish();
         }
 
-        sink.close();
-        System.out.println("There were " + count + " InSynk messages");
         t.join();
-
-        source.close();
         long time = System.nanoTime() - start;
+
+        System.out.println("There were " + count + " InSynk messages");
         System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+
+        sink.close();
+        source.close();
 
         assertIndexedClean(basePathSource);
         assertIndexedClean(basePathSink);
@@ -120,8 +122,14 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 2);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 2);
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+            .bindAddress(BASE_PORT + 2)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+            .connectAddress("localhost", BASE_PORT + 2)
+            .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -148,7 +156,7 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -162,8 +170,14 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 3);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 3);
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+            .bindAddress(BASE_PORT + 3)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+            .connectAddress("localhost", BASE_PORT + 3)
+            .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -192,7 +206,7 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
 
         source.close();
@@ -207,8 +221,14 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
-        final Chronicle source = new ChronicleSource(new IndexedChronicle(basePathSource), PORT + 4);
-        final Chronicle sink = new ChronicleSink(new IndexedChronicle(basePathSink), "localhost", PORT + 4);
+        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+            .source()
+            .bindAddress(BASE_PORT + 4)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+            .sink()
+            .connectAddress("localhost", BASE_PORT + 4)
+            .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -236,7 +256,7 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Tailer%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -268,7 +288,7 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.1f us to write and %.1f us to read%n",
-                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 
     // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
@@ -335,72 +355,6 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
             return true;
         }
     }
-/*
-
-    @Test
-    @Ignore
-    public void testOverTCPRolling() throws IOException, InterruptedException {
-        String baseDir = System.getProperty("java.io.tmpdir");
-        String srcBasePath = baseDir + "/IPCTR.testOverTCP.source";
-        ChronicleTools.deleteDirOnExit(srcBasePath);
-        // NOTE: the sink and source must have different chronicle files.
-        // TODO, make more robust.
-        final int messages = 2 * 1000 * 1000;
-        ChronicleConfig config = ChronicleConfig.TEST.clone();
-        config.indexFileExcerpts(512);
-//        config.dataBlockSize(4096);
-//        config.indexBlockSize(4096);
-        final Chronicle source = new ChronicleSource(new RollingChronicle(srcBasePath, config), PORT + 1);
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-//                    PosixJNAAffinity.INSTANCE.setAffinity(1 << 1);
-                    ExcerptAppender excerpt = source.createAppender();
-                    for (int i = 1; i <= messages; i++) {
-                        // use a size which will cause mis-alignment.
-                        excerpt.startExcerpt();
-                        excerpt.writeLong(i);
-                        excerpt.append(' ');
-                        excerpt.append(i);
-                        excerpt.append('\n');
-                        excerpt.finish();
-                    }
-                    System.out.println(System.currentTimeMillis() + ": Finished writing messages");
-                } catch (Exception e) {
-                    throw new AssertionError(e);
-                }
-            }
-        });
-
-//        PosixJNAAffinity.INSTANCE.setAffinity(1 << 2);
-        String snkBasePath = baseDir + "/IPCTR.testOverTCP.sink";
-        ChronicleTools.deleteDirOnExit(snkBasePath);
-        Chronicle sink = new InProcessChronicleSink(new RollingChronicle(snkBasePath, config), "localhost", PORT + 1);
-
-        long start = System.nanoTime();
-        t.start();
-        ExcerptTailer excerpt = sink.createTailer();
-        int count = 0;
-        for (int i = 1; i <= messages; i++) {
-            while (!excerpt.nextIndex())
-                count++;
-            long n = excerpt.readLong();
-            String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
-            if (i != n)
-                assertEquals('\'' + text + '\'', i, n);
-            excerpt.finish();
-            System.out.println(i);
-        }
-        sink.close();
-        System.out.println("There were " + count + " isSync messages");
-        t.join();
-        source.close();
-        long time = System.nanoTime() - start;
-        System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
-    }
-*/
-
 
     static class PriceUpdate implements Externalizable, Serializable {
         private long timeInMicros;
@@ -453,16 +407,30 @@ public class PersistedIndexedChronicleTest extends PersistedChronicleTestBase {
      * @throws IOException
      */
     @Test
-    public void testIndexedJira77() throws IOException{
-        final int BYTES_LENGTH = 66000;
+    public void testIndexedJira77() throws IOException {
         String basePath = getIndexedTestPath();
 
-        Chronicle chronicleSrc = new IndexedChronicle(basePath + "-src");
+        Chronicle chronicleSrc = ChronicleQueueBuilder.indexed(basePath + "-src").build();
         chronicleSrc.clear();
 
-        Chronicle chronicleTarget = new IndexedChronicle(basePath + "-target");
+        Chronicle chronicleTarget = ChronicleQueueBuilder.indexed(basePath + "-target").build();
         chronicleTarget.clear();
 
         testJira77(30100, chronicleSrc, chronicleTarget);
+    }
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira80() throws IOException {
+        String basePath = getIndexedTestPath();
+
+        testJira80(30101,
+            ChronicleQueueBuilder.indexed(basePath + "-master"),
+            ChronicleQueueBuilder.indexed(basePath + "-slave")
+        );
     }
 }

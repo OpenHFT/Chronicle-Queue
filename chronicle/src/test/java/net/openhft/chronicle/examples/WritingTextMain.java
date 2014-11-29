@@ -18,8 +18,9 @@
 
 package net.openhft.chronicle.examples;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -34,7 +35,7 @@ public class WritingTextMain {
             File file = new File(name);
             file.delete();
         }
-        IndexedChronicle chronicle = new IndexedChronicle(basePath);
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
 // write one object
         ExcerptAppender appender = chronicle.createAppender();

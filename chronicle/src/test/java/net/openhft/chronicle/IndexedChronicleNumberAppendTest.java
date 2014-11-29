@@ -44,7 +44,7 @@ public class IndexedChronicleNumberAppendTest extends IndexedChronicleTestBase {
 
     private void timeAppends(@NotNull Class excerptType, Class numType) throws IOException {
         final String basePath = getTestPath(excerptType.getSimpleName());
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender excerpt = chronicle.createAppender();

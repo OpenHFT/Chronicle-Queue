@@ -25,6 +25,8 @@ import net.openhft.lang.model.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -115,7 +117,7 @@ public enum ChronicleTools {
 
     public static void warmup() {
         //noinspection UnusedDeclaration needed to laod class.
-        boolean done = ChronicleWarmup.DONE;
+        boolean done = ChronicleWarmup.Indexed.DONE;
     }
 
     enum DeleteStatic {
@@ -142,36 +144,23 @@ public enum ChronicleTools {
         }
 
     }
-}
 
-class ChronicleWarmup {
-    public static final boolean DONE;
-    private static final int WARMUP_ITER = 200000;
-    private static final String TMP = System.getProperty("java.io.tmpdir");
+    public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
+        if (chronicle instanceof VanillaChronicle) {
+            ((VanillaChronicle) chronicle).checkCounts(min, max);
+        }
+    }
 
-    static {
-        ChronicleConfig cc = ChronicleConfig.DEFAULT.clone();
-        cc.dataBlockSize(64);
-        cc.indexBlockSize(64);
-        String basePath = TMP + "/warmup-" + Math.random();
-        ChronicleTools.deleteOnExit(basePath);
-        try {
-            IndexedChronicle ic = new IndexedChronicle(basePath, cc);
-            ExcerptAppender appender = ic.createAppender();
-            ExcerptTailer tailer = ic.createTailer();
-            for (int i = 0; i < WARMUP_ITER; i++) {
-                appender.startExcerpt();
-                appender.writeInt(i);
-                appender.finish();
-                boolean b = tailer.nextIndex() || tailer.nextIndex();
-                tailer.readInt();
-                tailer.finish();
-            }
-            ic.close();
-            System.gc();
-            DONE = true;
-        } catch (IOException e) {
-            throw new AssertionError();
+    public static ClassLoader getSystemClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
         }
     }
 }

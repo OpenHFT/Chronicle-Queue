@@ -18,10 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import org.junit.Test;
 
 import java.util.Random;
@@ -30,15 +27,23 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBase {
-    @Test
-    public void testPersistedLocalIndexedSink_001() throws Exception {
-        final int port = BASE_PORT + 201;
-        final String basePath = getIndexedTestPath();
+public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase {
 
-        final Chronicle chronicle = new IndexedChronicle(basePath);
-        final ChronicleSource source = new ChronicleSource(chronicle, port);
-        final Chronicle sink = localChronicleSink(chronicle, "localhost", port);
+    @Test
+    public void testPersistedLocalVanillaSink_001() throws Exception {
+        final int port = BASE_PORT + 301;
+        final String basePath = getVanillaTestPath();
+
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
+
+        final Chronicle source = ChronicleQueueBuilder.source(chronicle)
+            .bindAddress("localhost", port)
+            .build();
+        final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
+            .sharedChronicle(true)
+            .connectAddress("localhost",port)
+            .build();
+
         final CountDownLatch latch = new CountDownLatch(5);
         final Random random = new Random();
 
@@ -59,11 +64,12 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
                             appender.finish();
 
                             sleep(10 + random.nextInt(80));
-                        }
-                        appender.close();
-                    } catch (Exception e) {
-                    }
 
+                            appender.close();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             };
 
@@ -73,7 +79,6 @@ public class PersistedLocalIndexedChronicleTest extends PersistedChronicleTestBa
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
-                assertEquals(i - 1, tailer1.index());
                 assertEquals(i, tailer1.readLong());
                 tailer1.finish();
             }

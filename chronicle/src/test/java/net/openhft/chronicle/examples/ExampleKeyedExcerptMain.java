@@ -53,10 +53,10 @@ public class ExampleKeyedExcerptMain {
     };
 
     public ExampleKeyedExcerptMain(String basePath) throws IOException {
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
-//        config.indexBlockSize(4*1024);
-//        config.dataBlockSize(4*1024);
-        chronicle = new IndexedChronicle(basePath, config);
+//      ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
+//      config.indexBlockSize(4*1024);
+//      config.dataBlockSize(4*1024);
+        chronicle =  ChronicleQueueBuilder.indexed(basePath).build();
         tailer = chronicle.createTailer();
         appender = chronicle.createAppender();
         reader = chronicle.createExcerpt();

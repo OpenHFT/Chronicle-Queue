@@ -20,52 +20,33 @@ package net.openhft.chronicle.tcp;
 
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleConfig;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.io.IOTools;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Random;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class PersistedChronicleTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("PersistedChronicleTest");
+public class StatefulChronicleTestBase {
+    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-persisted-";
+    protected static final String PREFIX    = "ch-statefull-";
     protected static final int    BASE_PORT = 12000;
 
     @Rule
     public final TestName testName = new TestName();
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    protected Chronicle localChronicleSink(final Chronicle chronicle, String host, int port) throws IOException {
-        return new ChronicleSink(
-            chronicle,
-            ChronicleSinkConfig.DEFAULT.clone().sharedChronicle(true),
-            host,
-            port);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
@@ -81,50 +62,24 @@ public class PersistedChronicleTestBase {
         return path;
     }
 
-    protected ChronicleSource indexedChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath), port);
-    }
-
-    protected ChronicleSource indexedChronicleSource(String basePath, int port, ChronicleConfig config) throws IOException {
-        return new ChronicleSource(new IndexedChronicle(basePath, config), port);
-    }
-
     protected static void assertIndexedClean(String path) {
         assertNotNull(path);
         assertTrue(new File(path + ".index").delete());
         assertTrue(new File(path + ".data").delete());
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     protected synchronized String getVanillaTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
+        IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getVanillaTestPath(String suffix) {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
+        IOTools.deleteDir(path);
 
         return path;
-    }
-
-    protected Chronicle vanillaChronicleSource(String basePath, int port) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath), port);
-    }
-
-    protected Chronicle vanillaChronicleSource(String basePath, int port, VanillaChronicleConfig config) throws IOException {
-        return new ChronicleSource(new VanillaChronicle(basePath, config), port);
     }
 
     // *************************************************************************
@@ -133,19 +88,20 @@ public class PersistedChronicleTestBase {
 
     public void testJira77(int port, Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
         final int BYTES_LENGTH = 66000;
-        String basePath = getIndexedTestPath();
-        ChronicleConfig config = ChronicleConfig.DEFAULT.clone();
 
         Random random = new Random();
-        ChronicleSourceConfig sourceConfig = ChronicleSourceConfig.DEFAULT.clone();
-        sourceConfig.minBufferSize(2 * BYTES_LENGTH);
 
-        ChronicleSource chronicleSource = new ChronicleSource(chronicleSrc, sourceConfig, port);
-        ChronicleSinkConfig sinkConfig = ChronicleSinkConfig.DEFAULT.clone();
-        sinkConfig.minBufferSize(2 * BYTES_LENGTH);
-        ChronicleSink chronicleSink = new ChronicleSink(chronicleTarget, sinkConfig, new InetSocketAddress(port));
+        Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleSrc)
+            .minBufferSize(2 * BYTES_LENGTH)
+            .bindAddress(port)
+            .build();
 
-        ExcerptAppender app = chronicleSrc.createAppender();
+        Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
+            .minBufferSize(2 * BYTES_LENGTH)
+            .connectAddress("localhost", port)
+            .build();
+
+        ExcerptAppender app = chronicleSource.createAppender();
         byte[] bytes = new byte[BYTES_LENGTH];
         random.nextBytes(bytes);
         app.startExcerpt(4 + 4 + bytes.length);
@@ -170,5 +126,80 @@ public class PersistedChronicleTestBase {
         chronicleSrc.close();
         chronicleSource.close();
         chronicleSink.close();
+    }
+
+    public void testJira80(int port, final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
+        final long chunks = 4;
+        final long itemsPerChunk = 100000;
+
+        final Chronicle chronicleMaster = chronicleMasterBuilder.build();
+        final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMaster)
+            .bindAddress(port)
+            .build();
+
+        chronicleSource.clear();
+
+        final ExcerptAppender appender = chronicleSource.createAppender();
+        for (long i = 0; i < (chunks * itemsPerChunk); i++) {
+            appender.startExcerpt();
+            appender.writeLong(i);
+            appender.writeChar('=');
+            appender.append(i);
+            appender.append('\n');
+            appender.finish();
+        }
+
+        appender.close();
+
+        for(long i=0; i <= chunks; i++) {
+            Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleSlaveBuilder.build())
+                .connectAddress("localhost", port)
+                .build();
+
+            if(i == 0) {
+                chronicleSink.clear();
+            }
+
+            final ExcerptTailer tailer = chronicleSink.createTailer();
+            for(long c=0; c < (i * itemsPerChunk); c++) {
+                while (!tailer.nextIndex()) { }
+                long n1 = tailer.readLong();
+                char ch = tailer.readChar();
+                long n2 = tailer.parseLong();
+
+                assertEquals(c , n1);
+                assertEquals(ch, '=');
+                assertEquals(c , n2);
+
+                tailer.finish();
+            }
+
+            tailer.close();
+            chronicleSink.close();
+        }
+
+        // compare source and sink
+        final Chronicle slave  = chronicleSlaveBuilder.build();
+        final ExcerptTailer slaveTailer = slave.createTailer().toStart();
+
+        final ExcerptTailer masterTailer = chronicleMaster.createTailer().toStart();
+
+        for (long i = 0; i < (chunks * itemsPerChunk); i++) {
+            assertTrue(masterTailer.nextIndex());
+            assertTrue(slaveTailer.nextIndex());
+
+            assertEquals(masterTailer.readLong() , slaveTailer.readLong());
+            assertEquals(masterTailer.readChar() , slaveTailer.readChar());
+            assertEquals(masterTailer.parseLong(), slaveTailer.parseLong());
+
+            masterTailer.finish();
+            slaveTailer.finish();
+        }
+
+        masterTailer.close();
+        slaveTailer.close();
+
+        slave.close();
+        chronicleSource.close();
     }
 }

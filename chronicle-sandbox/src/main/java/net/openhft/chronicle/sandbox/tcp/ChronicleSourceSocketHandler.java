@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle.sandbox.tcp;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.EOFException;

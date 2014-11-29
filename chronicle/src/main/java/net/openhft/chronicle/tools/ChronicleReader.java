@@ -18,8 +18,9 @@
 
 package net.openhft.chronicle.tools;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
@@ -40,7 +41,7 @@ enum ChronicleReader {
 
         String basePath = args[0];
         long index = args.length > 1 ? Long.parseLong(args[1]) : 0L;
-        IndexedChronicle ic = new IndexedChronicle(basePath);
+        Chronicle ic = ChronicleQueueBuilder.indexed(basePath).build();
         ExcerptTailer excerpt = ic.createTailer();
         //noinspection InfiniteLoopStatement
         while (true) {

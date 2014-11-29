@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 public class DateCacheTest {
     @Test
     public void testFormat() {
-        DateCache dc = new DateCache("yyyyMMdd", 86400000);
+        VanillaDateCache dc = new VanillaDateCache("yyyyMMdd", 86400000);
         String str = dc.formatFor(16067);
         assertEquals("20131228", str);
         String str1 = dc.formatFor(1);
@@ -42,7 +42,7 @@ public class DateCacheTest {
         SimpleDateFormat sdf = new SimpleDateFormat(format);
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-        DateCache dc = new DateCache(format, 1000);
+        VanillaDateCache dc = new VanillaDateCache(format, 1000);
 
         int now = (int) (System.currentTimeMillis() / 1000);
         for (int i = 0; i < 10000; i++) {

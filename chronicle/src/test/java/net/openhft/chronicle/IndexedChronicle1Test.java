@@ -61,7 +61,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     @Test
     public void testSerializationPerformance() throws IOException, ClassNotFoundException, InterruptedException {
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender appender = chronicle.createAppender();
@@ -114,7 +114,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
 
     private void doRewriteableEntries(boolean useUnsafe, boolean minimiseByteBuffers, boolean synchronousMode) throws IOException {
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender excerpt = chronicle.createAppender();
@@ -158,7 +158,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     public void testCloseWithNullBuffers() throws IOException {
         final String basePath = getTestPath();
 
-        Chronicle chronicle = new IndexedChronicle(basePath);
+        Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
 //        tsc.clear();
         ExcerptAppender excerpt = chronicle.createAppender();
@@ -172,7 +172,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
 
         chronicle.close();
 
-        chronicle = new IndexedChronicle(basePath);
+        chronicle = ChronicleQueueBuilder.indexed(basePath).build();
         chronicle.createAppender().close();
         chronicle.close(); // used to throw an exception.
 
@@ -189,7 +189,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
             long start = System.nanoTime();
 
             int records = 10 * 1000 * 1000; {
-                Chronicle ic = new IndexedChronicle(basePath);
+                Chronicle ic = ChronicleQueueBuilder.indexed(basePath).build();
 //                ic.useUnsafe(true);
 //                ic.clear();
                 ExcerptAppender excerpt = ic.createAppender();
@@ -202,7 +202,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
                 ic.close();
             }
             {
-                IndexedChronicle ic = new IndexedChronicle(basePath);
+                Chronicle ic = ChronicleQueueBuilder.indexed(basePath).build();
 //                ic.useUnsafe(true);
                 ExcerptTailer excerpt = ic.createTailer();
                 for (int i = 1; i <= records; i++) {
@@ -232,7 +232,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     @Test
     public void testBoolean() throws Exception {
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender excerpt = chronicle.createAppender();
@@ -258,7 +258,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     public void testStopBitEncoded() throws IOException {
         boolean ok = false;
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender writer = chronicle.createAppender();
@@ -310,7 +310,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     @Test
     public void testEnum() throws IOException {
         final String basePath = getTestPath();
-        final Chronicle chronicle = new IndexedChronicle(basePath);
+        final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         try {
             ExcerptAppender excerpt = chronicle.createAppender();

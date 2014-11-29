@@ -18,6 +18,8 @@
 
 package vanilla.java.intserver;
 
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
@@ -34,12 +36,12 @@ public class ServerMain {
 
         String c2sPath = tmp + "/demo/c2s";
         ChronicleTools.deleteDirOnExit(c2sPath);
-        IndexedChronicle c2s = new IndexedChronicle(c2sPath);
+        Chronicle c2s = ChronicleQueueBuilder.indexed(c2sPath).build();
         ExcerptTailer tailer = c2s.createTailer();
 
         String s2cPath = tmp + "/demo/s2c";
         ChronicleTools.deleteDirOnExit(s2cPath);
-        IndexedChronicle s2c = new IndexedChronicle(s2cPath);
+        Chronicle s2c = ChronicleQueueBuilder.indexed(s2cPath).build();
 
         S2CWriter s2CWriter = new S2CWriter(s2c.createAppender());
         ServerHandler server = new ServerHandler(s2CWriter);

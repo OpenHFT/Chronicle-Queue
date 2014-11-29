@@ -22,6 +22,7 @@ import net.openhft.chronicle.tools.CheckedExcerpt;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
+import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
 
@@ -51,49 +52,37 @@ public class IndexedChronicle implements Chronicle {
     final VanillaMappedBlocks indexFileCache;
     @NotNull
     final VanillaMappedBlocks dataFileCache;
-
     @NotNull
-    final ChronicleConfig config;
+    final ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder;
+
     private final String basePath;
     // todo consider making volatile to help detect bugs in calling code.
     private long lastWrittenIndex = -1;
     private volatile boolean closed = false;
 
     /**
-     * Creates a new instance of IndexedChronicle having the specified <tt>basePath</tt> (the base name of the two
-     * backing files).
+     * Creates a new instance of IndexedChronicle as specified by the provided {@link net.openhft.chronicle.ChronicleQueueBuilder}
+     * and having the specified <tt>basePath</tt> (the base name of the two backing files).
      *
-     * @param basePath the base name of the files backing this IndexChronicle
+     * @param builder the builder u
+     *
      * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing, writable regular file
      *                               and a new regular file of that name cannot be created, or if some other error
      *                               occurs while opening or creating the file
      */
-    public IndexedChronicle(@NotNull String basePath) throws IOException {
-        this(basePath, ChronicleConfig.DEFAULT);
-    }
+    public IndexedChronicle(@NotNull ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder) throws IOException {
 
-    /**
-     * Creates a new instance of IndexedChronicle as specified by the provided {@link
-     * net.openhft.chronicle.ChronicleConfig} and having the specified <tt>basePath</tt> (the base name of the two
-     * backing files).
-     *
-     * @param basePath the base name of the files backing this IndexChronicle
-     * @param config   the ChronicleConfig based on which the current IndexChronicle should be constructed
-     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing, writable regular file
-     *                               and a new regular file of that name cannot be created, or if some other error
-     *                               occurs while opening or creating the file
-     */
-    public IndexedChronicle(@NotNull String basePath, @NotNull ChronicleConfig config) throws IOException {
-        this.basePath = basePath;
-        this.config = config.clone();
+        //this.config = config.clone();
+        this.builder = builder.clone();
+        this.basePath = builder.path().getAbsolutePath();
 
-        File parentFile = new File(basePath).getParentFile();
+        File parentFile = builder.path().getParentFile();
         if (parentFile != null) {
             parentFile.mkdirs();
         }
 
-        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"), config.indexBlockSize());
-        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"), config.dataBlockSize());
+        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"), builder.indexBlockSize());
+        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"), builder.dataBlockSize());
 
         findTheLastIndex();
     }
@@ -109,13 +98,13 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the {@link net.openhft.chronicle.ChronicleConfig} that has been used to create the current instance of
-     * IndexedChronicle
+     * Returns the {@link net.openhft.chronicle.ChronicleQueueBuilder} that has been used
+     * to create the current instance of IndexedChronicle
      *
      * @return the ChronicleConfig used to create this IndexChronicle
      */
-    public ChronicleConfig config() {
-        return config; //todo: would be better to return a copy/clone, because like this the config can be changed from the outside
+    public ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder() {
+        return this.builder;
     }
 
     /**
@@ -149,7 +138,7 @@ public class IndexedChronicle implements Chronicle {
             return -1;
         }
 
-        int indexBlockSize = config.indexBlockSize();
+        int indexBlockSize = builder.indexBlockSize();
         for (long block = size / indexBlockSize - 1; block >= 0; block--) {
             VanillaMappedBytes mbb = null;
             try {
@@ -162,7 +151,7 @@ public class IndexedChronicle implements Chronicle {
                 continue;
             }
 
-            int cacheLineSize = config.cacheLineSize();
+            int cacheLineSize = builder.cacheLineSize();
             for (int pos = 0; pos < indexBlockSize; pos += cacheLineSize) {
                 // if the next line is blank
                 if (pos + cacheLineSize >= indexBlockSize || mbb.readLong(pos + cacheLineSize) == 0) {
@@ -234,9 +223,9 @@ public class IndexedChronicle implements Chronicle {
     public Excerpt createExcerpt() throws IOException {
         final Excerpt excerpt = new IndexedExcerpt();
 
-        return !config.useCheckedExcerpt()
-                ? excerpt
-                : new CheckedExcerpt(excerpt);
+        return !builder.useCheckedExcerpt()
+            ? excerpt
+            : new CheckedExcerpt(excerpt);
     }
 
     /**
@@ -264,9 +253,9 @@ public class IndexedChronicle implements Chronicle {
     public ExcerptAppender createAppender() throws IOException {
         final ExcerptAppender appender = new IndexedExcerptAppender();
 
-        return !config.useCheckedExcerpt()
-                ? appender
-                : new CheckedExcerpt(appender);
+        return !builder.useCheckedExcerpt()
+            ? appender
+            : new CheckedExcerpt(appender);
     }
 
     /**
@@ -278,6 +267,11 @@ public class IndexedChronicle implements Chronicle {
     @Override
     public long lastWrittenIndex() {
         return lastWrittenIndex;
+    }
+
+    @Override
+    public long lastIndex() {
+        return findTheLastIndex0();
     }
 
     void incrSize() {
@@ -318,20 +312,6 @@ public class IndexedChronicle implements Chronicle {
         // which index does this refer to?
         private long indexStartOffset;
 
-        protected AbstractIndexedExcerpt() throws IOException {
-            super(NO_PAGE, NO_PAGE);
-            cacheLineSize = IndexedChronicle.this.config.cacheLineSize();
-            cacheLineMask = (cacheLineSize - 1);
-            dataBlockSize = IndexedChronicle.this.config.dataBlockSize();
-            indexBlockSize = IndexedChronicle.this.config.indexBlockSize();
-            indexEntriesPerLine = (cacheLineSize - 8) / 4;
-            indexEntriesPerBlock = indexBlockSize * indexEntriesPerLine / cacheLineSize;
-            loadIndexBuffer();
-            loadDataBuffer();
-
-            finished = true;
-        }
-
         // the start of this entry
         // inherited - long startAddr;
         // inherited - long positionAddr;
@@ -354,6 +334,25 @@ public class IndexedChronicle implements Chronicle {
                     "\nindexPositionAddr=" + indexPositionAddr +
                     "\npadding=" + padding +
                     '}';
+        }
+
+        // the start of this entry
+        // inherited - long startAddr;
+        // inherited - long positionAddr;
+        // inherited - long limitAddr;
+
+        protected AbstractIndexedExcerpt() throws IOException {
+            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+            cacheLineSize = IndexedChronicle.this.builder.cacheLineSize();
+            cacheLineMask = (cacheLineSize - 1);
+            dataBlockSize = IndexedChronicle.this.builder.dataBlockSize();
+            indexBlockSize = IndexedChronicle.this.builder.indexBlockSize();
+            indexEntriesPerLine = (cacheLineSize - 8) / 4;
+            indexEntriesPerBlock = indexBlockSize * indexEntriesPerLine / cacheLineSize;
+            loadIndexBuffer();
+            loadDataBuffer();
+
+            finished = true;
         }
 
         @Override
@@ -599,7 +598,7 @@ public class IndexedChronicle implements Chronicle {
         public void finish() {
             super.finish();
 
-            if (IndexedChronicle.this.config.synchronousMode()) {
+            if (IndexedChronicle.this.builder.synchronous()) {
                 if (dataBuffer != null) {
                     dataBuffer.force();
                 }
@@ -765,7 +764,7 @@ public class IndexedChronicle implements Chronicle {
 
         @Override
         public void startExcerpt() {
-            startExcerpt(IndexedChronicle.this.config.messageCapacity());
+            startExcerpt(IndexedChronicle.this.builder.messageCapacity());
         }
 
         public void startExcerpt(long capacity) {
@@ -775,9 +774,9 @@ public class IndexedChronicle implements Chronicle {
                 toEnd();
             }
 
-            if (capacity >= IndexedChronicle.this.config.dataBlockSize()) {
+            if (capacity >= IndexedChronicle.this.builder.dataBlockSize()) {
                 throw new IllegalArgumentException(
-                        "Capacity too large " + capacity + " >= " + IndexedChronicle.this.config.dataBlockSize());
+                        "Capacity too large " + capacity + " >= " + IndexedChronicle.this.builder.dataBlockSize());
             }
 
             // if the capacity is to large, roll the previous entry, and there was one
@@ -800,7 +799,7 @@ public class IndexedChronicle implements Chronicle {
             startAddr = positionAddr;
             limitAddr = positionAddr + capacity;
             finished = false;
-            nextSynchronous = IndexedChronicle.this.config.synchronousMode();
+            nextSynchronous = IndexedChronicle.this.builder.synchronous();
         }
 
         public void nextSynchronous(boolean nextSynchronous) {

@@ -18,9 +18,10 @@
 
 package demo;
 
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.VanillaChronicle;
-import net.openhft.chronicle.VanillaChronicleConfig;
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.tcp.ChronicleSink;
 import net.openhft.chronicle.tcp.ChronicleSource;
 
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by daniel on 19/06/2014.
  */
 public class ChronicleController {
-    private VanillaChronicle chronicle;
+    private Chronicle chronicle;
     private ChronicleUpdatable updatable;
     private WriterThread writerThread1, writerThread2;
     private ReaderThread readerThread;
@@ -51,10 +52,10 @@ public class ChronicleController {
     }
 
     public void start(String srate) throws IOException {
-        VanillaChronicleConfig config = new VanillaChronicleConfig();
-        config.indexBlockSize(32 << 20);
-        config.dataBlockSize(128 << 20);
-        chronicle = new VanillaChronicle(BASE_PATH, config);
+        chronicle = ChronicleQueueBuilder.vanilla(BASE_PATH)
+            .indexBlockSize(32 << 20)
+            .dataBlockSize(128 << 20)
+            .build();
 
         int rate = srate.equals("MAX") ? Integer.MAX_VALUE : Integer.valueOf(srate.trim().replace(",", ""));
         writerThread1 = new WriterThread("EURUSD", updatable.count1(), rate/2);
@@ -81,7 +82,12 @@ public class ChronicleController {
         tcpReaderThread.exit();
         timerThread.exit();
         chronicle.clear();
-        chronicle.close();
+
+        try {
+            chronicle.close();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private List<String> getFileNames(List<String> fileNames, Path dir) {
@@ -110,7 +116,7 @@ public class ChronicleController {
         private static final int BATCH = 16;
         public static final int ELASTICITY = 1000000;
         private final AtomicLong count;
-        private final VanillaChronicle.VanillaAppender appender;
+        private final ExcerptAppender appender;
         private int rate;
         private Price price = null;
         private long startTime = 0;
@@ -193,12 +199,12 @@ public class ChronicleController {
     private class TCPReaderThread extends ControlledThread {
         private Price p = new Price();
         private ExcerptTailer tcpTailer = null;
-        private ChronicleSink sink = null;
-        private ChronicleSource source = null;
+        private Chronicle sink = null;
+        private Chronicle source = null;
 
         public TCPReaderThread() throws IOException{
-            source = new ChronicleSource(chronicle, 0);
-            sink = new ChronicleSink(new VanillaChronicle(BASE_PATH_SINK), "localhost", source.getLocalPort());
+            source = ChronicleQueueBuilder.source(chronicle).bindAddress("localhost", 10987).build();
+            sink = ChronicleQueueBuilder.vanilla(BASE_PATH_SINK).sink().connectAddress("localhost", 10987).build();
             tcpTailer = sink.createTailer();
         }
 
@@ -215,8 +221,13 @@ public class ChronicleController {
             tcpTailer.close();
             sink.clear();
             source.clear();
-            sink.close();
-            source.close();
+
+            try {
+                sink.close();
+                source.close();
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

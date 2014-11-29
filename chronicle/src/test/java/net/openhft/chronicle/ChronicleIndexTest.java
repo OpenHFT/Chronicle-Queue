@@ -18,8 +18,6 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.VanillaChronicle;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,7 +35,7 @@ public class ChronicleIndexTest {
 
     @Test
     public void test() throws IOException {
-        VanillaChronicle chronicle = new VanillaChronicle(folder.newFolder().getAbsolutePath());
+        VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(folder.newFolder()).build();
         VanillaChronicle.VanillaAppender appender = chronicle.createAppender();
         appender.startExcerpt();
         appender.writeUTF("This is a test");

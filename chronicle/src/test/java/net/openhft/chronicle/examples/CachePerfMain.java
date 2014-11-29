@@ -20,10 +20,7 @@ package net.openhft.chronicle.examples;
 
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
@@ -55,7 +52,7 @@ public class CachePerfMain {
 
     public CachePerfMain(String basePath, int maxObjSize)
             throws IOException {
-        chronicle = new IndexedChronicle(basePath);
+        chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
         appender = chronicle.createAppender();
         randomAccessor = chronicle.createExcerpt();

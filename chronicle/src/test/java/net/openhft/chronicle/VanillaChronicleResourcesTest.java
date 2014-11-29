@@ -38,7 +38,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     public void testResourcesCleanup1() throws IOException {
         final String baseDir = getTestPath();
 
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -79,12 +79,10 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     public void testResourcesCleanup2() throws Exception {
         final String baseDir = getTestPath();
 
-        final VanillaChronicle chronicle = new VanillaChronicle(
-            baseDir,
-            VanillaChronicleConfig.DEFAULT.clone()
-                .dataBlockSize(64)
-                .indexBlockSize(64)
-        );
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+            .dataBlockSize(64)
+            .indexBlockSize(64)
+            .build();
 
         chronicle.clear();
 
@@ -119,16 +117,15 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         System.out.println("BaseDir : " + baseDir);
         System.out.println("PID : " + getPID());
 
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir,
-            VanillaChronicleConfig.DEFAULT.clone()
-                .entriesPerCycle(1L << 20)
-                .cycleLength(1000, false)
-                .cycleFormat("yyyyMMddHHmmss")
-                .indexBlockSize(64)
-                .dataBlockSize(64)
-                .dataCacheCapacity(nbThreads + 1)
-                .indexCacheCapacity(2)
-        );
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(64)
+            .dataBlockSize(64)
+            .dataCacheCapacity(nbThreads + 1)
+            .indexCacheCapacity(2)
+            .build();
 
         chronicle.clear();
 
@@ -194,17 +191,17 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         System.out.println("PID       : " + pid);
         System.out.println("NbThreads : " + nbThreads);
 
-        final VanillaChronicle chronicle = new VanillaChronicle(
-            baseDir,
-            new VanillaChronicleConfig()
-                .cycleFormat("yyyyMMdd/HHmmss")
-                .cycleLength(30 * 1000, false) //every 30 seconds
-                .defaultMessageSize(data.length)
-                .entriesPerCycle(4000000)
-                .dataCacheCapacity(nbThreads + 2)
-                .dataBlockSize(data.length * 15)
-                .indexCacheCapacity(2)
-                .indexBlockSize(1024));
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+            .cycleFormat("yyyyMMdd/HHmmss")
+            .cycleLength(30 * 1000, false) //every 30 seconds
+            .defaultMessageSize(data.length)
+            .entriesPerCycle(4000000)
+            .dataCacheCapacity(nbThreads + 2)
+            .dataBlockSize(data.length * 15)
+            .indexCacheCapacity(2)
+            .indexBlockSize(1024)
+            .build();
+
 
         chronicle.clear();
 
@@ -271,17 +268,16 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         System.out.println("PID       : " + pid);
         System.out.println("NbThreads : " + nbThreads);
 
-        final VanillaChronicle chronicle = new VanillaChronicle(
-            baseDir,
-            new VanillaChronicleConfig()
-                .cycleFormat("yyyyMMdd/HHmmss")
-                .cycleLength(30 * 1000, false) //every 30 seconds
-                .defaultMessageSize(data.length)
-                .entriesPerCycle(4000000)
-                .dataCacheCapacity(nbThreads + 2)
-                .dataBlockSize(data.length * 15)
-                .indexCacheCapacity(2)
-                .indexBlockSize(1024));
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+            .cycleFormat("yyyyMMdd/HHmmss")
+            .cycleLength(30 * 1000, false) //every 30 seconds
+            .defaultMessageSize(data.length)
+            .entriesPerCycle(4000000)
+            .dataCacheCapacity(nbThreads + 2)
+            .dataBlockSize(data.length * 15)
+            .indexCacheCapacity(2)
+            .indexBlockSize(1024)
+            .build();
 
         chronicle.clear();
 
@@ -330,7 +326,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     @Test
     public void testResourcesCleanup6() throws Exception {
         final String baseDir = getTestPath();
-        final VanillaChronicle chronicle = new VanillaChronicle(baseDir);
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
 
         chronicle.clear();
 
