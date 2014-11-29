@@ -52,11 +52,15 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
             appender.startExcerpt(100); // an upper limit to how much space in bytes this message should need.
             appender.writeObject("TestMessage");
             appender.finish();
+            appender.close();
 
             // read one object
             ExcerptTailer reader = chronicle.createTailer();
             Object ret = reader.readObject();
             reader.finish();
+            reader.close();
+            
+            chronicle.close();
     
             System.out.println(ret);
         }
@@ -67,7 +71,7 @@ Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder
 	String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
 	ChronicleTools.deleteOnExit(basePath);
 
-	IndexedChronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
+	Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
 
 IndexedChronicle creates two RandomAccessFile one for indexes and one for data having names relatively: 
 
