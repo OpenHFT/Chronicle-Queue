@@ -25,7 +25,6 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-import net.openhft.lang.io.StopCharTesters;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
