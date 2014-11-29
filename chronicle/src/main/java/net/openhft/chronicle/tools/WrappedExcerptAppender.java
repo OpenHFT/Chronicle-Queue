@@ -33,7 +33,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 public class WrappedExcerptAppender implements ExcerptAppender {
     protected final ExcerptAppender warappedAppender;
@@ -415,10 +414,6 @@ public class WrappedExcerptAppender implements ExcerptAppender {
 
     public void busyLockInt(long offset) throws InterruptedException, IllegalStateException {
         warappedAppender.busyLockInt(offset);
-    }
-
-    public IntStream codePoints() {
-        return warappedAppender.codePoints();
     }
 
     public void resetLockInt(long offset) {
@@ -1015,10 +1010,6 @@ public class WrappedExcerptAppender implements ExcerptAppender {
 
     public void finish() {
         warappedAppender.finish();
-    }
-
-    public IntStream chars() {
-        return warappedAppender.chars();
     }
 
     public long address() {
