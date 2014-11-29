@@ -65,7 +65,7 @@ Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s
 
 ## What types of Excerpt are there?
 
-Chronicle 2.x has three types of excerpt optimised for different purposes.
+Chronicle has three types of excerpt optimised for different purposes.
 
     Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
     ExcerptAppender appender = chronicle.createAppender(); // sequential writes.
