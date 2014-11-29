@@ -67,7 +67,7 @@ Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder
 	String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
 	ChronicleTools.deleteOnExit(basePath);
 
-	IndexedChronicle chronicle = new IndexedChronicle(basePath);
+	IndexedChronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
 
 IndexedChronicle creates two RandomAccessFile one for indexes and one for data having names relatively: 
 
