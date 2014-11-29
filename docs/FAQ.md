@@ -67,7 +67,7 @@ Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s
 
 Chronicle 2.x has three types of excerpt optimised for different purposes.
 
-    Chronicle chronicle = new IndexedChronicle(basePath);
+    Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
     ExcerptAppender appender = chronicle.createAppender(); // sequential writes.
     ExcerptTailer tailer = chronicle.createTailer();       // sequential reads.
     Excerpt excerpt = chronicle.createExcerpt();           // random access to existing excerpts.
@@ -162,7 +162,7 @@ You cannot safely write to the same Chronicle from multiple processes.
 
 ## Does Chronicle support replication?
 
-Yes, you can wrap the source (single master) with InProcessChronicleSource and the copies with InProcessChronicleSink.
+Yes, you can wrap the source (single master) with ChronicleSource and the copies with IChronicleSink.
 This supports TCP replication and means a copy is stored on each client. When file rolling is supported, this will make it easier to delete old files.
 
 ## Does Chronicle support UDP replication?
