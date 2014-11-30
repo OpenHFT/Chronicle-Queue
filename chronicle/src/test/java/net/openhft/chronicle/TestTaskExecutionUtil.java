@@ -37,7 +37,6 @@ public final class TestTaskExecutionUtil {
      * Execute specified tasks in independent threads.
      */
     public static void executeConcurrentTasks(final List<? extends Callable<Void>> tasks, final long taskTimeoutMillis) {
-
         // Create and start a thread per task
         final List<TaskRunner> taskRunners = new ArrayList<TaskRunner>();
         final List<Thread> threads = new ArrayList<Thread>();

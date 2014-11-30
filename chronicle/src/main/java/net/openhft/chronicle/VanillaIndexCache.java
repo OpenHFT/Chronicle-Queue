@@ -118,7 +118,6 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
-
         // Position can be changed by another thread, so take a snapshot each loop so that
         // buffer overflows are not generated when advancing to the next position.
         // As a result, the position could step backwards when this method is called concurrently,

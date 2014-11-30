@@ -164,7 +164,6 @@ public class CachePerfMain {
     }
 
     public void get(int key, Person person) {
-
         // Change reader position
         randomAccessor.index(keyIndex.get(key));
         // Read contents into byte buffer
