@@ -108,7 +108,6 @@ public class CachePerfMain {
                             + "th iter: Took %.3f secs to update random %,d entries%n",
                             duration / 1e9, keys);
         }
-
     }
 
     static long putTest(int keycount, String prefix, CachePerfMain map) {
@@ -133,7 +132,6 @@ public class CachePerfMain {
             map.put(i, person);
         }
         return System.nanoTime() - start;
-
     }
 
     static void shufflelist() {
@@ -174,7 +172,6 @@ public class CachePerfMain {
 
         // validate reading was correct
         randomAccessor.finish();
-
     }
 
     public void put(int key, Person person) {
@@ -184,7 +181,6 @@ public class CachePerfMain {
             randomAccessor.index(keyIndex.get(key));
             // Override existing
             person.writeMarshallable(randomAccessor);
-
         } else {
 
             // Start an excerpt with given chunksize
@@ -206,7 +202,6 @@ public class CachePerfMain {
             // Put the position of the excerpt with its key to a map.
             keyIndex.put(key, (int) index);
         }
-
     }
 
     public void close() {

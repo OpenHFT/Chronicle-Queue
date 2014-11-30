@@ -170,7 +170,6 @@ public class VanillaIndexCache implements Closeable {
                 long date = dateCache.parseCount(file.getName());
                 if (firstDate > date)
                     firstDate = date;
-
             } catch (ParseException ignored) {
                 // ignored
             }
@@ -190,7 +189,6 @@ public class VanillaIndexCache implements Closeable {
                 long date = dateCache.parseCount(file.getName());
                 if (firstDate < date)
                     firstDate = date;
-
             } catch (ParseException ignored) {
                 // ignored
             }

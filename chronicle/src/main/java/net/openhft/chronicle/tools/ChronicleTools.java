@@ -18,12 +18,13 @@
 
 package net.openhft.chronicle.tools;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptCommon;
+import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -142,7 +143,6 @@ public enum ChronicleTools {
             IOTools.deleteDir(dirPath);
             toDeleteList.add(dirPath);
         }
-
     }
 
     public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {

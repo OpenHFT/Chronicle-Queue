@@ -335,7 +335,6 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             source.close();
             source.clear();
         }
-
     }
 
     // *************************************************************************

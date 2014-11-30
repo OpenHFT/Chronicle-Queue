@@ -69,10 +69,8 @@ public class JournalRecord extends NativeBytes {
         assert dataSize <= size;
         writeInt(dataSize);
         compareAndSwapInt(READ_WRITE_LOCK, -1, 0);
-
     }
 
     public void readLock() {
-
     }
 }

@@ -235,7 +235,6 @@ public class VanillaChronicle implements Chronicle {
 
                 final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
                 return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
-
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
@@ -377,7 +376,6 @@ public class VanillaChronicle implements Chronicle {
                         assert indexBytes.refCount() > 1;
                         lastCycle = cycle;
                         lastIndexCount = indexCount;
-
                     }
                     indexValue = indexBytes.readVolatileLong(indexOffset << 3);
                 } catch (FileNotFoundException e) {

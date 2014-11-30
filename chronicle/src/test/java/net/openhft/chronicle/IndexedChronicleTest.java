@@ -276,7 +276,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                     assertTrue(e.index(idx++));
                 }
                 validateExcerpt(e, i, expected);
-
             }
             w.close();
             r.close();
@@ -621,7 +620,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 mec.hi = Math.max(x, y);
                 testSearchRange(ints, excerpt, mec, startEnd);
             }
-
         } finally {
             chronicle.close();
             assertClean(basePath);

@@ -918,7 +918,6 @@ public class IndexedChronicle implements Chronicle {
             assert (index == 0 || indexBaseForLine > 0) && indexBaseForLine < 1L << 48 : "dataPositionAtStartOfLine out of bounds, was " + indexBaseForLine;
 
             appendStartOfLine();
-
         }
 
         private void appendStartOfLine() {

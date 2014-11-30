@@ -224,7 +224,6 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
                             appender.close();
                         }
                     } catch (IOException e) {
-
                     }
                 }
             });
@@ -347,7 +346,6 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             sleep(5, TimeUnit.SECONDS);
 
             chronicle.checkCounts(1,1);
-
         } finally {
             chronicle.close();
             chronicle.clear();

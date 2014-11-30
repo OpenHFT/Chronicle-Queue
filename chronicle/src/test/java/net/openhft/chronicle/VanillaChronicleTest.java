@@ -309,7 +309,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             tailer.close();
 
             chronicle.checkCounts(1, 1);
-
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -636,7 +635,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             rchronicle.close();
 
             wchronicle.checkCounts(1, 1);
-
         } finally {
             wchronicle.close();
             wchronicle.clear();
@@ -1060,7 +1058,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
 
             chronicle.checkCounts(1, 1);
-
         } finally {
             chronicle.close();
             chronicle.clear();

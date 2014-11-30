@@ -109,7 +109,6 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
 //                for (boolean synchronousMode : booleans)
 //                    doRewriteableEntries(useUnsafe, minimiseByteBuffers, synchronousMode);
         doRewriteableEntries(true, true, false);
-
     }
 
     private void doRewriteableEntries(boolean useUnsafe, boolean minimiseByteBuffers, boolean synchronousMode) throws IOException {

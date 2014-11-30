@@ -18,7 +18,10 @@
 
 package net.openhft.chronicle.sandbox;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.model.constraints.NotNull;
 
@@ -57,7 +60,6 @@ public class RollingChronicle implements Chronicle {
         masterMBB = masterFileCache.acquireBuffer(0, false).order(ByteOrder.nativeOrder());
         findLastIndex();
         rollNewIndexFileData();
-
     }
 
     private void findLastIndex() {
@@ -201,7 +203,6 @@ public class RollingChronicle implements Chronicle {
         private boolean checkNextChronicle(int n) {
             if (chronicle == null) {
                 return index(0);
-
             } else if (super.index() + n >= indexFileExcerpts) {
                 boolean ret = index(index() + n);
                 nextIndex = (int) (chronicleIndexBase / indexFileExcerpts);

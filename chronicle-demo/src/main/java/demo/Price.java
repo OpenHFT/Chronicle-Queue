@@ -52,7 +52,6 @@ public class Price implements BytesMarshallable {
         out.writeCompactLong(bidQuantity);
         out.writeCompactLong(askQuantity);
         out.writeBoolean(confirmed);
-
     }
 
     @Override
