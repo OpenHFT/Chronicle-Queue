@@ -35,7 +35,6 @@ public class VanillaDataCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
-
     /*
     public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this(basePath, blockBits, dateCache, builder.dataCacheCapacity(), builder.cleanupOnClose());
@@ -52,7 +51,6 @@ public class VanillaDataCache implements Closeable {
         this.dateCache = dateCache;
         this.cache = new VanillaMappedCache<DataKey>(capacity, true, cleanupOnClose);
     }
-
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
         return new File(
@@ -153,7 +151,6 @@ public class VanillaDataCache implements Closeable {
     public void checkCounts(int min, int max) {
         this.cache.checkCounts(min,max);
     }
-
 
     static class DataKey implements Cloneable {
         int cycle;

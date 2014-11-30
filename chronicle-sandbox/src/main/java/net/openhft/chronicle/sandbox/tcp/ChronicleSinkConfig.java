@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.sandbox.tcp;
 
-
 import net.openhft.lang.model.constraints.NotNull;
 
 public class ChronicleSinkConfig implements Cloneable {

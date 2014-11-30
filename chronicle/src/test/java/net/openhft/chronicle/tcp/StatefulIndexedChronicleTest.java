@@ -26,15 +26,7 @@ import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -207,7 +199,6 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
             (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
-
 
         source.close();
         sink.close();

@@ -372,7 +372,6 @@ public abstract class SourceTcp {
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
         protected abstract boolean write() throws IOException;
 
-
     }
 
     /**

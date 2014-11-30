@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.tcp;
 
-
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
@@ -34,10 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class StatefulChronicleTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");

@@ -49,7 +49,6 @@ public class VanillaChronicleConfig implements Cloneable {
      */
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
 
-
     private String cycleFormat = "yyyyMMdd";
     private int cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
     private long indexBlockSize = 16L << 20; // 16 MB

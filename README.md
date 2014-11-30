@@ -20,7 +20,6 @@ It is available on maven central as
 Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 
- 
 For working examples, have a look at the unit tests and demo module.
 
 ###  JavaDoc
@@ -30,11 +29,9 @@ Check out our documentation at [JavaDoc] (http://openhft.github.io/Chronicle-Que
 
 See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/chronicle/info), or you can post your question on the forum at [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 
-
 ---
 
 [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
-
 
 [Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)
 

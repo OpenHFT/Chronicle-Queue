@@ -435,7 +435,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             mec.lo = mec.hi = 1000;
             assertEquals(~100, excerpt.findMatch(mec));
 
-
             // range match near the start
             long[] startEnd = new long[2];
 
@@ -554,7 +553,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 assertEquals(i, tailer.readLong());
                 tailer.finish();
             }
-
 
             // test a vanilla tailer, rewind
             tailer = chronicle.createTailer().toStart();

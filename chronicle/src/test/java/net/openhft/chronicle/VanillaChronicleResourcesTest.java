@@ -202,7 +202,6 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             .indexBlockSize(1024)
             .build();
 
-
         chronicle.clear();
 
         final ExecutorService es = Executors.newCachedThreadPool();
@@ -217,7 +216,6 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
                             appender.startExcerpt(data.length);
                             appender.write(data);
                             appender.finish();
-
 
                             sleep(1,TimeUnit.SECONDS);
                         }

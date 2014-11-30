@@ -119,7 +119,6 @@ public class ChronicleTcp {
         return ByteBuffer.allocateDirect(newSize).order(byteOrder);
     }
 
-
     public static void writeAllOrEOF(@NotNull SocketChannel sc, @NotNull ByteBuffer bb) throws IOException {
         writeAll(sc, bb);
 

@@ -21,7 +21,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Assert;
 
-
 /**
  * Created by Slawomir on 02/08/2014.
  */

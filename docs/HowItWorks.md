@@ -30,7 +30,6 @@ HashMap is more performant and lower GC than a B-Tree.  The advantage of a b-Tre
 ## Getting Started
 Lets see Chronicle in action with an example. In this example we simply will: Create a Chronicle, Put a record to chronicle and Read the record from chronicle.
 
-
 	package net.openhft.chronicle.examples;
 	import java.io.IOException;
     import net.openhft.chronicle.Excerpt;
@@ -66,8 +65,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
         }
     }
 
-
-Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder. 
+Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder.
 	String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
 	ChronicleTools.deleteOnExit(basePath);
 
@@ -102,5 +100,4 @@ In order to read data from data cache, you first need to get physical start addr
     reader.finish();
 
 End of simple put/get example. 
-
 

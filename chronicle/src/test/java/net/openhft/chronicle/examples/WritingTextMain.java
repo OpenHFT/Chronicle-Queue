@@ -56,7 +56,6 @@ public class WritingTextMain {
         appender.append("\n");
         appender.finish();
 
-
         chronicle.close();
 
         BufferedReader br = new BufferedReader(new FileReader(basePath + ".data"));

@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 public abstract class SinkTcp extends TcpConnection {
     protected final Logger logger;
     protected final String name;

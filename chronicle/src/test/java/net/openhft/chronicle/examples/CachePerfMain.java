@@ -20,7 +20,10 @@ package net.openhft.chronicle.examples;
 
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
@@ -79,7 +82,6 @@ public class CachePerfMain {
                     duration / 1e9, keys);
         }
 
-
         for (int i = 0; i < 2; i++) {
             duration = getTest(keys, map);
             System.out.printf(i
@@ -106,7 +108,6 @@ public class CachePerfMain {
                             + "th iter: Took %.3f secs to update random %,d entries%n",
                             duration / 1e9, keys);
         }
-
 
     }
 

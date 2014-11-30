@@ -224,7 +224,6 @@ public class ChronicleSource implements Chronicle {
         }
     }
 
-
     private final class SourceExcerpt extends WrappedExcerpt {
         public SourceExcerpt(final ExcerptCommon excerptCommon) {
             super(excerptCommon);
@@ -257,7 +256,6 @@ public class ChronicleSource implements Chronicle {
             } else if (this.index == -2) {
                 this.index = tailer.toEnd().index();
             }
-
 
             sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, this.index);
 

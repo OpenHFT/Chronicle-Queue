@@ -17,17 +17,8 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptComparator;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedChronicle;
-
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.NativeBytes;
@@ -85,7 +76,6 @@ public class ChronicleSink extends WrappedChronicle {
     public ExcerptAppender createAppender() throws IOException {
         throw new UnsupportedOperationException();
     }
-
 
     private ExcerptCommon createExcerpt0() throws IOException {
         if( this.excerpt != null) {
@@ -545,7 +535,6 @@ public class ChronicleSink extends WrappedChronicle {
 
         throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
     }
-
 
     private abstract class AppenderAdapter extends WrappedExcerptAppender {
 
