@@ -72,5 +72,4 @@ public class SinkTcpInitiator extends SinkTcp {
 
         return false;
     }
-
 }

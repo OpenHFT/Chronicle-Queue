@@ -152,7 +152,6 @@ public class ChronicleSink extends WrappedChronicle {
     }
 
     private class StatefulLocalExcerpt extends AbstractStatefulExcerpt {
-
         public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
         }
@@ -318,7 +317,6 @@ public class ChronicleSink extends WrappedChronicle {
     // *************************************************************************
 
     private class StatelessExcerpt extends NativeBytes implements Excerpt {
-
         private final Logger logger;
         private final ByteBuffer writeBuffer;
         private final ByteBuffer readBuffer;

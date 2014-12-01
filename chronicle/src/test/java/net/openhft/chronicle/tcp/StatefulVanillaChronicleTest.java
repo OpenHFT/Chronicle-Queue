@@ -405,7 +405,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         Chronicle chronicleTarget = ChronicleQueueBuilder.vanilla(basePath + "-target").build();
         chronicleTarget.clear();
 
-        testJira77(30101, chronicleSrc, chronicleTarget);
+        testJira77(
+            BASE_PORT + 105,
+            chronicleSrc,
+            chronicleTarget);
     }
 
     /**
@@ -417,7 +420,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testVanillaJira80() throws IOException {
         String basePath = getVanillaTestPath();
 
-        testJira80(30101,
+        testJira80(
+            BASE_PORT + 106,
             ChronicleQueueBuilder.vanilla(basePath + "-master"),
             ChronicleQueueBuilder.vanilla(basePath + "-slave")
         );

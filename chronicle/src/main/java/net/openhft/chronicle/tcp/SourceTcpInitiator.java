@@ -20,10 +20,12 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 
 import java.io.IOException;
+import java.net.NetworkInterface;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.*;
 
 public final class SourceTcpInitiator extends SourceTcp {
+    private SocketChannel socketChannel;
 
     public SourceTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         super(
@@ -36,6 +38,8 @@ public final class SourceTcpInitiator extends SourceTcp {
                 TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<Runnable>())
         );
+
+        this.socketChannel = null;
     }
 
     protected Runnable createHandler() {
@@ -43,19 +47,19 @@ public final class SourceTcpInitiator extends SourceTcp {
             @Override
             public void run() {
                 while (running.get()) {
-                    SocketChannel channel = null;
-                    while (running.get() && channel == null) {
+                    socketChannel = null;
+                    while (running.get() && socketChannel == null) {
                         try {
-                            channel = SocketChannel.open();
-                            channel.configureBlocking(true);
+                            socketChannel = SocketChannel.open();
+                            socketChannel.configureBlocking(true);
 
                             if (builder.bindAddress() != null) {
-                                channel.bind(builder.bindAddress());
+                                socketChannel.bind(builder.bindAddress());
                             }
 
-                            channel.connect(builder.connectAddress());
+                            socketChannel.connect(builder.connectAddress());
 
-                            logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
+                            logger.info("Connected to {} from {}", socketChannel.getRemoteAddress(), socketChannel.getLocalAddress());
                         } catch (IOException e) {
                             logger.info("Failed to connect to {}, retrying", builder.connectAddress());
 
@@ -65,15 +69,29 @@ public final class SourceTcpInitiator extends SourceTcp {
                                 Thread.currentThread().interrupt();
                             }
 
-                            channel = null;
+                            socketChannel = null;
                         }
                     }
 
-                    if (channel != null) {
-                        createSessionHandler(channel).run();
+                    if (socketChannel != null) {
+                        createSessionHandler(socketChannel).run();
                     }
                 }
             }
         };
+    }
+
+    @Override
+    public boolean isLocalhost() {
+        if(builder.connectAddress().getAddress().isLoopbackAddress()) {
+            return true;
+        }
+
+        try {
+            return NetworkInterface.getByInetAddress(builder.connectAddress().getAddress()) != null;
+        } catch(Exception e)  {
+        }
+
+        return false;
     }
 }
