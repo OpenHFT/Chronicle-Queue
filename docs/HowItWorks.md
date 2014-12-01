@@ -44,7 +44,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
             String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
             ChronicleTools.deleteOnExit(basePath);
 
-            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
+            Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
             // write one object
             ExcerptAppender appender = chronicle.createAppender();
@@ -69,7 +69,7 @@ Create a chronicle giving Java_temp_directory/SimpleChronicle as the base folder
 	String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
 	ChronicleTools.deleteOnExit(basePath);
 
-	Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath);
+	Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
 IndexedChronicle creates two RandomAccessFile one for indexes and one for data having names relatively: 
 
