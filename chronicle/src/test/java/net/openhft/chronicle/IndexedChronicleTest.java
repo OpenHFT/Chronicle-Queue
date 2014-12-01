@@ -57,7 +57,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         double d = r.readDouble();
         assertEquals(i, d, 0.0);
 
-
         if (0 != r.remaining())
             assertEquals("index: " + r.index(), 0, r.remaining());
 
@@ -277,7 +276,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                     assertTrue(e.index(idx++));
                 }
                 validateExcerpt(e, i, expected);
-
             }
             w.close();
             r.close();
@@ -381,7 +379,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             "maxJitter: " + maxJitter / 1000 + " us, " +
             "maxDelay: " + maxDelay / 1000 + " us," + "");
 //                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
-
 
         t.join();
         chronicle.close();
@@ -597,7 +594,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             mec.lo = mec.hi = 1000;
             assertEquals(~100, excerpt.findMatch(mec));
 
-
             // range match near the start
             long[] startEnd = new long[2];
 
@@ -624,7 +620,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 mec.hi = Math.max(x, y);
                 testSearchRange(ints, excerpt, mec, startEnd);
             }
-
         } finally {
             chronicle.close();
             assertClean(basePath);

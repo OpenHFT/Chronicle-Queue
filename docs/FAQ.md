@@ -9,7 +9,6 @@ I looked at the demo and demo2 samples and noticed that the reader thread usuall
 Your reasoning is fine. If you want to minimise latency you want to have a small number of dedicated cpus. Most applications only need a small number of these critical threads. In fact 6 is the most I have ever seen for a tuned system and you can easily buy a server with much more cores than this.
 Part of the reason you don't need more cpus because by this point your bottleneck has moved somewhere else such as the memory bandwidth (in synthetic test) but more often its something on the network or an upstream/downstream services over which you have no control eg an exchange.
 
-
 ## What is Chronicle designed for?
 
 Chronicle is design to be a record everything of interest logger and persisted IPC.
@@ -149,7 +148,6 @@ A given Chronicle can safely have many readers, both inside and outside of the p
 
 To have multiple readers of a Chronicle, you should generally create a new Chronicle per reader pointing at the same underlying Journal. On each of these Chronicles, you will call createTailer and get a new tailer that can be used to read it. These Tailers should never be shared.
 A less performant option to this is to share a single Chronicle and Tailer and lock access with synchronized or ReentrantLock. Only one Tailer should ever be active at the same time.
-
 
 ## Can I have multiple writers?
 

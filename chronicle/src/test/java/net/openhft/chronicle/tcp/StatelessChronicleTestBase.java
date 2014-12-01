@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.tcp;
 
-
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;

@@ -32,6 +32,5 @@ package net.openhft.chronicle.sandbox;
  */
 class VanillaJournal {
     public VanillaJournal(String fileName, JournalConfig config) {
-
     }
 }

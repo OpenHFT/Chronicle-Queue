@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.tools;
 
-
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.lang.io.*;

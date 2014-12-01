@@ -18,12 +18,10 @@
 
 package demo;
 
+import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.tcp.ChronicleSink;
-import net.openhft.chronicle.tcp.ChronicleSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -250,7 +248,6 @@ public class ChronicleController {
 
         @Override
         public void cleanup() {
-
         }
     }
 }

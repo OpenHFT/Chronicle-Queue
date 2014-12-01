@@ -22,7 +22,6 @@ import net.openhft.lang.io.NativeBytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class JournalRecord extends NativeBytes {
     private static final Logger LOGGER = LoggerFactory.getLogger(JournalRecord.class);
     // int read write lock
@@ -70,10 +69,8 @@ public class JournalRecord extends NativeBytes {
         assert dataSize <= size;
         writeInt(dataSize);
         compareAndSwapInt(READ_WRITE_LOCK, -1, 0);
-
     }
 
     public void readLock() {
-
     }
 }

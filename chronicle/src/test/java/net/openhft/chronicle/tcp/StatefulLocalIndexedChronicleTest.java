@@ -18,7 +18,10 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.util.Random;
@@ -67,7 +70,6 @@ public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase
                         appender.close();
                     } catch (Exception e) {
                     }
-
                 }
             };
 

@@ -20,7 +20,10 @@ package net.openhft.chronicle.examples;
 
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.IOTools;
@@ -79,7 +82,6 @@ public class CachePerfMain {
                     duration / 1e9, keys);
         }
 
-
         for (int i = 0; i < 2; i++) {
             duration = getTest(keys, map);
             System.out.printf(i
@@ -106,8 +108,6 @@ public class CachePerfMain {
                             + "th iter: Took %.3f secs to update random %,d entries%n",
                             duration / 1e9, keys);
         }
-
-
     }
 
     static long putTest(int keycount, String prefix, CachePerfMain map) {
@@ -132,7 +132,6 @@ public class CachePerfMain {
             map.put(i, person);
         }
         return System.nanoTime() - start;
-
     }
 
     static void shufflelist() {
@@ -165,7 +164,6 @@ public class CachePerfMain {
     }
 
     public void get(int key, Person person) {
-
         // Change reader position
         randomAccessor.index(keyIndex.get(key));
         // Read contents into byte buffer
@@ -173,7 +171,6 @@ public class CachePerfMain {
 
         // validate reading was correct
         randomAccessor.finish();
-
     }
 
     public void put(int key, Person person) {
@@ -183,7 +180,6 @@ public class CachePerfMain {
             randomAccessor.index(keyIndex.get(key));
             // Override existing
             person.writeMarshallable(randomAccessor);
-
         } else {
 
             // Start an excerpt with given chunksize
@@ -205,7 +201,6 @@ public class CachePerfMain {
             // Put the position of the excerpt with its key to a map.
             keyIndex.put(key, (int) index);
         }
-
     }
 
     public void close() {

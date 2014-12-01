@@ -309,7 +309,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             tailer.close();
 
             chronicle.checkCounts(1, 1);
-
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -435,7 +434,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             mec.lo = mec.hi = 1000;
             assertEquals(~100, excerpt.findMatch(mec));
 
-
             // range match near the start
             long[] startEnd = new long[2];
 
@@ -555,7 +553,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 tailer.finish();
             }
 
-
             // test a vanilla tailer, rewind
             tailer = chronicle.createTailer().toStart();
             for (long i = 0; i < 3; i++) {
@@ -638,7 +635,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             rchronicle.close();
 
             wchronicle.checkCounts(1, 1);
-
         } finally {
             wchronicle.close();
             wchronicle.clear();
@@ -1062,7 +1058,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
 
             chronicle.checkCounts(1, 1);
-
         } finally {
             chronicle.close();
             chronicle.clear();

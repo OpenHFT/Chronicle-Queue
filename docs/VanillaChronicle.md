@@ -44,7 +44,6 @@ The source sends a message for;
  - when the source is in sync.
  - a heartbeat every 2.5 seconds.
 
-
 Concurrent Producer
 -------------------
 
@@ -82,5 +81,4 @@ Consumers can work on either a Topic basis (the default) or can be applied on a 
         double y = tailer.parseDouble();
         tailer.finish();
     }
-
 

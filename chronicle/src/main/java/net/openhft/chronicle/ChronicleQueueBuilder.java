@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle;
 
-
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
@@ -50,7 +49,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
     public static IndexedChronicleQueueBuilder indexed(File parent, String child) {
         return indexed(new File(parent, child));
     }
-
 
     public static VanillaChronicleQueueBuilder vanilla(File path) {
         return new VanillaChronicleQueueBuilder(path);
@@ -116,7 +114,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.indexBlockSize = Math.max(4096, this.dataBlockSize / 4);
             this.messageCapacity = 128 * 1024;
         }
-
 
         protected File path() {
             return this.path;

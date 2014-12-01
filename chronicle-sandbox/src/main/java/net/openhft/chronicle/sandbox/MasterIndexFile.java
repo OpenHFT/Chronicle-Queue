@@ -48,7 +48,6 @@ public class MasterIndexFile {
             }
         } catch (FileNotFoundException fnfe) {
             throw new AssertionError(fnfe);
-
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }

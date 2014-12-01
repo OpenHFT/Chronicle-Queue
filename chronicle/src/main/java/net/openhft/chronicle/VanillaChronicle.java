@@ -29,13 +29,11 @@ import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 
 /**
  * Created by peter
@@ -237,7 +235,6 @@ public class VanillaChronicle implements Chronicle {
 
                 final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
                 return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
-
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
@@ -379,7 +376,6 @@ public class VanillaChronicle implements Chronicle {
                         assert indexBytes.refCount() > 1;
                         lastCycle = cycle;
                         lastIndexCount = indexCount;
-
                     }
                     indexValue = indexBytes.readVolatileLong(indexOffset << 3);
                 } catch (FileNotFoundException e) {
