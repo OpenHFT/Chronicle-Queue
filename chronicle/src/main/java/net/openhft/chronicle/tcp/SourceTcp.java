@@ -86,6 +86,7 @@ public abstract class SourceTcp {
         return this.name;
     }
 
+    public abstract boolean isLocalhost();
     protected abstract Runnable createHandler();
 
     /**
@@ -313,7 +314,6 @@ public abstract class SourceTcp {
         }
 
         protected boolean onRead(final SelectionKey key) throws IOException {
-
             try {
                 readBuffer.clear();
                 connection.readFullyOrEOF(readBuffer);

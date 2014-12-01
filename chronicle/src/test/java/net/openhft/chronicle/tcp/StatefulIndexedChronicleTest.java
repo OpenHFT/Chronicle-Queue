@@ -407,7 +407,10 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         Chronicle chronicleTarget = ChronicleQueueBuilder.indexed(basePath + "-target").build();
         chronicleTarget.clear();
 
-        testJira77(30100, chronicleSrc, chronicleTarget);
+        testJira77(
+            BASE_PORT + 5,
+            chronicleSrc,
+            chronicleTarget);
     }
 
     /**
@@ -419,7 +422,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     public void testIndexedJira80() throws IOException {
         String basePath = getIndexedTestPath();
 
-        testJira80(30101,
+        testJira80(
+            BASE_PORT + 6,
             ChronicleQueueBuilder.indexed(basePath + "-master"),
             ChronicleQueueBuilder.indexed(basePath + "-slave")
         );

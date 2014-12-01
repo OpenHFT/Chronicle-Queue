@@ -39,7 +39,7 @@ public class StatefulChronicleTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "ch-statefull-";
-    protected static final int    BASE_PORT = 12000;
+    protected static final int    BASE_PORT = 13000;
 
     @Rule
     public final TestName testName = new TestName();

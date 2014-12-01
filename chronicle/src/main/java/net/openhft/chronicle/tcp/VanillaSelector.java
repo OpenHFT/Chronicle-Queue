@@ -81,7 +81,7 @@ public class VanillaSelector implements Closeable {
         return this;
     }
 
-    VanillaSelectionKeySet  vanillaSelectionKeys() {
+    VanillaSelectionKeySet vanillaSelectionKeys() {
         return this.selectionKeySet;
     }
 
