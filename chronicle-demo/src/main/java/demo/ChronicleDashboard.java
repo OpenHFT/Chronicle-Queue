@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Demo application for Chronicle
  */
-public class ChronicleDashboard2 implements ChronicleUpdatable{
+public class ChronicleDashboard implements ChronicleUpdatable{
 
     private AtomicLong runningTime = new AtomicLong(0);
     private AtomicLong messagesRead = new AtomicLong(0);
@@ -33,10 +33,10 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
 
     private ChronicleController controller;
     public static void main(String... args) throws IOException{
-        new ChronicleDashboard2();
+        new ChronicleDashboard();
     }
-    public ChronicleDashboard2() throws IOException{
-        Image image = ImageIO.read(ChronicleDashboard2.class.getResourceAsStream("/diagram.jpg"));
+    public ChronicleDashboard() throws IOException{
+        Image image = ImageIO.read(ChronicleDashboard.class.getResourceAsStream("/diagram.jpg"));
 
         final GUIUpdaterThread updater = new GUIUpdaterThread();
         updater.setLoopTime(100);
@@ -313,7 +313,7 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
             tfTotalReads.setText(String.format("%,d K", messagesRead.get() / 1000));
             long totalMessage = messagesProduced1.get() + messagesProduced2.get();
             tfTotalWrites.setText(String.format("%,d K", totalMessage / 1000));
-            long runningTime = ChronicleDashboard2.this.runningTime.get();
+            long runningTime = ChronicleDashboard.this.runningTime.get();
             tfRunningTime.setText(String.format("%.3f", runningTime / 1000.0));
             if (runningTime != 0) {
                 tfReadRate.setText(String.format("%,d K", messagesRead.get() / runningTime));

@@ -90,7 +90,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>demo.ChronicleDashboard2</mainClass>
+                            <mainClass>demo.ChronicleDashboard</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
