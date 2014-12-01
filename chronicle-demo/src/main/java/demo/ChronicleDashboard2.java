@@ -69,11 +69,11 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
 
         final JProgressBar pBar = new JProgressBar();
         JLabel lblEventsWritten = new JLabel("Events written");
-        JLabel lblRateWritten = new JLabel("Write rate(p/s)");
+        JLabel lblRateWritten = new JLabel("Write rate(events/s)");
         JLabel lblEventsRead = new JLabel("Events read");
-        JLabel lblRateRead = new JLabel("Read rate(p/s)");
+        JLabel lblRateRead = new JLabel("Read rate(events/s)");
         JLabel lblEventsTCP = new JLabel("Events read");
-        JLabel lblRateTCP = new JLabel("Read rate(p/s)");
+        JLabel lblRateTCP = new JLabel("Read rate(events/s)");
         JLabel lblRunningTime = new JLabel("Demo running time(s)");
         JLabel lblFilesCreated = new JLabel("Files written to disk");
         JLabel lblDiskSpace = new JLabel("Disk space remaining");
@@ -114,39 +114,39 @@ public class ChronicleDashboard2 implements ChronicleUpdatable{
         cbRate.setLocation(120, 25);
         cbRate.setSize(140, 25);
 
-        lblRateWritten.setLocation(90, 180);
-        lblRateWritten.setSize(100, 18);
+        lblRateWritten.setLocation(70, 180);
+        lblRateWritten.setSize(140, 18);
         tfWriteRate.setLocation(200, 180);
         tfWriteRate.setSize(80, 18);
         tfWriteRate.setEditable(false);
 
-        lblEventsWritten.setLocation(90, 200);
-        lblEventsWritten.setSize(100, 18);
+        lblEventsWritten.setLocation(70, 200);
+        lblEventsWritten.setSize(120, 18);
         tfTotalWrites.setLocation(200, 200);
         tfTotalWrites.setSize(80, 18);
         tfTotalWrites.setEditable(false);
 
-        lblRateRead.setLocation(160, 310);
-        lblRateRead.setSize(100, 18);
+        lblRateRead.setLocation(140, 310);
+        lblRateRead.setSize(140, 18);
         tfReadRate.setLocation(270, 310);
         tfReadRate.setSize(80, 18);
         tfReadRate.setEditable(false);
 
-        lblEventsRead.setLocation(160, 330);
+        lblEventsRead.setLocation(140, 330);
         lblEventsRead.setSize(100, 18);
         tfTotalReads.setLocation(270, 330);
         tfTotalReads.setSize(80, 18);
         tfTotalReads.setEditable(false);
 
         lblRateTCP.setLocation(610, 100);
-        lblRateTCP.setSize(100, 18);
-        tfTCPRate.setLocation(720, 100);
+        lblRateTCP.setSize(140, 18);
+        tfTCPRate.setLocation(740, 100);
         tfTCPRate.setSize(80, 18);
         tfTCPRate.setEditable(false);
 
         lblEventsTCP.setLocation(610, 120);
         lblEventsTCP.setSize(100, 18);
-        tfTotalTCP.setLocation(720, 120);
+        tfTotalTCP.setLocation(740, 120);
         tfTotalTCP.setSize(80, 18);
         tfTotalTCP.setEditable(false);
 
