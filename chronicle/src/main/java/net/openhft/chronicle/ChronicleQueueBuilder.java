@@ -800,9 +800,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          * @return a cloned copy of this ReplicaChronicleQueueBuilder instance
          */
         @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
         @Override
-        public ReplicaChronicleQueueBuilder clone() throws CloneNotSupportedException{
-            return (ReplicaChronicleQueueBuilder) super.clone();
+        public ReplicaChronicleQueueBuilder clone(){
+            try {
+                return (ReplicaChronicleQueueBuilder) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 
@@ -844,11 +849,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
         @Override
         public SinkChronicleQueueBuilder clone() {
-            try {
-                return (SinkChronicleQueueBuilder) super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new AssertionError(e);
-            }
+            return (SinkChronicleQueueBuilder) super.clone();
         }
     }
 
@@ -886,11 +887,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @SuppressWarnings("SourceChronicleQueueBuilder")
         @Override
         public SourceChronicleQueueBuilder clone() {
-            try {
-                return (SourceChronicleQueueBuilder) super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new AssertionError(e);
-            }
+            return (SourceChronicleQueueBuilder) super.clone();
         }
     }
 
@@ -903,6 +900,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
      *
      * @return a cloned copy of this ChronicleQueueBuilder instance
      */
+    @NotNull
+    @SuppressWarnings("SourceChronicleQueueBuilder")
     @Override
     public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
         return (ChronicleQueueBuilder) super.clone();

@@ -161,9 +161,6 @@ public abstract class SourceTcp {
 
         @Override
         public void run() {
-            final int spinLoopCount = builder.selectorSpinLoopCount();
-            final long selectTimeout = builder.selectTimeout();
-
             VanillaSelectionKeySet selectionKeys = null;
 
             try {
@@ -203,7 +200,7 @@ public abstract class SourceTcp {
                 }
             } finally {
                 if(selectionKeys != null) {
-                    selectionKeys.cleanup();
+                    selectionKeys.clear();
                 }
             }
 
@@ -222,8 +219,10 @@ public abstract class SourceTcp {
                 int nbKeys = selector.select(spinLoopCount, selectTimeout);
 
                 if (nbKeys > 0) {
-                    final SelectionKey[] keys = selectionKeys.flip();
-                    for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                    final SelectionKey[] keys = selectionKeys.keys();
+                    final int size = selectionKeys.size();
+
+                    for (int k = 0; k < size; k++) {
                         final SelectionKey key = keys[k];
                         if (key != null) {
                             if (!onSelectionKey(key)) {
@@ -232,7 +231,7 @@ public abstract class SourceTcp {
                         }
                     }
 
-                    selectionKeys.cleanup(keys);
+                    selectionKeys.clear();
                 }
             }
         }
@@ -246,7 +245,6 @@ public abstract class SourceTcp {
 
                 if(nbKeys > 0) {
                     final Set<SelectionKey> keys = selector.selectionKeys();
-
                     for(final SelectionKey key : keys) {
                         if(!onSelectionKey(key)) {
                             break;
@@ -320,7 +318,7 @@ public abstract class SourceTcp {
                 readBuffer.flip();
 
                 long action = readBuffer.getLong();
-                long data   = readBuffer.getLong();
+                long data = readBuffer.getLong();
 
                 if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     return onSubscribe(key, data);
