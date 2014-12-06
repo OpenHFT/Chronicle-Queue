@@ -18,8 +18,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -63,28 +61,28 @@ class TcpConnection {
         }
     }
 
-    public boolean write(ByteBuffer buffer) throws IOException {
-        return true;
+    public int write(final ByteBuffer buffer) throws IOException {
+        return this.socketChannel.write(buffer);
     }
 
-    public void writeAllOrEOF(ByteBuffer bb) throws IOException {
+    public void writeAllOrEOF(final ByteBuffer bb) throws IOException {
         writeAll(bb);
-
         if (bb.remaining() > 0) {
             throw new EOFException();
         }
     }
 
-    public void writeAll(ByteBuffer bb) throws IOException {
+    public void writeAll(final ByteBuffer bb) throws IOException {
+        int bw = 0;
         while (bb.remaining() > 0) {
-            int bw = this.socketChannel.write(bb);
+            bw = this.socketChannel.write(bb);
             if (bw < 0) {
                 break;
             }
         }
     }
 
-    public boolean read(ByteBuffer buffer) throws IOException {
+    public boolean read(final ByteBuffer buffer) throws IOException {
         if (this.socketChannel.read(buffer) < 0) {
             throw new EOFException();
         }
@@ -92,12 +90,11 @@ class TcpConnection {
         return true;
     }
 
-    public boolean read(ByteBuffer buffer, int size) throws IOException {
+    public boolean read(final ByteBuffer buffer, int size) throws IOException {
         return read(buffer, size, size);
     }
 
-    public boolean read(ByteBuffer buffer, int threshod, int size) throws IOException {
-        Logger l = LoggerFactory.getLogger(this.getClass());
+    public boolean read(final ByteBuffer buffer, int threshod, int size) throws IOException {
         int rem = buffer.remaining();
         if (rem < threshod) {
             if (buffer.remaining() == 0) {
@@ -129,7 +126,7 @@ class TcpConnection {
     }
 
     public void readAvailable(@NotNull ByteBuffer bb) throws IOException {
-        while (bb.remaining() > 0) {
+        for (long i=0; bb.remaining() > 0; i++) {
             if (this.socketChannel.read(bb) < 0) {
                 break;
             }

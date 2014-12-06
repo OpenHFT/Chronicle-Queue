@@ -36,7 +36,7 @@ public class ChronicleSource extends WrappedChronicle {
 
     public ChronicleSource(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
-        this.builder = builder;
+        this.builder = builder.clone();
         this.notifier = new Object();
         this.closed = false;
 

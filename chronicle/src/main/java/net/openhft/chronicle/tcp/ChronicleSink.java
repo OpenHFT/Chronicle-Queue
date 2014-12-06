@@ -44,7 +44,7 @@ public class ChronicleSink extends WrappedChronicle {
     public ChronicleSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
-        this.builder = builder;
+        this.builder = builder.clone();
         this.closed = false;
         this.isLocal = builder.sharedChronicle() && connection.isLocalhost();
         this.excerpt = null;

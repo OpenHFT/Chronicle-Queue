@@ -1,123 +1,149 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 Higher Frequency Trading
  *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ * http://www.higherfrequencytrading.com
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.lang.Maths;
+
 import java.nio.channels.SelectionKey;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * TODO: move to Chronicle-Common
+ * References:
+ * - Netty's SelectedSelectionKeySet
+ *     https://github.com/real-logic/Aeron/blob/master/aeron-driver/src/main/java/uk/co/real_logic/aeron/driver/NioSelectedKeySet.java
+ * - Aeron's NioSelectedKeySet
+ *     https://github.com/netty/netty/blob/master/transport/src/main/java/io/netty/channel/nio/SelectedSelectionKeySet.java
+ *
+ * Assumes single threaded usage.
  */
 public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
+    private static final int MIN_KEYS = 16;
 
-    private SelectionKey[] keysA;
-    private int keysASize;
-    private SelectionKey[] keysB;
-    private int keysBSize;
-    private boolean isA = true;
+    private SelectionKey[] keys;
+    private int size;
 
     VanillaSelectionKeySet() {
-        keysA = new SelectionKey[1024];
-        keysB = keysA.clone();
+        keys = new SelectionKey[MIN_KEYS];
+        size = 0;
+
+        Arrays.fill(keys, null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public boolean add(SelectionKey o) {
-        if (o == null) {
+    public boolean add(final SelectionKey key) {
+        if (key == null) {
             return false;
         }
 
-        if (isA) {
-            int size = keysASize;
-            keysA[size ++] = o;
-            keysASize = size;
-            if (size == keysA.length) {
-                doubleCapacityA();
-            }
-        } else {
-            int size = keysBSize;
-            keysB[size ++] = o;
-            keysBSize = size;
-            if (size == keysB.length) {
-                doubleCapacityB();
-            }
-        }
+        ensureCapacity(size + 1);
+        keys[size++] = key;
 
         return true;
     }
 
-    private void doubleCapacityA() {
-        SelectionKey[] newKeysA = new SelectionKey[keysA.length << 1];
-        System.arraycopy(keysA, 0, newKeysA, 0, keysASize);
-        keysA = newKeysA;
-    }
-
-    private void doubleCapacityB() {
-        SelectionKey[] newKeysB = new SelectionKey[keysB.length << 1];
-        System.arraycopy(keysB, 0, newKeysB, 0, keysBSize);
-        keysB = newKeysB;
-    }
-
-    SelectionKey[] flip() {
-        if (isA) {
-            isA = false;
-            keysA[keysASize] = null;
-            keysBSize = 0;
-            return keysA;
-        } else {
-            isA = true;
-            keysB[keysBSize] = null;
-            keysASize = 0;
-            return keysB;
-        }
-    }
-
-    void cleanup(SelectionKey[] keys) {
+    /**
+     * Reset for next iteration.
+     */
+    @Override
+    public void clear() {
         for (int i = 0; i < keys.length && keys[i] != null; i++) {
             keys[i] = null;
         }
+
+        size = 0;
     }
 
-    void cleanup() {
-        cleanup(keysA);
-        cleanup(keysB);
+    /**
+     * Return selected keys.
+     *
+     * @return selected keys
+     */
+    public SelectionKey[] keys() {
+        return keys;
     }
 
+    /**
+     * Capacity of the current set
+     *
+     * @return capacity of the set
+     */
+    public int capacity() {
+        return keys.length;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int size() {
-        if (isA) {
-            return keysASize;
-        } else {
-            return keysBSize;
+        return size;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean remove(final Object o) {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * It seems that on MacOSX this method is used to check if a SelectionKey has
+     * already been added to the list of availables keys.
+     */
+    @Override
+    public boolean contains(final Object o) {
+        if(o instanceof SelectionKey) {
+            final SelectionKey key = (SelectionKey)o;
+            for (int i = 0; i < keys.length && keys[i] != null; i++) {
+                if(keys[i].channel() == key.channel() && keys[i].interestOps() == key.interestOps() ) {
+                    return true;
+                }
+            }
         }
-    }
 
-    @Override
-    public boolean remove(Object o) {
         return false;
     }
 
-    @Override
-    public boolean contains(Object o) {
-        return false;
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Iterator<SelectionKey> iterator() {
         throw new UnsupportedOperationException();
+    }
+
+    private void ensureCapacity(final int requiredCapacity) {
+        if (requiredCapacity < 0) {
+            final String s = String.format("Insufficient capacity: length=%d required=%d", keys.length, requiredCapacity);
+            throw new IllegalStateException(s);
+        }
+
+        if (requiredCapacity > keys.length) {
+            final int newCapacity = Maths.nextPower2(MIN_KEYS, requiredCapacity);
+            keys = Arrays.copyOf(keys, newCapacity);
+        }
     }
 }

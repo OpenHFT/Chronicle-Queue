@@ -67,8 +67,10 @@ public final class SourceTcpAcceptor extends SourceTcp {
 
                         if(nbKeys > 0) {
                             if(selectionKeys != null) {
-                                final SelectionKey[] keys = selectionKeys.flip();
-                                for (int k = 0; k < keys.length && keys[k] != null; k++) {
+                                final SelectionKey[] keys = selectionKeys.keys();
+                                final int size = selectionKeys.size();
+
+                                for (int k = 0; k < size; k++) {
                                     final SelectionKey key = keys[k];
                                     if (key != null) {
                                         if (key.isAcceptable()) {
@@ -80,7 +82,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                                     }
                                 }
 
-                                selectionKeys.cleanup(keys);
+                                selectionKeys.clear();
                             } else {
                                 final Set<SelectionKey> keys = selector.selectionKeys();
 
