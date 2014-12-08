@@ -118,6 +118,9 @@ public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
         if(o instanceof SelectionKey) {
             final SelectionKey key = (SelectionKey)o;
             for (int i = 0; i < keys.length && keys[i] != null; i++) {
+                if(key == keys[i]) {
+                    return true;
+                }
                 if(keys[i].channel() == key.channel() && keys[i].interestOps() == key.interestOps() ) {
                     return true;
                 }
