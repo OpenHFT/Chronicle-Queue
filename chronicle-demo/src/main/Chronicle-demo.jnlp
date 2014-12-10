@@ -15,4 +15,4 @@
 		<jar href="chronicle-demo-sign-1.0.jar" />
 	</resources>
 	<application-desc main-class="demo.ChronicleDashboard" />
-</jnlp>chr
+</jnlp>
