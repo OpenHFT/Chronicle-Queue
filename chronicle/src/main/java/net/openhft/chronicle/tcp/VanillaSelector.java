@@ -68,8 +68,7 @@ public class VanillaSelector implements Closeable {
     }
 
     public VanillaSelector register(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
-        SelectionKey register = channel.register(this.selector, ops);
-        assert register.attachment() != null;
+        channel.register(this.selector, ops);
         return this;
     }
 
