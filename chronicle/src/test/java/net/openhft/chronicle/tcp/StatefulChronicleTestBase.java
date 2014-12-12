@@ -24,8 +24,6 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,14 +33,11 @@ import java.util.Random;
 
 import static org.junit.Assert.*;
 
-public class StatefulChronicleTestBase {
+public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "ch-statefull-";
     protected static final int    BASE_PORT = 13000;
-
-    @Rule
-    public final TestName testName = new TestName();
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();

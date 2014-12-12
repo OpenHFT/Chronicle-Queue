@@ -17,12 +17,31 @@
  */
 package net.openhft.chronicle.tcp;
 
+import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertNotEquals;
+
 public class ChronicleTcpTestBase {
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleTcpTestBase.class);
+
+    @Rule
+    public final TestName testName = new TestName();
+
+    @Rule
+    public final ErrorCollector errorCollector = new ErrorCollector();
+
+    protected synchronized String getTestName() {
+        return testName.getMethodName();
+    }
 
     protected class PortSupplier extends TcpConnectionHandler {
         private AtomicInteger port;
@@ -48,6 +67,15 @@ public class ChronicleTcpTestBase {
             }
 
             return this.port.get();
+        }
+
+        public int getAndCheckPort() {
+            final int port =  port();
+            assertNotEquals(-1, port);
+
+            LOGGER.info("{} : source listening on port {}", getTestName(), port);
+
+            return port;
         }
     }
 }

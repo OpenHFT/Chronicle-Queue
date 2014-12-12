@@ -51,16 +51,6 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     protected static final String PREFIX    = "ch-stateless-";
     protected static final int    BASE_PORT = 12000;
 
-    @Rule
-    public final TestName testName = new TestName();
-
-    @Rule
-    public final ErrorCollector errorCollector = new ErrorCollector();
-
-    protected synchronized String getTestName() {
-        return testName.getMethodName();
-    }
-
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
         ChronicleTools.deleteOnExit(path);
