@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class StatelessChronicleTestBase {
+public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
     protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
     protected static final String PREFIX    = "ch-stateless-";
@@ -56,6 +56,10 @@ public class StatelessChronicleTestBase {
 
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
+
+    protected synchronized String getTestName() {
+        return testName.getMethodName();
+    }
 
     protected synchronized String getIndexedTestPath() {
         final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();

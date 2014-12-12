@@ -48,12 +48,16 @@ public final class SourceTcpAcceptor extends SourceTcp {
         return new Runnable() {
             @Override
             public void run() {
+                ServerSocketChannel socketChannel = null;
+
                 try {
 
-                    final ServerSocketChannel socketChannel = ServerSocketChannel.open();
+                    socketChannel = ServerSocketChannel.open();
                     socketChannel.socket().setReuseAddress(true);
                     socketChannel.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
                     socketChannel.configureBlocking(false);
+
+                    builder.connectionListener().onServerSocketStarted(socketChannel);
 
                     final VanillaSelector selector = new VanillaSelector()
                         .open()
@@ -103,6 +107,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     selector.close();
                     socketChannel.close();
                 } catch (IOException e) {
+                    builder.connectionListener().onServerSocketError(socketChannel, e);
                     logger.warn("", e);
                 }
             }
