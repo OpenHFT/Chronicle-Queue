@@ -111,7 +111,7 @@
 
         <dependency>
             <groupId>net.java.dev.jna</groupId>
-            <artifactId>platform</artifactId>
+            <artifactId>jna-platform</artifactId>
             <scope>test</scope>
         </dependency>
 
