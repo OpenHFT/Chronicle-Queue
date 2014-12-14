@@ -461,7 +461,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return dataBlockSize;
         }
 
-        public VanillaChronicleQueueBuilder dataBlockSize(int dataBlockSize) {
+        public VanillaChronicleQueueBuilder dataBlockSize(long dataBlockSize) {
             this.dataBlockSize = dataBlockSize;
             return this;
         }
@@ -558,6 +558,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
     // *************************************************************************
 
     public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder {
+        public static final TcpConnectionListener CONNECTION_LISTENER = new TcpConnectionHandler();
+
         private final ChronicleQueueBuilder builder;
         private Chronicle chronicle;
 
@@ -580,6 +582,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int acceptorMaxThreads;
         private long acceptorThreadPoolkeepAliveTime;
         private TimeUnit acceptorThreadPoolkeepAliveTimeUnit;
+        private TcpConnectionListener connectionListener;
 
         private ReplicaChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
             this.builder = builder;
@@ -603,6 +606,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.acceptorThreadPoolkeepAliveTimeUnit = TimeUnit.SECONDS;
             this.maxExcerptsPerMessage = 128;
             this.selectorSpinLoopCount = 100000;
+            this.connectionListener = CONNECTION_LISTENER;
         }
 
         public InetSocketAddress bindAddress() {
@@ -777,6 +781,19 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public ReplicaChronicleQueueBuilder selectorSpinLoopCount(int selectorSpinLoopCount) {
             this.selectorSpinLoopCount = selectorSpinLoopCount;
             return this;
+        }
+
+        public ReplicaChronicleQueueBuilder connectionListener(TcpConnectionListener connectionListener) {
+            this.connectionListener = connectionListener;
+            return this;
+        }
+
+        public boolean hasConnectionListener() {
+            return this.connectionListener != null;
+        }
+
+        public TcpConnectionListener connectionListener() {
+            return this.connectionListener;
         }
 
         public Chronicle chronicle() {

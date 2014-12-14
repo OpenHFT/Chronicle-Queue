@@ -47,13 +47,17 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         // TODO, make more robust.
         final int messages = 5 * 1000 * 1000;
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-            .bindAddress(BASE_PORT + 1)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-            .connectAddress("localhost", BASE_PORT + 1)
+            .connectAddress("localhost", port)
             .build();
 
         final Thread t = new Thread(new Runnable() {
@@ -114,13 +118,17 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-            .bindAddress(BASE_PORT + 2)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-            .connectAddress("localhost", BASE_PORT + 2)
+            .connectAddress("localhost", port)
             .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -162,13 +170,17 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-            .bindAddress(BASE_PORT + 3)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-            .connectAddress("localhost", BASE_PORT + 3)
+            .connectAddress("localhost", port)
             .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -212,13 +224,17 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getIndexedTestPath("-source");
         final String basePathSink = getIndexedTestPath("-sink");
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
             .source()
-            .bindAddress(BASE_PORT + 4)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
             .sink()
-            .connectAddress("localhost", BASE_PORT + 4)
+            .connectAddress("localhost", port)
             .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
@@ -408,7 +424,6 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            BASE_PORT + 5,
             chronicleSrc,
             chronicleTarget);
     }
@@ -423,7 +438,6 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         String basePath = getIndexedTestPath();
 
         testJira80(
-            BASE_PORT + 6,
             ChronicleQueueBuilder.indexed(basePath + "-master"),
             ChronicleQueueBuilder.indexed(basePath + "-slave")
         );

@@ -33,14 +33,16 @@ import static org.junit.Assert.assertTrue;
 public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
     public void testPersistedLocalIndexedSink_001() throws Exception {
-        final int port = BASE_PORT + 201;
         final String basePath = getIndexedTestPath();
-
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(chronicle)
-            .bindAddress("localhost", port)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
             .sharedChronicle(true)
             .connectAddress("localhost", port)

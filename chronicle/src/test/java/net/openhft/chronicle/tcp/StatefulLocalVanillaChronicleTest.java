@@ -31,14 +31,16 @@ public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase
 
     @Test
     public void testPersistedLocalVanillaSink_001() throws Exception {
-        final int port = BASE_PORT + 301;
         final String basePath = getVanillaTestPath();
-
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(chronicle)
-            .bindAddress("localhost", port)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
             .sharedChronicle(true)
             .connectAddress("localhost",port)
