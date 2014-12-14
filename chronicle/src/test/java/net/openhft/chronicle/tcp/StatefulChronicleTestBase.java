@@ -24,8 +24,6 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.IOTools;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,20 +32,17 @@ import java.util.Random;
 import static org.junit.Assert.*;
 
 public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatefulChronicleTest");
-    protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-statefull-";
-    protected static final int    BASE_PORT = 13000;
+    protected static final String PREFIX = "ch-statefull-";
 
     protected synchronized String getIndexedTestPath() {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
         ChronicleTools.deleteOnExit(path);
 
         return path;
     }
 
     protected synchronized String getIndexedTestPath(String suffix) {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
         ChronicleTools.deleteOnExit(path);
 
         return path;
@@ -60,14 +55,14 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     }
 
     protected synchronized String getVanillaTestPath() {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
         IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getVanillaTestPath(String suffix) {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
         IOTools.deleteDir(path);
 
         return path;
@@ -77,17 +72,20 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    public void testJira77(int port, Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
+    public void testJira77(Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
         final int BYTES_LENGTH = 66000;
 
-        Random random = new Random();
+        final Random random = new Random();
 
-        Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleSrc)
+        final PortSupplier portSupplier = new PortSupplier();
+        final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleSrc)
             .minBufferSize(2 * BYTES_LENGTH)
-            .bindAddress(port)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
 
-        Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
+        final int port = portSupplier.getAndCheckPort();
+        final Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
             .minBufferSize(2 * BYTES_LENGTH)
             .connectAddress("localhost", port)
             .build();
@@ -119,17 +117,21 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
         chronicleSink.close();
     }
 
-    public void testJira80(int port, final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
+    public void testJira80(final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
         final long chunks = 4;
         final long itemsPerChunk = 100000;
 
+        final PortSupplier portSupplier = new PortSupplier();
+
         final Chronicle chronicleMaster = chronicleMasterBuilder.build();
         final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMaster)
-            .bindAddress(port)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
 
         chronicleSource.clear();
 
+        final int port = portSupplier.getAndCheckPort();
         final ExcerptAppender appender = chronicleSource.createAppender();
         for (long i = 0; i < (chunks * itemsPerChunk); i++) {
             appender.startExcerpt();

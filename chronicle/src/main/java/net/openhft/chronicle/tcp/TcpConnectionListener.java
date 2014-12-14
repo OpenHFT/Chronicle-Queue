@@ -18,9 +18,10 @@
 package net.openhft.chronicle.tcp;
 
 import java.io.IOException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
 
 public interface TcpConnectionListener {
-    public void onServerSocketError(ServerSocketChannel channel, IOException exception);
-    public void onServerSocketStarted(ServerSocketChannel channel);
+    public void onError(SelectableChannel channel, IOException exception);
+    public void onListen(ServerSocketChannel channel);
 }

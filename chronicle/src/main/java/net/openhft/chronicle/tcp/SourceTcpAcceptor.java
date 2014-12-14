@@ -57,7 +57,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     socketChannel.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
                     socketChannel.configureBlocking(false);
 
-                    builder.connectionListener().onServerSocketStarted(socketChannel);
+                    builder.connectionListener().onListen(socketChannel);
 
                     final VanillaSelector selector = new VanillaSelector()
                         .open()
@@ -107,7 +107,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     selector.close();
                     socketChannel.close();
                 } catch (IOException e) {
-                    builder.connectionListener().onServerSocketError(socketChannel, e);
+                    builder.connectionListener().onError(socketChannel, e);
                     logger.warn("", e);
                 }
             }

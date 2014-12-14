@@ -37,13 +37,18 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
 
+        final PortSupplier portSupplier = new PortSupplier();
+
         final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
             .source()
-            .bindAddress("localhost", BASE_PORT + 101)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.vanilla(sinkBasePath)
             .sink()
-            .connectAddress("localhost", BASE_PORT + 101)
+            .connectAddress("localhost", port)
             .build();
 
         try {
@@ -123,11 +128,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             .indexBlockSize(16L << 10)
             .build();
 
+        final PortSupplier portSupplier = new PortSupplier();
+
         final Chronicle source = ChronicleQueueBuilder.source(sourceChronicle)
-            .bindAddress("localhost", BASE_PORT + 102)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
-            .connectAddress("localhost", BASE_PORT + 102)
+            .connectAddress("localhost", port)
             .build();
 
         try {
@@ -209,11 +219,15 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             .indexBlockSize(16L << 10)
             .build();
 
+        final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(sourceChronicle)
-            .bindAddress("localhost", BASE_PORT + 103)
+            .bindAddress(0)
+            .connectionListener(portSupplier)
             .build();
+
+        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
-            .connectAddress("localhost", BASE_PORT + 103)
+            .connectAddress("localhost", port)
             .build();
 
         try {
@@ -292,14 +306,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
-        final Chronicle source = ChronicleQueueBuilder.source(
-                ChronicleQueueBuilder.vanilla(sourceBasePath)
-                    .entriesPerCycle(1L << 20)
-                    .cycleLength(1000, false)
-                    .cycleFormat("yyyyMMddHHmmss")
-                    .indexBlockSize(16L << 10)
-                    .build())
-            .bindAddress("localhost", BASE_PORT + 104)
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10)
+            .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
             .build();
 
         ExcerptAppender appender = source.createAppender();
@@ -319,15 +335,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         appender.close();
         System.out.print("\n");
 
+        final int port = portSupplier.getAndCheckPort();
+
         //create a tailer to get the first 50 items then exit the tailer
-        final Chronicle sink1 = ChronicleQueueBuilder.sink(
-                ChronicleQueueBuilder.vanilla(sinkBasePath)
-                    .entriesPerCycle(1L << 20)
-                    .cycleLength(1000, false)
-                    .cycleFormat("yyyyMMddHHmmss")
-                    .indexBlockSize(16L << 10)
-                    .build())
-            .connectAddress("localhost", BASE_PORT + 104)
+        final Chronicle sink1 = ChronicleQueueBuilder.vanilla(sinkBasePath)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10)
+            .sink()
+                .connectAddress("localhost", port)
             .build();
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
@@ -347,14 +364,13 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         ChronicleTools.checkCount(sink1,1,1);
 
         //now resume the tailer to get the first 50 items
-        final Chronicle sink2 = ChronicleQueueBuilder.sink(
-            ChronicleQueueBuilder.vanilla(sinkBasePath)
-                .entriesPerCycle(1L << 20)
-                .cycleLength(1000, false)
-                .cycleFormat("yyyyMMddHHmmss")
-                .indexBlockSize(16L << 10)
-                .build())
-            .connectAddress("localhost", BASE_PORT + 104)
+        final Chronicle sink2 = ChronicleQueueBuilder.vanilla(sinkBasePath)
+            .entriesPerCycle(1L << 20)
+            .cycleLength(1000, false)
+            .cycleFormat("yyyyMMddHHmmss")
+            .indexBlockSize(16L << 10)
+            .sink()
+                .connectAddress("localhost", port)
             .build();
 
         //Take the tailer to the last index (item 50) and start reading from there.
@@ -406,7 +422,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            BASE_PORT + 105,
             chronicleSrc,
             chronicleTarget);
     }
@@ -421,7 +436,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         String basePath = getVanillaTestPath();
 
         testJira80(
-            BASE_PORT + 106,
             ChronicleQueueBuilder.vanilla(basePath + "-master"),
             ChronicleQueueBuilder.vanilla(basePath + "-slave")
         );

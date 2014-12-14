@@ -28,11 +28,6 @@ import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Rule;
-import org.junit.rules.ErrorCollector;
-import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,30 +38,29 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
-    protected static final Logger LOGGER    = LoggerFactory.getLogger("StatelessChronicleTestBase");
-    protected static final String TMP_DIR   = System.getProperty("java.io.tmpdir");
-    protected static final String PREFIX    = "ch-stateless-";
-    protected static final int    BASE_PORT = 12000;
+    protected static final String PREFIX = "ch-stateless-";
 
     protected synchronized String getIndexedTestPath() {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
         ChronicleTools.deleteOnExit(path);
 
         return path;
     }
 
     protected synchronized String getIndexedTestPath(String suffix) {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
         ChronicleTools.deleteOnExit(path);
 
         return path;
     }
 
     protected synchronized String getVanillaTestPath() {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName();
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
         final File f = new File(path);
         if(f.exists()) {
             f.delete();
@@ -76,7 +70,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     }
 
     protected synchronized String getVanillaTestPath(String suffix) {
-        final String path = TMP_DIR + "/" + PREFIX + testName.getMethodName() + suffix;
+        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
         final File f = new File(path);
         if(f.exists()) {
             f.delete();

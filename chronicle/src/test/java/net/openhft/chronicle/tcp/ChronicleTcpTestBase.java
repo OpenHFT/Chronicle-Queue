@@ -23,6 +23,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -39,13 +41,25 @@ public class ChronicleTcpTestBase {
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     protected synchronized String getTestName() {
         return testName.getMethodName();
     }
 
-    protected class PortSupplier extends TcpConnectionHandler {
-        private AtomicInteger port;
-        private CountDownLatch latch;
+    protected synchronized String getTmpDir() {
+        return System.getProperty("java.io.tmpdir");
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected final class PortSupplier implements TcpConnectionListener {
+        private final AtomicInteger port;
+        private final CountDownLatch latch;
 
         public PortSupplier() {
             this.port = new AtomicInteger(-1);
@@ -53,8 +67,16 @@ public class ChronicleTcpTestBase {
         }
 
         @Override
-        public void onServerSocketStarted(final ServerSocketChannel channel) {
+        public void onListen(final ServerSocketChannel channel) {
             this.port.set(channel.socket().getLocalPort());
+            this.latch.countDown();
+        }
+
+        @Override
+        public void onError(SelectableChannel channel, IOException exception) {
+            errorCollector.addError(exception);
+
+            this.port.set(-1);
             this.latch.countDown();
         }
 
@@ -70,10 +92,10 @@ public class ChronicleTcpTestBase {
         }
 
         public int getAndCheckPort() {
-            final int port =  port();
+            final int port = port();
             assertNotEquals(-1, port);
 
-            LOGGER.info("{} : source listening on port {}", getTestName(), port);
+            LOGGER.info("{} : listening on port {}", getTestName(), port);
 
             return port;
         }
