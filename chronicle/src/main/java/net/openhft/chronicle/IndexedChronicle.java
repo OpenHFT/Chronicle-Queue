@@ -17,6 +17,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.MappedFile;
+import net.openhft.lang.io.MappedMemory;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -70,29 +71,34 @@ public class IndexedChronicle implements Chronicle {
         }
         int indexBlockSize = config.indexBlockSize();
         for (long block = size / indexBlockSize - 1; block >= 0; block--) {
-            MappedByteBuffer mbb = null;
+            MappedMemory mm = null;
+            MappedByteBuffer mb = null;
             try {
-                mbb = indexFileCache.acquire(block).buffer();
+                mm = indexFileCache.acquire(block);
+                mb = mm.buffer();
             } catch (IOException e) {
                 continue;
             }
-            mbb.order(ByteOrder.nativeOrder());
-            if (block > 0 && mbb.getLong(0) == 0) {
+            mb.order(ByteOrder.nativeOrder());
+            if (block > 0 && mb.getLong(0) == 0) {
+                mm.release();
                 continue;
             }
             int cacheLineSize = config.cacheLineSize();
             for (int pos = 0; pos < indexBlockSize; pos += cacheLineSize) {
                 // if the next line is blank
-                if (pos + cacheLineSize >= indexBlockSize || mbb.getLong(pos + cacheLineSize) == 0) {
+                if (pos + cacheLineSize >= indexBlockSize || mb.getLong(pos + cacheLineSize) == 0) {
                     // last cache line.
                     int pos2 = 8;
                     for (pos2 = 8; pos2 < cacheLineSize; pos2 += 4) {
-                        if (mbb.getInt(pos + pos2) == 0)
+                        if (mb.getInt(pos + pos2) == 0)
                             break;
                     }
+                    mm.release();
                     return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos2 / 4 - 3;
                 }
             }
+            mm.release();
             return (block + 1) * indexBlockSize / cacheLineSize * (cacheLineSize / 4 - 2);
         }
         return -1;
