@@ -147,7 +147,7 @@ public class VanillaIndexCache implements Closeable {
 
     public static long countIndices(final VanillaMappedBytes buffer) {
         long indices = 0;
-        for (long offset = 0;(buffer.limit() - buffer.address() + offset) < 8;offset += 8) {
+        for (long offset = 0; offset < buffer.capacity(); offset += 8) {
             if(buffer.readLong(offset) != 0) {
                 indices++;
             } else {
