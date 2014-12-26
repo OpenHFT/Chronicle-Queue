@@ -85,9 +85,9 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         excerpt.findRange(startEnd, mec);
 
         assertEquals(
-            "lo: " + mec.lo + ", hi: " + mec.hi,
-            "[" + elo + ", " + ehi + "]",
-            Arrays.toString(startEnd));
+                "lo: " + mec.lo + ", hi: " + mec.hi,
+                "[" + elo + ", " + ehi + "]",
+                Arrays.toString(startEnd));
     }
 
     static class MyExcerptComparator implements ExcerptComparator {
@@ -110,10 +110,10 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         final ChronicleQueueBuilder builder = ChronicleQueueBuilder
-            .indexed(basePath)
-            .test()
-            .dataBlockSize(128)
-            .indexBlockSize(128);
+                .indexed(basePath)
+                .test()
+                .dataBlockSize(128)
+                .indexBlockSize(128);
 
         final Chronicle chronicle1 = builder.build();
         final Chronicle chronicle2 = builder.build();
@@ -226,10 +226,10 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         int dataBlockSize = 4 * 1024;
 
         Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-            .test()
-            .dataBlockSize(dataBlockSize)
-            .indexBlockSize(128 * 1024)
-            .build();
+                .test()
+                .dataBlockSize(dataBlockSize)
+                .indexBlockSize(128 * 1024)
+                .build();
 
         int i = 0;
         try {
@@ -282,7 +282,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         } finally {
             chronicle.close();
 
-            assertEquals(runs,i);
+            assertEquals(runs, i);
             assertClean(basePath);
         }
     }
@@ -299,9 +299,9 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         final int dataBlockSize = 1 << 26;
 
         Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-            .dataBlockSize(dataBlockSize)
-            .indexBlockSize(dataBlockSize / 4)
-            .build();
+                .dataBlockSize(dataBlockSize)
+                .indexBlockSize(dataBlockSize / 4)
+                .build();
 
         final ExcerptTailer r = chronicle.createTailer();
 
@@ -314,9 +314,9 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             public void run() {
                 try {
                     final Chronicle c = ChronicleQueueBuilder.indexed(basePath)
-                        .dataBlockSize(dataBlockSize)
-                        .indexBlockSize(dataBlockSize / 4)
-                        .build();
+                            .dataBlockSize(dataBlockSize)
+                            .indexBlockSize(dataBlockSize / 4)
+                            .build();
 
                     final ExcerptAppender w = c.createAppender();
                     for (int i = 0; i < words; i += size) {
@@ -376,8 +376,8 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         r.close();
         long rate = words / size * 10 * 1000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec for " + size * 4 + " byte messages, " +
-            "maxJitter: " + maxJitter / 1000 + " us, " +
-            "maxDelay: " + maxDelay / 1000 + " us," + "");
+                "maxJitter: " + maxJitter / 1000 + " us, " +
+                "maxDelay: " + maxDelay / 1000 + " us," + "");
 //                "totalWait: " + (PrefetchingMappedFileCache.totalWait.longValue() + SingleMappedFileCache.totalWait.longValue()) / 1000 + " us");
 
         t.join();
@@ -495,10 +495,10 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
 
             long indexFileSize = indexFile.length();
             final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-                .test()
-                .indexBlockSize(128)
-                .dataBlockSize(128)
-                .build();
+                    .test()
+                    .indexBlockSize(128)
+                    .dataBlockSize(128)
+                    .build();
 
             assertEquals("Index should not grow on open (i=" + i + ")", indexFileSize, indexFile.length());
 
