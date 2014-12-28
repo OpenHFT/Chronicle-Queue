@@ -1325,4 +1325,14 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     public void unlockRWWriteLock(long offset) throws IllegalStateException {
         wrappedCommon.unlockRWWriteLock(offset);
     }
+
+    @Override
+    public void readFully(long offset, @org.jetbrains.annotations.NotNull byte[] bytes, int off, int len) {
+        wrappedCommon.readFully(offset, bytes, off, len);
+    }
+
+    @Override
+    public void write(long offset, byte[] bytes, int off, int len) {
+        wrappedCommon.write(offset, bytes, off, len);
+    }
 }
