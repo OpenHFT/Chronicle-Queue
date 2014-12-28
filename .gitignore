@@ -9,5 +9,10 @@
 *.iml
 .idea
 
-# maven
-target
+# Maven
+target/
+
+# Eclipse
+.project
+.classpath
+.settings/
