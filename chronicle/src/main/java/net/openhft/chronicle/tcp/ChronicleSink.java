@@ -558,12 +558,12 @@ public class ChronicleSink extends WrappedChronicle {
 
         @Override
         public void writePaddedEntry() {
-            super.warappedAppender.addPaddedEntry();
+            super.wrappedAppender.addPaddedEntry();
         }
 
         @Override
         public void startExcerpt(long capacity, long index) {
-            super.warappedAppender.startExcerpt(capacity);
+            super.wrappedAppender.startExcerpt(capacity);
         }
     }
 

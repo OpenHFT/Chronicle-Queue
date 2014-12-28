@@ -19,11 +19,7 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.lang.io.ByteStringAppender;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MutableDecimal;
-import net.openhft.lang.io.RandomDataInput;
-import net.openhft.lang.io.StopCharTester;
+import net.openhft.lang.io.*;
 import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
@@ -1275,5 +1271,15 @@ public class WrappedExcerptTailer implements ExcerptTailer {
     @Override
     public void unlockRWWriteLock(long offset) throws IllegalStateException {
         wrappedTailer.unlockRWWriteLock(offset);
+    }
+
+    @Override
+    public void readFully(long offset, @org.jetbrains.annotations.NotNull byte[] bytes, int off, int len) {
+        wrappedTailer.readFully(offset, bytes, off, len);
+    }
+
+    @Override
+    public void write(long offset, byte[] bytes, int off, int len) {
+        wrappedTailer.write(offset, bytes, off, len);
     }
 }
