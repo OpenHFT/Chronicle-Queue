@@ -314,6 +314,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
         try {
             ExcerptAppender excerpt = chronicle.createAppender();
             excerpt.startExcerpt();
+            excerpt.writeUTFΔ(AccessMode.EXECUTE.name());
             excerpt.writeEnum(AccessMode.EXECUTE);
             excerpt.writeEnum(AccessMode.READ);
             excerpt.writeEnum(AccessMode.WRITE);
@@ -329,6 +330,8 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
             ExcerptTailer tailer = chronicle.createTailer();
             tailer.nextIndex();
             AccessMode e = tailer.readEnum(AccessMode.class);
+            String e2 = tailer.readEnum(String.class);
+            assertEquals(AccessMode.EXECUTE.name(), e2);
             AccessMode r = tailer.readEnum(AccessMode.class);
             AccessMode w = tailer.readEnum(AccessMode.class);
             BigInteger one = tailer.readEnum(BigInteger.class);
