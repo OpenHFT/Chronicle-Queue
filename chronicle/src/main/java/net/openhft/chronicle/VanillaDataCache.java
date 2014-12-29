@@ -27,23 +27,13 @@ import java.io.File;
 import java.io.IOException;
 
 public class VanillaDataCache implements Closeable {
-    private static final String FILE_NAME_PREFIX = "data-";
+    public static final String FILE_NAME_PREFIX = "data-";
 
     private final String basePath;
     private final DataKey key = new DataKey();
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
-
-    /*
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
-        this(basePath, blockBits, dateCache, builder.dataCacheCapacity(), builder.cleanupOnClose());
-    }
-
-    public VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity) {
-        this(basePath, blockBits, dateCache, capacity, false);
-    }
-    */
 
     VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
