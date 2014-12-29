@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.text.ParseException;
 
 public class VanillaIndexCache implements Closeable {
-    private static final String FILE_NAME_PREFIX = "index-";
+    public static final String FILE_NAME_PREFIX = "index-";
 
     private final String basePath;
     private final File baseFile;
