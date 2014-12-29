@@ -38,7 +38,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
     import net.openhft.chronicle.ChronicleQueueBuilder;
     import net.openhft.chronicle.tools.ChronicleTools;
 
-    public class ExampleCacheMain {
+    public class GettingStartedMain {
         public static void main(String... ignored) throws IOException {
             
             String basePath = System.getProperty("java.io.tmpdir") + "/SimpleChronicle";
@@ -48,13 +48,14 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
 
             // write one object
             ExcerptAppender appender = chronicle.createAppender();
-            appender.startExcerpt(100); // an upper limit to how much space in bytes this message should need.
+            appender.startExcerpt(256); // an upper limit to how much space in bytes this message should need.
             appender.writeObject("TestMessage");
             appender.finish();
             appender.close();
 
             // read one object
             ExcerptTailer reader = chronicle.createTailer();
+            while(!reader.nextIndex()); // while until there is a new Excerpt to read
             Object ret = reader.readObject();
             reader.finish();
             reader.close();
