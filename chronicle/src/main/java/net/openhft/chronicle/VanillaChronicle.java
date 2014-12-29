@@ -316,7 +316,9 @@ public class VanillaChronicle implements Chronicle {
             return index;
         }
 
-        protected void setIndex(long index) { this.index = index; }
+        protected void setIndex(long index) {
+            this.index = index;
+        }
 
         /**
          * Return the last index written by the appender.
@@ -333,8 +335,9 @@ public class VanillaChronicle implements Chronicle {
             this.lastWrittenIndex = lastWrittenIndex;
             for(;;) {
                 long lwi = VanillaChronicle.this.lastWrittenIndex();
-                if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex))
+                if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex)) {
                     break;
+                }
             }
         }
 
@@ -354,12 +357,14 @@ public class VanillaChronicle implements Chronicle {
 
         public boolean index(long nextIndex) {
             checkNotClosed();
+
             try {
                 int cycle = (int) (nextIndex >>> entriesForCycleBits);
                 int indexCount = (int) ((nextIndex & entriesForCycleMask) >>> indexBlockLongsBits);
                 int indexOffset = (int) (nextIndex & indexBlockLongsMask);
                 long indexValue;
                 boolean indexFileChange = false;
+
                 try {
                     if (lastCycle != cycle || lastIndexCount != indexCount || indexBytes == null) {
                         if (indexBytes != null) {
@@ -381,19 +386,23 @@ public class VanillaChronicle implements Chronicle {
                 } catch (FileNotFoundException e) {
                     return false;
                 }
+
                 if (indexValue == 0) {
                     return false;
                 }
+
                 int threadId = (int) (indexValue >>> INDEX_DATA_OFFSET_BITS);
                 long dataOffset0 = indexValue & INDEX_DATA_OFFSET_MASK;
                 int dataCount = (int) (dataOffset0 >>> dataBlockSizeBits);
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
+
                 if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
                     if (dataBytes != null) {
                         dataBytes.release();
                         dataBytes = null;
                     }
                 }
+
                 if (dataBytes == null) {
                     dataBytes = dataCache.dataFor(cycle, threadId, dataCount, false);
                     lastThreadId = threadId;
@@ -406,13 +415,16 @@ public class VanillaChronicle implements Chronicle {
 
                 int len2 = ~len;
                 // invalid if either the top two bits are set,
-                if ((len2 >>> 30) != 0)
+                if ((len2 >>> 30) != 0) {
                     throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
+                }
+
                 startAddr = positionAddr = dataBytes.startAddr() + dataOffset;
                 limitAddr = startAddr + ~len;
 
                 index = nextIndex;
                 finished = false;
+
                 return true;
             } catch (IOException ioe) {
                 throw new AssertionError(ioe);
@@ -430,12 +442,14 @@ public class VanillaChronicle implements Chronicle {
             long nextIndex = index + 1;
             while (true) {
                 boolean found = index(nextIndex);
-                if (found)
+                if (found) {
                     return true;
+                }
 
                 int cycle = (int) (nextIndex / builder.entriesPerCycle());
-                if (cycle >= cycle())
+                if (cycle >= cycle()) {
                     return false;
+                }
 
                 nextIndex = (cycle + 1) * builder.entriesPerCycle();
             }
@@ -593,10 +607,13 @@ public class VanillaChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
-            if (dataBytes == null)
+            if (dataBytes == null) {
                 return;
+            }
+
             int length = ~(int) (positionAddr - startAddr);
             NativeBytes.UNSAFE.putOrderedInt(null, startAddr - 4, length);
+
             // position of the start not the end.
             int offset = (int) (startAddr - dataBytes.address());
             long dataOffset = dataBytes.index() * builder.dataBlockSize() + offset;
@@ -611,9 +628,9 @@ public class VanillaChronicle implements Chronicle {
                     }
 
                     indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
-                    setLastWrittenIndex(indexFrom(appenderCycle, positionArr[0]));
+                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), positionArr[0]));
                 } else {
-                    setLastWrittenIndex(indexFrom(appenderCycle, position));
+                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), position));
                 }
             } catch (IOException e) {
                 throw new AssertionError(e);
@@ -628,8 +645,8 @@ public class VanillaChronicle implements Chronicle {
             }
         }
 
-        private long indexFrom(int appenderCycle, long position) {
-            return ((long) appenderCycle << entriesForCycleBits) + (position >> 3);
+        private long indexFrom(long cycle, long indexCount, long indexPosition) {
+            return (cycle << entriesForCycleBits) + (indexCount << indexBlockLongsBits) + (indexPosition >> 3);
         }
 
         @NotNull

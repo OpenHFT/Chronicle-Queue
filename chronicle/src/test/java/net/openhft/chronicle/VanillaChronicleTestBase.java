@@ -30,6 +30,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleTestBase {
@@ -103,5 +105,25 @@ public class VanillaChronicleTestBase {
            br.close();
            proc.destroy();
         }
+    }
+
+    protected int findLastIndexCacheNumber(final File cyclePath) {
+        int maxIndex = -1;
+
+        final File[] files = cyclePath.listFiles();
+
+        if (files != null) {
+            for (final File file : files) {
+                String name = file.getName();
+                if (name.startsWith(VanillaIndexCache.FILE_NAME_PREFIX)) {
+                    int index = Integer.parseInt(name.substring(VanillaIndexCache.FILE_NAME_PREFIX.length()));
+                    if (maxIndex < index) {
+                        maxIndex = index;
+                    }
+                }
+            }
+        }
+
+        return maxIndex;
     }
 }

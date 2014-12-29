@@ -19,12 +19,20 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.CheckedExcerpt;
+import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
@@ -65,6 +73,66 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
             chronicle.clear();
 
             assertFalse(new File(basePath).exists());
+        }
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-92
+     */
+    @Test
+    public void testJira92() throws Exception {
+        final int RUNS = 10;
+        final int indicesPerFile = 2;
+
+        final String baseDir = getTestPath();
+        final File baseFile = new File(baseDir, new SimpleDateFormat("yyyyMMdd").format(new Date()));
+        final Set<Long> indices = new HashSet<>(RUNS);
+
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
+            .defaultMessageSize(128)
+            .indexBlockSize(indicesPerFile * 8)
+            .dataBlockSize(16 * 1024)
+            .build();
+
+        chronicle.clear();
+
+        try {
+            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptTailer tailer = chronicle.createTailer();
+            final Excerpt excerpt = chronicle.createExcerpt();
+
+            for (long entry = 0; entry < RUNS; entry++) {
+                appender.startExcerpt();
+                appender.writeLong(entry);
+                appender.finish();
+
+                long idx = appender.lastWrittenIndex();
+                int idxFileNum = findLastIndexCacheNumber(baseFile);
+
+                assertTrue("Index should be unique (" + idx + ")", indices.add(idx));
+                assertEquals(entry / indicesPerFile, idxFileNum);
+
+                tailer.nextIndex();
+                assertEquals(entry, tailer.readLong());
+                assertEquals(tailer.index(), idx);
+                tailer.finish();
+
+                excerpt.index(idx);
+                assertEquals(entry, excerpt.readLong());
+                assertEquals(excerpt.index(), idx);
+                excerpt.finish();
+            }
+
+            appender.close();
+            tailer.close();
+            excerpt.close();
+
+            ChronicleTools.checkCount(chronicle, 1, 1);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
         }
     }
 

@@ -148,6 +148,7 @@ public class IndexedChronicle implements Chronicle {
             }
 
             if (block > 0 && mbb.readLong(0) == 0) {
+                mbb.release();
                 continue;
             }
 
@@ -162,11 +163,16 @@ public class IndexedChronicle implements Chronicle {
                             break;
                         }
                     }
+
+                    mbb.release();
                     return (block * indexBlockSize + pos) / cacheLineSize * (cacheLineSize / 4 - 2) + pos2 / 4 - 3;
                 }
             }
+
+            mbb.release();
             return (block + 1) * indexBlockSize / cacheLineSize * (cacheLineSize / 4 - 2);
         }
+
         return -1;
     }
 
