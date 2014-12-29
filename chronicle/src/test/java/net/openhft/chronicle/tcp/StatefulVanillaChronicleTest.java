@@ -18,7 +18,11 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.affinity.AffinityLock;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
@@ -26,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
@@ -55,6 +58,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
             final Thread at = new Thread("th-appender") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
                         for (int i = 0; i < RUNS; i++) {
@@ -66,12 +70,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         appender.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
 
             final Thread tt = new Thread("th-tailer") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptTailer tailer = sink.createTailer();
                         for (int i = 0; i < RUNS; i++) {
@@ -86,6 +94,9 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         tailer.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
@@ -143,6 +154,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         try {
             final Thread at = new Thread("th-appender") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
                         for (int i = 0; i < RUNS; i++) {
@@ -157,12 +169,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         appender.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
 
             final Thread tt = new Thread("th-tailer") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptTailer tailer = sink.createTailer();
                         for (int i = 0; i < RUNS; i++) {
@@ -177,6 +193,9 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         tailer.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
@@ -233,6 +252,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         try {
             final Thread at = new Thread("th-appender") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
                         for (int i = 0; i < RUNS; i++) {
@@ -247,12 +267,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         appender.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
 
             final Thread tt = new Thread("th-tailer") {
                 public void run() {
+                    AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptTailer tailer = sink.createTailer();
                         for (int i = 0; i < RUNS; i++) {
@@ -267,6 +291,9 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
                         tailer.close();
                     } catch(Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
                     }
                 }
             };
