@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 public class IndexedChronicleResourcesTest extends IndexedChronicleTestBase {
     @Test
-    public void simpleChronicleTest1() throws IOException {
+    public void resourceTest1() throws IOException {
         final String basePath = "simpleTest";
         deleteAndAssert(basePath);
 
@@ -37,7 +37,7 @@ public class IndexedChronicleResourcesTest extends IndexedChronicleTestBase {
     }
 
     @Test
-    public void simpleChronicleTest2() throws IOException {
+    public void resourceTest2() throws IOException {
         final String basePath = "simpleTest";
         deleteAndAssert(basePath);
 
