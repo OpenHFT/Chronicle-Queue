@@ -148,6 +148,7 @@ public class IndexedChronicle implements Chronicle {
             }
 
             if (block > 0 && mbb.readLong(0) == 0) {
+                mbb.release();
                 continue;
             }
 
