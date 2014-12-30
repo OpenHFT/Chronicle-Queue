@@ -34,7 +34,6 @@
     <packaging>bundle</packaging>
 
     <name>OpenHFT/Chronicle-Queue/chronicle-test</name>
-    <description>Java library for persisted low latency messaging (Java 6+)</description>
 
     <dependencyManagement>
         <dependencies>
