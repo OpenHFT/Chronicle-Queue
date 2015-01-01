@@ -11,8 +11,6 @@ import java.io.IOException;
 public class QueueServerMain {
     public static void main(String... args) throws IOException {
         String host = args[0];
-        if (!host.equals("localhost"))
-            AffinityLock.acquireLock();
 
         Chronicle inbound = ChronicleQueueBuilder
                 .indexed("/tmp/server-inbound")
@@ -26,6 +24,9 @@ public class QueueServerMain {
                 .build();
 
         ExcerptAppender appender = outbound.createAppender();
+
+        if (!host.equals("localhost"))
+            AffinityLock.acquireLock();
 
         long count = 0, next = 1000000;
         while (true) {
