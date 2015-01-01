@@ -26,12 +26,13 @@ public class QueueClientMain {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
-                AffinityLock lock = AffinitySupport.acquireLock();
+                AffinityLock lock = null;
                 try {
                     Chronicle outbound = ChronicleQueueBuilder
                             .indexed("/tmp/client-outbound")
                             .source().bindAddress(54001)
                             .build();
+                    lock = AffinitySupport.acquireLock();
                     ExcerptAppender appender = outbound.createAppender();
                     for (int i = 0; i < TESTS; i++) {
 
@@ -64,7 +65,8 @@ public class QueueClientMain {
                     e.printStackTrace();
                     System.exit(-1);
                 } finally {
-                    lock.release();
+                    if (lock != null)
+                        lock.release();
                 }
             }
         });
