@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -441,5 +442,85 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             ChronicleQueueBuilder.indexed(basePath + "-master"),
             ChronicleQueueBuilder.indexed(basePath + "-slave")
         );
+    }
+
+    static final int RATE = Integer.getInteger("rate", 50000);
+    static final int COUNT = Integer.getInteger("count", 200000);
+    static final int WARMUP = Integer.getInteger("warmup", 50000);
+
+    @Test
+    public void testReplicationLatencyPerf() throws IOException, InterruptedException {
+        String basePath = getIndexedTestPath();
+        String sourcePath = basePath + "-latency-source";
+        final Chronicle source = ChronicleQueueBuilder
+                .indexed(sourcePath)
+                .source()
+                .bindAddress(54321)
+                .build();
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ExcerptAppender appender = source.createAppender();
+                    long spacing = 1000000000 / RATE;
+                    long now = System.nanoTime();
+                    for (int i = -WARMUP; i < COUNT; i++) {
+                        while (now > System.nanoTime()) {
+                            // busy waiting.
+                        }
+                        appender.startExcerpt();
+                        appender.writeLong(now);
+                        appender.finish();
+                        now += spacing;
+                    }
+                    appender.startExcerpt();
+                    appender.writeLong(-1);
+                    appender.finish();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        t.start();
+
+        String sinkPath = basePath + "-latency-sink";
+        Chronicle sink = ChronicleQueueBuilder
+                .indexed(sinkPath)
+                .sink()
+                .connectAddress("localhost", 54321)
+                .build();
+        ExcerptTailer tailer = sink.createTailer();
+        long[] times = new long[COUNT];
+        int count = -WARMUP;
+        while (true) {
+            if (tailer.nextIndex()) {
+                long timestamp = tailer.readLong();
+                if (timestamp < 0)
+                    break;
+                if (++count > 0 && count < times.length) {
+                    times[count] = System.nanoTime() - timestamp;
+                }
+//                if ((count & 1023) == 0)
+//                    System.out.println(count);
+                tailer.finish();
+            }
+        }
+        assertEquals(COUNT, count);
+        Arrays.sort(times);
+        System.out.printf("Latencies 50 90/99 99.9/99.99 %%tile %,d %,d/%,d %,d/%,d us%n",
+                times[times.length - times.length / 2] / 1000,
+                times[times.length - times.length / 10] / 1000,
+                times[times.length - times.length / 100] / 1000,
+                times[times.length - times.length / 1000 - 1] / 1000,
+                times[times.length - times.length / 10000 - 1] / 1000
+        );
+        t.join(10000);
+
+        source.close();
+        sink.close();
+        assertIndexedClean(sourcePath);
+        assertIndexedClean(sinkPath);
+
     }
 }

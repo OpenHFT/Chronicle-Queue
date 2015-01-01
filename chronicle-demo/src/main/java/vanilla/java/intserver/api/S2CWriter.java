@@ -36,7 +36,7 @@ public class S2CWriter implements IClient {
         excerpt.writeInt(response);
         excerpt.writeInt(args.length);
         for (Object arg : args) {
-            excerpt.writeObject(response);
+            excerpt.writeObject(arg);
         }
         excerpt.finish();
     }
