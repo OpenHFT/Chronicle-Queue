@@ -74,8 +74,7 @@ public class QueueClientMain {
                 .indexed("/tmp/server-outbound")
                 .sink().connectAddress(host, 54002)
                 .build();
-        ExcerptTailer tailer = inbound.createTailer();
-
+        ExcerptTailer tailer = inbound.createTailer().toEnd();
         long[] times = new long[COUNT];
         int count = 0, next = 1000000;
 

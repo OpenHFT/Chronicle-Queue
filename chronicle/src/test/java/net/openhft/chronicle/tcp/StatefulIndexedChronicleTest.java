@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.tcp;
 
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
@@ -50,16 +51,16 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
-            .sink()
-            .connectAddress("localhost", port)
-            .build();
+                .sink()
+                .connectAddress("localhost", port)
+                .build();
 
         final Thread t = new Thread(new Runnable() {
             @Override
@@ -121,16 +122,16 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
-            .sink()
-            .connectAddress("localhost", port)
-            .build();
+                .sink()
+                .connectAddress("localhost", port)
+                .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -157,7 +158,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read%n",
-            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -173,16 +174,16 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
-            .sink()
-            .connectAddress("localhost", port)
-            .build();
+                .sink()
+                .connectAddress("localhost", port)
+                .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -211,7 +212,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Excerpt%n",
-            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -227,16 +228,16 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
-            .sink()
-            .connectAddress("localhost", port)
-            .build();
+                .sink()
+                .connectAddress("localhost", port)
+                .build();
 
         final PriceWriter pw = new PriceWriter(source.createAppender());
         final AtomicInteger count = new AtomicInteger();
@@ -264,7 +265,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.2f us to write and %.2f us to read using Tailer%n",
-            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
 
         source.close();
         sink.close();
@@ -296,7 +297,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         long end = System.nanoTime();
         System.out.printf("Took an average of %.1f us to write and %.1f us to read%n",
-            (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
+                (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 
     // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
@@ -425,8 +426,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            chronicleSrc,
-            chronicleTarget);
+                chronicleSrc,
+                chronicleTarget);
     }
 
     /**
@@ -439,14 +440,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         String basePath = getIndexedTestPath();
 
         testJira80(
-            ChronicleQueueBuilder.indexed(basePath + "-master"),
-            ChronicleQueueBuilder.indexed(basePath + "-slave")
+                ChronicleQueueBuilder.indexed(basePath + "-master"),
+                ChronicleQueueBuilder.indexed(basePath + "-slave")
         );
     }
 
-    static final int RATE = Integer.getInteger("rate", 50000);
-    static final int COUNT = Integer.getInteger("count", 200000);
-    static final int WARMUP = Integer.getInteger("warmup", 50000);
+    static final int RATE = Integer.getInteger("rate", 100000);
+    static final int COUNT = Integer.getInteger("count", RATE * 2);
+    static final int WARMUP = Integer.getInteger("warmup", RATE);
 
     @Test
     public void testReplicationLatencyPerf() throws IOException, InterruptedException {
@@ -461,6 +462,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
+                AffinityLock lock = AffinityLock.acquireLock();
                 try {
                     ExcerptAppender appender = source.createAppender();
                     long spacing = 1000000000 / RATE;
@@ -479,6 +481,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                     appender.finish();
                 } catch (IOException e) {
                     e.printStackTrace();
+                } finally {
+                    lock.release();
                 }
             }
         });
@@ -490,31 +494,36 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .sink()
                 .connectAddress("localhost", 54321)
                 .build();
-        ExcerptTailer tailer = sink.createTailer();
-        long[] times = new long[COUNT];
-        int count = -WARMUP;
-        while (true) {
-            if (tailer.nextIndex()) {
-                long timestamp = tailer.readLong();
-                if (timestamp < 0)
-                    break;
-                if (++count > 0 && count < times.length) {
-                    times[count] = System.nanoTime() - timestamp;
-                }
+        AffinityLock lock = AffinityLock.acquireLock();
+        try {
+            ExcerptTailer tailer = sink.createTailer();
+            long[] times = new long[COUNT];
+            int count = -WARMUP;
+            while (true) {
+                if (tailer.nextIndex()) {
+                    long timestamp = tailer.readLong();
+                    if (timestamp < 0)
+                        break;
+                    if (++count > 0 && count < times.length) {
+                        times[count] = System.nanoTime() - timestamp;
+                    }
 //                if ((count & 1023) == 0)
 //                    System.out.println(count);
-                tailer.finish();
+                    tailer.finish();
+                }
             }
+            assertEquals(COUNT, count);
+            Arrays.sort(times);
+            System.out.printf("Latencies 50 90/99 99.9/99.99 %%tile %,d %,d/%,d %,d/%,d us%n",
+                    times[times.length - times.length / 2] / 1000,
+                    times[times.length - times.length / 10] / 1000,
+                    times[times.length - times.length / 100] / 1000,
+                    times[times.length - times.length / 1000 - 1] / 1000,
+                    times[times.length - times.length / 10000 - 1] / 1000
+            );
+        } finally {
+            lock.release();
         }
-        assertEquals(COUNT, count);
-        Arrays.sort(times);
-        System.out.printf("Latencies 50 90/99 99.9/99.99 %%tile %,d %,d/%,d %,d/%,d us%n",
-                times[times.length - times.length / 2] / 1000,
-                times[times.length - times.length / 10] / 1000,
-                times[times.length - times.length / 100] / 1000,
-                times[times.length - times.length / 1000 - 1] / 1000,
-                times[times.length - times.length / 10000 - 1] / 1000
-        );
         t.join(10000);
 
         source.close();

@@ -18,7 +18,7 @@ public class QueueServerMain {
                 .indexed("/tmp/server-inbound")
                 .sink().connectAddress(host, 54001)
                 .build();
-        ExcerptTailer tailer = inbound.createTailer();
+        ExcerptTailer tailer = inbound.createTailer().toEnd();
 
         Chronicle outbound = ChronicleQueueBuilder
                 .indexed("/tmp/server-outbound")
