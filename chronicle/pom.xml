@@ -28,7 +28,7 @@
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.3.4-SNAPSHOT</version>
+    <version>3.3.5-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
@@ -46,7 +46,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.4.19-SNAPSHOT</version>
+                <version>6.4.19</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
