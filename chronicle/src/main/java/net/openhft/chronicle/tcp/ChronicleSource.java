@@ -17,11 +17,7 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 
@@ -30,18 +26,15 @@ import java.io.IOException;
 public class ChronicleSource extends WrappedChronicle {
     private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
-    private final Object notifier;
 
     private volatile boolean closed;
 
     public ChronicleSource(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
         this.builder = builder.clone();
-        this.notifier = new Object();
         this.closed = false;
 
         this.connection = connection;
-        this.connection.notifier(this.notifier);
         this.connection.open();
     }
 
@@ -85,9 +78,7 @@ public class ChronicleSource extends WrappedChronicle {
         public void finish() {
             super.finish();
 
-            synchronized (notifier) {
-                notifier.notifyAll();
-            }
+            ChronicleSource.this.connection.pauser.unpause();
         }
     }
 }
