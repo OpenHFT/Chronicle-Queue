@@ -19,6 +19,7 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
 import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.thread.LightPauser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,29 +39,18 @@ public abstract class SourceTcp {
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final ThreadPoolExecutor executor;
-
-    protected Object notifier;
+    protected final LightPauser pauser = new LightPauser(10000, 10000);
 
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
         this.builder = builder;
-        this.notifier = null;
         this.name = ChronicleTcp.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
     }
 
-    void notifier(Object notifier) {
-        this.notifier = notifier;
-    }
-
-    Object notifier() {
-        return this.notifier;
-    }
-
     public boolean open() {
         this.running.set(true);
-
         this.executor.execute(createHandler());
 
         return this.running.get();
@@ -121,7 +111,6 @@ public abstract class SourceTcp {
         private final SocketChannel socketChannel;
 
         private long lastUnpausedNS;
-        private long pauseWait;
 
         protected final TcpConnection connection;
         protected ExcerptTailer tailer;
@@ -136,7 +125,6 @@ public abstract class SourceTcp {
             this.tailer = null;
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
-            this.pauseWait = builder.heartbeatIntervalUnit().toMillis(builder.heartbeatInterval()) / 2;
             this.readBuffer = ChronicleTcp.createBufferOfSize(16);
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
 
@@ -262,6 +250,7 @@ public abstract class SourceTcp {
 
         protected void pauseReset() {
             lastUnpausedNS = System.nanoTime();
+            pauser.reset();
         }
 
         protected void pause() {
@@ -269,13 +258,7 @@ public abstract class SourceTcp {
                 return;
             }
 
-            try {
-                synchronized (notifier) {
-                    notifier.wait(pauseWait);
-                }
-            } catch (InterruptedException ie) {
-                //logger.warn("Interrupt ignored");
-            }
+            pauser.pause();
         }
 
         protected void setLastHeartbeat() {
