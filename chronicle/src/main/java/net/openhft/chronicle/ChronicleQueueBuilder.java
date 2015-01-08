@@ -66,16 +66,16 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return vanilla(new File(parent, child));
     }
 
-    public static ReplicaChronicleQueueBuilder statelessSink() {
-        return sink(null);
-    }
-
     public static ReplicaChronicleQueueBuilder sink(Chronicle chronicle) {
         return new SinkChronicleQueueBuilder(chronicle);
     }
 
     public static ReplicaChronicleQueueBuilder source(Chronicle chronicle) {
         return new SourceChronicleQueueBuilder(chronicle);
+    }
+
+    public static ReplicaChronicleQueueBuilder remote() {
+        return new RemoteChronicleQueueBuilder();
     }
 
     // *************************************************************************
@@ -905,6 +905,40 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @Override
         public SourceChronicleQueueBuilder clone() {
             return (SourceChronicleQueueBuilder) super.clone();
+        }
+    }
+
+    private static class RemoteChronicleQueueBuilder extends SinkChronicleQueueBuilder {
+
+        private RemoteChronicleQueueBuilder() {
+            super();
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            SinkTcp cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = new SinkTcpAcceptor(this);
+            } else if(connectAddress() != null) {
+                cnx = new SinkTcpInitiator(this);
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new RemoteChronicleQueue(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public SinkChronicleQueueBuilder clone() {
+            return (SinkChronicleQueueBuilder) super.clone();
         }
     }
 

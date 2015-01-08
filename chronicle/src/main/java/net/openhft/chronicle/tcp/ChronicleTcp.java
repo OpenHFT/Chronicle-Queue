@@ -29,7 +29,10 @@ public class ChronicleTcp {
     public static final int PADDED_LEN = -127;
     public static final int SYNC_IDX_LEN = -126;
     public static final long ACTION_SUBSCRIBE = 1;
-    public static final long ACTION_QUERY = 2;
+    public static final long ACTION_UNSUBSCRIBE = 2;
+    public static final long ACTION_QUERY = 10;
+    public static final long ACTION_DATA = 20;
+    public static final long IDX_NONE = 0;
     public static final long IDX_TO_START = -1;
     public static final long IDX_TO_END = -2;
 

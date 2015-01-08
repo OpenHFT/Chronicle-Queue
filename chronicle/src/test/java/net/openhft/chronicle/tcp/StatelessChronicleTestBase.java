@@ -88,7 +88,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
         ExcerptTailer tailer = null;
 
         try {
-            sink = ChronicleQueueBuilder.statelessSink()
+            sink = ChronicleQueueBuilder.remote()
                 .connectAddress(new InetSocketAddress("localhost", port))
                 .build();
 
@@ -108,7 +108,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            sink =ChronicleQueueBuilder.statelessSink()
+            sink =ChronicleQueueBuilder.remote()
                 .connectAddress("localhost", port)
                 .build();
 
@@ -126,7 +126,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             sink.clear();
             sink = null;
 
-            sink = ChronicleQueueBuilder.statelessSink()
+            sink = ChronicleQueueBuilder.remote()
                 .connectAddress("localhost", port)
                 .build();
 
@@ -166,7 +166,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
 
                             latch.await();
 
-                            sink = ChronicleQueueBuilder.statelessSink().connectAddress("localhost", port).build();
+                            sink = ChronicleQueueBuilder.remote().connectAddress("localhost", port).build();
                             tailer = sink.createTailer();//.toStart();
 
                             LOGGER.info("Start ChronicleSink on thread {}", threadId);
@@ -235,7 +235,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     }
 
     protected void testJiraChron78(final int port, final Chronicle source) throws Exception {
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remote()
             .connectAddress("localhost", port)
             .build();
 
@@ -270,7 +270,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     }
 
     protected void testJiraChron81(final int port, final Chronicle source) throws Exception {
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remote()
             .connectAddress("localhost", port)
             .build();
 
