@@ -869,7 +869,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSink(this, cnx);
+            return new ChronicleQueueSink(this, cnx);
         }
 
         /**
@@ -907,7 +907,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSource(this, cnx);
+            return new ChronicleQueueSource(this, cnx);
         }
 
         /**

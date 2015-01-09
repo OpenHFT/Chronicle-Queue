@@ -37,7 +37,7 @@ import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
 class RemoteChronicleQueue extends WrappedChronicle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteChronicleQueue.class);
 
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;

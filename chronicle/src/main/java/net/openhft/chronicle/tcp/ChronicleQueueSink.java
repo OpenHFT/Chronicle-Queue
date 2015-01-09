@@ -36,8 +36,8 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-public class ChronicleSink extends WrappedChronicle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink.class);
+public class ChronicleQueueSink extends WrappedChronicle {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueSink.class);
 
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
@@ -45,7 +45,7 @@ public class ChronicleSink extends WrappedChronicle {
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public ChronicleSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
+    public ChronicleQueueSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder.clone();
@@ -129,7 +129,7 @@ public class ChronicleSink extends WrappedChronicle {
             }
 
             super.close();
-            ChronicleSink.this.excerpt = null;
+            ChronicleQueueSink.this.excerpt = null;
         }
 
         protected void subscribe(long index) throws IOException {
