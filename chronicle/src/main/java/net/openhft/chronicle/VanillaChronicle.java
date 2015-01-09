@@ -443,6 +443,7 @@ public class VanillaChronicle implements Chronicle {
             while (true) {
                 boolean found = index(nextIndex);
                 if (found) {
+                    index = nextIndex;
                     return true;
                 }
 
