@@ -570,6 +570,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private long selectTimeout;
         private TimeUnit selectTimeoutUnit;
         private int receiveBufferSize;
+        private int sendBufferSize;
         private int minBufferSize;
         private boolean sharedChronicle;
         private long heartbeatInterval;
@@ -597,6 +598,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.heartbeatInterval = 2500;
             this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
             this.receiveBufferSize = 256 * 1024;
+            this.sendBufferSize = -1;
             this.minBufferSize = this.receiveBufferSize;
             this.sharedChronicle = false;
             this.acceptorMaxBacklog = 50;
@@ -699,6 +701,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder receiveBufferSize(int receiveBufferSize) {
             this.receiveBufferSize = receiveBufferSize;
+            return this;
+        }
+
+        public int sendBufferSize() {
+            return sendBufferSize;
+        }
+
+        public ReplicaChronicleQueueBuilder sendBufferSize(int sendBufferSize) {
+            this.sendBufferSize = sendBufferSize;
             return this;
         }
 

@@ -49,11 +49,11 @@ public abstract class SourceTcp {
         this.executor = executor;
     }
 
-    public boolean open() {
+    public SourceTcp open() {
         this.running.set(true);
         this.executor.execute(createHandler());
 
-        return this.running.get();
+        return this;
     }
 
     public boolean close()  {
@@ -153,10 +153,16 @@ public abstract class SourceTcp {
 
             try {
                 socketChannel.configureBlocking(false);
-                socketChannel.socket().setSendBufferSize(builder.minBufferSize());
                 socketChannel.socket().setTcpNoDelay(true);
                 socketChannel.socket().setSoTimeout(0);
                 socketChannel.socket().setSoLinger(false, 0);
+
+                if(builder.receiveBufferSize() > 0) {
+                    socketChannel.socket().setReceiveBufferSize(builder.receiveBufferSize());
+                }
+                if(builder.sendBufferSize() > 0) {
+                    socketChannel.socket().setSendBufferSize(builder.sendBufferSize());
+                }
 
                 final VanillaSelector selector = new VanillaSelector()
                     .open()
@@ -307,6 +313,9 @@ public abstract class SourceTcp {
                     return onSubscribe(key, data);
                 } else if(action == ChronicleTcp.ACTION_QUERY) {
                     return onQuery(key, data);
+                } else if(action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
+                    key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+                    return true;
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
                 }

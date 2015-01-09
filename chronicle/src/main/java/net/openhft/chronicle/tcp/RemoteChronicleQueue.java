@@ -26,7 +26,6 @@ import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.WrappedChronicle;
-import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
@@ -81,7 +80,17 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        throw new UnsupportedOperationException();
+        return (ExcerptAppender)createAppender0();
+    }
+
+    private ExcerptCommon createAppender0() throws IOException {
+        if( this.excerpt != null) {
+            throw new IllegalStateException("An excerpt has already been created");
+        }
+
+        open();
+
+        return this.excerpt = new StatelessAppender();
     }
 
     private ExcerptCommon createExcerpt0() throws IOException {
@@ -89,9 +98,20 @@ public class RemoteChronicleQueue extends WrappedChronicle {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
+        open();
+
         return this.excerpt = new StatelessExcerpt();
     }
 
+    private synchronized void open() {
+        for(;!connection.isOpen();) {
+            try {
+                connection.open();
+            } catch (IOException e) {
+                LOGGER.warn("", e);
+            }
+        }
+    }
     // *************************************************************************
     // STATELESS
     // *************************************************************************
@@ -274,9 +294,7 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
             try {
                 if(!connection.isOpen()) {
-                    connection.open();
-                    readBuffer.clear();
-                    readBuffer.limit(0);
+                    return false;
                 }
 
                 writeBuffer.clear();
