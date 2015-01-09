@@ -45,7 +45,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.remote()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -100,7 +100,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.remote()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -149,7 +149,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.remote()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -210,7 +210,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 executor.submit(new Runnable() {
                     public void run() {
                         try {
-                            final Chronicle sink = ChronicleQueueBuilder.remote()
+                            final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
                                 .connectAddress("localhost", port)
                                 .build();
 
@@ -270,7 +270,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.remote()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -312,7 +312,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.remote()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 

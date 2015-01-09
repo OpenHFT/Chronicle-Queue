@@ -74,8 +74,12 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return new SourceChronicleQueueBuilder(chronicle);
     }
 
-    public static ReplicaChronicleQueueBuilder remote() {
-        return new RemoteChronicleQueueBuilder();
+    public static ReplicaChronicleQueueBuilder remoteAppender() {
+        return new RemoteChronicleQueueAppenderBuilder();
+    }
+
+    public static ReplicaChronicleQueueBuilder remoteTailer() {
+        return new RemoteChronicleQueueTailerBuilder();
     }
 
     // *************************************************************************
@@ -919,10 +923,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
-    private static class RemoteChronicleQueueBuilder extends SinkChronicleQueueBuilder {
+    private static final class RemoteChronicleQueueAppenderBuilder extends ReplicaChronicleQueueBuilder {
 
-        private RemoteChronicleQueueBuilder() {
-            super();
+        private RemoteChronicleQueueAppenderBuilder() {
+            super(null, null);
         }
 
         @Override
@@ -937,7 +941,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new RemoteChronicleQueue(this, cnx);
+            return new RemoteChronicleQueueAppender(this, cnx);
         }
 
         /**
@@ -948,8 +952,42 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @NotNull
         @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
         @Override
-        public SinkChronicleQueueBuilder clone() {
-            return (SinkChronicleQueueBuilder) super.clone();
+        public RemoteChronicleQueueAppenderBuilder clone() {
+            return (RemoteChronicleQueueAppenderBuilder) super.clone();
+        }
+    }
+
+    private static final class RemoteChronicleQueueTailerBuilder extends ReplicaChronicleQueueBuilder {
+
+        private RemoteChronicleQueueTailerBuilder() {
+            super(null, null);
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            SinkTcp cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = new SinkTcpAcceptor(this);
+            } else if(connectAddress() != null) {
+                cnx = new SinkTcpInitiator(this);
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new RemoteChronicleQueueTailer(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public RemoteChronicleQueueTailerBuilder clone() {
+            return (RemoteChronicleQueueTailerBuilder) super.clone();
         }
     }
 

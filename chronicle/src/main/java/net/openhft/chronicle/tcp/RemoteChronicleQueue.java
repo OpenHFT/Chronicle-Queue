@@ -26,19 +26,17 @@ import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.WrappedChronicle;
-import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-public class RemoteChronicleQueue extends WrappedChronicle {
+class RemoteChronicleQueue extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleSink.class);
 
     private final SinkTcp connection;
@@ -60,9 +58,7 @@ public class RemoteChronicleQueue extends WrappedChronicle {
     public void close() throws IOException {
         if(!closed) {
             closed = true;
-            if (this.connection != null) {
-                this.connection.close();
-            }
+            closeConnection();
         }
 
         super.close();
@@ -70,69 +66,97 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return (Excerpt)createExcerpt0();
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public synchronized ExcerptTailer createTailer() throws IOException {
-        return (ExcerptTailer)createExcerpt0();
+    public ExcerptTailer createTailer() throws IOException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return (ExcerptAppender)createAppender0();
+        throw new UnsupportedOperationException();
     }
 
-    private ExcerptCommon createAppender0() throws IOException {
+    protected synchronized ExcerptCommon createAppender0() throws IOException {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
-        open();
-
-        return this.excerpt = new StatelessAppender();
+        return this.excerpt = new StatelessExcerpAppender();
     }
 
-    private ExcerptCommon createExcerpt0() throws IOException {
+    protected synchronized ExcerptCommon createExcerpt0() throws IOException {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
-
-        open();
 
         return this.excerpt = new StatelessExcerpt();
     }
 
-    private synchronized void open() {
-        for(;!connection.isOpen();) {
+    private void openConnection() {
+        for(int i=0; !connection.isOpen(); i++) {
             try {
+                LOGGER.info(">> openConnection");
                 connection.open();
             } catch (IOException e) {
-                LOGGER.warn("", e);
+                if(i > 10) {
+                    try {
+                        Thread.sleep(builder.reconnectTimeoutMillis());
+                    } catch (InterruptedException ex) {
+                    }
+
+                    LOGGER.warn("", e);
+                }
             }
         }
     }
+
+    private void closeConnection() {
+        try {
+            if(connection.isOpen()) {
+                LOGGER.info(">> closeConnection");
+            }
+
+            connection.close();
+        } catch (IOException e) {
+            LOGGER.warn("Error closing socketChannel", e);
+        }
+    }
+
+    @Override
+    public String name() {
+        return null;
+    }
+
     // *************************************************************************
     // STATELESS
     // *************************************************************************
 
-    private final class StatelessAppender extends NativeBytes implements ExcerptAppender {
-        private final Logger logger;
-        private final ByteBuffer readBuffer;
-        private ByteBuffer writeBuffer;
-
-        private long index;
-
-        public StatelessAppender() {
+    private class AbstractStatelessExcerp extends NativeBytes {
+        protected AbstractStatelessExcerp() {
             super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+        }
+    }
 
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp.createBufferOfSize(builder.minBufferSize());
-            this.readBuffer = ChronicleTcp.createBuffer(12);
-            this.startAddr = ((DirectBuffer) this.readBuffer).address();
-            this.capacityAddr = this.startAddr + builder.minBufferSize();
-            this.limitAddr = this.capacityAddr;
-            this.finished = true;
+    private final class StatelessExcerpAppender extends AbstractStatelessExcerp implements ExcerptAppender {
+        private final Logger logger;
+
+        private ByteBuffer readBuffer;
+        private ByteBuffer writeBuffer;
+        private long lastIndex;
+
+        public StatelessExcerpAppender() {
+            super();
+
+            int minSize = ChronicleTcp.nextPower2(builder.minBufferSize());
+
+            this.logger      = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            this.writeBuffer = ChronicleTcp.createBufferOfSize(16 + minSize);
+            this.readBuffer  = ChronicleTcp.createBufferOfSize(12);
+            this.finished    = true;
+            this.lastIndex   = -1;
         }
 
         @Override
@@ -143,11 +167,22 @@ public class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public void startExcerpt(long capacity) {
             if(capacity <= this.capacity()) {
-                writeBuffer.clear();
+                this.limitAddr = this.startAddr + capacity;
             } else {
-                IOTools.clean(writeBuffer);
-                this.writeBuffer = ChronicleTcp.createBufferOfSize((int)capacity);
+                if(writeBuffer != null) {
+                    ChronicleTcp.clean(writeBuffer);
+                }
+
+                int minSize = ChronicleTcp.nextPower2(builder.minBufferSize());
+
+                this.writeBuffer  = ChronicleTcp.createBufferOfSize(16 + minSize);
+                this.startAddr    = ChronicleTcp.address(this.writeBuffer);
+                this.capacityAddr = this.startAddr + 16 + builder.minBufferSize();
+                this.limitAddr    = this.startAddr + 16 + capacity;
             }
+
+            writeBuffer.clear();
+            writeBuffer.limit((int)capacity);
         }
 
         @Override
@@ -163,7 +198,31 @@ public class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public void finish() {
             if(!finished) {
+                if(!connection.isOpen()) {
+                    openConnection();
+                }
 
+                writeBuffer.putLong(0, ChronicleTcp.ACTION_DATA);
+                writeBuffer.putLong(8, ChronicleTcp.IDX_NONE);
+                writeBuffer.limit((int)limit());
+                writeBuffer.flip();
+
+                try {
+                    connection.writeAllOrEOF(writeBuffer);
+
+                    if(connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE)) {
+                        int  recType  = this.readBuffer.getInt();
+                        long recIndex = this.readBuffer.getLong();
+
+                        if(recType == ChronicleTcp.ACK_LEN) {
+                            this.lastIndex = recIndex;
+                        } else {
+                            logger.warn("unknown message received {}, {}", recType, recIndex);
+                        }
+                    }
+                } catch(IOException e) {
+                    logger.warn("", e);
+                }
             }
 
             super.finish();
@@ -171,6 +230,8 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public synchronized void close() {
+            closeConnection();
+
             super.close();
             RemoteChronicleQueue.this.excerpt = null;
         }
@@ -182,12 +243,12 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public long index() {
-            throw new UnsupportedOperationException();
+            return -1;
         }
 
         @Override
         public long lastWrittenIndex() {
-            throw new UnsupportedOperationException();
+            return this.lastIndex;
         }
 
         @Override
@@ -206,7 +267,7 @@ public class RemoteChronicleQueue extends WrappedChronicle {
         }
     }
 
-    private final class StatelessExcerpt extends NativeBytes implements Excerpt {
+    private final class StatelessExcerpt extends AbstractStatelessExcerp implements Excerpt {
         private final Logger logger;
         private final ByteBuffer writeBuffer;
         private final ByteBuffer readBuffer;
@@ -215,16 +276,17 @@ public class RemoteChronicleQueue extends WrappedChronicle {
         private int lastSize;
 
         public StatelessExcerpt() {
-            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+            super();
 
-            this.index = -1;
-            this.lastSize = 0;
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
-            this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
-            this.startAddr = ((DirectBuffer) this.readBuffer).address();
+            this.index        = -1;
+            this.lastSize     = 0;
+            this.logger       = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            this.writeBuffer  = ChronicleTcp.createBufferOfSize(16);
+            this.readBuffer   = ChronicleTcp.createBuffer(builder.minBufferSize());
+            this.startAddr    = ChronicleTcp.address(this.readBuffer);
             this.capacityAddr = this.startAddr + builder.minBufferSize();
-            this.finished = true;
+            this.limitAddr    = this.startAddr;
+            this.finished     = true;
         }
 
         @Override
@@ -261,6 +323,8 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public synchronized void close() {
+            //closeConnection();
+
             try {
                 writeBuffer.clear();
                 writeBuffer.putLong(ChronicleTcp.ACTION_UNSUBSCRIBE);
@@ -268,6 +332,8 @@ public class RemoteChronicleQueue extends WrappedChronicle {
                 writeBuffer.flip();
 
                 connection.writeAllOrEOF(writeBuffer);
+
+                closeConnection();
             } catch (IOException e) {
                 logger.warn("", e);
             }
@@ -294,7 +360,10 @@ public class RemoteChronicleQueue extends WrappedChronicle {
 
             try {
                 if(!connection.isOpen()) {
-                    return false;
+                    openConnection();
+
+                    readBuffer.clear();
+                    readBuffer.limit(0);
                 }
 
                 writeBuffer.clear();
@@ -371,12 +440,12 @@ public class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
 
-                index = receivedIndex;
+                index        = receivedIndex;
                 positionAddr = startAddr + this.readBuffer.position();
-                limitAddr = positionAddr + excerptSize;
+                limitAddr    = positionAddr + excerptSize;
                 capacityAddr = limitAddr;
-                lastSize = excerptSize;
-                finished = false;
+                lastSize     = excerptSize;
+                finished     = false;
             } catch (IOException e) {
                 close();
                 return false;

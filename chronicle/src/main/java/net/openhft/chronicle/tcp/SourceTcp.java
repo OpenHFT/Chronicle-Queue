@@ -309,13 +309,13 @@ public abstract class SourceTcp {
                 long action = readBuffer.getLong();
                 long data = readBuffer.getLong();
 
+
                 if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     return onSubscribe(key, data);
                 } else if(action == ChronicleTcp.ACTION_QUERY) {
                     return onQuery(key, data);
                 } else if(action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
-                    key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-                    return true;
+                    return onUnsubscribe(key, data);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
                 }
@@ -329,7 +329,7 @@ public abstract class SourceTcp {
             final long now = System.currentTimeMillis();
             if(running.get() && !write()) {
                 if (lastHeartbeat <= now) {
-                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
+                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
                 }
             }
 
@@ -347,7 +347,7 @@ public abstract class SourceTcp {
                         break;
                     } else {
                         if (lastHeartbeat <= now) {
-                            sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
+                            sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
                             break;
                         }
                     }
@@ -355,6 +355,12 @@ public abstract class SourceTcp {
             } else {
                 sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
             }
+
+            return true;
+        }
+
+        protected boolean onUnsubscribe(final SelectionKey key, long data) throws IOException {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 
             return true;
         }
