@@ -14,9 +14,9 @@ import java.util.Arrays;
  * NOTE: This test requires at least SIX (6) cpus, or the performance will be poor.
  */
 public class QueueClientMain {
-    static final int TESTS = Integer.getInteger("tests", 5);
-    static final int RATE = Integer.getInteger("rate", 1000000);
-    static final int COUNT = Integer.getInteger("count", RATE * 5);
+    static final int TESTS = Integer.getInteger("tests", 10);
+    static final int RATE = Integer.getInteger("rate", 30000);
+    static final int COUNT = Integer.getInteger("count", RATE * 10);
     static final long END_OF_TEST = -1L;
     static final long END_OF_TESTS = -2L;
 
@@ -81,6 +81,7 @@ public class QueueClientMain {
         int count = 0, next = 1000000;
 
         AffinitySupport.acquireLock();
+        System.out.print("Warmup - ");
         while (true) {
             if (tailer.nextIndex()) {
                 long timestamp = tailer.readLong();
