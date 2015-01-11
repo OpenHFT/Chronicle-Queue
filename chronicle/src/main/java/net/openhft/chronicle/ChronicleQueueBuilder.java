@@ -581,6 +581,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private TimeUnit heartbeatIntervalUnit;
         private int maxExcerptsPerMessage;
         private int selectorSpinLoopCount;
+        private boolean appendRequireAck;
 
         private int acceptorMaxBacklog;
         private int acceptorDefaultThreads;
@@ -613,6 +614,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.maxExcerptsPerMessage = 128;
             this.selectorSpinLoopCount = 100000;
             this.connectionListener = CONNECTION_LISTENER;
+            this.appendRequireAck = false;
         }
 
         public InetSocketAddress bindAddress() {
@@ -809,6 +811,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public TcpConnectionListener connectionListener() {
             return this.connectionListener;
+        }
+
+        public ReplicaChronicleQueueBuilder appendRequireAck(boolean appendRequireAck) {
+            this.appendRequireAck = appendRequireAck;
+            return this;
+        }
+
+        public boolean appendRequireAck() {
+            return this.appendRequireAck;
         }
 
         public Chronicle chronicle() {

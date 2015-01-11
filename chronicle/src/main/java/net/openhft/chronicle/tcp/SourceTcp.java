@@ -114,6 +114,7 @@ public abstract class SourceTcp {
 
         protected final TcpConnection connection;
         protected ExcerptTailer tailer;
+        protected ExcerptAppender appender;
         protected long lastHeartbeat;
 
         protected final ByteBuffer writeBuffer;
@@ -123,9 +124,10 @@ public abstract class SourceTcp {
             this.socketChannel = socketChannel;
             this.connection = new TcpConnection(socketChannel);
             this.tailer = null;
+            this.appender = null;
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
-            this.readBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.readBuffer = ChronicleTcp.createBufferOfSize(builder.minBufferSize());
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
 
             this.readBuffer.clear();
@@ -140,6 +142,11 @@ public abstract class SourceTcp {
             if(this.tailer != null) {
                 this.tailer.close();
                 this.tailer = null;
+            }
+
+            if(this.appender != null) {
+                this.appender.close();
+                this.appender = null;
             }
 
             if(this.socketChannel.isOpen()) {
@@ -169,6 +176,8 @@ public abstract class SourceTcp {
                     .register(socketChannel, SelectionKey.OP_READ);
 
                 tailer = builder.chronicle().createTailer();
+                appender = builder.chronicle().createAppender();
+
                 selectionKeys = selector.vanillaSelectionKeys();
 
                 if(selectionKeys != null) {
@@ -303,12 +312,12 @@ public abstract class SourceTcp {
         protected boolean onRead(final SelectionKey key) throws IOException {
             try {
                 readBuffer.clear();
+                readBuffer.limit(16);
                 connection.readFullyOrEOF(readBuffer);
                 readBuffer.flip();
 
                 long action = readBuffer.getLong();
-                long data = readBuffer.getLong();
-
+                long data   = readBuffer.getLong();
 
                 if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     return onSubscribe(key, data);
@@ -316,6 +325,10 @@ public abstract class SourceTcp {
                     return onQuery(key, data);
                 } else if(action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
                     return onUnsubscribe(key, data);
+                } else if(action == ChronicleTcp.ACTION_DATA) {
+                    return onData(key, data, true);
+                } else if(action == ChronicleTcp.ACTION_DATA_NOACK) {
+                    return onData(key, data, false);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
                 }
@@ -344,6 +357,7 @@ public abstract class SourceTcp {
                 while (true) {
                     if (tailer.nextIndex()) {
                         sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, tailer.index());
+                        tailer.finish();
                         break;
                     } else {
                         if (lastHeartbeat <= now) {
@@ -366,6 +380,7 @@ public abstract class SourceTcp {
         }
 
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
+        protected abstract boolean onData(final SelectionKey key, long size, boolean ack) throws IOException ;
         protected abstract boolean write() throws IOException;
     }
 
@@ -397,6 +412,11 @@ public abstract class SourceTcp {
         }
 
         @Override
+        protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
+            return true;
+        }
+
+        @Override
         protected boolean write() throws IOException {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
@@ -415,6 +435,46 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
+
+            /*
+            writeBuffer.clear();
+
+            int capacity  = writeBuffer.capacity();
+            int maxExcerpts = builder.maxExcerptsPerMessage();
+            for (int count = 0; count < maxExcerpts; ) {
+                if(!tailer.wasPadding()) {
+                    if (hasRoomForExcerpt(writeBuffer, tailer)) {
+                        int size = (int)tailer.capacity();
+                        writeBuffer.limit(writeBuffer.position() + size + ChronicleTcp.HEADER_SIZE);
+                        writeBuffer.putInt(size);
+                        writeBuffer.putLong(tailer.index());
+                        tailer.read(writeBuffer);
+
+                        if (count == 0 && (size > capacity / 2)) {
+                            break;
+                        }
+
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+
+                if((count < maxExcerpts) && !tailer.index(++index)) {
+                    break;
+                }
+            }
+
+            writeBuffer.flip();
+            connection.writeAll(writeBuffer);
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + index);
+            }
+
+            index++;
+            return true;
+            */
 
             final long size = tailer.capacity();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -461,10 +521,6 @@ public abstract class SourceTcp {
                 connection.writeAll(writeBuffer);
             }
 
-            if (writeBuffer.remaining() > 0) {
-                throw new EOFException("Failed to send index=" + index);
-            }
-
             index++;
             return true;
         }
@@ -509,6 +565,28 @@ public abstract class SourceTcp {
 
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             return false;
+        }
+
+        @Override
+        protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
+            logger.info("onData size={}", size);
+
+            readBuffer.clear();
+            readBuffer.limit((int)size);
+            connection.readFullyOrEOF(readBuffer);
+            readBuffer.flip();
+
+            appender.startExcerpt((int)size);
+            appender.write(readBuffer);
+            appender.finish();
+
+            pauser.unpause();
+
+            if(ack) {
+                sendSizeAndIndex(ChronicleTcp.ACK_LEN, appender.lastWrittenIndex());
+            }
+
+            return true;
         }
 
         @Override

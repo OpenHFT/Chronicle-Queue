@@ -166,8 +166,13 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void startExcerpt(long capacity) {
+            if(!finished) {
+                finish();
+            }
+
             if(capacity <= this.capacity()) {
-                this.limitAddr = this.startAddr + capacity;
+                this.positionAddr = this.startAddr + 16;
+                this.limitAddr    = this.startAddr + 16 + capacity;
             } else {
                 if(writeBuffer != null) {
                     ChronicleTcp.clean(writeBuffer);
@@ -177,12 +182,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 this.writeBuffer  = ChronicleTcp.createBufferOfSize(16 + minSize);
                 this.startAddr    = ChronicleTcp.address(this.writeBuffer);
-                this.capacityAddr = this.startAddr + 16 + builder.minBufferSize();
+                this.positionAddr = this.startAddr + 16;
+                this.capacityAddr = this.startAddr + 16 + minSize;
                 this.limitAddr    = this.startAddr + 16 + capacity;
             }
 
             writeBuffer.clear();
             writeBuffer.limit((int)capacity);
+            finished = false;
         }
 
         @Override
@@ -202,22 +209,27 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     openConnection();
                 }
 
-                writeBuffer.putLong(0, ChronicleTcp.ACTION_DATA);
-                writeBuffer.putLong(8, ChronicleTcp.IDX_NONE);
-                writeBuffer.limit((int)limit());
+                writeLong(0, ChronicleTcp.ACTION_DATA_NOACK);
+                writeLong(8, position());
+
+                writeBuffer.limit((int) position());
                 writeBuffer.flip();
 
                 try {
                     connection.writeAllOrEOF(writeBuffer);
 
-                    if(connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE)) {
-                        int  recType  = this.readBuffer.getInt();
-                        long recIndex = this.readBuffer.getLong();
+                    if(builder.appendRequireAck()) {
+                        this.readBuffer.clear();
+                        this.readBuffer.limit(0);
+                        if (connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE)) {
+                            int recType = this.readBuffer.getInt();
+                            long recIndex = this.readBuffer.getLong();
 
-                        if(recType == ChronicleTcp.ACK_LEN) {
-                            this.lastIndex = recIndex;
-                        } else {
-                            logger.warn("unknown message received {}, {}", recType, recIndex);
+                            if (recType == ChronicleTcp.ACK_LEN) {
+                                this.lastIndex = recIndex;
+                            } else {
+                                logger.warn("unknown message received {}, {}", recType, recIndex);
+                            }
                         }
                     }
                 } catch(IOException e) {
@@ -355,7 +367,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public boolean index(long index) {
-            this.index = index;
             this.lastSize = 0;
 
             try {
@@ -368,31 +379,42 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 writeBuffer.clear();
                 writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
-                writeBuffer.putLong(this.index);
+                writeBuffer.putLong(index);
                 writeBuffer.flip();
 
                 connection.writeAllOrEOF(writeBuffer);
 
                 while (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
-                    int receivedSize = readBuffer.getInt();
+                    int  receivedSize  = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
 
                     switch(receivedSize) {
                         case ChronicleTcp.SYNC_IDX_LEN:
-                            if(index == ChronicleTcp.IDX_TO_START) {
+                            if (index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
-                            } else if(index == ChronicleTcp.IDX_TO_END) {
+                            } else if (index == ChronicleTcp.IDX_TO_END) {
                                 return advanceIndex();
-                            } else {
-                                return (index == receivedIndex) ? advanceIndex() : false;
+                            } else if (index == receivedIndex) {
+                                return advanceIndex();
                             }
-                        case ChronicleTcp.PADDED_LEN:
                         case ChronicleTcp.IN_SYNC_LEN:
+                        case ChronicleTcp.PADDED_LEN:
                             return false;
                     }
 
-                    if (readBuffer.remaining() >= receivedSize) {
-                        readBuffer.position(readBuffer.position() + receivedSize);
+                    try {
+                        if ((receivedSize > 0) && (readBuffer.remaining() >= receivedSize)) {
+                            readBuffer.position(readBuffer.position() + receivedSize);
+                        }
+                    } catch (IllegalArgumentException ex) {
+                        logger.warn("index={}, position={}, limit={}, remaining={}, receivedSize={}",
+                            index,
+                            readBuffer.position(),
+                            readBuffer.limit(),
+                            readBuffer.remaining(),
+                            receivedSize);
+
+                        throw ex;
                     }
                 }
             } catch (IOException e) {
