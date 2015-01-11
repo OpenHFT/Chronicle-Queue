@@ -38,7 +38,7 @@ public class ChronicleTcp {
     public static final long ACTION_UNSUBSCRIBE = 2;
     public static final long ACTION_QUERY       = 10;
     public static final long ACTION_DATA        = 20;
-    public static final long ACTION_DATA_NOACK  = 20;
+    public static final long ACTION_DATA_NOACK  = 21;
     public static final long IDX_NONE           = 0L;
     public static final long IDX_TO_START       = -1;
     public static final long IDX_TO_END         = -2;

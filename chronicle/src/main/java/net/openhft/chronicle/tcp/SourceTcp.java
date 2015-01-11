@@ -319,6 +319,8 @@ public abstract class SourceTcp {
                 long action = readBuffer.getLong();
                 long data   = readBuffer.getLong();
 
+                logger.info("onRead action={}, data={}", action, data);
+
                 if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     return onSubscribe(key, data);
                 } else if(action == ChronicleTcp.ACTION_QUERY) {
@@ -569,7 +571,7 @@ public abstract class SourceTcp {
 
         @Override
         protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
-            logger.info("onData size={}", size);
+            logger.info(">>>>>>>  onData size={}", size);
 
             readBuffer.clear();
             readBuffer.limit((int)size);

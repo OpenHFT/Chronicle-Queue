@@ -188,7 +188,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
 
             writeBuffer.clear();
-            writeBuffer.limit((int)capacity);
+            writeBuffer.limit(16 + (int)capacity);
+            writeBuffer.position(16 + (int) capacity);
+
             finished = false;
         }
 
@@ -209,10 +211,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     openConnection();
                 }
 
-                writeLong(0, ChronicleTcp.ACTION_DATA_NOACK);
-                writeLong(8, position());
+                writeLong(0, builder.appendRequireAck() ? ChronicleTcp.ACTION_DATA : ChronicleTcp.ACTION_DATA_NOACK);
+                writeLong(8, position() - 16);
 
-                writeBuffer.limit((int) position());
                 writeBuffer.flip();
 
                 try {
