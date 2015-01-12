@@ -82,12 +82,13 @@ class TcpConnection {
         }
     }
 
-    public boolean read(final ByteBuffer buffer) throws IOException {
-        if (this.socketChannel.read(buffer) < 0) {
+    public int read(final ByteBuffer buffer) throws IOException {
+        int nb = this.socketChannel.read(buffer);
+        if (nb < 0) {
             throw new EOFException();
         }
 
-        return true;
+        return 0;
     }
 
     public boolean read(final ByteBuffer buffer, int size) throws IOException {

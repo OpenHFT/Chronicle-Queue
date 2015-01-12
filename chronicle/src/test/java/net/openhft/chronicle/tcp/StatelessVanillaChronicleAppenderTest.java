@@ -26,9 +26,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTestBase {
 
@@ -45,6 +43,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             .build();
 
         final int port = portSupplier.getAndCheckPort();
+
         final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", port)
             .build();
@@ -52,7 +51,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             .connectAddress("localhost", port)
             .build();
 
-        final int items = 100;
+        final int items = 10;
         final ExcerptAppender appender = remoteAppender.createAppender();
         final ExcerptTailer tailer = remoteTailer.createTailer();
 

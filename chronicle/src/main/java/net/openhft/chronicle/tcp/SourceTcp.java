@@ -131,7 +131,7 @@ public abstract class SourceTcp {
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
 
             this.readBuffer.clear();
-            this.readBuffer.limit(16);
+            this.readBuffer.limit(0);
 
             this.writeBuffer.clear();
             this.writeBuffer.limit(0);
@@ -311,33 +311,42 @@ public abstract class SourceTcp {
 
         protected boolean onRead(final SelectionKey key) throws IOException {
             try {
+                logger.info("onRead");
+
                 readBuffer.clear();
                 readBuffer.limit(16);
                 connection.readFullyOrEOF(readBuffer);
                 readBuffer.flip();
 
-                long action = readBuffer.getLong();
-                long data   = readBuffer.getLong();
+                long    action = readBuffer.getLong();
+                long    data   = readBuffer.getLong();
+                boolean result = true;
 
                 logger.info("onRead action={}, data={}", action, data);
 
-                if(action == ChronicleTcp.ACTION_SUBSCRIBE) {
-                    return onSubscribe(key, data);
-                } else if(action == ChronicleTcp.ACTION_QUERY) {
-                    return onQuery(key, data);
-                } else if(action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
-                    return onUnsubscribe(key, data);
-                } else if(action == ChronicleTcp.ACTION_DATA) {
-                    return onData(key, data, true);
-                } else if(action == ChronicleTcp.ACTION_DATA_NOACK) {
-                    return onData(key, data, false);
+                if (action == ChronicleTcp.ACTION_SUBSCRIBE) {
+                    result = onSubscribe(key, data);
+                } else if (action == ChronicleTcp.ACTION_QUERY) {
+                    result = onQuery(key, data);
+                } else if (action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
+                    result = onUnsubscribe(key, data);
+                } else if (action == ChronicleTcp.ACTION_DATA) {
+                    result = onData(key, data, true);
+                } else if (action == ChronicleTcp.ACTION_DATA_NOACK) {
+                    result = onData(key, data, false);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
+                }
+
+                if(!result) {
+                    return false;
                 }
             } catch(EOFException e) {
                 key.selector().close();
                 throw e;
             }
+
+            return true;
         }
 
         protected boolean onWrite(final SelectionKey key) throws IOException {
@@ -573,7 +582,6 @@ public abstract class SourceTcp {
         protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
             logger.info(">>>>>>>  onData size={}", size);
 
-            readBuffer.clear();
             readBuffer.limit((int)size);
             connection.readFullyOrEOF(readBuffer);
             readBuffer.flip();
