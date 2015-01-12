@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 class RemoteChronicleQueue extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteChronicleQueue.class);
@@ -187,9 +188,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 this.limitAddr    = this.startAddr + 16 + capacity;
             }
 
-            writeBuffer.clear();
             writeBuffer.limit(16 + (int)capacity);
-            writeBuffer.position(16 + (int) capacity);
+            writeBuffer.position(16 + (int)capacity);
 
             finished = false;
         }

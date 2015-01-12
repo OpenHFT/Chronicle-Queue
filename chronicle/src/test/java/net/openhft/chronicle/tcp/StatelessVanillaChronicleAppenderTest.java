@@ -21,16 +21,15 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTestBase {
 
-    @Ignore("not yet ready")
     @Test
     public void testVanillaStatelessAppender_001() throws Exception {
         final String basePathSource = getVanillaTestPath("-source");
@@ -47,11 +46,63 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
         final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", port)
             .build();
+
+        final int items = 1000000;
+        final ExcerptAppender appender = remoteAppender.createAppender();
+        final ExcerptTailer tailer = source.createTailer();;
+
+        try {
+            for (long i = 1; i <= items; i++) {
+                appender.startExcerpt(16);
+                appender.writeLong(i);
+                appender.writeLong(i + 1);
+                appender.finish();
+            }
+
+            appender.close();
+
+            int count = 0;
+            for (long i = 1; i <= items; i++) {
+                while(!tailer.nextIndex());
+                count++;
+
+                assertEquals(i    , tailer.readLong());
+                assertEquals(i + 1, tailer.readLong());
+                tailer.finish();
+            }
+
+            tailer.close();
+
+            assertEquals(items, count);
+        } finally {
+            source.close();
+            source.clear();
+
+            assertFalse(new File(basePathSource).exists());
+        }
+    }
+
+    @Test
+    public void testVanillaStatelessAppender_002() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+            .bindAddress(0)
+            .connectionListener(portSupplier)
+            .build();
+
+        final int port = portSupplier.getAndCheckPort();
+
+        final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
+            .connectAddress("localhost", port)
+            .build();
         final Chronicle remoteTailer = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
-        final int items = 10;
+        final int items = 1000000;
         final ExcerptAppender appender = remoteAppender.createAppender();
         final ExcerptTailer tailer = remoteTailer.createTailer();
 
@@ -59,26 +110,115 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             for (long i = 1; i <= items; i++) {
                 appender.startExcerpt(16);
                 appender.writeLong(i);
-                appender.writeLong(i);
+                appender.writeLong(i + 1);
                 appender.finish();
             }
 
             appender.close();
 
-            /*
+            int count = 0;
             for (long i = 1; i <= items; i++) {
-                assertTrue(tailer.nextIndex());
-                assertEquals(i, tailer.readLong());
+                while(!tailer.nextIndex());
+                count++;
+
+                assertEquals(i    , tailer.readLong());
+                assertEquals(i + 1, tailer.readLong());
                 tailer.finish();
             }
 
             tailer.close();
-            */
+
+            assertEquals(items, count);
         } finally {
             source.close();
             source.clear();
 
             assertFalse(new File(basePathSource).exists());
         }
+    }
+
+    @Test
+    public void testVanillaStatelessAppender_003() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+            .bindAddress(0)
+            .connectionListener(portSupplier)
+            .build();
+
+        final int port = portSupplier.getAndCheckPort();
+
+        final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
+            .connectAddress("localhost", port)
+            .build();
+        final Chronicle remoteTailer = ChronicleQueueBuilder.remoteTailer()
+            .connectAddress("localhost", port)
+            .build();
+
+        final int items = 1000000;
+
+        final Thread appenderTh = new Thread() {
+            public void run() {
+                try {
+                    ExcerptAppender appender = remoteAppender.createAppender();
+
+                    for (long i = 1; i <= items; i++) {
+                        appender.startExcerpt(16);
+                        appender.writeLong(i);
+                        appender.writeLong(i + 1);
+                        appender.finish();
+                    }
+
+                    appender.close();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                } catch (AssertionError ae) {
+                    LOGGER.warn("", ae);
+                    errorCollector.addError(ae);
+                }
+            }
+        };
+
+        final Thread tailerTh = new Thread() {
+            public void run() {
+                try {
+                    ExcerptTailer tailer = remoteTailer.createTailer();
+
+                    int count = 0;
+                    for (long i = 1; i <= items; i++) {
+                        while(!tailer.nextIndex());
+                        count++;
+
+                        assertEquals(i    , tailer.readLong());
+                        assertEquals(i + 1, tailer.readLong());
+                        tailer.finish();
+                    }
+
+                    tailer.close();
+
+                    assertEquals(items, count);
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                } catch (AssertionError ae) {
+                    LOGGER.warn("", ae);
+                    errorCollector.addError(ae);
+                }
+            }
+        };
+
+        appenderTh.start();
+        tailerTh.start();
+
+        appenderTh.join();
+        tailerTh.join();
+
+        source.close();
+        source.clear();
+
+        assertFalse(new File(basePathSource).exists());
     }
 }

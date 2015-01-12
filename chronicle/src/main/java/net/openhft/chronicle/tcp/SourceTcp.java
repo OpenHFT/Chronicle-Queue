@@ -175,7 +175,7 @@ public abstract class SourceTcp {
                     .open()
                     .register(socketChannel, SelectionKey.OP_READ);
 
-                tailer = builder.chronicle().createTailer();
+                tailer   = builder.chronicle().createTailer();
                 appender = builder.chronicle().createAppender();
 
                 selectionKeys = selector.vanillaSelectionKeys();
@@ -311,8 +311,6 @@ public abstract class SourceTcp {
 
         protected boolean onRead(final SelectionKey key) throws IOException {
             try {
-                logger.info("onRead");
-
                 readBuffer.clear();
                 readBuffer.limit(16);
                 connection.readFullyOrEOF(readBuffer);
@@ -321,8 +319,6 @@ public abstract class SourceTcp {
                 long    action = readBuffer.getLong();
                 long    data   = readBuffer.getLong();
                 boolean result = true;
-
-                logger.info("onRead action={}, data={}", action, data);
 
                 if (action == ChronicleTcp.ACTION_SUBSCRIBE) {
                     result = onSubscribe(key, data);
@@ -580,13 +576,12 @@ public abstract class SourceTcp {
 
         @Override
         protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
-            logger.info(">>>>>>>  onData size={}", size);
-
-            readBuffer.limit((int)size);
+            readBuffer.clear();
+            readBuffer.limit((int) size);
             connection.readFullyOrEOF(readBuffer);
             readBuffer.flip();
 
-            appender.startExcerpt((int)size);
+            appender.startExcerpt((int) size);
             appender.write(readBuffer);
             appender.finish();
 
