@@ -36,14 +36,24 @@ import java.util.Map;
 /**
  * @author peter.lawrey
  */
-public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
+public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, MappingProvider<WrappedExcerpt> {
     protected ExcerptTailer wrappedTailer;
     protected ExcerptAppender wrappedAppender;
     protected ExcerptCommon wrappedCommon;
     protected Excerpt wrappedExcerpt;
+    private MappingFunction withMapping;
 
     public WrappedExcerpt(ExcerptCommon excerptCommon) {
         setExcerpt(excerptCommon);
+    }
+
+    public WrappedExcerpt withMapping(MappingFunction mapping) {
+        this.withMapping = mapping;
+        return this;
+    }
+
+    public MappingFunction withMapping() {
+        return this.withMapping;
     }
 
     protected void setExcerpt(ExcerptCommon excerptCommon) {

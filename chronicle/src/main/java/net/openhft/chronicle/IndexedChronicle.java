@@ -32,17 +32,19 @@ import java.io.IOException;
 import java.util.ConcurrentModificationException;
 
 /**
- * IndexedChronicle is a single-writer-multiple-reader {@link net.openhft.chronicle.Chronicle} that you can put huge
- * numbers of objects in, having different sizes.
+ * IndexedChronicle is a single-writer-multiple-reader {@link net.openhft.chronicle.Chronicle} that
+ * you can put huge numbers of objects in, having different sizes.
  *
- * <p>For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means
- * IndexedChronicle "knows" where the Nth object resides at in memory, thus the name "Indexed". But this index is just
- * sequential index, first object has index 0, second object has index 1, and so on. If you want to access objects with
- * other logical keys you have to manage your own mapping from logical key to index.</p>
+ * <p>For each record, IndexedChronicle holds the memory-offset in another index cache for random
+ * access. This means IndexedChronicle "knows" where the Nth object resides at in memory, thus the
+ * name "Indexed". But this index is just sequential index, first object has index 0, second object
+ * has index 1, and so on. If you want to access objects with other logical keys you have to manage
+ * your own mapping from logical key to index.</p>
  *
- * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data file called &#60;base
- * file name&#62;.data</li> <li>an index file called &#60;base file name&#62;.index</li> </ul> , <tt>base file name</tt>
- * (or <tt>basePath</tt>) is provided on construction.
+ * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data
+ * file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file
+ * name&#62;.index</li> </ul> , <tt>base file name</tt> (or <tt>basePath</tt>) is provided on
+ * construction.
  *
  * @author peter.lawrey
  */
@@ -61,14 +63,15 @@ public class IndexedChronicle implements Chronicle {
     private volatile boolean closed = false;
 
     /**
-     * Creates a new instance of IndexedChronicle as specified by the provided {@link net.openhft.chronicle.ChronicleQueueBuilder}
-     * and having the specified <tt>basePath</tt> (the base name of the two backing files).
+     * Creates a new instance of IndexedChronicle as specified by the provided {@link
+     * net.openhft.chronicle.ChronicleQueueBuilder} and having the specified <tt>basePath</tt> (the
+     * base name of the two backing files).
      *
      * @param builder the builder u
-     *
-     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing, writable regular file
-     *                               and a new regular file of that name cannot be created, or if some other error
-     *                               occurs while opening or creating the file
+     * @throws FileNotFoundException if the <tt>basePath</tt> string does not denote an existing,
+     *                               writable regular file and a new regular file of that name
+     *                               cannot be created, or if some other error occurs while opening
+     *                               or creating the file
      */
     IndexedChronicle(@NotNull ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder) throws IOException {
 
@@ -98,8 +101,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the {@link net.openhft.chronicle.ChronicleQueueBuilder} that has been used
-     * to create the current instance of IndexedChronicle
+     * Returns the {@link net.openhft.chronicle.ChronicleQueueBuilder} that has been used to create
+     * the current instance of IndexedChronicle
      *
      * @return the ChronicleConfig used to create this IndexChronicle
      */
@@ -108,16 +111,16 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously written into this {@link
-     * net.openhft.chronicle.Chronicle}. Basically the same value as returned by {@link
-     * IndexedChronicle#lastWrittenIndex()}, but does it by looking at the content of the backing files and figuring it
-     * out from there.
+     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously
+     * written into this {@link net.openhft.chronicle.Chronicle}. Basically the same value as
+     * returned by {@link IndexedChronicle#lastWrittenIndex()}, but does it by looking at the
+     * content of the backing files and figuring it out from there.
      *
-     * <p>A side effect of the method is that it also stores the obtained value and it can and will be used by
-     * subsequent calls of {@link IndexedChronicle#lastWrittenIndex()}.</p>
+     * <p>A side effect of the method is that it also stores the obtained value and it can and will
+     * be used by subsequent calls of {@link IndexedChronicle#lastWrittenIndex()}.</p>
      *
-     * <p>The constructors of IndexedChronicle automatically call this method so they properly handle the backing file
-     * being both empty or non-empty at the start.</p>
+     * <p>The constructors of IndexedChronicle automatically call this method so they properly
+     * handle the backing file being both empty or non-empty at the start.</p>
      *
      * @return the index of the most recent Excerpt written into this Chronicle
      */
@@ -177,8 +180,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the number of {@link net.openhft.chronicle.Excerpt}s that have been written into this {@link
-     * net.openhft.chronicle.Chronicle}.
+     * Returns the number of {@link net.openhft.chronicle.Excerpt}s that have been written into this
+     * {@link net.openhft.chronicle.Chronicle}.
      *
      * @return the number of Excerpts previously written into this Chronicle
      */
@@ -194,9 +197,9 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns the base file name backing this instance of IndexChronicle. Index chronicle uses two files: <ul> <li>a
-     * data file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file name&#62;.index</li>
-     * </ul>
+     * Returns the base file name backing this instance of IndexChronicle. Index chronicle uses two
+     * files: <ul> <li>a data file called &#60;base file name&#62;.data</li> <li>an index file
+     * called &#60;base file name&#62;.index</li> </ul>
      *
      * @return the base file name backing this IndexChronicle
      */
@@ -218,8 +221,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.Excerpt} which can be used for random access to the data
-     * stored in this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.Excerpt} which can be used for random
+     * access to the data stored in this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.Excerpt} for this Chronicle
      * @throws IOException if an I/O error occurs
@@ -230,13 +233,13 @@ public class IndexedChronicle implements Chronicle {
         final Excerpt excerpt = new IndexedExcerpt();
 
         return !builder.useCheckedExcerpt()
-            ? excerpt
-            : new CheckedExcerpt(excerpt);
+                ? excerpt
+                : new CheckedExcerpt(excerpt);
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.ExcerptTailer} which can be used for sequential reads from
-     * this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.ExcerptTailer} which can be used for
+     * sequential reads from this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.ExcerptTailer} for this Chronicle
      * @throws IOException if an I/O error occurs
@@ -248,8 +251,8 @@ public class IndexedChronicle implements Chronicle {
     }
 
     /**
-     * Returns a new instance of {@link net.openhft.chronicle.ExcerptAppender} which can be used for sequential writes
-     * into this Chronicle.
+     * Returns a new instance of {@link net.openhft.chronicle.ExcerptAppender} which can be used for
+     * sequential writes into this Chronicle.
      *
      * @return new {@link net.openhft.chronicle.ExcerptAppender} for this Chronicle
      * @throws IOException if an I/O error occurs
@@ -260,13 +263,13 @@ public class IndexedChronicle implements Chronicle {
         final ExcerptAppender appender = new IndexedExcerptAppender();
 
         return !builder.useCheckedExcerpt()
-            ? appender
-            : new CheckedExcerpt(appender);
+                ? appender
+                : new CheckedExcerpt(appender);
     }
 
     /**
-     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously written into this {@link
-     * net.openhft.chronicle.Chronicle}. Basically <tt>size() - 1</tt>.
+     * Returns the index of the most recent {@link net.openhft.chronicle.Excerpt}s previously
+     * written into this {@link net.openhft.chronicle.Chronicle}. Basically <tt>size() - 1</tt>.
      *
      * @return the index of the most recent Excerpt written into this Chronicle
      */
@@ -288,7 +291,8 @@ public class IndexedChronicle implements Chronicle {
     //
     // *************************************************************************
 
-    protected abstract class AbstractIndexedExcerpt extends NativeBytes implements ExcerptCommon {
+    protected abstract class AbstractIndexedExcerpt extends NativeBytes implements ExcerptCommon,
+            MappingProvider<AbstractIndexedExcerpt> {
         @NotNull
         final int cacheLineMask;
         final int dataBlockSize;
@@ -317,6 +321,20 @@ public class IndexedChronicle implements Chronicle {
         boolean padding = true;
         // which index does this refer to?
         private long indexStartOffset;
+
+        private MappingFunction mappingFunction;
+
+        @Override
+        public MappingFunction withMapping() {
+            return mappingFunction;
+        }
+
+        @Override
+        public AbstractIndexedExcerpt withMapping(MappingFunction mappingFunction) {
+            this.mappingFunction = mappingFunction;
+            return this;
+        }
+
 
         // the start of this entry
         // inherited - long startAddr;

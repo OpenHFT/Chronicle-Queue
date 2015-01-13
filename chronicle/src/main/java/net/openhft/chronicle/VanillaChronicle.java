@@ -28,6 +28,7 @@ import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -42,8 +43,8 @@ public class VanillaChronicle implements Chronicle {
     public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
 
     /**
-     * Number of most-significant bits used to hold the thread id in index entries.
-     * The remaining least-significant bits of the index entry are used for the data offset info.
+     * Number of most-significant bits used to hold the thread id in index entries. The remaining
+     * least-significant bits of the index entry are used for the data offset info.
      */
     public static final int THREAD_ID_BITS = Integer.getInteger("os.max.pid.bits", Jvm.PID_BITS);
 
@@ -94,11 +95,11 @@ public class VanillaChronicle implements Chronicle {
         int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
 
         this.indexCache = new VanillaIndexCache(
-            builder.path().getAbsolutePath(),
-            indexBlockSizeBits,
-            dateCache,
-            builder.indexCacheCapacity(),
-            builder.cleanupOnClose());
+                builder.path().getAbsolutePath(),
+                indexBlockSizeBits,
+                dateCache,
+                builder.indexCacheCapacity(),
+                builder.cleanupOnClose());
 
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
@@ -107,11 +108,12 @@ public class VanillaChronicle implements Chronicle {
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
 
         this.dataCache = new VanillaDataCache(
-            builder.path().getAbsolutePath(),
-            dataBlockSizeBits,
-            dateCache,
-            builder.indexCacheCapacity(),
-            builder.cleanupOnClose());
+                builder.path().getAbsolutePath(),
+                dataBlockSizeBits,
+                dateCache,
+                builder.indexCacheCapacity(),
+                builder.cleanupOnClose()
+        );
 
         this.entriesForCycleBits = Maths.intLog2(builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
@@ -198,16 +200,16 @@ public class VanillaChronicle implements Chronicle {
         final VanillaAppender appender = new VanillaAppenderImpl();
 
         return !builder.useCheckedExcerpt()
-            ? appender
-            : new VanillaCheckedAppender(appender);
+                ? appender
+                : new VanillaCheckedAppender(appender);
     }
 
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
         final Excerpt excerpt = builder.useCheckedExcerpt()
-            ? new VanillaExcerpt()
-            : new VanillaCheckedExcerpt(new VanillaExcerpt());
+                ? new VanillaExcerpt()
+                : new VanillaCheckedExcerpt(new VanillaExcerpt());
 
         return excerpt;
     }
@@ -218,9 +220,10 @@ public class VanillaChronicle implements Chronicle {
     }
 
     /**
-     * This method returns the very last index in the chronicle.  Not to be confused with lastWrittenIndex(),
-     * this method returns the actual last index by scanning the underlying data even the appender has not
-     * been activated.
+     * This method returns the very last index in the chronicle.  Not to be confused with
+     * lastWrittenIndex(), this method returns the actual last index by scanning the underlying data
+     * even the appender has not been activated.
+     *
      * @return The last index in the file
      */
     @Override
@@ -286,7 +289,8 @@ public class VanillaChronicle implements Chronicle {
     //
     // *************************************************************************
 
-    private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
+    private abstract class AbstractVanillaExcerpt extends NativeBytes implements
+            VanillaExcerptCommon, MappingProvider<AbstractVanillaExcerpt> {
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
@@ -296,10 +300,23 @@ public class VanillaChronicle implements Chronicle {
 
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
+        private MappingFunction withMapping;
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_PAGE, NO_PAGE, null);
         }
+
+
+        public AbstractVanillaExcerpt withMapping(@Nullable final MappingFunction withMapping) {
+            this.withMapping = withMapping;
+            return null;
+        }
+
+        @Nullable
+        public MappingFunction withMapping() {
+            return this.withMapping;
+        }
+
 
         @Override
         public boolean unmapped() {
@@ -323,8 +340,8 @@ public class VanillaChronicle implements Chronicle {
         /**
          * Return the last index written by the appender.
          *
-         * This may not be the actual last index in the Chronicle which can be
-         * found from lastIndex().
+         * This may not be the actual last index in the Chronicle which can be found from
+         * lastIndex().
          */
         @Override
         public long lastWrittenIndex() {
@@ -333,7 +350,7 @@ public class VanillaChronicle implements Chronicle {
 
         protected void setLastWrittenIndex(long lastWrittenIndex) {
             this.lastWrittenIndex = lastWrittenIndex;
-            for(;;) {
+            for (; ; ) {
                 long lwi = VanillaChronicle.this.lastWrittenIndex();
                 if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex)) {
                     break;
@@ -487,7 +504,7 @@ public class VanillaChronicle implements Chronicle {
                 indexBytes.release();
                 indexBytes = null;
             }
-            
+
             if (dataBytes != null) {
                 dataBytes.release();
                 dataBytes = null;
@@ -533,7 +550,7 @@ public class VanillaChronicle implements Chronicle {
         private int appenderCycle;
         private int appenderThreadId;
         private boolean nextSynchronous;
-        private long[] positionArr = { 0L };
+        private long[] positionArr = {0L};
         private int dataCount;
 
         @Override
@@ -563,12 +580,12 @@ public class VanillaChronicle implements Chronicle {
                         indexBytes.release();
                         indexBytes = null;
                     }
-                    
+
                     lastCycle = appenderCycle;
                     lastThreadId = appenderThreadId;
                 }
 
-                if(dataBytes == null || indexBytes == null) {
+                if (dataBytes == null || indexBytes == null) {
                     dataCount = dataCache.findNextDataCount(appenderCycle, appenderThreadId);
                     dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, dataCount, true);
                 }

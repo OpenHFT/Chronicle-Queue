@@ -21,6 +21,7 @@ import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
+import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -52,7 +53,7 @@ public class ChronicleSink extends WrappedChronicle {
 
     @Override
     public void close() throws IOException {
-        if(!closed) {
+        if (!closed) {
             closed = true;
             if (this.connection != null) {
                 this.connection.close();
@@ -64,12 +65,12 @@ public class ChronicleSink extends WrappedChronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return (Excerpt)createExcerpt0();
+        return (Excerpt) createExcerpt0();
     }
 
     @Override
     public synchronized ExcerptTailer createTailer() throws IOException {
-        return (ExcerptTailer)createExcerpt0();
+        return (ExcerptTailer) createExcerpt0();
     }
 
     @Override
@@ -78,13 +79,13 @@ public class ChronicleSink extends WrappedChronicle {
     }
 
     private ExcerptCommon createExcerpt0() throws IOException {
-        if( this.excerpt != null) {
+        if (this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
         this.excerpt = wrappedChronicle == null
-            ? new StatelessExcerpt()
-            : isLocal
+                ? new StatelessExcerpt()
+                : isLocal
                 ? new StatefulLocalExcerpt(wrappedChronicle.createTailer())
                 : new StatefulExcerpt(wrappedChronicle.createTailer());
 
@@ -98,6 +99,7 @@ public class ChronicleSink extends WrappedChronicle {
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ByteBuffer writeBuffer;
+        protected final ByteBufferBytes writeBufferBytes;
         protected final ByteBuffer readBuffer;
 
         protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
@@ -105,6 +107,7 @@ public class ChronicleSink extends WrappedChronicle {
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = ChronicleTcp.createBuffer(16);
+            this.writeBufferBytes = new ByteBufferBytes(writeBuffer);
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
         }
 
@@ -131,10 +134,31 @@ public class ChronicleSink extends WrappedChronicle {
         }
 
         protected void subscribe(long index) throws IOException {
+
             writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
+            writeBufferBytes.clear();
+
+            writeBufferBytes.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+            writeBufferBytes.writeLong(index);
+
+            MappingFunction mapping = withMapping();
+
+            if (mapping != null) {
+                // write with mapping and len
+                writeBufferBytes.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
+                long pos = writeBufferBytes.position();
+                writeBufferBytes.skip(4);
+                long start = writeBufferBytes.position();
+
+                writeBufferBytes.writeObject(mapping);
+                int len = (int) (writeBufferBytes.position() - start);
+                writeBufferBytes.writeInt(pos, len);
+
+            }
+
+            writeBuffer.position(0);
+            writeBuffer.limit((int) writeBufferBytes.position());
+
 
             connection.writeAllOrEOF(writeBuffer);
         }
@@ -213,6 +237,7 @@ public class ChronicleSink extends WrappedChronicle {
             //this.appender = null;
             this.adapter = null;
             this.lastLocalIndex = -1;
+            this.withMapping(ChronicleSink.this.builder.withMapping());
         }
 
         @Override
@@ -223,7 +248,7 @@ public class ChronicleSink extends WrappedChronicle {
                     readBuffer.clear();
                     readBuffer.limit(0);
 
-                    if(this.adapter == null) {
+                    if (this.adapter == null) {
                         this.adapter = createAppenderAdapter();
                     }
 
@@ -239,7 +264,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         private boolean readNextExcerpt() {
             try {
-                if(!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
+                if (!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -262,7 +287,7 @@ public class ChronicleSink extends WrappedChronicle {
                     throw new StreamCorruptedException("size was " + size);
                 }
 
-                if(lastLocalIndex != scIndex) {
+                if (lastLocalIndex != scIndex) {
                     this.adapter.startExcerpt(size, scIndex);
 
                     long remaining = size;
@@ -303,7 +328,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         @Override
         public void close() {
-            if(this.adapter != null) {
+            if (this.adapter != null) {
                 this.adapter.close();
                 this.adapter = null;
             }
@@ -383,7 +408,7 @@ public class ChronicleSink extends WrappedChronicle {
 
         @Override
         public void finish() {
-            if(!isFinished()) {
+            if (!isFinished()) {
                 if (lastSize > 0) {
                     readBuffer.position(readBuffer.position() + lastSize);
                 }
@@ -398,7 +423,7 @@ public class ChronicleSink extends WrappedChronicle {
             this.lastSize = 0;
 
             try {
-                if(!connection.isOpen()) {
+                if (!connection.isOpen()) {
                     connection.open();
                     readBuffer.clear();
                     readBuffer.limit(0);
@@ -415,11 +440,11 @@ public class ChronicleSink extends WrappedChronicle {
                     int receivedSize = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
 
-                    switch(receivedSize) {
+                    switch (receivedSize) {
                         case ChronicleTcp.SYNC_IDX_LEN:
-                            if(index == ChronicleTcp.IDX_TO_START) {
+                            if (index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
-                            } else if(index == ChronicleTcp.IDX_TO_END) {
+                            } else if (index == ChronicleTcp.IDX_TO_END) {
                                 return advanceIndex();
                             } else {
                                 return (index == receivedIndex) ? advanceIndex() : false;
@@ -445,15 +470,15 @@ public class ChronicleSink extends WrappedChronicle {
             finish();
 
             try {
-                if(!connection.isOpen()) {
-                    if(index(this.index)) {
+                if (!connection.isOpen()) {
+                    if (index(this.index)) {
                         return nextIndex();
                     } else {
                         return false;
                     }
                 }
 
-                if(!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
+                if (!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -472,8 +497,8 @@ public class ChronicleSink extends WrappedChronicle {
                     throw new StreamCorruptedException("Size was " + excerptSize);
                 }
 
-                if(this.readBuffer.remaining() < excerptSize) {
-                    if(!connection.read(this.readBuffer, excerptSize)) {
+                if (this.readBuffer.remaining() < excerptSize) {
+                    if (!connection.read(this.readBuffer, excerptSize)) {
                         return false;
                     }
                 }
@@ -493,7 +518,7 @@ public class ChronicleSink extends WrappedChronicle {
         }
 
         protected boolean advanceIndex() throws IOException {
-            if(nextIndex()) {
+            if (nextIndex()) {
                 finish();
                 return true;
             } else {
@@ -519,15 +544,15 @@ public class ChronicleSink extends WrappedChronicle {
     /**
      * Creates a SinkAppenderAdapter.
      *
-     * @return  the SinkAppenderAdapter
-     * @throws  java.io.IOException
+     * @return the SinkAppenderAdapter
+     * @throws java.io.IOException
      */
     private AppenderAdapter createAppenderAdapter() throws IOException {
-        if(wrappedChronicle instanceof IndexedChronicle) {
+        if (wrappedChronicle instanceof IndexedChronicle) {
             return new IndexedAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
         }
 
-        if(wrappedChronicle instanceof VanillaChronicle) {
+        if (wrappedChronicle instanceof VanillaChronicle) {
             return new VanillaAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
         }
 
@@ -553,7 +578,7 @@ public class ChronicleSink extends WrappedChronicle {
         public IndexedAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             super(appender);
 
-            this.chronicle = (IndexedChronicle)chronicle;
+            this.chronicle = (IndexedChronicle) chronicle;
         }
 
         @Override
@@ -577,8 +602,8 @@ public class ChronicleSink extends WrappedChronicle {
         public VanillaAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             super(appender);
 
-            this.chronicle = (VanillaChronicle)chronicle;
-            this.appender = (VanillaChronicle.VanillaAppender)appender;
+            this.chronicle = (VanillaChronicle) chronicle;
+            this.appender = (VanillaChronicle.VanillaAppender) appender;
         }
 
         @Override

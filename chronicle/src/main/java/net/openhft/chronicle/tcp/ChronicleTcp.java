@@ -30,11 +30,12 @@ public class ChronicleTcp {
     public static final int SYNC_IDX_LEN = -126;
     public static final long ACTION_SUBSCRIBE = 1;
     public static final long ACTION_QUERY = 2;
+    public static final long ACTION_WITH_MAPPING = 3;
     public static final long IDX_TO_START = -1;
     public static final long IDX_TO_END = -2;
 
     public static ByteBuffer createBufferOfSize(int size) {
-        return createBufferOfSize(size,  ByteOrder.nativeOrder());
+        return createBufferOfSize(size, ByteOrder.nativeOrder());
     }
 
     public static ByteBuffer createBufferOfSize(int minSize, ByteOrder byteOrder) {
@@ -42,7 +43,7 @@ public class ChronicleTcp {
     }
 
     public static ByteBuffer createBuffer(int minSize) {
-        return createBuffer(minSize,  ByteOrder.nativeOrder());
+        return createBuffer(minSize, ByteOrder.nativeOrder());
     }
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
