@@ -44,12 +44,16 @@ public abstract class SinkTcp extends TcpConnection {
     }
 
     public SinkTcp open() throws IOException {
+        return open(false);
+    }
+
+    public SinkTcp open(boolean blocking) throws IOException {
         close();
         running.set(true);
 
         SocketChannel socketChannel = openSocketChannel();
         if(socketChannel != null) {
-            socketChannel.configureBlocking(false);
+            socketChannel.configureBlocking(blocking);
             socketChannel.socket().setTcpNoDelay(true);
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
@@ -62,6 +66,7 @@ public abstract class SinkTcp extends TcpConnection {
             }
 
             super.setSocketChannel(socketChannel);
+
         }
 
         running.set(false);

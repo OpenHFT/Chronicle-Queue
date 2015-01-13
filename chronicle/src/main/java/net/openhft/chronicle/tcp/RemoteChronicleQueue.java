@@ -35,23 +35,22 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 class RemoteChronicleQueue extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteChronicleQueue.class);
 
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
-    private final boolean isLocal;
+    private final boolean blocking;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
+    protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection, boolean blocking) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder.clone();
         this.closed = false;
-        this.isLocal = builder.sharedChronicle() && connection.isLocalhost();
+        this.blocking = blocking;
         this.excerpt = null;
     }
 
@@ -99,8 +98,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     private void openConnection() {
         for(int i=0; !connection.isOpen(); i++) {
             try {
-                LOGGER.info(">> openConnection");
-                connection.open();
+                connection.open(this.blocking);
             } catch (IOException e) {
                 if(i > 10) {
                     try {
@@ -116,10 +114,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
     private void closeConnection() {
         try {
-            if(connection.isOpen()) {
-                LOGGER.info(">> closeConnection");
-            }
-
             connection.close();
         } catch (IOException e) {
             LOGGER.warn("Error closing socketChannel", e);
@@ -221,9 +215,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                     if(builder.appendRequireAck()) {
                         this.readBuffer.clear();
-                        this.readBuffer.limit(0);
+                        this.readBuffer.limit(ChronicleTcp.HEADER_SIZE);
+                        this.readBuffer.flip();
                         if (connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE)) {
-                            int recType = this.readBuffer.getInt();
+                            int  recType  = this.readBuffer.getInt();
                             long recIndex = this.readBuffer.getLong();
 
                             if (recType == ChronicleTcp.ACK_LEN) {

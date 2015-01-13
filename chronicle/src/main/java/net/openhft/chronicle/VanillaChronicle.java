@@ -622,6 +622,7 @@ public class VanillaChronicle implements Chronicle {
 
             try {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
+                long lvindex = -1;
                 if (position < 0) {
                     if (indexBytes != null) {
                         indexBytes.release();
@@ -629,10 +630,12 @@ public class VanillaChronicle implements Chronicle {
                     }
 
                     indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
-                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), positionArr[0]));
+                    lvindex = indexFrom(appenderCycle, indexBytes.index(), positionArr[0]);
                 } else {
-                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), position));
+                    lvindex = indexFrom(appenderCycle, indexBytes.index(), position);
                 }
+
+                setLastWrittenIndex(lvindex);
             } catch (IOException e) {
                 throw new AssertionError(e);
             }

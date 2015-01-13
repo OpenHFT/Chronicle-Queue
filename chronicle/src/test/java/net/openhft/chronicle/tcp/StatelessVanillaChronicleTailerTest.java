@@ -21,7 +21,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -31,7 +30,25 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
+public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestBase {
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testVanillaStatelessExceptionOnCreateAppender() throws Exception {
+        ChronicleQueueBuilder.remoteTailer()
+            .connectAddress("localhost", 9876)
+            .build()
+            .createAppender();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testVanillaStatelessExceptionOnCreatTailerTwice() throws Exception {
+        Chronicle ch = ChronicleQueueBuilder.remoteTailer()
+            .connectAddress("localhost", 9876)
+            .build();
+
+        ch.createTailer();
+        ch.createTailer();
+    }
 
     @Test
     public void testVanillaStatelessSink_001() throws Exception {

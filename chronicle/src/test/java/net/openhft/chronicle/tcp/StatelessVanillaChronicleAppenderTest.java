@@ -30,6 +30,24 @@ import static org.junit.Assert.assertFalse;
 
 public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTestBase {
 
+    @Test(expected = UnsupportedOperationException.class)
+    public void testVanillaStatelessExceptionOnCreateTailer() throws Exception {
+        ChronicleQueueBuilder.remoteAppender()
+            .connectAddress("localhost", 9876)
+            .build()
+            .createTailer();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testVanillaStatelessExceptionOnCreatAppenderTwice() throws Exception {
+        Chronicle ch = ChronicleQueueBuilder.remoteAppender()
+            .connectAddress("localhost", 9876)
+            .build();
+
+        ch.createAppender();
+        ch.createAppender();
+    }
+
     @Test
     public void testVanillaStatelessAppender_001() throws Exception {
         final String basePathSource = getVanillaTestPath("-source");
@@ -49,9 +67,11 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
         final int items = 1000000;
         final ExcerptAppender appender = remoteAppender.createAppender();
-        final ExcerptTailer tailer = source.createTailer();;
+        final ExcerptTailer tailer = source.createTailer();
 
         try {
+            source.clear();
+
             for (long i = 1; i <= items; i++) {
                 appender.startExcerpt(16);
                 appender.writeLong(i);
@@ -97,6 +117,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
         final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", port)
+            .appendRequireAck(false)
             .build();
         final Chronicle remoteTailer = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
@@ -107,6 +128,8 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
         final ExcerptTailer tailer = remoteTailer.createTailer();
 
         try {
+            source.clear();
+
             for (long i = 1; i <= items; i++) {
                 appender.startExcerpt(16);
                 appender.writeLong(i);
@@ -121,13 +144,12 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
                 while(!tailer.nextIndex());
                 count++;
 
-                assertEquals(i    , tailer.readLong());
+                assertEquals(i, tailer.readLong());
                 assertEquals(i + 1, tailer.readLong());
                 tailer.finish();
             }
 
             tailer.close();
-
             assertEquals(items, count);
         } finally {
             source.close();
@@ -158,6 +180,8 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             .build();
 
         final int items = 1000000;
+
+        source.clear();
 
         final Thread appenderTh = new Thread() {
             public void run() {
@@ -192,7 +216,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
                         while(!tailer.nextIndex());
                         count++;
 
-                        assertEquals(i    , tailer.readLong());
+                        assertEquals(i, tailer.readLong());
                         assertEquals(i + 1, tailer.readLong());
                         tailer.finish();
                     }
@@ -220,5 +244,55 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
         source.clear();
 
         assertFalse(new File(basePathSource).exists());
+    }
+
+    @Test
+    public void testVanillaStatelessAppender_004() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
+            .source()
+            .bindAddress(0)
+            .connectionListener(portSupplier)
+            .build();
+
+        final int port = portSupplier.getAndCheckPort();
+
+        final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
+            .connectAddress("localhost", port)
+            .appendRequireAck(true)
+            .build();
+
+        final int items = 1000000;
+        final ExcerptAppender appender = remoteAppender.createAppender();
+        final ExcerptTailer tailer = source.createTailer();
+
+        try {
+            source.clear();
+
+            for (long i = 1; i <= items; i++) {
+                appender.startExcerpt(16);
+                appender.writeLong(i);
+                appender.writeLong(i + 1);
+                appender.finish();
+
+                while(!tailer.nextIndex());
+
+                assertEquals(i , tailer.readLong());
+                assertEquals(i + 1, tailer.readLong());
+                assertEquals(tailer.index() , appender.lastWrittenIndex());
+
+                tailer.finish();
+            }
+
+            appender.close();
+            tailer.close();
+        } finally {
+            source.close();
+            source.clear();
+
+            assertFalse(new File(basePathSource).exists());
+        }
     }
 }

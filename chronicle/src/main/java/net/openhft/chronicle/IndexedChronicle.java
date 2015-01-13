@@ -860,9 +860,10 @@ public class IndexedChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
-            if (index != IndexedChronicle.this.size())
+            if (index != IndexedChronicle.this.size()) {
                 throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
-                        + chronicle().size());
+                    + chronicle().size());
+            }
 
             // push out the entry is available. This is what the reader polls.
             // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
