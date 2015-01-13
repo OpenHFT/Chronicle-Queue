@@ -326,10 +326,10 @@ public abstract class SourceTcp {
                     result = onQuery(key, data);
                 } else if (action == ChronicleTcp.ACTION_UNSUBSCRIBE) {
                     result = onUnsubscribe(key, data);
-                } else if (action == ChronicleTcp.ACTION_DATA) {
-                    result = onData(key, data, true);
-                } else if (action == ChronicleTcp.ACTION_DATA_NOACK) {
-                    result = onData(key, data, false);
+                } else if (action == ChronicleTcp.ACTION_SUBMIT) {
+                    result = onSubmit(key, data, true);
+                } else if (action == ChronicleTcp.ACTION_SUBMIT_NOACK) {
+                    result = onSubmit(key, data, false);
                 } else {
                     throw new IOException("Unknown action received (" + action + ")");
                 }
@@ -387,7 +387,7 @@ public abstract class SourceTcp {
         }
 
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
-        protected abstract boolean onData(final SelectionKey key, long size, boolean ack) throws IOException ;
+        protected abstract boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException ;
         protected abstract boolean write() throws IOException;
     }
 
@@ -419,7 +419,7 @@ public abstract class SourceTcp {
         }
 
         @Override
-        protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
+        protected boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException {
             return true;
         }
 
@@ -575,7 +575,7 @@ public abstract class SourceTcp {
         }
 
         @Override
-        protected boolean onData(final SelectionKey key, long size, boolean ack) throws IOException {
+        protected boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException {
             readBuffer.clear();
             readBuffer.limit((int) size);
             connection.readFullyOrEOF(readBuffer);

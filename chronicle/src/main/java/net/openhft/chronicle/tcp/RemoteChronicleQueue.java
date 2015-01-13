@@ -205,7 +205,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     openConnection();
                 }
 
-                writeLong(0, builder.appendRequireAck() ? ChronicleTcp.ACTION_DATA : ChronicleTcp.ACTION_DATA_NOACK);
+                writeLong(0, builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK);
                 writeLong(8, position() - 16);
 
                 writeBuffer.flip();

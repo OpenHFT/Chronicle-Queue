@@ -360,7 +360,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
 
         appender.close();
-        LOGGER.info("\n");
 
         final int port = portSupplier.getAndCheckPort();
 
