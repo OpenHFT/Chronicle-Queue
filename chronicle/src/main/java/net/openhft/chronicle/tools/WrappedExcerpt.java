@@ -801,7 +801,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
 
     @Override
     public long lastWrittenIndex() {
-        return wrappedCommon.lastWrittenIndex();
+        return wrappedAppender.lastWrittenIndex();
     }
 
     @Override
@@ -835,7 +835,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt {
     @NotNull
     @Override
     public WrappedExcerpt toEnd() {
-        wrappedCommon.toEnd();
+        wrappedTailer.toEnd();
         return this;
     }
 

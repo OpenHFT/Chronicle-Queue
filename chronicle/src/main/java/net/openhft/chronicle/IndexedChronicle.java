@@ -497,11 +497,6 @@ public class IndexedChronicle implements Chronicle {
         }
 
         @Override
-        public long lastWrittenIndex() {
-            return IndexedChronicle.this.lastWrittenIndex();
-        }
-
-        @Override
         public long size() {
             return IndexedChronicle.this.size();
         }
@@ -812,6 +807,11 @@ public class IndexedChronicle implements Chronicle {
             this.nextSynchronous = nextSynchronous;
         }
 
+        @Override
+        public long lastWrittenIndex() {
+            return IndexedChronicle.this.lastWrittenIndex();
+        }
+
         public boolean nextSynchronous() {
             return nextSynchronous;
         }
@@ -929,7 +929,6 @@ public class IndexedChronicle implements Chronicle {
 
         private void appendStartOfLine() {
             UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
-            // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
             indexPositionAddr += 8;
         }
     }

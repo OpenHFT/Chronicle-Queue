@@ -28,7 +28,8 @@ import net.openhft.lang.model.constraints.NotNull;
 public interface ExcerptAppender extends ExcerptCommon {
     /**
      * Start an excerpt with the default message capacity of 128K (can be configured)
-     * This can waste up to 0.1% of disk space, unless you have sparse file support like Linux, when you will waste far less.
+     * This can waste up to 0.1% of disk space, unless you have sparse file support like Linux,
+     * when you will waste far less.
      */
     void startExcerpt();
 
@@ -52,6 +53,9 @@ public interface ExcerptAppender extends ExcerptCommon {
 
     /**
      * Add a padded entry to keep the index in sync with a master source.
+     *
+     * Not for public use. This method is expected to be retained only
+     * as a package private method in a future release.
      */
     void addPaddedEntry();
 
@@ -66,4 +70,9 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @param nextSynchronous make the next write synchronous or not.
      */
     void nextSynchronous(boolean nextSynchronous);
+
+    /**
+     * @return the index last written to including padded entries.
+     */
+    long lastWrittenIndex();
 }

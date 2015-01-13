@@ -292,7 +292,6 @@ public class VanillaChronicle implements Chronicle {
         private int lastIndexCount = Integer.MIN_VALUE;
         private int lastThreadId = Integer.MIN_VALUE;
         private int lastDataCount = Integer.MIN_VALUE;
-        private long lastWrittenIndex = 0;
 
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
@@ -326,20 +325,9 @@ public class VanillaChronicle implements Chronicle {
          * This may not be the actual last index in the Chronicle which can be
          * found from lastIndex().
          */
-        @Override
-        public long lastWrittenIndex() {
-            return lastWrittenIndex;
-        }
-
-        protected void setLastWrittenIndex(long lastWrittenIndex) {
-            this.lastWrittenIndex = lastWrittenIndex;
-            for(;;) {
-                long lwi = VanillaChronicle.this.lastWrittenIndex();
-                if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex)) {
-                    break;
-                }
-            }
-        }
+        //protected long lastWrittenIndex() {
+        //    return lastWrittenIndex;
+        //}
 
         @Override
         public long size() {
@@ -467,8 +455,7 @@ public class VanillaChronicle implements Chronicle {
         }
 
         @NotNull
-        @Override
-        public ExcerptCommon toEnd() {
+        protected ExcerptCommon toEnd() {
             long lastIndex = lastIndex();
             if (lastIndex >= 0) {
                 index(lastIndex);
@@ -528,13 +515,24 @@ public class VanillaChronicle implements Chronicle {
     }
 
     private class VanillaAppenderImpl extends AbstractVanillaExcerpt implements VanillaAppender {
-        private int lastCycle = Integer.MIN_VALUE;
-        private int lastThreadId = Integer.MIN_VALUE;
+        private int lastCycle;
+        private int lastThreadId;
         private int appenderCycle;
         private int appenderThreadId;
         private boolean nextSynchronous;
+        private long lastWrittenIndex;
         private long[] positionArr = { 0L };
         private int dataCount;
+
+        public VanillaAppenderImpl() {
+            this.lastCycle = Integer.MIN_VALUE;
+            this.lastThreadId = Integer.MIN_VALUE;
+            this.lastWrittenIndex = -1;
+            this.appenderCycle = -1;
+            this.appenderThreadId = -1;
+            this.nextSynchronous = builder.synchronous();
+            this.dataCount = 0;
+        }
 
         @Override
         public void startExcerpt() {
@@ -604,7 +602,6 @@ public class VanillaChronicle implements Chronicle {
         public void nextSynchronous(boolean nextSynchronous) {
             this.nextSynchronous = nextSynchronous;
         }
-
         @Override
         public void finish() {
             super.finish();
@@ -639,6 +636,7 @@ public class VanillaChronicle implements Chronicle {
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
+
             setIndex(lastWrittenIndex() + 1);
 
             dataBytes.positionAddr(positionAddr);
@@ -658,6 +656,22 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptAppender toEnd() {
             // NO-OP
             return this;
+        }
+
+        @Override
+        public long lastWrittenIndex() {
+            return lastWrittenIndex;
+        }
+
+
+        protected void setLastWrittenIndex(long lastWrittenIndex) {
+            this.lastWrittenIndex = lastWrittenIndex;
+            for(;;) {
+                long lwi = VanillaChronicle.this.lastWrittenIndex();
+                if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex)) {
+                    break;
+                }
+            }
         }
     }
 

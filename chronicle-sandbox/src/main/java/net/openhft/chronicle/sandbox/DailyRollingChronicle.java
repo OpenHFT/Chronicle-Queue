@@ -238,20 +238,8 @@ public class DailyRollingChronicle implements Chronicle {
         }
 
         @Override
-        public long lastWrittenIndex() {
-            return DailyRollingChronicle.this.lastWrittenIndex();
-        }
-
-        @Override
         public long size() {
             return capacity();
-        }
-
-        @NotNull
-        @Override
-        public ExcerptCommon toEnd() {
-            index(lastWrittenIndex());
-            return this;
         }
 
         @Override
@@ -312,7 +300,7 @@ public class DailyRollingChronicle implements Chronicle {
         @NotNull
         @Override
         public Excerpt toEnd() {
-            super.toEnd();
+            index(lastWrittenIndex());
             return this;
         }
     }
@@ -338,7 +326,7 @@ public class DailyRollingChronicle implements Chronicle {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            super.toEnd();
+            index(lastWrittenIndex());
             return this;
         }
     }
@@ -385,10 +373,15 @@ public class DailyRollingChronicle implements Chronicle {
             nextSynchronous = config.isSynchronousWriter();
         }
 
+        @Override
+        public long lastWrittenIndex() {
+            return DailyRollingChronicle.this.lastWrittenIndex();
+        }
+
         @NotNull
         @Override
         public ExcerptAppender toEnd() {
-            super.toEnd();
+            index(lastWrittenIndex());
             return this;
         }
     }
