@@ -346,7 +346,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             .build();
 
         ExcerptAppender appender = source.createAppender();
-        System.out.print("writing 100 items will take take 10 seconds.");
+        LOGGER.info("writing 100 items will take take 10 seconds.");
         for (int i = 0; i < 100; i++) {
             appender.startExcerpt();
             int value = 1000000000 + i;
@@ -355,12 +355,12 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             Thread.sleep(100);
 
             if(i % 10==0) {
-                System.out.print(".");
+                LOGGER.info(".");
             }
         }
 
         appender.close();
-        System.out.print("\n");
+        LOGGER.info("\n");
 
         final int port = portSupplier.getAndCheckPort();
 
@@ -376,7 +376,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
-        System.out.println("Sink1 reading first 50 items then stopping");
+        LOGGER.info("Sink1 reading first 50 items then stopping");
         for( int count=0; count < 50 ;) {
             if(tailer1.nextIndex()) {
                 assertEquals(1000000000 + count, tailer1.parseLong());
@@ -405,7 +405,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
         
-        System.out.println("Sink2 restarting to continue to read the next 50 items");
+        LOGGER.info("Sink2 restarting to continue to read the next 50 items");
         for(int count=50 ; count < 100 ; ) {
             if(tailer2.nextIndex()) {
                 assertEquals(1000000000 + count, tailer2.parseLong());
