@@ -352,6 +352,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             int value = 1000000000 + i;
             appender.append(value).append(' '); //this space is really important.
             appender.finish();
+
             Thread.sleep(100);
 
             if(i % 10==0) {
