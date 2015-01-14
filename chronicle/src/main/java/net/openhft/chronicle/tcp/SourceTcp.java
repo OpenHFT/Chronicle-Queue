@@ -296,11 +296,7 @@ public abstract class SourceTcp {
         }
 
         protected void sendSizeAndIndex(int size, long index) throws IOException {
-            writeBuffer.clear();
-            writeBuffer.putInt(size);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
-            connection.writeAllOrEOF(writeBuffer);
+            connection.writeSizeAndIndex(writeBuffer, size, index);
             setLastHeartbeat();
         }
 

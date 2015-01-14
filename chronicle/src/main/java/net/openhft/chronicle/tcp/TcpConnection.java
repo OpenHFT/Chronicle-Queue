@@ -141,6 +141,15 @@ class TcpConnection {
         buffer.flip();
     }
 
+    public void writeSizeAndIndex(ByteBuffer buffer, int action, long index) throws IOException {
+        buffer.clear();
+        buffer.putInt(action);
+        buffer.putLong(index);
+        buffer.flip();
+
+        writeAllOrEOF(buffer);
+    }
+
     public void writeAction(ByteBuffer buffer, long action, long index) throws IOException {
         buffer.clear();
         buffer.putLong(action);

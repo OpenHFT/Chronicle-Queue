@@ -422,7 +422,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     throw new StreamCorruptedException("Size was " + receivedSize);
                 }
 
-                if(receivedSize > capacity()) {
+                if(receivedSize > this.readBuffer.capacity()) {
                     ChronicleTcp.clean(this.readBuffer);
 
                     this.readBuffer   = ChronicleTcp.createBuffer(Maths.nextPower2(receivedSize, receivedSize));
