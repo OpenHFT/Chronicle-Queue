@@ -133,4 +133,20 @@ class TcpConnection {
             }
         }
     }
+
+    public void readUpTo(ByteBuffer buffer, int size) throws IOException {
+        buffer.clear();
+        buffer.limit(size);
+        readFullyOrEOF(buffer);
+        buffer.flip();
+    }
+
+    public void writeAction(ByteBuffer buffer, long action, long index) throws IOException {
+        buffer.clear();
+        buffer.putLong(action);
+        buffer.putLong(index);
+        buffer.flip();
+
+        writeAllOrEOF(buffer);
+    }
 }

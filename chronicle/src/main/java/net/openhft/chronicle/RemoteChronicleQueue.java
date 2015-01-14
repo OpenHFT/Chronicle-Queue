@@ -21,6 +21,7 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
+import net.openhft.lang.Maths;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -214,19 +215,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     connection.writeAllOrEOF(writeBuffer);
 
                     if(builder.appendRequireAck()) {
-                        this.readBuffer.clear();
-                        this.readBuffer.limit(ChronicleTcp.HEADER_SIZE);
-                        this.readBuffer.flip();
+                        connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
 
-                        if (connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE)) {
-                            int  recType  = this.readBuffer.getInt();
-                            long recIndex = this.readBuffer.getLong();
+                        int  recType  = this.readBuffer.getInt();
+                        long recIndex = this.readBuffer.getLong();
 
-                            if (recType == ChronicleTcp.ACK_LEN) {
-                                this.lastIndex = recIndex;
-                            } else {
-                                logger.warn("Unknown message received {}, {}", recType, recIndex);
-                            }
+                        if (recType == ChronicleTcp.ACK_LEN) {
+                            this.lastIndex = recIndex;
+                        } else {
+                            logger.warn("Unknown message received {}, {}", recType, recIndex);
                         }
                     }
                 } catch(IOException e) {
@@ -278,8 +275,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     private final class StatelessExcerpt extends AbstractStatelessExcerp implements Excerpt {
-        private final ByteBuffer writeBuffer;
-        private final ByteBuffer readBuffer;
+        private ByteBuffer writeBuffer;
+        private ByteBuffer readBuffer;
 
         private long index;
         private int lastSize;
@@ -327,12 +324,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public synchronized void close() {
             try {
-                writeBuffer.clear();
-                writeBuffer.putLong(ChronicleTcp.ACTION_UNSUBSCRIBE);
-                writeBuffer.putLong(ChronicleTcp.IDX_NONE);
-                writeBuffer.flip();
-
-                connection.writeAllOrEOF(writeBuffer);
+                connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_UNSUBSCRIBE, ChronicleTcp.IDX_NONE);
 
                 closeConnection();
             } catch (IOException e) {
@@ -366,14 +358,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     readBuffer.limit(0);
                 }
 
-                writeBuffer.clear();
-                writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
-                writeBuffer.putLong(index);
-                writeBuffer.flip();
+                connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_SUBSCRIBE, index);
 
-                connection.writeAllOrEOF(writeBuffer);
+                while (true) {
+                    connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
 
-                while (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
                     int  receivedSize  = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
 
@@ -391,19 +380,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
                             return false;
                     }
 
-                    try {
-                        if ((receivedSize > 0) && (readBuffer.remaining() >= receivedSize)) {
-                            readBuffer.position(readBuffer.position() + receivedSize);
-                        }
-                    } catch (IllegalArgumentException ex) {
-                        logger.warn("index={}, position={}, limit={}, remaining={}, receivedSize={}",
-                            index,
-                            readBuffer.position(),
-                            readBuffer.limit(),
-                            readBuffer.remaining(),
-                            receivedSize);
-
-                        throw ex;
+                    // skip excerpt
+                    if (receivedSize > 0) {
+                        connection.readUpTo(this.readBuffer, receivedSize);
                     }
                 }
             } catch (IOException e) {
@@ -426,14 +405,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
 
-                if(!connection.read(this.readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
-                    return false;
-                }
+                connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
 
-                int excerptSize = this.readBuffer.getInt();
+                int  receivedSize  = this.readBuffer.getInt();
                 long receivedIndex = this.readBuffer.getLong();
 
-                switch (excerptSize) {
+                switch (receivedSize) {
                     case ChronicleTcp.IN_SYNC_LEN:
                         return false;
                     case ChronicleTcp.SYNC_IDX_LEN:
@@ -441,21 +418,26 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         return nextIndex();
                 }
 
-                if (excerptSize > 128 << 20 || excerptSize < 0) {
-                    throw new StreamCorruptedException("Size was " + excerptSize);
+                if (receivedSize > 128 << 20 || receivedSize < 0) {
+                    throw new StreamCorruptedException("Size was " + receivedSize);
                 }
 
-                if(this.readBuffer.remaining() < excerptSize) {
-                    if(!connection.read(this.readBuffer, excerptSize)) {
-                        return false;
-                    }
+                if(receivedSize > capacity()) {
+                    ChronicleTcp.clean(this.readBuffer);
+
+                    this.readBuffer   = ChronicleTcp.createBuffer(Maths.nextPower2(receivedSize, receivedSize));
+                    this.startAddr    = ChronicleTcp.address(this.readBuffer);
+                    this.capacityAddr = this.startAddr + builder.minBufferSize();
+                    this.limitAddr    = this.startAddr;
                 }
+
+                connection.readUpTo(this.readBuffer, receivedSize);
 
                 index        = receivedIndex;
-                positionAddr = startAddr + this.readBuffer.position();
-                limitAddr    = positionAddr + excerptSize;
+                positionAddr = startAddr;
+                limitAddr    = positionAddr + receivedSize;
                 capacityAddr = limitAddr;
-                lastSize     = excerptSize;
+                lastSize     = receivedSize;
                 finished     = false;
             } catch (IOException e) {
                 close();

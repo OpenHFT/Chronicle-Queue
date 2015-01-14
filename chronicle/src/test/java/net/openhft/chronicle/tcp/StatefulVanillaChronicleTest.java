@@ -19,11 +19,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.affinity.AffinityLock;
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.io.Bytes;
 import org.junit.Test;
 
 import java.io.File;
@@ -32,6 +30,13 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
+
+    public static class NoOpMappingFunction implements MappingFunction {
+        @Override
+        public void apply(Bytes from, Bytes to) {
+            to.write(from);
+        }
+    }
 
     @Test
     public void testReplication1() throws Exception {
@@ -43,16 +48,16 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.vanilla(sinkBasePath)
-            .sink()
-            .connectAddress("localhost", port)
-            .build();
+                .sink()
+                .connectAddress("localhost", port)
+                .build();
 
         try {
 
@@ -69,7 +74,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         appender.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -93,7 +98,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         tailer.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -118,6 +123,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
+
+
+
+
     @Test
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
@@ -126,30 +135,30 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("-sink");
 
         final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .build();
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build();
 
         final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .build();
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build();
 
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.source(sourceChronicle)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         try {
             final Thread at = new Thread("th-appender") {
@@ -168,7 +177,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         appender.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -192,7 +201,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         tailer.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -225,29 +234,29 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("-sink");
 
         final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .build();
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build();
 
         final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .build();
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build();
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(sourceChronicle)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         try {
             final Thread at = new Thread("th-appender") {
@@ -266,7 +275,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         appender.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -290,7 +299,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                         }
 
                         tailer.close();
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         lock.release();
@@ -316,12 +325,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     }
 
     /**
-     * This test tests the following functionality.
-     * (1) It ensures that data can be written to a VanillaChronicle Source over a period of 10 seconds
-     * whilst the chronicle is rolling files every second.
-     * (2) It also ensures that the Sink can be tailed to fetch the items from that Source.
-     * (3) Critically it ensures that even though the Sink is stopped and then restarted it resumes
-     * from the index at which it stopped.
+     * This test tests the following functionality. (1) It ensures that data can be written to a
+     * VanillaChronicle Source over a period of 10 seconds whilst the chronicle is rolling files
+     * every second. (2) It also ensures that the Sink can be tailed to fetch the items from that
+     * Source. (3) Critically it ensures that even though the Sink is stopped and then restarted it
+     * resumes from the index at which it stopped.
      */
     //@Ignore // need to investigate why toEnd does not find the righ message
     @Test
@@ -336,14 +344,14 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .source()
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         ExcerptAppender appender = source.createAppender();
         LOGGER.info("writing 100 items will take take 10 seconds.");
@@ -366,13 +374,13 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         //create a tailer to get the first 50 items then exit the tailer
         final Chronicle sink1 = ChronicleQueueBuilder.vanilla(sinkBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .sink()
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .sink()
                 .connectAddress("localhost", port)
-            .build();
+                .build();
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
@@ -388,17 +396,17 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         tailer1.close();
         sink1.close();
-        ChronicleTools.checkCount(sink1,1,1);
+        ChronicleTools.checkCount(sink1, 1, 1);
 
         //now resume the tailer to get the first 50 items
         final Chronicle sink2 = ChronicleQueueBuilder.vanilla(sinkBasePath)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .sink()
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .sink()
                 .connectAddress("localhost", port)
-            .build();
+                .build();
 
         //Take the tailer to the last index (item 50) and start reading from there.
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
@@ -418,11 +426,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         tailer2.close();
 
         sink2.close();
-        ChronicleTools.checkCount(sink2,1,1);
+        ChronicleTools.checkCount(sink2, 1, 1);
         sink2.clear();
 
         source.close();
-        ChronicleTools.checkCount(source,1,1);
+        ChronicleTools.checkCount(source, 1, 1);
         source.clear();
 
         assertFalse(new File(sourceBasePath).exists());
@@ -449,8 +457,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            chronicleSrc,
-            chronicleTarget);
+                chronicleSrc,
+                chronicleTarget);
     }
 
     /**
@@ -463,8 +471,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         String basePath = getVanillaTestPath();
 
         testJira80(
-            ChronicleQueueBuilder.vanilla(basePath + "-master"),
-            ChronicleQueueBuilder.vanilla(basePath + "-slave")
+                ChronicleQueueBuilder.vanilla(basePath + "-master"),
+                ChronicleQueueBuilder.vanilla(basePath + "-slave")
         );
     }
 }

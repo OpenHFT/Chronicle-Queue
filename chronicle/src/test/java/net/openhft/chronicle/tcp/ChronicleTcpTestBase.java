@@ -17,12 +17,15 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.MappingFunction;
+import net.openhft.lang.io.Bytes;
 import org.junit.Rule;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -41,6 +44,14 @@ public class ChronicleTcpTestBase {
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
+
+    public static final MappingFunction NOOP_MAPPING_FUNCTION = new MappingFunction() {
+        @Override
+        public void apply(Bytes from, Bytes to) {
+            to.write(from);
+        }
+    };
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -49,8 +60,19 @@ public class ChronicleTcpTestBase {
         return testName.getMethodName();
     }
 
-    protected synchronized String getTmpDir() {
+     static String getTmpDir() {
         return System.getProperty("java.io.tmpdir");
+    }
+
+    synchronized String getVanillaTestPath(String suffix) {
+        final String path = getTmpDir() + "/" + "chronicle-" + testName
+                .getMethodName() + suffix;
+        final File f = new File(path);
+        if (f.exists()) {
+            f.delete();
+        }
+
+        return path;
     }
 
     // *************************************************************************
@@ -81,7 +103,7 @@ public class ChronicleTcpTestBase {
         }
 
         public int port() {
-            if(port.get() == -1) {
+            if (port.get() == -1) {
                 try {
                     this.latch.await(5, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {

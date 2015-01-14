@@ -63,6 +63,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
         final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", port)
+            .appendRequireAck(false)
             .build();
 
         final int items = 1000000;
@@ -174,6 +175,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
         final Chronicle remoteAppender = ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", port)
+            .appendRequireAck(false)
             .build();
         final Chronicle remoteTailer = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)

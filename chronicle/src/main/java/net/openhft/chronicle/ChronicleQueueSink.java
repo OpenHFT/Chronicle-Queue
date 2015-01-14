@@ -22,6 +22,7 @@ import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
+import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
     @Override
     public void close() throws IOException {
-        if(!closed) {
+        if (!closed) {
             closed = true;
             if (this.connection != null) {
                 this.connection.close();
@@ -62,12 +63,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return (Excerpt)createExcerpt0();
+        return (Excerpt) createExcerpt0();
     }
 
     @Override
     public synchronized ExcerptTailer createTailer() throws IOException {
-        return (ExcerptTailer)createExcerpt0();
+        return (ExcerptTailer) createExcerpt0();
     }
 
     @Override
@@ -76,7 +77,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     }
 
     private ExcerptCommon createExcerpt0() throws IOException {
-        if( this.excerpt != null) {
+        if (this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
@@ -94,6 +95,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ByteBuffer writeBuffer;
+        protected final ByteBufferBytes writeBufferBytes;
         protected final ByteBuffer readBuffer;
 
         protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
@@ -101,6 +103,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = ChronicleTcp.createBuffer(16);
+            this.writeBufferBytes = new ByteBufferBytes(writeBuffer);
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
         }
 
@@ -127,10 +130,31 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected void subscribe(long index) throws IOException {
+
             writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp.ACTION_SUBSCRIBE);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
+            writeBufferBytes.clear();
+
+            writeBufferBytes.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+            writeBufferBytes.writeLong(index);
+
+            MappingFunction mapping = withMapping();
+
+            if (mapping != null) {
+                // write with mapping and len
+                writeBufferBytes.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
+                long pos = writeBufferBytes.position();
+                writeBufferBytes.skip(4);
+                long start = writeBufferBytes.position();
+
+                writeBufferBytes.writeObject(mapping);
+                int len = (int) (writeBufferBytes.position() - start);
+                writeBufferBytes.writeInt(pos, len);
+
+            }
+
+            writeBuffer.position(0);
+            writeBuffer.limit((int) writeBufferBytes.position());
+
 
             connection.writeAllOrEOF(writeBuffer);
         }
@@ -209,6 +233,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             //this.appender = null;
             this.adapter = null;
             this.lastLocalIndex = -1;
+            this.withMapping(ChronicleQueueSink.this.builder.withMapping());
         }
 
         @Override
@@ -219,7 +244,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                     readBuffer.clear();
                     readBuffer.limit(0);
 
-                    if(this.adapter == null) {
+                    if (this.adapter == null) {
                         this.adapter = createAppenderAdapter();
                     }
 
@@ -235,7 +260,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         private boolean readNextExcerpt() {
             try {
-                if(!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
+                if (!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
                     return false;
                 }
 
@@ -258,7 +283,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                     throw new StreamCorruptedException("size was " + size);
                 }
 
-                if(lastLocalIndex != scIndex) {
+                if (lastLocalIndex != scIndex) {
                     this.adapter.startExcerpt(size, scIndex);
 
                     long remaining = size;
@@ -299,7 +324,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         public void close() {
-            if(this.adapter != null) {
+            if (this.adapter != null) {
                 this.adapter.close();
                 this.adapter = null;
             }
@@ -315,15 +340,15 @@ class ChronicleQueueSink extends WrappedChronicle {
     /**
      * Creates a SinkAppenderAdapter.
      *
-     * @return  the SinkAppenderAdapter
-     * @throws  java.io.IOException
+     * @return the SinkAppenderAdapter
+     * @throws java.io.IOException
      */
     private AppenderAdapter createAppenderAdapter() throws IOException {
-        if(wrappedChronicle instanceof IndexedChronicle) {
+        if (wrappedChronicle instanceof IndexedChronicle) {
             return new IndexedAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
         }
 
-        if(wrappedChronicle instanceof VanillaChronicle) {
+        if (wrappedChronicle instanceof VanillaChronicle) {
             return new VanillaAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
         }
 
@@ -349,7 +374,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         public IndexedAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             super(appender);
 
-            this.chronicle = (IndexedChronicle)chronicle;
+            this.chronicle = (IndexedChronicle) chronicle;
         }
 
         @Override
@@ -373,8 +398,8 @@ class ChronicleQueueSink extends WrappedChronicle {
         public VanillaAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
             super(appender);
 
-            this.chronicle = (VanillaChronicle)chronicle;
-            this.appender = (VanillaChronicle.VanillaAppender)appender;
+            this.chronicle = (VanillaChronicle) chronicle;
+            this.appender = (VanillaChronicle.VanillaAppender) appender;
         }
 
         @Override
