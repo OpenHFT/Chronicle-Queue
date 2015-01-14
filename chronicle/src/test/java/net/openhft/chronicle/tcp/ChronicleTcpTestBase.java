@@ -23,6 +23,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -49,8 +50,19 @@ public class ChronicleTcpTestBase {
         return testName.getMethodName();
     }
 
-    protected synchronized String getTmpDir() {
+     static String getTmpDir() {
         return System.getProperty("java.io.tmpdir");
+    }
+
+    synchronized String getVanillaTestPath(String suffix) {
+        final String path = getTmpDir() + "/" + "chronicle-" + testName
+                .getMethodName() + suffix;
+        final File f = new File(path);
+        if (f.exists()) {
+            f.delete();
+        }
+
+        return path;
     }
 
     // *************************************************************************
@@ -81,7 +93,7 @@ public class ChronicleTcpTestBase {
         }
 
         public int port() {
-            if(port.get() == -1) {
+            if (port.get() == -1) {
                 try {
                     this.latch.await(5, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
