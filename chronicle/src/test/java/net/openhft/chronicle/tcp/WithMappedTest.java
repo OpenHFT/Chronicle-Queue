@@ -7,7 +7,6 @@ import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -262,13 +261,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     }
 
-    @Ignore("looks like there is a bug the MappingFunction is appearing to be applied to all the sinks, " +
-            "not just the sink that sent the mapping.")
+
     @Test
     public void testReplicationWithPriceMarketDataFilter() throws Throwable {
 
         final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
+        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow");
+        final String sinkCloseBasePath = getVanillaTestPath("-sink-close");
 
         final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
 
@@ -280,11 +279,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         final int port = portSupplier.getAndCheckPort();
 
-        final Chronicle closeSink = ChronicleQueueBuilder.vanilla(sinkBasePath)
-                .sink()
-                .withMapping(Close.fromMarketData()) // this is sent to the source
-                .connectAddress("localhost", port)
-                .build();
+
         try {
 
 
@@ -299,6 +294,8 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
             Callable<Void> appenderCallable = new Callable<Void>() {
                 public Void call() throws Exception {
+
+
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -322,7 +319,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                 public Void call() throws Exception {
 
-                    final Chronicle highLowSink = ChronicleQueueBuilder.vanilla(sinkBasePath)
+                    final Chronicle highLowSink = ChronicleQueueBuilder.vanilla(sinkHighLowBasePath)
                             .sink()
                             .withMapping(HighLow.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
@@ -342,7 +339,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
                             Assert.assertTrue(actual.date < DATE_FORMAT.parse("2016-01-01").getTime());
 
-
                             Assert.assertTrue(actual.high > 5000);
                             Assert.assertTrue(actual.high < 8000);
 
@@ -360,6 +356,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                     } finally {
                         lock.release();
+                        highLowSink.clear();
                     }
                     return null;
                 }
@@ -370,6 +367,12 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             Callable<Void> closeCallable = new Callable<Void>() {
 
                 public Void call() throws Exception {
+
+                    final Chronicle closeSink = ChronicleQueueBuilder.vanilla(sinkCloseBasePath)
+                            .sink()
+                            .withMapping(Close.fromMarketData()) // this is sent to the source
+                            .connectAddress("localhost", port)
+                            .build();
 
                     AffinityLock lock = AffinityLock.acquireLock();
                     try (final ExcerptTailer tailer = closeSink.createTailer()) {
@@ -406,6 +409,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                     } finally {
                         lock.release();
+                        closeSink.clear();
                     }
 
                     return null;
@@ -413,6 +417,8 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
             };
+
+
             try {
 
                 ThreadFactory appenderFactory = new ThreadFactory() {
@@ -426,7 +432,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
                 appenderFuture.get(20, TimeUnit.SECONDS);
-
 
 
                 ThreadFactory closeFactory = new ThreadFactory() {
@@ -458,16 +463,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
         } finally {
-
-
-            closeSink.close();
-            closeSink.clear();
-
             source.close();
             source.clear();
 
+            // check cleanup
             assertFalse(new File(sourceBasePath).exists());
-            assertFalse(new File(sinkBasePath).exists());
+            assertFalse(new File(sinkCloseBasePath).exists());
+            assertFalse(new File(sinkHighLowBasePath).exists());
         }
     }
 

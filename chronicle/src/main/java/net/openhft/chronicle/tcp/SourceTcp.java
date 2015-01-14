@@ -314,6 +314,8 @@ public abstract class SourceTcp {
                         Object attachment = key.attachment();
                         if (attachment instanceof MappingProvider) {
                             MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
+                            System.out.println(mappingFunction.getClass() + " key=" + key);
+
                             ((MappingProvider) attachment).withMapping(mappingFunction);
                         } else
                             throw new IllegalStateException("Expecting attached to implement MappingFunction.class");
@@ -358,7 +360,9 @@ public abstract class SourceTcp {
 
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
-            if (running.get() && !write(key.attachment())) {
+            Object attachment = key.attachment();
+
+            if (running.get() && !write(attachment)) {
                 if (lastHeartbeat <= now) {
                     sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
                 }
@@ -444,10 +448,6 @@ public abstract class SourceTcp {
 
             final long size = tailer.capacity();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
-
-
-            if (tailer instanceof MappingProvider)
-                ((MappingProvider) tailer).withMapping();
 
             writeBuffer.clear();
             writeBuffer.putInt((int) size);
@@ -560,16 +560,7 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
-            Bytes bytes;
-            if (attached instanceof MappingProvider) {
-                bytes = applyMapping(tailer, (MappingProvider) attached);
-
-            } else
-
-            {
-                bytes = tailer;
-            }
-
+            Bytes bytes = applyMapping(tailer, attached);
 
             final long size = bytes.capacity();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -598,7 +589,7 @@ public abstract class SourceTcp {
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
 
-                        bytes = applyMapping(tailer, (MappingProvider) attached);
+                        bytes = applyMapping(tailer, attached);
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
@@ -621,9 +612,7 @@ public abstract class SourceTcp {
                 connection.writeAll(writeBuffer);
             }
 
-            if (writeBuffer.remaining() > 0)
-
-            {
+            if (writeBuffer.remaining() > 0) {
                 throw new EOFException("Failed to send index=" + tailer.index());
             }
 
@@ -635,12 +624,17 @@ public abstract class SourceTcp {
          * applies a mapping if the mapping is not set to {@code}null{code}
          *
          * @param source
-         * @param mappingProvider the key attachment
+         * @param attached the key attachment
          * @return returns the tailer or the mapped bytes
          * @see
          */
-        private Bytes applyMapping(final ExcerptTailer source, MappingProvider mappingProvider) {
+        private Bytes applyMapping(final ExcerptTailer source, Object attached) {
 
+            if (!(attached instanceof MappingProvider)) {
+                return tailer;
+            }
+
+            final MappingProvider mappingProvider = (MappingProvider) attached;
             final MappingFunction mappingFunction = mappingProvider.withMapping();
 
             if (mappingFunction == null)

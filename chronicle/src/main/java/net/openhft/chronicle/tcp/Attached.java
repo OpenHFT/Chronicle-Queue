@@ -20,4 +20,11 @@ public class Attached implements MappingProvider<Attached> {
         this.mappingFunction = mappingFunction;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "Attached{" +
+                "mappingFunction=" + (mappingFunction == null ? "null" : mappingFunction.getClass()
+        ) + '}';
+    }
 }
