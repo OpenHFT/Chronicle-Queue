@@ -46,7 +46,7 @@ public class VanillaSelector implements Closeable {
 
         try {
             final Class<?> selectorImplClass =
-                Class.forName("sun.nio.ch.SelectorImpl", false, ChronicleTools.getSystemClassLoader());
+                    Class.forName("sun.nio.ch.SelectorImpl", false, ChronicleTools.getSystemClassLoader());
 
             if (selectorImplClass.isAssignableFrom(this.selector.getClass())) {
                 this.selectionKeySet = new VanillaSelectionKeySet();
@@ -67,8 +67,15 @@ public class VanillaSelector implements Closeable {
         return this;
     }
 
+
+
     public VanillaSelector register(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
         channel.register(this.selector, ops);
+        return this;
+    }
+
+    public VanillaSelector register(@NotNull AbstractSelectableChannel channel, int ops,Object obj) throws IOException {
+        channel.register(this.selector, ops, obj);
         return this;
     }
 
@@ -92,7 +99,7 @@ public class VanillaSelector implements Closeable {
     public int select(int spinLoopCount, long timeout) throws IOException {
         for (int i = 0; i < spinLoopCount; i++) {
             int nbKeys = selector.selectNow();
-            if(nbKeys != 0) {
+            if (nbKeys != 0) {
                 return nbKeys;
             }
         }
@@ -102,7 +109,7 @@ public class VanillaSelector implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if(selector != null) {
+        if (selector != null) {
             selector.close();
         }
     }

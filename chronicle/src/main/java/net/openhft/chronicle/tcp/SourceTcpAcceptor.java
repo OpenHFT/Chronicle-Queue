@@ -32,17 +32,18 @@ public final class SourceTcpAcceptor extends SourceTcp {
 
     public SourceTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         super(
-            "source-acceptor",
-            builder,
+                "source-acceptor",
+                builder,
                 new ThreadPoolExecutor(
-                builder.acceptorDefaultThreads() + 1,
-                Math.max(builder.acceptorMaxThreads(), builder.acceptorMaxThreads() + 1),
-                builder.acceptorThreadPoolkeepAliveTime(),
-                builder.acceptorThreadPoolkeepAliveTimeUnit(),
-                new SynchronousQueue<Runnable>(),
-                new NamedThreadFactory("chronicle-source", true))
+                        builder.acceptorDefaultThreads() + 1,
+                        Math.max(builder.acceptorMaxThreads(), builder.acceptorMaxThreads() + 1),
+                        builder.acceptorThreadPoolkeepAliveTime(),
+                        builder.acceptorThreadPoolkeepAliveTimeUnit(),
+                        new SynchronousQueue<Runnable>(),
+                        new NamedThreadFactory("chronicle-source", true))
         );
     }
+
 
     protected Runnable createHandler() {
         return new Runnable() {
@@ -60,8 +61,8 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     builder.connectionListener().onListen(socketChannel);
 
                     final VanillaSelector selector = new VanillaSelector()
-                        .open()
-                        .register(socketChannel, SelectionKey.OP_ACCEPT);
+                            .open()
+                            .register(socketChannel, SelectionKey.OP_ACCEPT, new Attached());
 
                     final long selectTimeout = builder.selectTimeout();
                     final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
@@ -69,8 +70,8 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     while (running.get()) {
                         int nbKeys = selector.select(0, selectTimeout);
 
-                        if(nbKeys > 0) {
-                            if(selectionKeys != null) {
+                        if (nbKeys > 0) {
+                            if (selectionKeys != null) {
                                 final SelectionKey[] keys = selectionKeys.keys();
                                 final int size = selectionKeys.size();
 
@@ -90,7 +91,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                             } else {
                                 final Set<SelectionKey> keys = selector.selectionKeys();
 
-                                for(final SelectionKey key : keys) {
+                                for (final SelectionKey key : keys) {
                                     if (key.isAcceptable()) {
                                         SocketChannel channel = socketChannel.accept();
                                         logger.info("Accepted connection from: {}", channel.getRemoteAddress());

@@ -30,6 +30,7 @@ public class SinkTcpAcceptor extends SinkTcp {
         super("sink-acceptor", builder);
     }
 
+
     @Override
     public SocketChannel openSocketChannel() throws IOException {
         final ServerSocketChannel socketChannel = ServerSocketChannel.open();
@@ -37,19 +38,20 @@ public class SinkTcpAcceptor extends SinkTcp {
         socketChannel.socket().bind(builder.bindAddress());
         socketChannel.configureBlocking(false);
 
+
         final VanillaSelector selector = new VanillaSelector()
-            .open()
-            .register(socketChannel, SelectionKey.OP_ACCEPT);
+                .open()
+                .register(socketChannel, SelectionKey.OP_ACCEPT,new Attached());
 
         final long selectTimeout = builder.selectTimeout();
         final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
 
         SocketChannel channel = null;
-        while(running.get() && channel == null) {
+        while (running.get() && channel == null) {
             int nbKeys = selector.select(0, selectTimeout);
 
-            if(nbKeys > 0) {
-                if(selectionKeys != null) {
+            if (nbKeys > 0) {
+                if (selectionKeys != null) {
                     final SelectionKey[] keys = selectionKeys.keys();
                     final int size = selectionKeys.size();
 
@@ -67,7 +69,7 @@ public class SinkTcpAcceptor extends SinkTcp {
                 } else {
                     final Set<SelectionKey> keys = selector.selectionKeys();
 
-                    for(final SelectionKey key : keys) {
+                    for (final SelectionKey key : keys) {
                         if (key.isAcceptable()) {
                             channel = socketChannel.accept();
                             logger.info("Accepted connection from: " + channel.getRemoteAddress());

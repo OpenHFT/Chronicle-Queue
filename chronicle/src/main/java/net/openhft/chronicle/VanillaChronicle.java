@@ -28,7 +28,6 @@ import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallerFactory;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -290,7 +289,7 @@ public class VanillaChronicle implements Chronicle {
     // *************************************************************************
 
     private abstract class AbstractVanillaExcerpt extends NativeBytes implements
-            VanillaExcerptCommon, MappingProvider<AbstractVanillaExcerpt> {
+            VanillaExcerptCommon {
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
@@ -300,21 +299,10 @@ public class VanillaChronicle implements Chronicle {
 
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
-        private MappingFunction withMapping;
+
 
         public AbstractVanillaExcerpt() {
             super(acquireBMF(), NO_PAGE, NO_PAGE, null);
-        }
-
-
-        public AbstractVanillaExcerpt withMapping(@Nullable final MappingFunction withMapping) {
-            this.withMapping = withMapping;
-            return null;
-        }
-
-        @Nullable
-        public MappingFunction withMapping() {
-            return this.withMapping;
         }
 
 

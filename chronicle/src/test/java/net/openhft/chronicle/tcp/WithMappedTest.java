@@ -280,21 +280,11 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         final int port = portSupplier.getAndCheckPort();
 
-
-        final Chronicle highLowSink = ChronicleQueueBuilder.vanilla(sinkBasePath)
-                .sink()
-                .withMapping(HighLow.fromMarketData()) // this is sent to the source
-                .connectAddress("localhost", port)
-                .build();
-
-
         final Chronicle closeSink = ChronicleQueueBuilder.vanilla(sinkBasePath)
                 .sink()
                 .withMapping(Close.fromMarketData()) // this is sent to the source
                 .connectAddress("localhost", port)
                 .build();
-
-
         try {
 
 
@@ -331,6 +321,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             Callable<Void> highLowCallable = new Callable<Void>() {
 
                 public Void call() throws Exception {
+
+                    final Chronicle highLowSink = ChronicleQueueBuilder.vanilla(sinkBasePath)
+                            .sink()
+                            .withMapping(HighLow.fromMarketData()) // this is sent to the source
+                            .connectAddress("localhost", port)
+                            .build();
+
                     AffinityLock lock = AffinityLock.acquireLock();
 
                     try (final ExcerptTailer tailer = highLowSink.createTailer()) {
@@ -418,13 +415,39 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
             try {
 
-                ExecutorService executorService = Executors.newCachedThreadPool();
+                ThreadFactory appenderFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "appender");
+                    }
+                };
 
-                Future<Void> appenderFuture = executorService.submit(appenderCallable);
+                Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
+
+
                 appenderFuture.get(20, TimeUnit.SECONDS);
 
-                Future<Void> closeFuture = executorService.submit(closeCallable);
-                Future<Void> highLowFuture = executorService.submit(highLowCallable);
+
+
+                ThreadFactory closeFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "close");
+                    }
+                };
+
+                Future<Void> closeFuture = Executors.newSingleThreadExecutor(closeFactory).submit(closeCallable);
+
+
+                ThreadFactory highLowFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "highlow");
+                    }
+                };
+
+
+                Future<Void> highLowFuture = Executors.newSingleThreadExecutor(highLowFactory).submit(highLowCallable);
 
                 closeFuture.get(20, TimeUnit.SECONDS);
                 highLowFuture.get(20, TimeUnit.SECONDS);
@@ -435,8 +458,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
         } finally {
-            highLowSink.close();
-            highLowSink.clear();
+
 
             closeSink.close();
             closeSink.clear();

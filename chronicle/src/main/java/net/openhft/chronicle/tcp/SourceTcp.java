@@ -82,6 +82,7 @@ public abstract class SourceTcp {
 
     protected abstract Runnable createHandler();
 
+
     /**
      * Creates a session handler according to the Chronicle the sources is connected to.
      *
@@ -166,7 +167,7 @@ public abstract class SourceTcp {
 
                 final VanillaSelector selector = new VanillaSelector()
                         .open()
-                        .register(socketChannel, SelectionKey.OP_READ);
+                        .register(socketChannel, SelectionKey.OP_READ, new Attached());
 
                 tailer = builder.chronicle().createTailer();
                 selectionKeys = selector.vanillaSelectionKeys();
@@ -309,10 +310,13 @@ public abstract class SourceTcp {
 
                     case (int) ChronicleTcp.ACTION_WITH_MAPPING:
                         int size = readUpTo(4).readInt();
-                        MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
 
-                        if (tailer instanceof MappingProvider)
-                            ((MappingProvider) tailer).withMapping(mappingFunction);
+                        Object attachment = key.attachment();
+                        if (attachment instanceof MappingProvider) {
+                            MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
+                            ((MappingProvider) attachment).withMapping(mappingFunction);
+                        } else
+                            throw new IllegalStateException("Expecting attached to implement MappingFunction.class");
 
                         return true;
 
@@ -354,7 +358,7 @@ public abstract class SourceTcp {
 
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
-            if (running.get() && !write()) {
+            if (running.get() && !write(key.attachment())) {
                 if (lastHeartbeat <= now) {
                     sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
                 }
@@ -388,7 +392,7 @@ public abstract class SourceTcp {
 
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException;
 
-        protected abstract boolean write() throws IOException;
+        protected abstract boolean write(Object attachment) throws IOException;
     }
 
     /**
@@ -419,7 +423,7 @@ public abstract class SourceTcp {
         }
 
         @Override
-        protected boolean write() throws IOException {
+        protected boolean write(Object attached) throws IOException {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
                     if (index >= 0) {
@@ -539,7 +543,7 @@ public abstract class SourceTcp {
         }
 
         @Override
-        protected boolean write() throws IOException {
+        protected boolean write(Object attached) throws IOException {
             if (nextIndex) {
                 if (!tailer.nextIndex()) {
                     pause();
@@ -556,8 +560,16 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
+            Bytes bytes;
+            if (attached instanceof MappingProvider) {
+                bytes = applyMapping(tailer, (MappingProvider) attached);
 
-            Bytes bytes = applyMapping(tailer);
+            } else
+
+            {
+                bytes = tailer;
+            }
+
 
             final long size = bytes.capacity();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -567,7 +579,9 @@ public abstract class SourceTcp {
             writeBuffer.putLong(tailer.index());
 
             // for large objects send one at a time.
-            if (size > writeBuffer.capacity() / 2) {
+            if (size > writeBuffer.capacity() / 2)
+
+            {
                 while (remaining > 0) {
                     int size2 = (int) Math.min(remaining, writeBuffer.capacity());
                     writeBuffer.limit(size2);
@@ -576,13 +590,15 @@ public abstract class SourceTcp {
                     remaining -= writeBuffer.remaining();
                     connection.writeAll(writeBuffer);
                 }
-            } else {
+            } else
+
+            {
                 writeBuffer.limit((int) remaining);
                 bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
 
-                        bytes = applyMapping(tailer);
+                        bytes = applyMapping(tailer, (MappingProvider) attached);
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
@@ -605,7 +621,9 @@ public abstract class SourceTcp {
                 connection.writeAll(writeBuffer);
             }
 
-            if (writeBuffer.remaining() > 0) {
+            if (writeBuffer.remaining() > 0)
+
+            {
                 throw new EOFException("Failed to send index=" + tailer.index());
             }
 
@@ -617,15 +635,12 @@ public abstract class SourceTcp {
          * applies a mapping if the mapping is not set to {@code}null{code}
          *
          * @param source
+         * @param mappingProvider the key attachment
          * @return returns the tailer or the mapped bytes
          * @see
          */
-        private Bytes applyMapping(final ExcerptTailer source) {
+        private Bytes applyMapping(final ExcerptTailer source, MappingProvider mappingProvider) {
 
-            if (!(source instanceof MappingProvider))
-                return source;
-
-            final MappingProvider mappingProvider = (MappingProvider) source;
             final MappingFunction mappingFunction = mappingProvider.withMapping();
 
             if (mappingFunction == null)
