@@ -16,21 +16,25 @@
  * limitations under the License.
  *
  */
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle;
 
 
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.tcp.SinkTcp;
 
 import java.io.IOException;
 
-public class RemoteChronicleQueueAppender extends RemoteChronicleQueue {
-    public RemoteChronicleQueueAppender(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
-        super(builder, connection, true);
+class RemoteChronicleQueueTailer extends RemoteChronicleQueue {
+    RemoteChronicleQueueTailer(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
+        super(builder, connection, false);
+    }
+    
+    @Override
+    public Excerpt createExcerpt() throws IOException {
+        return (Excerpt)createExcerpt0();
     }
 
     @Override
-    public ExcerptAppender createAppender() throws IOException {
-        return (ExcerptAppender)createAppender0();
+    public ExcerptTailer createTailer() throws IOException {
+        return (ExcerptTailer)createExcerpt0();
     }
 }

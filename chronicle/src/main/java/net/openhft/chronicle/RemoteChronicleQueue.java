@@ -16,15 +16,10 @@
  * limitations under the License.
  *
  */
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptComparator;
-import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;

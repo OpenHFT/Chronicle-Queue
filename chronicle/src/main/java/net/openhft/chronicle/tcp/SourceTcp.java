@@ -39,7 +39,7 @@ public abstract class SourceTcp {
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final ThreadPoolExecutor executor;
-    protected final LightPauser pauser = new LightPauser(10000, 10000);
+    protected final LightPauser pauser;
 
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
         this.builder = builder;
@@ -47,6 +47,7 @@ public abstract class SourceTcp {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
+        this.pauser = new LightPauser(10000, 10000);
     }
 
     public SourceTcp open() {
@@ -74,6 +75,10 @@ public abstract class SourceTcp {
     @Override
     public String toString() {
         return this.name;
+    }
+
+    public void dataNotification() {
+        pauser.unpause();
     }
 
     public abstract boolean isLocalhost();

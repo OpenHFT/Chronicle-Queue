@@ -15,16 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptCommon;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
@@ -36,7 +30,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-public class ChronicleQueueSink extends WrappedChronicle {
+class ChronicleQueueSink extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueSink.class);
 
     private final SinkTcp connection;
@@ -45,7 +39,7 @@ public class ChronicleQueueSink extends WrappedChronicle {
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    public ChronicleQueueSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
+    ChronicleQueueSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
         super(builder.chronicle());
         this.connection = connection;
         this.builder = builder.clone();
