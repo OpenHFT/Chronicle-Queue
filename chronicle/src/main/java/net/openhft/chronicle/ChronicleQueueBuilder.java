@@ -314,7 +314,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          * <li>data block size <b>8k</b></li>
          * </ul>
          */
-        public IndexedChronicleQueueBuilder test() {
+        IndexedChronicleQueueBuilder test() {
             dataBlockSize(8 * 1024);
             return this;
         }
