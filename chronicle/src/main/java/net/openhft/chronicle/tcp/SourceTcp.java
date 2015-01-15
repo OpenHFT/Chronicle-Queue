@@ -227,7 +227,7 @@ public abstract class SourceTcp {
         }
 
         private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException {
-            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final int  spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
             while (running.get()) {
@@ -252,7 +252,7 @@ public abstract class SourceTcp {
         }
 
         private void nioLoop(final VanillaSelector selector) throws IOException {
-            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final int  spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
             while (running.get()) {
@@ -301,6 +301,26 @@ public abstract class SourceTcp {
             setLastHeartbeat();
         }
 
+        protected ByteBufferBytes readUpTo(int size) throws IOException {
+            if (readBuffer.capacity() < size) {
+                // resize the buffer
+                this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));
+            }
+
+            readBuffer.clear();
+            readBuffer.buffer().clear();
+
+            readBuffer.limit(size);
+            readBuffer.buffer().limit(size);
+
+            connection.readFullyOrEOF(readBuffer.buffer());
+            readBuffer.buffer().flip();
+            readBuffer.position(0);
+            readBuffer.limit(readBuffer.limit());
+
+            return readBuffer;
+        }
+
         protected boolean onSelectionKey(final SelectionKey key) throws IOException {
             if (key != null) {
                 if (key.isReadable()) {
@@ -342,37 +362,6 @@ public abstract class SourceTcp {
                 throw e;
             } 
         }
-
-        protected ByteBufferBytes readUpTo(int size) throws IOException {
-            if (readBuffer.capacity() < size) {
-                // resize the buffer
-                this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));
-            }
-
-            readBuffer.clear();
-            readBuffer.buffer().clear();
-
-            readBuffer.limit(size);
-            readBuffer.buffer().limit(size);
-
-            connection.readFullyOrEOF(readBuffer.buffer());
-            readBuffer.buffer().flip();
-            readBuffer.position(0);
-            readBuffer.limit(readBuffer.limit());
-
-            return readBuffer;
-        }
-
-        protected boolean onMapping(final SelectionKey key, int size) throws IOException {
-            MappingProvider mappingProvider = (MappingProvider)key.attachment();
-            if (mappingProvider != null) {
-                MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
-                mappingProvider.withMapping(mappingFunction);
-            }
-
-            return true;
-        }
-
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
             Object attachment = key.attachment();
@@ -385,6 +374,17 @@ public abstract class SourceTcp {
 
             return true;
         }
+
+        protected boolean onMapping(final SelectionKey key, int size) throws IOException {
+            MappingProvider mappingProvider = (MappingProvider)key.attachment();
+            if (mappingProvider != null) {
+                MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
+                mappingProvider.withMapping(mappingFunction);
+            }
+
+            return true;
+        }
+
 
         protected boolean onQuery(final SelectionKey key, long data) throws IOException {
             if (tailer.index(data)) {
@@ -598,8 +598,11 @@ public abstract class SourceTcp {
 
             pauseReset();
             Bytes bytes = applyMapping(tailer, attached);
+            if (bytes.limit() == 0) {
+                return true;
+            }
 
-            final long size = bytes.capacity();
+            final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
@@ -623,10 +626,13 @@ public abstract class SourceTcp {
                     if (!tailer.wasPadding()) {
 
                         bytes = applyMapping(tailer, attached);
+                        if (bytes.limit() == 0){
+                            continue;
+                        }
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
-                            int size2 = (int) bytes.capacity();
+                            int size2 = (int) bytes.limit();
                             writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                             writeBuffer.putInt(size2);
                             writeBuffer.putLong(tailer.index());
@@ -656,7 +662,7 @@ public abstract class SourceTcp {
         /**
          * applies a mapping if the mapping is not set to {@code}null{code}
          *
-         * @param source the tailer for the mapping to be applied to
+         * @param source   the tailer for the mapping to be applied to
          * @param attached the key attachment
          * @return returns the tailer or the mapped bytes
          * @see
@@ -697,9 +703,7 @@ public abstract class SourceTcp {
             }
 
             withMappedBuffer.flip();
-
-            // set the capacity() equal withMappedBuffer the limit()
-            return withMappedBuffer.slice(0, withMappedBuffer.limit());
+            return withMappedBuffer;
         }
     }
 }
