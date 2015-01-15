@@ -342,13 +342,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertTrue(actual.high > 5000);
                             Assert.assertTrue(actual.high < 8000);
 
-                            Assert.assertTrue(actual.high > 5000);
-                            Assert.assertTrue(actual.high < 8000);
+                            Assert.assertTrue(actual.low > 5000);
+                            Assert.assertTrue(actual.low < 8000);
 
 
                             MarketData expected = expectedMarketDate.get(new Date(actual.date));
-                            Assert.assertEquals(expected.high, actual.high, 0.0001);
-                            Assert.assertEquals(expected.low, actual.low, 0.0001);
+                            Assert.assertEquals(expected.high, actual.high, 0.0);
+                            Assert.assertEquals(expected.low, actual.low, 0.0);
 
                             tailer.finish();
 
@@ -400,8 +400,8 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                             String message = "expected=" + expected + "actual=" + actual;
 
-                            Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0001);
-                            Assert.assertEquals(message, expected.close, actual.close, 0.0001);
+                            Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0);
+                            Assert.assertEquals(message, expected.close, actual.close, 0.0);
 
                             tailer.finish();
 
