@@ -291,8 +291,7 @@ public class IndexedChronicle implements Chronicle {
     //
     // *************************************************************************
 
-    protected abstract class AbstractIndexedExcerpt extends NativeBytes implements ExcerptCommon,
-            MappingProvider<AbstractIndexedExcerpt> {
+    protected abstract class AbstractIndexedExcerpt extends NativeBytes implements ExcerptCommon {
         @NotNull
         final int cacheLineMask;
         final int dataBlockSize;
@@ -321,19 +320,6 @@ public class IndexedChronicle implements Chronicle {
         boolean padding = true;
         // which index does this refer to?
         private long indexStartOffset;
-
-        private MappingFunction mappingFunction;
-
-        @Override
-        public MappingFunction withMapping() {
-            return mappingFunction;
-        }
-
-        @Override
-        public AbstractIndexedExcerpt withMapping(MappingFunction mappingFunction) {
-            this.mappingFunction = mappingFunction;
-            return this;
-        }
 
 
         // the start of this entry

@@ -17,5 +17,12 @@
  */
 package net.openhft.chronicle.tcp;
 
-public class TcpByteBufferBytes {
+import net.openhft.lang.io.NativeBytes;
+import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
+
+public class TcpBytes extends NativeBytes {
+
+    public TcpBytes() {
+        super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+    }
 }
