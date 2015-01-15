@@ -41,7 +41,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.11</version>
+                <version>3.4.18</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
@@ -129,6 +129,16 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgument>-Xlint:deprecation</compilerArgument>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
             <!--
                 generate maven dependencies versions file that can be used later
                 to install the right bundle in test phase.
