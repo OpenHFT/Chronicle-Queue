@@ -312,13 +312,10 @@ public abstract class SourceTcp {
                         int size = readUpTo(4).readInt();
 
                         Object attachment = key.attachment();
-                        if (attachment instanceof MappingProvider) {
+                        if (attachment != null) {
                             MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
-                            System.out.println(mappingFunction.getClass() + " key=" + key);
-
                             ((MappingProvider) attachment).withMapping(mappingFunction);
-                        } else
-                            throw new IllegalStateException("Expecting attached to implement MappingFunction.class");
+                        }
 
                         return true;
 
@@ -630,9 +627,8 @@ public abstract class SourceTcp {
          */
         private Bytes applyMapping(final ExcerptTailer source, Object attached) {
 
-            if (!(attached instanceof MappingProvider)) {
+            if (attached == null)
                 return tailer;
-            }
 
             final MappingProvider mappingProvider = (MappingProvider) attached;
             final MappingFunction mappingFunction = mappingProvider.withMapping();
