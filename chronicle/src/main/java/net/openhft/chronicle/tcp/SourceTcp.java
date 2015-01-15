@@ -620,7 +620,7 @@ public abstract class SourceTcp {
         /**
          * applies a mapping if the mapping is not set to {@code}null{code}
          *
-         * @param source
+         * @param source the tailer for the mapping to be applied to
          * @param attached the key attachment
          * @return returns the tailer or the mapped bytes
          * @see
