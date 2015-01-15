@@ -111,8 +111,14 @@ public class ChronicleTcp {
         return ((DirectBuffer) buffer).address();
     }
 
-    public static void clean(@NotNull ByteBuffer buffer) {
-        IOTools.clean(buffer);
+    public static void clean(ByteBuffer buffer) {
+        if(buffer != null) {
+            IOTools.clean(buffer);
+        }
+    }
+
+    public static boolean hasCapacityOf(ByteBuffer buffer, int size) {
+        return buffer != null ? buffer.capacity() >= size : false;
     }
 }
 

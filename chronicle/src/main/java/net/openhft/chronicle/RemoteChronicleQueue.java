@@ -282,6 +282,35 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public void nextSynchronous(boolean nextSynchronous) {
             throw new UnsupportedOperationException();
         }
+
+        /*
+        protected void ensureWriteBufferCapacity(int size) {
+            if(writeBuffer != null) {
+                ChronicleTcp.clean(writeBuffer);
+            }
+
+            if(size > Integer.MAX_VALUE) {
+                throw new IllegalStateException("Excerpt size can't exceed " + Integer.MAX_VALUE);
+            }
+
+            if(this.writeBuffer != null && size <= this.writeBuffer.capacity()) {
+                this.positionAddr = this.startAddr;
+                this.limitAddr    = this.startAddr + size;
+            } else {
+                int maxSize       = Math.min(Integer.MAX_VALUE, size);
+                int roundedSize   = ChronicleTcp.nextPower2(maxSize, builder.minBufferSize());
+
+                this.writeBuffer  = ChronicleTcp.createBufferOfSize(roundedSize);
+                this.startAddr    = ChronicleTcp.address(this.writeBuffer);
+                this.positionAddr = this.startAddr;
+                this.capacityAddr = this.startAddr + roundedSize;
+                this.limitAddr    = this.startAddr + size;
+            }
+
+            writeBuffer.limit(size);
+            writeBuffer.position(size);
+        }
+        */
     }
 
     private final class StatelessExcerpt extends AbstractStatelessExcerp implements Excerpt {
@@ -475,5 +504,24 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 return false;
             }
         }
+
+        /*
+        protected void ensureReadBufferCapacity(int size) {
+            if(!ChronicleTcp.hasCapacityOf(this.readBuffer, size)) {
+                ChronicleTcp.clean(this.readBuffer);
+
+                int bufferSize = Maths.nextPower2(builder.minBufferSize(), size);
+
+                this.readBuffer   = ChronicleTcp.createBufferOfSize(bufferSize);
+                this.startAddr    = ChronicleTcp.address(this.readBuffer);
+                this.capacityAddr = this.startAddr + bufferSize;
+                this.limitAddr    = this.startAddr;
+            }
+
+            positionAddr = startAddr;
+            limitAddr    = startAddr + size;
+            capacityAddr = limitAddr;
+        }
+        */
     }
 }
