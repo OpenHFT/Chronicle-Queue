@@ -27,6 +27,7 @@ import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.nio.ch.IOUtil;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
@@ -136,7 +137,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     private final class StatelessExcerpAppender extends AbstractStatelessExcerp implements ExcerptAppender {
-        private ByteBuffer readBuffer;
+        private final ByteBuffer readBuffer;
+        private final ByteBuffer commandBuffer;
         private ByteBuffer writeBuffer;
         private long lastIndex;
         private long actionType;
@@ -144,13 +146,37 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public StatelessExcerpAppender() {
             super();
 
-            int minSize = ChronicleTcp.nextPower2(builder.minBufferSize());
+            this.writeBuffer   = null;
+            this.readBuffer    = ChronicleTcp.createBufferOfSize(12);
+            this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.startAddr     = NO_PAGE;
+            this.positionAddr  = NO_PAGE;
+            this.capacityAddr  = NO_PAGE;
+            this.limitAddr     = NO_PAGE;
+            this.finished      = true;
+            this.lastIndex     = -1;
+            this.actionType    = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
 
-            this.writeBuffer = ChronicleTcp.createBufferOfSize(16 + minSize);
-            this.readBuffer  = ChronicleTcp.createBufferOfSize(12);
-            this.finished    = true;
-            this.lastIndex   = -1;
-            this.actionType  = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
+            resizeWriteBuffer(builder.minBufferSize());
+        }
+
+        protected void resizeWriteBuffer(int size) {
+            if(writeBuffer != null) {
+                ChronicleTcp.clean(writeBuffer);
+            }
+
+            if(size > Integer.MAX_VALUE) {
+                throw new IllegalStateException("Excerpt size can't exceed " + Integer.MAX_VALUE);
+            }
+
+            int maxSize     = Math.min(Integer.MAX_VALUE, size);
+            int roundedSize = ChronicleTcp.nextPower2(maxSize, builder.minBufferSize());
+
+            this.writeBuffer  = ChronicleTcp.createBufferOfSize(roundedSize);
+            this.startAddr    = ChronicleTcp.address(this.writeBuffer);
+            this.positionAddr = this.startAddr;
+            this.capacityAddr = this.startAddr + roundedSize;
+            this.limitAddr    = this.startAddr + size;
         }
 
         @Override
@@ -159,32 +185,20 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
-        public void startExcerpt(long capacity) {
+        public void startExcerpt(long excerptSize) {
             if(!finished) {
                 finish();
             }
 
-            if(capacity <= this.writeBuffer.capacity()) {
-                this.positionAddr = this.startAddr + 16;
-                this.limitAddr    = this.startAddr + 16 + capacity;
+            if(excerptSize <= this.writeBuffer.capacity()) {
+                this.positionAddr = this.startAddr;
+                this.limitAddr    = this.startAddr + excerptSize;
             } else {
-                if(writeBuffer != null) {
-                    ChronicleTcp.clean(writeBuffer);
-                }
-
-                int minSize = ChronicleTcp.nextPower2(builder.minBufferSize());
-
-                this.writeBuffer  = ChronicleTcp.createBufferOfSize(16 + minSize);
-                this.startAddr    = ChronicleTcp.address(this.writeBuffer);
-                this.positionAddr = this.startAddr + 16;
-                this.capacityAddr = this.startAddr + 16 + minSize;
-                this.limitAddr    = this.startAddr + 16 + capacity;
+                resizeWriteBuffer((int)excerptSize);
             }
 
-            // move limit and position at the expected size, buffer will be filled
-            // through NativeBytes methods
-            writeBuffer.limit(16 + (int)capacity);
-            writeBuffer.position(16 + (int)capacity);
+            writeBuffer.limit((int)excerptSize);
+            writeBuffer.position((int)excerptSize);
 
             finished = false;
         }
@@ -206,19 +220,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     openConnection();
                 }
 
-                writeLong(0, this.actionType);
-                writeLong(8, position() - 16);
-
-                writeBuffer.flip();
-
                 try {
-                    connection.writeAllOrEOF(writeBuffer);
+                    connection.writeAction(commandBuffer, actionType, position());
+                    connection.writeAllOrEOF((ByteBuffer)writeBuffer.flip());
 
                     if(builder.appendRequireAck()) {
-                        connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
+                        connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE);
 
-                        int  recType  = this.readBuffer.getInt();
-                        long recIndex = this.readBuffer.getLong();
+                        int  recType  = readBuffer.getInt();
+                        long recIndex = readBuffer.getLong();
 
                         if (recType == ChronicleTcp.ACK_LEN) {
                             this.lastIndex = recIndex;
@@ -447,15 +457,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
             return true;
         }
 
-        protected boolean advanceIndex() throws IOException {
-            if(nextIndex()) {
-                finish();
-                return true;
-            } else {
-                return false;
-            }
-        }
-
         @Override
         public long findMatch(@NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
@@ -464,6 +465,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
+        }
+
+        protected boolean advanceIndex() throws IOException {
+            if(nextIndex()) {
+                finish();
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 }

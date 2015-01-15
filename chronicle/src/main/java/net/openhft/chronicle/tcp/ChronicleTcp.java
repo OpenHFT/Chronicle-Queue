@@ -95,8 +95,16 @@ public class ChronicleTcp {
         return Maths.nextPower2(size, size);
     }
 
+    public static int nextPower2(int size, int min) {
+        return Maths.nextPower2(size, min);
+    }
+
     public static long nextPower2(long size) {
         return Maths.nextPower2(size, size);
+    }
+
+    public static long nextPower2(long size, long min) {
+        return Maths.nextPower2(size, min);
     }
 
     public static long address(@NotNull ByteBuffer buffer) {
