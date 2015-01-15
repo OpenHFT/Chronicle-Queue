@@ -73,7 +73,7 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     // *************************************************************************
 
     public void testJira77(Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
-        final int BYTES_LENGTH = 66000;
+        final int BYTES_LENGTH = 1 << 16;
 
         final Random random = new Random();
 
