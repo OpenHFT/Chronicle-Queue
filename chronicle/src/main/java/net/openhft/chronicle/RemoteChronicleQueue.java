@@ -164,7 +164,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 finish();
             }
 
-            if(capacity <= this.capacity()) {
+            if(capacity <= this.writeBuffer.capacity()) {
                 this.positionAddr = this.startAddr + 16;
                 this.limitAddr    = this.startAddr + 16 + capacity;
             } else {

@@ -19,6 +19,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
+import net.openhft.lang.Maths;
 import net.openhft.lang.model.constraints.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -455,7 +456,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("EntriesPerCycle must not exceed 1L << 48 (" + (1L << 48) + ")");
             }
 
-            if (!((entriesPerCycle & -entriesPerCycle) == entriesPerCycle)) {
+            if(!Maths.isPowerOf2(entriesPerCycle)) {
                 throw new IllegalArgumentException("EntriesPerCycle must be a power of 2");
             }
 
@@ -705,6 +706,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder minBufferSize(int minBufferSize) {
+            if(!Maths.isPowerOf2(minBufferSize)) {
+                throw new IllegalArgumentException("MinBufferSize must be a power of 2");
+            }
+
             this.minBufferSize = minBufferSize;
             return this;
         }

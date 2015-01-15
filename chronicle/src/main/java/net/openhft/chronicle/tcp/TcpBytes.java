@@ -17,12 +17,70 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
+import net.openhft.lang.model.constraints.NotNull;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class TcpBytes extends NativeBytes {
+    private ByteBuffer buffer;
 
-    public TcpBytes() {
+    public TcpBytes(int initialSize) {
         super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+
+        this.buffer       = ChronicleTcp.createBufferOfSize(initialSize);
+        this.startAddr    = ChronicleTcp.address(this.buffer);
+        this.positionAddr = this.startAddr;
+        this.capacityAddr = this.startAddr + initialSize;
+        this.limitAddr    = this.startAddr + initialSize;
+    }
+
+    public TcpBytes resize(long size) {
+        if(size > buffer.capacity()) {
+            IOTools.clean(buffer);
+
+            this.buffer       = ChronicleTcp.createBufferOfSize((int)size);
+            this.startAddr    = ChronicleTcp.address(this.buffer);
+            this.positionAddr = this.startAddr;
+            this.capacityAddr = this.startAddr + size;
+            this.limitAddr    = this.startAddr + size;
+        }
+
+        return this;
+    }
+
+    public void send(@NotNull TcpConnection cnx) throws IOException {
+        buffer.clear();
+        buffer.limit((int) limit());
+        buffer.flip();
+
+        cnx.writeAllOrEOF(buffer);
+    }
+
+    public void read(@NotNull TcpConnection cnx, int size) throws IOException {
+        resize(size);
+
+        buffer.clear();
+        buffer.limit(size);
+        cnx.readFullyOrEOF(buffer);
+        buffer.flip();
+
+        this.positionAddr = this.startAddr;
+        this.limitAddr    = this.startAddr + buffer.remaining();
+    }
+
+    @Override
+    public void close() {
+        super.close();
+
+        IOTools.clean(buffer);
+
+        this.startAddr    = NO_PAGE;
+        this.positionAddr = NO_PAGE;
+        this.capacityAddr = NO_PAGE;
+        this.limitAddr    = NO_PAGE;
     }
 }
