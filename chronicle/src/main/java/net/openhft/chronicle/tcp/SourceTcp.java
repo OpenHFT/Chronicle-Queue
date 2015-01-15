@@ -559,12 +559,15 @@ public abstract class SourceTcp {
             pauseReset();
             Bytes bytes = applyMapping(tailer, attached);
 
-            final long size = bytes.capacity();
+
+            final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
             writeBuffer.putInt((int) size);
             writeBuffer.putLong(tailer.index());
+            if (bytes.limit() == 0)
+                return true;
 
             // for large objects send one at a time.
             if (size > writeBuffer.capacity() / 2)
@@ -587,10 +590,12 @@ public abstract class SourceTcp {
                     if (!tailer.wasPadding()) {
 
                         bytes = applyMapping(tailer, attached);
+                        if (bytes.limit() == 0)
+                            continue;
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
-                            int size2 = (int) bytes.capacity();
+                            int size2 = (int) bytes.limit();
                             writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                             writeBuffer.putInt(size2);
                             writeBuffer.putLong(tailer.index());
@@ -620,7 +625,7 @@ public abstract class SourceTcp {
         /**
          * applies a mapping if the mapping is not set to {@code}null{code}
          *
-         * @param source the tailer for the mapping to be applied to
+         * @param source   the tailer for the mapping to be applied to
          * @param attached the key attachment
          * @return returns the tailer or the mapped bytes
          * @see
@@ -661,7 +666,7 @@ public abstract class SourceTcp {
             withMappedBuffer.flip();
 
             // set the capacity() equal withMappedBuffer the limit()
-            return withMappedBuffer.slice(0, withMappedBuffer.limit());
+            return withMappedBuffer;
 
         }
     }
