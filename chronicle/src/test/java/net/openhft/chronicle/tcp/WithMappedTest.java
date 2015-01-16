@@ -263,11 +263,11 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
     @Test
-    public void testReplicationWithPriceMarketDataFilter() throws Throwable {
+    public void testVanillaReplicationWithPriceMarketDataFilter() throws Throwable {
 
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow");
-        final String sinkCloseBasePath = getVanillaTestPath("-sink-close");
+        final String sourceBasePath = getVanillaTestPath("-source-vanilla");
+        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow-vanilla");
+        final String sinkCloseBasePath = getVanillaTestPath("-sink-close-vanilla");
 
         final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
 
@@ -473,5 +473,216 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         }
     }
 
+
+    @Test
+    public void testIndexedReplicationWithPriceMarketDataFilter() throws Throwable {
+
+        final String sourceBasePath = getVanillaTestPath("-source-indexed");
+        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow-indexed");
+        final String sinkCloseBasePath = getVanillaTestPath("-sink-close-indexed");
+
+        final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
+
+        final Chronicle source = ChronicleQueueBuilder.indexed(sourceBasePath)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        final int port = portSupplier.getAndCheckPort();
+
+
+        try {
+
+
+            final Collection<MarketData> marketRecords = loadMarketData();
+
+            final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
+
+            for (MarketData marketRecord : marketRecords) {
+                expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
+            }
+
+
+            Callable<Void> appenderCallable = new Callable<Void>() {
+                public Void call() throws Exception {
+
+
+                    AffinityLock lock = AffinityLock.acquireLock();
+                    try {
+                        final ExcerptAppender appender = source.createAppender();
+                        for (MarketData marketData : marketRecords) {
+                            appender.startExcerpt();
+                            marketData.writeMarshallable(appender);
+                            appender.finish();
+                        }
+
+                        appender.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
+                    }
+                    return null;
+                }
+            };
+
+            Callable<Void> highLowCallable = new Callable<Void>() {
+
+                public Void call() throws Exception {
+
+                    final Chronicle highLowSink = ChronicleQueueBuilder.indexed(sinkHighLowBasePath)
+                            .sink()
+                            .withMapping(HighLow.fromMarketData()) // this is sent to the source
+                            .connectAddress("localhost", port)
+                            .build();
+
+                    AffinityLock lock = AffinityLock.acquireLock();
+
+                    try (final ExcerptTailer tailer = highLowSink.createTailer()) {
+
+
+                        while (tailer.nextIndex()) {
+
+                            HighLow actual = new HighLow();
+                            actual.readMarshallable(tailer);
+
+                            // check the data is reasonable
+                            Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
+                            Assert.assertTrue(actual.date < DATE_FORMAT.parse("2016-01-01").getTime());
+
+                            Assert.assertTrue(actual.high > 5000);
+                            Assert.assertTrue(actual.high < 8000);
+
+                            Assert.assertTrue(actual.low > 5000);
+                            Assert.assertTrue(actual.low < 8000);
+
+
+                            MarketData expected = expectedMarketDate.get(new Date(actual.date));
+                            Assert.assertEquals(expected.high, actual.high, 0.0);
+                            Assert.assertEquals(expected.low, actual.low, 0.0);
+
+                            tailer.finish();
+
+                        }
+
+                    } finally {
+                        lock.release();
+                        highLowSink.clear();
+                    }
+                    return null;
+                }
+
+
+            };
+
+            Callable<Void> closeCallable = new Callable<Void>() {
+
+                public Void call() throws Exception {
+
+                    final Chronicle closeSink = ChronicleQueueBuilder.indexed(sinkCloseBasePath)
+                            .sink()
+                            .withMapping(Close.fromMarketData()) // this is sent to the source
+                            .connectAddress("localhost", port)
+                            .build();
+
+                    AffinityLock lock = AffinityLock.acquireLock();
+                    try (final ExcerptTailer tailer = closeSink.createTailer()) {
+
+                        while (tailer.nextIndex()) {
+
+                            Close actual = new Close();
+                            actual.readMarshallable(tailer);
+
+
+                            // check the data is reasonable
+
+                            Assert.assertTrue(actual.date > _2014_01_01);
+                            Assert.assertTrue(actual.date < _2016_01_01);
+
+                            Assert.assertTrue(actual.adjClose > 5000);
+                            Assert.assertTrue(actual.adjClose < 8000);
+
+                            Assert.assertTrue(actual.close > 5000);
+                            Assert.assertTrue(actual.close < 8000);
+
+
+                            final MarketData expected = expectedMarketDate.get(new Date(actual
+                                    .date));
+
+                            String message = "expected=" + expected + "actual=" + actual;
+
+                            Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0);
+                            Assert.assertEquals(message, expected.close, actual.close, 0.0);
+
+                            tailer.finish();
+
+                        }
+
+                    } finally {
+                        lock.release();
+                        closeSink.clear();
+                    }
+
+                    return null;
+                }
+
+
+            };
+
+
+            try {
+
+                ThreadFactory appenderFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "appender");
+                    }
+                };
+
+                Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
+
+
+                appenderFuture.get(20, TimeUnit.SECONDS);
+
+
+                ThreadFactory closeFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "close");
+                    }
+                };
+
+                Future<Void> closeFuture = Executors.newSingleThreadExecutor(closeFactory).submit(closeCallable);
+
+
+                ThreadFactory highLowFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "highlow");
+                    }
+                };
+
+
+                Future<Void> highLowFuture = Executors.newSingleThreadExecutor(highLowFactory).submit(highLowCallable);
+
+                closeFuture.get(20, TimeUnit.SECONDS);
+                highLowFuture.get(20, TimeUnit.SECONDS);
+
+            } catch (ExecutionException e) {
+                throw e.getCause();
+            }
+
+
+        } finally {
+            source.close();
+            source.clear();
+
+            // check cleanup
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkCloseBasePath).exists());
+            assertFalse(new File(sinkHighLowBasePath).exists());
+        }
+    }
 }
 
