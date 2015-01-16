@@ -27,17 +27,22 @@ import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
 import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
-import static junit.framework.TestCase.assertTrue;
-import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
-import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
 import static org.junit.Assert.assertEquals;
 
 /**
