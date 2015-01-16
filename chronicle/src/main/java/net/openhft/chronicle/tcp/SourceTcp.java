@@ -449,6 +449,10 @@ public abstract class SourceTcp {
 
         @Override
         protected boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException {
+            if(ack) {
+                sendSizeAndIndex(ChronicleTcp.NACK_LEN, ChronicleTcp.IDX_NOT_SUPPORTED);
+            }
+
             return true;
         }
 

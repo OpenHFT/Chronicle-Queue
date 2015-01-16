@@ -106,6 +106,64 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
+    public void testVanillaStatelessAppenderResizeWriteBuffer() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final Chronicle source = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        final Chronicle remoteAppender = remoteAppender()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .appendRequireAck(false)
+                .minBufferSize(4)
+                .build();
+
+        final int items = 10;
+        final ExcerptAppender appender = remoteAppender.createAppender();
+        final ExcerptTailer tailer = source.createTailer();
+
+        try {
+            source.clear();
+
+            for (long i = 1; i <= items; i++) {
+                appender.startExcerpt(i * 8);
+                for(int x=0;x<i;x++) {
+                    appender.writeLong(x + 1);
+                }
+
+                appender.finish();
+            }
+
+            appender.close();
+
+            int count = 0;
+            for (long i = 1; i <= items; i++) {
+                while(!tailer.nextIndex());
+                count++;
+
+                for(int x=0;x<i;x++) {
+                    assertEquals(x + 1, tailer.readLong());
+                }
+
+                tailer.finish();
+            }
+
+            tailer.close();
+
+            assertEquals(items, count);
+        } finally {
+            source.close();
+            source.clear();
+
+            assertFalse(new File(basePathSource).exists());
+        }
+    }
+
+    @Test
     public void testVanillaStatelessAppenderAndTailer() throws Exception {
         final String basePathSource = getVanillaTestPath("-source");
         final PortSupplier portSupplier = new PortSupplier();

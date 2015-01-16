@@ -33,10 +33,10 @@ import java.nio.ByteOrder;
 import java.util.Collection;
 import java.util.Map;
 
-public class WrappedExcerptAppender implements ExcerptAppender {
-    protected final ExcerptAppender wrappedAppender;
+public class WrappedExcerptAppender<T extends ExcerptAppender> implements ExcerptAppender {
+    protected T wrappedAppender;
 
-    public WrappedExcerptAppender(final @NotNull ExcerptAppender appender) {
+    public WrappedExcerptAppender(final @NotNull T appender) {
         this.wrappedAppender = appender;
     }
 
@@ -502,11 +502,6 @@ public class WrappedExcerptAppender implements ExcerptAppender {
     @NotNull
     public InputStream inputStream() {
         return wrappedAppender.inputStream();
-    }
-
-    @NotNull
-    public ExcerptAppender toEnd() {
-        return wrappedAppender.toEnd();
     }
 
     public long remaining() {

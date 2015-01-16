@@ -545,8 +545,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private final ChronicleQueueBuilder builder;
         private Chronicle chronicle;
 
-        private InetSocketAddress bindAddress;
-        private InetSocketAddress connectAddress;
+        private AddressProvider bindAddressProvider;
+        private AddressProvider connectAddressprovider;
         private long reconnectTimeout;
         private TimeUnit reconnectTimeoutUnit;
         private long selectTimeout;
@@ -575,8 +575,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.builder = builder;
             this.chronicle = chronicle;
 
-            this.bindAddress = null;
-            this.connectAddress = null;
+            this.bindAddressProvider = null;
+            this.connectAddressprovider = null;
             this.reconnectTimeout = 500;
             this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.selectTimeout = 1000;
@@ -600,11 +600,19 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public InetSocketAddress bindAddress() {
-            return bindAddress;
+            return bindAddressProvider != null
+                    ? bindAddressProvider.get()
+                    : null;
         }
 
-        public ReplicaChronicleQueueBuilder bindAddress(InetSocketAddress bindAddress) {
-            this.bindAddress = bindAddress;
+        public ReplicaChronicleQueueBuilder bindAddress(final InetSocketAddress bindAddress) {
+            this.bindAddressProvider = new AddressProvider() {
+                @Override
+                public InetSocketAddress get() {
+                    return bindAddress;
+                }
+            };
+
             return this;
         }
 
@@ -616,12 +624,38 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return bindAddress(new InetSocketAddress(host, port));
         }
 
-        public InetSocketAddress connectAddress() {
-            return connectAddress;
+        public AddressProvider bindAddressProvider() {
+            return this.connectAddressprovider;
         }
 
-        public ReplicaChronicleQueueBuilder connectAddress(InetSocketAddress connectAddress) {
-            this.connectAddress = connectAddress;
+        public ReplicaChronicleQueueBuilder bindAddressProvider(AddressProvider bindAddressProvider ) {
+            this.bindAddressProvider = bindAddressProvider;
+            return this;
+        }
+
+        public InetSocketAddress connectAddress() {
+            return connectAddressprovider != null
+                    ? connectAddressprovider.get()
+                    : null;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddress(final InetSocketAddress connectAddress) {
+            this.connectAddressprovider = new AddressProvider() {
+                @Override
+                public InetSocketAddress get() {
+                    return connectAddress;
+                }
+            };
+
+            return this;
+        }
+
+        public AddressProvider connectAddressProvider() {
+            return this.connectAddressprovider;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddressProvider(AddressProvider connectAddressprovider ) {
+            this.connectAddressprovider = connectAddressprovider;
             return this;
         }
 

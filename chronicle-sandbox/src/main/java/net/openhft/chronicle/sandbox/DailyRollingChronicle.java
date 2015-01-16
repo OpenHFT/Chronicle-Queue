@@ -335,7 +335,6 @@ public class DailyRollingChronicle implements Chronicle {
         private boolean nextSynchronous = config.isSynchronousWriter();
 
         DRCExcerptAppender() {
-            toEnd();
         }
 
         @Override
@@ -376,13 +375,6 @@ public class DailyRollingChronicle implements Chronicle {
         @Override
         public long lastWrittenIndex() {
             return DailyRollingChronicle.this.lastWrittenIndex();
-        }
-
-        @NotNull
-        @Override
-        public ExcerptAppender toEnd() {
-            index(lastWrittenIndex());
-            return this;
         }
     }
 }

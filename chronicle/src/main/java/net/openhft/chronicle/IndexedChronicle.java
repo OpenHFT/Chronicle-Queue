@@ -764,7 +764,7 @@ public class IndexedChronicle implements Chronicle {
         private boolean nextSynchronous;
 
         IndexedExcerptAppender() throws IOException {
-            toEnd();
+            super.toEndForAppend0();
         }
 
         @Override
@@ -776,7 +776,7 @@ public class IndexedChronicle implements Chronicle {
             checkNotClosed();
             // in case there is more than one appender :P
             if (index != size()) {
-                toEnd();
+                super.toEndForAppend0();
             }
 
             if (capacity >= IndexedChronicle.this.builder.dataBlockSize()) {
@@ -824,7 +824,7 @@ public class IndexedChronicle implements Chronicle {
         public void addPaddedEntry() {
             // in case there is more than one appender :P
             if (index != lastWrittenIndex()) {
-                toEnd();
+                super.toEndForAppend0();
             }
 
             // check we are the start of a block.
@@ -895,13 +895,6 @@ public class IndexedChronicle implements Chronicle {
 
         private void writeIndexEntry(int relativeOffset) {
             UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
-        }
-
-        @NotNull
-        @Override
-        public ExcerptAppender toEnd() {
-            super.toEndForAppend0();
-            return this;
         }
 
         void checkNewIndexLine() {

@@ -18,8 +18,6 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.lang.model.constraints.NotNull;
-
 /**
  * The component that facilitates sequentially writing data to a {@link net.openhft.chronicle.Chronicle}.
  *
@@ -42,14 +40,6 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @param capacity to allow for, but not exceed.
      */
     void startExcerpt(long capacity);
-
-    /**
-     * Skip to the last index.
-     *
-     * @return this Excerpt
-     */
-    @NotNull
-    ExcerptAppender toEnd();
 
     /**
      * Add a padded entry to keep the index in sync with a master source.

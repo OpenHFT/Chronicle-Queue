@@ -34,6 +34,7 @@ public class ChronicleTcp {
     public static final int PADDED_LEN = -127;
     public static final int SYNC_IDX_LEN = -126;
     public static final int ACK_LEN = -129;
+    public static final int NACK_LEN = -130;
     public static final long ACTION_SUBSCRIBE = 1;
     public static final long ACTION_UNSUBSCRIBE = 2;
     public static final long ACTION_QUERY = 10;
@@ -44,6 +45,7 @@ public class ChronicleTcp {
     public static final long IDX_TO_START = -1;
     public static final long IDX_TO_END = -2;
     public static final long IDX_ACK = -3;
+    public static final long IDX_NOT_SUPPORTED = -4;
 
     public static ByteBuffer createBufferOfSize(int size) {
         return createBufferOfSize(size, ByteOrder.nativeOrder());

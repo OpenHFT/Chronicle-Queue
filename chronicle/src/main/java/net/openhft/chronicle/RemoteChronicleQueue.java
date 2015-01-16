@@ -21,13 +21,13 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
+import net.openhft.chronicle.tools.WrappedExcerptAppenders;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.IOUtil;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
@@ -126,57 +126,28 @@ class RemoteChronicleQueue extends WrappedChronicle {
     // STATELESS
     // *************************************************************************
 
-    private class AbstractStatelessExcerp extends NativeBytes {
-        protected final Logger logger;
+    private final class StatelessExcerpAppender
+            extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppender {
 
-        protected AbstractStatelessExcerp() {
-            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
-
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-        }
-    }
-
-    private final class StatelessExcerpAppender extends AbstractStatelessExcerp implements ExcerptAppender {
+        private final Logger logger;
         private final ByteBuffer readBuffer;
         private final ByteBuffer commandBuffer;
-        private ByteBuffer writeBuffer;
         private long lastIndex;
         private long actionType;
 
         public StatelessExcerpAppender() {
-            super();
+            super(builder.minBufferSize());
 
-            this.writeBuffer   = null;
+            this.logger        = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.readBuffer    = ChronicleTcp.createBufferOfSize(12);
             this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
-            this.startAddr     = NO_PAGE;
-            this.positionAddr  = NO_PAGE;
-            this.capacityAddr  = NO_PAGE;
-            this.limitAddr     = NO_PAGE;
-            this.finished      = true;
             this.lastIndex     = -1;
             this.actionType    = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
-
-            resizeWriteBuffer(builder.minBufferSize());
         }
 
-        protected void resizeWriteBuffer(int size) {
-            if(writeBuffer != null) {
-                ChronicleTcp.clean(writeBuffer);
-            }
-
-            if(size > Integer.MAX_VALUE) {
-                throw new IllegalStateException("Excerpt size can't exceed " + Integer.MAX_VALUE);
-            }
-
-            int maxSize     = Math.min(Integer.MAX_VALUE, size);
-            int roundedSize = ChronicleTcp.nextPower2(maxSize, builder.minBufferSize());
-
-            this.writeBuffer  = ChronicleTcp.createBufferOfSize(roundedSize);
-            this.startAddr    = ChronicleTcp.address(this.writeBuffer);
-            this.positionAddr = this.startAddr;
-            this.capacityAddr = this.startAddr + roundedSize;
-            this.limitAddr    = this.startAddr + size;
+        @Override
+        public long capacity() {
+            return super.limit();
         }
 
         @Override
@@ -186,26 +157,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void startExcerpt(long excerptSize) {
-            if(!finished) {
+            if(!isFinished()) {
                 finish();
             }
 
-            if(excerptSize <= this.writeBuffer.capacity()) {
-                this.positionAddr = this.startAddr;
-                this.limitAddr    = this.startAddr + excerptSize;
-            } else {
-                resizeWriteBuffer((int)excerptSize);
-            }
-
-            writeBuffer.limit((int)excerptSize);
-            writeBuffer.position((int)excerptSize);
-
-            finished = false;
-        }
-
-        @Override
-        public ExcerptAppender toEnd() {
-            return this;
+            super.startExcerpt(excerptSize);
         }
 
         @Override
@@ -215,14 +171,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void finish() {
-            if(!finished) {
+            if(!isFinished()) {
                 if(!connection.isOpen()) {
                     openConnection();
                 }
 
                 try {
                     connection.writeAction(commandBuffer, actionType, position());
-                    connection.writeAllOrEOF((ByteBuffer)writeBuffer.flip());
+                    connection.writeAllOrEOF(wrappedAppender.buffer());
 
                     if(builder.appendRequireAck()) {
                         connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE);
@@ -230,10 +186,19 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         int  recType  = readBuffer.getInt();
                         long recIndex = readBuffer.getLong();
 
-                        if (recType == ChronicleTcp.ACK_LEN) {
-                            this.lastIndex = recIndex;
-                        } else {
-                            logger.warn("Unknown message received {}, {}", recType, recIndex);
+                        switch(recType) {
+                            case ChronicleTcp.ACK_LEN:
+                                this.lastIndex = recIndex;
+                                break;
+                            case ChronicleTcp.NACK_LEN:
+                                throw new IllegalStateException(
+                                    "Message discarded by server, reason: " + (
+                                        recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
+                                            ? "unsupported"
+                                            : "unknown")
+                                );
+                            default:
+                                logger.warn("Unknown message received {}, {}", recType, recIndex);
                         }
                     }
                 } catch(IOException e) {
@@ -254,11 +219,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
-        public boolean wasPadding() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public long index() {
             return -1;
         }
@@ -267,53 +227,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public long lastWrittenIndex() {
             return this.lastIndex;
         }
-
-        @Override
-        public void addPaddedEntry() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean nextSynchronous() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void nextSynchronous(boolean nextSynchronous) {
-            throw new UnsupportedOperationException();
-        }
-
-        /*
-        protected void ensureWriteBufferCapacity(int size) {
-            if(writeBuffer != null) {
-                ChronicleTcp.clean(writeBuffer);
-            }
-
-            if(size > Integer.MAX_VALUE) {
-                throw new IllegalStateException("Excerpt size can't exceed " + Integer.MAX_VALUE);
-            }
-
-            if(this.writeBuffer != null && size <= this.writeBuffer.capacity()) {
-                this.positionAddr = this.startAddr;
-                this.limitAddr    = this.startAddr + size;
-            } else {
-                int maxSize       = Math.min(Integer.MAX_VALUE, size);
-                int roundedSize   = ChronicleTcp.nextPower2(maxSize, builder.minBufferSize());
-
-                this.writeBuffer  = ChronicleTcp.createBufferOfSize(roundedSize);
-                this.startAddr    = ChronicleTcp.address(this.writeBuffer);
-                this.positionAddr = this.startAddr;
-                this.capacityAddr = this.startAddr + roundedSize;
-                this.limitAddr    = this.startAddr + size;
-            }
-
-            writeBuffer.limit(size);
-            writeBuffer.position(size);
-        }
-        */
     }
 
-    private final class StatelessExcerpt extends AbstractStatelessExcerp implements Excerpt {
+    private final class StatelessExcerpt extends NativeBytes implements Excerpt {
+        private final Logger logger;
+
         private ByteBuffer writeBuffer;
         private ByteBuffer readBuffer;
 
@@ -321,8 +239,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
         private int lastSize;
 
         public StatelessExcerpt() {
-            super();
+            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
 
+            this.logger       = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.index        = -1;
             this.lastSize     = 0;
             this.writeBuffer  = ChronicleTcp.createBufferOfSize(16);
