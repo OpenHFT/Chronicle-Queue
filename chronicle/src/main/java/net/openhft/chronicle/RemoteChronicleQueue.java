@@ -181,7 +181,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     connection.writeAllOrEOF(wrappedAppender.buffer());
 
                     if(builder.appendRequireAck()) {
-                        connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE);
+                        connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);
 
                         int  recType  = readBuffer.getInt();
                         long recIndex = readBuffer.getLong();
@@ -237,6 +237,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         private long index;
         private int lastSize;
+        private int readCount;
 
         public StatelessExcerpt() {
             super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
@@ -250,6 +251,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.capacityAddr = this.startAddr + builder.minBufferSize();
             this.limitAddr    = this.startAddr;
             this.finished     = true;
+            this.readCount    = builder.readSpinCount();
         }
 
         @Override
@@ -319,7 +321,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_SUBSCRIBE, index);
 
                 while (true) {
-                    connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
+                    connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE, -1);
 
                     int  receivedSize  = readBuffer.getInt();
                     long receivedIndex = readBuffer.getLong();
@@ -340,7 +342,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                     // skip excerpt
                     if (receivedSize > 0) {
-                        connection.readUpTo(this.readBuffer, receivedSize);
+                        connection.readUpTo(this.readBuffer, receivedSize, -1);
                     }
                 }
             } catch (IOException e) {
@@ -363,7 +365,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
 
-                connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE);
+                if(!connection.readUpTo(this.readBuffer, ChronicleTcp.HEADER_SIZE, this.readCount)) {
+                    return false;
+                }
 
                 int  receivedSize  = this.readBuffer.getInt();
                 long receivedIndex = this.readBuffer.getLong();
@@ -389,7 +393,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     this.limitAddr    = this.startAddr;
                 }
 
-                connection.readUpTo(this.readBuffer, receivedSize);
+                connection.readUpTo(this.readBuffer, receivedSize, -1);
 
                 index        = receivedIndex;
                 positionAddr = startAddr;

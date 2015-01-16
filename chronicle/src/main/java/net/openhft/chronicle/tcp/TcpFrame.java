@@ -64,14 +64,14 @@ public class TcpFrame {
     }
 
     public TcpFrame readHeader(@NotNull TcpConnection connection) throws IOException {
-        connection.readUpTo(this.header, HEADER_SIZE);
+        connection.readUpTo(this.header, HEADER_SIZE, -1);
         return this;
     }
 
     public TcpFrame readData(@NotNull TcpConnection connection, int size) throws IOException {
         ensureDataCapacity(size);
 
-        connection.readUpTo(this.data, size);
+        connection.readUpTo(this.data, size, -1);
         return this;
     }
 

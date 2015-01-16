@@ -45,9 +45,8 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
+            .connectAddress("localhost", portSupplier.getAndCheckPort())
             .build();
 
         final int items = 1000000;
