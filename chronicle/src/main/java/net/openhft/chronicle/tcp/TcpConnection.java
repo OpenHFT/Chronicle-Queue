@@ -18,6 +18,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;

@@ -31,6 +31,7 @@ import java.io.IOException;
 
 import static junit.framework.TestCase.assertTrue;
 import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
 import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -485,77 +486,25 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getVanillaTestPath("-source");
         final String basePathSink = getVanillaTestPath("-sink");
         final PortSupplier portSupplier = new PortSupplier();
-        final int messages = 1000000;
 
-        final Chronicle source = vanilla(basePathSource)
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
                 .source()
                 .bindAddress(0)
-                .connectionListener(portSupplier)
-                .build();
+                .connectionListener(portSupplier);
 
-        final ReplicaChronicleQueueBuilder builder = vanilla(basePathSink)
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
                 .sink()
                 .connectAddress("localhost", portSupplier.getAndCheckPort())
                 .readSpinCount(5);
 
-        final Chronicle sink = builder.build();
-        final ExcerptTailer tailer = sink.createTailer();
+        final Chronicle sinnk = sinkBuilder.build();
 
-        final Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final ExcerptAppender appender = source.createAppender();
-                    for (int i = 1; i <= messages; i++) {
-                        // use a size which will cause mis-alignment.
-                        appender.startExcerpt();
-                        appender.writeLong(i);
-                        appender.append(' ');
-                        appender.append(i);
-                        appender.append('\n');
-                        appender.finish();
-                    }
-
-                    appender.close();
-                    LOGGER.info("Finished writing messages");
-
-                } catch (Exception e) {
-                    throw new AssertionError(e);
-                }
-            }
-        });
-
-        t.start();
-
-        long start = 0;
-        long end = 0;
-        boolean hasNext = false;
-
-        for(int i=1; i<=messages; ) {
-            start   = System.currentTimeMillis();
-            hasNext = tailer.nextIndex();
-            end     = System.currentTimeMillis();
-
-            assertTrue("Timeout exceeded " + (end - start), end - start < builder.heartbeatIntervalMillis());
-
-            if(hasNext) {
-                assertEquals(i, tailer.readInt());
-                i++;
-            }
-
-            tailer.finish();
-        }
-
-        tailer.close();
-
-        t.join();
-
-        source.close();
-        source.clear();
-        sink.close();
-        sink.clear();
-
-        assertFalse(new File(basePathSource).exists());
-        assertFalse(new File(basePathSink).exists());
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
     }
 }
