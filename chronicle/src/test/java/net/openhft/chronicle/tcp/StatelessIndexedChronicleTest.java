@@ -25,11 +25,16 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static junit.framework.TestCase.assertTrue;
+import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
+import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
 import static org.junit.Assert.*;
 
 public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
@@ -348,6 +353,84 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             source.close();
             source.clear();
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testStatelessIndexedNonBlockingClient() throws Exception {
+        final String basePathSource = getIndexedTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int messages = 1000000;
+
+        final Chronicle source = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        final ReplicaChronicleQueueBuilder builder = remoteTailer()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .readSpinCount(5);
+
+        final Chronicle sink = builder.build();
+        final ExcerptTailer tailer = sink.createTailer();
+
+        final Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final ExcerptAppender appender = source.createAppender();
+                    for (int i = 1; i <= messages; i++) {
+                        // use a size which will cause mis-alignment.
+                        appender.startExcerpt();
+                        appender.writeLong(i);
+                        appender.append(' ');
+                        appender.append(i);
+                        appender.append('\n');
+                        appender.finish();
+                    }
+
+                    appender.close();
+                    LOGGER.info("Finished writing messages");
+
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        long start = 0;
+        long end = 0;
+        boolean hasNext = false;
+
+        for(int i=1; i<=messages; ) {
+            start   = System.currentTimeMillis();
+            hasNext = tailer.nextIndex();
+            end     = System.currentTimeMillis();
+
+            assertTrue("Timeout exceeded " + (end - start), end - start < builder.heartbeatIntervalMillis());
+
+            if(hasNext) {
+                assertEquals(i, tailer.readInt());
+                i++;
+            }
+
+            tailer.finish();
+        }
+
+        tailer.close();
+
+        t.join();
+
+        source.close();
+        source.clear();
+        sink.close();
+        sink.clear();
     }
 
     // *************************************************************************

@@ -37,6 +37,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
+    private final int readSpinCount;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
@@ -47,6 +48,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         this.closed = false;
         this.isLocal = builder.sharedChronicle() && connection.isLocalhost();
         this.excerpt = null;
+        this.readSpinCount = builder.readSpinCount();
     }
 
     @Override
@@ -197,7 +199,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 if (!closed) {
                     query(wrappedChronicle.lastIndex());
 
-                    if (connection.read(readBuffer, ChronicleTcp.HEADER_SIZE)) {
+                    if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
                         final int size = readBuffer.getInt();
                         final long scIndex = readBuffer.getLong();
 
@@ -222,18 +224,15 @@ class ChronicleQueueSink extends WrappedChronicle {
     }
 
     private final class StatefulExcerpt extends AbstractStatefulExcerpt {
-
-        //private ExcerptAppender appender;
         private AppenderAdapter adapter;
         private long lastLocalIndex;
 
         public StatefulExcerpt(final ExcerptCommon common) {
             super(common);
 
-            //this.appender = null;
             this.adapter = null;
             this.lastLocalIndex = -1;
-            this.withMapping(ChronicleQueueSink.this.builder.withMapping());
+            this.withMapping(builder.withMapping());
         }
 
         @Override
@@ -260,7 +259,11 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         private boolean readNextExcerpt() {
             try {
-                if (!closed && !connection.read(readBuffer, ChronicleTcp.HEADER_SIZE, ChronicleTcp.HEADER_SIZE + 8)) {
+                if (!closed && !connection.read(
+                        readBuffer,
+                        ChronicleTcp.HEADER_SIZE,
+                        ChronicleTcp.HEADER_SIZE + 8,
+                        readSpinCount)) {
                     return false;
                 }
 
@@ -298,13 +301,8 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                     // needs more than one read.
                     while (remaining > 0) {
-                        readBuffer.clear();
                         int size3 = (int) Math.min(readBuffer.capacity(), remaining);
-                        readBuffer.limit(size3);
-
-                        connection.read(readBuffer);
-
-                        readBuffer.flip();
+                        connection.readUpTo(readBuffer, size3, -1);
                         remaining -= readBuffer.remaining();
                         adapter.write(readBuffer);
                     }
