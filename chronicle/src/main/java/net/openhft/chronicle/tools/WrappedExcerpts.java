@@ -18,43 +18,21 @@
 package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.nio.ByteBuffer;
 
-public class WrappedExcerptAppenders {
+public class WrappedExcerpts {
 
-    //**************************************************************************
-    //
-    //**************************************************************************
-
-    public static class ByteBufferBytesAppender extends ByteBufferBytes implements ExcerptAppender {
-        public ByteBufferBytesAppender(@NotNull ByteBuffer buffer) {
+    public static class ByteBufferBytesExcerpt extends ByteBufferBytes implements Excerpt {
+        public ByteBufferBytesExcerpt(@NotNull ByteBuffer buffer) {
             super(buffer);
 
             super.finished = true;
-        }
-
-        @Override
-        public void startExcerpt() {
-            clear();
-            buffer().clear();
-        }
-
-        @Override
-        public void startExcerpt(long capacity) {
-            if(capacity <= capacity()) {
-                clear();
-                buffer().clear();
-
-                limit(capacity);
-                buffer().limit((int) capacity);
-            } else {
-                throw new IllegalStateException("Excerpt's size can't exceed Excerpt's capacity");
-            }
         }
 
         @Override
@@ -68,32 +46,42 @@ public class WrappedExcerptAppenders {
         }
 
         @Override
-        public long lastWrittenIndex() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public Chronicle chronicle() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void addPaddedEntry() {
+        public boolean nextIndex() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public boolean nextSynchronous() {
+        public long findMatch(@NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void nextSynchronous(boolean nextSynchronous) {
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
             throw new UnsupportedOperationException();
         }
 
-        public static ByteBufferBytesAppender withSize(int size) {
-            return new ByteBufferBytesAppender(ChronicleTcp.createBufferOfSize(size));
+        @Override
+        public boolean index(long l) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Excerpt toStart() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Excerpt toEnd() {
+            throw new UnsupportedOperationException();
+        }
+
+        public static ByteBufferBytesExcerpt withSize(int size) {
+            return new ByteBufferBytesExcerpt(ChronicleTcp.createBufferOfSize(size));
         }
     }
 
@@ -101,32 +89,43 @@ public class WrappedExcerptAppenders {
     //
     //**************************************************************************
 
-    public static class ByteBufferBytesExcerptAppenderWrapper extends WrappedExcerptAppender<ByteBufferBytesAppender> {
+    public static class ByteBufferBytesExcerptWrapper extends WrappedExcerpt {
 
         private final int defaulCapacity;
 
-        public ByteBufferBytesExcerptAppenderWrapper(int defaulCapacity) {
-            super(ByteBufferBytesAppender.withSize(defaulCapacity));
+        public ByteBufferBytesExcerptWrapper(int defaulCapacity) {
+            super(ByteBufferBytesExcerpt.withSize(defaulCapacity));
 
             this.defaulCapacity = defaulCapacity;
         }
 
-        @Override
-        public void startExcerpt() {
-            this.startExcerpt(this.defaulCapacity);
+        protected ByteBuffer buffer() {
+            return ((ByteBufferBytesExcerpt)wrappedExcerpt).buffer();
         }
 
-        @Override
-        public void startExcerpt(long capacity) {
+        protected ByteBufferBytesExcerpt excerpt() {
+            return ((ByteBufferBytesExcerpt)wrappedExcerpt);
+        }
+
+
+        protected void resize(long capacity) {
             if(capacity > Integer.MAX_VALUE) {
                 throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
             }
 
-            if(capacity > wrappedAppender.buffer().capacity()) {
-                wrappedAppender = ByteBufferBytesAppender.withSize((int)capacity);
+            if(capacity > excerpt().capacity()) {
+                setExcerpt(ByteBufferBytesExcerpt.withSize((int) capacity));
             }
 
-            super.startExcerpt(capacity);
+            excerpt().clear();
+            excerpt().limit(capacity);
+            buffer().clear();
+            buffer().limit((int)capacity);
+        }
+
+        protected void cleanup() {
+            excerpt().clear();
+            buffer().clear();
         }
     }
 }

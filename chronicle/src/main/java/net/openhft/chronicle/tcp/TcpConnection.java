@@ -18,6 +18,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -119,6 +120,90 @@ class TcpConnection {
         return true;
     }
 
+
+
+    public boolean read(final ByteBuffer buffer, int threshod, int size, int readCount) throws IOException {
+        int rem = buffer.remaining();
+        if (rem < threshod) {
+            if (buffer.remaining() == 0) {
+                buffer.clear();
+            } else {
+                buffer.compact();
+            }
+
+            int spins = 0;
+            int bytes = 0;
+            int targetPosition = buffer.position() + size;
+            while (buffer.position() < targetPosition) {
+                int rb = this.socketChannel.read(buffer);
+                if (rb < 0) {
+                    throw new EOFException();
+                } else if(bytes == 0 && rb == 0 && readCount > -1) {
+                    if(spins++ >= readCount) {
+                        buffer.flip();
+                        return false;
+                    }
+                } else {
+                    spins = 0;
+                    bytes += rb;
+                }
+            }
+
+            buffer.flip();
+        }
+
+        return true;
+    }
+
+    public boolean readAtLeast(final ByteBuffer buffer, int size, int readCount) throws IOException {
+        if (buffer.remaining() == 0) {
+            buffer.clear();
+        } else {
+            buffer.compact();
+        }
+
+        int spins = 0;
+        int bytes = 0;
+        int targetPosition = buffer.position() + size;
+        while (buffer.position() < targetPosition) {
+            int rb = this.socketChannel.read(buffer);
+            if (rb < 0) {
+                throw new EOFException();
+            } else if(bytes == 0 && rb == 0 && readCount > -1) {
+                if(spins++ >= readCount) {
+                    return false;
+                }
+            } else {
+                spins = 0;
+                bytes += rb;
+            }
+        }
+
+        buffer.flip();
+
+        return true;
+    }
+
+    public boolean readAllOrNone(final ByteBuffer buffer, int readCount) throws IOException {
+        int spins = 0;
+        int bytes = 0;
+        while (buffer.remaining() > 0) {
+            int rb = this.socketChannel.read(buffer);
+            if (rb < 0) {
+                throw new EOFException();
+            } else if(bytes == 0 && rb == 0 && readCount > -1) {
+                if(spins++ >= readCount) {
+                    return false;
+                }
+            } else {
+                spins = 0;
+                bytes += rb;
+            }
+        }
+
+        return true;
+    }
+
     public void readFullyOrEOF(@NotNull ByteBuffer bb) throws IOException {
         readAvailable(bb);
         if (bb.remaining() > 0) {
@@ -127,18 +212,29 @@ class TcpConnection {
     }
 
     public void readAvailable(@NotNull ByteBuffer bb) throws IOException {
-        for (long i=0; bb.remaining() > 0; i++) {
+        while (bb.remaining() > 0) {
             if (this.socketChannel.read(bb) < 0) {
                 break;
             }
         }
     }
 
-    public void readUpTo(ByteBuffer buffer, int size) throws IOException {
+    public boolean readUpTo(ByteBuffer buffer, int size, int readCount) throws IOException {
         buffer.clear();
         buffer.limit(size);
-        readFullyOrEOF(buffer);
+
+        if(readCount == -1) {
+            readFullyOrEOF(buffer);
+        } else {
+            if(!readAllOrNone(buffer, readCount)) {
+                buffer.clear();
+                return false;
+            }
+        }
+
         buffer.flip();
+
+        return true;
     }
 
     public void writeSizeAndIndex(ByteBuffer buffer, int action, long index) throws IOException {

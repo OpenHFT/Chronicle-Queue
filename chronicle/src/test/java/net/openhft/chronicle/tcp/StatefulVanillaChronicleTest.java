@@ -19,24 +19,25 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.affinity.AffinityLock;
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.io.Bytes;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static junit.framework.TestCase.assertTrue;
+import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
+import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
-
-    public static class NoOpMappingFunction implements MappingFunction {
-        @Override
-        public void apply(Bytes from, Bytes to) {
-            to.write(from);
-        }
-    }
 
     @Test
     public void testReplication1() throws Exception {
@@ -47,14 +48,14 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
 
-        final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle source = vanilla(sourceBasePath)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.vanilla(sinkBasePath)
+        final Chronicle sink = vanilla(sinkBasePath)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -134,14 +135,14 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
 
-        final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle sourceChronicle = vanilla(sourceBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
                 .indexBlockSize(16L << 10)
                 .build();
 
-        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
+        final Chronicle sinkChronicle = vanilla(sinkBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -233,14 +234,14 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkBasePath = getVanillaTestPath("-sink");
 
-        final Chronicle sourceChronicle = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle sourceChronicle = vanilla(sourceBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
                 .indexBlockSize(16L << 10)
                 .build();
 
-        final Chronicle sinkChronicle = ChronicleQueueBuilder.vanilla(sinkBasePath)
+        final Chronicle sinkChronicle = vanilla(sinkBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -343,7 +344,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final PortSupplier portSupplier = new PortSupplier();
 
-        final Chronicle source = ChronicleQueueBuilder.vanilla(sourceBasePath)
+        final Chronicle source = vanilla(sourceBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -363,7 +364,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
             Thread.sleep(100);
 
-            if(i % 10==0) {
+            if(i % 10 ==0) {
                 LOGGER.info(".");
             }
         }
@@ -373,7 +374,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final int port = portSupplier.getAndCheckPort();
 
         //create a tailer to get the first 50 items then exit the tailer
-        final Chronicle sink1 = ChronicleQueueBuilder.vanilla(sinkBasePath)
+        final Chronicle sink1 = vanilla(sinkBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -399,7 +400,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         ChronicleTools.checkCount(sink1, 1, 1);
 
         //now resume the tailer to get the first 50 items
-        final Chronicle sink2 = ChronicleQueueBuilder.vanilla(sinkBasePath)
+        final Chronicle sink2 = vanilla(sinkBasePath)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -450,10 +451,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testVanillaJira77() throws IOException {
         String basePath = getVanillaTestPath();
 
-        Chronicle chronicleSrc = ChronicleQueueBuilder.vanilla(basePath + "-src").build();
+        Chronicle chronicleSrc = vanilla(basePath + "-src").build();
         chronicleSrc.clear();
 
-        Chronicle chronicleTarget = ChronicleQueueBuilder.vanilla(basePath + "-target").build();
+        Chronicle chronicleTarget = vanilla(basePath + "-target").build();
         chronicleTarget.clear();
 
         testJira77(
@@ -471,8 +472,39 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         String basePath = getVanillaTestPath();
 
         testJira80(
-                ChronicleQueueBuilder.vanilla(basePath + "-master"),
-                ChronicleQueueBuilder.vanilla(basePath + "-slave")
+                vanilla(basePath + "-master"),
+                vanilla(basePath + "-slave")
+        );
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testVanillaNonBlockingClient() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSink = getVanillaTestPath("-sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .readSpinCount(5);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
         );
     }
 }

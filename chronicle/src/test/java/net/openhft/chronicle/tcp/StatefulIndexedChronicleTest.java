@@ -27,12 +27,22 @@ import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -50,14 +60,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final int messages = 5 * 1000 * 1000;
 
         final PortSupplier portSupplier = new PortSupplier();
-        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+        final Chronicle source = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+        final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -121,14 +131,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final PortSupplier portSupplier = new PortSupplier();
-        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+        final Chronicle source = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+        final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -173,14 +183,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final PortSupplier portSupplier = new PortSupplier();
-        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+        final Chronicle source = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+        final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -227,14 +237,14 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         final String basePathSink = getIndexedTestPath("-sink");
 
         final PortSupplier portSupplier = new PortSupplier();
-        final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
+        final Chronicle source = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.indexed(basePathSink)
+        final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -419,10 +429,10 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     public void testIndexedJira77() throws IOException {
         String basePath = getIndexedTestPath();
 
-        Chronicle chronicleSrc = ChronicleQueueBuilder.indexed(basePath + "-src").build();
+        Chronicle chronicleSrc = indexed(basePath + "-src").build();
         chronicleSrc.clear();
 
-        Chronicle chronicleTarget = ChronicleQueueBuilder.indexed(basePath + "-target").build();
+        Chronicle chronicleTarget = indexed(basePath + "-target").build();
         chronicleTarget.clear();
 
         testJira77(
@@ -440,8 +450,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         String basePath = getIndexedTestPath();
 
         testJira80(
-                ChronicleQueueBuilder.indexed(basePath + "-master"),
-                ChronicleQueueBuilder.indexed(basePath + "-slave")
+                indexed(basePath + "-master"),
+                indexed(basePath + "-slave")
         );
     }
 
@@ -531,5 +541,32 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         assertIndexedClean(sourcePath);
         assertIndexedClean(sinkPath);
 
+    }
+
+    @Test
+    public void testIndexedNonBlockingClient() throws Exception {
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = indexed(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .readSpinCount(5);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
     }
 }

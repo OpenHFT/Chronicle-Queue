@@ -28,6 +28,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static junit.framework.TestCase.assertTrue;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
+import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
+import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
+import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
 import static org.junit.Assert.*;
 
 public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestBase {
@@ -337,6 +342,35 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
             assertFalse(new File(basePathSource).exists());
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testStatelessVanillaNonBlockingClient() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = remoteTailer()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .readSpinCount(5);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
     }
 
     // *************************************************************************

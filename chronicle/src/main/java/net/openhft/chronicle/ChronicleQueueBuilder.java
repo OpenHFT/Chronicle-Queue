@@ -559,6 +559,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private TimeUnit heartbeatIntervalUnit;
         private int maxExcerptsPerMessage;
         private int selectorSpinLoopCount;
+        private int readSpinCount;
         private boolean appendRequireAck;
 
         private int acceptorMaxBacklog;
@@ -594,6 +595,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.acceptorThreadPoolkeepAliveTimeUnit = TimeUnit.SECONDS;
             this.maxExcerptsPerMessage = 128;
             this.selectorSpinLoopCount = 100000;
+            this.readSpinCount = -1;
             this.connectionListener = CONNECTION_LISTENER;
             this.appendRequireAck = false;
             this.mapping = null;
@@ -606,13 +608,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder bindAddress(final InetSocketAddress bindAddress) {
-            this.bindAddressProvider = new AddressProvider() {
-                @Override
-                public InetSocketAddress get() {
-                    return bindAddress;
-                }
-            };
-
+            this.bindAddressProvider =  AddressProviders.single(bindAddress);
             return this;
         }
 
@@ -640,13 +636,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder connectAddress(final InetSocketAddress connectAddress) {
-            this.connectAddressprovider = new AddressProvider() {
-                @Override
-                public InetSocketAddress get() {
-                    return connectAddress;
-                }
-            };
-
+            this.connectAddressprovider = AddressProviders.single(connectAddress);
             return this;
         }
 
@@ -816,7 +806,28 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder selectorSpinLoopCount(int selectorSpinLoopCount) {
+            if(selectorSpinLoopCount < -1) {
+                throw new IllegalArgumentException(
+                        "SelectorSpinLoopCount must be greather or equal to -1");
+            }
+
             this.selectorSpinLoopCount = selectorSpinLoopCount;
+
+            return this;
+        }
+
+        public int readSpinCount() {
+            return this.readSpinCount;
+        }
+
+        public ReplicaChronicleQueueBuilder readSpinCount(int readSpinCount) {
+            if(selectorSpinLoopCount < -1) {
+                throw new IllegalArgumentException(
+                        "ReadSpinCount must be greather or equal to -1");
+            }
+
+            this.readSpinCount = readSpinCount;
+
             return this;
         }
 

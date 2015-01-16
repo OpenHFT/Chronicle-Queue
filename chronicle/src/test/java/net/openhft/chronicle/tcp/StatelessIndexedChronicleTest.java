@@ -30,6 +30,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static junit.framework.TestCase.assertTrue;
+import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
+import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
+import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
 import static org.junit.Assert.*;
 
 public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
@@ -45,9 +49,8 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
+            .connectAddress("localhost", portSupplier.getAndCheckPort())
             .build();
 
         final int items = 1000000;
@@ -349,6 +352,31 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             source.close();
             source.clear();
         }
+    }
+
+    @Test
+    public void testStatelessIndexedNonBlockingClient() throws Exception {
+        final String basePathSource = getIndexedTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = remoteTailer()
+                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .readSpinCount(5);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
     }
 
     // *************************************************************************
