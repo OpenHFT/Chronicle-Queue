@@ -102,6 +102,10 @@ public class ChronicleTcpTestBase {
             this.latch.countDown();
         }
 
+        public void reset() {
+            this.port.set(-1);
+        }
+
         public int port() {
             if (port.get() == -1) {
                 try {

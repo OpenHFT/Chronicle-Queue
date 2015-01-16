@@ -1302,6 +1302,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
         return wrappedCommon.readUnsignedByteOrThrow();
     }
 
+    @Override
     public String toDebugString() {
         return wrappedCommon.toDebugString();
     }

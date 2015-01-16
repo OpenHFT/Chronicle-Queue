@@ -1234,6 +1234,7 @@ public class WrappedExcerptTailer implements ExcerptTailer {
         return wrappedTailer.readUnsignedByteOrThrow();
     }
 
+    @Override
     public String toDebugString() {
         return wrappedTailer.toDebugString();
     }

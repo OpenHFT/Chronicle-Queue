@@ -22,6 +22,7 @@ import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -425,6 +426,7 @@ public abstract class SourceTcp {
      */
     private class IndexedSessionHandler extends SessionHandler {
         private long index;
+        private Bytes withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(1024));
 
         private IndexedSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
@@ -456,6 +458,7 @@ public abstract class SourceTcp {
             return true;
         }
 
+        @Override
         protected boolean write(Object attached) throws IOException {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
@@ -475,7 +478,20 @@ public abstract class SourceTcp {
 
             pauseReset();
 
-            final long size = tailer.capacity();
+            Bytes bytes;
+            for (; ; ) {
+                bytes = applyMapping(tailer, attached, withMappedBuffer);
+                if (bytes.limit() > 0) {
+                    break;
+                }
+
+                // if the excepts is filtered out, move onto the next one
+                if (!tailer.index(index++)) {
+                    return false;
+                }
+            }
+
+            final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
@@ -487,7 +503,7 @@ public abstract class SourceTcp {
                 while (remaining > 0) {
                     int size2 = (int) Math.min(remaining, writeBuffer.capacity());
                     writeBuffer.limit(size2);
-                    tailer.read(writeBuffer);
+                    bytes.read(writeBuffer);
                     writeBuffer.flip();
                     remaining -= writeBuffer.remaining();
 
@@ -495,16 +511,25 @@ public abstract class SourceTcp {
                 }
             } else {
                 writeBuffer.limit((int) remaining);
-                tailer.read(writeBuffer);
+
+                bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
+                    bytes = applyMapping(tailer, attached, withMappedBuffer);
+
+                    // skip excepts that are filtered out by the MappingFunction
+                    if (bytes.limit() == 0) {
+                        index++;
+                        continue;
+                    }
+
                     if (!tailer.wasPadding()) {
-                        if (hasRoomForExcerpt(writeBuffer, tailer)) {
+                        if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
-                            int size2 = (int) tailer.capacity();
+                            int size2 = (int) bytes.limit();
                             writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
                             writeBuffer.putInt(size2);
                             writeBuffer.putLong(tailer.index());
-                            tailer.read(writeBuffer);
+                            bytes.read(writeBuffer);
 
                             index++;
                             count--;
@@ -518,6 +543,10 @@ public abstract class SourceTcp {
 
                 writeBuffer.flip();
                 connection.writeAll(writeBuffer);
+            }
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to send index=" + index);
             }
 
             index++;
@@ -584,6 +613,7 @@ public abstract class SourceTcp {
             return true;
         }
 
+        @Override
         protected boolean write(Object attached) throws IOException {
             if (nextIndex) {
                 if (!tailer.nextIndex()) {
@@ -601,9 +631,17 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
-            Bytes bytes = applyMapping(tailer, attached);
-            if (bytes.limit() == 0) {
-                return true;
+            Bytes bytes;
+
+            for (; ; ) {
+                bytes = applyMapping(tailer, attached, withMappedBuffer);
+                if (bytes.limit() > 0) {
+                    break;
+                }
+
+                if (!tailer.nextIndex()) {
+                    return false;
+                }
             }
 
             final long size = bytes.limit();
@@ -628,9 +666,10 @@ public abstract class SourceTcp {
                 bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
+                        bytes = applyMapping(tailer, attached, withMappedBuffer);
 
-                        bytes = applyMapping(tailer, attached);
-                        if (bytes.limit() == 0){
+                        // skip excepts that are filtered out by the MappingFunction
+                        if (bytes.limit() == 0) {
                             continue;
                         }
 
@@ -661,53 +700,50 @@ public abstract class SourceTcp {
 
             return true;
         }
+    }
 
+    /**
+     * applies a mapping if the mapping is not set to {@code}null{code}
+     *
+     * @param source the tailer for the mapping to be applied to
+     * @param attached the key attachment
+     * @param withMappedBuffer
+     * @return returns the tailer or the mapped bytes
+     * @see
+     */
+    private static Bytes applyMapping(@NotNull final ExcerptTailer source,
+                                      @Nullable Object attached, Bytes withMappedBuffer) {
+        if (attached == null) {
+            return source;
+        }
 
-        /**
-         * applies a mapping if the mapping is not set to {@code}null{code}
-         *
-         * @param source   the tailer for the mapping to be applied to
-         * @param attached the key attachment
-         * @return returns the tailer or the mapped bytes
-         * @see
-         */
-        private Bytes applyMapping(final ExcerptTailer source, Object attached) {
-            if (attached == null) {
-                return tailer;
-            }
+        final MappingProvider mappingProvider = (MappingProvider) attached;
+        final MappingFunction mappingFunction = mappingProvider.withMapping();
+        if (mappingFunction == null) {
+            return source;
+        }
 
-            final MappingProvider mappingProvider = (MappingProvider) attached;
-            final MappingFunction mappingFunction = mappingProvider.withMapping();
+        withMappedBuffer.clear();
+        if (withMappedBuffer.capacity() < source.capacity()) {
+            withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate((int) source.capacity()));
+        }
 
-            if (mappingFunction == null) {
-                return source;
-            }
-
-            withMappedBuffer.clear();
-
-            if (withMappedBuffer.capacity() < source.capacity()) {
-                withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate((int) source.capacity()));
-            }
-
-            try {
-                mappingFunction.apply(source, withMappedBuffer);
-            } catch (IllegalArgumentException e) {
-                // lets try to resize
-                if (e.getMessage().contains("Attempt to write")) {
-                    if (withMappedBuffer.capacity() == Integer.MAX_VALUE) {
-                        throw e;
-                    }
-
-                    int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
-                    withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(newSize));
-                } else {
+        try {
+            mappingFunction.apply(source, withMappedBuffer);
+        } catch (IllegalArgumentException e) {
+            // lets try to resize
+            if (e.getMessage().contains("Attempt to write")) {
+                if (withMappedBuffer.capacity() == Integer.MAX_VALUE) {
                     throw e;
                 }
 
+                int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
+                withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(newSize));
+            } else {
+                throw e;
             }
-
-            withMappedBuffer.flip();
-            return withMappedBuffer;
         }
+
+        return withMappedBuffer.flip();
     }
 }

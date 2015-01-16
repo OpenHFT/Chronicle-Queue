@@ -27,20 +27,63 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static net.openhft.chronicle.ChronicleQueueBuilder.*;
+import static java.util.Arrays.asList;
+import static net.openhft.chronicle.tcp.WithMappedTest.TypeOfQueue.INDEXED;
+import static net.openhft.chronicle.tcp.WithMappedTest.TypeOfQueue.VANILLA;
 import static org.junit.Assert.assertFalse;
 
 /**
  * @author Rob Austin.
  */
+@RunWith(value = Parameterized.class)
 public class WithMappedTest extends ChronicleTcpTestBase {
+
+    public static final int TIMEOUT = 20;
+
+    enum TypeOfQueue {INDEXED, VANILLA}
+
+    private final TypeOfQueue typeOfQueue;
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return asList(new Object[][]{{INDEXED}, {VANILLA}});
+    }
+
+    public WithMappedTest(TypeOfQueue typeOfQueue) {
+        this.typeOfQueue = typeOfQueue;
+    }
+
+    @Rule
+    public final TestName testName = new TestName();
+
+
+    final Collection<MarketData> marketRecords = loadMarketData();
+
+
+    final Map<Date, MarketData> expectedMarketDate = expectedMarketData();
+
+    private Map<Date, MarketData> expectedMarketData() {
+
+        final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
+
+        for (MarketData marketRecord : marketRecords) {
+            expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
+        }
+
+        return expectedMarketDate;
+    }
 
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -119,10 +162,10 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         @Override
         public String toString() {
             return "PriceData{" +
-                "date=" + new Date(date) +
-                ", high=" + high +
-                ", low=" + low +
-                '}';
+                    "date=" + new Date(date) +
+                    ", high=" + high +
+                    ", low=" + low +
+                    '}';
         }
     }
 
@@ -150,13 +193,18 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         @Override
         public String toString() {
             return "PriceData{" +
-                "date=" + new Date(date) +
-                ", close=" + close +
-                ", adjClose=" + adjClose +
-                '}';
+                    "date=" + new Date(date) +
+                    ", close=" + close +
+                    ", adjClose=" + adjClose +
+                    '}';
         }
 
 
+        /**
+         * applys a filter to only send the close and adjusted close
+         *
+         * @return filtered data
+         */
         private static MappingFunction fromMarketData() {
             return new MappingFunction() {
                 @Override
@@ -190,6 +238,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     }
 
+
     private static class MarketData implements BytesMarshallable {
         private long date;
         private double open;
@@ -199,16 +248,23 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         private double volume;
         private double adjClose;
 
+        public MarketData() {
+
+        }
 
         public MarketData(String... args) throws ParseException {
             int i = 0;
-            date = DATE_FORMAT.parse(args[i++]).getTime();
-            open = Double.valueOf(args[i++]);
-            high = Double.valueOf(args[i++]);
-            low = Double.valueOf(args[i++]);
-            close = Double.valueOf(args[i++]);
-            volume = Double.valueOf(args[i++]);
-            adjClose = Double.valueOf(args[i]);
+            try {
+                date = DATE_FORMAT.parse(args[i++]).getTime();
+                open = Double.valueOf(args[i++]);
+                high = Double.valueOf(args[i++]);
+                low = Double.valueOf(args[i++]);
+                close = Double.valueOf(args[i++]);
+                volume = Double.valueOf(args[i++]);
+                adjClose = Double.valueOf(args[i]);
+            } catch (Exception e) {
+                throw e;
+            }
         }
 
         @Override
@@ -244,37 +300,80 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         @Override
         public String toString() {
             return "MarketData{" +
-                "date=" + new Date(date) +
-                ", open=" + open +
-                ", high=" + high +
-                ", low=" + low +
-                ", close=" + close +
-                ", volume=" + volume +
-                ", adjClose=" + adjClose +
-                '}';
+                    "date=" + new Date(date) +
+                    ", open=" + open +
+                    ", high=" + high +
+                    ", low=" + low +
+                    ", close=" + close +
+                    ", volume=" + volume +
+                    ", adjClose=" + adjClose +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof MarketData)) return false;
+
+            MarketData that = (MarketData) o;
+
+            if (Double.compare(that.adjClose, adjClose) != 0) return false;
+            if (Double.compare(that.close, close) != 0) return false;
+            if (date != that.date) return false;
+            if (Double.compare(that.high, high) != 0) return false;
+            if (Double.compare(that.low, low) != 0) return false;
+            if (Double.compare(that.open, open) != 0) return false;
+            if (Double.compare(that.volume, volume) != 0) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result;
+            long temp;
+            result = (int) (date ^ (date >>> 32));
+            temp = Double.doubleToLongBits(open);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(high);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(low);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(close);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(volume);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(adjClose);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            return result;
         }
     }
 
 
-    private Collection<MarketData> loadMarketData() throws IOException, ParseException {
+    Collection<MarketData> loadMarketData() {
         InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream("ftse-prices.csv");
 
         BufferedReader br = new BufferedReader(new InputStreamReader(resourceAsStream));
 
         ArrayList<MarketData> result = new ArrayList<MarketData>();
         String line;
-        while ((line = br.readLine()) != null) {
-            String[] split = line.split(",");
+        try {
+            while ((line = br.readLine()) != null) {
+                String[] split = line.split(",");
 
-            // skip records that start with a #
-            if (split[0].trim().startsWith("#"))
-                continue;
+                // skip records that start with a #
+                if (split[0].trim().startsWith("#"))
+                    continue;
 
-            result.add(new MarketData(split));
+                result.add(new MarketData(split));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         return result;
 
     }
+
 
     @Test
     public void testReplicationWithPriceMarketDataFilter() throws Throwable {
@@ -283,26 +382,23 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow");
         final String sinkCloseBasePath = getVanillaTestPath("-sink-close");
 
-        final PortSupplier portSupplier = new PortSupplier();
+        final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
 
-        final Chronicle source = vanilla(sourceBasePath)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+        final Chronicle source = source(sourceBasePath)
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndCheckPort();
 
-        try {
-            final Collection<MarketData> marketRecords = loadMarketData();
-            final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
 
-            for (MarketData marketRecord : marketRecords) {
-                expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
-            }
+        try {
+
 
             Callable<Void> appenderCallable = new Callable<Void>() {
                 public Void call() throws Exception {
+
+
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -323,16 +419,21 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> highLowCallable = new Callable<Void>() {
+
                 public Void call() throws Exception {
-                    final Chronicle highLowSink = ChronicleQueueBuilder.vanilla(sinkHighLowBasePath)
-                            .sink()
+
+                    final Chronicle highLowSink = sink(sinkHighLowBasePath)
                             .withMapping(HighLow.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
                             .build();
 
                     AffinityLock lock = AffinityLock.acquireLock();
+
                     try (final ExcerptTailer tailer = highLowSink.createTailer()) {
+
+
                         while (tailer.nextIndex()) {
+
                             HighLow actual = new HighLow();
                             actual.readMarshallable(tailer);
 
@@ -346,11 +447,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertTrue(actual.low > 5000);
                             Assert.assertTrue(actual.low < 8000);
 
+
                             MarketData expected = expectedMarketDate.get(new Date(actual.date));
                             Assert.assertEquals(expected.high, actual.high, 0.0);
                             Assert.assertEquals(expected.low, actual.low, 0.0);
 
                             tailer.finish();
+
                         }
 
                     } finally {
@@ -359,23 +462,30 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     }
                     return null;
                 }
+
+
             };
 
             Callable<Void> closeCallable = new Callable<Void>() {
+
                 public Void call() throws Exception {
-                    final Chronicle closeSink = ChronicleQueueBuilder.vanilla(sinkCloseBasePath)
-                            .sink()
+
+                    final Chronicle closeSink = sink(sinkCloseBasePath)
                             .withMapping(Close.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
                             .build();
 
                     AffinityLock lock = AffinityLock.acquireLock();
                     try (final ExcerptTailer tailer = closeSink.createTailer()) {
+
                         while (tailer.nextIndex()) {
+
                             Close actual = new Close();
                             actual.readMarshallable(tailer);
 
+
                             // check the data is reasonable
+
                             Assert.assertTrue(actual.date > _2014_01_01);
                             Assert.assertTrue(actual.date < _2016_01_01);
 
@@ -385,14 +495,19 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertTrue(actual.close > 5000);
                             Assert.assertTrue(actual.close < 8000);
 
-                            final MarketData expected = expectedMarketDate.get(new Date(actual.date));
-                            final String message = "expected=" + expected + "actual=" + actual;
+
+                            final MarketData expected = expectedMarketDate.get(new Date(actual
+                                    .date));
+
+                            String message = "expected=" + expected + "actual=" + actual;
 
                             Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0);
                             Assert.assertEquals(message, expected.close, actual.close, 0.0);
 
                             tailer.finish();
+
                         }
+
                     } finally {
                         lock.release();
                         closeSink.clear();
@@ -400,9 +515,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                     return null;
                 }
+
+
             };
 
+
             try {
+
                 ThreadFactory appenderFactory = new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
@@ -411,7 +530,11 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 };
 
                 Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
+
+
                 appenderFuture.get(20, TimeUnit.SECONDS);
+
+
                 ThreadFactory closeFactory = new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
@@ -420,6 +543,8 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 };
 
                 Future<Void> closeFuture = Executors.newSingleThreadExecutor(closeFactory).submit(closeCallable);
+
+
                 ThreadFactory highLowFactory = new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
@@ -427,13 +552,17 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     }
                 };
 
+
                 Future<Void> highLowFuture = Executors.newSingleThreadExecutor(highLowFactory).submit(highLowCallable);
 
                 closeFuture.get(20, TimeUnit.SECONDS);
                 highLowFuture.get(20, TimeUnit.SECONDS);
+
             } catch (ExecutionException e) {
                 throw e.getCause();
             }
+
+
         } finally {
             source.close();
             source.clear();
@@ -443,6 +572,227 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             assertFalse(new File(sinkCloseBasePath).exists());
             assertFalse(new File(sinkHighLowBasePath).exists());
         }
+    }
+
+    /**
+     * @return a filters records to only send records that contain an even data ( for example will
+     * send records that contain a date with 2nd and 4th in the month not a 3rd ) this is just to
+     * show we we can use filters to skip records as well.
+     */
+    private static MappingFunction evenDayFilter() {
+        return new MappingFunction() {
+            @Override
+            public void apply(Bytes from, Bytes to) {
+
+                //date
+                long v = from.readLong();
+
+                Date date = new Date(v);
+                int day = Integer.parseInt(new SimpleDateFormat("dd").format(date));
+
+                boolean isEvenDay = (day % 2) == 0;
+
+                if (!isEvenDay)
+                    return;
+
+                to.writeLong(v);
+
+                //open - skipping
+                to.writeDouble(from.readDouble());
+
+                // high - skipping
+                to.writeDouble(from.readDouble());
+
+                // low - skipping
+                to.writeDouble(from.readDouble());
+
+                // close - skipping
+                to.writeDouble(from.readDouble());
+
+                // volume - skipping
+                to.writeDouble(from.readDouble());
+
+                // adjClose
+                to.writeDouble(from.readDouble());
+
+            }
+        };
+    }
+
+    @Test
+    public void testReplicationWithEvenDayFilter() throws Throwable {
+
+        final String sourceBasePath = getVanillaTestPath("-source-vanilla");
+        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow-vanilla");
+        final String sinkCloseBasePath = getVanillaTestPath("-sink-close-vanilla");
+
+        final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
+
+        final Chronicle source = source(sourceBasePath)
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        final int port = portSupplier.getAndCheckPort();
+
+
+        try {
+
+
+            final Collection<MarketData> marketRecords = loadMarketData();
+
+            final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
+
+            for (MarketData marketRecord : marketRecords) {
+                expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
+            }
+
+
+            Callable<Void> appenderCallable = new Callable<Void>() {
+                public Void call() throws Exception {
+
+
+                    AffinityLock lock = AffinityLock.acquireLock();
+                    try {
+                        final ExcerptAppender appender = source.createAppender();
+                        for (MarketData marketData : marketRecords) {
+                            appender.startExcerpt();
+                            marketData.writeMarshallable(appender);
+                            appender.finish();
+                        }
+
+                        appender.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        lock.release();
+                    }
+                    return null;
+                }
+            };
+
+            Callable<Void> dayFilterCallable = new Callable<Void>() {
+
+                public Void call() throws Exception {
+
+                    final Chronicle highLowSink = sink(sinkHighLowBasePath)
+                            .withMapping(evenDayFilter()) // this is sent to the source
+                            .connectAddress("localhost", port)
+                            .build();
+
+                    AffinityLock lock = AffinityLock.acquireLock();
+
+                    try (final ExcerptTailer tailer = highLowSink.createTailer()) {
+
+
+                        while (tailer.nextIndex()) {
+
+                            MarketData actual = new MarketData();
+                            actual.readMarshallable(tailer);
+
+                            //check that he date is even
+                            Assert.assertTrue(actual.date % 2 == 0);
+
+                            // check the data is reasonable
+                            Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
+
+                            final MarketData expected = expectedMarketDate.get(new Date(actual
+                                    .date));
+
+                            Assert.assertEquals(expected, actual);
+
+                            tailer.finish();
+
+                        }
+
+                    } finally {
+                        lock.release();
+                        highLowSink.clear();
+                    }
+                    return null;
+                }
+
+
+            };
+
+
+            try {
+
+                ThreadFactory appenderFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "appender");
+                    }
+                };
+
+                Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
+
+
+                appenderFuture.get(20, TimeUnit.SECONDS);
+
+
+                ThreadFactory dayFilterFactory = new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "dayFilter");
+                    }
+                };
+
+
+                Future<Void> dayFilterFuture = Executors.newSingleThreadExecutor(dayFilterFactory).submit
+                        (dayFilterCallable);
+
+
+                dayFilterFuture.get(TIMEOUT, TimeUnit.SECONDS);
+
+            } catch (ExecutionException e) {
+                throw e.getCause();
+            }
+
+
+        } finally {
+            source.close();
+            source.clear();
+
+            // check cleanup
+            assertFalse(new File(sourceBasePath).exists());
+            assertFalse(new File(sinkCloseBasePath).exists());
+            assertFalse(new File(sinkHighLowBasePath).exists());
+        }
+    }
+
+
+    private ChronicleQueueBuilder.ReplicaChronicleQueueBuilder sink(@NotNull String path) {
+        switch (typeOfQueue) {
+
+            case VANILLA:
+                return ChronicleQueueBuilder.vanilla(path).sink();
+
+            case INDEXED:
+                return ChronicleQueueBuilder.indexed(path).sink();
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+
+
+    }
+
+
+    private ChronicleQueueBuilder.ReplicaChronicleQueueBuilder source(@NotNull String path) {
+        switch (typeOfQueue) {
+
+            case VANILLA:
+                return ChronicleQueueBuilder.vanilla(path).source();
+
+            case INDEXED:
+                return ChronicleQueueBuilder.indexed(path).source();
+
+            default:
+                throw new UnsupportedOperationException();
+        }
+
+
     }
 }
 
