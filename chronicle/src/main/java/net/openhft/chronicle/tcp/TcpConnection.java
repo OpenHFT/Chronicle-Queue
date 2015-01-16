@@ -82,12 +82,13 @@ class TcpConnection {
         }
     }
 
-    public boolean read(final ByteBuffer buffer) throws IOException {
-        if (this.socketChannel.read(buffer) < 0) {
+    public int read(final ByteBuffer buffer) throws IOException {
+        int nb = this.socketChannel.read(buffer);
+        if (nb < 0) {
             throw new EOFException();
         }
 
-        return true;
+        return 0;
     }
 
     public boolean read(final ByteBuffer buffer, int size) throws IOException {
@@ -131,5 +132,30 @@ class TcpConnection {
                 break;
             }
         }
+    }
+
+    public void readUpTo(ByteBuffer buffer, int size) throws IOException {
+        buffer.clear();
+        buffer.limit(size);
+        readFullyOrEOF(buffer);
+        buffer.flip();
+    }
+
+    public void writeSizeAndIndex(ByteBuffer buffer, int action, long index) throws IOException {
+        buffer.clear();
+        buffer.putInt(action);
+        buffer.putLong(index);
+        buffer.flip();
+
+        writeAllOrEOF(buffer);
+    }
+
+    public void writeAction(ByteBuffer buffer, long action, long index) throws IOException {
+        buffer.clear();
+        buffer.putLong(action);
+        buffer.putLong(index);
+        buffer.flip();
+
+        writeAllOrEOF(buffer);
     }
 }

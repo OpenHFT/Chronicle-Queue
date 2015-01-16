@@ -15,21 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.tcp;
+package net.openhft.chronicle;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.tcp.SourceTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 
 import java.io.IOException;
 
-public class ChronicleSource extends WrappedChronicle {
+class ChronicleQueueSource extends WrappedChronicle {
     private final SourceTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
 
     private volatile boolean closed;
 
-    public ChronicleSource(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
+    ChronicleQueueSource(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SourceTcp connection) {
         super(builder.chronicle());
         this.builder = builder.clone();
         this.closed = false;
@@ -78,7 +78,7 @@ public class ChronicleSource extends WrappedChronicle {
         public void finish() {
             super.finish();
 
-            ChronicleSource.this.connection.pauser.unpause();
+            ChronicleQueueSource.this.connection.dataNotification();
         }
     }
 }

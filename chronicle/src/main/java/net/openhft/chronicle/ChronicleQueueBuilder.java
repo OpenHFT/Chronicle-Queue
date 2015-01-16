@@ -19,6 +19,7 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
+import net.openhft.lang.Maths;
 import net.openhft.lang.model.constraints.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,16 +68,20 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return vanilla(new File(parent, child));
     }
 
-    public static ReplicaChronicleQueueBuilder statelessSink() {
-        return sink(null);
-    }
-
     public static ReplicaChronicleQueueBuilder sink(Chronicle chronicle) {
         return new SinkChronicleQueueBuilder(chronicle);
     }
 
     public static ReplicaChronicleQueueBuilder source(Chronicle chronicle) {
         return new SourceChronicleQueueBuilder(chronicle);
+    }
+
+    public static ReplicaChronicleQueueBuilder remoteAppender() {
+        return new RemoteChronicleQueueAppenderBuilder();
+    }
+
+    public static ReplicaChronicleQueueBuilder remoteTailer() {
+        return new RemoteChronicleQueueTailerBuilder();
     }
 
     // *************************************************************************
@@ -290,7 +295,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          *
          * It has the following params: <ul> <li>data block size <b>8k</b></li> </ul>
          */
-        public IndexedChronicleQueueBuilder test() {
+        IndexedChronicleQueueBuilder test() {
             dataBlockSize(8 * 1024);
             return this;
         }
@@ -451,7 +456,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("EntriesPerCycle must not exceed 1L << 48 (" + (1L << 48) + ")");
             }
 
-            if (!((entriesPerCycle & -entriesPerCycle) == entriesPerCycle)) {
+            if(!Maths.isPowerOf2(entriesPerCycle)) {
                 throw new IllegalArgumentException("EntriesPerCycle must be a power of 2");
             }
 
@@ -540,19 +545,21 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private final ChronicleQueueBuilder builder;
         private Chronicle chronicle;
 
-        private InetSocketAddress bindAddress;
-        private InetSocketAddress connectAddress;
+        private AddressProvider bindAddressProvider;
+        private AddressProvider connectAddressprovider;
         private long reconnectTimeout;
         private TimeUnit reconnectTimeoutUnit;
         private long selectTimeout;
         private TimeUnit selectTimeoutUnit;
         private int receiveBufferSize;
+        private int sendBufferSize;
         private int minBufferSize;
         private boolean sharedChronicle;
         private long heartbeatInterval;
         private TimeUnit heartbeatIntervalUnit;
         private int maxExcerptsPerMessage;
         private int selectorSpinLoopCount;
+        private boolean appendRequireAck;
 
         private int acceptorMaxBacklog;
         private int acceptorDefaultThreads;
@@ -568,8 +575,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.builder = builder;
             this.chronicle = chronicle;
 
-            this.bindAddress = null;
-            this.connectAddress = null;
+            this.bindAddressProvider = null;
+            this.connectAddressprovider = null;
             this.reconnectTimeout = 500;
             this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.selectTimeout = 1000;
@@ -577,6 +584,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.heartbeatInterval = 2500;
             this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
             this.receiveBufferSize = 256 * 1024;
+            this.sendBufferSize = -1;
             this.minBufferSize = this.receiveBufferSize;
             this.sharedChronicle = false;
             this.acceptorMaxBacklog = 50;
@@ -587,14 +595,24 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.maxExcerptsPerMessage = 128;
             this.selectorSpinLoopCount = 100000;
             this.connectionListener = CONNECTION_LISTENER;
+            this.appendRequireAck = false;
+            this.mapping = null;
         }
 
         public InetSocketAddress bindAddress() {
-            return bindAddress;
+            return bindAddressProvider != null
+                    ? bindAddressProvider.get()
+                    : null;
         }
 
-        public ReplicaChronicleQueueBuilder bindAddress(InetSocketAddress bindAddress) {
-            this.bindAddress = bindAddress;
+        public ReplicaChronicleQueueBuilder bindAddress(final InetSocketAddress bindAddress) {
+            this.bindAddressProvider = new AddressProvider() {
+                @Override
+                public InetSocketAddress get() {
+                    return bindAddress;
+                }
+            };
+
             return this;
         }
 
@@ -606,12 +624,38 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return bindAddress(new InetSocketAddress(host, port));
         }
 
-        public InetSocketAddress connectAddress() {
-            return connectAddress;
+        public AddressProvider bindAddressProvider() {
+            return this.connectAddressprovider;
         }
 
-        public ReplicaChronicleQueueBuilder connectAddress(InetSocketAddress connectAddress) {
-            this.connectAddress = connectAddress;
+        public ReplicaChronicleQueueBuilder bindAddressProvider(AddressProvider bindAddressProvider ) {
+            this.bindAddressProvider = bindAddressProvider;
+            return this;
+        }
+
+        public InetSocketAddress connectAddress() {
+            return connectAddressprovider != null
+                    ? connectAddressprovider.get()
+                    : null;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddress(final InetSocketAddress connectAddress) {
+            this.connectAddressprovider = new AddressProvider() {
+                @Override
+                public InetSocketAddress get() {
+                    return connectAddress;
+                }
+            };
+
+            return this;
+        }
+
+        public AddressProvider connectAddressProvider() {
+            return this.connectAddressprovider;
+        }
+
+        public ReplicaChronicleQueueBuilder connectAddressProvider(AddressProvider connectAddressprovider ) {
+            this.connectAddressprovider = connectAddressprovider;
             return this;
         }
 
@@ -682,11 +726,24 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this;
         }
 
+        public int sendBufferSize() {
+            return sendBufferSize;
+        }
+
+        public ReplicaChronicleQueueBuilder sendBufferSize(int sendBufferSize) {
+            this.sendBufferSize = sendBufferSize;
+            return this;
+        }
+
         public int minBufferSize() {
             return minBufferSize;
         }
 
         public ReplicaChronicleQueueBuilder minBufferSize(int minBufferSize) {
+            if(!Maths.isPowerOf2(minBufferSize)) {
+                throw new IllegalArgumentException("MinBufferSize must be a power of 2");
+            }
+
             this.minBufferSize = minBufferSize;
             return this;
         }
@@ -776,6 +833,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.connectionListener;
         }
 
+        public ReplicaChronicleQueueBuilder appendRequireAck(boolean appendRequireAck) {
+            this.appendRequireAck = appendRequireAck;
+            return this;
+        }
+
+        public boolean appendRequireAck() {
+            return this.appendRequireAck;
+        }
+
         public Chronicle chronicle() {
             return this.chronicle;
         }
@@ -850,7 +916,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSink(this, cnx);
+            return new ChronicleQueueSink(this, cnx);
         }
 
         /**
@@ -888,7 +954,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
 
-            return new ChronicleSource(this, cnx);
+            return new ChronicleQueueSource(this, cnx);
         }
 
         /**
@@ -901,6 +967,74 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @Override
         public SourceChronicleQueueBuilder clone() {
             return (SourceChronicleQueueBuilder) super.clone();
+        }
+    }
+
+    private static final class RemoteChronicleQueueAppenderBuilder extends ReplicaChronicleQueueBuilder {
+
+        private RemoteChronicleQueueAppenderBuilder() {
+            super(null, null);
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            SinkTcp cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = new SinkTcpAcceptor(this);
+            } else if(connectAddress() != null) {
+                cnx = new SinkTcpInitiator(this);
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new RemoteChronicleQueueAppender(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public RemoteChronicleQueueAppenderBuilder clone() {
+            return (RemoteChronicleQueueAppenderBuilder) super.clone();
+        }
+    }
+
+    private static final class RemoteChronicleQueueTailerBuilder extends ReplicaChronicleQueueBuilder {
+
+        private RemoteChronicleQueueTailerBuilder() {
+            super(null, null);
+        }
+
+        @Override
+        public Chronicle doBuild() throws IOException {
+            SinkTcp cnx;
+
+            if(bindAddress() != null && connectAddress() == null) {
+                cnx = new SinkTcpAcceptor(this);
+            } else if(connectAddress() != null) {
+                cnx = new SinkTcpInitiator(this);
+            } else {
+                throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
+            }
+
+            return new RemoteChronicleQueueTailer(this, cnx);
+        }
+
+        /**
+         * Makes SinkChronicleQueueBuilder cloneable.
+         *
+         * @return a cloned copy of this SinkChronicleQueueBuilder instance
+         */
+        @NotNull
+        @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+        @Override
+        public RemoteChronicleQueueTailerBuilder clone() {
+            return (RemoteChronicleQueueTailerBuilder) super.clone();
         }
     }
 

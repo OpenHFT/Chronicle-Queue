@@ -811,7 +811,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
 
     @Override
     public long lastWrittenIndex() {
-        return wrappedCommon.lastWrittenIndex();
+        return wrappedAppender.lastWrittenIndex();
     }
 
     @Override
@@ -845,7 +845,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
     @NotNull
     @Override
     public WrappedExcerpt toEnd() {
-        wrappedCommon.toEnd();
+        wrappedTailer.toEnd();
         return this;
     }
 
@@ -1302,12 +1302,9 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
         return wrappedCommon.readUnsignedByteOrThrow();
     }
 
+    @Override
     public String toDebugString() {
         return wrappedCommon.toDebugString();
-    }
-
-    public String toDebugString(long limit) {
-        return wrappedCommon.toDebugString(limit);
     }
 
     @Override

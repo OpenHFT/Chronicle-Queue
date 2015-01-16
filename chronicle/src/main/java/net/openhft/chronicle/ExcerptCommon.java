@@ -25,6 +25,9 @@ import net.openhft.lang.io.Bytes;
  */
 public interface ExcerptCommon extends Bytes {
     /**
+     * Not for public use. This method is expected to be retained only
+     * as a package private method in a future release.
+     *
      * @return true if the last index(long) looked up as padding.
      */
     boolean wasPadding();
@@ -35,11 +38,6 @@ public interface ExcerptCommon extends Bytes {
     long index();
 
     /**
-     * @return the index last written to including padded entries.
-     */
-    long lastWrittenIndex();
-
-    /**
      * This is an upper bound for the number of entires available. This includes padded entries.
      *
      * @return lastWrittenIndex() + 1
@@ -47,20 +45,18 @@ public interface ExcerptCommon extends Bytes {
     long size();
 
     /**
-     * Wind to the end.
-     *
-     * @return this Excerpt
-     */
-    ExcerptCommon toEnd();
-
-    /**
      * @return the chronicle associated with this Excerpt
      */
     Chronicle chronicle();
 
     /**
-     * Finish reading or writing. This checks there was not a buffer overflow and shrink wraps new entries and adds
-     * them to the index
+     * Finish reading or writing. This checks there was not a buffer overflow and
+     * shrink wraps new entries and add them to the index
+     *
+     * May throw:
+     * - AssertionError
+     * - ConcurrentModificationException
+     * - IllegalStateException
      */
     void finish();
 }

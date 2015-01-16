@@ -114,8 +114,8 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         final int nbAppend = 10;
         final String baseDir = getTestPath();
 
-        System.out.println("BaseDir : " + baseDir);
-        System.out.println("PID : " + getPID());
+        LOGGER.info("BaseDir : " + baseDir);
+        LOGGER.info("PID     : " + getPID());
 
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
             .entriesPerCycle(1L << 20)
@@ -187,9 +187,9 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         final byte[] data = new byte[4096];
         Arrays.fill(data, (byte) 'x');
 
-        System.out.println("BaseDir   : " + baseDir);
-        System.out.println("PID       : " + pid);
-        System.out.println("NbThreads : " + nbThreads);
+        LOGGER.info("BaseDir   : " + baseDir);
+        LOGGER.info("PID       : " + getPID());
+        LOGGER.info("NbThreads : " + nbThreads);
 
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
             .cycleFormat("yyyyMMdd/HHmmss")
@@ -232,20 +232,20 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         for(int i=0;i<10;i++) {
             sleep(1, TimeUnit.MINUTES);
 
-            System.out.println("After " + i + " minutes");
+            LOGGER.info("After " + i + " minutes");
             lsof(pid, ".*testResourcesCleanup4.*");
         }
 
         es.shutdown();
         es.awaitTermination(30, TimeUnit.SECONDS);
 
-        System.out.println("Before close:");
+        LOGGER.info("Before close:");
         lsof(pid, ".*testResourcesCleanup4.*");
 
         chronicle.checkCounts(1, 1);
         chronicle.close();
 
-        System.out.println("After close:");
+        LOGGER.info("After close:");
         lsof(pid, ".*testResourcesCleanup4.*");
 
         chronicle.clear();
@@ -261,9 +261,9 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         final byte[] data = new byte[4096];
         Arrays.fill(data, (byte) 'x');
 
-        System.out.println("BaseDir   : " + baseDir);
-        System.out.println("PID       : " + pid);
-        System.out.println("NbThreads : " + nbThreads);
+        LOGGER.info("BaseDir   : " + baseDir);
+        LOGGER.info("PID       : " + getPID());
+        LOGGER.info("NbThreads : " + nbThreads);
 
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
             .cycleFormat("yyyyMMdd/HHmmss")
@@ -299,7 +299,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
             sleep(1, TimeUnit.SECONDS);
 
             if(i % 60 == 0) {
-                System.out.println("After " + ((i / 60) + 1) + " minutes");
+                LOGGER.info("After " + ((i / 60) + 1) + " minutes");
                 lsof(pid, ".*testResourcesCleanup5.*");
             }
         }
@@ -307,13 +307,13 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
         es.shutdown();
         es.awaitTermination(30, TimeUnit.SECONDS);
 
-        System.out.println("Before close:");
+        LOGGER.info("Before close:");
         lsof(pid, ".*testResourcesCleanup5.*");
 
         chronicle.checkCounts(1, 1);
         chronicle.close();
 
-        System.out.println("After close:");
+        LOGGER.info("After close:");
         lsof(pid, ".*testResourcesCleanup5.*");
 
         chronicle.clear();

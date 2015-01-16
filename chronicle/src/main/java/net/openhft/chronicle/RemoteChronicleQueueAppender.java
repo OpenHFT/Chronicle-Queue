@@ -18,13 +18,18 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.lang.io.Bytes;
 
-import java.io.Serializable;
+import net.openhft.chronicle.tcp.SinkTcp;
 
-/**
- * Represents a function that accepts one argument and produces a result.
- */
-public interface MappingFunction extends Serializable {
-    public void apply(Bytes from, Bytes to);
+import java.io.IOException;
+
+class RemoteChronicleQueueAppender extends RemoteChronicleQueue {
+    RemoteChronicleQueueAppender(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
+        super(builder, connection, true);
+    }
+
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        return (ExcerptAppender)createAppender0();
+    }
 }

@@ -501,11 +501,6 @@ public class IndexedChronicle implements Chronicle {
         }
 
         @Override
-        public long lastWrittenIndex() {
-            return IndexedChronicle.this.lastWrittenIndex();
-        }
-
-        @Override
         public long size() {
             return IndexedChronicle.this.size();
         }
@@ -769,7 +764,7 @@ public class IndexedChronicle implements Chronicle {
         private boolean nextSynchronous;
 
         IndexedExcerptAppender() throws IOException {
-            toEnd();
+            super.toEndForAppend0();
         }
 
         @Override
@@ -781,7 +776,7 @@ public class IndexedChronicle implements Chronicle {
             checkNotClosed();
             // in case there is more than one appender :P
             if (index != size()) {
-                toEnd();
+                super.toEndForAppend0();
             }
 
             if (capacity >= IndexedChronicle.this.builder.dataBlockSize()) {
@@ -816,6 +811,11 @@ public class IndexedChronicle implements Chronicle {
             this.nextSynchronous = nextSynchronous;
         }
 
+        @Override
+        public long lastWrittenIndex() {
+            return IndexedChronicle.this.lastWrittenIndex();
+        }
+
         public boolean nextSynchronous() {
             return nextSynchronous;
         }
@@ -824,7 +824,7 @@ public class IndexedChronicle implements Chronicle {
         public void addPaddedEntry() {
             // in case there is more than one appender :P
             if (index != lastWrittenIndex()) {
-                toEnd();
+                super.toEndForAppend0();
             }
 
             // check we are the start of a block.
@@ -864,9 +864,10 @@ public class IndexedChronicle implements Chronicle {
         @Override
         public void finish() {
             super.finish();
-            if (index != IndexedChronicle.this.size())
+            if (index != IndexedChronicle.this.size()) {
                 throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
-                        + chronicle().size());
+                    + chronicle().size());
+            }
 
             // push out the entry is available. This is what the reader polls.
             // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "= " + (int) (dataPosition() - dataPositionAtStartOfLine));
@@ -894,13 +895,6 @@ public class IndexedChronicle implements Chronicle {
 
         private void writeIndexEntry(int relativeOffset) {
             UNSAFE.putOrderedInt(null, indexPositionAddr, relativeOffset);
-        }
-
-        @NotNull
-        @Override
-        public ExcerptAppender toEnd() {
-            super.toEndForAppend0();
-            return this;
         }
 
         void checkNewIndexLine() {
@@ -932,7 +926,6 @@ public class IndexedChronicle implements Chronicle {
 
         private void appendStartOfLine() {
             UNSAFE.putLong(indexPositionAddr, indexBaseForLine);
-            // System.out.println(Long.toHexString(indexPositionAddr - indexStartAddr + indexStart) + "=== " + dataPositionAtStartOfLine);
             indexPositionAddr += 8;
         }
     }

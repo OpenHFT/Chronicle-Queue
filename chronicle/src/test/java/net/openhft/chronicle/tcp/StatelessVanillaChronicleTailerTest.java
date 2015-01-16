@@ -30,7 +30,25 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
+public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestBase {
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testVanillaStatelessExceptionOnCreateAppender() throws Exception {
+        ChronicleQueueBuilder.remoteTailer()
+            .connectAddress("localhost", 9876)
+            .build()
+            .createAppender();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testVanillaStatelessExceptionOnCreatTailerTwice() throws Exception {
+        Chronicle ch = ChronicleQueueBuilder.remoteTailer()
+            .connectAddress("localhost", 9876)
+            .build();
+
+        ch.createTailer();
+        ch.createTailer();
+    }
 
     @Test
     public void testVanillaStatelessSink_001() throws Exception {
@@ -44,7 +62,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -99,7 +117,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -158,7 +176,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
                 executor.submit(new Runnable() {
                     public void run() {
                         try {
-                            final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+                            final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
                                 .connectAddress("localhost", port)
                                 .build();
 
@@ -219,7 +237,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 
@@ -267,7 +285,7 @@ public class StatelessVanillaChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final int port = portSupplier.getAndCheckPort();
-        final Chronicle sink = ChronicleQueueBuilder.statelessSink()
+        final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
 

@@ -762,11 +762,6 @@ public class WrappedExcerptTailer implements ExcerptTailer {
     }
 
     @Override
-    public long lastWrittenIndex() {
-        return wrappedTailer.lastWrittenIndex();
-    }
-
-    @Override
     public boolean stepBackAndSkipTo(@NotNull StopCharTester tester) {
         return wrappedTailer.stepBackAndSkipTo(tester);
     }
@@ -1239,12 +1234,9 @@ public class WrappedExcerptTailer implements ExcerptTailer {
         return wrappedTailer.readUnsignedByteOrThrow();
     }
 
+    @Override
     public String toDebugString() {
         return wrappedTailer.toDebugString();
-    }
-
-    public String toDebugString(long limit) {
-        return wrappedTailer.toDebugString(limit);
     }
 
     @Override

@@ -17,6 +17,11 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.lang.Maths;
+import net.openhft.lang.io.IOTools;
+import net.openhft.lang.model.constraints.NotNull;
+import sun.nio.ch.DirectBuffer;
+
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,18 +33,34 @@ public class ChronicleTcp {
     public static final int IN_SYNC_LEN = -128;
     public static final int PADDED_LEN = -127;
     public static final int SYNC_IDX_LEN = -126;
+    public static final int ACK_LEN = -129;
+    public static final int NACK_LEN = -130;
     public static final long ACTION_SUBSCRIBE = 1;
-    public static final long ACTION_QUERY = 2;
-    public static final long ACTION_WITH_MAPPING = 3;
+    public static final long ACTION_UNSUBSCRIBE = 2;
+    public static final long ACTION_QUERY = 10;
+    public static final long ACTION_SUBMIT = 20;
+    public static final long ACTION_SUBMIT_NOACK = 21;
+    public static final long ACTION_WITH_MAPPING = 30;
+    public static final long IDX_NONE = 0L;
     public static final long IDX_TO_START = -1;
     public static final long IDX_TO_END = -2;
+    public static final long IDX_ACK = -3;
+    public static final long IDX_NOT_SUPPORTED = -4;
 
     public static ByteBuffer createBufferOfSize(int size) {
         return createBufferOfSize(size, ByteOrder.nativeOrder());
     }
 
-    public static ByteBuffer createBufferOfSize(int minSize, ByteOrder byteOrder) {
-        return ByteBuffer.allocateDirect(minSize).order(byteOrder);
+    public static ByteBuffer createBufferOfNextPow2Size(int size) {
+        return createBufferOfNextPow2Size(size, ByteOrder.nativeOrder());
+    }
+
+    public static ByteBuffer createBufferOfSize(int size, ByteOrder byteOrder) {
+        return ByteBuffer.allocateDirect(size).order(byteOrder);
+    }
+
+    public static ByteBuffer createBufferOfNextPow2Size(int size, ByteOrder byteOrder) {
+        return ByteBuffer.allocateDirect(Maths.nextPower2(size,size)).order(byteOrder);
     }
 
     public static ByteBuffer createBuffer(int minSize) {
@@ -70,6 +91,36 @@ public class ChronicleTcp {
         }
 
         return sb.toString();
+    }
+
+    public static int nextPower2(int size) {
+        return Maths.nextPower2(size, size);
+    }
+
+    public static int nextPower2(int size, int min) {
+        return Maths.nextPower2(size, min);
+    }
+
+    public static long nextPower2(long size) {
+        return Maths.nextPower2(size, size);
+    }
+
+    public static long nextPower2(long size, long min) {
+        return Maths.nextPower2(size, min);
+    }
+
+    public static long address(@NotNull ByteBuffer buffer) {
+        return ((DirectBuffer) buffer).address();
+    }
+
+    public static void clean(ByteBuffer buffer) {
+        if(buffer != null) {
+            IOTools.clean(buffer);
+        }
+    }
+
+    public static boolean hasCapacityOf(ByteBuffer buffer, int size) {
+        return buffer != null ? buffer.capacity() >= size : false;
     }
 }
 

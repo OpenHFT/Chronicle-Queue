@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.MappingFunction;
+import net.openhft.lang.io.Bytes;
 import org.junit.Rule;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
@@ -41,6 +43,14 @@ public class ChronicleTcpTestBase {
 
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
+
+
+    public static final MappingFunction NOOP_MAPPING_FUNCTION = new MappingFunction() {
+        @Override
+        public void apply(Bytes from, Bytes to) {
+            to.write(from);
+        }
+    };
 
     // *************************************************************************
     //
@@ -90,6 +100,10 @@ public class ChronicleTcpTestBase {
 
             this.port.set(-1);
             this.latch.countDown();
+        }
+
+        public void reset() {
+            this.port.set(-1);
         }
 
         public int port() {

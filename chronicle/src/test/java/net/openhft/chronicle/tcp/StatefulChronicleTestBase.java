@@ -73,7 +73,7 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     // *************************************************************************
 
     public void testJira77(Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
-        final int BYTES_LENGTH = 66000;
+        final int BYTES_LENGTH = 1 << 16;
 
         final Random random = new Random();
 
@@ -115,6 +115,9 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
         chronicleSrc.close();
         chronicleSource.close();
         chronicleSink.close();
+
+        chronicleSrc.clear();
+        chronicleTarget.clear();
     }
 
     public void testJira80(final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
@@ -194,5 +197,8 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
 
         slave.close();
         chronicleSource.close();
+
+        slave.clear();
+        chronicleSource.clear();
     }
 }

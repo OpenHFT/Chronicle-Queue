@@ -42,7 +42,7 @@ public abstract class SourceTcp {
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final ThreadPoolExecutor executor;
-    protected final LightPauser pauser = new LightPauser(10000, 10000);
+    protected final LightPauser pauser;
 
     protected SourceTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, ThreadPoolExecutor executor) {
         this.builder = builder;
@@ -50,13 +50,14 @@ public abstract class SourceTcp {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
+        this.pauser = new LightPauser(10000, 10000);
     }
 
-    public boolean open() {
+    public SourceTcp open() {
         this.running.set(true);
         this.executor.execute(createHandler());
 
-        return this.running.get();
+        return this;
     }
 
     public boolean close() {
@@ -77,6 +78,10 @@ public abstract class SourceTcp {
     @Override
     public String toString() {
         return this.name;
+    }
+
+    public void dataNotification() {
+        pauser.unpause();
     }
 
     public abstract boolean isLocalhost();
@@ -119,6 +124,7 @@ public abstract class SourceTcp {
 
         protected final TcpConnection connection;
         protected ExcerptTailer tailer;
+        protected ExcerptAppender appender;
         protected long lastHeartbeat;
 
         protected final ByteBuffer writeBuffer;
@@ -131,13 +137,14 @@ public abstract class SourceTcp {
             this.socketChannel = socketChannel;
             this.connection = new TcpConnection(socketChannel);
             this.tailer = null;
+            this.appender = null;
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
-            this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(16));
-            this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
 
+            this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(16));
             this.readBuffer.clear();
 
+            this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.writeBuffer.clear();
             this.writeBuffer.limit(0);
         }
@@ -148,6 +155,11 @@ public abstract class SourceTcp {
             if (this.tailer != null) {
                 this.tailer.close();
                 this.tailer = null;
+            }
+
+            if (this.appender != null) {
+                this.appender.close();
+                this.appender = null;
             }
 
             if (this.socketChannel.isOpen()) {
@@ -161,16 +173,24 @@ public abstract class SourceTcp {
 
             try {
                 socketChannel.configureBlocking(false);
-                socketChannel.socket().setSendBufferSize(builder.minBufferSize());
                 socketChannel.socket().setTcpNoDelay(true);
                 socketChannel.socket().setSoTimeout(0);
                 socketChannel.socket().setSoLinger(false, 0);
+
+                if(builder.receiveBufferSize() > 0) {
+                    socketChannel.socket().setReceiveBufferSize(builder.receiveBufferSize());
+                }
+                if(builder.sendBufferSize() > 0) {
+                    socketChannel.socket().setSendBufferSize(builder.sendBufferSize());
+                }
 
                 final VanillaSelector selector = new VanillaSelector()
                         .open()
                         .register(socketChannel, SelectionKey.OP_READ, new Attached());
 
-                tailer = builder.chronicle().createTailer();
+                tailer   = builder.chronicle().createTailer();
+                appender = builder.chronicle().createAppender();
+
                 selectionKeys = selector.vanillaSelectionKeys();
 
                 if (selectionKeys != null) {
@@ -208,7 +228,7 @@ public abstract class SourceTcp {
         }
 
         private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException {
-            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final int  spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
             while (running.get()) {
@@ -233,7 +253,7 @@ public abstract class SourceTcp {
         }
 
         private void nioLoop(final VanillaSelector selector) throws IOException {
-            final int spinLoopCount = builder.selectorSpinLoopCount();
+            final int  spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
             while (running.get()) {
@@ -278,12 +298,28 @@ public abstract class SourceTcp {
         }
 
         protected void sendSizeAndIndex(int size, long index) throws IOException {
-            writeBuffer.clear();
-            writeBuffer.putInt(size);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
-            connection.writeAllOrEOF(writeBuffer);
+            connection.writeSizeAndIndex(writeBuffer, size, index);
             setLastHeartbeat();
+        }
+
+        protected ByteBufferBytes readUpTo(int size) throws IOException {
+            if (readBuffer.capacity() < size) {
+                // resize the buffer
+                this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));
+            }
+
+            readBuffer.clear();
+            readBuffer.buffer().clear();
+
+            readBuffer.limit(size);
+            readBuffer.buffer().limit(size);
+
+            connection.readFullyOrEOF(readBuffer.buffer());
+            readBuffer.buffer().flip();
+            readBuffer.position(0);
+            readBuffer.limit(readBuffer.limit());
+
+            return readBuffer;
         }
 
         protected boolean onSelectionKey(final SelectionKey key) throws IOException {
@@ -304,70 +340,52 @@ public abstract class SourceTcp {
 
         protected boolean onRead(final SelectionKey key) throws IOException {
             try {
-
                 final long action = readUpTo(8).readLong();
 
                 switch ((int) action) {
-
                     case (int) ChronicleTcp.ACTION_WITH_MAPPING:
-                        int size = readUpTo(4).readInt();
-
-                        Object attachment = key.attachment();
-                        if (attachment != null) {
-                            MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
-                            ((MappingProvider) attachment).withMapping(mappingFunction);
-                        }
-
-                        return true;
-
+                        return onMapping(key, readUpTo(4).readInt());
                     case (int) ChronicleTcp.ACTION_SUBSCRIBE:
                         return onSubscribe(key, readUpTo(8).readLong());
-
+                    case (int) ChronicleTcp.ACTION_UNSUBSCRIBE:
+                        return onUnsubscribe(key, readUpTo(8).readLong());
                     case (int) ChronicleTcp.ACTION_QUERY:
                         return onQuery(key, readUpTo(8).readLong());
-
+                    case (int) ChronicleTcp.ACTION_SUBMIT:
+                        return onSubmit(key, readUpTo(8).readLong(), true);
+                    case (int) ChronicleTcp.ACTION_SUBMIT_NOACK:
+                        return onSubmit(key, readUpTo(8).readLong(), false);
                     default:
                         throw new IOException("Unknown action received (" + action + ")");
                 }
-            } catch (EOFException e) {
+            } catch (IOException e) {
                 key.selector().close();
                 throw e;
-            }
+            } 
         }
-
-        private ByteBufferBytes readUpTo(int size) throws IOException {
-
-            if (readBuffer.capacity() < size) {
-                // resize the buffer
-                this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));
-            }
-
-            readBuffer.clear();
-            readBuffer.buffer().clear();
-
-            readBuffer.limit(size);
-            readBuffer.buffer().limit(size);
-
-            connection.readFullyOrEOF(readBuffer.buffer());
-            readBuffer.buffer().flip();
-            readBuffer.position(0);
-            readBuffer.limit(readBuffer.limit());
-
-            return readBuffer;
-        }
-
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
             Object attachment = key.attachment();
 
             if (running.get() && !write(attachment)) {
                 if (lastHeartbeat <= now) {
-                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
+                    sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
                 }
             }
 
             return true;
         }
+
+        protected boolean onMapping(final SelectionKey key, int size) throws IOException {
+            MappingProvider mappingProvider = (MappingProvider)key.attachment();
+            if (mappingProvider != null) {
+                MappingFunction mappingFunction = readUpTo(size).readObject(MappingFunction.class);
+                mappingProvider.withMapping(mappingFunction);
+            }
+
+            return true;
+        }
+
 
         protected boolean onQuery(final SelectionKey key, long data) throws IOException {
             if (tailer.index(data)) {
@@ -377,10 +395,11 @@ public abstract class SourceTcp {
                 while (true) {
                     if (tailer.nextIndex()) {
                         sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, tailer.index());
+                        tailer.finish();
                         break;
                     } else {
                         if (lastHeartbeat <= now) {
-                            sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, 0L);
+                            sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
                             break;
                         }
                     }
@@ -392,8 +411,13 @@ public abstract class SourceTcp {
             return true;
         }
 
-        protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException;
+        protected boolean onUnsubscribe(final SelectionKey key, long data) throws IOException {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            return true;
+        }
 
+        protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
+        protected abstract boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException ;
         protected abstract boolean write(Object attachment) throws IOException;
     }
 
@@ -426,6 +450,15 @@ public abstract class SourceTcp {
         }
 
         @Override
+        protected boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException {
+            if(ack) {
+                sendSizeAndIndex(ChronicleTcp.NACK_LEN, ChronicleTcp.IDX_NOT_SUPPORTED);
+            }
+
+            return true;
+        }
+
+        @Override
         protected boolean write(Object attached) throws IOException {
             if (!tailer.index(index)) {
                 if (tailer.wasPadding()) {
@@ -446,17 +479,16 @@ public abstract class SourceTcp {
             pauseReset();
 
             Bytes bytes;
-
             for (; ; ) {
                 bytes = applyMapping(tailer, attached, withMappedBuffer);
-
-                if (bytes.limit() > 0)
+                if (bytes.limit() > 0) {
                     break;
+                }
 
                 // if the excepts is filtered out, move onto the next one
-                if (!tailer.index(index++))
+                if (!tailer.index(index++)) {
                     return false;
-
+                }
             }
 
             final long size = bytes.limit();
@@ -565,6 +597,23 @@ public abstract class SourceTcp {
         }
 
         @Override
+        protected boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException {
+            readUpTo((int) size);
+
+            appender.startExcerpt((int) size);
+            appender.write(readBuffer);
+            appender.finish();
+
+            pauser.unpause();
+
+            if(ack) {
+                sendSizeAndIndex(ChronicleTcp.ACK_LEN, appender.lastWrittenIndex());
+            }
+
+            return true;
+        }
+
+        @Override
         protected boolean write(Object attached) throws IOException {
             if (nextIndex) {
                 if (!tailer.nextIndex()) {
@@ -586,15 +635,14 @@ public abstract class SourceTcp {
 
             for (; ; ) {
                 bytes = applyMapping(tailer, attached, withMappedBuffer);
-
-                if (bytes.limit() > 0)
+                if (bytes.limit() > 0) {
                     break;
+                }
 
-                if (!tailer.nextIndex())
+                if (!tailer.nextIndex()) {
                     return false;
-
+                }
             }
-
 
             final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -604,9 +652,7 @@ public abstract class SourceTcp {
             writeBuffer.putLong(tailer.index());
 
             // for large objects send one at a time.
-            if (size > writeBuffer.capacity() / 2)
-
-            {
+            if (size > writeBuffer.capacity() / 2) {
                 while (remaining > 0) {
                     int size2 = (int) Math.min(remaining, writeBuffer.capacity());
                     writeBuffer.limit(size2);
@@ -615,19 +661,17 @@ public abstract class SourceTcp {
                     remaining -= writeBuffer.remaining();
                     connection.writeAll(writeBuffer);
                 }
-            } else
-
-            {
+            } else {
                 writeBuffer.limit((int) remaining);
                 bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
-
                         bytes = applyMapping(tailer, attached, withMappedBuffer);
 
                         // skip excepts that are filtered out by the MappingFunction
-                        if (bytes.limit() == 0)
+                        if (bytes.limit() == 0) {
                             continue;
+                        }
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
@@ -656,57 +700,50 @@ public abstract class SourceTcp {
 
             return true;
         }
-
-
     }
-
 
     /**
      * applies a mapping if the mapping is not set to {@code}null{code}
      *
-     * @param source           the tailer for the mapping to be applied to
-     * @param attached         the key attachment
+     * @param source the tailer for the mapping to be applied to
+     * @param attached the key attachment
      * @param withMappedBuffer
      * @return returns the tailer or the mapped bytes
      * @see
      */
     private static Bytes applyMapping(@NotNull final ExcerptTailer source,
                                       @Nullable Object attached, Bytes withMappedBuffer) {
-
-        if (attached == null)
+        if (attached == null) {
             return source;
+        }
 
         final MappingProvider mappingProvider = (MappingProvider) attached;
         final MappingFunction mappingFunction = mappingProvider.withMapping();
-
-        if (mappingFunction == null)
+        if (mappingFunction == null) {
             return source;
+        }
 
         withMappedBuffer.clear();
-
-        if (withMappedBuffer.capacity() < source.capacity())
+        if (withMappedBuffer.capacity() < source.capacity()) {
             withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate((int) source.capacity()));
+        }
 
         try {
             mappingFunction.apply(source, withMappedBuffer);
         } catch (IllegalArgumentException e) {
-
             // lets try to resize
             if (e.getMessage().contains("Attempt to write")) {
-
-                if (withMappedBuffer.capacity() == Integer.MAX_VALUE)
+                if (withMappedBuffer.capacity() == Integer.MAX_VALUE) {
                     throw e;
+                }
 
                 int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
                 withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(newSize));
-            } else
+            } else {
                 throw e;
-
+            }
         }
-        withMappedBuffer.flip();
 
-        // set the capacity() equal withMappedBuffer the limit()
-        return withMappedBuffer;
-
+        return withMappedBuffer.flip();
     }
 }

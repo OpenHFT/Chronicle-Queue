@@ -32,7 +32,6 @@ import static org.junit.Assert.*;
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     public static class NoOpMappingFunction implements MappingFunction {
-
         @Override
         public void apply(Bytes from, Bytes to) {
             to.write(from);
@@ -355,21 +354,21 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender = source.createAppender();
-        System.out.print("writing 100 items will take take 10 seconds.");
+        LOGGER.info("writing 100 items will take take 10 seconds.");
         for (int i = 0; i < 100; i++) {
             appender.startExcerpt();
             int value = 1000000000 + i;
             appender.append(value).append(' '); //this space is really important.
             appender.finish();
+
             Thread.sleep(100);
 
-            if (i % 10 == 0) {
-                System.out.print(".");
+            if(i % 10==0) {
+                LOGGER.info(".");
             }
         }
 
         appender.close();
-        System.out.print("\n");
 
         final int port = portSupplier.getAndCheckPort();
 
@@ -385,9 +384,9 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
-        System.out.println("Sink1 reading first 50 items then stopping");
-        for (int count = 0; count < 50; ) {
-            if (tailer1.nextIndex()) {
+        LOGGER.info("Sink1 reading first 50 items then stopping");
+        for( int count=0; count < 50 ;) {
+            if(tailer1.nextIndex()) {
                 assertEquals(1000000000 + count, tailer1.parseLong());
                 tailer1.finish();
 
@@ -413,10 +412,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
         assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
-
-        System.out.println("Sink2 restarting to continue to read the next 50 items");
-        for (int count = 50; count < 100; ) {
-            if (tailer2.nextIndex()) {
+        
+        LOGGER.info("Sink2 restarting to continue to read the next 50 items");
+        for(int count=50 ; count < 100 ; ) {
+            if(tailer2.nextIndex()) {
                 assertEquals(1000000000 + count, tailer2.parseLong());
                 tailer2.finish();
 

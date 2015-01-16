@@ -43,22 +43,35 @@ public abstract class SinkTcp extends TcpConnection {
         return this.name;
     }
 
-    public void open() throws IOException {
+    public SinkTcp open() throws IOException {
+        return open(false);
+    }
+
+    public SinkTcp open(boolean blocking) throws IOException {
         close();
         running.set(true);
 
         SocketChannel socketChannel = openSocketChannel();
         if(socketChannel != null) {
-            socketChannel.configureBlocking(false);
+            socketChannel.configureBlocking(blocking);
             socketChannel.socket().setTcpNoDelay(true);
-            socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
 
+            if(this.builder.receiveBufferSize() > 0) {
+                socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
+            }
+            if(this.builder.sendBufferSize() > 0) {
+                socketChannel.socket().setSendBufferSize(this.builder.sendBufferSize());
+            }
+
             super.setSocketChannel(socketChannel);
+
         }
 
         running.set(false);
+
+        return this;
     }
 
     public void close() throws IOException {
