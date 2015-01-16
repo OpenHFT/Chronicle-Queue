@@ -445,10 +445,19 @@ public abstract class SourceTcp {
 
             pauseReset();
 
+            Bytes bytes;
 
-            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
-            if (bytes.limit() == 0)
-                return true;
+            for (; ; ) {
+                bytes = applyMapping(tailer, attached, withMappedBuffer);
+
+                if (bytes.limit() > 0)
+                    break;
+
+                // if the excepts is filtered out, move onto the next one
+                if (!tailer.index(index++))
+                    return false;
+
+            }
 
             final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -474,6 +483,13 @@ public abstract class SourceTcp {
                 bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
                     bytes = applyMapping(tailer, attached, withMappedBuffer);
+
+                    // skip excepts that are filtered out by the MappingFunction
+                    if (bytes.limit() == 0) {
+                        index++;
+                        continue;
+                    }
+
                     if (!tailer.wasPadding()) {
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
@@ -566,7 +582,18 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
-            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
+            Bytes bytes;
+
+            for (; ; ) {
+                bytes = applyMapping(tailer, attached, withMappedBuffer);
+
+                if (bytes.limit() > 0)
+                    break;
+
+                if (!tailer.nextIndex())
+                    return false;
+
+            }
 
 
             final long size = bytes.limit();
@@ -575,8 +602,6 @@ public abstract class SourceTcp {
             writeBuffer.clear();
             writeBuffer.putInt((int) size);
             writeBuffer.putLong(tailer.index());
-            if (bytes.limit() == 0)
-                return true;
 
             // for large objects send one at a time.
             if (size > writeBuffer.capacity() / 2)
@@ -599,6 +624,8 @@ public abstract class SourceTcp {
                     if (!tailer.wasPadding()) {
 
                         bytes = applyMapping(tailer, attached, withMappedBuffer);
+
+                        // skip excepts that are filtered out by the MappingFunction
                         if (bytes.limit() == 0)
                             continue;
 
