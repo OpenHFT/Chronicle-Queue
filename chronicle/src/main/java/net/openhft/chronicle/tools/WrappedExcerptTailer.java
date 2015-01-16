@@ -1243,6 +1243,10 @@ public class WrappedExcerptTailer implements ExcerptTailer {
         return wrappedTailer.toDebugString();
     }
 
+    public String toDebugString(long limit) {
+        return wrappedTailer.toDebugString(limit);
+    }
+
     @Override
     public boolean compareAndSwapDouble(long offset, double expected, double x) {
         return wrappedTailer.compareAndSwapDouble(offset, expected, x);
