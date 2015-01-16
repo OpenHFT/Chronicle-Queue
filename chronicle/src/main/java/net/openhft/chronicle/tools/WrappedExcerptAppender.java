@@ -163,6 +163,10 @@ public class WrappedExcerptAppender implements ExcerptAppender {
         return wrappedAppender.toDebugString();
     }
 
+    public String toDebugString(long limit) {
+        return wrappedAppender.toDebugString(limit);
+    }
+
     public boolean isFinished() {
         return wrappedAppender.isFinished();
     }
