@@ -101,11 +101,11 @@ public class WrappedExcerptAppenders {
     //
     //**************************************************************************
 
-    public static class ByteBufferBytesExcerptAppender extends WrappedExcerptAppender<ByteBufferBytesAppender> {
+    public static class ByteBufferBytesExcerptAppenderWrapper extends WrappedExcerptAppender<ByteBufferBytesAppender> {
 
         private final int defaulCapacity;
 
-        public ByteBufferBytesExcerptAppender(int defaulCapacity) {
+        public ByteBufferBytesExcerptAppenderWrapper(int defaulCapacity) {
             super(ByteBufferBytesAppender.withSize(defaulCapacity));
 
             this.defaulCapacity = defaulCapacity;

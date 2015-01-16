@@ -57,10 +57,10 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
     }
 
     protected void setExcerpt(ExcerptCommon excerptCommon) {
-        wrappedTailer = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
+        wrappedTailer   = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
         wrappedAppender = excerptCommon instanceof ExcerptAppender ? (ExcerptAppender) excerptCommon : null;
-        wrappedExcerpt = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
-        wrappedCommon = excerptCommon;
+        wrappedExcerpt  = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
+        wrappedCommon   = excerptCommon;
     }
 
     @Override

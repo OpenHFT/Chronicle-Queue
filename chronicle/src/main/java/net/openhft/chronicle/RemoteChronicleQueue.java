@@ -127,7 +127,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     // *************************************************************************
 
     private final class StatelessExcerpAppender
-            extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppender {
+            extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppenderWrapper {
 
         private final Logger logger;
         private final ByteBuffer readBuffer;
