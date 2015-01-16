@@ -844,7 +844,7 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
 
     @NotNull
     @Override
-    public WrappedExcerpt toEnd() {
+    public Excerpt toEnd() {
         wrappedTailer.toEnd();
         return this;
     }

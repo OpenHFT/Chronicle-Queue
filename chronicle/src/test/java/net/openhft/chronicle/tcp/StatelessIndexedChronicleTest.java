@@ -25,7 +25,6 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

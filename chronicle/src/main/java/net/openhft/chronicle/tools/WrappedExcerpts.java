@@ -19,7 +19,6 @@ package net.openhft.chronicle.tools;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.lang.io.ByteBufferBytes;
@@ -98,6 +97,35 @@ public class WrappedExcerpts {
             super(ByteBufferBytesExcerpt.withSize(defaulCapacity));
 
             this.defaulCapacity = defaulCapacity;
+        }
+
+        protected ByteBuffer buffer() {
+            return ((ByteBufferBytesExcerpt)wrappedExcerpt).buffer();
+        }
+
+        protected ByteBufferBytesExcerpt excerpt() {
+            return ((ByteBufferBytesExcerpt)wrappedExcerpt);
+        }
+
+
+        protected void resize(long capacity) {
+            if(capacity > Integer.MAX_VALUE) {
+                throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
+            }
+
+            if(capacity > excerpt().capacity()) {
+                setExcerpt(ByteBufferBytesExcerpt.withSize((int) capacity));
+            }
+
+            excerpt().clear();
+            excerpt().limit(capacity);
+            buffer().clear();
+            buffer().limit((int)capacity);
+        }
+
+        protected void cleanup() {
+            excerpt().clear();
+            buffer().clear();
         }
     }
 }
