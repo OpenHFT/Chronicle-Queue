@@ -49,11 +49,6 @@
                 <artifactId>chronicle</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>2.1.6</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -61,10 +56,6 @@
         <dependency>
             <groupId>com.sun.java</groupId>
             <artifactId>tools</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -185,9 +176,4 @@
         </plugins>
     </build>
 
-    <scm>
-        <url>scm:git:https://github.com/OpenHFT/Java-Lang.git</url>
-    </scm>
-
 </project>
-
