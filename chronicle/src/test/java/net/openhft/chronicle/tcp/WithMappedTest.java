@@ -389,7 +389,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
 
 
         try {
@@ -633,7 +633,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
 
 
         try {

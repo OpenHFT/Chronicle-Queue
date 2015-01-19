@@ -38,7 +38,7 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
             .build();
 
         final Chronicle remoteAppender = remoteAppender()
-            .connectAddress("localhost", portSupplier.getAndCheckPort())
+            .connectAddress("localhost", portSupplier.getAndAssertOnError())
             .appendRequireAck(true)
             .build();
 
@@ -70,7 +70,7 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
                 .build();
 
         final Chronicle remoteAppender = remoteAppender()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .appendRequireAck(false)
                 .build();
 

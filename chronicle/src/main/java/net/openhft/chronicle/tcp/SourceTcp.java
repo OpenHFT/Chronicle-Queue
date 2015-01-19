@@ -341,7 +341,6 @@ public abstract class SourceTcp {
         protected boolean onRead(final SelectionKey key) throws IOException {
             try {
                 final long action = readUpTo(8).readLong();
-
                 switch ((int) action) {
                     case (int) ChronicleTcp.ACTION_WITH_MAPPING:
                         return onMapping(key, readUpTo(4).readInt());
@@ -365,7 +364,7 @@ public abstract class SourceTcp {
         }
         protected boolean onWrite(final SelectionKey key) throws IOException {
             final long now = System.currentTimeMillis();
-            Object attachment = key.attachment();
+            final Object attachment = key.attachment();
 
             if (running.get() && !write(attachment)) {
                 if (lastHeartbeat <= now) {
@@ -712,7 +711,9 @@ public abstract class SourceTcp {
      * @see
      */
     private static Bytes applyMapping(@NotNull final ExcerptTailer source,
-                                      @Nullable Object attached, Bytes withMappedBuffer) {
+                                      @Nullable Object attached,
+                                      Bytes withMappedBuffer) {
+
         if (attached == null) {
             return source;
         }

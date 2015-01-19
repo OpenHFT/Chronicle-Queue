@@ -123,11 +123,11 @@ public class ChronicleTcpTestBase {
             return this.port.get();
         }
 
-        public int getAndCheckPort() {
+        public int getAndAssertOnError() {
             final int port = port();
             assertNotEquals(-1, port);
 
-            LOGGER.info("{} : listening on port {}", getTestName(), port);
+            //LOGGER.info("{} : listening on port {}", getTestName(), port);
 
             return port;
         }

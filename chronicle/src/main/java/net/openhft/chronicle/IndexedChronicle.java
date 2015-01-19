@@ -75,7 +75,6 @@ public class IndexedChronicle implements Chronicle {
      */
     IndexedChronicle(@NotNull ChronicleQueueBuilder.IndexedChronicleQueueBuilder builder) throws IOException {
 
-        //this.config = config.clone();
         this.builder = builder.clone();
         this.basePath = builder.path().getAbsolutePath();
 
