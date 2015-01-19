@@ -84,7 +84,7 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
             .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
             .minBufferSize(2 * BYTES_LENGTH)
             .connectAddress("localhost", port)
@@ -134,7 +134,7 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
 
         chronicleSource.clear();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final ExcerptAppender appender = chronicleSource.createAppender();
         for (long i = 0; i < (chunks * itemsPerChunk); i++) {
             appender.startExcerpt();

@@ -66,7 +66,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -121,7 +121,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -175,7 +175,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         try {
             for(int i=0;i<tailers;i++) {
                 executor.submit(new Runnable() {
@@ -241,7 +241,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -289,7 +289,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -361,7 +361,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final Chronicle source = sourceBuilder.build();
 
         final ReplicaChronicleQueueBuilder sinkBuilder = remoteTailer()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
         final Chronicle sinnk = sinkBuilder.build();
@@ -391,7 +391,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron74(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron74(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -408,7 +408,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron75(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron75(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -425,7 +425,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron78(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron78(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -442,6 +442,6 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron81(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron81(portSupplier.getAndAssertOnError(), chronicle);
     }
 }

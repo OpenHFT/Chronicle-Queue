@@ -28,10 +28,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertTrue;
 import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
-import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
 import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -54,7 +56,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = vanilla(sinkBasePath)
                 .sink()
                 .connectAddress("localhost", port)
@@ -156,7 +158,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
                 .connectAddress("localhost", port)
                 .build();
@@ -254,7 +256,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.sink(sinkChronicle)
                 .connectAddress("localhost", port)
                 .build();
@@ -371,7 +373,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         appender.close();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
 
         //create a tailer to get the first 50 items then exit the tailer
         final Chronicle sink1 = vanilla(sinkBasePath)
@@ -496,7 +498,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
                 .sink()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
         final Chronicle sinnk = sinkBuilder.build();
@@ -506,5 +508,99 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 sinnk,
                 sinkBuilder.heartbeatIntervalMillis()
         );
+    }
+
+    @Test
+    public void testVanillaClientReconnection() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSink = getVanillaTestPath("-sink");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int items = 20;
+        final CountDownLatch latch = new CountDownLatch(items);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Chronicle sink = vanilla(basePathSink)
+                            .sink()
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
+
+                    ExcerptTailer tailer = sink.createTailer();
+                    while(latch.getCount() > 0) {
+                        if(tailer.nextIndex()) {
+                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            tailer.finish();
+                            latch.countDown();
+                        } else {
+                            Thread.sleep(1000);
+                        }
+                    }
+
+                    tailer.clear();
+                    sink.close();
+                    sink.clear();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        // Source 1
+        Chronicle source1 = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender1 = source1.createAppender();
+        for(long i=0; i < items / 2 ; i++) {
+            appender1.startExcerpt(8);
+            appender1.writeLong(i);
+            appender1.finish();
+        }
+
+        appender1.close();
+
+        while(latch.getCount() > 10) {
+            Thread.sleep(250);
+        }
+
+        source1.close();
+
+        portSupplier.reset();
+
+        // Source 2
+        Chronicle source2 = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender2 = source2.createAppender();
+        for(long i=items / 2; i < items; i++) {
+            appender2.startExcerpt(8);
+            appender2.writeLong(i);
+            appender2.finish();
+        }
+
+        appender2.close();
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertEquals(0, latch.getCount());
+
+        source2.close();
+        source2.clear();
     }
 }

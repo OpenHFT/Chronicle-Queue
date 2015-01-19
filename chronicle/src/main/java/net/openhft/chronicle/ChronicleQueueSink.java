@@ -132,7 +132,6 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected void subscribe(long index) throws IOException {
-
             writeBuffer.clear();
             writeBufferBytes.clear();
 
@@ -140,23 +139,23 @@ class ChronicleQueueSink extends WrappedChronicle {
             writeBufferBytes.writeLong(index);
 
             MappingFunction mapping = withMapping();
-
             if (mapping != null) {
                 // write with mapping and len
                 writeBufferBytes.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
                 long pos = writeBufferBytes.position();
+
                 writeBufferBytes.skip(4);
                 long start = writeBufferBytes.position();
 
                 writeBufferBytes.writeObject(mapping);
                 int len = (int) (writeBufferBytes.position() - start);
+
                 writeBufferBytes.writeInt(pos, len);
 
             }
 
             writeBuffer.position(0);
             writeBuffer.limit((int) writeBufferBytes.position());
-
 
             connection.writeAllOrEOF(writeBuffer);
         }
@@ -214,9 +213,14 @@ class ChronicleQueueSink extends WrappedChronicle {
                         }
                     }
                 }
-            } catch (IOException e) {
-                logger.warn("", e);
-                close();
+            } catch (IOException e1) {
+                logger.warn("Exception reading nextExcerpt", e1);
+
+                try {
+                    connection.close();
+                } catch (IOException e2) {
+                    logger.warn("Error closing socketChannel", e2);
+                }
             }
 
             return false;
@@ -312,9 +316,14 @@ class ChronicleQueueSink extends WrappedChronicle {
                     readBuffer.position(readBuffer.position() + size);
                     return readNextExcerpt();
                 }
-            } catch (IOException e) {
-                logger.warn("", e);
-                close();
+            } catch (IOException e1) {
+                logger.warn("Exception reading nextExcerpt", e1);
+
+                try {
+                    connection.close();
+                } catch (IOException e2) {
+                    logger.warn("Error closing socketChannel", e2);
+                }
             }
 
             return true;
