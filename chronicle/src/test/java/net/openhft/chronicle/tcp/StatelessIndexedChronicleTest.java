@@ -25,7 +25,9 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +52,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
             .build();
 
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", portSupplier.getAndCheckPort())
+            .connectAddress("localhost", portSupplier.getAndAssertOnError())
             .build();
 
         final int items = 1000000;
@@ -103,7 +105,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -153,7 +155,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -207,7 +209,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
 
         try {
             for(int i=0;i<tailers;i++) {
@@ -273,7 +275,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -315,7 +317,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -367,7 +369,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         final Chronicle source = sourceBuilder.build();
 
         final ReplicaChronicleQueueBuilder sinkBuilder = remoteTailer()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
         final Chronicle sinnk = sinkBuilder.build();
@@ -383,6 +385,103 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
     // JIRA
     // *************************************************************************
 
+
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-103
+     */
+    @Test
+    public void testIndexedRemoteClientReconnection() throws Exception {
+        final String basePathSource = getIndexedTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int items = 20;
+        final CountDownLatch latch = new CountDownLatch(items);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Chronicle sink = remoteTailer()
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
+
+                    ExcerptTailer tailer = sink.createTailer();
+                    while(latch.getCount() > 0) {
+                        if(tailer.nextIndex()) {
+                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            tailer.finish();
+                            latch.countDown();
+                        } else {
+                            Thread.sleep(1000);
+                        }
+                    }
+
+                    tailer.clear();
+                    sink.close();
+                    sink.clear();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        // Source 1
+        Chronicle source1 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender1 = source1.createAppender();
+        for(long i=0; i < items / 2 ; i++) {
+            appender1.startExcerpt(8);
+            appender1.writeLong(i);
+            appender1.finish();
+        }
+
+        appender1.close();
+
+        while(latch.getCount() > 10) {
+            Thread.sleep(250);
+        }
+
+        source1.close();
+
+        portSupplier.reset();
+
+        // Source 2
+        Chronicle source2 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender2 = source2.createAppender();
+        for(long i=items / 2; i < items; i++) {
+            appender2.startExcerpt(8);
+            appender2.writeLong(i);
+            appender2.finish();
+        }
+
+        appender2.close();
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertEquals(0, latch.getCount());
+
+        source2.close();
+        source2.clear();
+    }
+
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
      */
@@ -397,7 +496,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron74(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron74(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -414,7 +513,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron75(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron75(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -431,7 +530,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron78(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron78(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -448,6 +547,6 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron81(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron81(portSupplier.getAndAssertOnError(), chronicle);
     }
 }

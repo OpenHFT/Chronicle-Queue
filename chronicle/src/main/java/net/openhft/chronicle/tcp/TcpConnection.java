@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -60,6 +61,22 @@ class TcpConnection {
 
             socketChannel = null;
         }
+    }
+
+    public String debugString() {
+        if(this.socketChannel != null) {
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append("[");
+                sb.append(this.socketChannel.getLocalAddress());
+                sb.append(" -> ");
+                sb.append(this.socketChannel.getRemoteAddress());
+                sb.append("]");
+            } catch(IOException e) {
+            }
+        }
+
+         return "[] -> []";
     }
 
     public int write(final ByteBuffer buffer) throws IOException {

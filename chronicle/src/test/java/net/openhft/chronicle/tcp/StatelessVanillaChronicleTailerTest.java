@@ -24,16 +24,16 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertTrue;
-import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
-import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
-import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
-import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
-import static org.junit.Assert.*;
+import static net.openhft.chronicle.ChronicleQueueBuilder.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestBase {
 
@@ -66,7 +66,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -121,7 +121,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -175,7 +175,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         try {
             for(int i=0;i<tailers;i++) {
                 executor.submit(new Runnable() {
@@ -241,7 +241,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -289,7 +289,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -361,7 +361,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final Chronicle source = sourceBuilder.build();
 
         final ReplicaChronicleQueueBuilder sinkBuilder = remoteTailer()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
         final Chronicle sinnk = sinkBuilder.build();
@@ -378,6 +378,101 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     // *************************************************************************
 
     /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
+     */
+    @Test
+    public void testVanillaClientReconnection() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int items = 20;
+        final CountDownLatch latch = new CountDownLatch(items);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Chronicle sink = remoteTailer()
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
+
+                    ExcerptTailer tailer = sink.createTailer();
+                    while(latch.getCount() > 0) {
+                        if(tailer.nextIndex()) {
+                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            tailer.finish();
+                            latch.countDown();
+                        } else {
+                            Thread.sleep(1000);
+                        }
+                    }
+
+                    tailer.clear();
+                    sink.close();
+                    sink.clear();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        // Source 1
+        Chronicle source1 = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender1 = source1.createAppender();
+        for(long i=0; i < items / 2 ; i++) {
+            appender1.startExcerpt(8);
+            appender1.writeLong(i);
+            appender1.finish();
+        }
+
+        appender1.close();
+
+        while(latch.getCount() > 10) {
+            Thread.sleep(250);
+        }
+
+        source1.close();
+
+        portSupplier.reset();
+
+        // Source 2
+        Chronicle source2 = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender2 = source2.createAppender();
+        for(long i=items / 2; i < items; i++) {
+            appender2.startExcerpt(8);
+            appender2.writeLong(i);
+            appender2.finish();
+        }
+
+        appender2.close();
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertEquals(0, latch.getCount());
+
+        source2.close();
+        source2.clear();
+    }
+
+    /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
      */
     @Test
@@ -391,7 +486,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron74(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron74(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -408,7 +503,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron75(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron75(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -425,7 +520,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron78(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron78(portSupplier.getAndAssertOnError(), chronicle);
     }
 
     /*
@@ -442,6 +537,6 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .connectionListener(portSupplier)
             .build();
 
-        testJiraChron81(portSupplier.getAndCheckPort(), chronicle);
+        testJiraChron81(portSupplier.getAndAssertOnError(), chronicle);
     }
 }

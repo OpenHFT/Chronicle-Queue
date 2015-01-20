@@ -40,7 +40,7 @@ public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase
             .connectionListener(portSupplier)
             .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
             .sharedChronicle(true)
             .connectAddress("localhost",port)

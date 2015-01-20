@@ -27,18 +27,13 @@ import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.*;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
@@ -66,7 +61,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
@@ -137,7 +132,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
@@ -189,7 +184,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
@@ -243,7 +238,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .connectionListener(portSupplier)
                 .build();
 
-        final int port = portSupplier.getAndCheckPort();
+        final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = indexed(basePathSink)
                 .sink()
                 .connectAddress("localhost", port)
@@ -455,6 +450,107 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         );
     }
 
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
+     */
+    @Test
+    public void testIndexedClientReconnection() throws Exception {
+        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSink = getIndexedTestPath("-sink");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int items = 20;
+        final CountDownLatch latch = new CountDownLatch(items);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Chronicle sink = indexed(basePathSink)
+                            .sink()
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
+
+                    ExcerptTailer tailer = sink.createTailer();
+                    while(latch.getCount() > 0) {
+                        if(tailer.nextIndex()) {
+                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            tailer.finish();
+                            latch.countDown();
+                        } else {
+                            Thread.sleep(1000);
+                        }
+                    }
+
+                    tailer.clear();
+                    sink.close();
+                    sink.clear();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        // Source 1
+        Chronicle source1 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender1 = source1.createAppender();
+        for(long i=0; i < items / 2 ; i++) {
+            appender1.startExcerpt(8);
+            appender1.writeLong(i);
+            appender1.finish();
+        }
+
+        appender1.close();
+
+        while(latch.getCount() > 10) {
+            Thread.sleep(250);
+        }
+
+        source1.close();
+
+        portSupplier.reset();
+
+        // Source 2
+        Chronicle source2 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender2 = source2.createAppender();
+        for(long i=items / 2; i < items; i++) {
+            appender2.startExcerpt(8);
+            appender2.writeLong(i);
+            appender2.finish();
+        }
+
+        appender2.close();
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertEquals(0, latch.getCount());
+
+        source2.close();
+        source2.clear();
+    }
+    
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     static final int RATE = Integer.getInteger("rate", 100000);
     static final int COUNT = Integer.getInteger("count", RATE * 2);
     static final int WARMUP = Integer.getInteger("warmup", RATE);
@@ -558,7 +654,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         final ReplicaChronicleQueueBuilder sinkBuilder = indexed(basePathSink)
                 .sink()
-                .connectAddress("localhost", portSupplier.getAndCheckPort())
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
         final Chronicle sinnk = sinkBuilder.build();
