@@ -11,6 +11,11 @@ import java.io.IOException;
  * Created by peter on 20/01/15.
  */
 public class GenerateData {
+    /*
+    On an i7-3970X prints.
+
+    Took 1.383 seconds to write 10,000,000 records
+     */
     static final long RECORDS = Long.getLong("RECORDS", 10000000);
 
     public static void main(String[] args) throws IOException {
