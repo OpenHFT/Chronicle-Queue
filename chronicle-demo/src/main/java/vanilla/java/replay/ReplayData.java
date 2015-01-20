@@ -23,12 +23,12 @@ public class ReplayData {
                 td.readMarshallable(tailer);
                 tailer.finish();
                 if (td.getAge() != count) {
-                    System.out.println(count + ":" + td);
+                    System.err.println(count + ":" + td);
                     break;
                 }
                 count++;
                 if (count % 1000000 == 0)
-                    System.out.println(td);
+                    System.out.println(tailer.index() + " : " + td);
             }
         }
         System.out.printf("Took %.3f seconds to read %,d records%n",
