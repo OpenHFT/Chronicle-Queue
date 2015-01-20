@@ -22,8 +22,12 @@ public class ReplayData {
             while (tailer.nextIndex()) {
                 td.readMarshallable(tailer);
                 tailer.finish();
+                if (td.getAge() != count) {
+                    System.out.println(count + ":" + td);
+                    break;
+                }
                 count++;
-                if (tailer.index() % 100000 == 0)
+                if (count % 100000 == 0)
                     System.out.println(td);
             }
         }

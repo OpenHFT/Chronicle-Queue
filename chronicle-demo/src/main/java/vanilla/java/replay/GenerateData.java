@@ -11,7 +11,7 @@ import java.io.IOException;
  * Created by peter on 20/01/15.
  */
 public class GenerateData {
-    static final long RECORDS = Long.getLong("RECORDS", 1000000);
+    static final long RECORDS = Long.getLong("RECORDS", 10000000);
 
     public static void main(String[] args) throws IOException {
         TestData td = DataValueClasses.newInstance(TestData.class);
