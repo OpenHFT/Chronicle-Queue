@@ -23,10 +23,6 @@ import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerptAppenders;
 import net.openhft.chronicle.tools.WrappedExcerpts;
-import net.openhft.lang.Maths;
-import net.openhft.lang.io.NativeBytes;
-import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
-import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -361,8 +357,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 connection.readUpTo(buffer(), receivedSize, -1);
 
                 index = receivedIndex;
-            } catch (IOException e) {
-                close();
+            } catch (IOException e1) {
+                logger.warn("Exception reading nextExcerpt", e1);
+
+                try {
+                    connection.close();
+                } catch (IOException e2) {
+                    logger.warn("Error closing socketChannel", e2);
+                }
+
                 return false;
             }
 

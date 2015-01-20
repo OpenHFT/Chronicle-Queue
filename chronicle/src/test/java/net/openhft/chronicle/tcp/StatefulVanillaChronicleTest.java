@@ -479,37 +479,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         );
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
 
-    @Test
-    public void testVanillaNonBlockingClient() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
-        final String basePathSink = getVanillaTestPath("-sink");
-        final PortSupplier portSupplier = new PortSupplier();
-
-        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier);
-
-        final Chronicle source = sourceBuilder.build();
-
-        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
-                .sink()
-                .connectAddress("localhost", portSupplier.getAndAssertOnError())
-                .readSpinCount(5);
-
-        final Chronicle sinnk = sinkBuilder.build();
-
-        testNonBlockingClient(
-                source,
-                sinnk,
-                sinkBuilder.heartbeatIntervalMillis()
-        );
-    }
-
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
+     */
     @Test
     public void testVanillaClientReconnection() throws Exception {
         final String basePathSource = getVanillaTestPath("-source");
@@ -602,5 +575,36 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         source2.close();
         source2.clear();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testVanillaNonBlockingClient() throws Exception {
+        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSink = getVanillaTestPath("-sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .readSpinCount(5);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
     }
 }
