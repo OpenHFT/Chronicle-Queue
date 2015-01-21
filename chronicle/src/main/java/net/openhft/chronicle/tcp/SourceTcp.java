@@ -477,18 +477,7 @@ public abstract class SourceTcp {
 
             pauseReset();
 
-            Bytes bytes;
-            for (; ; ) {
-                bytes = applyMapping(tailer, attached, withMappedBuffer);
-                if (bytes.limit() > 0) {
-                    break;
-                }
-
-                // if the excepts is filtered out, move onto the next one
-                if (!tailer.index(index++)) {
-                    return false;
-                }
-            }
+            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
 
             final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -514,12 +503,6 @@ public abstract class SourceTcp {
                 bytes.read(writeBuffer);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
                     bytes = applyMapping(tailer, attached, withMappedBuffer);
-
-                    // skip excepts that are filtered out by the MappingFunction
-                    if (bytes.limit() == 0) {
-                        index++;
-                        continue;
-                    }
 
                     if (!tailer.wasPadding()) {
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
@@ -630,18 +613,7 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
-            Bytes bytes;
-
-            for (; ; ) {
-                bytes = applyMapping(tailer, attached, withMappedBuffer);
-                if (bytes.limit() > 0) {
-                    break;
-                }
-
-                if (!tailer.nextIndex()) {
-                    return false;
-                }
-            }
+            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
 
             final long size = bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
@@ -666,11 +638,6 @@ public abstract class SourceTcp {
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
                         bytes = applyMapping(tailer, attached, withMappedBuffer);
-
-                        // skip excepts that are filtered out by the MappingFunction
-                        if (bytes.limit() == 0) {
-                            continue;
-                        }
 
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.

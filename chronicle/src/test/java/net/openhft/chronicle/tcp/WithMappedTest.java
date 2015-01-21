@@ -269,6 +269,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         @Override
         public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+
             date = in.readLong();
             open = in.readDouble();
             high = in.readDouble();
@@ -686,6 +687,10 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
                         while (tailer.nextIndex()) {
+
+                            // skip the empty messages
+                            if (tailer.limit() == 0)
+                                continue;
 
                             MarketData actual = new MarketData();
                             actual.readMarshallable(tailer);

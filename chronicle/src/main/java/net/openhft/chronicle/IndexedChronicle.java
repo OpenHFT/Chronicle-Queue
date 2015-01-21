@@ -873,7 +873,7 @@ public class IndexedChronicle implements Chronicle {
             long offsetInBlock = positionAddr - dataStartAddr;
             assert offsetInBlock >= 0 && offsetInBlock <= dataBlockSize;
             int relativeOffset = (int) (dataStartOffset + offsetInBlock - indexBaseForLine);
-            assert relativeOffset > 0;
+            assert relativeOffset >= 0;
             writeIndexEntry(relativeOffset);
             indexPositionAddr += 4;
             index++;
