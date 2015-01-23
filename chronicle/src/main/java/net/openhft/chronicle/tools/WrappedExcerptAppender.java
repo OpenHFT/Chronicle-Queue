@@ -40,6 +40,11 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> implements Excerp
         this.wrappedAppender = appender;
     }
 
+    @Override
+    public String toDebugString(long limit) {
+        return wrappedAppender.toDebugString(limit);
+    }
+
     public void startExcerpt() {
         wrappedAppender.startExcerpt();
     }
