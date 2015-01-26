@@ -46,11 +46,6 @@ public class WrappedExcerptTailer implements ExcerptTailer {
     }
 
     @Override
-    public String toDebugString(long limit) {
-        return wrappedTailer.toDebugString(limit);
-    }
-
-    @Override
     public WrappedExcerptTailer clear() {
         wrappedTailer.clear();
         return this;
