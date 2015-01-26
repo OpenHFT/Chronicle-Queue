@@ -1308,6 +1308,11 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
     }
 
     @Override
+    public String toDebugString(long limit) {
+        return wrappedCommon.toDebugString(limit);
+    }
+
+    @Override
     public boolean compareAndSwapDouble(long offset, double expected, double x) {
         return wrappedCommon.compareAndSwapDouble(offset, expected, x);
     }

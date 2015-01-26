@@ -45,6 +45,47 @@ public class VanillaIndexCache implements Closeable {
         this.cache = new VanillaMappedCache<IndexKey>(capacity, true, cleanupOnClose);
     }
 
+    public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
+        // Position can be changed by another thread, so take a snapshot each loop so that
+        // buffer overflows are not generated when advancing to the next position.
+        // As a result, the position could step backwards when this method is called concurrently,
+        // but the compareAndSwapLong call ensures that data is never overwritten.
+
+        if (bytes != null) {
+            boolean endOfFile = false;
+            long position = bytes.position();
+            while (!endOfFile) {
+                endOfFile = (bytes.limit() - position) < 8;
+                if (!endOfFile) {
+                    if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
+                        bytes.position(position + 8);
+                        if (synchronous) {
+                            bytes.force();
+                        }
+
+                        return position;
+                    }
+                }
+                position += 8;
+            }
+        }
+
+        return -1;
+    }
+
+    public static long countIndices(final VanillaMappedBytes buffer) {
+        long indices = 0;
+        for (long offset = 0; offset < buffer.capacity(); offset += 8) {
+            if (buffer.readLong(offset) != 0) {
+                indices++;
+            } else {
+                break;
+            }
+        }
+
+        return indices;
+    }
+
     public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         return new File(
             new File(basePath, dateCache.formatFor(cycle)),
@@ -115,47 +156,6 @@ public class VanillaIndexCache implements Closeable {
         }
 
         throw new AssertionError();
-    }
-
-    public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
-        // Position can be changed by another thread, so take a snapshot each loop so that
-        // buffer overflows are not generated when advancing to the next position.
-        // As a result, the position could step backwards when this method is called concurrently,
-        // but the compareAndSwapLong call ensures that data is never overwritten.
-
-        if(bytes != null) {
-            boolean endOfFile = false;
-            long position = bytes.position();
-            while (!endOfFile) {
-                endOfFile = (bytes.limit() - position) < 8;
-                if (!endOfFile) {
-                    if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
-                        bytes.lazyPosition(position + 8);
-                        if (synchronous) {
-                            bytes.force();
-                        }
-
-                        return position;
-                    }
-                }
-                position += 8;
-            }
-        }
-
-        return -1;
-    }
-
-    public static long countIndices(final VanillaMappedBytes buffer) {
-        long indices = 0;
-        for (long offset = 0; offset < buffer.capacity(); offset += 8) {
-            if(buffer.readLong(offset) != 0) {
-                indices++;
-            } else {
-                break;
-            }
-        }
-
-        return indices;
     }
 
     public long firstCycle() {
