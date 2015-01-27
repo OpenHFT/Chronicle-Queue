@@ -41,6 +41,16 @@ public class WrappedExcerptTailer implements ExcerptTailer {
     }
 
     @Override
+    public String toDebugString(long limit) {
+        return wrappedTailer.toDebugString(limit);
+    }
+
+    @Override
+    public boolean compare(long offset, RandomDataInput input, long inputOffset, long len) {
+        return wrappedTailer.compare(offset, input, inputOffset, len);
+    }
+
+    @Override
     public <E extends Enum<E>> E parseEnum(@NotNull Class<E> eClass, @NotNull StopCharTester tester) {
         return wrappedTailer.parseEnum(eClass, tester);
     }

@@ -20,6 +20,7 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
 import org.jetbrains.annotations.Nullable;
@@ -131,7 +132,7 @@ public abstract class SourceTcp {
 
 
         // this could be re-sized so cannot be final
-        protected ByteBufferBytes readBuffer;
+        protected IByteBufferBytes readBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
@@ -141,11 +142,10 @@ public abstract class SourceTcp {
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
 
-            this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(16));
-            this.readBuffer.clear();
+            this.readBuffer = ByteBufferBytes.wrap(ChronicleTcp.createBufferOfSize(16));
+            this.readBuffer.clearThreadAssociation();
 
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
-            this.writeBuffer.clear();
             this.writeBuffer.limit(0);
         }
 
@@ -302,7 +302,7 @@ public abstract class SourceTcp {
             setLastHeartbeat();
         }
 
-        protected ByteBufferBytes readUpTo(int size) throws IOException {
+        protected IByteBufferBytes readUpTo(int size) throws IOException {
             if (readBuffer.capacity() < size) {
                 // resize the buffer
                 this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));

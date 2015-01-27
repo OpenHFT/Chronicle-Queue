@@ -75,6 +75,16 @@ public class WrappedExcerpt implements ExcerptTailer, ExcerptAppender, Excerpt, 
     }
 
     @Override
+    public String toDebugString(long limit) {
+        return wrappedCommon.toDebugString(limit);
+    }
+
+    @Override
+    public boolean compare(long offset, RandomDataInput input, long inputOffset, long len) {
+        return wrappedCommon.compare(offset, input, inputOffset, len);
+    }
+
+    @Override
     public void readObject(Object object, int start, int end) {
         wrappedCommon.readObject(object, start, end);
     }

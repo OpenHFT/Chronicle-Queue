@@ -58,7 +58,7 @@ public class VanillaIndexCache implements Closeable {
                 endOfFile = (bytes.limit() - position) < 8;
                 if (!endOfFile) {
                     if (bytes.compareAndSwapLong(position, 0L, indexValue)) {
-                        bytes.position(position + 8);
+                        bytes.lazyPosition(position + 8);
                         if (synchronous) {
                             bytes.force();
                         }

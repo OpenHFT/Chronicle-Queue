@@ -33,10 +33,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertTrue;
-import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
-import static net.openhft.chronicle.ChronicleQueueBuilder.indexed;
-import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
-import static org.junit.Assert.*;
+import static net.openhft.chronicle.ChronicleQueueBuilder.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
 
@@ -415,7 +414,8 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
                     ExcerptTailer tailer = sink.createTailer();
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            if (tailer.remaining() >= 8)
+                                assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
                         } else {

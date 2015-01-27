@@ -26,6 +26,7 @@ import net.openhft.chronicle.tools.WrappedExcerpts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
@@ -199,7 +200,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         }
                     }
                 } catch(IOException e) {
-                    LOGGER.warn("", e);
+                    LOGGER.trace("", e);
                     throw new IllegalStateException(e);
                 }
             }
@@ -358,6 +359,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 index = receivedIndex;
             } catch (IOException e1) {
+                if (e1 instanceof EOFException)
+                    logger.trace("Exception reading nextExcerpt", e1);
+                else
                 logger.warn("Exception reading nextExcerpt", e1);
 
                 try {

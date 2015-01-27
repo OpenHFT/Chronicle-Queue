@@ -25,6 +25,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -82,7 +83,11 @@ public final class SourceTcpAcceptor extends SourceTcp {
                                             SocketChannel channel = socketChannel.accept();
                                             logger.info("Accepted connection from: {}", channel.getRemoteAddress());
 
-                                            executor.execute(createSessionHandler(channel));
+                                            try {
+                                                executor.execute(createSessionHandler(channel));
+                                            } catch (RejectedExecutionException rejected) {
+                                                logger.trace("Unable to start session", rejected);
+                                            }
                                         }
                                     }
                                 }
@@ -96,7 +101,11 @@ public final class SourceTcpAcceptor extends SourceTcp {
                                         SocketChannel channel = socketChannel.accept();
                                         logger.info("Accepted connection from: {}", channel.getRemoteAddress());
 
-                                        executor.execute(createSessionHandler(channel));
+                                        try {
+                                            executor.execute(createSessionHandler(channel));
+                                        } catch (RejectedExecutionException rejected) {
+                                            logger.trace("Unable to start session", rejected);
+                                        }
                                     }
                                 }
 

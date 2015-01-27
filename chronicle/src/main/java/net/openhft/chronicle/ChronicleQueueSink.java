@@ -27,6 +27,7 @@ import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
@@ -84,8 +85,8 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         this.excerpt = isLocal
-            ? new StatefulLocalExcerpt(wrappedChronicle.createTailer())
-            : new StatefulExcerpt(wrappedChronicle.createTailer());
+                ? new StatefulLocalExcerpt(wrappedChronicle.createTailer())
+                : new StatefulExcerpt(wrappedChronicle.createTailer());
 
         return this.excerpt;
     }
@@ -317,7 +318,10 @@ class ChronicleQueueSink extends WrappedChronicle {
                     return readNextExcerpt();
                 }
             } catch (IOException e1) {
-                logger.warn("Exception reading nextExcerpt", e1);
+                if (e1 instanceof EOFException)
+                    logger.trace("Exception reading nextExcerpt", e1);
+                else
+                    logger.warn("Exception reading nextExcerpt", e1);
 
                 try {
                     connection.close();
@@ -369,6 +373,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         public abstract void writePaddedEntry();
+
         public abstract void startExcerpt(long capacity, long index);
     }
 

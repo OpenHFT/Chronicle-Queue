@@ -52,6 +52,16 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> implements Excerp
         wrappedAppender.readMarshallable(in);
     }
 
+    @Override
+    public String toDebugString(long limit) {
+        return wrappedAppender.toDebugString(limit);
+    }
+
+    @Override
+    public boolean compare(long offset, RandomDataInput input, long inputOffset, long len) {
+        return wrappedAppender.compare(offset, input, inputOffset, len);
+    }
+
     public long readCompactLong() {
         return wrappedAppender.readCompactLong();
     }
