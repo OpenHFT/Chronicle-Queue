@@ -176,7 +176,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 try {
                     connection.writeAction(commandBuffer, actionType, position());
-                    connection.writeAllOrEOF(wrappedAppender.buffer());
+                    connection.writeAllOrEOF(wrapped.buffer());
 
                     if(builder.appendRequireAck()) {
                         connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);

@@ -122,8 +122,8 @@ public class WrappedExcerptAppenders {
                 throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
             }
 
-            if(capacity > wrappedAppender.buffer().capacity()) {
-                wrappedAppender = ByteBufferBytesAppender.withSize((int)capacity);
+            if (capacity > wrapped.buffer().capacity()) {
+                wrapped = ByteBufferBytesAppender.withSize((int) capacity);
             }
 
             super.startExcerpt(capacity);

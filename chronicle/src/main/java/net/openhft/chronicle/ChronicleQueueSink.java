@@ -366,7 +366,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
     }
 
-    private abstract class AppenderAdapter extends WrappedExcerptAppender {
+    private abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppender> {
 
         public AppenderAdapter(@NotNull ExcerptAppender appender) {
             super(appender);
@@ -391,12 +391,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         public void writePaddedEntry() {
-            super.wrappedAppender.addPaddedEntry();
+            super.wrapped.addPaddedEntry();
         }
 
         @Override
         public void startExcerpt(long capacity, long index) {
-            super.wrappedAppender.startExcerpt(capacity);
+            super.wrapped.startExcerpt(capacity);
         }
     }
 
