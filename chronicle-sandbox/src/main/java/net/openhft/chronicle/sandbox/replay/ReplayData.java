@@ -1,4 +1,4 @@
-package vanilla.java.replay;
+package net.openhft.chronicle.sandbox.replay;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
