@@ -16,23 +16,34 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
-
-import net.openhft.lang.model.constraints.NotNull;
-
-import java.io.Closeable;
-import java.nio.MappedByteBuffer;
+package net.openhft.chronicle.queue;
 
 /**
  * @author peter.lawrey
  */
-public interface MappedFileCache extends Closeable {
-    @NotNull
-    MappedByteBuffer acquireBuffer(long index, boolean prefetch);
+public interface ExcerptCommon {
+    /**
+     * @return this appender is pointing.
+     */
+    long index();
 
-    void excerptUsed();
-
+    /**
+     * This is an upper bound for the number of entires available. This includes padded entries.
+     *
+     * @return lastWrittenIndex() + 1
+     */
     long size();
 
-    void close();
+    /**
+     * @return the chronicle associated with this Excerpt
+     */
+    Chronicle chronicle();
+
+    /**
+     * Finish reading or writing. This checks there was not a buffer overflow and shrink wraps new entries and add them
+     * to the index
+     *
+     * May throw: - AssertionError - ConcurrentModificationException - IllegalStateException
+     */
+    void finish();
 }

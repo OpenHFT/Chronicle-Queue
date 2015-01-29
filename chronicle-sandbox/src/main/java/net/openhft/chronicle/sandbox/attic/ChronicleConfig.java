@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
 import net.openhft.lang.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
@@ -115,7 +115,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * Sets the capacity to be used for index files. This parameter is used only in
-     * <tt>net.openhft.chronicle.sandbox.RollingChronicle</tt>.
+     * <tt>net.openhft.chronicle.sandbox.attic.RollingChronicle</tt>.
      *
      * @param indexFileCapacity the capacity to be used for index files
      *
@@ -128,7 +128,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * Returns the capacity to be used for index files. This parameter is used only in
-     * <tt>net.openhft.chronicle.sandbox.RollingChronicle</tt>.
+     * <tt>net.openhft.chronicle.sandbox.attic.RollingChronicle</tt>.
      *
      * @return the capacity to be used for index files
      */
@@ -138,7 +138,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * Sets the number of excerpts in the index file. This parameter is used only in
-     * <tt>net.openhft.chronicle.sandbox.RollingChronicle</tt>.
+     * <tt>net.openhft.chronicle.sandbox.attic.RollingChronicle</tt>.
      *
      * @param indexFileExcerpts the number of excerpts in the index file
      *
@@ -151,7 +151,7 @@ public class ChronicleConfig implements Cloneable {
 
     /**
      * Returns the number of excerpts in the index file. This parameter is used only in
-     * <tt>net.openhft.chronicle.sandbox.RollingChronicle</tt>.
+     * <tt>net.openhft.chronicle.sandbox.attic.RollingChronicle</tt>.
      *
      * @return the number of excerpts in the index file
      */

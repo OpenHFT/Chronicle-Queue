@@ -16,25 +16,8 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
-import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.lang.model.constraints.NotNull;
-
-/**
- * A Journal is a simplified Chronicle.  It is bounded in size and number, does not support random access and is designed for fast writes.
- */
-public interface Journal {
-    @NotNull
-    String name();
-
-    @NotNull
-    ExcerptTailer createTailer();
-
-    @NotNull
-    ExcerptAppender createAppender();
-
-    // the last written entry.
-    long size();
+public interface VanillaChronicleMonitor {
+    public void onNewCycle(int cycle, int threadId);
 }

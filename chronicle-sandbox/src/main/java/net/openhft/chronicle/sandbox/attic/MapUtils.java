@@ -16,8 +16,23 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
-public interface VanillaChronicleMonitor {
-    public void onNewCycle(int cycle, int threadId);
+import net.openhft.lang.io.MappedFile;
+import net.openhft.lang.model.constraints.NotNull;
+
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * User: peter.lawrey Date: 13/08/13 Time: 18:58
+ */
+public class MapUtils {
+    @Deprecated()
+
+    public static MappedByteBuffer getMap(@NotNull FileChannel fileChannel, long start, int size) throws IOException {
+        return MappedFile.getMap(fileChannel, start, size);
+    }
+
 }

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
 import net.openhft.chronicle.Excerpt;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.chronicle.sandbox.tools.DailingRollingIndexReader;
 import net.openhft.chronicle.sandbox.tools.DailingRollingReader;
+import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;

@@ -16,23 +16,21 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
-
-import net.openhft.lang.io.MappedFile;
-import net.openhft.lang.model.constraints.NotNull;
-
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
+package net.openhft.chronicle.sandbox.attic;
 
 /**
- * User: peter.lawrey Date: 13/08/13 Time: 18:58
+ * File structure
+ * 64 byte header of
+ * long magic number: JOURNAL\\u001
+ * int header size:      64
+ * int index count:     e.g. 4096
+ * int data shift:        e.g. 0
+ * int data allocations: e.g. 16 M
+ * padding
+ * rotating indexes
+ * data
  */
-public class MapUtils {
-    @Deprecated()
-
-    public static MappedByteBuffer getMap(@NotNull FileChannel fileChannel, long start, int size) throws IOException {
-        return MappedFile.getMap(fileChannel, start, size);
+class VanillaJournal {
+    public VanillaJournal(String fileName, JournalConfig config) {
     }
-
 }

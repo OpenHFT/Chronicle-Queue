@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
 import net.openhft.lang.io.NativeBytes;
 import org.slf4j.Logger;

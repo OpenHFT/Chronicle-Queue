@@ -18,7 +18,7 @@
 
 package net.openhft.chronicle.sandbox.tools;
 
-import net.openhft.chronicle.sandbox.MasterIndexFile;
+import net.openhft.chronicle.sandbox.attic.MasterIndexFile;
 
 import java.io.File;
 import java.io.PrintWriter;

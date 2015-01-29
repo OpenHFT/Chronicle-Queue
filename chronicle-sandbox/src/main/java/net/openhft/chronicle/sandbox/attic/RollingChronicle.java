@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.Excerpt;

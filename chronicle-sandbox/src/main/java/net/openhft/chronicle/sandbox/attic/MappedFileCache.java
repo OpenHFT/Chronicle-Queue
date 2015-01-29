@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.sandbox;
+package net.openhft.chronicle.sandbox.attic;
+
+import net.openhft.lang.model.constraints.NotNull;
+
+import java.io.Closeable;
+import java.nio.MappedByteBuffer;
 
 /**
- * File structure
- * 64 byte header of
- * long magic number: JOURNAL\\u001
- * int header size:      64
- * int index count:     e.g. 4096
- * int data shift:        e.g. 0
- * int data allocations: e.g. 16 M
- * padding
- * rotating indexes
- * data
+ * @author peter.lawrey
  */
-class VanillaJournal {
-    public VanillaJournal(String fileName, JournalConfig config) {
-    }
+public interface MappedFileCache extends Closeable {
+    @NotNull
+    MappedByteBuffer acquireBuffer(long index, boolean prefetch);
+
+    void excerptUsed();
+
+    long size();
+
+    void close();
 }
