@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.chronicle.queue;
 
-import net.openhft.chronicle.ExcerptComparator;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.model.constraints.NotNull;
 

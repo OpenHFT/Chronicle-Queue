@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireOut;
 
