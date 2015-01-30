@@ -20,7 +20,6 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.VanillaMappedBytes;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -123,7 +122,6 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    @Ignore("failing on TC")
     public void testConcurrentAppend() throws Exception {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
