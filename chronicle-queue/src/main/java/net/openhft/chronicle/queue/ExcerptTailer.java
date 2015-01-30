@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
+import net.openhft.lang.io.Bytes;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
@@ -26,7 +27,17 @@ import net.openhft.lang.model.constraints.NotNull;
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon, WireIn {
+public interface ExcerptTailer extends ExcerptCommon {
+    /**
+     * @return the wire associated with this tailer.
+     */
+    public WireIn wire();
+
+    /**
+     * @return the underlying Bytes
+     */
+    public Bytes bytes();
+    
     /**
      * Randomly select an Excerpt.
      *

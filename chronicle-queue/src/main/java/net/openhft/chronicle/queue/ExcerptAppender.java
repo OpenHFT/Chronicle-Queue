@@ -18,14 +18,26 @@
 
 package net.openhft.chronicle.queue;
 
+
 import net.openhft.chronicle.wire.WireOut;
+import net.openhft.lang.io.Bytes;
 
 /**
- * The component that facilitates sequentially writing data to a {@link net.openhft.chronicle.Chronicle}.
+ * The component that facilitates sequentially writing data to a {@link Chronicle}.
  *
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends ExcerptCommon, WireOut {
+public interface ExcerptAppender extends ExcerptCommon {
+    /**
+     * @return the underlying Wire.
+     */
+    public WireOut wire();
+
+    /**
+     * @return the underlying Bytes.
+     */
+    public Bytes bytes();
+    
     /**
      * Start an excerpt with the default message capacity of 128K (can be configured) This can waste up to 0.1% of disk
      * space, unless you have sparse file support like Linux, when you will waste far less.
