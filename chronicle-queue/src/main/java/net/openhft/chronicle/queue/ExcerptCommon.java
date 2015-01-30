@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.chronicle.queue;
+package net.openhft.chronicle.queue;
 
 /**
  * @author peter.lawrey

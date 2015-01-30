@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.chronicle.queue;
+package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.lang.model.constraints.NotNull;

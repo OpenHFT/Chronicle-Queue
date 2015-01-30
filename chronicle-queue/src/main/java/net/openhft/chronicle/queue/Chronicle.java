@@ -1,4 +1,4 @@
-package net.chronicle.queue;
+package net.openhft.chronicle.queue;
 
 import net.openhft.lang.model.constraints.NotNull;
 

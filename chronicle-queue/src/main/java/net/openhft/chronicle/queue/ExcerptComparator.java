@@ -1,4 +1,4 @@
-package net.chronicle.queue;
+package net.openhft.chronicle.queue;
 
 /**
  * For a binary search, provide a comparison of Excerpts
