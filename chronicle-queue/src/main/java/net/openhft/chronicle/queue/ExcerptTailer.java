@@ -22,7 +22,7 @@ import net.openhft.chronicle.wire.WireIn;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
- * The component that facilitates sequentially reading data from a {@link net.openhft.chronicle.Chronicle}.
+ * The component that facilitates sequentially reading data from a {@link Chronicle}.
  *
  * @author peter.lawrey
  */
