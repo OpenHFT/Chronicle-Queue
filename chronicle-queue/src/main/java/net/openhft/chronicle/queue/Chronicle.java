@@ -22,17 +22,17 @@ import java.io.IOException;
  * C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as
  * ByteBuffers if the portion is mapped into memory.
  *
- * <p>{@link net.openhft.chronicle.Chronicle} (now in the specific sense) is the main interface for management and can
+ * <p>{@link Chronicle} (now in the specific sense) is the main interface for management and can
  * be seen as the "Collection class" of the <em>Chronicle</em> environment. You will reserve a portion of memory and
- * then put/fetch/update records using the {@link net.openhft.chronicle.Chronicle} interface.</p>
+ * then put/fetch/update records using the {@link Chronicle} interface.</p>
  *
- * <p>{@link net.openhft.chronicle.Excerpt} is the main data container in a {@link net.openhft.chronicle.Chronicle},
+ * <p>{@link Excerpt} is the main data container in a {@link Chronicle},
  * each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into
  * it and finishing the Excerpt at the end.</p>
  *
- * <p>While {@link net.openhft.chronicle.Excerpt} is a generic purpose container allowing for remote access, it also has
- * more specialized counterparts for sequential operations. See {@link net.openhft.chronicle.ExcerptTailer} and {@link
- * net.openhft.chronicle.ExcerptAppender}</p>
+ * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
+ * more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
+ * net.openhft.chronicle.queue.ExcerptAppender}</p>
  *
  * @author peter.lawrey
  */
