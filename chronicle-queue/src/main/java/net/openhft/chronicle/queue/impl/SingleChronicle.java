@@ -4,12 +4,12 @@ import net.openhft.chronicle.queue.Chronicle;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.MappedFile;
 import net.openhft.lang.io.MappedMemory;
-import net.openhft.lang.model.DataValueClasses;
-import net.openhft.lang.values.LongValue;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
@@ -20,8 +20,6 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.ZonedDateTime;
-import java.util.UUID;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file
@@ -107,59 +105,6 @@ public class SingleChronicle implements Chronicle {
 
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE))
             throw new AssertionError("Concurrent writing of the header");
-    }
-
-    static class Header implements Marshallable {
-        UUID uuid;
-        ZonedDateTime created;
-        String user;
-        String host;
-        LongValue readReady = DataValueClasses.newDirectInstance(LongValue.class);
-        LongValue readByte = DataValueClasses.newDirectInstance(LongValue.class);
-        LongValue writeReady = DataValueClasses.newDirectInstance(LongValue.class);
-        LongValue writeByte = DataValueClasses.newDirectInstance(LongValue.class);
-
-        public void init() {
-            uuid = UUID.randomUUID();
-            created = ZonedDateTime.now();
-            user = System.getProperty("user.name");
-            host = getHostName();
-            readReady.setOrderedValue(0);
-            writeReady.setOrderedValue(0);
-        }
-
-        enum HeaderField implements WireKey {
-            type,
-            uuid, created, user, host,
-            readReady, readByte,
-            writeReady, writeByte
-        }
-
-        @Override
-        public void writeMarshallable(WireOut out) {
-            out.write(HeaderField.type).text("header")
-                    .write(HeaderField.uuid).uuid(uuid)
-                    .write(HeaderField.created).zonedDateTime(created)
-                    .write(HeaderField.user).text(user)
-                    .write(HeaderField.host).text(host)
-                    .write(HeaderField.readReady).int64(readReady)
-                    .write(HeaderField.readByte).int64(readByte)
-                    .write(HeaderField.writeReady).cacheAlign().int64(writeReady)
-                    .write(HeaderField.writeReady).int64(writeReady);
-        }
-
-        @Override
-        public void readMarshallable(WireIn in) throws StreamCorruptedException {
-            in.read(HeaderField.type).expectText("header")
-                    .read(HeaderField.uuid).uuid(u -> uuid = u)
-                    .read(HeaderField.created).zonedDateTime(c -> created = c)
-                    .read(HeaderField.user).text(u -> user = u)
-                    .read(HeaderField.host).text(h -> host = h)
-                    .read(HeaderField.readReady).int64(readReady)
-                    .read(HeaderField.readByte).int64(readByte)
-                    .read(HeaderField.writeReady).int64(writeReady)
-                    .read(HeaderField.writeByte).int64(writeByte);
-        }
     }
 
     private static short toShort(long l) {
