@@ -412,7 +412,7 @@ public class IndexedChronicle implements Chronicle {
                 indexBaseForLine = UNSAFE.getLong(indexStartAddr + indexLineStart);
                 indexPositionAddr = indexStartAddr + indexLineStart + inLine;
 
-                long dataOffsetStart = inLine == 0
+                long dataOffsetStart = indexLineEntry == 0
                         ? indexBaseForLine
                         : (indexBaseForLine + Math.abs(UNSAFE.getInt(indexPositionAddr - 4)));
 
