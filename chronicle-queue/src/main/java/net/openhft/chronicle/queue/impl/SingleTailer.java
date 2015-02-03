@@ -2,17 +2,25 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.Chronicle;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.MultiStoreBytes;
+
+import java.util.function.Function;
 
 /**
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleTailer implements ExcerptTailer {
-    private final Chronicle chronicle;
+    private final DirectChronicle chronicle;
+    long index;
+    private final MultiStoreBytes bytes = new MultiStoreBytes();
+    private final Wire wire = new BinaryWire(bytes);
 
     public SingleTailer(Chronicle chronicle) {
-        this.chronicle = chronicle;
+        this.chronicle = (DirectChronicle) chronicle;
+        toStart();
     }
 
     @Override
@@ -21,8 +29,9 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public Bytes bytes() {
-        throw new UnsupportedOperationException();
+    public <T> boolean readDocument(Function<WireIn, T> reader) {
+        wire.readDocument(reader);
+        return true;
     }
 
     @Override
@@ -31,37 +40,20 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public boolean nextIndex() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ExcerptTailer toStart() {
-        throw new UnsupportedOperationException();
+        index = -1;
+        chronicle.index(-1L, bytes);
+        return this;
     }
 
     @Override
     public ExcerptTailer toEnd() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long index() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long size() {
-        throw new UnsupportedOperationException();
+        index(chronicle.lastIndex());
+        return this;
     }
 
     @Override
     public Chronicle chronicle() {
         return chronicle;
-    }
-
-    @Override
-    public void finish() {
-        throw new UnsupportedOperationException();
     }
 }

@@ -20,7 +20,6 @@ public enum Excerpts {
                     break;
             }
             int cmp = comparator.compare(excerpt);
-            excerpt.finish();
             if (cmp < 0)
                 lo = mid + 1;
             else if (cmp > 0)
@@ -48,7 +47,6 @@ public enum Excerpts {
                     break;
             }
             int cmp = comparator.compare(excerpt);
-            excerpt.finish();
 
             if (cmp < 0) {
                 lo1 = mid + 1;
@@ -75,7 +73,6 @@ public enum Excerpts {
                     break;
             }
             int cmp = comparator.compare(excerpt);
-            excerpt.finish();
 
             if (cmp <= 0) {
                 lo2 = mid + 1;

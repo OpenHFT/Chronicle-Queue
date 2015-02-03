@@ -23,27 +23,7 @@ package net.openhft.chronicle.queue;
  */
 public interface ExcerptCommon {
     /**
-     * @return this appender is pointing.
-     */
-    long index();
-
-    /**
-     * This is an upper bound for the number of entires available. This includes padded entries.
-     *
-     * @return lastWrittenIndex() + 1
-     */
-    long size();
-
-    /**
      * @return the chronicle associated with this Excerpt
      */
     Chronicle chronicle();
-
-    /**
-     * Finish reading or writing. This checks there was not a buffer overflow and shrink wraps new entries and add them
-     * to the index
-     *
-     * May throw: - AssertionError - ConcurrentModificationException - IllegalStateException
-     */
-    void finish();
 }

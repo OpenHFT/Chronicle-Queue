@@ -6,9 +6,12 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.lang.Jvm;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.MappedFile;
 import net.openhft.lang.io.MappedMemory;
+import net.openhft.lang.io.MultiStoreBytes;
+import net.openhft.lang.values.LongValue;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,14 +27,16 @@ import java.nio.file.Paths;
  *
  * Created by peter on 30/01/15.
  */
-public class SingleChronicle implements Chronicle {
+public class SingleChronicle implements Chronicle, DirectChronicle {
     static final long MAGIC_OFFSET = 0L;
-    static final long UNINTIALISED = 0L;
+    static final long HEADER_OFFSET = 8L;
+    static final long UNINITIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
     static final long QUEUE_CREATED = asLong("QUEUE400");
     static final int NOT_READY = 1 << 31;
     static final int META_DATA = 1 << 30;
-    static final int LENGTH_MASK = -1 >> 2;
+    static final int LENGTH_MASK = -1 >>> 2;
+    static final int MAX_LENGTH = LENGTH_MASK;
 
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
     private final MappedFile file;
@@ -48,13 +53,56 @@ public class SingleChronicle implements Chronicle {
         initialiseHeader();
     }
 
-    enum MetaDataKey implements WireKey {
-        header
+    @Override
+    public void appendDocument(Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+        LongValue writeByte = header.writeByte;
+        long lastByte = writeByte.getVolatileValue();
+        for (; ; ) {
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                writeByte.setValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) length);
+                return;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            Jvm.checkInterrupted();
+        }
+    }
 
+    @Override
+    public Bytes bytes() {
+        return bytes;
+    }
+
+    @Override
+    public long lastIndex() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean index(long index, MultiStoreBytes bytes) {
+        if (index == -1) {
+            bytes.storePositionAndSize(headerMemory, HEADER_OFFSET, headerMemory.size() - HEADER_OFFSET);
+            return true;
+        }
+        return false;
+    }
+
+    private int length30(int i) {
+        return i & LENGTH_MASK;
+    }
+
+    enum MetaDataKey implements WireKey {
+        header, index2index, index
     }
 
     private void initialiseHeader() throws IOException {
-        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINTIALISED, BUILDING)) {
+        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINITIALISED, BUILDING)) {
             buildHeader();
         }
         readHeader();
@@ -64,8 +112,8 @@ public class SingleChronicle implements Chronicle {
         // skip the magic number. 
         waitForTheHeaderToBeBuilt(bytes);
 
-        bytes.position(8L);
-        wire.readMetaData(() -> wire.read().readMarshallable(header));
+        bytes.position(HEADER_OFFSET);
+        wire.readMetaData($ -> wire.read().readMarshallable(header));
     }
 
     private void waitForTheHeaderToBeBuilt(Bytes bytes) throws IOException {
@@ -88,11 +136,10 @@ public class SingleChronicle implements Chronicle {
 
     private void buildHeader() {
         // skip the magic number.
-        bytes.position(MAGIC_OFFSET + 8L);
+        bytes.position(HEADER_OFFSET);
 
         wire.writeMetaData(() -> wire
-                .write(MetaDataKey.header).writeMarshallable(header.init())
-                .addPadding(1024));
+                .write(MetaDataKey.header).writeMarshallable(header.init()));
 
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");

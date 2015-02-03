@@ -19,8 +19,9 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.io.Bytes;
 import net.openhft.lang.model.constraints.NotNull;
+
+import java.util.function.Function;
 
 /**
  * The component that facilitates sequentially reading data from a {@link Chronicle}.
@@ -33,11 +34,8 @@ public interface ExcerptTailer extends ExcerptCommon {
      */
     public WireIn wire();
 
-    /**
-     * @return the underlying Bytes
-     */
-    public Bytes bytes();
-    
+    public <T> boolean readDocument(Function<WireIn, T> reader);
+
     /**
      * Randomly select an Excerpt.
      *
@@ -45,14 +43,6 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return true if this is a valid entries and not padding.
      */
     boolean index(long l);
-
-    /**
-     * Wind to the next entry, no matter how many padded index entries you need to skip. If there is padding, the
-     * index() can change even though this method might return false
-     *
-     * @return Is there a valid entry to be read.
-     */
-    boolean nextIndex();
 
     /**
      * Replay from the start.

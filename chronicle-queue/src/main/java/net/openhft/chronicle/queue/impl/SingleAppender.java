@@ -2,9 +2,11 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.Chronicle;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.values.LongValue;
+import net.openhft.lang.io.DirectStore;
 
 import java.util.function.Consumer;
 
@@ -13,13 +15,13 @@ import java.util.function.Consumer;
  */
 public class SingleAppender implements ExcerptAppender {
 
-    private final Chronicle chronicle;
-    private final LongValue writeByte;
+    private final DirectChronicle chronicle;
     private final ChronicleWireOut wireOut;
+    private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
+    private final Wire wire = new BinaryWire(buffer);
 
-    public SingleAppender(Chronicle chronicle, LongValue writeByte) {
-        this.chronicle = chronicle;
-        this.writeByte = writeByte;
+    public SingleAppender(Chronicle chronicle) {
+        this.chronicle = (DirectChronicle) chronicle;
         wireOut = new ChronicleWireOut(null);
     }
 
@@ -29,24 +31,11 @@ public class SingleAppender implements ExcerptAppender {
     }
 
     @Override
-    public Bytes bytes() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeDocument(Consumer<WireOut> wire) {
-        long position = writeByte.getValue();
-
-    }
-
-    @Override
-    public void startExcerpt() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void startExcerpt(long capacity) {
-        throw new UnsupportedOperationException();
+    public void writeDocument(Consumer<WireOut> writer) {
+        buffer.clear();
+        writer.accept(wire);
+        buffer.flip();
+        chronicle.appendDocument(buffer);
     }
 
     @Override
@@ -65,22 +54,7 @@ public class SingleAppender implements ExcerptAppender {
     }
 
     @Override
-    public long index() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long size() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Chronicle chronicle() {
         return chronicle;
-    }
-
-    @Override
-    public void finish() {
-        throw new UnsupportedOperationException();
     }
 }
