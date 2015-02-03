@@ -5,14 +5,12 @@ import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.MappedFile;
 import net.openhft.lang.io.MappedMemory;
 
 import java.io.IOException;
-import java.io.StreamCorruptedException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -28,27 +26,35 @@ import java.nio.file.Paths;
  */
 public class SingleChronicle implements Chronicle {
     static final long MAGIC_OFFSET = 0L;
-    static final long CREATED = 0L;
+    static final long UNINTIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
-    static final long QUEUE = asLong("QUEUE400");
-    static final int META_BITS = 0x8000;
-    static final int META_MASK = 0x7FFF;
+    static final long QUEUE_CREATED = asLong("QUEUE400");
+    static final int NOT_READY = 1 << 31;
+    static final int META_DATA = 1 << 30;
+    static final int LENGTH_MASK = -1 >> 2;
 
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
     private final MappedFile file;
     private final MappedMemory headerMemory;
     private final Header header = new Header();
+    private final ChronicleWire wire;
+    private final Bytes bytes;
 
     public SingleChronicle(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
         headerMemory = file.acquire(0);
+        bytes = headerMemory.bytes();
+        wire = new ChronicleWire(new BinaryWire(bytes));
         initialiseHeader();
     }
 
+    enum MetaDataKey implements WireKey {
+        header
+
+    }
+
     private void initialiseHeader() throws IOException {
-        Bytes bytes = headerMemory.bytes();
-        long magic = bytes.readVolatileLong(MAGIC_OFFSET);
-        if (magic == CREATED && bytes.compareAndSwapLong(MAGIC_OFFSET, CREATED, BUILDING)) {
+        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINTIALISED, BUILDING)) {
             buildHeader();
         }
         readHeader();
@@ -56,60 +62,40 @@ public class SingleChronicle implements Chronicle {
 
     private void readHeader() throws IOException {
         // skip the magic number. 
-        Bytes bytes = headerMemory.bytes().bytes();
         waitForTheHeaderToBeBuilt(bytes);
 
         bytes.position(8L);
-
-        int len = bytes.readUnsignedShort();
-        if (len < META_BITS)
-            throw new StreamCorruptedException("Length was " + Integer.toHexString(len));
-        // shrink wrap the header so our padding can do it's work.
-        bytes.limit(len + 8L);
-
-        WireIn in = new BinaryWire(bytes, true, false, false);
-        header.readMarshallable(in);
-
+        wire.readMetaData(() -> wire.read().readMarshallable(header));
     }
 
     private void waitForTheHeaderToBeBuilt(Bytes bytes) throws IOException {
-        for (int i = 0; ; i++) {
+        for (int i = 0; i < 1000; i++) {
             long magic = bytes.readVolatileLong(MAGIC_OFFSET);
-            if (magic != CREATED)
-                throw new AssertionError("Invalid magic number " + Long.toHexString(magic) + " in file " + name());
-            if (i > 1000)
-                throw new AssertionError("Timeout waiting to build the file " + name());
-            if (magic == BUILDING)
+            if (magic == BUILDING) {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
                     throw new IOException("Interrupted waiting for the header to be built");
                 }
-
+            } else if (magic == QUEUE_CREATED) {
+                return;
+            } else {
+                throw new AssertionError("Invalid magic number " + Long.toHexString(magic) + " in file " + name());
+            }
         }
+        throw new AssertionError("Timeout waiting to build the file " + name());
     }
 
     private void buildHeader() {
-        Bytes bytes = headerMemory.bytes();
-        // skip the magic number. 
-        bytes.position(8L);
+        // skip the magic number.
+        bytes.position(MAGIC_OFFSET + 8L);
 
-        long position = bytes.position();
-        bytes.writeUnsignedShort(0);
+        wire.writeMetaData(() -> wire
+                .write(MetaDataKey.header).writeMarshallable(header.init())
+                .addPadding(1024));
 
-        WireOut out = new BinaryWire(bytes, true, false, false);
-        header.writeMarshallable(out);
-        out.addPadding(1024);
-
-        bytes.writeUnsignedShort(position, META_BITS | toShort(bytes.position() - position));
-
-        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE))
+        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");
-    }
-
-    private static short toShort(long l) {
-        if (l < 0 || l > Short.MAX_VALUE) throw new AssertionError();
-        return (short) l;
     }
 
     static String getHostName() {
@@ -141,14 +127,14 @@ public class SingleChronicle implements Chronicle {
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new SingleTailer();
+        return new SingleTailer(this);
     }
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
         ExcerptAppender appender = localAppender.get();
         if (appender == null)
-            localAppender.set(appender = new SingleAppender());
+            localAppender.set(appender = new SingleAppender(this));
         return appender;
     }
 

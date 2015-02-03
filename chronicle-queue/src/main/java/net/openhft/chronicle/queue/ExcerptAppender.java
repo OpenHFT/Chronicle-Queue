@@ -22,6 +22,8 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.io.Bytes;
 
+import java.util.function.Consumer;
+
 /**
  * The component that facilitates sequentially writing data to a {@link Chronicle}.
  *
@@ -37,6 +39,8 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @return the underlying Bytes.
      */
     public Bytes bytes();
+
+    public void writeDocument(Consumer<WireOut> wire);
     
     /**
      * Start an excerpt with the default message capacity of 128K (can be configured) This can waste up to 0.1% of disk

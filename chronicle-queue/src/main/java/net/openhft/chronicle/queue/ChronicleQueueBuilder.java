@@ -9,7 +9,16 @@ import java.io.IOException;
  */
 public class ChronicleQueueBuilder {
     private String name;
-    private long blockSize;
+    private long blockSize = 64 << 20;
+
+    public ChronicleQueueBuilder(String name) {
+        this.name = name;
+    }
+
+    public ChronicleQueueBuilder blockSize(int blockSize) {
+        this.blockSize = blockSize;
+        return this;
+    }
 
     public Chronicle build() throws IOException {
         return new SingleChronicle(name, blockSize);

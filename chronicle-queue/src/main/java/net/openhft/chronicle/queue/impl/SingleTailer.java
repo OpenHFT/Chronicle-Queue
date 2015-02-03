@@ -9,9 +9,15 @@ import net.openhft.lang.io.Bytes;
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleTailer implements ExcerptTailer {
+    private final Chronicle chronicle;
+
+    public SingleTailer(Chronicle chronicle) {
+        this.chronicle = chronicle;
+    }
+
     @Override
     public WireIn wire() {
-        throw new UnsupportedOperationException();
+        return new ChronicleWireIn(null);
     }
 
     @Override
@@ -51,7 +57,7 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public Chronicle chronicle() {
-        throw new UnsupportedOperationException();
+        return chronicle;
     }
 
     @Override
