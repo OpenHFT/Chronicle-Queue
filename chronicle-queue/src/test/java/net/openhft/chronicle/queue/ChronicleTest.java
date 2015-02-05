@@ -21,7 +21,7 @@ public class ChronicleTest {
     @Test
     public void testCreateAppender() throws Exception {
         for (int r = 0; r < 2; r++) {
-            for (int t = 1; t <= 12; t++) {
+            for (int t = 1; t <= Runtime.getRuntime().availableProcessors(); t++) {
                 List<Future<?>> futureList = new ArrayList<>();
                 long start = System.nanoTime();
                 for (int j = 0; j < 4; j++) {
