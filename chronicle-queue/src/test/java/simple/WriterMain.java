@@ -33,7 +33,7 @@ public class WriterMain {
             }
             file.close();
             long time = System.nanoTime() - start;
-            System.out.printf("%,d in %.3f secs, throughput %.6f M/s%n", count, time / 1e9, count * 1e3 / time);
+            System.out.printf("%,d in %.3f secs, throughput %.6f M/s x %,d%n", count, time / 1e9, count * 1e3 / time, length);
         }
     }
 
