@@ -18,7 +18,7 @@ public class WriterMain {
 
     public static void main(String[] args) throws IOException {
         int dataSize = 256 << 20;
-        int length = 4;
+        int length = 50;
         byte[] bytes = new byte[length];
         for (int t = 0; t < 5; t++) {
             long start = System.nanoTime();
