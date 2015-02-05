@@ -23,6 +23,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.wire.BinaryWire.isDocument;
+
 /**
  * SingleChronicle implements Chronicle over a single streaming file
  *
@@ -77,7 +79,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     }
 
     @Override
-    public void readDocument(AtomicLong offset, Bytes buffer) {
+    public boolean readDocument(AtomicLong offset, Bytes buffer) {
         buffer.clear();
         long lastByte = offset.get();
         for (; ; ) {
@@ -88,7 +90,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
                 buffer.write(bytes, lastByte, length2);
                 lastByte += length2;
                 offset.set(lastByte);
-                return;
+                return isDocument(length);
             }
             Jvm.checkInterrupted();
         }

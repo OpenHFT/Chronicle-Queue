@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public interface DirectChronicle extends Chronicle {
     void appendDocument(Bytes buffer);
 
-    void readDocument(AtomicLong offset, Bytes buffer);
+    boolean readDocument(AtomicLong offset, Bytes buffer);
 
     Bytes bytes();
 
