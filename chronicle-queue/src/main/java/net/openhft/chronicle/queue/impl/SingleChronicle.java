@@ -21,6 +21,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file
@@ -44,6 +45,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     private final Header header = new Header();
     private final ChronicleWire wire;
     private final Bytes bytes;
+    private long firstBytes = -1;
 
     public SingleChronicle(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
@@ -70,6 +72,24 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
             }
             int length2 = length30(bytes.readVolatileInt());
             bytes.skip(length2);
+            Jvm.checkInterrupted();
+        }
+    }
+
+    @Override
+    public void readDocument(AtomicLong offset, Bytes buffer) {
+        buffer.clear();
+        long lastByte = offset.get();
+        for (; ; ) {
+            int length = bytes.readVolatileInt(lastByte);
+            int length2 = length30(length);
+            if (BinaryWire.isReady(length)) {
+                lastByte += 4;
+                buffer.write(bytes, lastByte, length2);
+                lastByte += length2;
+                offset.set(lastByte);
+                return;
+            }
             Jvm.checkInterrupted();
         }
     }
@@ -114,6 +134,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
 
         bytes.position(HEADER_OFFSET);
         wire.readMetaData($ -> wire.read().readMarshallable(header));
+        firstBytes = bytes.position();
     }
 
     private void waitForTheHeaderToBeBuilt(Bytes bytes) throws IOException {
@@ -210,4 +231,8 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public long firstBytes() {
+        return firstBytes;
+    }
 }
