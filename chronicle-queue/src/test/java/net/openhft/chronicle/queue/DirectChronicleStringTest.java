@@ -65,17 +65,17 @@ public class DirectChronicleStringTest {
     }
 
     private void readSome(DirectChronicle chronicle) throws IOException {
-        final Bytes tailer = chronicle.bytes();
+        final Bytes bytes = chronicle.bytes();
         for (int i = 0; i < RUNS; i++) {
-            assertEquals(EXPECTED_STRING, tailer.readUTF());
+            assertEquals(EXPECTED_STRING, bytes.readUTF());
         }
     }
 
     private void writeSome(DirectChronicle chronicle) throws IOException {
 
-        final Bytes appender = chronicle.bytes();
+        final Bytes bytes = chronicle.bytes();
         for (int i = 0; i < RUNS; i++) {
-            appender.writeUTF(EXPECTED_STRING);
+            bytes.writeUTF(EXPECTED_STRING);
         }
     }
 
