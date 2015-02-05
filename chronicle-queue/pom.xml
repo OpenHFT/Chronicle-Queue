@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.0.0-SNAPSHOT</version>
+    <version>4.0.0-alapha-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/queue4</name>
