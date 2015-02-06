@@ -1066,6 +1066,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
+    @Ignore
     @Test
     public void testAppendX() throws Exception {
         final long RUNS = 1000000;

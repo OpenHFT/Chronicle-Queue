@@ -68,6 +68,9 @@ public class VanillaChronicle implements Chronicle {
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
+    private final VanillaDateCache dateCache;
+    private final int indexBlockSizeBits;
+    private final int indexBlockSizeMask;
     private final int indexBlockLongsBits;
     private final int indexBlockLongsMask;
     private final int dataBlockSizeBits;
@@ -84,37 +87,24 @@ public class VanillaChronicle implements Chronicle {
 
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
-        this.marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
-        this.tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
-        this.appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
+        this.marshallersCache = new ThreadLocal<>();
+        this.tailerCache = new ThreadLocal<>();
+        this.appenderCache = new ThreadLocal<>();
         this.name = builder.path().getName();
 
-        VanillaDateCache dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
-        int indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
-        int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
+        this.dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
 
-        this.indexCache = new VanillaIndexCache(
-                builder.path().getAbsolutePath(),
-                indexBlockSizeBits,
-                dateCache,
-                builder.indexCacheCapacity(),
-                builder.cleanupOnClose());
-
+        this.indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
+        this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
+        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits);
 
         this.dataBlockSizeBits = Maths.intLog2(builder.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
+        this.dataCache = new VanillaDataCache(this.builder, dateCache, dataBlockSizeBits);
 
-        this.dataCache = new VanillaDataCache(
-                builder.path().getAbsolutePath(),
-                dataBlockSizeBits,
-                dateCache,
-                builder.indexCacheCapacity(),
-                builder.cleanupOnClose()
-        );
-
-        this.entriesForCycleBits = Maths.intLog2(builder.entriesPerCycle());
+        this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
     }
 
