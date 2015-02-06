@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.lang.Jvm;
 import org.junit.Test;
 
 import java.io.File;
@@ -18,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 public class ChronicleTest {
 
     public static final int RUNS = 1000000;
-    public static final String TMP = Jvm.isMacOSX() ? "/tmp" : System.getProperty("java.io.tmpdir");
+    public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
 
     @Test
     public void testCreateAppender() throws Exception {
