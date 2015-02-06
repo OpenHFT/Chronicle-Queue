@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.Chronicle;
-import net.openhft.chronicle.queue.Excerpt;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.Jvm;
@@ -36,8 +33,8 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     static final long UNINITIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
     static final long QUEUE_CREATED = asLong("QUEUE400");
-    static final int NOT_READY = 1 << 31;
-    static final int META_DATA = 1 << 30;
+    static final int NOT_READY = 1 << 30;
+    static final int META_DATA = 1 << 31;
     static final int LENGTH_MASK = -1 >>> 2;
     static final int MAX_LENGTH = LENGTH_MASK;
 
@@ -162,7 +159,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         bytes.position(HEADER_OFFSET);
 
         wire.writeMetaData(() -> wire
-                .write(MetaDataKey.header).writeMarshallable(header.init()));
+                .write(MetaDataKey.header).writeMarshallable(header.init(Compression.NONE)));
 
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");

@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.DirectChronicle;
-import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
 import org.junit.Test;
@@ -94,10 +93,5 @@ public class DirectChronicleStringTest {
             toWrite.clear();
             chronicle.appendDocument(toWrite);
         }
-    }
-
-
-    enum TestKey implements WireKey {
-        test
     }
 }

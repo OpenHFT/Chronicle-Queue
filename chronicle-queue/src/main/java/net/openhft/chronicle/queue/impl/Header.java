@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
@@ -22,16 +23,18 @@ class Header implements Marshallable {
     ZonedDateTime created;
     String user;
     String host;
+    String compression;
 
     // support binding to off heap memory with thread safe operations.
     final LongValue writeByte = newDirectInstance(LongValue.class);
     final LongValue index2Index = newDirectInstance(LongValue.class);
 
-    public Header init() {
+    public Header init(Compression compression) {
         uuid = UUID.randomUUID();
         created = ZonedDateTime.now();
         user = System.getProperty("user.name");
         host = SingleChronicle.getHostName();
+        this.compression = compression.name();
         writeByte.setOrderedValue(PADDED_SIZE);
         return this;
     }
