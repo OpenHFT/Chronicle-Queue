@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.DirectChronicle;
-import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
 import org.junit.Test;
@@ -35,6 +34,7 @@ public class DirectChronicleStringTest {
     public static final int RUNS = 1000000;
     public static final String EXPECTED_STRING = "Hello World23456789012345678901234567890";
     public static final byte[] EXPECTED_BYTES = EXPECTED_STRING.getBytes();
+    public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
 
     @Test
     public void testCreateAppender() throws Exception {
@@ -43,7 +43,7 @@ public class DirectChronicleStringTest {
                 List<Future<?>> futureList = new ArrayList<>();
                 long start = System.nanoTime();
                 for (int j = 0; j < t; j++) {
-                    String name = "/tmp/single" + start + "-" + j + ".q";
+                    String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
                     DirectChronicle chronicle = (DirectChronicle) new ChronicleQueueBuilder(name)
                             .build();
@@ -59,7 +59,7 @@ public class DirectChronicleStringTest {
                 futureList.clear();
                 long mid = System.nanoTime();
                 for (int j = 0; j < t; j++) {
-                    String name = "/tmp/single" + start + "-" + j + ".q";
+                    String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
                     DirectChronicle chronicle = (DirectChronicle) new ChronicleQueueBuilder(name)
                             .build();
@@ -94,10 +94,5 @@ public class DirectChronicleStringTest {
             toWrite.clear();
             chronicle.appendDocument(toWrite);
         }
-    }
-
-
-    enum TestKey implements WireKey {
-        test
     }
 }
