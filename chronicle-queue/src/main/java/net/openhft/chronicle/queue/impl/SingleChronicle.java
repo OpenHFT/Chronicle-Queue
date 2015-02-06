@@ -1,9 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.Chronicle;
-import net.openhft.chronicle.queue.Excerpt;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.Jvm;
@@ -21,6 +18,9 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file
@@ -33,8 +33,8 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     static final long UNINITIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
     static final long QUEUE_CREATED = asLong("QUEUE400");
-    static final int NOT_READY = 1 << 31;
-    static final int META_DATA = 1 << 30;
+    static final int NOT_READY = 1 << 30;
+    static final int META_DATA = 1 << 31;
     static final int LENGTH_MASK = -1 >>> 2;
     static final int MAX_LENGTH = LENGTH_MASK;
 
@@ -44,6 +44,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     private final Header header = new Header();
     private final ChronicleWire wire;
     private final Bytes bytes;
+    private long firstBytes = -1;
 
     public SingleChronicle(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
@@ -70,6 +71,24 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
             }
             int length2 = length30(bytes.readVolatileInt());
             bytes.skip(length2);
+            Jvm.checkInterrupted();
+        }
+    }
+
+    @Override
+    public boolean readDocument(AtomicLong offset, Bytes buffer) {
+        buffer.clear();
+        long lastByte = offset.get();
+        for (; ; ) {
+            int length = bytes.readVolatileInt(lastByte);
+            int length2 = length30(length);
+            if (BinaryWire.isReady(length)) {
+                lastByte += 4;
+                buffer.write(bytes, lastByte, length2);
+                lastByte += length2;
+                offset.set(lastByte);
+                return isDocument(length);
+            }
             Jvm.checkInterrupted();
         }
     }
@@ -114,6 +133,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
 
         bytes.position(HEADER_OFFSET);
         wire.readMetaData($ -> wire.read().readMarshallable(header));
+        firstBytes = bytes.position();
     }
 
     private void waitForTheHeaderToBeBuilt(Bytes bytes) throws IOException {
@@ -139,7 +159,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         bytes.position(HEADER_OFFSET);
 
         wire.writeMetaData(() -> wire
-                .write(MetaDataKey.header).writeMarshallable(header.init()));
+                .write(MetaDataKey.header).writeMarshallable(header.init(Compression.NONE)));
 
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");
@@ -210,4 +230,8 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public long firstBytes() {
+        return firstBytes;
+    }
 }

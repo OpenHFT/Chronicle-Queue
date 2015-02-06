@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
 public class ChronicleTest {
 
     public static final int RUNS = 1000000;
+    public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
 
     @Test
     public void testCreateAppender() throws Exception {
@@ -25,7 +26,7 @@ public class ChronicleTest {
                 List<Future<?>> futureList = new ArrayList<>();
                 long start = System.nanoTime();
                 for (int j = 0; j < 4; j++) {
-                    String name = "single" + start + "-" + j + ".q";
+                    String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
                     Chronicle chronicle = new ChronicleQueueBuilder(name).build();
 
@@ -40,7 +41,7 @@ public class ChronicleTest {
                 futureList.clear();
                 long mid = System.nanoTime();
                 for (int j = 0; j < 4; j++) {
-                    String name = "single" + start + "-" + j + ".q";
+                    String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
                     Chronicle chronicle = new ChronicleQueueBuilder(name).build();
 
