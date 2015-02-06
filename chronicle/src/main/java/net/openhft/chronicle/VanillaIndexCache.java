@@ -36,6 +36,8 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
+    private volatile int cycle;
+    private volatile int fileIndex;
 
     VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
         this.basePath = basePath;
@@ -43,6 +45,8 @@ public class VanillaIndexCache implements Closeable {
         this.blockBits = blockBits;
         this.dateCache = dateCache;
         this.cache = new VanillaMappedCache<IndexKey>(capacity, true, cleanupOnClose);
+        this.cycle = 0;
+        this.fileIndex = 0;
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -143,16 +147,31 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
-    public VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
-        for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
-            VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
-            long position0 = append(vmb, indexValue, synchronous);
-            if (position0 >= 0) {
-                position[0] = position0;
-                return vmb;
-            }
+    public synchronized VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
+        if(this.cycle <= cycle) {
+            this.cycle = cycle;
+            for (int indexCount = this.fileIndex; indexCount < 10000; indexCount++) {
+                VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
+                long position0 = append(vmb, indexValue, synchronous);
+                if (position0 >= 0) {
+                    position[0] = position0;
+                    this.fileIndex = indexCount;
+                    return vmb;
+                }
 
-            vmb.release();
+                vmb.release();
+            }
+        } else {
+            for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
+                VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
+                long position0 = append(vmb, indexValue, synchronous);
+                if (position0 >= 0) {
+                    position[0] = position0;
+                    return vmb;
+                }
+
+                vmb.release();
+            }
         }
 
         throw new AssertionError();
