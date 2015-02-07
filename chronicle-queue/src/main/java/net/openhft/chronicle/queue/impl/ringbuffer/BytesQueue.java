@@ -52,11 +52,7 @@ public class BytesQueue {
 
                 long nextWriteLocation = queue.nextlocation(writeLocation, 8);
 
-                for (; bytes.remaining() > 0; nextWriteLocation =
-                        queue.nextWrite(nextWriteLocation)) {
-                    assert nextWriteLocation != -1;
-                    queue.write(nextWriteLocation, bytes.readByte());
-                }
+                nextWriteLocation = queue.write(bytes, nextWriteLocation);
 
                 writeLocation = nextWriteLocation;
                 return true;
@@ -75,6 +71,7 @@ public class BytesQueue {
             queue.writeLocation.set(writeLocation);
         }
     }
+
 
     /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
@@ -211,7 +208,7 @@ public class BytesQueue {
     }
 
 
-    private class VanillaByteQueue {
+    private static class VanillaByteQueue {
 
 
         final AtomicLong readLocation = new AtomicLong();
@@ -219,6 +216,7 @@ public class BytesQueue {
 
         final AtomicLong readupto = new AtomicLong();
         final AtomicLong writeupto = new AtomicLong();
+
         private boolean isBytesBigEndian;
         private final Bytes bytes;
 
@@ -229,6 +227,24 @@ public class BytesQueue {
             isBytesBigEndian = isBytesBigEndian();
         }
 
+        private long write(Bytes bytes, long offset) {
+
+           long endOffSet = nextlocation(offset, bytes.remaining());
+
+            if (endOffSet > offset) {
+                this.bytes.write(offset, bytes);
+                return endOffSet;
+            }
+
+
+            for (; bytes.remaining() > 0; offset =
+                    nextWrite(offset)) {
+                assert offset != -1;
+                write(offset, bytes.readByte());
+            }
+
+            return offset;
+        }
 
         boolean isBytesBigEndian() {
             try {
@@ -360,7 +376,7 @@ public class BytesQueue {
             return nextlocation(location, 1);
         }
 
-        long nextlocation(long location, int increment) {
+        long nextlocation(long location, long increment) {
 
             long result = location + increment;
             if (result < capacity())
