@@ -30,7 +30,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testSimpledSingleThreadedWriteRead() throws InterruptedException {
-        final BytesQueue bytesRingBuffer = new BytesQueue(150);
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
 
         bytesRingBuffer.offer(output.clear());
         assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
@@ -41,7 +41,7 @@ public class BytesRingBufferTest {
     public void testFlowAroundSingleThreadedWriteDiffrentSizeBuffers() throws InterruptedException {
 
         for (int j = 23; j < 100; j++) {
-            final BytesQueue bytesRingBuffer = new BytesQueue(j);
+            final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(j + 1)));
 
             for (int i = 0; i < 50; i++) {
                 bytesRingBuffer.offer(output.clear());
@@ -53,7 +53,7 @@ public class BytesRingBufferTest {
     @Test
     public void testWrite3read3SingleThreadedWrite() throws InterruptedException {
 
-        final BytesQueue bytesRingBuffer = new BytesQueue(22 * 3);
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(22 * 3 + 1)));
 
         for (int i = 0; i < 100; i++) {
             bytesRingBuffer.offer(output.clear());
