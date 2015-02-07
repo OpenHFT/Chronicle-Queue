@@ -30,8 +30,6 @@ public class BytesQueue {
 
         try {
 
-            //  IByteBufferBytes size = ByteBufferBytes.wrap(ByteBuffer.wrap(new byte[8]));
-
             for (; ; ) {
 
                 if (Thread.currentThread().isInterrupted())
@@ -224,9 +222,7 @@ public class BytesQueue {
         private boolean isBytesBigEndian;
         private final Bytes bytes;
 
-        /**
-         * @param size Creates an BlockingQueue with the given (fixed) capacity
-         */
+
         public VanillaByteQueue(int size) {
             bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(size + 1));
             assert bytes.length() > 4;
