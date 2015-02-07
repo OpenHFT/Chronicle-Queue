@@ -156,12 +156,8 @@ public class BytesQueue {
 
         size.limit(position + 8);
 
-
-        // block until we can read the size of the element, currently there not enough data in
-        // the queue to even  read the size of the element
-        if (queue.size() < 8) {
+        if (queue.size() < 8)
             return -1;
-        }
 
         for (; size.remaining() > 0; readLocation = queue.nextOffSet(readLocation)) {
             size.write(queue.read(readLocation));
