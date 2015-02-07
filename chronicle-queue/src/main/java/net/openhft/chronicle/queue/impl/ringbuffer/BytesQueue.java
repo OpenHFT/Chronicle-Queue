@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.IByteBufferBytes;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
@@ -31,7 +30,7 @@ public class BytesQueue {
 
         try {
 
-            IByteBufferBytes size = ByteBufferBytes.wrap(ByteBuffer.wrap(new byte[8]));
+            //  IByteBufferBytes size = ByteBufferBytes.wrap(ByteBuffer.wrap(new byte[8]));
 
             for (; ; ) {
 
@@ -50,19 +49,10 @@ public class BytesQueue {
                 if (!queue.writeLocation.compareAndSet(writeLocation, -1))
                     continue;
 
-
                 queue.readupto.set(writeLocation);
+                queue.write(writeLocation, bytes.remaining());
 
-                size.clear().writeLong(bytes.remaining());
-                size.clear();
-
-                long nextWriteLocation = writeLocation;
-
-                for (; size.remaining() > 0; nextWriteLocation =
-                        queue.nextWrite(nextWriteLocation)) {
-                    assert nextWriteLocation != -1;
-                    queue.write(nextWriteLocation, size.readByte());
-                }
+                long nextWriteLocation = queue.nextlocation(writeLocation, 8);
 
                 for (; bytes.remaining() > 0; nextWriteLocation =
                         queue.nextWrite(nextWriteLocation)) {
@@ -72,7 +62,11 @@ public class BytesQueue {
 
                 writeLocation = nextWriteLocation;
                 return true;
+
             }
+        } catch (IllegalStateException e) {
+            // when the queue is full
+            return false;
         } finally {
             if (writeLocation == Integer.MIN_VALUE)
                 throw new IllegalStateException();
@@ -186,14 +180,48 @@ public class BytesQueue {
         return result;
     }
 
+    private static byte long7(long x) {
+        return (byte) (x >> 56);
+    }
+
+    private static byte long6(long x) {
+        return (byte) (x >> 48);
+    }
+
+    private static byte long5(long x) {
+        return (byte) (x >> 40);
+    }
+
+    private static byte long4(long x) {
+        return (byte) (x >> 32);
+    }
+
+    private static byte long3(long x) {
+        return (byte) (x >> 24);
+    }
+
+    private static byte long2(long x) {
+        return (byte) (x >> 16);
+    }
+
+    private static byte long1(long x) {
+        return (byte) (x >> 8);
+    }
+
+    private static byte long0(long x) {
+        return (byte) (x);
+    }
+
+
     private class VanillaByteQueue {
+
 
         final AtomicLong readLocation = new AtomicLong();
         final AtomicLong writeLocation = new AtomicLong();
 
         final AtomicLong readupto = new AtomicLong();
         final AtomicLong writeupto = new AtomicLong();
-
+        private boolean isBytesBigEndian;
         private final Bytes bytes;
 
         /**
@@ -201,10 +229,62 @@ public class BytesQueue {
          */
         public VanillaByteQueue(int size) {
             bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(size + 1));
+            assert bytes.length() > 4;
+            isBytesBigEndian = isBytesBigEndian();
+        }
+
+
+        boolean isBytesBigEndian() {
+            try {
+                putLongB(bytes, 0, 1);
+                return bytes.flip().readLong() == 1;
+            } finally {
+                bytes.clear();
+            }
         }
 
         private void write(long offset, byte value) {
             bytes.writeByte(offset, value);
+        }
+
+        private void write(long offset, long value) {
+
+            if (nextlocation(offset, 8) > offset)
+                bytes.writeLong(offset, value);
+
+            else if (isBytesBigEndian)
+                putLongB(bytes, offset, value);
+            else
+                putLongL(bytes, offset, value);
+
+
+        }
+
+
+        private void putLongB(Bytes bb, long location, long x) {
+
+            bb.writeByte(location, long7(x));
+            bb.writeByte(location = nextlocation(location), long6(x));
+            bb.writeByte(location = nextlocation(location), long5(x));
+            bb.writeByte(location = nextlocation(location), long4(x));
+            bb.writeByte(location = nextlocation(location), long3(x));
+            bb.writeByte(location = nextlocation(location), long2(x));
+            bb.writeByte(location = nextlocation(location), long1(x));
+            bb.writeByte(nextlocation(location), long0(x));
+
+        }
+
+        private void putLongL(Bytes bb, long location, long x) {
+            bb.writeByte(location, long0(x));
+
+            bb.writeByte(location = nextlocation(location), long1(x));
+            bb.writeByte(location = nextlocation(location), long2(x));
+            bb.writeByte(location = nextlocation(location), long3(x));
+            bb.writeByte(location = nextlocation(location), long4(x));
+            bb.writeByte(location = nextlocation(location), long5(x));
+            bb.writeByte(location = nextlocation(location), long6(x));
+            bb.writeByte(nextlocation(location), long7(x));
+
         }
 
         private byte read(long offset) {
