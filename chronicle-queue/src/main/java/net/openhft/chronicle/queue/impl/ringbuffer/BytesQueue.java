@@ -50,11 +50,11 @@ public class BytesQueue {
                 queue.readupto.set(writeLocation);
                 queue.write(writeLocation, bytes.remaining());
 
-                long nextWriteLocation = queue.nextOffset(writeLocation, 8);
+                long offset = queue.nextOffset(writeLocation, 8);
 
-                nextWriteLocation = queue.write(bytes, nextWriteLocation);
+                offset = queue.write(bytes, offset);
 
-                writeLocation = nextWriteLocation;
+                writeLocation = offset;
                 return true;
 
             }
@@ -95,36 +95,25 @@ public class BytesQueue {
                 continue;
 
             long elementSize = queue.readLong(offset);
-            if (elementSize == -1) {
-                using.position(0);
-                using.limit(0);
-                return using;
-            }
 
             // checks that the 'using' bytes is large enough
             checkSize(using, elementSize);
 
             offset = queue.nextOffset(offset, 8);
             assert offset < queue.capacity();
-            for (int i = 0; i < elementSize; offset = queue.blockForReadSpace(offset), i++) {
 
-                if (offset == -1) {
-                    using.position(0);
-                    using.limit(0);
-                    return null;
-                }
+            using.limit(using.position() + elementSize);
 
-                byte b = queue.read(offset);
-                using.write(b);
-            }
-
+            offset = queue.read(using, offset);
             queue.writeupto.set(offset);
             queue.readLocation.set(offset);
 
-            return using.flip();
+            return using;
         }
 
     }
+
+
 
     private static void checkSize(@NotNull Bytes using, long elementSize) {
         if (using.remaining() < elementSize)
@@ -175,6 +164,25 @@ public class BytesQueue {
             return endOffSet;
 
         }
+
+        private long read(@NotNull Bytes bytes, long offset) {
+
+            long endOffSet = nextOffset(offset, bytes.remaining());
+
+            if (endOffSet >= offset) {
+                bytes.write(buffer, offset, bytes.remaining());
+                bytes.flip();
+                return endOffSet;
+            }
+
+            bytes.write(buffer, offset, capacity() - offset);
+            bytes.write(buffer, 1, bytes.remaining());
+            bytes.flip();
+
+            return endOffSet;
+
+        }
+
 
         boolean isBytesBigEndian() {
             try {
