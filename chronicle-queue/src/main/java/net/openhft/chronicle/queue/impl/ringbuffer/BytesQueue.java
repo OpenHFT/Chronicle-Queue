@@ -50,14 +50,16 @@ public class BytesQueue {
 
             for (; ; ) {
 
+                long writeLocation = this.writeLocation();
+
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
 
-                long writeLocation = this.writeLocation();
+
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 if (remainingForWrite(writeLocation) < bytes.remaining() + SIZE_OF_SIZE) {
-                    if (freeReadMessages()) {
 
+                    if (freeReadMessages()) {
                         if (remainingForWrite(writeLocation) < bytes.remaining() + SIZE_OF_SIZE)
                             return false;
                     } else
@@ -105,7 +107,8 @@ public class BytesQueue {
 
     boolean freeReadMessages() {
         boolean success = false;
-        long offset = writeupto.get();
+        long start;
+        long offset = start = writeupto.get();
 
         while (reader.readByte(offset) == States.USED.ordinal() && offset < writeLocation()) {
             offset += reader.readLong(offset);
@@ -113,7 +116,7 @@ public class BytesQueue {
         }
 
         if (success)
-            writeupto.set(offset + writer.capacity());
+            writeupto.compareAndSet(start, offset + writer.capacity());
 
 
         return success;
@@ -169,9 +172,6 @@ public class BytesQueue {
             long elementSize = reader.readLong(offset);
             offset += 8;
 
-            if (offset + elementSize > 9999999)
-                System.out.println(offset + elementSize);
-
             if (!this.readLocation.compareAndSet(readLocation, offset + elementSize))
                 continue;
 
@@ -196,8 +196,8 @@ public class BytesQueue {
 
             using.position(position);
             return using;
-        }
 
+        }
     }
 
 

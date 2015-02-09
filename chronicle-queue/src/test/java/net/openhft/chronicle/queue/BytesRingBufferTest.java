@@ -105,7 +105,7 @@ public class BytesRingBufferTest {
         //writer
         int iterations = 20_000;
         {
-            ExecutorService executorService = Executors.newFixedThreadPool(1 );
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
 
 
             for (int i = 0; i < iterations; i++) {
