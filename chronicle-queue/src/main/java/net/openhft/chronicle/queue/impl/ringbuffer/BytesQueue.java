@@ -54,14 +54,18 @@ public class BytesQueue {
                 if (!queue.writeLocation.compareAndSet(writeLocation, -1))
                     continue;
 
+
                 queue.readupto.set(writeLocation);
+
+                System.out.println("(write) element size location =" + writeLocation + "size =" + bytes.remaining());
+                // write the size
                 queue.write(writeLocation, bytes.remaining());
 
-                long offset = queue.nextOffset(writeLocation, 8);
+                long offset = writeLocation + 8;
+                writeLocation = offset + bytes.remaining();
+                queue.write(bytes, offset);
 
-                offset = queue.write(bytes, offset);
 
-                writeLocation = offset;
                 return true;
 
             }
@@ -74,7 +78,7 @@ public class BytesQueue {
 
             assert writeLocation != -1;
             // writeLocation =  queue.nextWrite(writeLocation);
-            queue.readupto.set(writeLocation);
+            queue.readupto.set(writeLocation - 1);
             queue.writeLocation.set(writeLocation);
         }
     }
@@ -97,27 +101,28 @@ public class BytesQueue {
             if (offset == -1)
                 continue;
 
-            if (queue.isEmpty(offset))
+            if (queue.remainingForRead(offset) == 0)
                 return null;
 
             if (!queue.readLocation.compareAndSet(offset, -1))
                 continue;
 
+
+            System.out.println("(read) element size location =" + offset);
             long elementSize = queue.readLong(offset);
 
-            long nextElement =  queue.nextOffset(offset,8L+elementSize);
+
+            long nextElement = offset + 8 + elementSize;
             queue.readLocation.set(nextElement);
 
             // checks that the 'using' bytes is large enough
             checkSize(using, elementSize);
 
-            offset = queue.nextOffset(offset, 8);
-            assert offset < queue.capacity();
 
             using.limit(using.position() + elementSize);
 
-            queue.read(using, offset);
-            queue.writeupto.set(nextElement);
+            queue.read(using, offset + 8);
+            queue.writeupto.set((nextElement - 1) + queue.capacity());
 
 
             return using;
@@ -141,7 +146,7 @@ public class BytesQueue {
         final AtomicLong writeLocation = new AtomicLong();
 
         final AtomicLong readupto = new AtomicLong();
-        final AtomicLong writeupto = new AtomicLong();
+        final AtomicLong writeupto;
 
         private boolean isBytesBigEndian;
 
@@ -152,10 +157,12 @@ public class BytesQueue {
         public VanillaByteQueue(@NotNull Bytes buffer) {
             this.buffer = buffer;
             isBytesBigEndian = isBytesBigEndian();
+            writeupto = new AtomicLong(capacity());
         }
 
         private long write(@NotNull Bytes bytes, long offset) {
 
+            offset %= capacity();
             long endOffSet = nextOffset(offset, bytes.remaining());
 
             if (endOffSet >= offset) {
@@ -171,13 +178,13 @@ public class BytesQueue {
             bytes.position(bytes.limit());
             bytes.limit(limit);
 
-            this.buffer.write(1, bytes);
+            this.buffer.write(0, bytes);
             return endOffSet;
 
         }
 
         private long read(@NotNull Bytes bytes, long offset) {
-
+            offset %= capacity();
             long endOffSet = nextOffset(offset, bytes.remaining());
 
             if (endOffSet >= offset) {
@@ -187,7 +194,7 @@ public class BytesQueue {
             }
 
             bytes.write(buffer, offset, capacity() - offset);
-            bytes.write(buffer, 1, bytes.remaining());
+            bytes.write(buffer, 0, bytes.remaining());
             bytes.flip();
 
             return endOffSet;
@@ -206,6 +213,8 @@ public class BytesQueue {
 
 
         private void write(long offset, long value) {
+
+            offset %= capacity();
 
             if (nextOffset(offset, 8) > offset)
                 buffer.writeLong(offset, value);
@@ -230,6 +239,7 @@ public class BytesQueue {
 
         private long readLong(long offset) {
 
+            offset %= capacity();
             if (nextOffset(offset, 8) > offset)
                 return buffer.readLong(offset);
 
@@ -277,9 +287,6 @@ public class BytesQueue {
 
         }
 
-        private byte read(long offset) {
-            return buffer.readByte(offset);
-        }
 
         private long capacity() {
             return buffer.capacity();
@@ -313,27 +320,23 @@ public class BytesQueue {
             if (result < capacity())
                 return result;
 
-            return result - (capacity() - 1);
+            return result % capacity();
 
         }
 
 
         long remainingForRead(long offset) {
             //
-            long l = readupto.get() - offset;
-            return l > 0 ? l : l + capacity();
+            return readupto.get() - offset;
+
         }
 
 
         long remainingForWrite(long offset) {
-            //
-            long l = writeupto.get() - offset;
-            return l > 0 ? l : l + capacity();
+            return writeupto.get() - offset;
+
         }
 
-        private boolean isEmpty(long offset) {
-            return readupto.get() == offset;
-        }
 
     }
 }
