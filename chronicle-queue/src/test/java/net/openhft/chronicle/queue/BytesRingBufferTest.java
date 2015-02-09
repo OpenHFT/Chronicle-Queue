@@ -41,7 +41,8 @@ public class BytesRingBufferTest {
         final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
 
         bytesRingBuffer.offer(output.clear());
-        assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(EXPECTED, poll.readUTF());
     }
 
     @Test
@@ -97,23 +98,27 @@ public class BytesRingBufferTest {
     public void testMultiThreaded() throws InterruptedException {
 
 
-        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(22 * 3 + 1)));
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer
+                .allocate(1000)));
 
 
         //writer
+        int iterations = 20_000;
         {
-            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            ExecutorService executorService = Executors.newFixedThreadPool(1 );
 
 
-            for (int i = 0; i < 100; i++) {
-                final int j =i;
+            for (int i = 0; i < iterations; i++) {
+                final int j = i;
                 executorService.submit(() -> {
-                    final Bytes out = new ByteBufferBytes(ByteBuffer.allocate(22));
-                    out.clear().writeUTF(EXPECTED_VALUE +j);
-                    out.flip();
-
-                    //  System.out.println("hex=" + AbstractBytes.toHex(out));
                     try {
+                        final Bytes out = new ByteBufferBytes(ByteBuffer.allocate(iterations));
+                        String expected = EXPECTED_VALUE + j;
+                        out.clear().writeUTF(expected);
+                        out.flip();
+
+
+                        LOG.info("writing > " + expected);
                         boolean offer;
                         do {
 
@@ -123,41 +128,47 @@ public class BytesRingBufferTest {
 
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                    } catch (AssertionError e) {
+                        e.printStackTrace();
                     }
                 });
             }
         }
 
 
-        CountDownLatch count = new CountDownLatch(100);
+        CountDownLatch count = new CountDownLatch(iterations);
 
 
         //reader
         {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < iterations; i++) {
                 executorService.submit(() -> {
-                    Bytes bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(25));
-                    Bytes result = null;
-                    do {
-                        try {
-                            result = bytesRingBuffer.poll(bytes);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                    } while (result == null);
+
+                    try {
+                        Bytes bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(25));
+                        Bytes result = null;
+                        do {
+                            try {
+                                result = bytesRingBuffer.poll(bytes);
+                            } catch (InterruptedException e) {
+                                return;
+                            }
+                        } while (result == null);
 
 
-                    String actual = result.clear().readUTF();
-                    LOG.info(actual);
-                    if (actual.startsWith(EXPECTED_VALUE))
-                        count.countDown();
-
+                        String actual = result.clear().readUTF();
+                        LOG.info("reading > " + actual);
+                        if (actual.startsWith(EXPECTED_VALUE))
+                            count.countDown();
+                    } catch (Error e) {
+                        e.printStackTrace();
+                    }
 
                 });
             }
         }
 
-        Assert.assertTrue( count.await(5, TimeUnit.SECONDS));
+        Assert.assertTrue(count.await(5000, TimeUnit.SECONDS));
     }
 }
