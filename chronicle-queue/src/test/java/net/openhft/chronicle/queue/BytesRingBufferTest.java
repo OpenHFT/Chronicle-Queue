@@ -4,14 +4,17 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesQueue;
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
@@ -49,6 +52,14 @@ public class BytesRingBufferTest {
         assertEquals(null, poll);
     }
 
+    @Test
+    public void testWriteAndRead() throws InterruptedException {
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
+        bytesRingBuffer.offer(output.clear());
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(EXPECTED, poll.readUTF());
+    }
+
 
     @Test
     public void testFlowAroundSingleThreadedWriteDiffrentSizeBuffers() throws InterruptedException {
@@ -78,19 +89,36 @@ public class BytesRingBufferTest {
         }
     }
 
+
+    private final String EXPECTED_VALUE = "value=";
+
+
     @Test
     public void testMultiThreaded() throws InterruptedException {
 
+
         final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(22 * 3 + 1)));
 
+
+        //writer
         {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+
             for (int i = 0; i < 100; i++) {
+                final int j =i;
                 executorService.submit(() -> {
+                    final Bytes out = new ByteBufferBytes(ByteBuffer.allocate(22));
+                    out.clear().writeUTF(EXPECTED_VALUE +j);
+                    out.flip();
+
+                    //  System.out.println("hex=" + AbstractBytes.toHex(out));
                     try {
                         boolean offer;
                         do {
-                            offer = bytesRingBuffer.offer(output.clear());
+
+
+                            offer = bytesRingBuffer.offer(out);
                         } while (!offer);
 
                     } catch (InterruptedException e) {
@@ -101,6 +129,10 @@ public class BytesRingBufferTest {
         }
 
 
+        CountDownLatch count = new CountDownLatch(100);
+
+
+        //reader
         {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             for (int i = 0; i < 100; i++) {
@@ -118,12 +150,14 @@ public class BytesRingBufferTest {
 
                     String actual = result.clear().readUTF();
                     LOG.info(actual);
+                    if (actual.startsWith(EXPECTED_VALUE))
+                        count.countDown();
 
 
                 });
             }
         }
 
-        Thread.sleep(1000);
+        Assert.assertTrue( count.await(5, TimeUnit.SECONDS));
     }
 }
