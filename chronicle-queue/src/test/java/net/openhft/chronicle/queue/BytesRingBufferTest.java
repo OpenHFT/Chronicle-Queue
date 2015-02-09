@@ -6,8 +6,12 @@ import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -15,6 +19,7 @@ import static org.junit.Assert.assertEquals;
  * @author Rob Austin.
  */
 public class BytesRingBufferTest {
+    private static final Logger LOG = LoggerFactory.getLogger(BytesRingBufferTest.class.getName());
 
     Bytes output;
     Bytes input = ByteBufferBytes.wrap(ByteBuffer.allocate(22));
@@ -34,6 +39,14 @@ public class BytesRingBufferTest {
 
         bytesRingBuffer.offer(output.clear());
         assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
+    }
+
+    @Test
+    public void testPollWithNoData() throws InterruptedException {
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
+
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(null, poll);
     }
 
 
@@ -63,5 +76,54 @@ public class BytesRingBufferTest {
             assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
             assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
         }
+    }
+
+    @Test
+    public void testMultiThreaded() throws InterruptedException {
+
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(22 * 3 + 1)));
+
+        {
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            for (int i = 0; i < 100; i++) {
+                executorService.submit(() -> {
+                    try {
+                        boolean offer;
+                        do {
+                            offer = bytesRingBuffer.offer(output.clear());
+                        } while (!offer);
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+        }
+
+
+        {
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            for (int i = 0; i < 100; i++) {
+                executorService.submit(() -> {
+                    Bytes bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(25));
+                    Bytes result = null;
+                    do {
+                        try {
+                            result = bytesRingBuffer.poll(bytes);
+                        } catch (InterruptedException e) {
+                            return;
+                        }
+                    } while (result == null);
+
+
+                    String actual = result.clear().readUTF();
+                    LOG.info(actual);
+
+
+                });
+            }
+        }
+
+        Thread.sleep(1000);
     }
 }

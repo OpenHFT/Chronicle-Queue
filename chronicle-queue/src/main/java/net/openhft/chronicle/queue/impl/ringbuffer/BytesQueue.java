@@ -3,6 +3,8 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -10,6 +12,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Rob Austin.
  */
 public class BytesQueue {
+
+    private static final Logger LOG = LoggerFactory.getLogger(BytesQueue.class.getName());
 
     private static final int SIZE_OF_SIZE = 8;
 
@@ -24,9 +28,12 @@ public class BytesQueue {
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity, returning {@code true} upon success and
      * {@code false} if this queue is full.
+     *
+     * @InterruptedException if interrupted
      */
     public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
         long writeLocation = Integer.MAX_VALUE;
+
 
         try {
 
@@ -41,7 +48,7 @@ public class BytesQueue {
                     continue;
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
-                if (queue.remainingCapacity() < bytes.remaining() + SIZE_OF_SIZE)
+                if (queue.remainingForWrite(writeLocation) < bytes.remaining() + SIZE_OF_SIZE)
                     return false;
 
                 if (!queue.writeLocation.compareAndSet(writeLocation, -1))
@@ -83,18 +90,23 @@ public class BytesQueue {
     @Nullable
     public Bytes poll(@NotNull Bytes using) throws InterruptedException, IllegalStateException {
 
+
         for (; ; ) {
 
             long offset = queue.readLocation.get();
-            assert queue.writeLocation.get() != -1;
-
             if (offset == -1)
                 continue;
+
+            if (queue.isEmpty(offset))
+                return null;
 
             if (!queue.readLocation.compareAndSet(offset, -1))
                 continue;
 
             long elementSize = queue.readLong(offset);
+
+            long nextElement =  queue.nextOffset(offset,8L+elementSize);
+            queue.readLocation.set(nextElement);
 
             // checks that the 'using' bytes is large enough
             checkSize(using, elementSize);
@@ -104,15 +116,14 @@ public class BytesQueue {
 
             using.limit(using.position() + elementSize);
 
-            offset = queue.read(using, offset);
-            queue.writeupto.set(offset);
-            queue.readLocation.set(offset);
+            queue.read(using, offset);
+            queue.writeupto.set(nextElement);
+
 
             return using;
         }
 
     }
-
 
 
     private static void checkSize(@NotNull Bytes using, long elementSize) {
@@ -292,29 +303,6 @@ public class BytesQueue {
         }
 
 
-        /**
-         * This method does not lock, it therefore only provides and approximation of isEmpty(), it
-         * will be correct, if nothing was added or removed from the queue at the time it was
-         * called.
-         *
-         * @return an approximation of isEmpty()
-         */
-        boolean isEmpty() {
-            return size() == 0;
-        }
-
-
-        long blockForReadSpace(long readOffset) {
-
-            // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
-            // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
-            while (readupto.get() == readOffset)
-                return -1;
-
-            return nextOffset(readOffset);
-        }
-
-
         long nextOffset(long offset) {
             return nextOffset(offset, 1);
         }
@@ -330,17 +318,21 @@ public class BytesQueue {
         }
 
 
-        /**
-         * Returns the number of additional elements that this queue can ideally (in the absence of
-         * memory or resource constraints) accept without blocking, or <tt>Integer.MAX_VALUE</tt> if
-         * there is no intrinsic limit. <p> <p>Note that you <em>cannot</em> always tell if an
-         * attempt to insert an element will succeed by inspecting <tt>remainingCapacity</tt>
-         * because it may be the case that another thread is about to insert or remove an element.
-         *
-         * @return the remaining capacity
-         */
-        long remainingCapacity() {
-            return (capacity() - 1) - size();
+        long remainingForRead(long offset) {
+            //
+            long l = readupto.get() - offset;
+            return l > 0 ? l : l + capacity();
+        }
+
+
+        long remainingForWrite(long offset) {
+            //
+            long l = writeupto.get() - offset;
+            return l > 0 ? l : l + capacity();
+        }
+
+        private boolean isEmpty(long offset) {
+            return readupto.get() == offset;
         }
 
     }
