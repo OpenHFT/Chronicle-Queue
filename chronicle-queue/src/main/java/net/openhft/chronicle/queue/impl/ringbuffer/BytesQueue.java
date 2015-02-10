@@ -3,8 +3,6 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -15,14 +13,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class BytesQueue {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BytesQueue.class.getName());
-
     private static final int SIZE = 8;
     public static final int LOCKED = -1;
 
     @NotNull
     private final BytesRingBuffer bytes;
-
 
     public BytesQueue(@NotNull final Bytes buffer) {
         bytes = new BytesRingBuffer(buffer);
@@ -30,12 +25,7 @@ public class BytesQueue {
     }
 
 
-    long remainingForWrite(long offset) {
-        return (writeupto.get() - 1) - offset;
-
-    }
-
-    enum States {BUSY, READY, USED}
+    private enum States {BUSY, READY, USED}
 
     /**
      * Inserts the specified element at the tail of this queue if it is possible to do so
@@ -44,7 +34,6 @@ public class BytesQueue {
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
     public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
-
 
         try {
 
@@ -98,23 +87,10 @@ public class BytesQueue {
 
 
     /**
-     * @return spin loops to get a valid write location
-     */
-    long writeLocation() {
-
-        long writeLocation;
-
-        for (; ; ) {
-            if ((writeLocation = this.writeLocation.get()) != LOCKED)
-                return writeLocation;
-        }
-    }
-
-    /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
      * empty.
      *
-     * @return the head of this queue, or {@code null} if this queue is empty
+     * @return {@code null} if this queue is empty, or a populated buffer if the element was retried
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     @Nullable
@@ -181,9 +157,30 @@ public class BytesQueue {
     }
 
 
-    final AtomicLong readLocation = new AtomicLong();
-    final AtomicLong writeLocation = new AtomicLong();
-    final AtomicLong writeupto;
+    /**
+     * @return spin loops to get a valid write location
+     */
+    private long writeLocation() {
+
+        long writeLocation;
+
+        for (; ; ) {
+            if ((writeLocation = this.writeLocation.get()) != LOCKED)
+                return writeLocation;
+        }
+    }
+
+    private long remainingForWrite(long offset) {
+        return (writeupto.get() - 1) - offset;
+
+    }
+
+
+    private final AtomicLong readLocation = new AtomicLong();
+    private final AtomicLong writeLocation = new AtomicLong();
+
+    @NotNull
+    private final AtomicLong writeupto;
 
 
     /**
@@ -193,6 +190,7 @@ public class BytesQueue {
     private class BytesRingBuffer {
 
 
+        @NotNull
         final Bytes buffer;
         boolean isBytesBigEndian;
 
@@ -361,4 +359,5 @@ public class BytesQueue {
 
         }
     }
+
 }

@@ -7,8 +7,6 @@ import net.openhft.lang.io.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
@@ -23,7 +21,7 @@ import static org.junit.Assert.assertEquals;
  * @author Rob Austin.
  */
 public class BytesRingBufferTest {
-    private static final Logger LOG = LoggerFactory.getLogger(BytesRingBufferTest.class.getName());
+
 
     Bytes output;
     Bytes input = ByteBufferBytes.wrap(ByteBuffer.allocate(22));
