@@ -22,8 +22,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
@@ -138,6 +137,35 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         }
 
         ap.close();
+        ch.close();
+
+        assertClean(basePath);
+    }
+
+    @Test
+    public void testExceptionSerialization() throws IOException {
+        final String basePath = getTestPath();
+
+        final Chronicle ch = ChronicleQueueBuilder.indexed(basePath).build();
+        final ExcerptAppender ap = ch.createAppender();
+        final ExcerptTailer tl = ch.createTailer();
+
+        ap.startExcerpt();
+        ap.writeObject(new UnsupportedOperationException("UOE"));
+        ap.finish();
+        ap.close();
+
+        assertTrue(tl.nextIndex());
+        Object obj = tl.readObject();
+        assertNotNull(obj);
+        assertTrue(obj instanceof Throwable);
+        assertTrue(obj instanceof UnsupportedOperationException);
+
+        tl.finish();
+
+        assertFalse(tl.nextIndex());
+
+        tl.close();
         ch.close();
 
         assertClean(basePath);

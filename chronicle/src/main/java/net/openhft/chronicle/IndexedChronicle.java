@@ -22,6 +22,8 @@ import net.openhft.chronicle.tools.CheckedExcerpt;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
+import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
+import net.openhft.lang.io.serialization.JDKObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.model.constraints.Nullable;
@@ -351,7 +353,16 @@ public class IndexedChronicle implements Chronicle {
         // inherited - long limitAddr;
 
         protected AbstractIndexedExcerpt() throws IOException {
-            super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+            //super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
+            super(
+                BytesMarshallableSerializer.create(
+                    new VanillaBytesMarshallerFactory(),
+                    JDKObjectSerializer.INSTANCE),
+                NO_PAGE,
+                NO_PAGE,
+                null
+            );
+
             cacheLineSize = IndexedChronicle.this.builder.cacheLineSize();
             cacheLineMask = (cacheLineSize - 1);
             dataBlockSize = IndexedChronicle.this.builder.dataBlockSize();

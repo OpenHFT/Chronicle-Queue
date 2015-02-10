@@ -25,7 +25,9 @@ import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBytes;
-import net.openhft.lang.io.serialization.BytesMarshallerFactory;
+import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
+import net.openhft.lang.io.serialization.JDKObjectSerializer;
+import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 
@@ -63,7 +65,7 @@ public class VanillaChronicle implements Chronicle {
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
 
     private final String name;
-    private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache;
+    private final ThreadLocal<WeakReference<ObjectSerializer>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
@@ -84,7 +86,7 @@ public class VanillaChronicle implements Chronicle {
 
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
-        this.marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
+        this.marshallersCache = new ThreadLocal<WeakReference<ObjectSerializer>>();
         this.tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
         this.appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
         this.name = builder.path().getName();
@@ -133,20 +135,23 @@ public class VanillaChronicle implements Chronicle {
         return entriesForCycleBits;
     }
 
-    BytesMarshallerFactory acquireBMF() {
-        WeakReference<BytesMarshallerFactory> bmfRef = marshallersCache.get();
-        BytesMarshallerFactory bmf = null;
-        if (bmfRef != null)
-            bmf = bmfRef.get();
-        if (bmf == null) {
-            bmf = createBMF();
-            marshallersCache.set(new WeakReference<BytesMarshallerFactory>(bmf));
-        }
-        return bmf;
-    }
+    ObjectSerializer acquireSerializer() {
+        WeakReference<ObjectSerializer> serializerRef = marshallersCache.get();
 
-    BytesMarshallerFactory createBMF() {
-        return new VanillaBytesMarshallerFactory();
+        ObjectSerializer serializer = null;
+        if (serializerRef != null) {
+            serializer = serializerRef.get();
+        }
+
+        if (serializer == null) {
+            serializer = BytesMarshallableSerializer.create(
+                new VanillaBytesMarshallerFactory(),
+                JDKObjectSerializer.INSTANCE);
+
+            marshallersCache.set(new WeakReference<ObjectSerializer>(serializer));
+        }
+
+        return serializer;
     }
 
     @NotNull
@@ -301,7 +306,7 @@ public class VanillaChronicle implements Chronicle {
 
 
         public AbstractVanillaExcerpt() {
-            super(acquireBMF(), NO_PAGE, NO_PAGE, null);
+            super(acquireSerializer(), NO_PAGE, NO_PAGE, null);
         }
 
 

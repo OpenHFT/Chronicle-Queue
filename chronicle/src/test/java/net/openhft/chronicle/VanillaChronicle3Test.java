@@ -25,19 +25,46 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
     @Test
-    public void testFinishAfterClose() throws IOException {
+    public void testExceptionSerialization() throws IOException {
+        final String basePath = getTestPath();
+
+        final Chronicle ch = ChronicleQueueBuilder.vanilla(basePath).build();
+        final ExcerptAppender ap = ch.createAppender();
+        final ExcerptTailer tl = ch.createTailer();
+
+        ap.startExcerpt();
+        ap.writeObject(new UnsupportedOperationException("UOE"));
+        ap.finish();
+        ap.close();
+
+        assertTrue(tl.nextIndex());
+        Object obj = tl.readObject();
+        assertNotNull(obj);
+        assertTrue(obj instanceof Throwable);
+        assertTrue(obj instanceof UnsupportedOperationException);
+
+        tl.finish();
+
+        assertFalse(tl.nextIndex());
+
+        tl.close();
+        ch.close();
+        ch.clear();
+
+        assertFalse(new File(basePath).exists());
+    }
+
+    @Test
+    public void testVanillaFinishAfterClose() throws IOException {
         final String basePath = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath).build();
         final ExcerptAppender appender = chronicle.createAppender();
@@ -137,7 +164,7 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCheckedVanillaExcerpt_001() throws IOException {
+    public void testCheckedVanillaExcerpt() throws IOException {
         final String basePath = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath)
             .useCheckedExcerpt(true)
