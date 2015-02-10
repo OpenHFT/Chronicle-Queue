@@ -40,8 +40,7 @@ public class BytesQueue {
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity, returning {@code true} upon success and
      * {@code false} if this queue is full.
-     *
-     * @InterruptedException if interrupted
+
      */
     public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
 
