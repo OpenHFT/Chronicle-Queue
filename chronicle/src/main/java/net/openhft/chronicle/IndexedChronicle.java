@@ -34,13 +34,13 @@ import java.util.ConcurrentModificationException;
 /**
  * IndexedChronicle is a single-writer-multiple-reader {@link net.openhft.chronicle.Chronicle} that
  * you can put huge numbers of objects in, having different sizes.
- *
+ * <p/>
  * <p>For each record, IndexedChronicle holds the memory-offset in another index cache for random
  * access. This means IndexedChronicle "knows" where the Nth object resides at in memory, thus the
  * name "Indexed". But this index is just sequential index, first object has index 0, second object
  * has index 1, and so on. If you want to access objects with other logical keys you have to manage
  * your own mapping from logical key to index.</p>
- *
+ * <p/>
  * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data
  * file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file
  * name&#62;.index</li> </ul> , <tt>base file name</tt> (or <tt>basePath</tt>) is provided on
@@ -114,10 +114,10 @@ public class IndexedChronicle implements Chronicle {
      * written into this {@link net.openhft.chronicle.Chronicle}. Basically the same value as
      * returned by {@link IndexedChronicle#lastWrittenIndex()}, but does it by looking at the
      * content of the backing files and figuring it out from there.
-     *
+     * <p/>
      * <p>A side effect of the method is that it also stores the obtained value and it can and will
      * be used by subsequent calls of {@link IndexedChronicle#lastWrittenIndex()}.</p>
-     *
+     * <p/>
      * <p>The constructors of IndexedChronicle automatically call this method so they properly
      * handle the backing file being both empty or non-empty at the start.</p>
      *
@@ -862,10 +862,12 @@ public class IndexedChronicle implements Chronicle {
 
         @Override
         public void finish() {
+            if (finished)
+                throw new IllegalStateException("Not started");
             super.finish();
             if (index != IndexedChronicle.this.size()) {
                 throw new ConcurrentModificationException("Chronicle appended by more than one Appender at the same time, index=" + index + ", size="
-                    + chronicle().size());
+                        + chronicle().size());
             }
 
             // push out the entry is available. This is what the reader polls.

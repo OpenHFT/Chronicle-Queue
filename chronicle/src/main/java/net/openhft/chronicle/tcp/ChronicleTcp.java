@@ -76,17 +76,17 @@ public class ChronicleTcp {
         StringBuilder sb = new StringBuilder(name);
         if (bindAddress != null && connectAddress != null) {
             sb.append("[");
-            sb.append(bindAddress.toString());
+            sb.append(bindAddress);
             sb.append(" -> ");
-            sb.append(connectAddress.toString());
+            sb.append(connectAddress);
             sb.append("]");
         } else if (bindAddress != null) {
             sb.append("[");
-            sb.append(bindAddress.toString());
+            sb.append(bindAddress);
             sb.append("]");
         } else if (connectAddress != null) {
             sb.append("[");
-            sb.append(connectAddress.toString());
+            sb.append(connectAddress);
             sb.append("]");
         }
 

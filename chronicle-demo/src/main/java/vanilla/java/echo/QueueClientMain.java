@@ -14,7 +14,7 @@ import java.util.Arrays;
  * NOTE: This test requires at least SIX (6) cpus, or the performance will be poor.
  */
 public class QueueClientMain {
-    static final int TESTS = Integer.getInteger("tests", 10);
+    static final int TESTS = Integer.getInteger("tests", 6);
     static final int RATE = Integer.getInteger("rate", 30000);
     static final int COUNT = Integer.getInteger("count", RATE * 10);
     static final long END_OF_TEST = -1L;
@@ -73,7 +73,7 @@ public class QueueClientMain {
         t.start();
 
         Chronicle inbound = ChronicleQueueBuilder
-                .indexed("/tmp/server-outbound")
+                .indexed("/tmp/client-inbound")
                 .sink().connectAddress(host, 54002)
                 .build();
         ExcerptTailer tailer = inbound.createTailer().toEnd();

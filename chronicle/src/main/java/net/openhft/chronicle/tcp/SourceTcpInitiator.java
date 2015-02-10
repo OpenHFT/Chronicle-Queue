@@ -22,7 +22,9 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import java.io.IOException;
 import java.net.NetworkInterface;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public final class SourceTcpInitiator extends SourceTcp {
     private SocketChannel socketChannel;
@@ -89,7 +91,7 @@ public final class SourceTcpInitiator extends SourceTcp {
 
         try {
             return NetworkInterface.getByInetAddress(builder.connectAddress().getAddress()) != null;
-        } catch(Exception e)  {
+        } catch (Exception ignored) {
         }
 
         return false;
