@@ -121,7 +121,7 @@ public class IndexedChronicleLargeFileTest {
 				if (bytesRead != dataSize || !Arrays.equals(dataToWrite, readBuffer)) {
 					// @formatter:off
 					Assert.fail("Array not equal at index " + index + "\r\n"
-							+ "bytes read: " + bytesRead
+							+ "bytes read: " + bytesRead + "\r\n"
 							+ "expected : " + Arrays.toString(dataToWrite) + "\r\n" 
 							+ "actual : " + Arrays.toString(readBuffer));
 					// @formatter:on
