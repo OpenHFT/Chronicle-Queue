@@ -202,7 +202,6 @@ public class BytesQueue {
 
         }
 
-
         // added as the method below has visibility issues
         final AtomicLong writeLocationValue = new AtomicLong();
 
