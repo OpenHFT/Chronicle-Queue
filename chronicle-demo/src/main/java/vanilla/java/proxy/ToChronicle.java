@@ -21,7 +21,8 @@ public class ToChronicle implements InvocationHandler {
             return method.invoke(this, args);
         }
         appender.startExcerpt();
-        appender.writeObject(method);
+        MetaData.get().writeMarshallable(appender);
+        appender.writeUTFΔ(method.getName());
         if (args == null) {
             appender.writeStopBit(0);
         } else {
