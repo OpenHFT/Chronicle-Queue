@@ -40,7 +40,6 @@ public class BytesQueue {
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity, returning {@code true} upon success and
      * {@code false} if this queue is full.
-
      */
     public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
 
@@ -107,15 +106,30 @@ public class BytesQueue {
     boolean freeReadMessages() {
         boolean success = false;
         long start;
-        long offset = start = writeupto.get();
+        long offset = start = writeupto.get() - writer.capacity();
 
-        while (reader.readByte(offset) == States.USED.ordinal() && offset < writeLocation()) {
-            offset += reader.readLong(offset);
-            success = true;
+        long writeupto0 = offset;
+        for (; offset < readLocation.get() ;){
+
+            long x3 = offset;
+            byte state = reader.readByte(offset);
+            offset += 1;
+
+          //  LOG.info("" + States.values()[state]);
+
+            if (state == States.USED.ordinal()) {
+                long l = reader.readLong(offset);
+                offset += 8 + l;
+
+                writeupto0 = x3;
+                success = true;
+                continue;
+            }
+            break;
         }
 
         if (success)
-            writeupto.compareAndSet(start, offset + writer.capacity());
+            writeupto.compareAndSet(start, writeupto0 + writer.capacity());
 
 
         return success;
