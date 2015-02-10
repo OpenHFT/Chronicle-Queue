@@ -4,10 +4,17 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesQueue;
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
@@ -15,6 +22,7 @@ import static org.junit.Assert.assertEquals;
  * @author Rob Austin.
  */
 public class BytesRingBufferTest {
+    private static final Logger LOG = LoggerFactory.getLogger(BytesRingBufferTest.class.getName());
 
     Bytes output;
     Bytes input = ByteBufferBytes.wrap(ByteBuffer.allocate(22));
@@ -33,7 +41,24 @@ public class BytesRingBufferTest {
         final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
 
         bytesRingBuffer.offer(output.clear());
-        assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(EXPECTED, poll.readUTF());
+    }
+
+    @Test
+    public void testPollWithNoData() throws InterruptedException {
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
+
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(null, poll);
+    }
+
+    @Test
+    public void testWriteAndRead() throws InterruptedException {
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer.allocate(150 + 1)));
+        bytesRingBuffer.offer(output.clear());
+        Bytes poll = bytesRingBuffer.poll(input.clear());
+        assertEquals(EXPECTED, poll.readUTF());
     }
 
 
@@ -63,5 +88,87 @@ public class BytesRingBufferTest {
             assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
             assertEquals(EXPECTED, bytesRingBuffer.poll(input.clear()).readUTF());
         }
+    }
+
+
+    private final String EXPECTED_VALUE = "value=";
+
+
+    @Test
+    public void testMultiThreaded() throws InterruptedException {
+
+
+        final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer
+                .allocate(1000)));
+
+
+        //writer
+        int iterations = 20_000;
+        {
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+
+            for (int i = 0; i < iterations; i++) {
+                final int j = i;
+                executorService.submit(() -> {
+                    try {
+                        final Bytes out = new ByteBufferBytes(ByteBuffer.allocate(iterations));
+                        String expected = EXPECTED_VALUE + j;
+                        out.clear().writeUTF(expected);
+                        out.flip();
+
+
+                        LOG.info("writing > " + expected);
+                        boolean offer;
+                        do {
+
+
+                            offer = bytesRingBuffer.offer(out);
+                        } while (!offer);
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (AssertionError e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+        }
+
+
+        CountDownLatch count = new CountDownLatch(iterations);
+
+
+        //reader
+        {
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            for (int i = 0; i < iterations; i++) {
+                executorService.submit(() -> {
+
+                    try {
+                        Bytes bytes = ByteBufferBytes.wrap(ByteBuffer.allocate(25));
+                        Bytes result = null;
+                        do {
+                            try {
+                                result = bytesRingBuffer.poll(bytes);
+                            } catch (InterruptedException e) {
+                                return;
+                            }
+                        } while (result == null);
+
+
+                        String actual = result.clear().readUTF();
+                        LOG.info("reading > " + actual);
+                        if (actual.startsWith(EXPECTED_VALUE))
+                            count.countDown();
+                    } catch (Error e) {
+                        e.printStackTrace();
+                    }
+
+                });
+            }
+        }
+
+        Assert.assertTrue(count.await(5000, TimeUnit.SECONDS));
     }
 }
