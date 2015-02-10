@@ -18,6 +18,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.Maths;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.channels.SelectionKey;
 import java.util.AbstractSet;
@@ -134,6 +135,7 @@ public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
      * {@inheritDoc}
      */
     @Override
+    @NotNull
     public Iterator<SelectionKey> iterator() {
         throw new UnsupportedOperationException();
     }

@@ -69,7 +69,7 @@ class ChronicleQueueSource extends WrappedChronicle {
      * This excerpt notifies the replication engine that something has been done
      * on the underlying chronicle.
      */
-    private final class SourceExcerpt extends WrappedExcerpt {
+    final class SourceExcerpt extends WrappedExcerpt {
         public SourceExcerpt(final ExcerptCommon excerptCommon) {
             super(excerptCommon);
         }
