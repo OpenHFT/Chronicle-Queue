@@ -19,11 +19,82 @@ public class BytesQueue {
     @NotNull
     private final BytesRingBuffer bytes;
 
+    private final Header header;
+
     public BytesQueue(@NotNull final Bytes buffer) {
-        bytes = new BytesRingBuffer(buffer);
-        writeupto = new AtomicLong(buffer.capacity());
+
+        this.header = new Header(buffer);
+        this.bytes = new BytesRingBuffer(buffer);
+        header.setWriteupto(bytes.capacity());
     }
 
+    class Header {
+
+        private final long writeLocationOffset;
+        private final long writeuptoOffset;
+        private final long readLocationOffset;
+        private final Bytes buffer;
+
+        public Header(Bytes buffer) {
+
+            if (buffer.remaining() < 24) {
+                final String message = "buffer too small, buffer size=" + buffer.remaining();
+                throw new IllegalStateException(message);
+            }
+
+            long start = buffer.position();
+            readLocationOffset = buffer.position();
+            buffer.writeLong(0);
+
+
+            writeLocationOffset = buffer.position();
+            buffer.writeLong(0);
+
+            writeuptoOffset = buffer.position();
+            buffer.writeLong(0);
+
+            this.buffer = buffer.bytes(start, buffer.position());
+
+        }
+
+
+        // added as the method below has visibility issues
+        final AtomicLong writeLocationValue = new AtomicLong();
+
+        public synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+
+
+            // this has to be volatile and is not
+            //  boolean b = buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+
+            return writeLocationValue.compareAndSet(expectedValue, newValue);
+        }
+
+
+        public synchronized long getWriteLocation() {
+            //  return buffer.readVolatileLong(writeLocationOffset);
+            return writeLocationValue.get();
+        }
+
+        public void setWriteupto(long value) {
+            buffer.writeOrderedLong(writeuptoOffset, value);
+
+        }
+
+        public long getWriteupto() {
+            return buffer.readVolatileLong(writeuptoOffset);
+        }
+
+        public void setReadLocation(long value) {
+            buffer.writeOrderedLong(readLocationOffset, value);
+        }
+
+        public long getReadLocation() {
+            return buffer.readVolatileLong(readLocationOffset);
+        }
+
+
+    }
 
     private enum States {BUSY, READY, USED}
 
@@ -56,7 +127,7 @@ public class BytesQueue {
                 long offset = writeLocation;
 
                 // we want to ensure that only one thread ever gets in here at a time
-                if (!this.writeLocation.compareAndSet(writeLocation, LOCKED))
+                if (!header.compareAndSetWriteLocation(writeLocation, LOCKED))
                     continue;
 
                 // we have to set the busy fag before the write location for the reader
@@ -65,7 +136,7 @@ public class BytesQueue {
                 long flagLoc = offset;
                 offset = this.bytes.writeByte(offset, States.BUSY.ordinal());
 
-                if (!this.writeLocation.compareAndSet(-1, writeLocation + messageLen))
+                if (!header.compareAndSetWriteLocation(-1, writeLocation + messageLen))
                     continue;
 
                 // write a size
@@ -100,7 +171,7 @@ public class BytesQueue {
         long writeLoc = writeLocation();
 
 
-        long offset = this.readLocation.get();
+        long offset = header.getReadLocation();
         long readLocation = offset;//= this.readLocation.get();
 
         if (readLocation >= writeLoc) {
@@ -139,8 +210,8 @@ public class BytesQueue {
 
         // give the write some space back,
         // scan up the read items till it finds on that is NOT used
-        writeupto.set(next + bytes.capacity());
-        this.readLocation.set(next);
+        header.setWriteupto(next + bytes.capacity());
+        header.setReadLocation(next);
 
         using.position(using.position());
         return using;
@@ -165,22 +236,15 @@ public class BytesQueue {
         long writeLocation;
 
         for (; ; ) {
-            if ((writeLocation = this.writeLocation.get()) != LOCKED)
+            if ((writeLocation = header.getWriteLocation()) != LOCKED)
                 return writeLocation;
         }
     }
 
     private long remainingForWrite(long offset) {
-        return (writeupto.get() - 1) - offset;
+        return (header.getWriteupto() - 1) - offset;
 
     }
-
-
-    private final AtomicLong readLocation = new AtomicLong();
-    private final AtomicLong writeLocation = new AtomicLong();
-
-    @NotNull
-    private final AtomicLong writeupto;
 
 
     /**
@@ -195,7 +259,7 @@ public class BytesQueue {
         boolean isBytesBigEndian;
 
         public BytesRingBuffer(@NotNull Bytes buffer) {
-            this.buffer = buffer;
+            this.buffer = buffer.bytes(buffer.position(), buffer.remaining());
             isBytesBigEndian = isBytesBigEndian();
         }
 
