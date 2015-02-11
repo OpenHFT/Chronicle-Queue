@@ -124,25 +124,10 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     private void initialiseHeader() throws IOException {
-        if (casMagicOffset(UNINITIALISED, BUILDING)) {
+        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINITIALISED, BUILDING)) {
             buildHeader();
         }
         readHeader();
-    }
-
-    private boolean casMagicOffset(long expected, long value) {
-
-
-      //  if (Jvm.vmSupportsCS8())
-           return bytes.compareAndSwapLong(MAGIC_OFFSET, expected, value);
-
-   /*     synchronized (bytes) {
-            if (bytes.readVolatileLong(MAGIC_OFFSET) == expected) {
-                bytes.writeOrderedLong(MAGIC_OFFSET, value);
-                return true;
-            }
-            return false;
-        }*/
     }
 
 
@@ -180,7 +165,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         wire.writeMetaData(() -> wire
                 .write(MetaDataKey.header).writeMarshallable(header.init(Compression.NONE)));
 
-        if (!casMagicOffset(BUILDING, QUEUE_CREATED))
+        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");
     }
 
