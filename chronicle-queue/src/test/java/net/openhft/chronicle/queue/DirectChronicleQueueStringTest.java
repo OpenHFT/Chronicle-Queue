@@ -43,10 +43,14 @@ public class DirectChronicleQueueStringTest {
         for (int r = 0; r < 2; r++) {
             for (int t = 1; t < Runtime.getRuntime().availableProcessors(); t++) {
                 List<Future<?>> futureList = new ArrayList<>();
+
+                List<File> files = new ArrayList<>();
                 long start = System.nanoTime();
                 for (int j = 0; j < t; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
-                    new File(name).deleteOnExit();
+                    File file = new File(name);
+                    file.deleteOnExit();
+                    files.add(file);
                     DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
                             .build();
 
@@ -76,6 +80,9 @@ public class DirectChronicleQueueStringTest {
                 }
                 long end = System.nanoTime();
                 System.out.printf("Threads: %,d - Write rate %.1f M/s - Read rate %.1f M/s%n", t, t * RUNS * 1e3 / (mid - start), t * RUNS * 1e3 / (end - mid));
+                for (File f : files) {
+                    f.delete();
+                }
             }
         }
     }

@@ -24,10 +24,13 @@ public class ChronicleQueueTest {
         for (int r = 0; r < 2; r++) {
             for (int t = 1; t <= Runtime.getRuntime().availableProcessors(); t++) {
                 List<Future<?>> futureList = new ArrayList<>();
+                List<File> files = new ArrayList<>();
                 long start = System.nanoTime();
                 for (int j = 0; j < 4; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
-                    new File(name).deleteOnExit();
+                    File file = new File(name);
+                    files.add(file);
+                    file.deleteOnExit();
                     ChronicleQueue chronicle = new ChronicleQueueBuilder(name).build();
 
                     futureList.add(ForkJoinPool.commonPool().submit(() -> {
@@ -55,6 +58,9 @@ public class ChronicleQueueTest {
                 }
                 long end = System.nanoTime();
                 System.out.printf("Threads: %,d - Write rate %.1f M/s - Read rate %.1f M/s%n", t, t * RUNS * 1e3 / (mid - start), t * RUNS * 1e3 / (end - mid));
+                for (File f : files) {
+                    f.delete();
+                }
             }
         }
     }
