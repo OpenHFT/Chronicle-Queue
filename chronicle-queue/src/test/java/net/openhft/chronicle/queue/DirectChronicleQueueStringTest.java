@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -29,6 +30,7 @@ Threads: 9 - Write rate 136.8 M/s - Read rate 244.3 M/s
 Threads: 10 - Write rate 143.6 M/s - Read rate 268.7 M/s
 Threads: 11 - Write rate 161.7 M/s - Read rate 260.8 M/s
  */
+@Ignore
 public class DirectChronicleQueueStringTest {
 
     public static final int RUNS = 1000000;
