@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
-import net.openhft.lang.Jvm;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -203,16 +202,16 @@ public class BytesQueue {
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-            if (Jvm.vmSupportsCS8())
+          //  if (Jvm.vmSupportsCS8())
                 return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
-            synchronized (this) {
+           /* synchronized (this) {
                 if (expectedValue == getWriteLocation()) {
                     setWriteLocation(newValue);
                     return true;
                 }
                 return false;
 
-            }
+            }*/
 
         }
 

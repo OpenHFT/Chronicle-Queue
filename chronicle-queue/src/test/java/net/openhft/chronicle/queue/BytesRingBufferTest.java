@@ -38,7 +38,7 @@ public class BytesRingBufferTest {
     @Test
     public void testSimpledSingleThreadedWriteRead() throws Exception {
 
-        try (DirectStore allocate = DirectStore.allocate(150)) {
+        try (DirectStore  allocate = DirectStore.allocate(150)) {
 
             final BytesQueue bytesRingBuffer = new BytesQueue(allocate.bytes());
 
