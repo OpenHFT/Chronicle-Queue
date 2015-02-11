@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,6 +15,7 @@ import java.util.function.Function;
 
 import static org.junit.Assert.assertTrue;
 
+@Ignore
 public class ChronicleQueueTest {
 
     public static final int RUNS = 1000000;
