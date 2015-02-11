@@ -199,12 +199,28 @@ public class BytesQueue {
 
         }
 
-        // has to be synchronized because the compareAndSwapLong is not writeOrdered
+
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+
+            // todo CAS LONG is not working on CentOS
+            // buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+
+            synchronized (this) {
+                if (expectedValue == getWriteLocation()) {
+                    setWriteLocation(newValue);
+                    return true;
+                }
+                return false;
+
+            }
         }
 
-        // has to be synchronized because the compareAndSwapLong is not writeOrdered
+
+        private void setWriteLocation(long value) {
+            buffer.writeOrderedLong(writeLocationOffset, value);
+        }
+
+
         private long getWriteLocation() {
             return buffer.readVolatileLong(writeLocationOffset);
         }
