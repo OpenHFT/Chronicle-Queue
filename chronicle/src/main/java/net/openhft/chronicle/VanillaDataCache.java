@@ -35,11 +35,20 @@ public class VanillaDataCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
 
-    VanillaDataCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
-        this.basePath = basePath;
+    VanillaDataCache(
+            @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
+            @NotNull VanillaDateCache dateCache,
+            int blockBits) {
+
+        this.basePath = builder.path().getAbsolutePath();
         this.blockBits = blockBits;
         this.dateCache = dateCache;
-        this.cache = new VanillaMappedCache<DataKey>(capacity, true, cleanupOnClose);
+
+        this.cache = new VanillaMappedCache<>(
+            builder.dataCacheCapacity(),
+            true,
+            builder.cleanupOnClose()
+        );
     }
 
     public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
