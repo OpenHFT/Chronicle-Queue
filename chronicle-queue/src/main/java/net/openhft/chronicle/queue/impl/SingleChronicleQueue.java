@@ -28,7 +28,10 @@ import static net.openhft.chronicle.wire.BinaryWire.isDocument;
  * Created by peter on 30/01/15.
  */
 public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
-    static final long MAGIC_OFFSET = 0L;
+
+    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
+    private static final long MAGIC_OFFSET = 0L;
+
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
@@ -121,11 +124,26 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     private void initialiseHeader() throws IOException {
-        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINITIALISED, BUILDING)) {
+        if (casMagicOffset(UNINITIALISED, BUILDING)) {
             buildHeader();
         }
         readHeader();
     }
+
+    private boolean casMagicOffset(long expected, long value) {
+
+        if (Jvm.vmSupportsCS8())
+            return bytes.compareAndSwapLong(MAGIC_OFFSET, expected, value);
+
+        synchronized (bytes) {
+            if (bytes.readVolatileLong(MAGIC_OFFSET) == expected) {
+                bytes.writeOrderedLong(MAGIC_OFFSET, value);
+                return true;
+            }
+            return false;
+        }
+    }
+
 
     private void readHeader() throws IOException {
         // skip the magic number. 
@@ -161,7 +179,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         wire.writeMetaData(() -> wire
                 .write(MetaDataKey.header).writeMarshallable(header.init(Compression.NONE)));
 
-        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
+        if (!casMagicOffset(BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");
     }
 

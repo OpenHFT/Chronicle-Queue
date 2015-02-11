@@ -203,7 +203,7 @@ public class BytesQueue {
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-            if (Jvm.VMSupportsCS8())
+            if (Jvm.vmSupportsCS8())
                 return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
             synchronized (this) {
                 if (expectedValue == getWriteLocation()) {
