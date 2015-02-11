@@ -14,7 +14,7 @@ import java.util.function.Function;
 
 import static org.junit.Assert.assertTrue;
 
-public class ChronicleTest {
+public class ChronicleQueueTest {
 
     public static final int RUNS = 1000000;
     public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
@@ -28,7 +28,7 @@ public class ChronicleTest {
                 for (int j = 0; j < 4; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
-                    Chronicle chronicle = new ChronicleQueueBuilder(name).build();
+                    ChronicleQueue chronicle = new ChronicleQueueBuilder(name).build();
 
                     futureList.add(ForkJoinPool.commonPool().submit(() -> {
                         writeSome(chronicle);
@@ -43,7 +43,7 @@ public class ChronicleTest {
                 for (int j = 0; j < 4; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
-                    Chronicle chronicle = new ChronicleQueueBuilder(name).build();
+                    ChronicleQueue chronicle = new ChronicleQueueBuilder(name).build();
 
                     futureList.add(ForkJoinPool.commonPool().submit(() -> {
                         readSome(chronicle);
@@ -59,7 +59,7 @@ public class ChronicleTest {
         }
     }
 
-    private void readSome(Chronicle chronicle) throws IOException {
+    private void readSome(ChronicleQueue chronicle) throws IOException {
         ExcerptTailer tailer = chronicle.createTailer();
         StringBuilder sb = new StringBuilder();
         // TODO check this is still needed in future versions.
@@ -69,7 +69,7 @@ public class ChronicleTest {
         }
     }
 
-    private void writeSome(Chronicle chronicle) throws IOException {
+    private void writeSome(ChronicleQueue chronicle) throws IOException {
         ExcerptAppender appender = chronicle.createAppender();
         for (int i = 0; i < RUNS; i++) {
             appender.writeDocument(wire -> wire.write(TestKey.test).text("Hello World23456789012345678901234567890"));

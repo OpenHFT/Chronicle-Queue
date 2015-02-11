@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.queue.impl.SingleChronicle;
+import net.openhft.chronicle.queue.impl.SingleChronicleQueue;
 
 import java.io.IOException;
 
@@ -20,7 +20,7 @@ public class ChronicleQueueBuilder {
         return this;
     }
 
-    public Chronicle build() throws IOException {
-        return new SingleChronicle(name, blockSize);
+    public ChronicleQueue build() throws IOException {
+        return new SingleChronicleQueue(name, blockSize);
     }
 }

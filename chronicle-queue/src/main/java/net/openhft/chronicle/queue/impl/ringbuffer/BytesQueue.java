@@ -1,11 +1,9 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
+import net.openhft.lang.Jvm;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.lang.reflect.Field;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Multi writer single Reader, zero GC, ring buffer
@@ -177,7 +175,7 @@ public class BytesQueue {
         private final long writeUpToOffset;
         private final long readLocationOffset;
         private final Bytes buffer;
-        private final boolean vmSupportsLongCAS;
+
 
         /**
          * @param buffer the bytes for the header
@@ -201,17 +199,12 @@ public class BytesQueue {
 
             this.buffer = buffer.bytes(start, buffer.position());
 
-
-            Field vm_supports_long_cas = AtomicLong.class.getDeclaredField("VM_SUPPORTS_LONG_CAS");
-            vm_supports_long_cas.setAccessible(true);
-            vmSupportsLongCAS = (Boolean) vm_supports_long_cas.get(null);
-
-
         }
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-            //      return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+            if (Jvm.VMSupportsCS8())
+                return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
             synchronized (this) {
                 if (expectedValue == getWriteLocation()) {
                     setWriteLocation(newValue);

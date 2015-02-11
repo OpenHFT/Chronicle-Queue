@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.queue.impl.DirectChronicle;
+import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
 import org.junit.Test;
@@ -29,7 +29,7 @@ Threads: 9 - Write rate 136.8 M/s - Read rate 244.3 M/s
 Threads: 10 - Write rate 143.6 M/s - Read rate 268.7 M/s
 Threads: 11 - Write rate 161.7 M/s - Read rate 260.8 M/s
  */
-public class DirectChronicleStringTest {
+public class DirectChronicleQueueStringTest {
 
     public static final int RUNS = 1000000;
     public static final String EXPECTED_STRING = "Hello World23456789012345678901234567890";
@@ -45,7 +45,7 @@ public class DirectChronicleStringTest {
                 for (int j = 0; j < t; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
-                    DirectChronicle chronicle = (DirectChronicle) new ChronicleQueueBuilder(name)
+                    DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
                             .build();
 
                     futureList.add(ForkJoinPool.commonPool().submit(() -> {
@@ -61,7 +61,7 @@ public class DirectChronicleStringTest {
                 for (int j = 0; j < t; j++) {
                     String name = TMP + "/single" + start + "-" + j + ".q";
                     new File(name).deleteOnExit();
-                    DirectChronicle chronicle = (DirectChronicle) new ChronicleQueueBuilder(name)
+                    DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
                             .build();
 
                     futureList.add(ForkJoinPool.commonPool().submit(() -> {
@@ -78,7 +78,7 @@ public class DirectChronicleStringTest {
         }
     }
 
-    private void readSome(DirectChronicle chronicle) throws IOException {
+    private void readSome(DirectChronicleQueue chronicle) throws IOException {
         final Bytes toRead = DirectStore.allocate(EXPECTED_BYTES.length).bytes();
         AtomicLong offset = new AtomicLong(chronicle.firstBytes());
         for (int i = 0; i < RUNS; i++) {
@@ -87,7 +87,7 @@ public class DirectChronicleStringTest {
         }
     }
 
-    private void writeSome(DirectChronicle chronicle) throws IOException {
+    private void writeSome(DirectChronicleQueue chronicle) throws IOException {
         final Bytes toWrite = DirectStore.allocate(EXPECTED_BYTES.length).bytes();
         toWrite.write(EXPECTED_BYTES);
         for (int i = 0; i < RUNS; i++) {

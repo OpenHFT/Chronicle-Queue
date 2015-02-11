@@ -33,7 +33,7 @@ class Header implements Marshallable {
         uuid = UUID.randomUUID();
         created = ZonedDateTime.now();
         user = System.getProperty("user.name");
-        host = SingleChronicle.getHostName();
+        host = SingleChronicleQueue.getHostName();
         this.compression = compression.name();
         writeByte.setOrderedValue(PADDED_SIZE);
         return this;

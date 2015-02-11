@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.Chronicle;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
@@ -15,13 +15,13 @@ import java.util.function.Consumer;
  */
 public class SingleAppender implements ExcerptAppender {
 
-    private final DirectChronicle chronicle;
+    private final DirectChronicleQueue chronicle;
     private final ChronicleWireOut wireOut;
     private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
     private final Wire wire = new BinaryWire(buffer);
 
-    public SingleAppender(Chronicle chronicle) {
-        this.chronicle = (DirectChronicle) chronicle;
+    public SingleAppender(ChronicleQueue chronicle) {
+        this.chronicle = (DirectChronicleQueue) chronicle;
         wireOut = new ChronicleWireOut(null);
     }
 
@@ -54,7 +54,7 @@ public class SingleAppender implements ExcerptAppender {
     }
 
     @Override
-    public Chronicle chronicle() {
+    public ChronicleQueue chronicle() {
         return chronicle;
     }
 }

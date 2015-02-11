@@ -27,7 +27,7 @@ import static net.openhft.chronicle.wire.BinaryWire.isDocument;
  *
  * Created by peter on 30/01/15.
  */
-public class SingleChronicle implements Chronicle, DirectChronicle {
+public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
     static final long MAGIC_OFFSET = 0L;
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
@@ -46,7 +46,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     private final Bytes bytes;
     private long firstBytes = -1;
 
-    public SingleChronicle(String filename, long blockSize) throws IOException {
+    public SingleChronicleQueue(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
         headerMemory = file.acquire(0);
         bytes = headerMemory.bytes();
