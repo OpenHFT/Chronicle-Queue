@@ -132,8 +132,9 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     private boolean casMagicOffset(long expected, long value) {
 
-        if (Jvm.vmSupportsCS8())
-            return bytes.compareAndSwapLong(MAGIC_OFFSET, expected, value);
+
+       // if (Jvm.vmSupportsCS8())
+      //      return bytes.compareAndSwapLong(MAGIC_OFFSET, expected, value);
 
         synchronized (bytes) {
             if (bytes.readVolatileLong(MAGIC_OFFSET) == expected) {
