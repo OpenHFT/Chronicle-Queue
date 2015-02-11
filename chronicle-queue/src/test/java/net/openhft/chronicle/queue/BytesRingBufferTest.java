@@ -7,7 +7,6 @@ import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -22,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author Rob Austin.
  */
-@Ignore
 public class BytesRingBufferTest {
 
 
