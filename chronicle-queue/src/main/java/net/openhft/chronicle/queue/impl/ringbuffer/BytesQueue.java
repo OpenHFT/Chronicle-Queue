@@ -166,6 +166,14 @@ public class BytesQueue {
 
 
     /**
+     * Returns whether underlying JVM supports lockless CompareAndSet for longs. Called only once
+     * and cached in VM_SUPPORTS_LONG_CAS.
+     */
+    private static native boolean VMSupportsCS8();
+
+    static final boolean VM_SUPPORTS_LONG_CAS = VMSupportsCS8();
+
+    /**
      * used to store the locations around the ring buffer or reading and writing
      */
     private class Header {
@@ -202,10 +210,9 @@ public class BytesQueue {
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-            // todo CAS LONG is not working on CentOS
-            // buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
-
-            synchronized (this) {
+            if (VM_SUPPORTS_LONG_CAS)
+                return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+            else synchronized (this) {
                 if (expectedValue == getWriteLocation()) {
                     setWriteLocation(newValue);
                     return true;
@@ -213,8 +220,8 @@ public class BytesQueue {
                 return false;
 
             }
-        }
 
+        }
 
         private void setWriteLocation(long value) {
             buffer.writeOrderedLong(writeLocationOffset, value);
