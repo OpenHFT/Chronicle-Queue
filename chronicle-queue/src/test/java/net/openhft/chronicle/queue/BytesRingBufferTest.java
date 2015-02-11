@@ -183,7 +183,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testMultiThreadedWithIntValues() throws InterruptedException {
+    public void testMultiThreadedWithIntValues() throws  Exception {
 
 
         final BytesQueue bytesRingBuffer = new BytesQueue(ByteBufferBytes.wrap(ByteBuffer

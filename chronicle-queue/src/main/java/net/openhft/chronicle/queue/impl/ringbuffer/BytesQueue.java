@@ -4,6 +4,9 @@ import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Multi writer single Reader, zero GC, ring buffer
  *
@@ -21,7 +24,7 @@ public class BytesQueue {
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
-    public BytesQueue(@NotNull final Bytes buffer) {
+    public BytesQueue(@NotNull final Bytes buffer) throws Exception {
         this.header = new Header(buffer);
         this.bytes = new BytesRingBuffer(buffer);
         header.setWriteUpTo(bytes.capacity());
@@ -174,11 +177,12 @@ public class BytesQueue {
         private final long writeUpToOffset;
         private final long readLocationOffset;
         private final Bytes buffer;
+        private final boolean vmSupportsLongCAS;
 
         /**
          * @param buffer the bytes for the header
          */
-        private Header(@NotNull Bytes buffer) {
+        private Header(@NotNull Bytes buffer) throws Exception {
 
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
@@ -197,10 +201,15 @@ public class BytesQueue {
 
             this.buffer = buffer.bytes(start, buffer.position());
 
+
+            Field vm_supports_long_cas = AtomicLong.class.getDeclaredField("VM_SUPPORTS_LONG_CAS");
+            vm_supports_long_cas.setAccessible(true);
+            vmSupportsLongCAS = (Boolean) vm_supports_long_cas.get(null);
+
+
         }
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-
 
             //      return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
             synchronized (this) {
