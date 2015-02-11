@@ -1,6 +1,6 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.Chronicle;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
@@ -13,13 +13,13 @@ import java.util.function.Function;
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleTailer implements ExcerptTailer {
-    private final DirectChronicle chronicle;
+    private final DirectChronicleQueue chronicle;
     long index;
     private final MultiStoreBytes bytes = new MultiStoreBytes();
     private final Wire wire = new BinaryWire(bytes);
 
-    public SingleTailer(Chronicle chronicle) {
-        this.chronicle = (DirectChronicle) chronicle;
+    public SingleTailer(ChronicleQueue chronicle) {
+        this.chronicle = (DirectChronicleQueue) chronicle;
         toStart();
     }
 
@@ -53,7 +53,7 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public Chronicle chronicle() {
+    public ChronicleQueue chronicle() {
         return chronicle;
     }
 }

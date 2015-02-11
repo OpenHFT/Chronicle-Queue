@@ -1,10 +1,9 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
+import net.openhft.lang.Jvm;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Multi writer single Reader, zero GC, ring buffer
@@ -23,7 +22,7 @@ public class BytesQueue {
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
-    public BytesQueue(@NotNull final Bytes buffer) {
+    public BytesQueue(@NotNull final Bytes buffer) throws Exception {
         this.header = new Header(buffer);
         this.bytes = new BytesRingBuffer(buffer);
         header.setWriteUpTo(bytes.capacity());
@@ -177,10 +176,11 @@ public class BytesQueue {
         private final long readLocationOffset;
         private final Bytes buffer;
 
+
         /**
          * @param buffer the bytes for the header
          */
-        private Header(@NotNull Bytes buffer) {
+        private Header(@NotNull Bytes buffer) throws Exception {
 
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
@@ -190,7 +190,6 @@ public class BytesQueue {
             long start = buffer.position();
             readLocationOffset = buffer.position();
             buffer.skip(8);
-
 
             writeLocationOffset = buffer.position();
             buffer.skip(8);
@@ -202,17 +201,29 @@ public class BytesQueue {
 
         }
 
-        // added as the method below has visibility issues
-        final AtomicLong writeLocationValue = new AtomicLong();
+        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-        public synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return writeLocationValue.compareAndSet(expectedValue, newValue);
+            if (Jvm.vmSupportsCS8())
+                return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+            synchronized (this) {
+                if (expectedValue == getWriteLocation()) {
+                    setWriteLocation(newValue);
+                    return true;
+                }
+                return false;
+
+            }
+
         }
 
-        public synchronized long getWriteLocation() {
-            return writeLocationValue.get();
+        private void setWriteLocation(long value) {
+            buffer.writeOrderedLong(writeLocationOffset, value);
         }
 
+
+        private long getWriteLocation() {
+            return buffer.readVolatileLong(writeLocationOffset);
+        }
 
         /**
          * sets the point at which you should not write any additional bits
@@ -379,8 +390,12 @@ public class BytesQueue {
 
         boolean isBytesBigEndian() {
             try {
+
                 putLongB(0, 1);
                 return buffer.flip().readLong() == 1;
+
+            } catch (Exception e) {
+                return false;
             } finally {
                 buffer.clear();
             }

@@ -22,7 +22,7 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.lang.model.constraints.NotNull;
 
 /**
- * The main data container of a {@link Chronicle}, an extended version of {@link ExcerptTailer} which also facilitates
+ * The main data container of a {@link ChronicleQueue}, an extended version of {@link ExcerptTailer} which also facilitates
  * random access.
  *
  * @author peter.lawrey
