@@ -450,7 +450,7 @@ public abstract class SourceTcp {
             }
 
             withMappedBuffer.clear();
-            if (withMappedBuffer.capacity() < source.capacity()) {
+            if (withMappedBuffer.capacity() < source.limit()) {
                 withMappedBuffer = new DirectByteBufferBytes((int)source.capacity());
             }
 

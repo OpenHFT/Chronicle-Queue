@@ -75,9 +75,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
     final Map<Date, MarketData> expectedMarketDate = expectedMarketData();
 
     private Map<Date, MarketData> expectedMarketData() {
-
         final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
-
         for (MarketData marketRecord : marketRecords) {
             expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
         }
@@ -378,7 +376,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     @Test
     public void testReplicationWithPriceMarketDataFilter() throws Throwable {
-
         final String sourceBasePath = getVanillaTestPath("-source");
         final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow");
         final String sinkCloseBasePath = getVanillaTestPath("-sink-close");
@@ -392,14 +389,9 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         final int port = portSupplier.getAndAssertOnError();
 
-
         try {
-
-
             Callable<Void> appenderCallable = new Callable<Void>() {
                 public Void call() throws Exception {
-
-
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -420,21 +412,15 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> highLowCallable = new Callable<Void>() {
-
                 public Void call() throws Exception {
-
                     final Chronicle highLowSink = sink(sinkHighLowBasePath)
                             .withMapping(HighLow.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
                             .build();
 
                     AffinityLock lock = AffinityLock.acquireLock();
-
                     try (final ExcerptTailer tailer = highLowSink.createTailer()) {
-
-
                         while (tailer.nextIndex()) {
-
                             HighLow actual = new HighLow();
                             actual.readMarshallable(tailer);
 
@@ -454,23 +440,17 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertEquals(expected.low, actual.low, 0.0);
 
                             tailer.finish();
-
                         }
-
                     } finally {
                         lock.release();
                         highLowSink.clear();
                     }
                     return null;
                 }
-
-
             };
 
             Callable<Void> closeCallable = new Callable<Void>() {
-
                 public Void call() throws Exception {
-
                     final Chronicle closeSink = sink(sinkCloseBasePath)
                             .withMapping(Close.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
@@ -478,12 +458,9 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                     AffinityLock lock = AffinityLock.acquireLock();
                     try (final ExcerptTailer tailer = closeSink.createTailer()) {
-
                         while (tailer.nextIndex()) {
-
                             Close actual = new Close();
                             actual.readMarshallable(tailer);
-
 
                             // check the data is reasonable
 
@@ -496,9 +473,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             Assert.assertTrue(actual.close > 5000);
                             Assert.assertTrue(actual.close < 8000);
 
-
-                            final MarketData expected = expectedMarketDate.get(new Date(actual
-                                    .date));
+                            final MarketData expected = expectedMarketDate.get(new Date(actual.date));
 
                             String message = "expected=" + expected + "actual=" + actual;
 
@@ -531,8 +506,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 };
 
                 Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
-
-
                 appenderFuture.get(20, TimeUnit.SECONDS);
 
 
@@ -651,8 +624,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
             Callable<Void> appenderCallable = new Callable<Void>() {
                 public Void call() throws Exception {
-
-
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -716,8 +687,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     }
                     return null;
                 }
-
-
             };
 
 
@@ -731,10 +700,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 };
 
                 Future<Void> appenderFuture = Executors.newSingleThreadExecutor(appenderFactory).submit(appenderCallable);
-
-
                 appenderFuture.get(20, TimeUnit.SECONDS);
-
 
                 ThreadFactory dayFilterFactory = new ThreadFactory() {
                     @Override
@@ -743,11 +709,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     }
                 };
 
-
-                Future<Void> dayFilterFuture = Executors.newSingleThreadExecutor(dayFilterFactory).submit
-                        (dayFilterCallable);
-
-
+                Future<Void> dayFilterFuture = Executors.newSingleThreadExecutor(dayFilterFactory).submit(dayFilterCallable);
                 dayFilterFuture.get(TIMEOUT, TimeUnit.SECONDS);
 
             } catch (ExecutionException e) {
@@ -769,35 +731,25 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     private ChronicleQueueBuilder.ReplicaChronicleQueueBuilder sink(@NotNull String path) {
         switch (typeOfQueue) {
-
             case VANILLA:
                 return ChronicleQueueBuilder.vanilla(path).sink();
-
             case INDEXED:
                 return ChronicleQueueBuilder.indexed(path).sink();
-
             default:
                 throw new UnsupportedOperationException();
         }
-
-
     }
 
 
     private ChronicleQueueBuilder.ReplicaChronicleQueueBuilder source(@NotNull String path) {
         switch (typeOfQueue) {
-
             case VANILLA:
                 return ChronicleQueueBuilder.vanilla(path).source();
-
             case INDEXED:
                 return ChronicleQueueBuilder.indexed(path).source();
-
             default:
                 throw new UnsupportedOperationException();
         }
-
-
     }
 }
 
