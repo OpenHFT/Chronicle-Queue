@@ -189,7 +189,6 @@ public class BytesQueue {
             readLocationOffset = buffer.position();
             buffer.skip(8);
 
-
             writeLocationOffset = buffer.position();
             buffer.skip(8);
 
@@ -200,14 +199,13 @@ public class BytesQueue {
 
         }
 
-
         // has to be synchronized because the compareAndSwapLong is not writeOrdered
-        private synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
         // has to be synchronized because the compareAndSwapLong is not writeOrdered
-        private synchronized long getWriteLocation() {
+        private long getWriteLocation() {
             return buffer.readVolatileLong(writeLocationOffset);
         }
 
