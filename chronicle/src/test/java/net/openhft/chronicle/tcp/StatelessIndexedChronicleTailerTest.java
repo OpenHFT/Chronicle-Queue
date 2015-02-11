@@ -37,7 +37,7 @@ import static net.openhft.chronicle.ChronicleQueueBuilder.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
+public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestBase {
 
     @Test
     public void testIndexedStatelessSink_001() throws Exception {
@@ -436,7 +436,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         t.start();
 
         // Source 1
-        Chronicle source1 = indexed(basePathSource)
+        final Chronicle source1 = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -460,7 +460,7 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         portSupplier.reset();
 
         // Source 2
-        Chronicle source2 = indexed(basePathSource)
+        final Chronicle source2 = indexed(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -474,6 +474,17 @@ public class StatelessIndexedChronicleTest extends StatelessChronicleTestBase {
         }
 
         appender2.close();
+
+        final Chronicle check = vanilla(basePathSource).build();
+        final ExcerptTailer checkTailer = check.createTailer();
+        for(long i=0; i<items; i++) {
+            if(checkTailer.nextIndex()) {
+                assertEquals(i, checkTailer.readLong());
+                checkTailer.finish();
+            }
+        }
+
+        checkTailer.close();
 
         latch.await(5, TimeUnit.SECONDS);
         assertEquals(0, latch.getCount());

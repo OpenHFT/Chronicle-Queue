@@ -26,7 +26,7 @@ import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
-import net.openhft.lang.io.serialization.JDKObjectSerializer;
+import net.openhft.lang.io.serialization.JDKZObjectSerializer;
 import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -146,7 +146,7 @@ public class VanillaChronicle implements Chronicle {
         if (serializer == null) {
             serializer = BytesMarshallableSerializer.create(
                 new VanillaBytesMarshallerFactory(),
-                JDKObjectSerializer.INSTANCE);
+                JDKZObjectSerializer.INSTANCE);
 
             marshallersCache.set(new WeakReference<ObjectSerializer>(serializer));
         }
@@ -691,12 +691,6 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptTailer toEnd() {
             super.toEnd();
             return this;
-        }
-
-        //Must add this to get the correct capacity
-        @Override
-        public long capacity() {
-            return limitAddr - startAddr;
         }
     }
 

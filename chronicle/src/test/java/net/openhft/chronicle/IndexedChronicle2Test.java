@@ -151,17 +151,39 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         final ExcerptTailer tl = ch.createTailer();
 
         ap.startExcerpt();
-        ap.writeObject(new UnsupportedOperationException("UOE"));
+        ap.writeObject(new UnsupportedOperationException("UOE-1"));
+        ap.finish();
+        ap.startExcerpt();
+        ap.writeObject(new UnsupportedOperationException("UOE-2", new IllegalStateException("ISE")));
         ap.finish();
         ap.close();
 
-        assertTrue(tl.nextIndex());
-        Object obj = tl.readObject();
-        assertNotNull(obj);
-        assertTrue(obj instanceof Throwable);
-        assertTrue(obj instanceof UnsupportedOperationException);
+        {
+            assertTrue(tl.nextIndex());
+            Object obj1 = tl.readObject();
+            assertNotNull(obj1);
+            assertTrue(obj1 instanceof Throwable);
+            assertTrue(obj1 instanceof UnsupportedOperationException);
+            Throwable th1 = (Throwable) obj1;
+            assertEquals("UOE-1", th1.getMessage());
+            assertNull(th1.getCause());
+            tl.finish();
+        }
 
-        tl.finish();
+        {
+            assertTrue(tl.nextIndex());
+            Object obj2 = tl.readObject();
+            assertNotNull(obj2);
+            assertTrue(obj2 instanceof Throwable);
+            assertTrue(obj2 instanceof UnsupportedOperationException);
+            Throwable th2 = (Throwable) obj2;
+            assertEquals("UOE-2", th2.getMessage());
+            assertNotNull(th2.getCause());
+            assertTrue(th2.getCause() instanceof Throwable);
+            assertTrue(th2.getCause() instanceof IllegalStateException);
+            assertEquals("ISE", th2.getCause().getMessage());
+            tl.finish();
+        }
 
         assertFalse(tl.nextIndex());
 

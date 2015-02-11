@@ -20,6 +20,7 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.*;
 import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.DirectByteBufferBytes;
 import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
@@ -276,7 +277,8 @@ public abstract class SourceTcp {
         }
 
         protected boolean hasRoomForExcerpt(ByteBuffer buffer, Bytes tailer) {
-            return (tailer.capacity() + ChronicleTcp.HEADER_SIZE) < (buffer.capacity() - buffer.position());
+            //return (tailer.capacity() + ChronicleTcp.HEADER_SIZE) < (buffer.capacity() - buffer.position());
+            return buffer.remaining() >= (tailer.remaining() + ChronicleTcp.HEADER_SIZE);
         }
 
         protected void pauseReset() {
@@ -545,13 +547,14 @@ public abstract class SourceTcp {
     private class VanillaSessionHandler extends SessionHandler {
         private boolean nextIndex;
         private long index;
-        private Bytes withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(1024));
+        private Bytes withMappedBuffer;
 
         private VanillaSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
 
             this.nextIndex = true;
             this.index = -1;
+            this.withMappedBuffer = new DirectByteBufferBytes(1024);
         }
 
         @Override
@@ -618,18 +621,19 @@ public abstract class SourceTcp {
             pauseReset();
             Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
 
-            final long size = bytes.limit();
+            int  size = (int)bytes.limit();
             long remaining = size + ChronicleTcp.HEADER_SIZE;
 
             writeBuffer.clear();
-            writeBuffer.putInt((int) size);
+            writeBuffer.putInt(size);
             writeBuffer.putLong(tailer.index());
 
+
             // for large objects send one at a time.
-            if (size > writeBuffer.capacity() / 2) {
+            if (size > writeBuffer.limit() / 2) {
                 while (remaining > 0) {
-                    int size2 = (int) Math.min(remaining, writeBuffer.capacity());
-                    writeBuffer.limit(size2);
+                    size = (int) Math.min(remaining, writeBuffer.capacity());
+                    writeBuffer.limit(size);
                     bytes.read(writeBuffer);
                     writeBuffer.flip();
                     remaining -= writeBuffer.remaining();
@@ -638,25 +642,32 @@ public abstract class SourceTcp {
             } else {
                 writeBuffer.limit((int) remaining);
                 bytes.read(writeBuffer);
+
+                long previousIndex = tailer.index();
+                long currentIndex = previousIndex;
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
                     if (!tailer.wasPadding()) {
+                        currentIndex = tailer.index();
                         bytes = applyMapping(tailer, attached, withMappedBuffer);
-
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
                             // if there is free space, copy another one.
-                            int size2 = (int) bytes.limit();
-                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
-                            writeBuffer.putInt(size2);
-                            writeBuffer.putLong(tailer.index());
-                            bytes.read(writeBuffer);
+                            size = (int) bytes.limit();
+                            writeBuffer.limit(writeBuffer.position() + size + ChronicleTcp.HEADER_SIZE);
+                            writeBuffer.putInt(size);
+                            writeBuffer.putLong(previousIndex = currentIndex);
 
+                            bytes.read(writeBuffer);
                             count--;
                         } else {
+                            // if there is no space, go back to the previous index
+                            tailer.index(previousIndex);
                             break;
                         }
                     } else {
                         throw new AssertionError("Entry should not be padding - remove");
                     }
+
+                    //tailer.finish();
                 }
 
                 writeBuffer.flip();
@@ -696,7 +707,7 @@ public abstract class SourceTcp {
 
         withMappedBuffer.clear();
         if (withMappedBuffer.capacity() < source.capacity()) {
-            withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate((int) source.capacity()));
+            withMappedBuffer = new DirectByteBufferBytes((int)source.capacity());
         }
 
         try {
@@ -709,7 +720,7 @@ public abstract class SourceTcp {
                 }
 
                 int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
-                withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(newSize));
+                withMappedBuffer = new DirectByteBufferBytes(newSize);
             } else {
                 throw e;
             }
