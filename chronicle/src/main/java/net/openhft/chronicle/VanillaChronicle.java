@@ -25,7 +25,9 @@ import net.openhft.lang.Maths;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBytes;
-import net.openhft.lang.io.serialization.BytesMarshallerFactory;
+import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
+import net.openhft.lang.io.serialization.JDKZObjectSerializer;
+import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 
@@ -63,11 +65,14 @@ public class VanillaChronicle implements Chronicle {
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
 
     private final String name;
-    private final ThreadLocal<WeakReference<BytesMarshallerFactory>> marshallersCache;
+    private final ThreadLocal<WeakReference<ObjectSerializer>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
     private final ThreadLocal<WeakReference<VanillaAppender>> appenderCache;
     private final VanillaIndexCache indexCache;
     private final VanillaDataCache dataCache;
+    private final VanillaDateCache dateCache;
+    private final int indexBlockSizeBits;
+    private final int indexBlockSizeMask;
     private final int indexBlockLongsBits;
     private final int indexBlockLongsMask;
     private final int dataBlockSizeBits;
@@ -84,37 +89,24 @@ public class VanillaChronicle implements Chronicle {
 
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
-        this.marshallersCache = new ThreadLocal<WeakReference<BytesMarshallerFactory>>();
-        this.tailerCache = new ThreadLocal<WeakReference<VanillaTailer>>();
-        this.appenderCache = new ThreadLocal<WeakReference<VanillaAppender>>();
+        this.marshallersCache = new ThreadLocal<>();
+        this.tailerCache = new ThreadLocal<>();
+        this.appenderCache = new ThreadLocal<>();
         this.name = builder.path().getName();
 
-        VanillaDateCache dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
-        int indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
-        int indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
+        this.dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
 
-        this.indexCache = new VanillaIndexCache(
-                builder.path().getAbsolutePath(),
-                indexBlockSizeBits,
-                dateCache,
-                builder.indexCacheCapacity(),
-                builder.cleanupOnClose());
-
+        this.indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
+        this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
+        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits);
 
         this.dataBlockSizeBits = Maths.intLog2(builder.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
+        this.dataCache = new VanillaDataCache(this.builder, dateCache, dataBlockSizeBits);
 
-        this.dataCache = new VanillaDataCache(
-                builder.path().getAbsolutePath(),
-                dataBlockSizeBits,
-                dateCache,
-                builder.indexCacheCapacity(),
-                builder.cleanupOnClose()
-        );
-
-        this.entriesForCycleBits = Maths.intLog2(builder.entriesPerCycle());
+        this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
     }
 
@@ -133,20 +125,23 @@ public class VanillaChronicle implements Chronicle {
         return entriesForCycleBits;
     }
 
-    BytesMarshallerFactory acquireBMF() {
-        WeakReference<BytesMarshallerFactory> bmfRef = marshallersCache.get();
-        BytesMarshallerFactory bmf = null;
-        if (bmfRef != null)
-            bmf = bmfRef.get();
-        if (bmf == null) {
-            bmf = createBMF();
-            marshallersCache.set(new WeakReference<BytesMarshallerFactory>(bmf));
-        }
-        return bmf;
-    }
+    ObjectSerializer acquireSerializer() {
+        WeakReference<ObjectSerializer> serializerRef = marshallersCache.get();
 
-    BytesMarshallerFactory createBMF() {
-        return new VanillaBytesMarshallerFactory();
+        ObjectSerializer serializer = null;
+        if (serializerRef != null) {
+            serializer = serializerRef.get();
+        }
+
+        if (serializer == null) {
+            serializer = BytesMarshallableSerializer.create(
+                new VanillaBytesMarshallerFactory(),
+                JDKZObjectSerializer.INSTANCE);
+
+            marshallersCache.set(new WeakReference<>(serializer));
+        }
+
+        return serializer;
     }
 
     @NotNull
@@ -164,7 +159,7 @@ public class VanillaChronicle implements Chronicle {
 
         if (tailer == null) {
             tailer = createTailer0();
-            tailerCache.set(new WeakReference<VanillaTailer>(tailer));
+            tailerCache.set(new WeakReference<>(tailer));
         }
 
         return tailer;
@@ -189,7 +184,7 @@ public class VanillaChronicle implements Chronicle {
 
         if (appender == null) {
             appender = createAppender0();
-            appenderCache.set(new WeakReference<VanillaAppender>(appender));
+            appenderCache.set(new WeakReference<>(appender));
         }
 
         return appender;
@@ -301,7 +296,7 @@ public class VanillaChronicle implements Chronicle {
 
 
         public AbstractVanillaExcerpt() {
-            super(acquireBMF(), NO_PAGE, NO_PAGE, null);
+            super(acquireSerializer(), NO_PAGE, NO_PAGE, null);
         }
 
 
@@ -686,12 +681,6 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptTailer toEnd() {
             super.toEnd();
             return this;
-        }
-
-        //Must add this to get the correct capacity
-        @Override
-        public long capacity() {
-            return limitAddr - startAddr;
         }
     }
 

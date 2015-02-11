@@ -34,8 +34,13 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
+        final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
+                ChronicleQueueBuilder.vanilla(baseDir)
+                        .dataCacheCapacity(32)
+                        .cleanupOnClose(false);
+
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaDataCache dataCache = new VanillaDataCache(baseDir, 10 + 6, dateCache, 32, false);
+        final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
@@ -85,8 +90,13 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
+        final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
+                ChronicleQueueBuilder.vanilla(baseDir)
+                        .dataCacheCapacity(32)
+                        .cleanupOnClose(false);
+
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaDataCache dataCache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000, false);
+        final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
@@ -130,8 +140,13 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         try {
+            final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
+                    ChronicleQueueBuilder.vanilla(baseDir)
+                            .dataCacheCapacity(32)
+                            .cleanupOnClose(false);
+
             final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-            final VanillaDataCache dataCache = new VanillaDataCache(baseDir, 10 + 6, dateCache, 32 , false);
+            final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
             int cycle = (int) (System.currentTimeMillis() / 1000);
             final int threadId = AffinitySupport.getThreadId();
@@ -153,7 +168,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
             dataCache.close();
 
             // Open a new cache and check that it reads the existing data files that were created above
-            final VanillaDataCache dataCache2 = new VanillaDataCache(baseDir, 10 + 6, dateCache, 32, false);
+            final VanillaDataCache dataCache2 = new VanillaDataCache(builder, dateCache, 10 + 6);
 
             assertEquals(5, dataCache2.findNextDataCount(cycle, threadId));
 

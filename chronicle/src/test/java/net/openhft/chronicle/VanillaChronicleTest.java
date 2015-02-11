@@ -1066,4 +1066,47 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
+    @Ignore
+    @Test
+    public void testAppendX() throws Exception {
+        final long RUNS = 1000000;
+        final int THREADS = 5;
+
+        final String baseDir = getTestPath();
+        assertNotNull(baseDir);
+
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir).build();
+        chronicle.clear();
+
+        try{
+            ExecutorService es = Executors.newFixedThreadPool(THREADS);
+            for(int i=0; i<THREADS; i++) {
+                es.submit(new Runnable() {
+                    public void run() {
+                        try {
+                            final ExcerptAppender appender = chronicle.createAppender();
+                            for (long i = 0; i < RUNS; i++) {
+                                appender.startExcerpt(16);
+                                appender.append(i);
+                                appender.append(i + 1);
+                                appender.finish();
+                            }
+
+                            appender.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+
+            es.awaitTermination(10, TimeUnit.MINUTES);
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+
+            assertFalse(new File(baseDir).exists());
+        }
+    }
+
 }
