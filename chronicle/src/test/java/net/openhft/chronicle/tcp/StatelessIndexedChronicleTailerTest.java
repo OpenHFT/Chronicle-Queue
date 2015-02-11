@@ -384,8 +384,6 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     // JIRA
     // *************************************************************************
 
-
-
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-103
      */
