@@ -539,6 +539,7 @@ public class IndexedChronicle implements Chronicle {
         void loadDataBuffer() throws IOException {
             setDataBuffer(dataStartOffset / dataBlockSize);
             startAddr = positionAddr = limitAddr = dataStartAddr;
+            capacityAddr = startAddr + dataBuffer.capacity();
         }
 
         void loadIndexBuffer() throws IOException {

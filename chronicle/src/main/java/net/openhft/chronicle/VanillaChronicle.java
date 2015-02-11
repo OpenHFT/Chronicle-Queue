@@ -399,6 +399,7 @@ public class VanillaChronicle implements Chronicle {
 
                 startAddr = positionAddr = dataBytes.startAddr() + dataOffset;
                 limitAddr = startAddr + ~len;
+                capacityAddr = limitAddr;
 
                 index = nextIndex;
                 finished = false;
