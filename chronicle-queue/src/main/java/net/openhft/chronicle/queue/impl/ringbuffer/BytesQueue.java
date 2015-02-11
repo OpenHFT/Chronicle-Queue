@@ -4,8 +4,6 @@ import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Multi writer single Reader, zero GC, ring buffer
  *
@@ -202,17 +200,16 @@ public class BytesQueue {
 
         }
 
-        // added as the method below has visibility issues
-        final AtomicLong writeLocationValue = new AtomicLong();
 
-        public synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return writeLocationValue.compareAndSet(expectedValue, newValue);
+        // has to be synchronized because the compareAndSwapLong is not writeOrdered
+        private synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+            return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
-        public synchronized long getWriteLocation() {
-            return writeLocationValue.get();
+        // has to be synchronized because the compareAndSwapLong is not writeOrdered
+        private synchronized long getWriteLocation() {
+            return buffer.readVolatileLong(writeLocationOffset);
         }
-
 
         /**
          * sets the point at which you should not write any additional bits
@@ -379,8 +376,12 @@ public class BytesQueue {
 
         boolean isBytesBigEndian() {
             try {
+
                 putLongB(0, 1);
                 return buffer.flip().readLong() == 1;
+
+            } catch (Exception e) {
+                return false;
             } finally {
                 buffer.clear();
             }
