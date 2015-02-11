@@ -21,6 +21,7 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.lang.thread.NamedThreadFactory;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -55,9 +56,10 @@ public final class SourceTcpAcceptor extends SourceTcp {
                 try {
 
                     socketChannel = ServerSocketChannel.open();
-                    socketChannel.socket().setReuseAddress(true);
-                    socketChannel.socket().bind(builder.bindAddress(), builder.acceptorMaxBacklog());
                     socketChannel.configureBlocking(false);
+                    ServerSocket socket = socketChannel.socket();
+                    socket.setReuseAddress(true);
+                    socket.bind(builder.bindAddress(), builder.acceptorMaxBacklog());
 
                     builder.connectionListener().onListen(socketChannel);
 

@@ -67,7 +67,7 @@ public class SinkTcpInitiator extends SinkTcp {
 
         try {
             return NetworkInterface.getByInetAddress(builder.connectAddress().getAddress()) != null;
-        } catch(Exception e)  {
+        } catch (Exception ignored) {
         }
 
         return false;

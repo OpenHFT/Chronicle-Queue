@@ -175,10 +175,10 @@ public class CheckedExcerpt extends WrappedExcerpt {
         checkSpaceLeft0(requiredSize, remaining());
     }
 
-    private void checkSpaceLeft0(long requiredSize, long availabeSize) {
-        if(requiredSize > availabeSize) {
+    private void checkSpaceLeft0(long requiredSize, long availableSize) {
+        if (requiredSize > availableSize) {
             throw new IllegalStateException(
-                "Not enough space left, required is " + requiredSize + " remaining is " + availabeSize
+                    "Not enough space left, required is " + requiredSize + " remaining is " + availableSize
             );
         }
     }

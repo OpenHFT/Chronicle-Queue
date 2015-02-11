@@ -604,6 +604,8 @@ public class VanillaChronicle implements Chronicle {
         }
         @Override
         public void finish() {
+            if (finished)
+                throw new IllegalStateException("Not started");
             super.finish();
             if (dataBytes == null) {
                 return;
