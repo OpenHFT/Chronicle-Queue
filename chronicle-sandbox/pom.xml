@@ -30,7 +30,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle-sandbox</artifactId>
-    <version>3.3.5-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>OpenHFT/Chronicle-Queue/chronicle-sandbox</name>

@@ -18,8 +18,8 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.DirectByteBufferBytes;
 import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
@@ -133,9 +133,9 @@ public abstract class SourceTcp {
 
         protected final ByteBuffer writeBuffer;
 
-
         // this could be re-sized so cannot be final
         protected IByteBufferBytes readBuffer;
+        private Bytes withMappedBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
@@ -145,11 +145,13 @@ public abstract class SourceTcp {
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
 
-            this.readBuffer = ByteBufferBytes.wrap(ChronicleTcp.createBufferOfSize(16));
+            this.readBuffer = new DirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
 
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.writeBuffer.limit(0);
+
+            this.withMappedBuffer = new DirectByteBufferBytes(1024);
         }
 
 
@@ -276,7 +278,11 @@ public abstract class SourceTcp {
         }
 
         protected boolean hasRoomForExcerpt(ByteBuffer buffer, Bytes tailer) {
-            return (tailer.capacity() + ChronicleTcp.HEADER_SIZE) < (buffer.capacity() - buffer.position());
+            return hasRoomFor(buffer, tailer.remaining() + ChronicleTcp.HEADER_SIZE);
+        }
+
+        protected boolean hasRoomFor(ByteBuffer buffer, long size) {
+            return buffer.remaining() >= size;
         }
 
         protected void pauseReset() {
@@ -308,7 +314,7 @@ public abstract class SourceTcp {
         protected IByteBufferBytes readUpTo(int size) throws IOException {
             if (readBuffer.capacity() < size) {
                 // resize the buffer
-                this.readBuffer = new ByteBufferBytes(ChronicleTcp.createBufferOfSize(size));
+                this.readBuffer = new DirectByteBufferBytes(size);
             }
 
             readBuffer.clear();
@@ -421,18 +427,65 @@ public abstract class SourceTcp {
         protected abstract boolean onSubscribe(final SelectionKey key, long data) throws IOException ;
         protected abstract boolean onSubmit(final SelectionKey key, long size, boolean ack) throws IOException ;
         protected abstract boolean write(Object attachment) throws IOException;
+
+        /**
+         * applies a mapping if the mapping is not set to {@code}null{code}
+         *
+         * @param source the tailer for the mapping to be applied to
+         * @param attached the key attachment
+         * @return returns the tailer or the mapped bytes
+         * @see
+         */
+        protected Bytes applyMapping(@NotNull final ExcerptTailer source,
+                                     @Nullable Object attached) {
+
+            if (attached == null) {
+                return source;
+            }
+
+            final MappingProvider mappingProvider = (MappingProvider) attached;
+            final MappingFunction mappingFunction = mappingProvider.withMapping();
+            if (mappingFunction == null) {
+                return source;
+            }
+
+            withMappedBuffer.clear();
+            if (withMappedBuffer.capacity() < source.limit()) {
+                withMappedBuffer = new DirectByteBufferBytes((int)source.capacity());
+            }
+
+            try {
+                mappingFunction.apply(source, withMappedBuffer);
+            } catch (IllegalArgumentException e) {
+                // lets try to resize
+                if (e.getMessage().contains("Attempt to write")) {
+                    if (withMappedBuffer.capacity() == Integer.MAX_VALUE) {
+                        throw e;
+                    }
+
+                    int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
+                    withMappedBuffer = new DirectByteBufferBytes(newSize);
+                } else {
+                    throw e;
+                }
+            }
+
+            return withMappedBuffer.flip();
+        }
     }
+
+    // *************************************************************************
+    // SessionHandler - impleemntations
+    // *************************************************************************
 
     /**
      * IndexedChronicle session handler
      */
     private class IndexedSessionHandler extends SessionHandler {
         private long index;
-        private Bytes withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(1024));
 
         private IndexedSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
-
             this.index = -1;
         }
 
@@ -480,48 +533,53 @@ public abstract class SourceTcp {
 
             pauseReset();
 
-            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
-
-            final long size = bytes.limit();
-            long remaining = size + ChronicleTcp.HEADER_SIZE;
+            Bytes bytes = applyMapping(tailer, attached);
+            int size = (int)bytes.limit();
 
             writeBuffer.clear();
-            writeBuffer.putInt((int) size);
+            writeBuffer.putInt(size);
             writeBuffer.putLong(tailer.index());
 
             // for large objects send one at a time.
             if (size > writeBuffer.capacity() / 2) {
-                while (remaining > 0) {
-                    int size2 = (int) Math.min(remaining, writeBuffer.capacity());
-                    writeBuffer.limit(size2);
-                    bytes.read(writeBuffer);
+                while (size > 0) {
+                    int minSize = Math.min(size, writeBuffer.remaining());
+                    bytes.read(writeBuffer, minSize);
                     writeBuffer.flip();
-                    remaining -= writeBuffer.remaining();
-
                     connection.writeAll(writeBuffer);
+
+                    size -= minSize;
+                    if(size > 0) {
+                        writeBuffer.clear();
+                    }
                 }
             } else {
-                writeBuffer.limit((int) remaining);
-
-                bytes.read(writeBuffer);
+                bytes.read(writeBuffer, size);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
-                    bytes = applyMapping(tailer, attached, withMappedBuffer);
-
                     if (!tailer.wasPadding()) {
+                        bytes = applyMapping(tailer, attached);
+                        // if there is free space, copy another one.
                         if (hasRoomForExcerpt(writeBuffer, bytes)) {
-                            // if there is free space, copy another one.
-                            int size2 = (int) bytes.limit();
-                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
-                            writeBuffer.putInt(size2);
+                            size = (int) bytes.limit();
+                            writeBuffer.putInt(size);
                             writeBuffer.putLong(tailer.index());
-                            bytes.read(writeBuffer);
+                            bytes.read(writeBuffer, size);
 
                             index++;
                             count--;
+
+                            tailer.finish();
                         } else {
                             break;
                         }
                     } else {
+                        if(hasRoomFor(writeBuffer, ChronicleTcp.HEADER_SIZE)) {
+                            writeBuffer.putInt(ChronicleTcp.PADDED_LEN);
+                            writeBuffer.putLong(index);
+                        } else {
+                            break;
+                        }
+
                         index++;
                     }
                 }
@@ -545,7 +603,6 @@ public abstract class SourceTcp {
     private class VanillaSessionHandler extends SessionHandler {
         private boolean nextIndex;
         private long index;
-        private Bytes withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(1024));
 
         private VanillaSessionHandler(final @NotNull SocketChannel socketChannel) {
             super(socketChannel);
@@ -616,46 +673,53 @@ public abstract class SourceTcp {
             }
 
             pauseReset();
-            Bytes bytes = applyMapping(tailer, attached, withMappedBuffer);
 
-            final long size = bytes.limit();
-            long remaining = size + ChronicleTcp.HEADER_SIZE;
+            Bytes bytes = applyMapping(tailer, attached);
+            int size = (int)bytes.limit();
 
             writeBuffer.clear();
-            writeBuffer.putInt((int) size);
+            writeBuffer.putInt(size);
             writeBuffer.putLong(tailer.index());
 
             // for large objects send one at a time.
-            if (size > writeBuffer.capacity() / 2) {
-                while (remaining > 0) {
-                    int size2 = (int) Math.min(remaining, writeBuffer.capacity());
-                    writeBuffer.limit(size2);
-                    bytes.read(writeBuffer);
+            if (size > writeBuffer.limit() / 2) {
+                while (size > 0) {
+                    int minSize = Math.min(size, writeBuffer.remaining());
+                    bytes.read(writeBuffer, size);
                     writeBuffer.flip();
-                    remaining -= writeBuffer.remaining();
                     connection.writeAll(writeBuffer);
+                    writeBuffer.clear();
+
+                    size -= minSize;
+                    if(size > 0) {
+                        writeBuffer.clear();
+                    }
                 }
             } else {
-                writeBuffer.limit((int) remaining);
-                bytes.read(writeBuffer);
+                bytes.read(writeBuffer, size);
+
+                long previousIndex = tailer.index();
+                long currentIndex = previousIndex;
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.nextIndex(); ) {
-                    if (!tailer.wasPadding()) {
-                        bytes = applyMapping(tailer, attached, withMappedBuffer);
+                    currentIndex = tailer.index();
+                    bytes = applyMapping(tailer, attached);
 
-                        if (hasRoomForExcerpt(writeBuffer, bytes)) {
-                            // if there is free space, copy another one.
-                            int size2 = (int) bytes.limit();
-                            writeBuffer.limit(writeBuffer.position() + size2 + ChronicleTcp.HEADER_SIZE);
-                            writeBuffer.putInt(size2);
-                            writeBuffer.putLong(tailer.index());
-                            bytes.read(writeBuffer);
+                    // if there is free space, copy another one.
+                    if (hasRoomForExcerpt(writeBuffer, bytes)) {
+                        size = (int)bytes.limit();
+                        previousIndex = currentIndex;
+                        writeBuffer.putInt(size);
+                        writeBuffer.putLong(currentIndex);
 
-                            count--;
-                        } else {
-                            break;
-                        }
+                        bytes.read(writeBuffer, size);
+                        count--;
+
+                        tailer.finish();
                     } else {
-                        throw new AssertionError("Entry should not be padding - remove");
+                        tailer.finish();
+                        // if there is no space, go back to the previous index
+                        tailer.index(previousIndex);
+                        break;
                     }
                 }
 
@@ -669,52 +733,5 @@ public abstract class SourceTcp {
 
             return true;
         }
-    }
-
-    /**
-     * applies a mapping if the mapping is not set to {@code}null{code}
-     *
-     * @param source the tailer for the mapping to be applied to
-     * @param attached the key attachment
-     * @param withMappedBuffer
-     * @return returns the tailer or the mapped bytes
-     * @see
-     */
-    private static Bytes applyMapping(@NotNull final ExcerptTailer source,
-                                      @Nullable Object attached,
-                                      Bytes withMappedBuffer) {
-
-        if (attached == null) {
-            return source;
-        }
-
-        final MappingProvider mappingProvider = (MappingProvider) attached;
-        final MappingFunction mappingFunction = mappingProvider.withMapping();
-        if (mappingFunction == null) {
-            return source;
-        }
-
-        withMappedBuffer.clear();
-        if (withMappedBuffer.capacity() < source.capacity()) {
-            withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate((int) source.capacity()));
-        }
-
-        try {
-            mappingFunction.apply(source, withMappedBuffer);
-        } catch (IllegalArgumentException e) {
-            // lets try to resize
-            if (e.getMessage().contains("Attempt to write")) {
-                if (withMappedBuffer.capacity() == Integer.MAX_VALUE) {
-                    throw e;
-                }
-
-                int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
-                withMappedBuffer = new ByteBufferBytes(ByteBuffer.allocate(newSize));
-            } else {
-                throw e;
-            }
-        }
-
-        return withMappedBuffer.flip();
     }
 }

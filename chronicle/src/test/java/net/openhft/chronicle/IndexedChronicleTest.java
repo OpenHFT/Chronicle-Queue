@@ -46,8 +46,9 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
     static void validateExcerpt(@NotNull ExcerptCommon r, int i, int expected) {
         if (expected > r.remaining() || 8 * expected < r.remaining())
             assertEquals("index: " + r.index(), expected, r.remaining());
-        if (expected > r.capacity() || 8 * expected < r.capacity())
+        if (expected > r.limit() || 8 * expected < r.limit())
             assertEquals("index: " + r.index(), expected, r.capacity());
+
         assertEquals(0, r.position());
         long l = r.readLong();
         assertEquals(i, l);
@@ -240,10 +241,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             // finish just at the end of the first page.
             int idx = 0;
             for (i = 0; i < runs; i++) {
-//                System.out.println(i + " " + idx);
-//                if (i == 28)
-//                    ChronicleIndexReader.main(basePath + ".index");
-
                 assertFalse("i: " + i, r.nextIndex());
 
                 assertFalse("i: " + i, e.index(idx));
@@ -260,15 +257,10 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 assertEquals(capacity - expected, w.remaining());
 
                 w.finish();
-
-//                ChronicleIndexReader.main(basePath + ".index");
-
-//                if (i >= 5542)
-//                    ChronicleIndexReader.main(basePath + ".index");
-
                 if (!r.nextIndex()) {
                     assertTrue(r.nextIndex());
                 }
+
                 validateExcerpt(r, i, expected);
 
                 if (!e.index(idx++)) {
