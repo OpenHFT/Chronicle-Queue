@@ -244,4 +244,62 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     public long firstBytes() {
         return firstBytes;
     }
+
+
+    /**
+     * @return gets the index2index, and creates on if it does not exist
+     */
+    long indexToIndex() {
+        for (; ; ) {
+
+            long index2Index = header.index2Index.getVolatileValue();
+
+            if (index2Index == NOT_READY)
+                continue;
+
+            if (index2Index != UNINITIALISED)
+                return index2Index;
+
+            if (!header.index2Index.compareAndSwapValue(UNINITIALISED, NOT_READY))
+                continue;
+
+            long indexToIndex = newIndexToIndex();
+            header.index2Index.setOrderedValue(indexToIndex);
+            return indexToIndex;
+        }
+    }
+
+    /**
+     * creates a new Excerpt containing the index2index
+     *
+     * @return the address of the Excerpt
+     */
+    long newIndexToIndex() {
+
+        // the space required for 17bits
+        long length = 8L * (1L << 17L);
+
+        long firstByte;
+        LongValue writeByte = header.writeByte;
+        long lastByte = writeByte.getVolatileValue();
+
+        for (; ; ) {
+
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                firstByte = lastByte + 4;
+                long lastByte2 = firstByte + length;
+                header.lastIndex.addAtomicValue(1);
+                writeByte.setValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) length);
+                return firstByte;
+            }
+
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            Jvm.checkInterrupted();
+        }
+    }
+
+
 }
+

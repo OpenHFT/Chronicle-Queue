@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
+import net.openhft.chronicle.queue.impl.Indexer;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.io.Bytes;
@@ -195,6 +196,75 @@ public class SimpleChronicleQueueTest {
 
             DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
             Assert.assertEquals(0, chronicle.lastIndex());
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+
+    @Test
+    public void testHeaderIndexReadAtIndex() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            // create 100 documents
+            for (int i = 0; i < 100; i++) {
+                final int j = i;
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+            tailer.index(5);
+
+            StringBuilder sb = new StringBuilder();
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+
+            Assert.assertEquals("value=5", sb.toString());
+
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+
+    @Test
+    public void testReadAtIndexWithIndexes() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            // create 100 documents
+            for (int i = 0; i < 100; i++) {
+                final int j = i;
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            // creates the indexes
+            Indexer.index(chronicle);
+
+            tailer.index(67);
+
+            StringBuilder sb = new StringBuilder();
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+
+            Assert.assertEquals("value=67", sb.toString());
 
         } finally {
             file.delete();

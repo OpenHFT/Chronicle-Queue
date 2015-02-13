@@ -7,21 +7,24 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.lang.io.MultiStoreBytes;
 import net.openhft.lang.model.DataValueClasses;
-import net.openhft.lang.values.BooleanValue;
+import net.openhft.lang.values.LongValue;
 
 import java.util.function.Function;
+
+import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
+import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
 
 /**
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleTailer implements ExcerptTailer {
-    private final DirectChronicleQueue chronicle;
+    private final SingleChronicleQueue chronicle;
     long index;
     private final MultiStoreBytes bytes = new MultiStoreBytes();
     private final Wire wire = new BinaryWire(bytes);
 
     public SingleTailer(ChronicleQueue chronicle) {
-        this.chronicle = (DirectChronicleQueue) chronicle;
+        this.chronicle = (SingleChronicleQueue) chronicle;
         toStart();
     }
 
@@ -37,32 +40,45 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public boolean index(long l) {
+    public boolean index(long index) {
 
-        final BooleanValue exit = DataValueClasses.newInstance(BooleanValue.class);
+        long address0 = chronicle.indexToIndex() + toAddress0(index);
+        long address1 = chronicle.bytes().readVolatileLong(address0);
+        long start = 0;
+
+        if (address1 != 0) {
+            long address3 = chronicle.bytes().readVolatileLong(address1 + toAddress1(index));
+            if (address3 != 0) {
+                wire.bytes().position(address3);
+                start = ((long) (index / 64L)) * 64L;
+            }
+        }
+
+
+        final LongValue position = DataValueClasses.newInstance(LongValue.class);
         long last = chronicle.lastIndex();
 
-        if (l == 0)
-            return last > 0;
 
-        long readUpTo = l - 1;
+        // linear scan the last part
+        for (long i = start; i < last; i++) {
+            final long j = i;
 
-        for (int i = 0; i < last; i++) {
-            final int j = i;
+            Function<WireIn, Object> reader = wireIn -> {
 
-            this.readDocument(wireIn -> {
+                if (index == j)
+                    position.setValue(wire.bytes().position() - 4);
 
-                if (readUpTo == j)
-                    exit.setValue(true);
-
-                long remaining1 = wireIn.bytes().remaining();
-                wireIn.bytes().skip(remaining1);
+                wireIn.bytes().skip(wireIn.bytes().remaining());
                 return null;
 
-            });
+            };
 
-            if (exit.getValue())
+            wire.readDocument(reader);
+
+            if (position.getValue() != 0) {
+                wire.bytes().position(position.getValue());
                 return true;
+            }
         }
 
         return false;

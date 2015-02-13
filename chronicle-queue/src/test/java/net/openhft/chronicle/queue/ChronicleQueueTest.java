@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -19,6 +20,7 @@ public class ChronicleQueueTest {
     public static final int RUNS = 1000000;
     public static final String TMP = System.getProperty("java.io.tmpdir");
 
+    @Ignore("performance test")
     @Test
     public void testCreateAppender() throws Exception {
         for (int r = 0; r < 2; r++) {
