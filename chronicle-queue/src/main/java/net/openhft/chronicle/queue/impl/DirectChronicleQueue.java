@@ -10,7 +10,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by peter.lawrey on 03/02/15.
  */
 public interface DirectChronicleQueue extends ChronicleQueue {
-    void appendDocument(Bytes buffer);
+
+    /**
+     * @param buffer the bytes of the document
+     * @return the index of the document appended
+     */
+    long appendDocument(Bytes buffer);
 
     boolean readDocument(AtomicLong offset, Bytes buffer);
 

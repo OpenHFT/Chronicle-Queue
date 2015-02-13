@@ -58,25 +58,27 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     @Override
-    public void appendDocument(Bytes buffer) {
+    public long appendDocument(Bytes buffer) {
         long length = buffer.remaining();
         if (length > MAX_LENGTH)
             throw new IllegalStateException("Length too large: " + length);
         LongValue writeByte = header.writeByte;
         long lastByte = writeByte.getVolatileValue();
+
         for (; ; ) {
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
-                header.lastIndex.addAtomicValue(1);
+                long lastIndex = header.lastIndex.addAtomicValue(1);
                 writeByte.setValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
-                return;
+                return lastIndex;
             }
             int length2 = length30(bytes.readVolatileInt());
             bytes.skip(length2);
             Jvm.checkInterrupted();
         }
+
     }
 
     @Override
