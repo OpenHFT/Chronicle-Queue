@@ -47,7 +47,7 @@ public class ZipBytesRingBufferTest extends TestCase {
             long initialValue = chronicle.firstBytes();
             AtomicLong offset = new AtomicLong(initialValue);
 
-            while (getHeader((SingleChronicleQueue) chronicle).writeByte.getVolatileValue() == writeAddress) {
+            while (lastWrite((SingleChronicleQueue) chronicle) == writeAddress) {
                 // wait for data to be written ( via another thread )
             }
 
@@ -66,11 +66,14 @@ public class ZipBytesRingBufferTest extends TestCase {
 
     }
 
-    private Header getHeader(SingleChronicleQueue singleChronicleQueue) throws Exception {
+    public static long lastWrite(SingleChronicleQueue chronicle) throws Exception {
+        return getHeader(chronicle).writeByte.getVolatileValue();
+    }
+
+    public static Header getHeader(SingleChronicleQueue singleChronicleQueue) throws Exception {
         Field header = singleChronicleQueue.getClass().getDeclaredField("header");
         header.setAccessible(true);
 
         return (Header) header.get(singleChronicleQueue);
-
     }
 }

@@ -68,6 +68,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
+                header.lastIndex.addAtomicValue(1);
                 writeByte.setValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
                 return;
@@ -103,7 +104,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     @Override
     public long lastIndex() {
-        throw new UnsupportedOperationException();
+        return header.lastIndex.getVolatileValue();
     }
 
     @Override

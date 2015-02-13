@@ -28,6 +28,7 @@ class Header implements Marshallable {
     // support binding to off heap memory with thread safe operations.
     final LongValue writeByte = newDirectInstance(LongValue.class);
     final LongValue index2Index = newDirectInstance(LongValue.class);
+    final LongValue lastIndex = newDirectInstance(LongValue.class);
 
     public Header init(Compression compression) {
         uuid = UUID.randomUUID();
