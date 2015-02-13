@@ -22,6 +22,8 @@ import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Rule;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -30,6 +32,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class IndexedChronicleTestBase {
+
+    protected static final Logger LOGGER  = LoggerFactory.getLogger("IndexedChronicleTest");
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
     @Rule
