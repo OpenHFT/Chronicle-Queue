@@ -19,7 +19,7 @@ public class SingleAppender implements ExcerptAppender {
     private final ChronicleWireOut wireOut;
     private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
     private final Wire wire = new BinaryWire(buffer);
-    private long lastIndex = Long.MIN_VALUE;
+    private long lastWrittenIndex = -1;
 
     public SingleAppender(ChronicleQueue chronicle) {
         this.chronicle = (DirectChronicleQueue) chronicle;
@@ -36,7 +36,7 @@ public class SingleAppender implements ExcerptAppender {
         buffer.clear();
         writer.accept(wire);
         buffer.flip();
-        lastIndex = chronicle.appendDocument(buffer);
+        lastWrittenIndex = chronicle.appendDocument(buffer);
     }
 
     @Override
@@ -55,11 +55,12 @@ public class SingleAppender implements ExcerptAppender {
      */
     @Override
     public long lastWrittenIndex() {
-        if (lastIndex == Long.MIN_VALUE) {
-            String message = "No document has been written so the lastIndex is not available.";
+        if (lastWrittenIndex == -1) {
+            String message = "No document has been written using this appender, so the " +
+                    "lastWrittenIndex() is not available.";
             throw new IllegalStateException(message);
         }
-        return lastIndex;
+        return lastWrittenIndex;
     }
 
     @Override

@@ -11,8 +11,8 @@ import java.util.UUID;
 import static net.openhft.lang.model.DataValueClasses.newDirectInstance;
 
 /**
- * Data structure to bind to an off heap representation.  This is required to support persistence and sharing of this
- * data structure.
+ * Data structure to bind to an off heap representation.  This is required to support persistence
+ * and sharing of this data structure.
  */
 class Header implements Marshallable {
     private static final long PADDED_SIZE = 512;
@@ -29,6 +29,10 @@ class Header implements Marshallable {
     final LongValue writeByte = newDirectInstance(LongValue.class);
     final LongValue index2Index = newDirectInstance(LongValue.class);
     final LongValue lastIndex = newDirectInstance(LongValue.class);
+
+    {
+        lastIndex.setValue(-1);
+    }
 
     public Header init(Compression compression) {
         uuid = UUID.randomUUID();

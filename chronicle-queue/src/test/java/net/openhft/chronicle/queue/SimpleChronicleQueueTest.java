@@ -127,4 +127,78 @@ public class SimpleChronicleQueueTest {
 
     }
 
+    @Test
+    public void testLastWrittenIndexPerAppender() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
+            Assert.assertEquals(0, appender.lastWrittenIndex());
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+
+    @Test(expected = IllegalStateException.class)
+    public void testLastWrittenIndexPerAppenderNoData() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            Assert.assertEquals(0, appender.lastWrittenIndex());
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+    @Test
+    public void testLastIndexPerChronicle() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
+            Assert.assertEquals(0, chronicle.lastIndex());
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+
+    @Test(expected = IllegalStateException.class)
+    public void testLastIndexPerChronicleNoData() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+            Assert.assertEquals(0, chronicle.lastIndex());
+
+        } finally {
+            file.delete();
+        }
+
+    }
 }

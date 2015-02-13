@@ -106,7 +106,10 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     @Override
     public long lastIndex() {
-        return header.lastIndex.getVolatileValue();
+        long value = header.lastIndex.getVolatileValue();
+        if (value == -1)
+            throw new IllegalStateException("No data has been written to   chronicle.");
+        return value;
     }
 
     @Override

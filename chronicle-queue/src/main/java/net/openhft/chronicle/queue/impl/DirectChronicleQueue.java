@@ -21,6 +21,10 @@ public interface DirectChronicleQueue extends ChronicleQueue {
 
     Bytes bytes();
 
+    /**
+     * @return the last index in the chronicle
+     * @throws java.lang.IllegalStateException if now data has been written tot he chronicle
+     */
     long lastIndex();
 
     boolean index(long index, MultiStoreBytes bytes);
