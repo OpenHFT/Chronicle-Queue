@@ -32,13 +32,13 @@ public class ZippedDocumentAppender implements Closeable {
     public static final String ERR_MSG = "It not possible to zip more than " +
             "Integer.MAX_VALUE bytes in one go";
 
-    private final ExecutorService qReader = newSingleThreadExecutor(new NamedThreadFactory
-            ("qReader"));
+    private final ExecutorService qReader;
 
     public ZippedDocumentAppender(@NotNull final BytesRingBuffer bytesRingBuffer,
                                   @NotNull final DirectChronicleQueue chronicleQueue) {
         this.q = bytesRingBuffer;
         this.chronicleQueue = chronicleQueue;
+        qReader = newSingleThreadExecutor(new NamedThreadFactory("qReader"));
         qReader.submit(new Consumer());
     }
 

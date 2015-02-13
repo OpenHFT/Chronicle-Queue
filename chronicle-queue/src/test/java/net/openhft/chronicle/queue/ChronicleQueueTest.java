@@ -17,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 public class ChronicleQueueTest {
 
     public static final int RUNS = 1000000;
-    public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
+    public static final String TMP = System.getProperty("java.io.tmpdir");
 
     @Test
     public void testCreateAppender() throws Exception {
