@@ -66,31 +66,15 @@ public class SimpleChronicleQueueTest {
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
         }
 
-        StringBuilder first = new StringBuilder();
-        StringBuilder surname = new StringBuilder();
-
         final ExcerptTailer tailer = chronicle.createTailer();
-        final Bytes toRead = DirectStore.allocate(512).bytes();
-        ObjectSerializer objectSerializer = toRead.objectSerializer();
-        System.out.println(objectSerializer);
-
-
-        Bytes bytes = chronicle.bytes();
 
         for (int i = 0; i < chronicle.lastIndex(); i++) {
 
-
-            //  System.out.println(AbstractBytes.toHex(toRead.flip()));
-            tailer.readDocument(new Function<WireIn, Object>() {
-                @Override
-                public Object apply(WireIn wireIn) {
-                    Bytes bytes = wireIn.bytes();
-                    long remaining = bytes.remaining();
-                    System.out.println(bytes.position());
-                    bytes.skip(remaining);
-                    System.out.println(bytes.position());
-                    return null;
-                }
+            tailer.readDocument(wireIn -> {
+                Bytes bytes1 = wireIn.bytes();
+                long remaining = bytes1.remaining();
+                bytes1.skip(remaining);
+                return null;
             });
         }
 
@@ -258,6 +242,44 @@ public class SimpleChronicleQueueTest {
 
             // creates the indexes
             Indexer.index(chronicle);
+
+            tailer.index(67);
+
+            StringBuilder sb = new StringBuilder();
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+
+            Assert.assertEquals("value=67", sb.toString());
+
+        } finally {
+            file.delete();
+        }
+
+    }
+
+    @Test
+    public void testReadAtIndexWithIndexesAtStart() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getName()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + 0));
+
+            // creates the indexes
+            Indexer.index(chronicle);
+
+            // create 100 documents
+            for (int i = 1; i < 100; i++) {
+                final int j = i;
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+
 
             tailer.index(67);
 

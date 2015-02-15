@@ -19,7 +19,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.model.constraints.NotNull;
+import org.jetbrains.annotations.NotNull;
+
 
 import java.util.function.Function;
 

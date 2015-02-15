@@ -36,8 +36,6 @@ public class Indexer {
             final Function<WireIn, Object> reader = wireIn -> {
 
                 long address = wireIn.bytes().position() - 4;
-                System.out.print("address=" + address);
-
                 recordAddress(index, address, single, index2Index);
                 wireIn.bytes().skip(wireIn.bytes().remaining());
                 return null;
@@ -65,11 +63,10 @@ public class Indexer {
         if (index % 64 != 0)
             return;
 
-        System.out.println("index2Index=" + index2Index);
         long offset = IndexOffset.toAddress0(index);
         Bytes chronicleBytes = chronicleQueue.bytes();
         long rootOffset = index2Index + offset;
-        System.out.println("rootOffset=" + rootOffset);
+
         long refToSecondary = chronicleBytes.readVolatileLong(rootOffset);
 
         if (refToSecondary == UNINITIALISED) {
@@ -77,8 +74,8 @@ public class Indexer {
             if (!success) {
                 refToSecondary = chronicleBytes.readVolatileLong(rootOffset);
             } else {
-                refToSecondary = chronicleQueue.newIndexToIndex();
-                System.out.println("refToSecondary=" + refToSecondary);
+                refToSecondary = chronicleQueue.newIndex();
+
                 chronicleBytes.writeOrderedLong(rootOffset, refToSecondary);
             }
         }
@@ -87,7 +84,6 @@ public class Indexer {
         assert l == UNINITIALISED;
 
         long offset1 = refToSecondary + IndexOffset.toAddress1(index);
-        System.out.println("offset1=" + offset1);
         chronicleBytes.bytes().writeLong(offset1, address);
 
 
@@ -95,7 +91,6 @@ public class Indexer {
 
     enum IndexOffset {
         ;
-
 
         static long toAddress0(long index) {
 

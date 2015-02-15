@@ -18,8 +18,10 @@
 
 package net.openhft.chronicle.queue;
 
+
+
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.lang.model.constraints.NotNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The main data container of a {@link ChronicleQueue}, an extended version of {@link ExcerptTailer} which also facilitates

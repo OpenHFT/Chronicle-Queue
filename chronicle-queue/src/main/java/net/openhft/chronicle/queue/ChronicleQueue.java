@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.lang.model.constraints.NotNull;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.io.IOException;

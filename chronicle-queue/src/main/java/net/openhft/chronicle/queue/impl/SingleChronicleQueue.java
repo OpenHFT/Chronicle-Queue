@@ -2,12 +2,12 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.Jvm;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MappedFile;
-import net.openhft.lang.io.MappedMemory;
-import net.openhft.lang.io.MultiStoreBytes;
+import net.openhft.lang.io.*;
+import net.openhft.lang.model.DataValueClasses;
 import net.openhft.lang.values.LongValue;
 
 import java.io.IOException;
@@ -19,12 +19,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file
- *
+ * <p>
  * Created by peter on 30/01/15.
  */
 public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
@@ -247,7 +248,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
 
     /**
-     * @return gets the index2index, and creates on if it does not exist
+     * @return gets the index2index, or creates it, if it does not exist.
      */
     long indexToIndex() {
         for (; ; ) {
@@ -263,7 +264,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             if (!header.index2Index.compareAndSwapValue(UNINITIALISED, NOT_READY))
                 continue;
 
-            long indexToIndex = newIndexToIndex();
+            long indexToIndex = newIndex();
             header.index2Index.setOrderedValue(indexToIndex);
             return indexToIndex;
         }
@@ -274,10 +275,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
      *
      * @return the address of the Excerpt
      */
-    long newIndexToIndex() {
+    long newIndex() {
 
         // the space required for 17bits
-        long length = 8L * (1L << 17L);
+        long wireLen = 6;
+        long length = wireLen + 8L * (1L << 17L);
 
         long firstByte;
         LongValue writeByte = header.writeByte;
@@ -286,11 +288,16 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         for (; ; ) {
 
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                firstByte = lastByte + 4;
+
+                new BinaryWire(bytes.bytes(lastByte + 4, wireLen)).write(() -> "Index");
+                firstByte = lastByte + 4 + wireLen;
+
                 long lastByte2 = firstByte + length;
                 header.lastIndex.addAtomicValue(1);
                 writeByte.setValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
+                long l = lastByte + 4 + wireLen + length;
+                bytes.skip(length30((int)l));
                 return firstByte;
             }
 

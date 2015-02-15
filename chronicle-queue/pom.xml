@@ -95,6 +95,11 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.intellij</groupId>
+            <artifactId>annotations</artifactId>
+        </dependency>
+
         <!-- for testing -->
         <dependency>
             <groupId>org.easymock</groupId>
