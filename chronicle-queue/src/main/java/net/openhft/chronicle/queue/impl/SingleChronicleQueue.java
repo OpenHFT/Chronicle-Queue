@@ -296,8 +296,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
                 header.lastIndex.addAtomicValue(1);
                 writeByte.setValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
-                long l = lastByte + 4 + wireLen + length;
-                bytes.skip(length30((int)l));
                 return firstByte;
             }
 
