@@ -24,11 +24,11 @@ public class Indexer {
      */
     public static void index(@NotNull final ChronicleQueue chronicle) throws Exception {
 
-        SingleChronicleQueue single = (SingleChronicleQueue) chronicle;
+        final SingleChronicleQueue single = (SingleChronicleQueue) chronicle;
 
         final long index2Index = single.indexToIndex();
 
-       final ExcerptTailer tailer = chronicle.createTailer();
+        final ExcerptTailer tailer = chronicle.createTailer();
 
         for (long i = 0; i <= single.lastIndex(); i++) {
 
@@ -85,7 +85,7 @@ public class Indexer {
         assert l == UNINITIALISED;
 
         long offset1 = refToSecondary + IndexOffset.toAddress1(index);
-        chronicleBytes.bytes().writeLong(offset1, address);
+        chronicleBytes.bytes().writeOrderedLong(offset1, address);
 
 
     }

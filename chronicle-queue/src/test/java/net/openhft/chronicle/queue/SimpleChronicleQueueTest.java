@@ -296,4 +296,48 @@ public class SimpleChronicleQueueTest {
         }
 
     }
+
+    @Test
+    public void testScanFromLastKnownIndex() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            // create 100 documents
+            for (int i = 0; i < 65; i++) {
+                final int j = i;
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+
+            // creates the indexes - index's 1 and 2 are created by the indexer
+            Indexer.index(chronicle);
+
+            // create 100 documents
+            for (long i = chronicle.lastIndex() + 1; i < 200; i++) {
+                final long j = i;
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+
+            int expected = 150;
+            tailer.index(expected);
+
+            StringBuilder sb = new StringBuilder();
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+
+            Assert.assertEquals("value=" + expected, sb.toString());
+
+        } finally {
+            file.delete();
+        }
+
+    }
 }

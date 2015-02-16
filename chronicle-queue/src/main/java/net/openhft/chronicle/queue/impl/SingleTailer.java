@@ -44,14 +44,54 @@ public class SingleTailer implements ExcerptTailer {
 
         long address0 = chronicle.indexToIndex() + toAddress0(index);
         long address1 = chronicle.bytes().readVolatileLong(address0);
+        long address2 = 0;
         long start = 0;
 
         if (address1 != 0) {
-            long address3 = chronicle.bytes().readVolatileLong(address1 + toAddress1(index));
-            if (address3 != 0) {
-                wire.bytes().position(address3);
-                start = ((long) (index / 64L)) * 64L;
+            long offset = address1 + toAddress1(index);
+            address2 = chronicle.bytes().readVolatileLong(offset);
+            if (address2 != 0) {
+                wire.bytes().position(address2);
+                start = ((index / 64L)) * 64L;
             }
+        }
+
+        // scan from the last known index
+        if (address2 == 0) {
+            long lastKnownIndex = 0;
+            long newAddress0 = 0;
+            int count = 0;
+            for (newAddress0 = chronicle.indexToIndex(); count < ((int) (1L << 17L)); newAddress0 += 8, count++) {
+
+                long l = chronicle.bytes().readVolatileLong(newAddress0);
+                if (l != 0) {
+                    address1 = l;
+                    if (count > 0)
+                        lastKnownIndex += (1L << (17L + 6L));
+                } else
+                    break;
+            }
+
+            if (address1 != 0) {
+                long newAddress1;
+                for (newAddress1 = address1, count = 0; count < ((int) (1L << 17L)); newAddress1 += 8, count++) {
+
+                    long l = chronicle.bytes().readVolatileLong(newAddress1);
+                    if (l != 0) {
+                        address2 = l;
+                        if (count > 0)
+                            lastKnownIndex += (1L << (6L));
+                    } else
+                        break;
+
+                }
+            }
+
+            if (address2 != 0) {
+                wire.bytes().position(address2);
+                start = lastKnownIndex;
+            }
+
         }
 
 
@@ -88,8 +128,8 @@ public class SingleTailer implements ExcerptTailer {
     @Override
     public ExcerptTailer toStart() {
         index = -1;
-        chronicle.index(-1L, bytes );
-         return this;
+        chronicle.index(-1L, bytes);
+        return this;
     }
 
     @Override
