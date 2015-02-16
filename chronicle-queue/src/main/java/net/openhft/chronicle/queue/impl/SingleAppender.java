@@ -19,6 +19,7 @@ public class SingleAppender implements ExcerptAppender {
     private final ChronicleWireOut wireOut;
     private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
     private final Wire wire = new BinaryWire(buffer);
+
     private long lastWrittenIndex = -1;
 
     public SingleAppender(ChronicleQueue chronicle) {

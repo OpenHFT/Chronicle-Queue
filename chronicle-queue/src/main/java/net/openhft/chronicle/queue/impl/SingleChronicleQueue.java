@@ -9,6 +9,8 @@ import net.openhft.lang.Jvm;
 import net.openhft.lang.io.*;
 import net.openhft.lang.model.DataValueClasses;
 import net.openhft.lang.values.LongValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -32,6 +34,8 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
     private static final long MAGIC_OFFSET = 0L;
+
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
 
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
@@ -58,29 +62,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         initialiseHeader();
     }
 
-    @Override
-    public long appendDocument(Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
-        LongValue writeByte = header.writeByte;
-        long lastByte = writeByte.getVolatileValue();
-
-        for (; ; ) {
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                long lastByte2 = lastByte + 4 + buffer.remaining();
-                bytes.write(lastByte + 4, buffer);
-                long lastIndex = header.lastIndex.addAtomicValue(1);
-                writeByte.setValue(lastByte2);
-                bytes.writeOrderedInt(lastByte, (int) length);
-                return lastIndex;
-            }
-            int length2 = length30(bytes.readVolatileInt());
-            bytes.skip(length2);
-            Jvm.checkInterrupted();
-        }
-
-    }
 
     @Override
     public boolean readDocument(AtomicLong offset, Bytes buffer) {
@@ -270,41 +251,77 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         }
     }
 
+
     /**
-     * creates a new Excerpt containing the index2index
+     * creates a new Excerpt containing and index which will be 1L << 17L bytes
      *
-     * @return the address of the Excerpt
+     * @return the address of the Excerpt containing the usable index, just after the header
      */
     long newIndex() {
 
-        // the space required for 17bits
-        long wireLen = 6;
-        long length = wireLen + 8L * (1L << 17L);
+        long indexSize = 1L << 17L;
 
-        long firstByte;
+        try (DirectStore allocate = DirectStore.allocate(6)) {
+
+            DirectBytes buffer = allocate.bytes();
+            new BinaryWire(buffer).write(() -> "Index");
+            buffer.flip();
+
+            long keyLen = buffer.limit();
+
+            long length = buffer.remaining();
+            if (length > MAX_LENGTH)
+                throw new IllegalStateException("Length too large: " + length);
+
+
+            LongValue writeByte = header.writeByte;
+            long lastByte = writeByte.getVolatileValue();
+
+            for (; ; ) {
+                if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                    long lastByte2 = lastByte + 4 + buffer.remaining() + indexSize;
+                    bytes.write(lastByte + 4, buffer);
+
+                    header.lastIndex.addAtomicValue(1);
+                    writeByte.setOrderedValue(lastByte2);
+                    bytes.writeOrderedInt(lastByte, (int) (6 + indexSize));
+                    long start = lastByte + 4;
+                    bytes.zeroOut(start + keyLen,start + keyLen+length);
+                    return start + keyLen;
+                }
+                int length2 = length30(bytes.readVolatileInt());
+                bytes.skip(length2);
+                Jvm.checkInterrupted();
+            }
+
+
+        }
+    }
+
+    @Override
+    public long appendDocument(Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+
         LongValue writeByte = header.writeByte;
         long lastByte = writeByte.getVolatileValue();
 
         for (; ; ) {
-
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-
-                new BinaryWire(bytes.bytes(lastByte + 4, wireLen)).write(() -> "Index");
-                firstByte = lastByte + 4 + wireLen;
-
-                long lastByte2 = firstByte + length;
-                header.lastIndex.addAtomicValue(1);
-                writeByte.setValue(lastByte2);
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                long lastIndex = header.lastIndex.addAtomicValue(1);
+                writeByte.setOrderedValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
-                return firstByte;
+                return lastIndex;
             }
-
             int length2 = length30(bytes.readVolatileInt());
             bytes.skip(length2);
             Jvm.checkInterrupted();
         }
-    }
 
+    }
 
 }
 
