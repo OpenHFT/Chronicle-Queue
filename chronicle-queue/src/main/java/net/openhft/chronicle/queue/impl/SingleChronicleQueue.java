@@ -26,9 +26,8 @@ import java.util.function.Consumer;
 import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file
- * <p>
- * Created by peter on 30/01/15.
+ * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter on
+ * 30/01/15.
  */
 public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
 
@@ -253,7 +252,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
 
     /**
-     * creates a new Excerpt containing and index which will be 1L << 17L bytes
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
+     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
+     * index ( each entry in the primary index points to a unique a secondary index. The secondary
+     * index only records the address of every 64th except, the except are linearly scanned from
+     * there on.
      *
      * @return the address of the Excerpt containing the usable index, just after the header
      */
@@ -263,19 +266,18 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
         try (DirectStore allocate = DirectStore.allocate(6)) {
 
-            DirectBytes buffer = allocate.bytes();
+            final DirectBytes buffer = allocate.bytes();
             new BinaryWire(buffer).write(() -> "Index");
             buffer.flip();
 
-            long keyLen = buffer.limit();
+            final long keyLen = buffer.limit();
 
-            long length = buffer.remaining();
+            final long length = buffer.remaining();
             if (length > MAX_LENGTH)
                 throw new IllegalStateException("Length too large: " + length);
 
-
-            LongValue writeByte = header.writeByte;
-            long lastByte = writeByte.getVolatileValue();
+            final LongValue writeByte = header.writeByte;
+            final long lastByte = writeByte.getVolatileValue();
 
             for (; ; ) {
                 if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
@@ -286,7 +288,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
                     writeByte.setOrderedValue(lastByte2);
                     bytes.writeOrderedInt(lastByte, (int) (6 + indexSize));
                     long start = lastByte + 4;
-                    bytes.zeroOut(start + keyLen,start + keyLen+length);
+                    bytes.zeroOut(start + keyLen, start + keyLen + length);
                     return start + keyLen;
                 }
                 int length2 = length30(bytes.readVolatileInt());
