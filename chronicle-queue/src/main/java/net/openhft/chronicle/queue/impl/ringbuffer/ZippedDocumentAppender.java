@@ -17,7 +17,7 @@ import java.util.zip.Deflater;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
 /**
- * Create a background thread to zip the {@code bytes} before appending them zipped to the
+ * Create a background thread to zip the {@code bytes} before appending the zipped bytes to the
  * ChronicleQueue, in the meantime the bytes are held in a ring buffer.
  *
  * @author Rob Austin.
@@ -34,6 +34,10 @@ public class ZippedDocumentAppender implements Closeable {
 
     private final ExecutorService qReader;
 
+    /**
+     * @param bytesRingBuffer a ring buffer to hold the bytes before they are zipped
+     * @param chronicleQueue  the chronicle you wish to append the zipped bytes to
+     */
     public ZippedDocumentAppender(@NotNull final BytesRingBuffer bytesRingBuffer,
                                   @NotNull final DirectChronicleQueue chronicleQueue) {
         this.q = bytesRingBuffer;
@@ -45,7 +49,7 @@ public class ZippedDocumentAppender implements Closeable {
 
     /**
      * the bytes that you wish to append, this bytes will become zipped and appended to the
-     * chronicle
+     * chronicle using a background thread
      *
      * @param bytes the bytes to append
      * @throws InterruptedException
@@ -57,7 +61,6 @@ public class ZippedDocumentAppender implements Closeable {
         }
     }
 
-
     /**
      * terminates the background thread
      *
@@ -68,6 +71,10 @@ public class ZippedDocumentAppender implements Closeable {
         qReader.shutdown();
     }
 
+    /**
+     * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser} and write these
+     * zipped bytes to {@code chronicleQueue}
+     */
     private class Consumer implements BytesRingBuffer.BytesProvider, Runnable {
 
         @NotNull
@@ -79,10 +86,13 @@ public class ZippedDocumentAppender implements Closeable {
         @NotNull
         private byte[] output = new byte[]{};
 
+        @NotNull
         private Bytes inputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
+
+        @NotNull
         private Bytes outputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
 
-        public Consumer() {
+        private Consumer() {
             this.input = new byte[]{};
             this.inputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
         }
@@ -100,7 +110,7 @@ public class ZippedDocumentAppender implements Closeable {
                     do {
                         value = q.poll(this);
                     } while (value == null);
-                    System.out.println(value);
+
                     compresser.setInput(input, (int) value.position(), (int) value.remaining());
                     compresser.finish();
 
@@ -120,8 +130,9 @@ public class ZippedDocumentAppender implements Closeable {
 
         }
 
+        @NotNull
         @Override
-        public Bytes provide(long maxSize) {
+        public Bytes provide(final long maxSize) {
 
             if (maxSize < inputBuffer.capacity())
                 return inputBuffer.clear();

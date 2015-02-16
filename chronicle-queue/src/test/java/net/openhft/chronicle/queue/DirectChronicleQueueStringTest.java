@@ -4,6 +4,8 @@ import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +37,7 @@ public class DirectChronicleQueueStringTest {
     public static final String EXPECTED_STRING = "Hello World23456789012345678901234567890";
     public static final byte[] EXPECTED_BYTES = EXPECTED_STRING.getBytes();
     public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
+    private static final Logger LOG = LoggerFactory.getLogger(DirectChronicleQueueStringTest.class.getName());
 
     @Test
     public void testCreateAppender() throws Exception {
@@ -86,20 +89,28 @@ public class DirectChronicleQueueStringTest {
     }
 
     private void readSome(DirectChronicleQueue chronicle) throws IOException {
-        final Bytes toRead = DirectStore.allocate(EXPECTED_BYTES.length).bytes();
-        AtomicLong offset = new AtomicLong(chronicle.firstBytes());
-        for (int i = 0; i < RUNS; i++) {
-            toRead.clear();
-            chronicle.readDocument(offset, toRead);
+        try (DirectStore allocate = DirectStore.allocate(EXPECTED_BYTES.length)) {
+            final Bytes toRead = allocate.bytes();
+            AtomicLong offset = new AtomicLong(chronicle.firstBytes());
+            for (int i = 0; i < RUNS; i++) {
+                toRead.clear();
+                chronicle.readDocument(offset, toRead);
+            }
+        } catch (Exception e) {
+            LOG.error("", e);
         }
     }
 
     private void writeSome(DirectChronicleQueue chronicle) throws IOException {
-        final Bytes toWrite = DirectStore.allocate(EXPECTED_BYTES.length).bytes();
-        toWrite.write(EXPECTED_BYTES);
-        for (int i = 0; i < RUNS; i++) {
-            toWrite.clear();
-            chronicle.appendDocument(toWrite);
+        try (DirectStore allocate = DirectStore.allocate(EXPECTED_BYTES.length)) {
+            final Bytes toWrite = allocate.bytes();
+            toWrite.write(EXPECTED_BYTES);
+            for (int i = 0; i < RUNS; i++) {
+                toWrite.clear();
+                chronicle.appendDocument(toWrite);
+            }
+        } catch (Exception e) {
+            LOG.error("", e);
         }
     }
 }

@@ -27,9 +27,10 @@ public class Indexer {
         SingleChronicleQueue single = (SingleChronicleQueue) chronicle;
 
         final long index2Index = single.indexToIndex();
-        final ExcerptTailer tailer = chronicle.createTailer();
 
-        for (long i = 0; i < single.lastIndex(); i++) {
+       final ExcerptTailer tailer = chronicle.createTailer();
+
+        for (long i = 0; i <= single.lastIndex(); i++) {
 
             final long index = i;
 

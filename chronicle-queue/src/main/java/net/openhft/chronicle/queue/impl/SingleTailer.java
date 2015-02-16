@@ -40,7 +40,7 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public boolean index(long index) {
+    public boolean index(final long index) {
 
         long address0 = chronicle.indexToIndex() + toAddress0(index);
         long address1 = chronicle.bytes().readVolatileLong(address0);
@@ -88,8 +88,8 @@ public class SingleTailer implements ExcerptTailer {
     @Override
     public ExcerptTailer toStart() {
         index = -1;
-        chronicle.index(-1L, bytes);
-        return this;
+        chronicle.index(-1L, bytes );
+         return this;
     }
 
     @Override

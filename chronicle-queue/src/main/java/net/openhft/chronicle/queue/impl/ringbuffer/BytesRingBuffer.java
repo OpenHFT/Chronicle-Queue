@@ -22,12 +22,13 @@ public class BytesRingBuffer {
     public interface BytesProvider {
 
         /**
-         * provides a buffer for the ring buffer to read data into, the remaining bytes in the
+         * sets up a buffer to back the ring buffer, the data wil be read into this buffer the size of the
          * buffer must be as big as {@code maxSize}
          *
          * @param maxSize the number of bytes required
          * @return a buffer of at least {@code maxSize} bytes remaining
          */
+        @NotNull
         Bytes provide(long maxSize);
     }
 
