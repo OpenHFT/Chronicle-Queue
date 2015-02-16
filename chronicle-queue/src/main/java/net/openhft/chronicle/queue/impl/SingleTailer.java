@@ -6,6 +6,8 @@ import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.lang.io.MultiStoreBytes;
+import net.openhft.lang.model.DataValueClasses;
+import net.openhft.lang.values.BooleanValue;
 
 import java.util.function.Function;
 
@@ -36,7 +38,35 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public boolean index(long l) {
-        throw new UnsupportedOperationException();
+
+        final BooleanValue exit = DataValueClasses.newInstance(BooleanValue.class);
+        long last = chronicle.lastIndex();
+
+        if (l == 0)
+            return last > 0;
+
+        long readUpTo = l - 1;
+
+        for (int i = 0; i < last; i++) {
+            final int j = i;
+
+            this.readDocument(wireIn -> {
+
+                if (readUpTo == j)
+                    exit.setValue(true);
+
+                long remaining1 = wireIn.bytes().remaining();
+                wireIn.bytes().skip(remaining1);
+                return null;
+
+            });
+
+            if (exit.getValue())
+                return true;
+        }
+
+        return false;
+
     }
 
     @Override
@@ -57,3 +87,5 @@ public class SingleTailer implements ExcerptTailer {
         return chronicle;
     }
 }
+
+
