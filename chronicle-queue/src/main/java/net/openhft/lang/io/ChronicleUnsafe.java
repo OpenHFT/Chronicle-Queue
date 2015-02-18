@@ -65,7 +65,9 @@ public class ChronicleUnsafe {
             }
         }
 
+        // we would only require this if we wanted to records when a block was last accessed
         lastAccessed[chunk] = System.currentTimeMillis();
+
         return mappedMemory[chunk].bytes().address() + remainder;
     }
 
