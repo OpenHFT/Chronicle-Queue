@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.lang.model.constraints.NotNull;
+
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Created by peter on 29/01/15.

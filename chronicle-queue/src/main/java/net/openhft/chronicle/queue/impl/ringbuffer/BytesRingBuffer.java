@@ -1,31 +1,43 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
+import net.openhft.lang.Jvm;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
- * Multi writer single Reader, zero GC, ring buffer
+ * Multi writer single Reader, zero GC, ring buffer, which takes bytes
  *
  * @author Rob Austin.
  */
-public class BytesQueue {
+public class BytesRingBuffer {
 
     private static final int SIZE = 8;
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
 
-    private final BytesRingBuffer bytes;
+    private final RingBuffer bytes;
     private final Header header;
+
+    public interface BytesProvider {
+
+        /**
+         * sets up a buffer to back the ring buffer, the data wil be read into this buffer the size of the
+         * buffer must be as big as {@code maxSize}
+         *
+         * @param maxSize the number of bytes required
+         * @return a buffer of at least {@code maxSize} bytes remaining
+         */
+        @NotNull
+        Bytes provide(long maxSize);
+    }
 
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
-    public BytesQueue(@NotNull final Bytes buffer) {
+    public BytesRingBuffer(@NotNull final Bytes buffer) throws Exception {
         this.header = new Header(buffer);
-        this.bytes = new BytesRingBuffer(buffer);
+        this.bytes = new RingBuffer(buffer);
         header.setWriteUpTo(bytes.capacity());
     }
 
@@ -90,6 +102,15 @@ public class BytesQueue {
         }
     }
 
+    @NotNull
+    public Bytes take(@NotNull BytesProvider bytesProvider) throws InterruptedException,
+            IllegalStateException {
+        Bytes poll;
+        do {
+            poll = poll(bytesProvider);
+        } while (poll == null);
+        return poll;
+    }
 
     /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
@@ -99,7 +120,8 @@ public class BytesQueue {
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     @Nullable
-    public Bytes poll(@NotNull Bytes using) throws InterruptedException, IllegalStateException {
+    public Bytes poll(@NotNull BytesProvider bytesProvider) throws InterruptedException,
+            IllegalStateException {
 
         long writeLoc = writeLocation();
 
@@ -114,7 +136,7 @@ public class BytesQueue {
 
         long flag = offset;
 
-        byte state = bytes.readByte(flag);
+        final byte state = bytes.readByte(flag);
         offset += 1;
 
         // the element is currently being written to, so let wait for the write to finish
@@ -123,10 +145,12 @@ public class BytesQueue {
         assert state == States.READY.ordinal() : " we are reading a message that we " +
                 "shouldn't,  state=" + state;
 
-        long elementSize = bytes.readLong(offset);
+        final long elementSize = bytes.readLong(offset);
         offset += 8;
 
-        long next = offset + elementSize;
+        final long next = offset + elementSize;
+
+        final Bytes using = bytesProvider.provide(elementSize);
 
         // checks that the 'using' bytes is large enough
         checkSize(using, elementSize);
@@ -177,10 +201,11 @@ public class BytesQueue {
         private final long readLocationOffset;
         private final Bytes buffer;
 
+
         /**
          * @param buffer the bytes for the header
          */
-        private Header(@NotNull Bytes buffer) {
+        private Header(@NotNull Bytes buffer) throws Exception {
 
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
@@ -190,7 +215,6 @@ public class BytesQueue {
             long start = buffer.position();
             readLocationOffset = buffer.position();
             buffer.skip(8);
-
 
             writeLocationOffset = buffer.position();
             buffer.skip(8);
@@ -202,17 +226,29 @@ public class BytesQueue {
 
         }
 
-        // added as the method below has visibility issues
-        final AtomicLong writeLocationValue = new AtomicLong();
+        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
 
-        public synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return writeLocationValue.compareAndSet(expectedValue, newValue);
+            if (Jvm.vmSupportsCS8())
+                return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+            synchronized (this) {
+                if (expectedValue == getWriteLocation()) {
+                    setWriteLocation(newValue);
+                    return true;
+                }
+                return false;
+
+            }
+
         }
 
-        public synchronized long getWriteLocation() {
-            return writeLocationValue.get();
+        private void setWriteLocation(long value) {
+            buffer.writeOrderedLong(writeLocationOffset, value);
         }
 
+
+        private long getWriteLocation() {
+            return buffer.readVolatileLong(writeLocationOffset);
+        }
 
         /**
          * sets the point at which you should not write any additional bits
@@ -241,13 +277,13 @@ public class BytesQueue {
      * This is a Bytes ( like ) implementation where the backing buffer is a ring buffer In the
      * future we could extend this class to implement Bytes.
      */
-    private class BytesRingBuffer {
+    private class RingBuffer {
 
         @NotNull
         final Bytes buffer;
         final boolean isBytesBigEndian;
 
-        public BytesRingBuffer(@NotNull Bytes buffer) {
+        public RingBuffer(@NotNull Bytes buffer) {
             this.buffer = buffer.bytes(buffer.position(), buffer.remaining());
             isBytesBigEndian = isBytesBigEndian();
         }
@@ -379,8 +415,12 @@ public class BytesQueue {
 
         boolean isBytesBigEndian() {
             try {
+
                 putLongB(0, 1);
                 return buffer.flip().readLong() == 1;
+
+            } catch (Exception e) {
+                return false;
             } finally {
                 buffer.clear();
             }

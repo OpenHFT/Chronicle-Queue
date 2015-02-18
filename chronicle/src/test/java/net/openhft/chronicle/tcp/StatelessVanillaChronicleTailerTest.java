@@ -413,7 +413,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                         }
                     }
 
-                    tailer.clear();
+                    tailer.close();
                     sink.close();
                     sink.clear();
                 } catch (Exception e) {
@@ -426,7 +426,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         t.start();
 
         // Source 1
-        Chronicle source1 = vanilla(basePathSource)
+        final Chronicle source1 = vanilla(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -450,7 +450,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         portSupplier.reset();
 
         // Source 2
-        Chronicle source2 = vanilla(basePathSource)
+        final Chronicle source2 = vanilla(basePathSource)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -465,8 +465,21 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
         appender2.close();
 
+        final Chronicle check = vanilla(basePathSource).build();
+        final ExcerptTailer checkTailer = check.createTailer();
+        for(long i=0; i<items; i++) {
+            if(checkTailer.nextIndex()) {
+                assertEquals(i, checkTailer.readLong());
+                checkTailer.finish();
+            }
+        }
+
+        checkTailer.close();
+
         latch.await(5, TimeUnit.SECONDS);
         assertEquals(0, latch.getCount());
+
+        check.close();
 
         source2.close();
         source2.clear();

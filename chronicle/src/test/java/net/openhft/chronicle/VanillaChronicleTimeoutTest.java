@@ -82,8 +82,14 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     @Test(timeout = 31000)
     public void testDataCacheTimeout() throws Exception {
         final String baseDir = getTestPath();
+
+        final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
+                ChronicleQueueBuilder.vanilla(baseDir)
+                        .dataCacheCapacity(10000)
+                        .cleanupOnClose(false);
+
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaDataCache dataCache = new VanillaDataCache(baseDir, 10 + 7, dateCache, 10000, false);
+        final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);

@@ -19,12 +19,13 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.model.constraints.NotNull;
+import org.jetbrains.annotations.NotNull;
+
 
 import java.util.function.Function;
 
 /**
- * The component that facilitates sequentially reading data from a {@link Chronicle}.
+ * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
  *
  * @author peter.lawrey
  */

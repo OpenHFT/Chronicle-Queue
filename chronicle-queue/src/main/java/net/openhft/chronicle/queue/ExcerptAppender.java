@@ -24,7 +24,7 @@ import net.openhft.chronicle.wire.WireOut;
 import java.util.function.Consumer;
 
 /**
- * The component that facilitates sequentially writing data to a {@link Chronicle}.
+ * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
  *
  * @author peter.lawrey
  */

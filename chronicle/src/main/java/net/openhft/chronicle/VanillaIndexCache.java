@@ -36,13 +36,31 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
+    private final int[][] appenderCycles;
 
-    VanillaIndexCache(@NotNull String basePath, int blockBits, @NotNull VanillaDateCache dateCache, int capacity, boolean cleanupOnClose) {
-        this.basePath = basePath;
-        this.baseFile = new File(basePath);
-        this.blockBits = blockBits;
+    VanillaIndexCache(
+            @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
+            @NotNull VanillaDateCache dateCache,
+            int blocksBits) {
+
+        this.baseFile = builder.path();
+        this.basePath = this.baseFile.getAbsolutePath();
+
+        this.blockBits = blocksBits;
         this.dateCache = dateCache;
-        this.cache = new VanillaMappedCache<IndexKey>(capacity, true, cleanupOnClose);
+
+        this.cache = new VanillaMappedCache<>(
+            builder.indexCacheCapacity(),
+            true,
+            builder.cleanupOnClose()
+        );
+
+        int lastCycle = (int)lastCycle();
+        int lastIndex = lastIndexFile(lastCycle);
+        this.appenderCycles = new int[][]{
+            new int[]{ lastCycle, lastIndex },
+            new int[]{ 0, 0 }
+        };
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -143,12 +161,39 @@ public class VanillaIndexCache implements Closeable {
         return maxIndex != -1 ? maxIndex : defaultCycle;
     }
 
-    public VanillaMappedBytes append(int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
-        for (int indexCount = lastIndexFile(cycle, 0); indexCount < 10000; indexCount++) {
+    public synchronized VanillaMappedBytes append(
+            int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
+
+        int localIndex = this.appenderCycles[0][1];
+        int indexToUpdate = -1;
+
+        if(this.appenderCycles[0][0] < cycle) {
+            // New cycle detected, swap references
+            this.appenderCycles[1][0] = this.appenderCycles[0][0];
+            this.appenderCycles[1][1] = this.appenderCycles[0][1];
+            this.appenderCycles[0][0] = cycle;
+            this.appenderCycles[0][1] = 0;
+        } else if(this.appenderCycles[0][0] > cycle) {
+            if(this.appenderCycles[1][0] == cycle) {
+                // Old cycle detected
+                localIndex = this.appenderCycles[1][1];
+                indexToUpdate = 1;
+            } else {
+                // Untracked cycle, search for last index file
+                localIndex = lastIndexFile(cycle, 0);
+                indexToUpdate = -1;
+            }
+        }
+
+        for (int indexCount = localIndex; indexCount < 10000; indexCount++) {
             VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
             long position0 = append(vmb, indexValue, synchronous);
             if (position0 >= 0) {
                 position[0] = position0;
+                if(indexToUpdate == 0 || indexToUpdate == 1) {
+                    this.appenderCycles[indexToUpdate][1] = indexCount;
+                }
+
                 return vmb;
             }
 

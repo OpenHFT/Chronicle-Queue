@@ -2,13 +2,15 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.Jvm;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MappedFile;
-import net.openhft.lang.io.MappedMemory;
-import net.openhft.lang.io.MultiStoreBytes;
+import net.openhft.lang.io.*;
+import net.openhft.lang.model.DataValueClasses;
 import net.openhft.lang.values.LongValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -19,16 +21,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file
- *
- * Created by peter on 30/01/15.
+ * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter on
+ * 30/01/15.
  */
-public class SingleChronicle implements Chronicle, DirectChronicle {
-    static final long MAGIC_OFFSET = 0L;
+public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
+
+    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
+    private static final long MAGIC_OFFSET = 0L;
+
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
+
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
     static final long BUILDING = asLong("BUILDING");
@@ -46,7 +53,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     private final Bytes bytes;
     private long firstBytes = -1;
 
-    public SingleChronicle(String filename, long blockSize) throws IOException {
+    public SingleChronicleQueue(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
         headerMemory = file.acquire(0);
         bytes = headerMemory.bytes();
@@ -54,26 +61,6 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         initialiseHeader();
     }
 
-    @Override
-    public void appendDocument(Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
-        LongValue writeByte = header.writeByte;
-        long lastByte = writeByte.getVolatileValue();
-        for (; ; ) {
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                long lastByte2 = lastByte + 4 + buffer.remaining();
-                bytes.write(lastByte + 4, buffer);
-                writeByte.setValue(lastByte2);
-                bytes.writeOrderedInt(lastByte, (int) length);
-                return;
-            }
-            int length2 = length30(bytes.readVolatileInt());
-            bytes.skip(length2);
-            Jvm.checkInterrupted();
-        }
-    }
 
     @Override
     public boolean readDocument(AtomicLong offset, Bytes buffer) {
@@ -100,7 +87,10 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
 
     @Override
     public long lastIndex() {
-        throw new UnsupportedOperationException();
+        long value = header.lastIndex.getVolatileValue();
+        if (value == -1)
+            throw new IllegalStateException("No data has been written to   chronicle.");
+        return value;
     }
 
     @Override
@@ -126,6 +116,7 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
         }
         readHeader();
     }
+
 
     private void readHeader() throws IOException {
         // skip the magic number. 
@@ -234,4 +225,105 @@ public class SingleChronicle implements Chronicle, DirectChronicle {
     public long firstBytes() {
         return firstBytes;
     }
+
+
+    /**
+     * @return gets the index2index, or creates it, if it does not exist.
+     */
+    long indexToIndex() {
+        for (; ; ) {
+
+            long index2Index = header.index2Index.getVolatileValue();
+
+            if (index2Index == NOT_READY)
+                continue;
+
+            if (index2Index != UNINITIALISED)
+                return index2Index;
+
+            if (!header.index2Index.compareAndSwapValue(UNINITIALISED, NOT_READY))
+                continue;
+
+            long indexToIndex = newIndex();
+            header.index2Index.setOrderedValue(indexToIndex);
+            return indexToIndex;
+        }
+    }
+
+
+    /**
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
+     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
+     * index ( each entry in the primary index points to a unique a secondary index. The secondary
+     * index only records the address of every 64th except, the except are linearly scanned from
+     * there on.
+     *
+     * @return the address of the Excerpt containing the usable index, just after the header
+     */
+    long newIndex() {
+
+        long indexSize = 1L << 17L;
+
+        try (DirectStore allocate = DirectStore.allocate(6)) {
+
+            final DirectBytes buffer = allocate.bytes();
+            new BinaryWire(buffer).write(() -> "Index");
+            buffer.flip();
+
+            final long keyLen = buffer.limit();
+
+            final long length = buffer.remaining();
+            if (length > MAX_LENGTH)
+                throw new IllegalStateException("Length too large: " + length);
+
+            final LongValue writeByte = header.writeByte;
+            final long lastByte = writeByte.getVolatileValue();
+
+            for (; ; ) {
+                if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                    long lastByte2 = lastByte + 4 + buffer.remaining() + indexSize;
+                    bytes.write(lastByte + 4, buffer);
+
+                    header.lastIndex.addAtomicValue(1);
+                    writeByte.setOrderedValue(lastByte2);
+                    bytes.writeOrderedInt(lastByte, (int) (6 + indexSize));
+                    long start = lastByte + 4;
+                    bytes.zeroOut(start + keyLen, start + keyLen + length);
+                    return start + keyLen;
+                }
+                int length2 = length30(bytes.readVolatileInt());
+                bytes.skip(length2);
+                Jvm.checkInterrupted();
+            }
+
+
+        }
+    }
+
+    @Override
+    public long appendDocument(Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+
+        LongValue writeByte = header.writeByte;
+        long lastByte = writeByte.getVolatileValue();
+
+        for (; ; ) {
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                long lastIndex = header.lastIndex.addAtomicValue(1);
+                writeByte.setOrderedValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) length);
+                return lastIndex;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            Jvm.checkInterrupted();
+        }
+
+    }
+
 }
+

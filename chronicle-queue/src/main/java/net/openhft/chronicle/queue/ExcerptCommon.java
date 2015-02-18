@@ -25,5 +25,5 @@ public interface ExcerptCommon {
     /**
      * @return the chronicle associated with this Excerpt
      */
-    Chronicle chronicle();
+    ChronicleQueue chronicle();
 }
