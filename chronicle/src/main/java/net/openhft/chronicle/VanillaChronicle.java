@@ -516,7 +516,7 @@ public class VanillaChronicle implements Chronicle {
         private int appenderThreadId;
         private boolean nextSynchronous;
         private long lastWrittenIndex;
-        private long[] positionArr = { 0L };
+        private long[] positionArr = {0L};
         private int dataCount;
 
         public VanillaAppenderImpl() {
@@ -663,7 +663,7 @@ public class VanillaChronicle implements Chronicle {
 
         protected void setLastWrittenIndex(long lastWrittenIndex) {
             this.lastWrittenIndex = lastWrittenIndex;
-            for(;;) {
+            for (; ; ) {
                 long lwi = VanillaChronicle.this.lastWrittenIndex();
                 if (lwi >= lastWrittenIndex || VanillaChronicle.this.lastWrittenIndex.compareAndSet(lwi, lastWrittenIndex)) {
                     break;
