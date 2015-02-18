@@ -5,6 +5,8 @@ import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteOrder;
+
 /**
  * Multi writer single Reader, zero GC, ring buffer, which takes bytes
  *
@@ -285,7 +287,7 @@ public class BytesRingBuffer {
 
         public RingBuffer(@NotNull Bytes buffer) {
             this.buffer = buffer.bytes(buffer.position(), buffer.remaining());
-            isBytesBigEndian = isBytesBigEndian();
+            isBytesBigEndian = buffer.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 
 
@@ -413,18 +415,6 @@ public class BytesRingBuffer {
             return buffer.capacity();
         }
 
-        boolean isBytesBigEndian() {
-            try {
-
-                putLongB(0, 1);
-                return buffer.flip().readLong() == 1;
-
-            } catch (Exception e) {
-                return false;
-            } finally {
-                buffer.clear();
-            }
-        }
 
         void putLongB(long offset, long value) {
             buffer.writeByte(offset, (byte) (value >> 56));
