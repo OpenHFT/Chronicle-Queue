@@ -90,7 +90,7 @@ public class Indexer {
 
     }
 
-    enum IndexOffset {
+    public  enum IndexOffset {
         ;
 
         static long toAddress0(long index) {
@@ -114,7 +114,7 @@ public class Indexer {
         }
 
 
-        static String toBinaryString(long i) {
+       public static String toBinaryString(long i) {
 
             StringBuilder sb = new StringBuilder();
 
@@ -124,7 +124,7 @@ public class Indexer {
             return sb.toString();
         }
 
-        static String toScale() {
+        public  static String toScale() {
 
             StringBuilder units = new StringBuilder();
             StringBuilder tens = new StringBuilder();

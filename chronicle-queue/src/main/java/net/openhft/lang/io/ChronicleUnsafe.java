@@ -1,5 +1,6 @@
 package net.openhft.lang.io;
 
+import net.openhft.chronicle.queue.impl.Indexer;
 import org.apache.mina.core.RuntimeIoException;
 import sun.misc.Unsafe;
 
@@ -31,15 +32,25 @@ public class ChronicleUnsafe {
 
     private long chunkSize;
     private long offset;
+    private final long mask;
+    private long last = -1;
 
-    public ChronicleUnsafe(MappedFile mappedFile) {
+    public ChronicleUnsafe(MappedFile mappedFile, long shift) {
         this.mappedFile = mappedFile;
         this.chunkSize = mappedFile.blockSize();
+
+        mask = ~((1L << ((long) shift)) - 1L);
+
+       /* System.out.println(Indexer.IndexOffset.toBinaryString(i));
+        System.out.println(Indexer.IndexOffset.toScale());
+        System.out.println("");*/
     }
 
     public long toAddress(long address) {
 
-        if (address >= start && address < end()) {
+        long last = mask & address;
+
+        if (last == this.last) {
             return address + offset;
         }
 
@@ -67,6 +78,7 @@ public class ChronicleUnsafe {
         long start = address - remainder;
         this.start(start);
         this.end(start + chunkSize);
+        this.last = last;
         return result;
     }
 

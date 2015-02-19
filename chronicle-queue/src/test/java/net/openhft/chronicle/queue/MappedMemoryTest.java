@@ -8,13 +8,12 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Created by robaustin on 18/02/15.
- */
+
 public class MappedMemoryTest {
 
 
-    long TIMES = 1L << 25L;
+    public static final long SHIFT = 25L;
+    long TIMES = 1L << SHIFT;
 
     @Test
     public void withMappedNativeBytesTest() throws IOException {
@@ -24,9 +23,9 @@ public class MappedMemoryTest {
 
             MappedFile mappedFile = new MappedFile(tempFile.getName(), TIMES, 0);
 
-            ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile);
+            ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile, SHIFT);
             MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
-
+            bytes.writeLong(1, 1);
             long startTime = System.nanoTime();
             for (long i = 0; i < TIMES; i += 8) {
                 bytes.writeLong(i);
@@ -49,6 +48,7 @@ public class MappedMemoryTest {
             MappedFile mappedFile = new MappedFile(tempFile.getName(), TIMES, 0);
             Bytes bytes1 = mappedFile.acquire(1).bytes();
 
+
             long startTime = System.nanoTime();
             for (long i = 0; i < TIMES; i += 8L) {
                 bytes1.writeLong(i);
@@ -62,5 +62,28 @@ public class MappedMemoryTest {
         }
 
     }
+
+    @Test
+    public void mappedMemoryTest() throws IOException {
+
+        File tempFile = File.createTempFile("chronicle", "q");
+
+        int shift = 3;
+        MappedFile mappedFile = new MappedFile(tempFile.getName(), 1 << shift, 0);
+
+        ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile, shift);
+        MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
+        bytes.writeUTF("hello this is some very long text");
+
+        bytes.clear();
+
+        bytes.position(100);
+        bytes.writeUTF("hello this is some more long text...................");
+
+        bytes.position(100);
+        System.out.println("result=" + bytes.readUTF());
+
+    }
+
 }
 
