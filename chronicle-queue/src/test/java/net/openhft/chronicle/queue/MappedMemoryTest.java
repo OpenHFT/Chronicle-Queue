@@ -32,7 +32,7 @@ public class MappedMemoryTest {
                 bytes.writeLong(i);
             }
 
-            System.out.println("With MappedNativeBytes, time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
+            System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
 
         } finally {
             tempFile.delete();
@@ -54,7 +54,7 @@ public class MappedMemoryTest {
                 bytes1.writeLong(i);
             }
 
-            System.out.println("With RawNativeBytesTess time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
+            System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
 
 
         } finally {
