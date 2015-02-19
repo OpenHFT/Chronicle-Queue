@@ -14,9 +14,6 @@ public class ChronicleUnsafe {
     private final MappedFile mappedFile;
     private volatile MappedMemory[] mappedMemory = new MappedMemory[1];
 
-    // stores the timestamp the the chunk was last access
-    private volatile long[] lastAccessed = new long[1];
-
     public static final Unsafe UNSAFE;
 
     static {
@@ -33,6 +30,7 @@ public class ChronicleUnsafe {
     }
 
     private long chunkSize;
+    private long offset;
 
     public ChronicleUnsafe(MappedFile mappedFile) {
         this.mappedFile = mappedFile;
@@ -40,6 +38,10 @@ public class ChronicleUnsafe {
     }
 
     public long toAddress(long address) {
+
+        if (address >= start && address < end()) {
+            return address + offset;
+        }
 
         int chunk = (int) ((address / chunkSize));
         long remainder = address - (((long) chunk) * chunkSize);
@@ -49,13 +51,7 @@ public class ChronicleUnsafe {
             MappedMemory[] newMm = new MappedMemory[chunk + 1];
             System.arraycopy(mappedMemory, 0, newMm, 0, mappedMemory.length);
             mappedMemory = newMm;
-
-            long[] newLastAccessed = new long[chunk + 1];
-            System.arraycopy(lastAccessed, 0, newLastAccessed, 0, lastAccessed.length);
-            lastAccessed = newLastAccessed;
-
         }
-
 
         if (mappedMemory[chunk] == null) {
             try {
@@ -65,10 +61,34 @@ public class ChronicleUnsafe {
             }
         }
 
-        // we would only require this if we wanted to records when a block was last accessed
-        lastAccessed[chunk] = System.currentTimeMillis();
+        long address1 = mappedMemory[chunk].bytes().address();
+        long result = address1 + remainder;
+        this.offset = result - address;
+        long start = address - remainder;
+        this.start(start);
+        this.end(start + chunkSize);
+        return result;
+    }
 
-        return mappedMemory[chunk].bytes().address() + remainder;
+    private void end(long address) {
+        this.end = address;
+    }
+
+    private void start(long address) {
+        this.start = address;
+    }
+
+
+    long start;
+
+    long start() {
+        return this.start;
+    }
+
+    long end;
+
+    long end() {
+        return this.end;
     }
 
     public long toRemainingInChunk(long address) {

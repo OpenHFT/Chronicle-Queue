@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -13,24 +14,52 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MappedMemoryTest {
 
 
+    long TIMES = 1L << 25L;
+
     @Test
-    public void mappedMemoryTest() throws IOException {
+    public void withMappedNativeBytesTest() throws IOException {
 
         File tempFile = File.createTempFile("chronicle", "q");
+        try {
 
-        MappedFile mappedFile = new MappedFile(tempFile.getName(), 8, 0);
+            MappedFile mappedFile = new MappedFile(tempFile.getName(), TIMES, 0);
 
-        ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile);
-        MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
-        bytes.writeUTF("hello this is some very long text");
+            ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile);
+            MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
 
-        bytes.clear();
+            long startTime = System.nanoTime();
+            for (long i = 0; i < TIMES; i += 8) {
+                bytes.writeLong(i);
+            }
 
-        bytes.position(100);
-        bytes.writeUTF("hello this is some more long text...................");
+            System.out.println("With MappedNativeBytes, time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
 
-        bytes.position(100);
-        System.out.println("result=" + bytes.readUTF());
+        } finally {
+            tempFile.delete();
+        }
+
+    }
+
+    @Test
+    public void withRawNativeBytesTess() throws IOException {
+
+        File tempFile = File.createTempFile("chronicle", "q");
+        try {
+
+            MappedFile mappedFile = new MappedFile(tempFile.getName(), TIMES, 0);
+            Bytes bytes1 = mappedFile.acquire(1).bytes();
+
+            long startTime = System.nanoTime();
+            for (long i = 0; i < TIMES; i += 8L) {
+                bytes1.writeLong(i);
+            }
+
+            System.out.println("With RawNativeBytesTess time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + TIMES / 8));
+
+
+        } finally {
+            tempFile.delete();
+        }
 
     }
 }
