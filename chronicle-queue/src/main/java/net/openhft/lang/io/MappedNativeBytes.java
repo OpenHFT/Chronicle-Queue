@@ -28,9 +28,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @author peter.lawrey
- */
+
 public class MappedNativeBytes extends AbstractBytes {
     /**
      * *** Access the Unsafe class *****
