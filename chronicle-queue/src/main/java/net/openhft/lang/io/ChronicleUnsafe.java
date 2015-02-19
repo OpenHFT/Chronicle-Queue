@@ -39,7 +39,7 @@ public class ChronicleUnsafe {
         this.mappedFile = mappedFile;
         this.chunkSize = mappedFile.blockSize();
 
-        mask = ~((1L << ((long) shift)) - 1L);
+        mask = ~((1L << shift) - 1L);
 
        /* System.out.println(Indexer.IndexOffset.toBinaryString(i));
         System.out.println(Indexer.IndexOffset.toScale());
@@ -50,7 +50,7 @@ public class ChronicleUnsafe {
 
         long last = mask & address;
 
-        if (last == this.last) {
+        if ((last ^ this.last) == 0) {
             return address + offset;
         }
 

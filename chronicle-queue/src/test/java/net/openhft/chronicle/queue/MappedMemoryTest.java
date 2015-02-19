@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MappedMemoryTest {
 
 
-    public static final long SHIFT = 25L;
+    public static final long SHIFT = 27L;
     long TIMES = 1L << SHIFT;
 
     @Test
