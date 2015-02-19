@@ -19,10 +19,8 @@ public class MappedMemoryTest {
         File tempFile = File.createTempFile("chronicle", "q");
         try {
 
-            MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
-
-            ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile, BLOCK_SIZE);
-            MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
+            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+            final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
             bytes.writeLong(1, 1);
             long startTime = System.nanoTime();
             for (long i = 0; i < BLOCK_SIZE; i += 8) {
@@ -68,10 +66,8 @@ public class MappedMemoryTest {
         try {
             int shift = 3;
             int blockSize = 1 << shift;
-            MappedFile mappedFile = new MappedFile(tempFile.getName(), blockSize, 0);
-
-            ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(mappedFile, blockSize);
-            MappedNativeBytes bytes = new MappedNativeBytes(chronicleUnsafe);
+            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+            final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
             bytes.writeUTF("hello this is some very long text");
 
             bytes.clear();
@@ -96,8 +92,7 @@ public class MappedMemoryTest {
     public void checkBlockSizeIsPowerOfTwoTest() throws IOException {
         File tempFile = File.createTempFile("chronicle", "q");
         MappedFile mappedFile = new MappedFile(tempFile.getName(), 10, 0);
-        new ChronicleUnsafe(mappedFile, 10);
-
+        new ChronicleUnsafe(mappedFile);
     }
 
 

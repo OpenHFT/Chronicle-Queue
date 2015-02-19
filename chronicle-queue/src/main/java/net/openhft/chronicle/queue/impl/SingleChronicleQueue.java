@@ -2,12 +2,9 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.io.*;
-import net.openhft.lang.model.DataValueClasses;
 import net.openhft.lang.values.LongValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
@@ -46,7 +42,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     static final int MAX_LENGTH = LENGTH_MASK;
 
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
-    private final MappedFile file;
+    private final MappedFile mappedFile;
     private final MappedMemory headerMemory;
     private final Header header = new Header();
     private final ChronicleWire wire;
@@ -54,12 +50,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     private long firstBytes = -1;
 
     public SingleChronicleQueue(String filename, long blockSize) throws IOException {
-        file = new MappedFile(filename, blockSize);
+        mappedFile = new MappedFile(filename, blockSize);
 
-        final ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(file, blockSize);
-        MappedNativeBytes mappedNativeBytes = new MappedNativeBytes(chronicleUnsafe);
+        MappedNativeBytes mappedNativeBytes = new MappedNativeBytes(mappedFile, false);
 
-        headerMemory = file.acquire(0);
+        headerMemory = mappedFile.acquire(0);
         bytes = mappedNativeBytes;
         wire = new ChronicleWire(new BinaryWire(bytes));
         initialiseHeader();
@@ -178,7 +173,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     @Override
     public String name() {
-        return file.name();
+        return mappedFile.name();
     }
 
     @Override
