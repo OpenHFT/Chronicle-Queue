@@ -121,7 +121,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         readHeader();
     }
 
-
     private void readHeader() throws IOException {
         // skip the magic number. 
         waitForTheHeaderToBeBuilt(bytes);
