@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import net.openhft.lang.io.*;
 import org.junit.Test;
 
@@ -11,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 public class MappedMemoryTest {
 
 
-    long BLOCK_SIZE = 1L << 27L;
+    public static final long SHIFT = 30L;
+    long BLOCK_SIZE = 1L << SHIFT;
 
     @Test
     public void withMappedNativeBytesTest() throws IOException {
@@ -59,6 +61,55 @@ public class MappedMemoryTest {
 
     }
 
+    @Ignore
+    @Test
+    public void testShowComparablePerformanceOfBytes() throws IOException {
+
+        for (int x = 0; x < 5; x++) {
+
+            System.out.println("\n\niteration " + x);
+            File tempFile = File.createTempFile("chronicle", "q");
+            try {
+
+                final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+                final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
+                bytes.writeLong(1, 1);
+                long startTime = System.nanoTime();
+                for (long i = 0; i < BLOCK_SIZE; i++) {
+                    bytes.writeByte('X');
+                }
+
+                System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
+
+            } finally {
+                tempFile.delete();
+            }
+
+
+            File tempFile2 = File.createTempFile("chronicle", "q");
+            try {
+
+                MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+                Bytes bytes1 = mappedFile.acquire(1).bytes();
+
+
+                long startTime = System.nanoTime();
+                for (long i = 0; i < BLOCK_SIZE; i++) {
+                    bytes1.writeByte('X');
+                }
+
+                System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
+
+
+            } finally {
+                tempFile2.delete();
+            }
+            System.out.println("");
+        }
+
+
+    }
+
     @Test
     public void mappedMemoryTest() throws IOException {
 
@@ -94,7 +145,6 @@ public class MappedMemoryTest {
         MappedFile mappedFile = new MappedFile(tempFile.getName(), 10, 0);
         new ChronicleUnsafe(mappedFile);
     }
-
 
 }
 
