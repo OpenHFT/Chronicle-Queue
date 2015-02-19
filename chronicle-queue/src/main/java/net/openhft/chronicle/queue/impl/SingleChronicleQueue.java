@@ -55,8 +55,12 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     public SingleChronicleQueue(String filename, long blockSize) throws IOException {
         file = new MappedFile(filename, blockSize);
+
+        final ChronicleUnsafe chronicleUnsafe = new ChronicleUnsafe(file, blockSize);
+        MappedNativeBytes mappedNativeBytes = new MappedNativeBytes(chronicleUnsafe);
+
         headerMemory = file.acquire(0);
-        bytes = headerMemory.bytes();
+        bytes = mappedNativeBytes;
         wire = new ChronicleWire(new BinaryWire(bytes));
         initialiseHeader();
     }

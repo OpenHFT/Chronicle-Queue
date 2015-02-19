@@ -35,9 +35,21 @@ public class ChronicleUnsafe {
     private final long mask;
     private long last = -1;
 
-    public ChronicleUnsafe(MappedFile mappedFile, long shift) {
+
+    /**
+     * @param mappedFile
+     * @param blockSize  this must be a power of 2
+     */
+    public ChronicleUnsafe(MappedFile mappedFile, long blockSize) {
+
+        if (((blockSize & -blockSize) != blockSize))
+            throw new IllegalStateException("the block size has to be a power of 2");
+
         this.mappedFile = mappedFile;
         this.chunkSize = mappedFile.blockSize();
+
+        long shift = (int) (Math.log(blockSize) / Math.log(2));
+
 
         mask = ~((1L << shift) - 1L);
 
@@ -206,7 +218,7 @@ public class ChronicleUnsafe {
     }
 
     public void putOrderedInt(Object o, long address, int v) {
-        UNSAFE.putOrderedInt(0, toAddress(address), v);
+        UNSAFE.putOrderedInt(o, toAddress(address), v);
     }
 
     public boolean compareAndSwapInt(Object o, long address, int expected, int v) {
