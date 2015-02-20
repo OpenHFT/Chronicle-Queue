@@ -34,22 +34,22 @@ public class MappingReferenceCountTest {
 
             // write into block 1
             bytes.writeLong(64 + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getMap(1).refCount());
+            Assert.assertEquals(1, mappedFile.getRefCount(1));
 
             // we move from block 1 to block 2
             bytes.writeLong((64 * 2) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(0, mappedFile.getMap(1).refCount());
-            Assert.assertEquals(1, mappedFile.getMap(2).refCount());
+            Assert.assertEquals(0, mappedFile.getRefCount(1));
+            Assert.assertEquals(1, mappedFile.getRefCount(2));
 
 
             // we move from block 2 back to block 1
             bytes.writeLong((64 * 1) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getMap(1).refCount());
-            Assert.assertEquals(0, mappedFile.getMap(2).refCount());
+            Assert.assertEquals(1, mappedFile.getRefCount(1));
+            Assert.assertEquals(0, mappedFile.getRefCount(2));
 
             // we move from block 2 back to block 1
             bytes.writeLong((64 * 3) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getMap(3).refCount());
+            Assert.assertEquals(1, mappedFile.getRefCount(3));
 
 
         } catch (FileNotFoundException e) {
