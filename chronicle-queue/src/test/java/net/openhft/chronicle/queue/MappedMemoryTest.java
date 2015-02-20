@@ -12,9 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 public class MappedMemoryTest {
 
-
-    public static final long SHIFT = 30L;
-    long BLOCK_SIZE = 1L << SHIFT;
+    private static final long SHIFT = 30L;
+    private static long BLOCK_SIZE = 1L << SHIFT;
 
     @Test
     public void withMappedNativeBytesTest() throws IOException {
@@ -22,7 +21,7 @@ public class MappedMemoryTest {
         File tempFile = File.createTempFile("chronicle", "q");
         try {
 
-            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
             bytes.writeLong(1, 1);
             long startTime = System.nanoTime();
@@ -44,7 +43,7 @@ public class MappedMemoryTest {
         File tempFile = File.createTempFile("chronicle", "q");
         try {
 
-            MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+            MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             Bytes bytes1 = mappedFile.acquire(1).bytes();
 
 
@@ -72,7 +71,7 @@ public class MappedMemoryTest {
             File tempFile = File.createTempFile("chronicle", "q");
             try {
 
-                final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+                final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
                 final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
                 bytes.writeLong(1, 1);
                 long startTime = System.nanoTime();
@@ -90,7 +89,7 @@ public class MappedMemoryTest {
             File tempFile2 = File.createTempFile("chronicle", "q");
             try {
 
-                MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+                MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
                 Bytes bytes1 = mappedFile.acquire(1).bytes();
 
 
@@ -116,9 +115,8 @@ public class MappedMemoryTest {
 
         File tempFile = File.createTempFile("chronicle", "q");
         try {
-            int shift = 3;
-            int blockSize = 1 << shift;
-            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+
+            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
             bytes.writeUTF("hello this is some very long text");
 

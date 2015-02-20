@@ -28,7 +28,7 @@ public class MappingReferenceCountTest {
 
         try {
             int BLOCK_SIZE = 64;
-            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 0);
+            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
 
 
