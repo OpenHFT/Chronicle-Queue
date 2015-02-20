@@ -4,6 +4,7 @@ import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import net.openhft.lang.io.DirectStore;
 import net.openhft.lang.values.LongValue;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
@@ -34,7 +35,8 @@ class Header implements Marshallable {
         lastIndex.setValue(-1);
     }
 
-    public Header init(Compression compression) {
+    @NotNull
+    public Header init(@NotNull Compression compression) {
         uuid = UUID.randomUUID();
         created = ZonedDateTime.now();
         user = System.getProperty("user.name");
@@ -52,7 +54,7 @@ class Header implements Marshallable {
     }
 
     @Override
-    public void writeMarshallable(WireOut out) {
+    public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
                 .write(Field.writeByte).int64(writeByte)
                 .write(Field.created).zonedDateTime(created)
@@ -66,7 +68,7 @@ class Header implements Marshallable {
     }
 
     @Override
-    public void readMarshallable(WireIn in) {
+    public void readMarshallable(@NotNull WireIn in) {
         in.read(Field.uuid).uuid(u -> uuid = u)
                 .read(Field.writeByte).int64(writeByte)
                 .read(Field.created).zonedDateTime(c -> created = c)

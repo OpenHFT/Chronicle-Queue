@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 
 
 import net.openhft.chronicle.wire.WireOut;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -32,6 +33,7 @@ public interface ExcerptAppender extends ExcerptCommon {
     /**
      * @return the underlying Wire.
      */
+    @Nullable
     public WireOut wire();
 
     /**

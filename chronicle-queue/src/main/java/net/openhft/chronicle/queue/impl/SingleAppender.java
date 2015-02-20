@@ -7,6 +7,8 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectStore;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -15,7 +17,9 @@ import java.util.function.Consumer;
  */
 public class SingleAppender implements ExcerptAppender {
 
+    @NotNull
     private final DirectChronicleQueue chronicle;
+    @Nullable
     private final ChronicleWireOut wireOut;
     private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
     private final Wire wire = new BinaryWire(buffer);
@@ -27,13 +31,14 @@ public class SingleAppender implements ExcerptAppender {
         wireOut = new ChronicleWireOut(null);
     }
 
+    @Nullable
     @Override
     public WireOut wire() {
         return wireOut;
     }
 
     @Override
-    public void writeDocument(Consumer<WireOut> writer) {
+    public void writeDocument(@NotNull Consumer<WireOut> writer) {
         buffer.clear();
         writer.accept(wire);
         buffer.flip();
@@ -64,6 +69,7 @@ public class SingleAppender implements ExcerptAppender {
         return lastWrittenIndex;
     }
 
+    @NotNull
     @Override
     public ChronicleQueue chronicle() {
         return chronicle;

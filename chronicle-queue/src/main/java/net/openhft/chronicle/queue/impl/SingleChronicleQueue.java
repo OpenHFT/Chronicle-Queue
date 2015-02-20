@@ -6,6 +6,7 @@ import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.io.*;
 import net.openhft.lang.values.LongValue;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +43,13 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     static final int MAX_LENGTH = LENGTH_MASK;
 
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
+    @NotNull
     private final MappedFile mappedFile;
     private final MappedMemory headerMemory;
     private final Header header = new Header();
+    @NotNull
     private final ChronicleWire wire;
+    @NotNull
     private final Bytes bytes;
     private long firstBytes = -1;
 
@@ -62,7 +66,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
 
     @Override
-    public boolean readDocument(AtomicLong offset, Bytes buffer) {
+    public boolean readDocument(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
         buffer.clear();
         long lastByte = offset.get();
         for (; ; ) {
@@ -79,6 +83,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         }
     }
 
+    @NotNull
     @Override
     public Bytes bytes() {
         return bytes;
@@ -93,7 +98,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     @Override
-    public boolean index(long index, MultiStoreBytes bytes) {
+    public boolean index(long index, @NotNull MultiStoreBytes bytes) {
         if (index == -1) {
             bytes.storePositionAndSize(headerMemory, HEADER_OFFSET, headerMemory.size() - HEADER_OFFSET);
             return true;
@@ -125,7 +130,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         firstBytes = bytes.position();
     }
 
-    private void waitForTheHeaderToBeBuilt(Bytes bytes) throws IOException {
+    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
         for (int i = 0; i < 1000; i++) {
             long magic = bytes.readVolatileLong(MAGIC_OFFSET);
             if (magic == BUILDING) {
@@ -166,7 +171,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         }
     }
 
-    private static long asLong(String str) {
+    private static long asLong(@NotNull String str) {
         ByteBuffer bb = ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1)).order(ByteOrder.nativeOrder());
         return bb.getLong();
     }
@@ -176,16 +181,19 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         return mappedFile.name();
     }
 
+    @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
         throw new UnsupportedOperationException();
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new SingleTailer(this);
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         ExcerptAppender appender = localAppender.get();
@@ -299,7 +307,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     @Override
-    public long appendDocument(Bytes buffer) {
+    public long appendDocument(@NotNull Bytes buffer) {
         long length = buffer.remaining();
         if (length > MAX_LENGTH)
             throw new IllegalStateException("Length too large: " + length);

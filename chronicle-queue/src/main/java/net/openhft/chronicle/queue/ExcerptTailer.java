@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 
 import java.util.function.Function;
@@ -33,6 +34,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     /**
      * @return the wire associated with this tailer.
      */
+    @Nullable
     public WireIn wire();
 
     public <T> boolean readDocument(Function<WireIn, T> reader);

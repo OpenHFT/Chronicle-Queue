@@ -8,6 +8,8 @@ import net.openhft.chronicle.wire.WireIn;
 import net.openhft.lang.io.MultiStoreBytes;
 import net.openhft.lang.model.DataValueClasses;
 import net.openhft.lang.values.LongValue;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Function;
 
@@ -18,6 +20,7 @@ import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
  * Created by peter.lawrey on 30/01/15.
  */
 public class SingleTailer implements ExcerptTailer {
+    @NotNull
     private final SingleChronicleQueue chronicle;
     long index;
     private final MultiStoreBytes bytes = new MultiStoreBytes();
@@ -28,6 +31,7 @@ public class SingleTailer implements ExcerptTailer {
         toStart();
     }
 
+    @Nullable
     @Override
     public WireIn wire() {
         return new ChronicleWireIn(null);
@@ -125,6 +129,7 @@ public class SingleTailer implements ExcerptTailer {
 
     }
 
+    @NotNull
     @Override
     public ExcerptTailer toStart() {
         index = -1;
@@ -132,12 +137,14 @@ public class SingleTailer implements ExcerptTailer {
         return this;
     }
 
+    @NotNull
     @Override
     public ExcerptTailer toEnd() {
         index(chronicle.lastIndex());
         return this;
     }
 
+    @NotNull
     @Override
     public ChronicleQueue chronicle() {
         return chronicle;

@@ -114,6 +114,7 @@ public class Indexer {
         }
 
 
+       @NotNull
        public static String toBinaryString(long i) {
 
             StringBuilder sb = new StringBuilder();
@@ -124,6 +125,7 @@ public class Indexer {
             return sb.toString();
         }
 
+        @NotNull
         public  static String toScale() {
 
             StringBuilder units = new StringBuilder();

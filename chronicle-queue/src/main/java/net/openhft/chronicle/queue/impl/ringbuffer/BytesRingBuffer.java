@@ -18,7 +18,9 @@ public class BytesRingBuffer {
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
 
+    @NotNull
     private final RingBuffer bytes;
+    @NotNull
     private final Header header;
 
     public interface BytesProvider {
