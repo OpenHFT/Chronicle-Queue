@@ -23,8 +23,7 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.model.Byteable;
 
-import java.io.IOException;
-import java.util.Date;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -38,41 +37,92 @@ public class DirectAccess {
     //
     // *************************************************************************
 
-    public static void main(String[] ignored) {
-        final int items = 1000;
-        final String path = System.getProperty("java.io.tmpdir") + "/direct-access";
-        //final StockPrice price  = newDirectReference(StockPrice.class);
-        //appender.position(price.maxSize());
+    public static void main(String[] ignored) throws Exception {
+        final int items = 100;
 
-        final StockPrice price  = newDirectInstance(StockPrice.class);
-        price.bytes().position(price.maxSize());
+        appendWithDirectInstance(items);
+        appendWithDirectReference(items);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private static void appendWithDirectInstance(final int items) throws Exception {
+        final int readers = items / 10;
+
+        final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
+        final Event event = newDirectInstance(Event.class);
 
         try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
             chronicle.clear();
 
             ExcerptAppender appender = chronicle.createAppender();
-            for(int i=0;i<items;i++) {
-                price.bytes(appender, 0);
-                price.setStockId(i / 10);
-                price.setTransactionTime(System.currentTimeMillis());
-                price.setPrice(i);
-                price.setQuantity(i);
+            for(int i=0; i<items; i++) {
+                event.bytes(appender, 0);
+                event.setOwner(0);
+                event.setType(i / 10);
+                event.setTimestamp(System.currentTimeMillis());
+                event.setId(i);
 
-                appender.startExcerpt(price.maxSize());
-                appender.write(price.bytes(),0, price.maxSize());
+                appender.startExcerpt(event.maxSize());
+                appender.write(event.bytes(), 0, event.maxSize());
                 appender.finish();
             }
 
             appender.close();
 
-            ExecutorService ex = Executors.newFixedThreadPool(5);
-            for(int i=0;i<(items / 100);i++) {
-                ex.execute(new Reader(chronicle, i));
+            process(chronicle, items);
+        }
+    }
+
+    private static void appendWithDirectReference(final int items) throws Exception {
+        final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
+        final Event event = newDirectReference(Event.class);
+
+        try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
+            chronicle.clear();
+
+            ExcerptAppender appender = chronicle.createAppender();
+            for(int i=0; i<items; i++) {
+                appender.startExcerpt(event.maxSize());
+
+                event.bytes(appender, 0);
+                event.setOwner(0);
+                event.setType(i / 10);
+                event.setTimestamp(System.currentTimeMillis());
+                event.setId(i);
+
+                appender.position(event.maxSize());
+                appender.finish();
             }
 
-            ex.awaitTermination(5, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            e.printStackTrace();
+            appender.close();
+
+            process(chronicle, items);
+        }
+    }
+
+    private static void process(Chronicle chronicle, int items) throws Exception {
+        final int readers = items / 10;
+        ExecutorService ex = Executors.newFixedThreadPool(readers * 2);
+        for (int i = 0; i < readers * 2; i++) {
+            ex.execute(new Reader(chronicle, i, i / 2));
+        }
+
+        ex.shutdown();
+        ex.awaitTermination(1, TimeUnit.MINUTES);
+
+        try (ExcerptTailer tailer = chronicle.createTailer()) {
+            final Event evt = newDirectReference(Event.class);
+            for (int i = 0; i < items; ) {
+                if (tailer.nextIndex()) {
+                    evt.bytes(tailer, 0);
+                    System.out.printf("read : %s\n", evt);
+                    tailer.finish();
+                    i++;
+                }
+            }
         }
     }
 
@@ -82,36 +132,33 @@ public class DirectAccess {
 
     public static class Reader implements Runnable  {
         private final Chronicle chronicle;
+        private final Random random;
         private final int id;
+        private final int type;
 
-        public Reader(final Chronicle chronicle, int id) {
+        public Reader(final Chronicle chronicle, int id, int type) {
             this.chronicle = chronicle;
+            this.random = new Random();
             this.id = id;
-
+            this.type = type;
         }
 
         @Override
         public void run() {
-            System.out.println("Start reader id=" + this.id);
             try (ExcerptTailer tailer = chronicle.createTailer()) {
-                final StockPrice price = newDirectReference(StockPrice.class);
+                final Event event = newDirectReference(Event.class);
                 while(tailer.nextIndex()) {
-                    price.bytes(tailer, 0);
-                    if(price.getStockId() == this.id) {
-                        if (price.compareAndSwapMeta(0, this.id)) {
-                            System.out.printf("%d : %s - sotock-%d %f@%f\n",
-                                this.id,
-                                new Date(price.getTransactionTime()),
-                                price.getStockId(),
-                                price.getQuantity(),
-                                price.getPrice()
-                            );
+                    event.bytes(tailer, 0);
+                    if(event.getType() == this.type) {
+                        if (event.compareAndSwapOwner(0, this.id * 100)) {
+                            event.compareAndSwapOwner(this.id * 100, this.id);
+                            Thread.sleep(this.random.nextInt(250));
                         }
                     }
 
                     tailer.finish();
                 }
-            } catch(IOException e) {
+            } catch(Exception e) {
                 e.printStackTrace();
             }
         }
@@ -121,21 +168,18 @@ public class DirectAccess {
     //
     // *************************************************************************
 
-    public static interface StockPrice extends Byteable {
-        boolean compareAndSwapMeta(int expected, int value);
-        int getMeta();
-        void setMeta(int meta);
+    public static interface Event extends Byteable {
+        boolean compareAndSwapOwner(int expected, int value);
+        int getOwner();
+        void setOwner(int meta);
 
-        void setStockId(long id);
-        long getStockId();
+        void setId(long id);
+        long getId();
 
-        void setTransactionTime(long timestamp);
-        long getTransactionTime();
+        void setType(long id);
+        long getType();
 
-        void setPrice(double price);
-        double getPrice();
-
-        void setQuantity(double quantity);
-        double getQuantity();
+        void setTimestamp(long timestamp);
+        long getTimestamp();
     }
 }
