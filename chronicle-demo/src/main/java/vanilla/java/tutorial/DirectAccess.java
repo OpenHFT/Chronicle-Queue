@@ -39,28 +39,34 @@ public class DirectAccess {
     // *************************************************************************
 
     public static void main(String[] ignored) {
+        final int items = 1000;
         final String path = System.getProperty("java.io.tmpdir") + "/direct-access";
-        final StockPrice price  = newDirectReference(StockPrice.class);
+        //final StockPrice price  = newDirectReference(StockPrice.class);
+        //appender.position(price.maxSize());
+
+        final StockPrice price  = newDirectInstance(StockPrice.class);
+        price.bytes().position(price.maxSize());
 
         try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
             chronicle.clear();
 
             ExcerptAppender appender = chronicle.createAppender();
-            for(int i=0;i<1000;i++) {
-                appender.startExcerpt(price.maxSize());
+            for(int i=0;i<items;i++) {
                 price.bytes(appender, 0);
-                price.setStockId(i % 10);
+                price.setStockId(i / 10);
                 price.setTransactionTime(System.currentTimeMillis());
                 price.setPrice(i);
                 price.setQuantity(i);
-                appender.position(price.maxSize());
+
+                appender.startExcerpt(price.maxSize());
+                appender.write(price.bytes(),0, price.maxSize());
                 appender.finish();
             }
 
             appender.close();
 
             ExecutorService ex = Executors.newFixedThreadPool(5);
-            for(int i=0;i<5;i++) {
+            for(int i=0;i<(items / 100);i++) {
                 ex.execute(new Reader(chronicle, i));
             }
 
@@ -81,22 +87,26 @@ public class DirectAccess {
         public Reader(final Chronicle chronicle, int id) {
             this.chronicle = chronicle;
             this.id = id;
+
         }
 
         @Override
         public void run() {
+            System.out.println("Start reader id=" + this.id);
             try (ExcerptTailer tailer = chronicle.createTailer()) {
                 final StockPrice price = newDirectReference(StockPrice.class);
                 while(tailer.nextIndex()) {
                     price.bytes(tailer, 0);
-                    if(price.compareAndSwapMeta(0, this.id)) {
-                        System.out.printf("%d : %s - %d %f@%f\n",
-                            this.id,
-                            new Date(price.getTransactionTime()),
-                            price.getStockId(),
-                            price.getQuantity(),
-                            price.getPrice()
-                        );
+                    if(price.getStockId() == this.id) {
+                        if (price.compareAndSwapMeta(0, this.id)) {
+                            System.out.printf("%d : %s - sotock-%d %f@%f\n",
+                                this.id,
+                                new Date(price.getTransactionTime()),
+                                price.getStockId(),
+                                price.getQuantity(),
+                                price.getPrice()
+                            );
+                        }
                     }
 
                     tailer.finish();
