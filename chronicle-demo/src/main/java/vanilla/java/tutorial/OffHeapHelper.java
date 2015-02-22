@@ -18,8 +18,6 @@
 package vanilla.java.tutorial;
 
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.model.Byteable;
 
@@ -28,82 +26,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static net.openhft.lang.model.DataValueClasses.newDirectInstance;
 import static net.openhft.lang.model.DataValueClasses.newDirectReference;
 
-public class DirectAccess {
+public class OffHeapHelper {
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static void main(String[] ignored) throws Exception {
-        final int items = 100;
-
-        appendWithDirectInstance(items);
-        appendWithDirectReference(items);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private static void appendWithDirectInstance(final int items) throws Exception {
-        final int readers = items / 10;
-
-        final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
-        final Event event = newDirectInstance(Event.class);
-
-        try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
-            chronicle.clear();
-
-            ExcerptAppender appender = chronicle.createAppender();
-            for(int i=0; i<items; i++) {
-                event.bytes(appender, 0);
-                event.setOwner(0);
-                event.setType(i / 10);
-                event.setTimestamp(System.currentTimeMillis());
-                event.setId(i);
-
-                appender.startExcerpt(event.maxSize());
-                appender.write(event.bytes(), 0, event.maxSize());
-                appender.finish();
-            }
-
-            appender.close();
-
-            process(chronicle, items);
-        }
-    }
-
-    private static void appendWithDirectReference(final int items) throws Exception {
-        final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
-        final Event event = newDirectReference(Event.class);
-
-        try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
-            chronicle.clear();
-
-            ExcerptAppender appender = chronicle.createAppender();
-            for(int i=0; i<items; i++) {
-                appender.startExcerpt(event.maxSize());
-
-                event.bytes(appender, 0);
-                event.setOwner(0);
-                event.setType(i / 10);
-                event.setTimestamp(System.currentTimeMillis());
-                event.setId(i);
-
-                appender.position(event.maxSize());
-                appender.finish();
-            }
-
-            appender.close();
-
-            process(chronicle, items);
-        }
-    }
-
-    private static void process(Chronicle chronicle, int items) throws Exception {
+    protected static void process(Chronicle chronicle, int items) throws Exception {
         final int readers = items / 10;
         ExecutorService ex = Executors.newFixedThreadPool(readers * 2);
         for (int i = 0; i < readers * 2; i++) {
@@ -126,11 +53,7 @@ public class DirectAccess {
         }
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static class Reader implements Runnable  {
+    protected static class Reader implements Runnable  {
         private final Chronicle chronicle;
         private final Random random;
         private final int id;
@@ -163,10 +86,6 @@ public class DirectAccess {
             }
         }
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     public static interface Event extends Byteable {
         boolean compareAndSwapOwner(int expected, int value);
