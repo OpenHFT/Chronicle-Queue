@@ -21,7 +21,7 @@ It is available on maven central as
 Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 
-#### Contents
+### Contents
 * [Overview](https://github.com/OpenHFT/Chronicle-Queue#overview)
 * [Building Blocks](https://github.com/OpenHFT/Chronicle-Queue#building-blocks)
 * [Implementations](https://github.com/OpenHFT/Chronicle-Queue#implementations)
@@ -30,7 +30,7 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
 * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
-### Overview
+## Overview
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications. 
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
@@ -41,7 +41,7 @@ Using non-heap storage options(RandomAccessFile) Chronicle provides a processing
 
 Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibility. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
 
-### Building Blocks
+## Building Blocks
 Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface. 
 
 Chronicle has three main concepts:
@@ -53,15 +53,15 @@ An Excerpt is the main data container in a Chronicle, each Chronicle is composed
 A Tailer is an Excerpt optimized for sequential reads.
 An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle. 
 
-### Implementations
+## Implementations
 Current version of Chronicle contains IndexedChronicle and VanillaChronicle implementations. 
 
-## IndexedChronicle 
+### IndexedChronicle 
 IndexedChronicle is a single writer multiple reader Chronicle. 
 
 For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
 
-## VanillaChronicle 
+### VanillaChronicle 
 Vanilla Chronicle is a designed for more features rather than just speed and it supports:
  - rolling files on a daily, weekly or hourly basis.
  - concurrent writers on the same machine.
@@ -84,32 +84,59 @@ The index file format is an sequence of 8-byte values which consist of a 16-bit 
 The data file format has a 4-byte length of record. The length is the inverted bits of the 4-byte value.
 This is used to avoid seeing regular data as a length and detect corruption.  The length always starts of a 4-byte boundary.
 
-### Getting Started
+## Getting Started
+
+### Chronicle Construction
+Creating an instance of Chronicle is a little more complex than just calling a constructor. 
+To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
-// create a Chronicle
-String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
-Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+1  String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
+2  Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+```
 
-// write one object
+In this example we have created an IndexedChronicle which creates two RandomAccessFile one for indexes and one for data having names relatively:
+
+${java.io.tmpdir}/getting-started.index
+${java.io.tmpdir}/getting-started.data
+
+### Writing
+```java
+// Obtain an ExcerptAppender
 ExcerptAppender appender = chronicle.createAppender();
-appender.startExcerpt(); 
-appender.writeObject("TestMessage");
-appender.finish();
-appender.close();
 
-// read one object
+// Configure the appender to write up to 100 bytes 
+appender.startExcerpt(100); 
+
+// Copy the content of the Object as binary 
+appender.writeObject("TestMessage");
+
+// Commit 
+appender.finish();
+```
+
+### Reading
+```java
+// Obtain an ExcerptTailer
 ExcerptTailer reader = chronicle.createTailer();
 
-// while until there is a new Excerpt to read
+// While until there is a new Excerpt to read
 while(!reader.nextIndex());
 
-// read the objecy
+// Read the objecy
 Object ret = reader.readObject();
 
+// Make the reader ready for next read
 reader.finish();
-reader.close();
+```
 
+### Cleanup
+
+Chronicle-Queue stores its data off heap and it is recommended that you call close() once you have finished working with Excerpts and Chronicle-Queue.
+
+```java
+appender.close();
+reader.close();
 chronicle.close();
 ```
 
