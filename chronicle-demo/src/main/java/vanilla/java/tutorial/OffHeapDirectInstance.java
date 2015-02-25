@@ -42,7 +42,7 @@ public class OffHeapDirectInstance extends OffHeapHelper {
                 event.setId(i);
 
                 appender.startExcerpt(event.maxSize());
-                appender.write(event.bytes());
+                appender.write(event);
                 appender.finish();
             }
 
