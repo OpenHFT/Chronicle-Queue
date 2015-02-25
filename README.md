@@ -28,6 +28,11 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
   * [Indexed Chronicle](https://github.com/OpenHFT/Chronicle-Queue#indexed-chronicle)
   * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
 * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
+* [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
+  * [Stateful Client](https://github.com/OpenHFT/Chronicle-Queue#stateful-client)
+  * [Stateless Client](https://github.com/OpenHFT/Chronicle-Queue#stateless-client)
+  * [Appender Client](https://github.com/OpenHFT/Chronicle-Queue#appender-client)
+* [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ## Overview
@@ -61,6 +66,12 @@ IndexedChronicle is a single writer multiple reader Chronicle.
 
 For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
 
+```
+base-directory /
+    name.index
+    name.data
+```
+
 ### VanillaChronicle 
 Vanilla Chronicle is a designed for more features rather than just speed and it supports:
  - rolling files on a daily, weekly or hourly basis.
@@ -91,8 +102,8 @@ Creating an instance of Chronicle is a little more complex than just calling a c
 To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
-1  String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
-2  Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
+Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 ```
 
 In this example we have created an IndexedChronicle which creates two RandomAccessFile one for indexes and one for data having names relatively:
@@ -140,21 +151,19 @@ reader.close();
 chronicle.close();
 ```
 
+## Replication
 
-###  Support
+Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements. 
 
-See frequently asked questions on [Stackoverflow](http://stackoverflow.com/tags/chronicle/info), or you can post your question on the forum at [Java Chronicle support group](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
+![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
+
+### Stateful Client
+### Stateless Client
+### Appender Client
 
 
-
-If you want to access objects with other logical keys ( i.e via some value of object ) you have to manage your own mapping from logical key to index. 
-
----
-
-[Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
-
-[Chronicle support on Stackoverflow](http://stackoverflow.com/tags/chronicle/info)
-
-[Forum for those learning about OpenHFT](https://groups.google.com/forum/?hl=en-GB#!forum/open-hft)
-
-[Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
+##  Support
+* [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
+* [Chronicle support on StackOverflow](http://stackoverflow.com/tags/chronicle/info)
+* [Chronicle support on Google Groups](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
+* [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
