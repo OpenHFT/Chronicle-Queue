@@ -27,6 +27,7 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
 * [Implementations](https://github.com/OpenHFT/Chronicle-Queue#implementations)
   * [Indexed Chronicle](https://github.com/OpenHFT/Chronicle-Queue#indexed-chronicle)
   * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
+* [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ### Overview
@@ -61,8 +62,56 @@ IndexedChronicle is a single writer multiple reader Chronicle.
 For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
 
 ## VanillaChronicle 
-VanillaChronicle is a multiple writer multiple reader Chronicle
+Vanilla Chronicle is a designed for more features rather than just speed and it supports:
+ - rolling files on a daily, weekly or hourly basis.
+ - concurrent writers on the same machine.
+ - concurrent readers on the same machine or across multiple machines via TCP replication.
+ - zero copy serialization and deserialization.
+ - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
+ - synchronous persistence as required. (commit to disk before continuing)
+ - exact length of entries
+ 
+The directory structure is as follows.
 
+```
+base-directory /
+   {cycle-name} /       - The default format is yyyyMMdd
+        index-{n}       - multiple index files from 0 .. {n}
+        data-{tid}-{m}  - multiple data files for each thread id (matches the process id) from 0 .. {n}
+```
+
+The index file format is an sequence of 8-byte values which consist of a 16-bit {tid} and the offset in bytes of the start of the record.
+The data file format has a 4-byte length of record. The length is the inverted bits of the 4-byte value.
+This is used to avoid seeing regular data as a length and detect corruption.  The length always starts of a 4-byte boundary.
+
+### Getting Started
+
+```java
+// create a Chronicle
+String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
+Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+
+// write one object
+ExcerptAppender appender = chronicle.createAppender();
+appender.startExcerpt(); 
+appender.writeObject("TestMessage");
+appender.finish();
+appender.close();
+
+// read one object
+ExcerptTailer reader = chronicle.createTailer();
+
+// while until there is a new Excerpt to read
+while(!reader.nextIndex());
+
+// read the objecy
+Object ret = reader.readObject();
+
+reader.finish();
+reader.close();
+
+chronicle.close();
+```
 
 
 ###  Support
