@@ -17,8 +17,6 @@
  */
 package net.openhft.chronicle.tcp;
 
-import net.openhft.lang.Maths;
-import net.openhft.lang.io.IOTools;
 import net.openhft.lang.model.constraints.NotNull;
 import sun.nio.ch.DirectBuffer;
 
@@ -51,16 +49,8 @@ public class ChronicleTcp {
         return createBufferOfSize(size, ByteOrder.nativeOrder());
     }
 
-    public static ByteBuffer createBufferOfNextPow2Size(int size) {
-        return createBufferOfNextPow2Size(size, ByteOrder.nativeOrder());
-    }
-
     public static ByteBuffer createBufferOfSize(int size, ByteOrder byteOrder) {
         return ByteBuffer.allocateDirect(size).order(byteOrder);
-    }
-
-    public static ByteBuffer createBufferOfNextPow2Size(int size, ByteOrder byteOrder) {
-        return ByteBuffer.allocateDirect(Maths.nextPower2(size,size)).order(byteOrder);
     }
 
     public static ByteBuffer createBuffer(int minSize) {
@@ -93,30 +83,8 @@ public class ChronicleTcp {
         return sb.toString();
     }
 
-    public static int nextPower2(int size) {
-        return Maths.nextPower2(size, size);
-    }
-
-    public static int nextPower2(int size, int min) {
-        return Maths.nextPower2(size, min);
-    }
-
-    public static long nextPower2(long size) {
-        return Maths.nextPower2(size, size);
-    }
-
-    public static long nextPower2(long size, long min) {
-        return Maths.nextPower2(size, min);
-    }
-
     public static long address(@NotNull ByteBuffer buffer) {
         return ((DirectBuffer) buffer).address();
-    }
-
-    public static void clean(ByteBuffer buffer) {
-        if(buffer != null) {
-            IOTools.clean(buffer);
-        }
     }
 
     public static boolean hasCapacityOf(ByteBuffer buffer, int size) {
