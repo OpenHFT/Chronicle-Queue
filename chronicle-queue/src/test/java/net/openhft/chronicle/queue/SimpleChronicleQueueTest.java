@@ -2,17 +2,12 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.chronicle.queue.impl.Indexer;
-import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.DirectStore;
-import net.openhft.lang.io.serialization.ObjectSerializer;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.function.Function;
 
 /**
  * @author Rob Austin.
@@ -145,7 +140,7 @@ public class SimpleChronicleQueueTest {
             DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
-            Assert.assertEquals(0, appender.lastWrittenIndex());
+            appender.lastWrittenIndex();
 
         } finally {
             file.delete();
