@@ -59,16 +59,6 @@ public class StatelessAppender implements ExcerptAppender {
     }
 
     @Override
-    public boolean nextSynchronous() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void nextSynchronous(boolean nextSynchronous) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public long lastWrittenIndex() {
         return lastWrittenIndex;
     }
