@@ -32,6 +32,8 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
   * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
   * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
   * [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
+    * [Source](https://github.com/OpenHFT/Chronicle-Queue#source)
+    * [Sink](https://github.com/OpenHFT/Chronicle-Queue#sink)
     * [Remote Tailer](https://github.com/OpenHFT/Chronicle-Queue#remote-tailer)
     * [Remote Appender](https://github.com/OpenHFT/Chronicle-Queue#remote-appender)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
