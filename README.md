@@ -36,6 +36,11 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
     * [Sink](https://github.com/OpenHFT/Chronicle-Queue#sink)
     * [Remote Tailer](https://github.com/OpenHFT/Chronicle-Queue#remote-tailer)
     * [Remote Appender](https://github.com/OpenHFT/Chronicle-Queue#remote-appender)
+* [Advanced usage](https://github.com/OpenHFT/Chronicle-Queue#advanced-usage)
+  * [Off-Heap Data Structures](https://github.com/OpenHFT/Chronicle-Queue#off-heap-data-structures)
+    * [Direct Instance](https://github.com/OpenHFT/Chronicle-Queue#direct-instance)
+    * [Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#direct-reference)
+  * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
@@ -221,6 +226,67 @@ Chronicle chronicle = ChronicleQueueBuilder
 Chronicle chronicle = ChronicleQueueBuilder
     .remoteAppender()
     .build();
+```
+
+## Advanced usage
+### Off-Heap Data Structures
+### Reading the Chronicle after a shutdown
+
+#### Direct Instance
+```java
+final int items = 100;
+final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
+final Event event = newDirectInstance(Event.class);
+
+try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
+    chronicle.clear();
+
+    ExcerptAppender appender = chronicle.createAppender();
+    for(int i=0; i<items; i++) {
+        event.bytes(appender, 0);
+        event.setOwner(0);
+        event.setType(i / 10);
+        event.setTimestamp(System.currentTimeMillis());
+        event.setId(i);
+
+        appender.startExcerpt(event.maxSize());
+        appender.write(event);
+        appender.finish();
+    }
+
+    appender.close();
+
+    process(chronicle, items);
+}
+```
+
+#### Direct Reference
+```java
+final int items = 100;
+final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
+final Event event = newDirectReference(Event.class);
+
+try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
+    chronicle.clear();
+
+    ExcerptAppender appender = chronicle.createAppender();
+    for(int i=0; i<items; i++) {
+        appender.startExcerpt(event.maxSize());
+
+        event.bytes(appender, 0);
+        event.setOwner(0);
+        event.setType(i / 10);
+        event.setTimestamp(System.currentTimeMillis());
+        event.setId(i);
+
+        appender.position(event.maxSize());
+        appender.finish();
+    }
+
+    appender.close();
+
+    process(chronicle, items);
+}
 ```
 
 ##  Support
