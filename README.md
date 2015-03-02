@@ -32,9 +32,8 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
   * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
   * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
   * [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
-    * [Stateful Client](https://github.com/OpenHFT/Chronicle-Queue#stateful-client)
-    * [Stateless Client](https://github.com/OpenHFT/Chronicle-Queue#stateless-client)
-    * [Appender Client](https://github.com/OpenHFT/Chronicle-Queue#appender-client)
+    * [Remote Tailer](https://github.com/OpenHFT/Chronicle-Queue#remote-tailer)
+    * [Remote Appender](https://github.com/OpenHFT/Chronicle-Queue#remote-appender)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
@@ -67,7 +66,7 @@ An Appender is something like Iterator in Chronicle environment. You add data ap
 
 ## Chronicle Queue V3
 
-Current version of Chronicle (V3) contains IndexedChronicle and VanillaChronicle implementations. 
+Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations. 
 
 ### IndexedChronicle 
 IndexedChronicle is a single writer multiple reader Chronicle. 
@@ -165,10 +164,40 @@ Chronicle-Queue supports TCP replication with optional filtering so only the req
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
-### Stateful Client
-### Stateless Client
-### Appender Client
+```java
+String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-source"
+Chronicle chronicle = ChronicleQueueBuilder
+    .indexed(basePath)
+        .source()
+        .build();
+```
 
+### Remote Tailer
+
+A remote tailer is a Chronicle-Queue implementation that reads excerpt from a remote Chronicle-Queue (source) and can be configured to be stateful or stateless. A stateful client stores a copy of the data locally whereas the staeless one only operate in memory. 
+
+* Statefull
+```java
+Chronicle chronicle = ChronicleQueueBuilder
+    .remoteTailer(Syste.getProperty("java.io.tmpdir") + "/getting-started-tailer-staefull")
+    .build();
+```
+* Stateless
+```java
+Chronicle chronicle = ChronicleQueueBuilder
+    .remoteTailer()
+    .build();
+```
+
+### Remote Appender
+
+A remote appender is a Chronicle-Queue implementation that can append data to a remote Chronicle-Queue.
+
+```java
+Chronicle chronicle = ChronicleQueueBuilder
+    .remoteAppender()
+    .build();
+```
 
 ##  Support
 * [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
