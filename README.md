@@ -9,7 +9,7 @@ Inter Process Communication ( IPC ) with sub millisecond latency and able to sto
 
 
 
-It is available on maven central as
+Releases are available on maven central as
 
  ```xml
 <dependency>
@@ -18,20 +18,23 @@ It is available on maven central as
   <version><!--replace with the latest version--></version>
 </dependency>
 ```
+
+Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle)
+
 Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 
 ### Contents
 * [Overview](https://github.com/OpenHFT/Chronicle-Queue#overview)
 * [Building Blocks](https://github.com/OpenHFT/Chronicle-Queue#building-blocks)
-* [Implementations](https://github.com/OpenHFT/Chronicle-Queue#implementations)
-  * [Indexed Chronicle](https://github.com/OpenHFT/Chronicle-Queue#indexed-chronicle)
-  * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
-* [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
-* [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
-  * [Stateful Client](https://github.com/OpenHFT/Chronicle-Queue#stateful-client)
-  * [Stateless Client](https://github.com/OpenHFT/Chronicle-Queue#stateless-client)
-  * [Appender Client](https://github.com/OpenHFT/Chronicle-Queue#appender-client)
+* [Chronicle Queue V3](https://github.com/OpenHFT/Chronicle-Queue#chronicle-queue-v3)
+   * [Indexed Chronicle](https://github.com/OpenHFT/Chronicle-Queue#indexed-chronicle)
+   * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
+  * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
+  * [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
+    * [Stateful Client](https://github.com/OpenHFT/Chronicle-Queue#stateful-client)
+    * [Stateless Client](https://github.com/OpenHFT/Chronicle-Queue#stateless-client)
+    * [Appender Client](https://github.com/OpenHFT/Chronicle-Queue#appender-client)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
@@ -62,8 +65,9 @@ An Excerpt is the main data container in a Chronicle, each Chronicle is composed
 A Tailer is an Excerpt optimized for sequential reads.
 An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle. 
 
-## Implementations
-Current version of Chronicle contains IndexedChronicle and VanillaChronicle implementations. 
+## Chronicle Queue V3
+
+Current version of Chronicle (V3) contains IndexedChronicle and VanillaChronicle implementations. 
 
 ### IndexedChronicle 
 IndexedChronicle is a single writer multiple reader Chronicle. 
