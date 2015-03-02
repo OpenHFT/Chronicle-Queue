@@ -164,25 +164,49 @@ Chronicle-Queue supports TCP replication with optional filtering so only the req
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
+### Source
+
+A Chronicle-Queue Source is the master source of data  
 ```java
 String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-source"
-Chronicle chronicle = ChronicleQueueBuilder
-    .indexed(basePath)
-        .source()
-        .build();
+
+// Create a new Chronicle-Queue source
+Chronicle source = ChronicleQueueBuilder
+    .indexed(basePath + "/new")
+    .source()
+    .build();
+
+// Wrap an existing Chronicle-Queue
+Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/wrap")
+Chronicle source = ChronicleQueueBuilder
+    .source(chronicle)
+    .build();
+```
+
+### Sink
+
+A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica)
+
+```java
+String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-sink"
+
+// Create a new Chronicle-Queue sink
+Chronicle sink = ChronicleQueueBuilder
+    .indexed(basePath + "/statefull")
+    .sink()
+    .build();
+    
+// Wrap an existing Chronicle-Queue
+Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/statefull")
+Chronicle sink = ChronicleQueueBuilder
+    .sink(chronicle)
+    .build();
 ```
 
 ### Remote Tailer
 
-A remote tailer is a Chronicle-Queue implementation that reads excerpt from a remote Chronicle-Queue (source) and can be configured to be stateful or stateless. A stateful client stores a copy of the data locally whereas the staeless one only operate in memory. 
+A Remote Tailer is a stateless Sink
 
-* Statefull
-```java
-Chronicle chronicle = ChronicleQueueBuilder
-    .remoteTailer(Syste.getProperty("java.io.tmpdir") + "/getting-started-tailer-staefull")
-    .build();
-```
-* Stateless
 ```java
 Chronicle chronicle = ChronicleQueueBuilder
     .remoteTailer()
@@ -190,8 +214,6 @@ Chronicle chronicle = ChronicleQueueBuilder
 ```
 
 ### Remote Appender
-
-A remote appender is a Chronicle-Queue implementation that can append data to a remote Chronicle-Queue.
 
 ```java
 Chronicle chronicle = ChronicleQueueBuilder
