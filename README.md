@@ -38,8 +38,9 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
     * [Remote Appender](https://github.com/OpenHFT/Chronicle-Queue#remote-appender)
 * [Advanced usage](https://github.com/OpenHFT/Chronicle-Queue#advanced-usage)
   * [Off-Heap Data Structures](https://github.com/OpenHFT/Chronicle-Queue#off-heap-data-structures)
-    * [Direct Instance](https://github.com/OpenHFT/Chronicle-Queue#direct-instance)
-    * [Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#direct-reference)
+    * [Write with Direct Instance](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-instance)
+    * [Write with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-reference)
+    * [Read with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#read-with-direct-reference)
   * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
@@ -229,14 +230,31 @@ Chronicle chronicle = ChronicleQueueBuilder
 ```
 
 ## Advanced usage
-### Off-Heap Data Structures
-### Reading the Chronicle after a shutdown
 
-#### Direct Instance
+### Off-Heap Data Structures
+
+```java
+public static interface Event extends Byteable {
+    boolean compareAndSwapOwner(int expected, int value);
+    int getOwner();
+    void setOwner(int meta);
+
+    void setId(long id);
+    long getId();
+
+    void setType(long id);
+    long getType();
+
+    void setTimestamp(long timestamp);
+    long getTimestamp();
+}
+```   
+
+#### Write with Direct Instance
 ```java
 final int items = 100;
 final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
-final Event event = newDirectInstance(Event.class);
+final Event event = DataValueClasses.newDirectInstance(Event.class);
 
 try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     chronicle.clear();
@@ -260,11 +278,11 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
 }
 ```
 
-#### Direct Reference
+#### Write with Direct Reference
 ```java
 final int items = 100;
 final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
-final Event event = newDirectReference(Event.class);
+final Event event = DataValueClasses.newDirectReference(Event.class);
 
 try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     chronicle.clear();
@@ -288,6 +306,22 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     process(chronicle, items);
 }
 ```
+
+#### Read with Direct Reference
+```java
+try (ExcerptTailer tailer = chronicle.createTailer()) {
+     final Event event = DataValueClasses.newDirectReference(Event.class);
+     while(tailer.nextIndex()) {
+         event.bytes(tailer, 0);
+         // Do something with event
+         tailer.finish();
+     }
+ } catch(Exception e) {
+     e.printStackTrace();
+ }
+ ```
+            
+### Reading the Chronicle after a shutdown
 
 ##  Support
 * [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
