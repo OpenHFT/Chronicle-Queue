@@ -540,6 +540,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
     public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder
             implements MappingProvider<ReplicaChronicleQueueBuilder> {
+
         public static final TcpConnectionListener CONNECTION_LISTENER = new TcpConnectionHandler();
 
         private final ChronicleQueueBuilder builder;
@@ -565,9 +566,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int acceptorMaxBacklog;
         private int acceptorDefaultThreads;
         private int acceptorMaxThreads;
-        private long acceptorThreadPoolkeepAliveTime;
-        private TimeUnit acceptorThreadPoolkeepAliveTimeUnit;
+        private long acceptorThreadPoolKeepAliveTime;
+        private TimeUnit acceptorThreadPoolKeepAliveTimeUnit;
         private TcpConnectionListener connectionListener;
+
+        private long busyPeriod;
+        private TimeUnit busyPeriodTimeUnit;
+        private long parkPeriod;
+        private TimeUnit parkPeriodTimeUnit;
 
         @Nullable
         private MappingFunction mapping;
@@ -591,14 +597,18 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.acceptorMaxBacklog = 50;
             this.acceptorDefaultThreads = 0;
             this.acceptorMaxThreads = Integer.MAX_VALUE;
-            this.acceptorThreadPoolkeepAliveTime = 60L;
-            this.acceptorThreadPoolkeepAliveTimeUnit = TimeUnit.SECONDS;
+            this.acceptorThreadPoolKeepAliveTime = 60L;
+            this.acceptorThreadPoolKeepAliveTimeUnit = TimeUnit.SECONDS;
             this.maxExcerptsPerMessage = 128;
             this.selectorSpinLoopCount = 100000;
             this.readSpinCount = -1;
             this.connectionListener = CONNECTION_LISTENER;
             this.appendRequireAck = false;
             this.mapping = null;
+            this.busyPeriod = TimeUnit.NANOSECONDS.convert(20, TimeUnit.MICROSECONDS);
+            this.busyPeriodTimeUnit = TimeUnit.NANOSECONDS;
+            this.parkPeriod = TimeUnit.NANOSECONDS.convert(200, TimeUnit.MICROSECONDS);
+            this.parkPeriodTimeUnit = TimeUnit.NANOSECONDS;
         }
 
         public InetSocketAddress bindAddress() {
@@ -783,23 +793,96 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.acceptorMaxThreads;
         }
 
-        public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAlive(long acceptorThreadPoolkeepAlive, TimeUnit acceptorThreadPoolkeepAliveUnit) {
-            this.acceptorThreadPoolkeepAliveTime = acceptorThreadPoolkeepAlive;
-            this.acceptorThreadPoolkeepAliveTimeUnit = acceptorThreadPoolkeepAliveUnit;
+
+        public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAlive(long acceptorThreadPoolKeepAliveTime, TimeUnit acceptorThreadPoolKeepAliveTimeUnit) {
+            this.acceptorThreadPoolKeepAliveTime = acceptorThreadPoolKeepAliveTime;
+            this.acceptorThreadPoolKeepAliveTimeUnit = acceptorThreadPoolKeepAliveTimeUnit;
             return this;
         }
 
         public long acceptorThreadPoolkeepAliveTime() {
-            return this.acceptorThreadPoolkeepAliveTime;
+            return this.acceptorThreadPoolKeepAliveTime;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAliveTime(long acceptorThreadPoolKeepAliveTime) {
+            this.acceptorThreadPoolKeepAliveTime = acceptorThreadPoolKeepAliveTime;
+            return this;
         }
 
         public TimeUnit acceptorThreadPoolkeepAliveTimeUnit() {
-            return this.acceptorThreadPoolkeepAliveTimeUnit;
+            return this.acceptorThreadPoolKeepAliveTimeUnit;
+        }
+
+        public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAliveTimeUnit(TimeUnit acceptorThreadPoolKeepAliveTimeUnit) {
+            this.acceptorThreadPoolKeepAliveTimeUnit = acceptorThreadPoolKeepAliveTimeUnit;
+            return this;
         }
 
         public long acceptorThreadPoolkeepAliveTimeMillis() {
-            return this.acceptorThreadPoolkeepAliveTimeUnit.toMillis(this.acceptorThreadPoolkeepAliveTime);
+            return this.acceptorThreadPoolKeepAliveTimeUnit.toMillis(this.acceptorThreadPoolKeepAliveTime);
         }
+
+
+
+        public ReplicaChronicleQueueBuilder busyPeriod(long busyPeriod, TimeUnit busyPeriodTimeUnit) {
+            this.busyPeriod = busyPeriod;
+            this.busyPeriodTimeUnit = busyPeriodTimeUnit;
+            return this;
+        }
+
+        public long busyPeriod() {
+            return this.busyPeriod;
+        }
+
+        public ReplicaChronicleQueueBuilder busyPeriod(long busyPeriod) {
+            this.busyPeriod = busyPeriod;
+            return this;
+        }
+
+        public TimeUnit busyPeriodTimeUnit() {
+            return this.busyPeriodTimeUnit;
+        }
+
+        public ReplicaChronicleQueueBuilder busyPeriodTimeUnit(TimeUnit busyPeriodTimeUnit) {
+            this.busyPeriodTimeUnit = busyPeriodTimeUnit;
+            return this;
+        }
+
+        public long busyPeriodTimeNanos() {
+            return this.busyPeriodTimeUnit.toNanos(this.busyPeriod);
+        }
+
+
+
+        public ReplicaChronicleQueueBuilder parkPeriod(long parkPeriod, TimeUnit parkPeriodTimeUnit) {
+            this.parkPeriod = parkPeriod;
+            this.parkPeriodTimeUnit = parkPeriodTimeUnit;
+            return this;
+        }
+
+        public long parkPeriod() {
+            return this.parkPeriod;
+        }
+
+        public ReplicaChronicleQueueBuilder parkPeriod(long parkPeriod) {
+            this.parkPeriod = parkPeriod;
+            return this;
+        }
+
+        public TimeUnit parkPeriodTimeUnit() {
+            return this.parkPeriodTimeUnit;
+        }
+
+        public ReplicaChronicleQueueBuilder parkPeriodTimeUnit(TimeUnit parkPeriodTimeUnit) {
+            this.parkPeriodTimeUnit = parkPeriodTimeUnit;
+            return this;
+        }
+
+        public long parkPeriodTimeNanos() {
+            return this.parkPeriodTimeUnit.toNanos(this.parkPeriod);
+        }
+
+
 
         public int selectorSpinLoopCount() {
             return this.selectorSpinLoopCount;

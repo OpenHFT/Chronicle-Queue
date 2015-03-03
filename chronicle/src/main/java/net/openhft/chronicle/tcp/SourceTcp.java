@@ -37,9 +37,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-
 public abstract class SourceTcp {
     protected final Logger logger;
     protected final String name;
@@ -54,7 +51,7 @@ public abstract class SourceTcp {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.executor = executor;
-        this.pauser = new LightPauser(NANOSECONDS.convert(20, MICROSECONDS), NANOSECONDS.convert(200, MICROSECONDS));
+        this.pauser = new LightPauser(builder.busyPeriodTimeNanos(), builder.parkPeriodTimeNanos());
     }
 
     public SourceTcp open() {
@@ -475,7 +472,7 @@ public abstract class SourceTcp {
     }
 
     // *************************************************************************
-    // SessionHandler - impleemntations
+    // SessionHandler - implementations
     // *************************************************************************
 
     /**
