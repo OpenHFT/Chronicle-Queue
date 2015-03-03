@@ -28,7 +28,7 @@
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.4.1-SNAPSHOT</version>
+    <version>3.4.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>

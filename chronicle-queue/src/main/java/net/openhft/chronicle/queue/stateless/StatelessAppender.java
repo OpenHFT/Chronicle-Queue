@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 
 /**
  * todo : currently work in process
- *
+ * <p/>
  * Created by Rob Austin
  */
 public class StatelessAppender implements ExcerptAppender {
@@ -37,6 +37,7 @@ public class StatelessAppender implements ExcerptAppender {
     private final ChronicleQueue chronicleQueue;
     @NotNull
     private final StatelessRawBytesAppender statelessRawBytesAppender;
+    private long lastWrittenIndex = -1;
 
     public StatelessAppender(@NotNull ChronicleQueue chronicleQueue,
                              @NotNull StatelessRawBytesAppender statelessRawBytesAppender) {
@@ -54,22 +55,12 @@ public class StatelessAppender implements ExcerptAppender {
     public void writeDocument(@NotNull Consumer<WireOut> writer) {
         WireOut wire = wire();
         writer.accept(wire);
-        statelessRawBytesAppender.appendExcept(wire.bytes());
-    }
-
-    @Override
-    public boolean nextSynchronous() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void nextSynchronous(boolean nextSynchronous) {
-        throw new UnsupportedOperationException();
+        lastWrittenIndex = statelessRawBytesAppender.appendExcept(wire.bytes());
     }
 
     @Override
     public long lastWrittenIndex() {
-        return chronicleQueue.lastWrittenIndex();
+        return lastWrittenIndex;
     }
 
     @NotNull

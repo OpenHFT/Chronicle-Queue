@@ -889,9 +889,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder selectorSpinLoopCount(int selectorSpinLoopCount) {
-            if(selectorSpinLoopCount < -1) {
-                throw new IllegalArgumentException(
-                        "SelectorSpinLoopCount must be greather or equal to -1");
+            if(selectorSpinLoopCount != -1 && selectorSpinLoopCount <= 0) {
+                throw new IllegalArgumentException("SelectorSpinLoopCount must be greather than 0 or -1 (disabled)");
             }
 
             this.selectorSpinLoopCount = selectorSpinLoopCount;
@@ -904,9 +903,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder readSpinCount(int readSpinCount) {
-            if(selectorSpinLoopCount < -1) {
-                throw new IllegalArgumentException(
-                        "ReadSpinCount must be greather or equal to -1");
+            if(readSpinCount != -1 && readSpinCount <= 0) {
+                throw new IllegalArgumentException("ReadSpinCount must be greather than 0 or -1 (disabled)");
             }
 
             this.readSpinCount = readSpinCount;

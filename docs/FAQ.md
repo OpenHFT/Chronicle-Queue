@@ -77,11 +77,11 @@ The plain Except is slower so only use this is to need random access.
 
 You start by making sure there is enough free spaces with
 
-    appender.startExcerpt(capacity);
+    appender.startExcerpt(maximumLimit);
 
-It doesn't matter to much if the capacity is more than you need as the entry is shrink wrapped at the end.
-Making the capacity too large only matters at the end of a chunk as it can trigger a new chunk to be allocated when perhaps the end of the previous one would have been enough.
-Making the capacity a few KB more than it needs to be will have little measurable difference.
+It doesn't matter to much if the maximumLimit is more than you need as the entry is shrink wrapped at the end.
+Making the maximumLimit too large only matters at the end of a chunk as it can trigger a new chunk to be allocated when perhaps the end of the previous one would have been enough.
+Making the maximumLimit a few KB more than it needs to be will have little measurable difference.
 
 Then you write the text or binary to the excerpt with the variety of RandomDataOutput (binary) or ByteStringAppender (text) methods.
 These are all designed to operate without creating garbage.
@@ -94,7 +94,7 @@ Note: Serializable objects are supported for compatibility and are ok in small d
 Say you want to write to an excerpt later and you don't want shrink wrapping
 
     // don't do this unless you want to pad the excerpts.
-    appender.position(capacity); // tell the appender the whole capacity is needed.
+    appender.position(maximumLimit); // tell the appender the whole maximumLimit is needed.
 
 At this point if the program crashes, the entry is lost. On restart, the entry will be ignored.
 
