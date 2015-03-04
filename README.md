@@ -257,14 +257,15 @@ Now we have the option to automatically generate a concrete class with:
   * DataValueClasses.newDirectReference(Event.class) which reates a concrete implementation of the given interface which need to be supplied with a buffer to write to
 
 #### Write with Direct Instance
+
+When we write to an object created with newDirectInstance we write to an off-heap buffer owned by the generated class itself so we do not write directly to an Excerpt, once done we can write to the Excerpt as usual:  
+
 ```java
 final int items = 100;
 final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
 final Event event = DataValueClasses.newDirectInstance(Event.class);
 
 try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
-    chronicle.clear();
-
     ExcerptAppender appender = chronicle.createAppender();
     for(int i=0; i<items; i++) {
         event.bytes(appender, 0);
@@ -279,20 +280,19 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     }
 
     appender.close();
-
-    process(chronicle, items);
 }
 ```
 
 #### Write with Direct Reference
+
+An object created with newDirectReference does not hold any buffer so we need to provide one which can be an Excerp. By doing so we directly write to the Excerpt's buffer. 
+
 ```java
 final int items = 100;
 final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
 final Event event = DataValueClasses.newDirectReference(Event.class);
 
 try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
-    chronicle.clear();
-
     ExcerptAppender appender = chronicle.createAppender();
     for(int i=0; i<items; i++) {
         appender.startExcerpt(event.maxSize());
@@ -308,12 +308,15 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     }
 
     appender.close();
-
-    process(chronicle, items);
 }
 ```
 
 #### Read with Direct Reference
+
+Reading data from an Excerp via a class generated via newDirectReference is very efficient as 
+  * it does not involve any copy because the de-serialization is performed lazily and only on the needed fileds
+  * you do not have to deal with data offsets as it the code to do so is generated for you by newDirectReference
+
 ```java
 try (ExcerptTailer tailer = chronicle.createTailer()) {
      final Event event = DataValueClasses.newDirectReference(Event.class);
@@ -328,6 +331,57 @@ try (ExcerptTailer tailer = chronicle.createTailer()) {
  ```
             
 ### Reading the Chronicle after a shutdown
+
+Let's say my Chronicle Reader Thread dies. When the reader thread is up again, how do we ensure that the reader will read from the point where he left off? 
+
+here is a number of solutions. You can:
+  * write the results of the message to an output chronicle with with meta data like timings and the source index. If you reread the output to reconstruct your state you can also determine which entry was processed ie. You want to replay any entries read but for which there was no output.
+  * you can record the index of the last entry processed in a ChronicleMap.
+  * you can reread all the entries and check via some other means whether it is a duplicate or not.
+  * you can mark entries on the input, either for load balancing or timestamp in when the entry was read. The last entry read can be found by finding the last entry without a time stamp. You can use the binary search facility to do this efficiently.
+
+
+Example with mark entries as processed and recovery in case of failure:
+```java
+protected static class Reader implements Runnable  {
+    private final Chronicle chronicle;
+    private final int id;
+    private final int type;
+
+    public Reader(final Chronicle chronicle, int id, int type) {
+        this.chronicle = chronicle;
+        this.id = id;
+        this.type = type;
+    }
+
+    @Override
+    public void run() {
+        try (ExcerptTailer tailer = chronicle.createTailer().toStart()) {
+            final Event event = DataValueClasses.newDirectReference(Event.class);
+            while(tailer.nextIndex()) {
+                event.bytes(tailer, 0);
+                if(event.getType() == this.type) {
+                    // Check if the Reader was interrputed before completion
+                    if(event.getOwner() == this.id * 100) {
+                        // Do something with the Event
+                    }
+                    // Try to acquire the Excerpt and mark the event as being processed by this Reader
+                    else if (event.compareAndSwapOwner(0, this.id * 100)) {
+                        // Do something with the Event
+                        
+                        // Mark the event as processed by this Reader
+                        event.compareAndSwapOwner(this.id * 100, this.id);
+                    }
+                }
+
+                tailer.finish();
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
 
 ##  Support
 * [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
