@@ -50,13 +50,12 @@ Chronicle is a Java project focused on building a persisted low latency messagin
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
-In first glance it can be seen as **yet another queue implementation** but it has major design choices that should be emphasized. 
+At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised. 
 
-Using non-heap storage options(RandomAccessFile) Chronicle provides a processing environment where applications does not suffer from GarbageCollection. While implementing high performance and memory-intensive applications ( you heard the fancy term "bigdata"?) in Java; one of the biggest problem is GarbageCollection. GarbageCollection (GC) may slow down your critical operations non-deterministically at any time.. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are addressed. The main idea is to manage your memory manually so does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Using non-heap storage options(RandomAccessFile) Chronicle provides a processing environment where applications do not suffer from GarbageCollection. While implementing high performance and memory-intensive applications ( you heard the fancy term "bigdata"?) in Java; one of the biggest problems is GarbageCollection. GarbageCollection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
 
-Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibility. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
-
-This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap. 
+This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
@@ -193,7 +192,7 @@ Chronicle source = ChronicleQueueBuilder
 
 ### Sink
 
-A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica)
+A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica). 
 
 ```java
 String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-sink"
@@ -213,7 +212,7 @@ Chronicle sink = ChronicleQueueBuilder
 
 ### Remote Tailer
 
-A Remote Tailer is a stateless Sink
+A Remote Tailer is a stateless Sink (it operates in memory)
 
 ```java
 Chronicle chronicle = ChronicleQueueBuilder
@@ -233,6 +232,10 @@ Chronicle chronicle = ChronicleQueueBuilder
 
 ### Off-Heap Data Structures
 
+An Exceprt provide all the low-level primitive to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.   
+
+As example, we want to store some events to Chronicle-Queue so we can write an interface like that:
+
 ```java
 public static interface Event extends Byteable {
     boolean compareAndSwapOwner(int expected, int value);
@@ -249,6 +252,9 @@ public static interface Event extends Byteable {
     long getTimestamp();
 }
 ```   
+Now we have the option to automatically generate a concrete class with:
+  * DataValueClasses.newDirectInstance(Event.class) which creates a concrete implementation of the given interface baked by an off-heap buffer
+  * DataValueClasses.newDirectReference(Event.class) which reates a concrete implementation of the given interface which need to be supplied with a buffer to write to
 
 #### Write with Direct Instance
 ```java
