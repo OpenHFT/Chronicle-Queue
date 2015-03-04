@@ -42,6 +42,8 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
     * [Write with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-reference)
     * [Read with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#read-with-direct-reference)
   * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
+  * [Non blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
+  * [Data Filtering](https://github.com/OpenHFT/Chronicle-Queue#data-filtering)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
@@ -406,6 +408,55 @@ protected static class Reader implements Runnable  {
     }
 }
 ```
+
+### Non blocking Remote Client
+
+On a remote client (Synk or Tailer) nextIndex() waits untill some data is received from the Source before return true or false (in case the client receives an heart-Beat, nextIndex returns false) but sometimes you do not want this behavior, i.e. you want to monitor moultiple chronicles so you can set the number of times the client checks for data before giving up:
+
+```java
+Chronicle[] chronicles = new Chronicle[] {
+    ChronicleQueueBuilder.remoteTailer()
+        .connectAddress("localhost", 1234)
+        .readSpinCount(5)
+        .build(),
+    ChronicleQueueBuilder.remoteTailer()
+        .connectAddress("localhost", 1235)
+        .readSpinCount(5)
+        .build() 
+ };
+ 
+ for(Chronicle chronicle : chronicles) {
+     if(chronicle.nextIndex()) {
+         // do something
+     }
+ }
+```
+If readSpinCount is set to a value greater than zero, the socket channel is configured to be non-blocking and the read operations spins readSpinCount times before giving up if no data is received.
+
+### Data filtering
+
+By default a remote client receives every bit stored on the source but that is something you may not want as a client may be interested in some specific data or even fields
+
+```java
+final Chronicle highLowSink = sink(sinkHighLowBasePath)
+    .withMapping(new new MappingFunction() {
+        @Override
+        public void apply(Bytes from, Bytes to) {
+            // write first long
+            to.writeLong(from.readLong());
+            
+            // skip double
+            from.readDouble();
+            
+            // write double
+            to.writeDouble(from.readDouble());
+        })
+    .connectAddress("localhost", port)
+    .build();
+```
+
+[Example](https://github.com/lburgazzoli/Chronicle-Queue/blob/master/chronicle/src/test/java/net/openhft/chronicle/tcp/WithMappedTest.java)
+
 
 ##  Support
 * [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
