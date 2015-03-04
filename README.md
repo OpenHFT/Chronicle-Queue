@@ -442,20 +442,23 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
     .withMapping(new new MappingFunction() {
         @Override
         public void apply(Bytes from, Bytes to) {
-            // write first long
+            //date
             to.writeLong(from.readLong());
             
-            // skip double
+            //open which we not send out
             from.readDouble();
             
-            // write double
+            // high
+            to.writeDouble(from.readDouble());
+            
+            //low
             to.writeDouble(from.readDouble());
         })
     .connectAddress("localhost", port)
     .build();
 ```
 
-[Example](https://github.com/lburgazzoli/Chronicle-Queue/blob/master/chronicle/src/test/java/net/openhft/chronicle/tcp/WithMappedTest.java)
+[Full example](https://github.com/lburgazzoli/Chronicle-Queue/blob/master/chronicle/src/test/java/net/openhft/chronicle/tcp/WithMappedTest.java)
 
 
 ##  Support
