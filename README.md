@@ -41,6 +41,7 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
     * [Write with Direct Instance](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-instance)
     * [Write with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-reference)
     * [Read with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#read-with-direct-reference)
+    * [Ordering fields of DataValueClasses](https://github.com/OpenHFT/Chronicle-Queue#ordering-fields-of-DataValueClasses)
   * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
   * [Non blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
   * [Data Filtering](https://github.com/OpenHFT/Chronicle-Queue#data-filtering)
@@ -564,7 +565,7 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
 
 
 ##  Support
-* [Chronicle Wiki](https://github.com/OpenHFT/Chronicle-Queue/wiki)
+* [Chronicle FAQ](https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.md)
 * [Chronicle support on StackOverflow](http://stackoverflow.com/tags/chronicle/info)
 * [Chronicle support on Google Groups](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 * [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
