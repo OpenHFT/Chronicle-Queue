@@ -181,12 +181,14 @@ String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-source
 Chronicle source = ChronicleQueueBuilder
     .indexed(basePath + "/new")
     .source()
+    .bindAddress("localhost", 1234)
     .build();
 
 // Wrap an existing Chronicle-Queue
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/wrap")
 Chronicle source = ChronicleQueueBuilder
     .source(chronicle)
+    .bindAddress("localhost", 1234)
     .build();
 ```
 
@@ -201,12 +203,14 @@ String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-sink"
 Chronicle sink = ChronicleQueueBuilder
     .indexed(basePath + "/statefull")
     .sink()
+    .connectAddress("localhost", 1234)
     .build();
     
 // Wrap an existing Chronicle-Queue
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/statefull")
 Chronicle sink = ChronicleQueueBuilder
     .sink(chronicle)
+    .connectAddress("localhost", 1234)
     .build();
 ```
 
@@ -217,14 +221,34 @@ A Remote Tailer is a stateless Sink (it operates in memory)
 ```java
 Chronicle chronicle = ChronicleQueueBuilder
     .remoteTailer()
+    .connectAddress("localhost", 1234)
     .build();
 ```
 
 ### Remote Appender
 
+A Remote Appender is a Chronicle-Queue implementation which supports append excerpt to a Chronicle-Source.
+It is not a full implementation of a Chronicle-Queue as you can only create a single ExcerptAppender.
+
 ```java
 Chronicle chronicle = ChronicleQueueBuilder
     .remoteAppender()
+    .connectAddress("localhost", 1234)
+    .build();
+    
+ExcerptAppender appender.createAppender();
+appender.startExcerpt();
+appender.writeLong(100)
+appender.finish()
+```
+
+The appender can be configured in a fire and forget way (default) or require an ack from the Chronicle Source
+
+```java
+Chronicle chronicle = ChronicleQueueBuilder
+    .remoteAppender()
+    .connectAddress("localhost", 1234)
+    .appendRequireAck(true)
     .build();
 ```
 
