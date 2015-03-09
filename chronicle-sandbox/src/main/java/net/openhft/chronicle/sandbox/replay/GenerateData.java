@@ -8,7 +8,7 @@ import net.openhft.lang.model.DataValueClasses;
 import java.io.IOException;
 
 /**
- * Created by peter on 20/01/15.
+ * Created by peter.lawrey on 20/01/15.
  */
 public class GenerateData {
     /*
