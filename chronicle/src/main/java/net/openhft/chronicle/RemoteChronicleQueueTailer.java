@@ -25,7 +25,7 @@ import java.io.IOException;
 
 class RemoteChronicleQueueTailer extends RemoteChronicleQueue {
     RemoteChronicleQueueTailer(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
-        super(builder, connection, false);
+        super(builder, connection, builder.readSpinCount() > 0 ? false : true);
     }
     
     @Override

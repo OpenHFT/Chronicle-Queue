@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static net.openhft.chronicle.wire.BinaryWire.isDocument;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter on
+ * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on
  * 30/01/15.
  */
 public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {

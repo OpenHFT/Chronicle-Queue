@@ -4,7 +4,7 @@ import net.openhft.lang.model.Byteable;
 import net.openhft.lang.model.constraints.MaxSize;
 
 /**
- * Created by peter on 20/01/15.
+ * Created by peter.lawrey on 20/01/15.
  */
 public interface OffHeapTestData extends Byteable {
     /*

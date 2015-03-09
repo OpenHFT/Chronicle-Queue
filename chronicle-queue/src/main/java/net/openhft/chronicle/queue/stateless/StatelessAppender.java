@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 
 /**
  * todo : currently work in process
- * <p/>
+ *
  * Created by Rob Austin
  */
 public class StatelessAppender implements ExcerptAppender {
