@@ -119,7 +119,7 @@ Creating an instance of Chronicle is a little more complex than just calling a c
 To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
-String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started"
+String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 ```
 
@@ -178,7 +178,7 @@ Chronicle-Queue supports TCP replication with optional filtering so only the req
 
 A Chronicle-Queue Source is the master source of data  
 ```java
-String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-source"
+String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-source"
 
 // Create a new Chronicle-Queue source
 Chronicle source = ChronicleQueueBuilder
@@ -200,7 +200,7 @@ Chronicle source = ChronicleQueueBuilder
 A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica). 
 
 ```java
-String basePath = Syste.getProperty("java.io.tmpdir") + "/getting-started-sink"
+String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-sink"
 
 // Create a new Chronicle-Queue sink
 Chronicle sink = ChronicleQueueBuilder
