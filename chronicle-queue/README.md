@@ -15,13 +15,13 @@ Releases are available on maven central as
 <dependency>
   <groupId>net.openhft</groupId>
   <artifactId>chronicle</artifactId>
-  <version><!--replace with the latest version, see below--></version>
+  <version><!--replace with the latest version--></version>
 </dependency>
 ```
-Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle)
 
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22)
 
 
 ### Contents
@@ -49,37 +49,37 @@ Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repos
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ## Overview
-Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications. 
+Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
-At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised. 
+At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
 Using non-heap storage options(RandomAccessFile) Chronicle provides a processing environment where applications do not suffer from GarbageCollection. While implementing high performance and memory-intensive applications ( you heard the fancy term "bigdata"?) in Java; one of the biggest problems is GarbageCollection. GarbageCollection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
-Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
+Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
 ## Building Blocks
-Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface. 
+Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface.
 
 Chronicle has three main concepts:
   * Tailer (sequential reads)
   * Excerpt (random reads)
   * Appender (sequential writes).
 
-An Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing Excerpt at the end. 
+An Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing Excerpt at the end.
 A Tailer is an Excerpt optimized for sequential reads.
-An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle. 
+An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle.
 
 ## Chronicle Queue V3
 
-Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations. 
+Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations.
 
-### IndexedChronicle 
-IndexedChronicle is a single writer multiple reader Chronicle. 
+### IndexedChronicle
+IndexedChronicle is a single writer multiple reader Chronicle.
 
 For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
 
@@ -89,7 +89,7 @@ base-directory /
     name.data
 ```
 
-### VanillaChronicle 
+### VanillaChronicle
 Vanilla Chronicle is a designed for more features rather than just speed and it supports:
  - rolling files on a daily, weekly or hourly basis.
  - concurrent writers on the same machine.
@@ -98,7 +98,7 @@ Vanilla Chronicle is a designed for more features rather than just speed and it 
  - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
  - synchronous persistence as required. (commit to disk before continuing)
  - exact length of entries
- 
+
 The directory structure is as follows.
 
 ```
@@ -115,7 +115,7 @@ This is used to avoid seeing regular data as a length and detect corruption.  Th
 ## Getting Started
 
 ### Chronicle Construction
-Creating an instance of Chronicle is a little more complex than just calling a constructor. 
+Creating an instance of Chronicle is a little more complex than just calling a constructor.
 To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
@@ -133,13 +133,13 @@ ${java.io.tmpdir}/getting-started.data
 // Obtain an ExcerptAppender
 ExcerptAppender appender = chronicle.createAppender();
 
-// Configure the appender to write up to 100 bytes 
-appender.startExcerpt(100); 
+// Configure the appender to write up to 100 bytes
+appender.startExcerpt(100);
 
-// Copy the content of the Object as binary 
+// Copy the content of the Object as binary
 appender.writeObject("TestMessage");
 
-// Commit 
+// Commit
 appender.finish();
 ```
 
@@ -170,13 +170,13 @@ chronicle.close();
 
 ## Replication
 
-Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements. 
+Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements.
 
 ![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
 ### Source
 
-A Chronicle-Queue Source is the master source of data  
+A Chronicle-Queue Source is the master source of data
 ```java
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-source"
 
@@ -197,7 +197,7 @@ Chronicle source = ChronicleQueueBuilder
 
 ### Sink
 
-A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica). 
+A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica).
 
 ```java
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-sink"
@@ -208,7 +208,7 @@ Chronicle sink = ChronicleQueueBuilder
     .sink()
     .connectAddress("localhost", 1234)
     .build();
-    
+
 // Wrap an existing Chronicle-Queue
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/statefull")
 Chronicle sink = ChronicleQueueBuilder
@@ -238,7 +238,7 @@ Chronicle chronicle = ChronicleQueueBuilder
     .remoteAppender()
     .connectAddress("localhost", 1234)
     .build();
-    
+
 ExcerptAppender appender.createAppender();
 appender.startExcerpt();
 appender.writeLong(100)
@@ -259,7 +259,7 @@ Chronicle chronicle = ChronicleQueueBuilder
 
 ### Off-Heap Data Structures
 
-An Exceprt provide all the low-level primitive to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.   
+An Exceprt provide all the low-level primitive to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.
 
 As example, we want to store some events to Chronicle-Queue so we can write an interface like that:
 
@@ -278,14 +278,14 @@ public static interface Event extends Byteable {
     void setTimestamp(long timestamp);
     long getTimestamp();
 }
-```   
+```
 Now we have the option to automatically generate a concrete class with:
   * DataValueClasses.newDirectInstance(Event.class) which creates a concrete implementation of the given interface baked by an off-heap buffer
   * DataValueClasses.newDirectReference(Event.class) which reates a concrete implementation of the given interface which need to be supplied with a buffer to write to
 
 #### Write with Direct Instance
 
-When we write to an object created with newDirectInstance we write to an off-heap buffer owned by the generated class itself so we do not write directly to an Excerpt, once done we can write to the Excerpt as usual:  
+When we write to an object created with newDirectInstance we write to an off-heap buffer owned by the generated class itself so we do not write directly to an Excerpt, once done we can write to the Excerpt as usual:
 
 ```java
 final int items = 100;
@@ -312,7 +312,7 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
 
 #### Write with Direct Reference
 
-An object created with newDirectReference does not hold any buffer so we need to provide one which can be an Excerp. By doing so we directly write to the Excerpt's buffer. 
+An object created with newDirectReference does not hold any buffer so we need to provide one which can be an Excerp. By doing so we directly write to the Excerpt's buffer.
 
 ```java
 final int items = 100;
@@ -340,7 +340,7 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
 
 #### Read with Direct Reference
 
-Reading data from an Excerp via a class generated via newDirectReference is very efficient as 
+Reading data from an Excerp via a class generated via newDirectReference is very efficient as
   * it does not involve any copy because the de-serialization is performed lazily and only on the needed fileds
   * you do not have to deal with data offsets as it the code to do so is generated for you by newDirectReference
 
@@ -359,7 +359,7 @@ try (ExcerptTailer tailer = chronicle.createTailer()) {
 
 
 #### Ordering fields of DataValueClasses
- 
+
 ![](http://openhft.net/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
 
 By default when classes generated via DataValueClasses are serialized, their fields will be ordered by field size ( smallest first ), however sometimes, especially when you add new fields, you may not want new small fields to be serialize towards the top, You may wish to preserve the existing order of your fields, you can do this by using the @Group annotation to each method. The serialization order of the fields are determined by adding @Group to the set() method, If you wish you can have a number of different methods with the same value in @Group(), Methods with the same value continue to be ordered by size ( smallest first).
@@ -442,7 +442,7 @@ public class GroupTest {
             Assert.assertEquals("Hello World", baseInterface.getStr());
         }
     }
-    
+
     public interface BaseInterface {
         String getStr();
         void setStr(@MaxSize(15) String str);
@@ -461,7 +461,7 @@ public class GroupTest {
 
 ### Reading the Chronicle after a shutdown
 
-Let's say my Chronicle Reader Thread dies. When the reader thread is up again, how do we ensure that the reader will read from the point where he left off? 
+Let's say my Chronicle Reader Thread dies. When the reader thread is up again, how do we ensure that the reader will read from the point where he left off?
 
 here is a number of solutions. You can:
   * write the results of the message to an output chronicle with with meta data like timings and the source index. If you reread the output to reconstruct your state you can also determine which entry was processed ie. You want to replay any entries read but for which there was no output.
@@ -497,7 +497,7 @@ protected static class Reader implements Runnable  {
                     // Try to acquire the Excerpt and mark the event as being processed by this Reader
                     else if (event.compareAndSwapOwner(0, this.id * 100)) {
                         // Do something with the Event
-                        
+
                         // Mark the event as processed by this Reader
                         event.compareAndSwapOwner(this.id * 100, this.id);
                     }
@@ -525,9 +525,9 @@ Chronicle[] chronicles = new Chronicle[] {
     ChronicleQueueBuilder.remoteTailer()
         .connectAddress("localhost", 1235)
         .readSpinCount(5)
-        .build() 
+        .build()
  };
- 
+
  for(Chronicle chronicle : chronicles) {
      if(chronicle.nextIndex()) {
          // do something
@@ -547,13 +547,13 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
         public void apply(Bytes from, Bytes to) {
             //date
             to.writeLong(from.readLong());
-            
+
             //open which we not send out
             from.readDouble();
-            
+
             // high
             to.writeDouble(from.readDouble());
-            
+
             //low
             to.writeDouble(from.readDouble());
         })
@@ -569,3 +569,17 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
 * [Chronicle support on StackOverflow](http://stackoverflow.com/tags/chronicle/info)
 * [Chronicle support on Google Groups](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 * [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
+
+
+# Questions and Answers
+
+#### Question
+I got this login info. I don’t know what it means!
+ 18:59:45.860 INFO  net.openhft.chronicle.map.VanillaChronicleMap [1668] - Thread took 100ms to release the lock, (Was there a GC?)
+#### Answer
+The locking mechanism detects when you take a long time to get a lock. This means either;
+-  you had a GC which paused the jvm. If you add to the command line -verbose:gc you will see if this is the case
+- you are writing at a high rate which has resulted in some blocking paging/IO operation. You can monitor this in Unix with atop. Look for heavy write activity. You can tune the kernel to reduce the impact.
+- you are performing a long operation while holding a lock (Unlikely in your case)
+
+---

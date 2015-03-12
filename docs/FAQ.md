@@ -210,3 +210,18 @@ Where XML or JSon is neede down stream, I suggest writing in binary format and h
 
 It does, clone() a ChronicleConfig you like, e.g. DEFAULT and set synchronousMode(true).
 This will force() a persistence for every finish().  What this does is likely to be OS platform dependant.
+
+
+## Thread took 100ms to release the lock, (Was there a GC?)
+####  Question
+I got this login info. I don’t know what it means! 
+
+```
+18:59:45.860 INFO net.openhft.chronicle.map.VanillaChronicleMap [1668] - Thread took 100ms to release the lock, (Was there a GC?)
+```
+#### Answer
+The locking mechanism detects when you take a long time to get a lock. This means either;
+
+you had a GC which paused the jvm. If you add to the command line -verbose:gc you will see if this is the case
+you are writing at a high rate which has resulted in some blocking paging/IO operation. You can monitor this in Unix with atop. Look for heavy write activity. You can tune the kernel to reduce the impact.
+you are performing a long operation while holding a lock (Unlikely in your case)
