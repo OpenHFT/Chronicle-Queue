@@ -216,10 +216,10 @@ This will force() a persistence for every finish().  What this does is likely to
 ####  Question
 I got this login info. I don’t know what it means! 
 
-{code}
+```
 18:59:45.860 INFO net.openhft.chronicle.map.VanillaChronicleMap [1668] - Thread took 100ms to release the lock, (Was there a GC?)
 {code}
-####  Answer
+```
 
 The locking mechanism detects when you take a long time to get a lock. This means either;
 
