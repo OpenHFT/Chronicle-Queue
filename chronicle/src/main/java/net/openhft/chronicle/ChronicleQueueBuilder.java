@@ -94,6 +94,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         private boolean synchronous;
         private boolean useCheckedExcerpt;
+        private boolean useCompressedObjectSerializer;
 
         private int cacheLineSize;
         private int dataBlockSize;
@@ -111,6 +112,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.path = path;
             this.synchronous = false;
             this.useCheckedExcerpt = false;
+            this.useCompressedObjectSerializer = true;
             this.cacheLineSize = 64;
             this.dataBlockSize = Jvm.is64Bit() ? 128 * 1024 * 1024 : 16 * 1024 * 1024;
             this.indexBlockSize = Math.max(4096, this.dataBlockSize / 4);
@@ -156,6 +158,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          */
         public boolean useCheckedExcerpt() {
             return this.useCheckedExcerpt;
+        }
+
+        public boolean useCompressedObjectSerializer() {
+            return this.useCompressedObjectSerializer;
+        }
+
+        public IndexedChronicleQueueBuilder useCompressedObjectSerializer(boolean useCompressedObjectSerializer) {
+            this.useCompressedObjectSerializer = useCompressedObjectSerializer;
+            return this;
         }
 
         /**
@@ -335,6 +346,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         private boolean synchronous;
         private boolean useCheckedExcerpt;
+        private boolean useCompressedObjectSerializer;
 
         private String cycleFormat;
         private int cycleLength;
@@ -359,6 +371,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.dataBlockSize = 64L << 20; // 64 MB
             this.entriesPerCycle = 1L << 40; // one trillion per day or per hour.
             this.cleanupOnClose = false;
+            this.useCompressedObjectSerializer = true;
         }
 
         protected File path() {
@@ -400,6 +413,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          */
         public boolean useCheckedExcerpt() {
             return this.useCheckedExcerpt;
+        }
+
+        public boolean useCompressedObjectSerializer() {
+            return this.useCompressedObjectSerializer;
+        }
+
+        public VanillaChronicleQueueBuilder useCompressedObjectSerializer(boolean useCompressedObjectSerializer) {
+            this.useCompressedObjectSerializer = useCompressedObjectSerializer;
+            return this;
         }
 
         public VanillaChronicleQueueBuilder cycleFormat(String cycleFormat) {
