@@ -219,7 +219,7 @@ I got this login info. I don’t know what it means!
 ```
 18:59:45.860 INFO net.openhft.chronicle.map.VanillaChronicleMap [1668] - Thread took 100ms to release the lock, (Was there a GC?)
 ```
-
+#### Answer
 The locking mechanism detects when you take a long time to get a lock. This means either;
 
 you had a GC which paused the jvm. If you add to the command line -verbose:gc you will see if this is the case
