@@ -218,7 +218,6 @@ I got this login info. I don’t know what it means!
 
 ```
 18:59:45.860 INFO net.openhft.chronicle.map.VanillaChronicleMap [1668] - Thread took 100ms to release the lock, (Was there a GC?)
-{code}
 ```
 
 The locking mechanism detects when you take a long time to get a lock. This means either;
