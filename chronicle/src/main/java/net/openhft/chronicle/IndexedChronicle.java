@@ -23,6 +23,7 @@ import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBlocks;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
+import net.openhft.lang.io.serialization.JDKObjectSerializer;
 import net.openhft.lang.io.serialization.JDKZObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
@@ -357,7 +358,9 @@ public class IndexedChronicle implements Chronicle {
             super(
                 BytesMarshallableSerializer.create(
                     new VanillaBytesMarshallerFactory(),
-                    JDKZObjectSerializer.INSTANCE),
+                    builder.useCompressedObjectSerializer()
+                            ? JDKZObjectSerializer.INSTANCE
+                            : JDKObjectSerializer.INSTANCE),
                 NO_PAGE,
                 NO_PAGE,
                 null

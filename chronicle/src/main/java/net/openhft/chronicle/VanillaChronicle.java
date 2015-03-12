@@ -26,6 +26,7 @@ import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.serialization.BytesMarshallableSerializer;
+import net.openhft.lang.io.serialization.JDKObjectSerializer;
 import net.openhft.lang.io.serialization.JDKZObjectSerializer;
 import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
@@ -136,7 +137,10 @@ public class VanillaChronicle implements Chronicle {
         if (serializer == null) {
             serializer = BytesMarshallableSerializer.create(
                 new VanillaBytesMarshallerFactory(),
-                JDKZObjectSerializer.INSTANCE);
+                builder.useCompressedObjectSerializer()
+                    ? JDKZObjectSerializer.INSTANCE
+                    : JDKObjectSerializer.INSTANCE
+            );
 
             marshallersCache.set(new WeakReference<>(serializer));
         }
@@ -283,8 +287,7 @@ public class VanillaChronicle implements Chronicle {
     //
     // *************************************************************************
 
-    private abstract class AbstractVanillaExcerpt extends NativeBytes implements
-            VanillaExcerptCommon {
+    private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
