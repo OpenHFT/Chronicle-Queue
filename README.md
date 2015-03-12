@@ -15,13 +15,13 @@ Releases are available on maven central as
 <dependency>
   <groupId>net.openhft</groupId>
   <artifactId>chronicle</artifactId>
-  <version><!--replace with the latest version--></version>
+  <version><!--replace with the latest version, see below--></version>
 </dependency>
 ```
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle)
 
-Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
 
 
 ### Contents
