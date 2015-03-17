@@ -30,7 +30,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>chronicle-test</artifactId>
-    <version>3.4.2-SNAPSHOT</version>
+    <version>3.4.3-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHFT/Chronicle-Queue/chronicle-test</name>
