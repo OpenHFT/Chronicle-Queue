@@ -17,14 +17,8 @@
  */
 package vanilla.java.tutorial;
 
-import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.ExcerptAppender;
-
-import static net.openhft.lang.model.DataValueClasses.newDirectInstance;
-
 public class OffHeapDirectInstance extends OffHeapHelper {
-
+/*
     public static void main(String[] ignored) throws Exception {
         final int items = 100;
         final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
@@ -50,5 +44,5 @@ public class OffHeapDirectInstance extends OffHeapHelper {
 
             process(chronicle, items);
         }
-    }
+    }*/
 }
