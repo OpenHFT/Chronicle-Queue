@@ -22,8 +22,7 @@ import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
@@ -37,7 +36,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     @Nullable
     public WireIn wire();
 
-    public <T> boolean readDocument(Function<WireIn, T> reader);
+    public boolean readDocument(Consumer<WireIn> reader);
 
     /**
      * Randomly select an Excerpt.

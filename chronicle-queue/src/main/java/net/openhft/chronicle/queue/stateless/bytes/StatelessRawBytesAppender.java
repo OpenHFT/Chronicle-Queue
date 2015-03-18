@@ -1,9 +1,8 @@
 package net.openhft.chronicle.queue.stateless.bytes;
 
-import net.openhft.lang.io.Bytes;
+import net.openhft.chronicle.bytes.Bytes;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 /**

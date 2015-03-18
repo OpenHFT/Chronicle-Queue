@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
-import net.openhft.lang.Jvm;
-import net.openhft.lang.io.Bytes;
+import net.openhft.chronicle.bytes.Bytes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +38,7 @@ public class BytesRingBuffer {
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
-    public BytesRingBuffer(@NotNull final Bytes buffer) throws Exception {
+    public BytesRingBuffer(@NotNull final Bytes buffer) {
         this.header = new Header(buffer);
         this.bytes = new RingBuffer(buffer);
         header.setWriteUpTo(bytes.capacity());
@@ -209,14 +208,13 @@ public class BytesRingBuffer {
         /**
          * @param buffer the bytes for the header
          */
-        private Header(@NotNull Bytes buffer) throws Exception {
+        private Header(@NotNull Bytes buffer) {
 
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
                 throw new IllegalStateException(message);
             }
 
-            long start = buffer.position();
             readLocationOffset = buffer.position();
             buffer.skip(8);
 
@@ -226,23 +224,12 @@ public class BytesRingBuffer {
             writeUpToOffset = buffer.position();
             buffer.skip(8);
 
-            this.buffer = buffer.bytes(start, buffer.position());
+            this.buffer = buffer.bytes();
 
         }
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-
-            if (Jvm.vmSupportsCS8())
-                return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
-            synchronized (this) {
-                if (expectedValue == getWriteLocation()) {
-                    setWriteLocation(newValue);
-                    return true;
-                }
-                return false;
-
-            }
-
+            return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
         private void setWriteLocation(long value) {
@@ -288,7 +275,7 @@ public class BytesRingBuffer {
         final boolean isBytesBigEndian;
 
         public RingBuffer(@NotNull Bytes buffer) {
-            this.buffer = buffer.bytes(buffer.position(), buffer.remaining());
+            this.buffer = buffer.bytes();
             isBytesBigEndian = buffer.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 

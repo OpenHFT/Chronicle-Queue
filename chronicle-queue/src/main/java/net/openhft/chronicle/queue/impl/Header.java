@@ -1,15 +1,13 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
-import net.openhft.lang.io.DirectStore;
-import net.openhft.lang.values.LongValue;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
-
-import static net.openhft.lang.model.DataValueClasses.newDirectInstance;
 
 /**
  * Data structure to bind to an off heap representation.  This is required to support persistence
@@ -27,9 +25,9 @@ class Header implements Marshallable {
     int indexSpacing = 64;
 
     // support binding to off heap memory with thread safe operations.
-    final LongValue writeByte = newDirectInstance(LongValue.class);
-    final LongValue index2Index = newDirectInstance(LongValue.class);
-    final LongValue lastIndex = newDirectInstance(LongValue.class);
+    LongValue writeByte = null;
+    LongValue index2Index = null;
+    LongValue lastIndex = null;
 
     {
         lastIndex.setValue(-1);
@@ -70,14 +68,14 @@ class Header implements Marshallable {
     @Override
     public void readMarshallable(@NotNull WireIn in) {
         in.read(Field.uuid).uuid(u -> uuid = u)
-                .read(Field.writeByte).int64(writeByte)
+                .read(Field.writeByte).int64(writeByte, x -> writeByte = x)
                 .read(Field.created).zonedDateTime(c -> created = c)
                 .read(Field.user).text(u -> user = u)
                 .read(Field.host).text(h -> host = h)
                 .read(Field.compression).text(h -> compression = h)
                 .read(Field.indexCount).int32(h -> indexCount = h)
                 .read(Field.indexSpacing).int32(h -> indexSpacing = h)
-                .read(Field.index2Index).int64(index2Index);
+                .read(Field.index2Index).int64(index2Index, x -> index2Index = x);
     }
 
     public long getWriteByte() {
@@ -91,8 +89,8 @@ class Header implements Marshallable {
     public static void main(String... args) {
         Header h = new Header();
         h.init(Compression.NONE);
-        TextWire tw = new TextWire(new DirectStore(1024).bytes());
-        tw.writeDocument(() -> tw.write("header", null).writeMarshallable(h));
+        TextWire tw = new TextWire(NativeBytes.nativeBytes());
+        tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
         System.out.println(tw.bytes().flip().toString());
 
     }

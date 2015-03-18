@@ -1,20 +1,13 @@
 package net.openhft.chronicle.queue;
 
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
-import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.DirectStore;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -24,74 +17,62 @@ import static org.junit.Assert.assertEquals;
 public class BytesRingBufferTest {
 
 
-    Bytes output;
-    Bytes input = ByteBufferBytes.wrap(ByteBuffer.allocate(22));
+    Bytes<ByteBuffer> input = Bytes.wrap(ByteBuffer.allocate(22));
+    Bytes<ByteBuffer> output;
     private final String EXPECTED = "hello world";
 
     @Before
     public void setup() {
-        final Bytes out =   ByteBufferBytes.wrap(ByteBuffer.allocate(22));
-        out.writeUTF(EXPECTED);
-        output = out.flip().slice();
+        final Bytes<ByteBuffer> out = Bytes.wrap(ByteBuffer.allocate(22));
+        out.writeUTFΔ(EXPECTED);
+        output = out.flip().bytes();
     }
 
     @Test
-    public void testSimpledSingleThreadedWriteRead() throws Exception {
+    public void testSimpledSingleThreadedWriteRead() throws InterruptedException {
 
-        try (DirectStore allocate = DirectStore.allocate(150)) {
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
+        final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(NativeBytes.nativeBytes());
 
             bytesRingBuffer.offer(output.clear());
             Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
-            assertEquals(EXPECTED, actual.readUTF());
-        }
+        assertEquals(EXPECTED, actual.readUTFΔ());
     }
 
     @Test
     public void testPollWithNoData() throws Exception {
-        try (DirectStore allocate = DirectStore.allocate(150)) {
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
+        final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(NativeBytes.nativeBytes());
 
             Bytes actual = bytesRingBuffer.poll(maxSize -> input.clear());
             assertEquals(null, actual);
-        }
     }
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (DirectStore allocate = DirectStore.allocate(150)) {
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
+        final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(NativeBytes.nativeBytes());
             bytesRingBuffer.offer(output.clear());
             Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
-            assertEquals(EXPECTED, actual.readUTF());
-        }
+        assertEquals(EXPECTED, actual.readUTFΔ());
     }
 
 
     @Test
-    public void testFlowAroundSingleThreadedWriteDiffrentSizeBuffers() throws Exception {
+    public void testFlowAroundSingleThreadedWriteDiffrentSizeBuffers() {
 
         for (int j = 23 + 34; j < 100; j++) {
-            try (DirectStore allocate = DirectStore.allocate(j)) {
-
-                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(NativeBytes.nativeBytes());
 
                 for (int i = 0; i < 50; i++) {
                     bytesRingBuffer.offer(output.clear());
-                    assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTF());
+                    assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
                 }
             }
         }
     }
 
     @Test
-    public void testWrite3read3SingleThreadedWrite() throws Exception {
+    public void testWrite3read3SingleThreadedWrite() {
 
-        try (DirectStore allocate = DirectStore.allocate(40 * 3)) {
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
+        final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(NativeBytes.nativeBytes());
             for (int i = 0; i < 100; i++) {
                 bytesRingBuffer.offer(output.clear());
                 bytesRingBuffer.offer(output.clear());

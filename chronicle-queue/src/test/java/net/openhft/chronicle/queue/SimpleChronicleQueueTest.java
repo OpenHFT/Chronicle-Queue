@@ -1,9 +1,9 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.chronicle.queue.impl.Indexer;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.lang.io.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,7 +70,6 @@ public class SimpleChronicleQueueTest {
                 Bytes bytes1 = wireIn.bytes();
                 long remaining = bytes1.remaining();
                 bytes1.skip(remaining);
-                return null;
             });
         }
 

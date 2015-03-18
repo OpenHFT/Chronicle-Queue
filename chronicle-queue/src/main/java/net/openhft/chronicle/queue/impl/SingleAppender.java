@@ -1,12 +1,12 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.DirectStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,7 +21,7 @@ public class SingleAppender implements ExcerptAppender {
     private final DirectChronicleQueue chronicle;
     @Nullable
     private final ChronicleWireOut wireOut;
-    private final Bytes buffer = DirectStore.allocateLazy(128 * 1024).bytes();
+    private final Bytes buffer = NativeBytes.nativeBytes();
     private final Wire wire = new BinaryWire(buffer);
 
     private long lastWrittenIndex = -1;

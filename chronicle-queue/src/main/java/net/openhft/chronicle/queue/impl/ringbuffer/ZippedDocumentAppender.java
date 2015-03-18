@@ -1,9 +1,8 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.network.internal.NamedThreadFactory;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
-import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.thread.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +89,14 @@ public class ZippedDocumentAppender implements Closeable {
         private byte[] output = new byte[]{};
 
         @NotNull
-        private Bytes inputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
+        private Bytes<ByteBuffer> inputBuffer = Bytes.wrap(ByteBuffer.wrap(input));
 
         @NotNull
-        private Bytes outputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
+        private Bytes<ByteBuffer> outputBuffer = Bytes.wrap(ByteBuffer.wrap(input));
 
         private Consumer() {
             this.input = new byte[]{};
-            this.inputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
+            this.inputBuffer = Bytes.wrap(ByteBuffer.wrap(input));
         }
 
         @Override
@@ -146,10 +145,10 @@ public class ZippedDocumentAppender implements Closeable {
 
             // resize the buffers
             this.input = new byte[(int) maxSize];
-            this.inputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(input));
+            this.inputBuffer = Bytes.wrap(ByteBuffer.wrap(input));
 
             this.output = new byte[(int) maxSize];
-            this.outputBuffer = ByteBufferBytes.wrap(ByteBuffer.wrap(output));
+            this.outputBuffer = Bytes.wrap(ByteBuffer.wrap(output));
 
             return inputBuffer;
         }

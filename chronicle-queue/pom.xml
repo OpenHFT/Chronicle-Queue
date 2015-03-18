@@ -47,13 +47,8 @@
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>lang</artifactId>
-                <version>6.6.1</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
                 <artifactId>chronicle-wire</artifactId>
-                <version>1.0.0-alpha-SNAPSHOT</version>
+                <version>1.0.1-alpha-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
@@ -69,12 +64,6 @@
     </dependencyManagement>
 
     <dependencies>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>lang</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-network</artifactId>

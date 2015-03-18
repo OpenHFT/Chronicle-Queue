@@ -1,11 +1,14 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStoreBytes;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.lang.Jvm;
-import net.openhft.lang.io.*;
-import net.openhft.lang.values.LongValue;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.wire.BinaryWire.isDocument;
+import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on
@@ -45,7 +48,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
     @NotNull
     private final MappedFile mappedFile;
-    private final MappedMemory headerMemory;
+    private final Bytes headerMemory;
     private final Header header = new Header();
     @NotNull
     private final ChronicleWire wire;
@@ -54,12 +57,10 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     private long firstBytes = -1;
 
     public SingleChronicleQueue(String filename, long blockSize) throws IOException {
-        mappedFile = new MappedFile(filename, blockSize);
+        mappedFile = MappedFile.mappedFile(filename, blockSize);
 
-        MappedNativeBytes mappedNativeBytes = new MappedNativeBytes(mappedFile, false);
-
-        headerMemory = mappedFile.acquire(0);
-        bytes = mappedNativeBytes;
+        headerMemory = mappedFile.acquireBytes(0);
+        bytes = mappedFile.bytes();
         wire = new ChronicleWire(new BinaryWire(bytes));
         initialiseHeader();
     }
@@ -72,14 +73,15 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         for (; ; ) {
             int length = bytes.readVolatileInt(lastByte);
             int length2 = length30(length);
-            if (BinaryWire.isReady(length)) {
+            if (Wires.isReady(length)) {
                 lastByte += 4;
                 buffer.write(bytes, lastByte, length2);
                 lastByte += length2;
                 offset.set(lastByte);
-                return isDocument(length);
+                return isData(length);
             }
-            Jvm.checkInterrupted();
+            if (Thread.currentThread().isInterrupted())
+                return false;
         }
     }
 
@@ -98,9 +100,9 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     @Override
-    public boolean index(long index, @NotNull MultiStoreBytes bytes) {
+    public boolean index(long index, @NotNull BytesStoreBytes bytes) {
         if (index == -1) {
-            bytes.storePositionAndSize(headerMemory, HEADER_OFFSET, headerMemory.size() - HEADER_OFFSET);
+            bytes.setByteStore(headerMemory, HEADER_OFFSET, headerMemory.length() - HEADER_OFFSET);
             return true;
         }
         return false;
@@ -126,7 +128,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         waitForTheHeaderToBeBuilt(bytes);
 
         bytes.position(HEADER_OFFSET);
-        wire.readMetaData($ -> wire.read().readMarshallable(header));
+        wire.readDocument($ -> wire.read().marshallable(header), null);
         firstBytes = bytes.position();
     }
 
@@ -152,8 +154,8 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         // skip the magic number.
         bytes.position(HEADER_OFFSET);
 
-        wire.writeMetaData(() -> wire
-                .write(MetaDataKey.header).writeMarshallable(header.init(Compression.NONE)));
+        wire.writeDocument(true, w -> w
+                .write(MetaDataKey.header).marshallable(header.init(Compression.NONE)));
 
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
             throw new AssertionError("Concurrent writing of the header");
@@ -269,7 +271,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     long newIndex() {
 
         long indexSize = 1L << 17L;
-
         try (DirectStore allocate = DirectStore.allocate(6)) {
 
             final DirectBytes buffer = allocate.bytes();
@@ -328,7 +329,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             bytes.skip(length2);
             Jvm.checkInterrupted();
         }
-
     }
 
 }

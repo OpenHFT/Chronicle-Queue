@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle.queue.stateless;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -25,7 +26,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.stateless.bytes.StatelessRawBytesAppender;
 import net.openhft.chronicle.queue.stateless.bytes.StatelessRawBytesTailer;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

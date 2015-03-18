@@ -1,16 +1,16 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.BytesStoreBytes;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.io.MultiStoreBytes;
-import net.openhft.lang.model.DataValueClasses;
-import net.openhft.lang.values.LongValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
@@ -23,7 +23,7 @@ public class SingleTailer implements ExcerptTailer {
     @NotNull
     private final SingleChronicleQueue chronicle;
     long index;
-    private final MultiStoreBytes bytes = new MultiStoreBytes();
+    private final BytesStoreBytes bytes = new BytesStoreBytes(null);
     private final Wire wire = new BinaryWire(bytes);
 
     public SingleTailer(ChronicleQueue chronicle) {
@@ -38,8 +38,8 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public <T> boolean readDocument(Function<WireIn, T> reader) {
-        wire.readDocument(reader);
+    public boolean readDocument(Consumer<WireIn> reader) {
+        wire.readDocument(null, reader);
         return true;
     }
 
@@ -124,7 +124,6 @@ public class SingleTailer implements ExcerptTailer {
                 return true;
             }
         }
-
         return false;
 
     }

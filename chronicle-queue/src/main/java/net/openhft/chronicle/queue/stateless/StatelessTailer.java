@@ -18,14 +18,15 @@
 
 package net.openhft.chronicle.queue.stateless;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.stateless.bytes.StatelessRawBytesTailer;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -62,8 +63,8 @@ public class StatelessTailer implements ExcerptTailer {
     }
 
     @Override
-    public <T> boolean readDocument(@NotNull Function<WireIn, T> reader) {
-        reader.apply(wire());
+    public boolean readDocument(@NotNull Consumer<WireIn> reader) {
+        reader.accept(wire());
         return true;
     }
 

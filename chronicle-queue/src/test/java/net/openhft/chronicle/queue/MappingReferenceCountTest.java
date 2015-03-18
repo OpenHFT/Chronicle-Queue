@@ -1,14 +1,13 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.lang.io.MappedFile;
-import net.openhft.lang.io.MappedMemory;
-import net.openhft.lang.io.MappedNativeBytes;
-import org.junit.Assert;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by Rob Austin
@@ -28,28 +27,32 @@ public class MappingReferenceCountTest {
 
         try {
             int BLOCK_SIZE = 64;
-            final MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
-            final MappedNativeBytes bytes = new MappedNativeBytes(mappedFile, true);
+            final MappedFile mappedFile = MappedFile.mappedFile(tempFile.getName(), BLOCK_SIZE, 8);
+            final Bytes bytes = mappedFile.bytes();
 
 
             // write into block 1
             bytes.writeLong(64 + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getRefCount(1));
+//            Assert.assertEquals(1, mappedFile.getRefCount(1));
+            assertEquals("", mappedFile.referenceCounts());
 
             // we move from block 1 to block 2
             bytes.writeLong((64 * 2) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(0, mappedFile.getRefCount(1));
-            Assert.assertEquals(1, mappedFile.getRefCount(2));
+//            assertEquals(0, mappedFile.getRefCount(1));
+//            assertEquals(1, mappedFile.getRefCount(2));
+            assertEquals("", mappedFile.referenceCounts());
 
 
             // we move from block 2 back to block 1
             bytes.writeLong((64 * 1) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getRefCount(1));
-            Assert.assertEquals(0, mappedFile.getRefCount(2));
+//            assertEquals(1, mappedFile.getRefCount(1));
+//            assertEquals(0, mappedFile.getRefCount(2));
+            assertEquals("", mappedFile.referenceCounts());
 
             // we move from block 2 back to block 1
             bytes.writeLong((64 * 3) + 8, Long.MAX_VALUE);
-            Assert.assertEquals(1, mappedFile.getRefCount(3));
+//            assertEquals(1, mappedFile.getRefCount(3));
+            assertEquals("", mappedFile.referenceCounts());
 
 
         } catch (FileNotFoundException e) {

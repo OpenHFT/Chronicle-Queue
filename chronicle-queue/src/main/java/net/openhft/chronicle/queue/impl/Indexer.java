@@ -1,12 +1,9 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.BUILDING;
 import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.UNINITIALISED;
@@ -34,16 +31,12 @@ public class Indexer {
 
             final long index = i;
 
-            final Function<WireIn, Object> reader = wireIn -> {
 
+            tailer.readDocument(wireIn -> {
                 long address = wireIn.bytes().position() - 4;
                 recordAddress(index, address, single, index2Index);
                 wireIn.bytes().skip(wireIn.bytes().remaining());
-                return null;
-            };
-
-
-            tailer.readDocument(reader);
+            });
 
         }
     }

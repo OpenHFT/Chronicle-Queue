@@ -1,21 +1,11 @@
 package simple;
 
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MappedFile;
-import net.openhft.lang.io.MappedMemory;
-import net.openhft.lang.model.Byteable;
-import net.openhft.lang.model.DataValueClasses;
-import net.openhft.lang.values.LongValue;
-
-import java.io.File;
-import java.io.IOException;
-
 /**
  * Created by peter.lawrey on 02/02/15.
  */
 public class WriterMain {
     static final int CHUNK_BITS = 26;
-
+/*
     public static void main(String[] args) throws IOException {
         int dataSize = 256 << 20;
         int length = 50;
@@ -36,8 +26,8 @@ public class WriterMain {
             long time = System.nanoTime() - start;
             System.out.printf("%,d in %.3f secs, throughput %.6f M/s x %,d%n", count, time / 1e9, count * 1e3 / time, length);
         }
-    }
-
+    }*/
+/*
     static class FileWriter {
         static final int NOT_READY = 0x80000000;
         final MappedFile file;
@@ -74,5 +64,5 @@ public class WriterMain {
             bytes.writeOrderedInt(offset2, length);
             writeOffset += length;
         }
-    }
+    }*/
 }

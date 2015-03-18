@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStoreBytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.MultiStoreBytes;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,7 +27,7 @@ public interface DirectChronicleQueue extends ChronicleQueue {
      */
     long lastIndex();
 
-    boolean index(long index, MultiStoreBytes bytes);
+    boolean index(long index, BytesStoreBytes<?> bytes);
 
     long firstBytes();
 }
