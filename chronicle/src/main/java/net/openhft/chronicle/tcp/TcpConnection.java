@@ -18,11 +18,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.model.constraints.NotNull;
-import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -84,6 +82,7 @@ class TcpConnection {
     }
 
     public void writeAllOrEOF(final ByteBuffer bb) throws IOException {
+//        System.out.println("w - "+ChronicleTools.asString(bb));
         writeAll(bb);
         if (bb.remaining() > 0) {
             throw new EOFException();
@@ -223,6 +222,8 @@ class TcpConnection {
 
     public void readFullyOrEOF(@NotNull ByteBuffer bb) throws IOException {
         readAvailable(bb);
+
+//        System.out.println("r - "+ChronicleTools.asString(bb));
         if (bb.remaining() > 0) {
             throw new EOFException();
         }

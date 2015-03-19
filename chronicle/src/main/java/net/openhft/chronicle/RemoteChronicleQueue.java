@@ -79,7 +79,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
-        return this.excerpt = new StatelessExcerpAppender();
+        return this.excerpt = new StatelessExcerptAppender();
     }
 
     protected synchronized ExcerptCommon createExcerpt0() throws IOException {
@@ -124,7 +124,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     // STATELESS
     // *************************************************************************
 
-    private final class StatelessExcerpAppender
+    private final class StatelessExcerptAppender
             extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppenderWrapper {
 
         private final Logger logger;
@@ -133,7 +133,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         private long lastIndex;
         private long actionType;
 
-        public StatelessExcerpAppender() {
+        public StatelessExcerptAppender() {
             super(builder.minBufferSize());
 
             this.logger        = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
@@ -176,7 +176,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 try {
                     connection.writeAction(commandBuffer, actionType, position());
-                    connection.writeAllOrEOF(wrapped.buffer());
+                    ByteBuffer buffer = wrapped.buffer();
+                    buffer.limit((int) wrapped.position());
+                    connection.writeAllOrEOF(buffer);
 
                     if(builder.appendRequireAck()) {
                         connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);

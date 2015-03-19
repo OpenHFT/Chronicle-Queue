@@ -21,6 +21,8 @@ package net.openhft.chronicle.tools;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptCommon;
 import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.lang.io.ByteBufferBytes;
+import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.model.constraints.NotNull;
 
@@ -55,21 +57,12 @@ public enum ChronicleTools {
         DeleteStatic.INSTANCE.add(dirPath);
     }
 
-    @NotNull
-    public static String asString(@NotNull ByteBuffer bb) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = bb.position(); i < bb.limit(); i++) {
-            byte b = bb.get(i);
-            if (b < ' ') {
-                int h = b & 0xFF;
-                if (h < 16)
-                    sb.append('0');
-                sb.append(Integer.toHexString(h));
-            } else {
-                sb.append(' ').append((char) b);
-            }
-        }
-        return sb.toString();
+
+    public static String asString(ByteBuffer bb) {
+        IByteBufferBytes wrap = ByteBufferBytes.wrap(bb);
+        wrap.position(bb.position());
+        wrap.limit(bb.limit());
+        return wrap.toDebugString();
     }
 
     /**
@@ -121,6 +114,25 @@ public enum ChronicleTools {
         boolean done = ChronicleWarmup.Indexed.DONE;
     }
 
+    public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
+        if (chronicle instanceof VanillaChronicle) {
+            ((VanillaChronicle) chronicle).checkCounts(min, max);
+        }
+    }
+
+    public static ClassLoader getSystemClassLoader() {
+        if (System.getSecurityManager() == null) {
+            return ClassLoader.getSystemClassLoader();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return ClassLoader.getSystemClassLoader();
+                }
+            });
+        }
+    }
+
     enum DeleteStatic {
         INSTANCE;
         @SuppressWarnings("TypeMayBeWeakened")
@@ -142,25 +154,6 @@ public enum ChronicleTools {
         synchronized void add(String dirPath) {
             IOTools.deleteDir(dirPath);
             toDeleteList.add(dirPath);
-        }
-    }
-
-    public static void checkCount(final @NotNull Chronicle chronicle, int min, int max) {
-        if (chronicle instanceof VanillaChronicle) {
-            ((VanillaChronicle) chronicle).checkCounts(min, max);
-        }
-    }
-
-    public static ClassLoader getSystemClassLoader() {
-        if (System.getSecurityManager() == null) {
-            return ClassLoader.getSystemClassLoader();
-        } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return ClassLoader.getSystemClassLoader();
-                }
-            });
         }
     }
 }
