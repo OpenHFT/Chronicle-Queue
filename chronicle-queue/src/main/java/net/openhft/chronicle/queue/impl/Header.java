@@ -26,10 +26,10 @@ class Header implements Marshallable {
 
     // support binding to off heap memory with thread safe operations.
 
-    // todo change from LongTextReference
-    LongValue writeByte = new LongTextReference();
-    LongValue index2Index = new LongTextReference();
-    LongValue lastIndex = new LongTextReference();
+    // This is set to null as that it can pick up the right time the first time it is used.
+    LongValue writeByte = null;
+    LongValue index2Index = null;
+    LongValue lastIndex = null;
 
     {
         lastIndex.setValue(-1);
