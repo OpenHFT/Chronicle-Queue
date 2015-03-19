@@ -342,7 +342,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                     if (i > WARMUP && maxJitter < jitter)
                         maxJitter = jitter;
                     long delay0 = now - start0;
-                    if (delay0 > 100e6)
+                    if (delay0 > 200e6)
                         throw new AssertionError("delay: " + delay0 / 1000000 + ", index: " + r.index());
                     if (i > WARMUP && maxDelay < delay0)
                         maxDelay = delay0;
