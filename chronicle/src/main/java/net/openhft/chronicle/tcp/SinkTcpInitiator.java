@@ -30,6 +30,7 @@ public class SinkTcpInitiator extends SinkTcp {
 
     @Override
     public SocketChannel openSocketChannel() throws IOException {
+        int attempts = 0;
         SocketChannel channel = null;
         while (running.get() && channel == null) {
             try {
@@ -44,7 +45,18 @@ public class SinkTcpInitiator extends SinkTcp {
 
                 logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
             } catch(IOException e) {
-                logger.info("Failed to connect to {}, retrying", builder.connectAddress());
+                attempts++;
+
+                if(attempts > builder.reconnectionWarningThreshold()) {
+                    logger.warn("Failed to connect to {}, retrying", builder.connectAddress());
+                }
+
+                if(builder.reconnectionAttempts() > 0) {
+                    logger.warn("Maximum reconnection attempt reached");
+                    if(attempts > builder.reconnectionAttempts()) {
+                        return null;
+                    }
+                }
 
                 try {
                     Thread.sleep(builder.reconnectTimeoutMillis());

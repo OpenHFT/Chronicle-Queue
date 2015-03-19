@@ -569,8 +569,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private Chronicle chronicle;
 
         private AddressProvider bindAddressProvider;
-        private AddressProvider connectAddressprovider;
+        private AddressProvider connectAddressProvider;
         private long reconnectTimeout;
+        private int reconnectionAttempts;
+        private int reconnectionWarningThreshold;
         private TimeUnit reconnectTimeoutUnit;
         private long selectTimeout;
         private TimeUnit selectTimeoutUnit;
@@ -605,9 +607,11 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.chronicle = chronicle;
 
             this.bindAddressProvider = null;
-            this.connectAddressprovider = null;
+            this.connectAddressProvider = null;
             this.reconnectTimeout = 500;
             this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
+            this.reconnectionAttempts = 0;
+            this.reconnectionWarningThreshold = 10;
             this.selectTimeout = 1000;
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.heartbeatInterval = 2500;
@@ -653,7 +657,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public AddressProvider bindAddressProvider() {
-            return this.connectAddressprovider;
+            return this.connectAddressProvider;
         }
 
         public ReplicaChronicleQueueBuilder bindAddressProvider(AddressProvider bindAddressProvider ) {
@@ -662,22 +666,22 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public InetSocketAddress connectAddress() {
-            return connectAddressprovider != null
-                    ? connectAddressprovider.get()
+            return connectAddressProvider != null
+                    ? connectAddressProvider.get()
                     : null;
         }
 
         public ReplicaChronicleQueueBuilder connectAddress(final InetSocketAddress connectAddress) {
-            this.connectAddressprovider = AddressProviders.single(connectAddress);
+            this.connectAddressProvider = AddressProviders.single(connectAddress);
             return this;
         }
 
         public AddressProvider connectAddressProvider() {
-            return this.connectAddressprovider;
+            return this.connectAddressProvider;
         }
 
         public ReplicaChronicleQueueBuilder connectAddressProvider(AddressProvider connectAddressprovider ) {
-            this.connectAddressprovider = connectAddressprovider;
+            this.connectAddressProvider = connectAddressprovider;
             return this;
         }
 
@@ -687,6 +691,11 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public long reconnectTimeout() {
             return reconnectTimeout;
+        }
+
+        public ReplicaChronicleQueueBuilder reconnectTimeout(long reconnectTimeout) {
+            this.reconnectTimeout = reconnectTimeout;
+            return this;
         }
 
         public long reconnectTimeoutMillis() {
@@ -701,6 +710,37 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public TimeUnit getReconnectTimeoutUnit() {
             return this.reconnectTimeoutUnit;
+        }
+
+        public ReplicaChronicleQueueBuilder getReconnectTimeoutUnit(TimeUnit reconnectTimeoutUnit) {
+            this.reconnectTimeoutUnit = reconnectTimeoutUnit;
+            return this;
+        }
+
+        public int reconnectionAttempts() {
+            return this.reconnectionAttempts;
+        }
+
+        public ReplicaChronicleQueueBuilder reconnectionAttempts(int reconnectionAttempts) {
+            if(reconnectionAttempts < 0) {
+                throw new IllegalArgumentException("ReconnectionAttempts must be greater or equals than 0");
+            }
+
+            this.reconnectionAttempts = reconnectionAttempts;
+            return this;
+        }
+
+        public int reconnectionWarningThreshold() {
+            return this.reconnectionWarningThreshold;
+        }
+
+        public ReplicaChronicleQueueBuilder reconnectionWarningThreshold(int reconnectionWarningThreshold) {
+            if(reconnectionWarningThreshold < 0) {
+                throw new IllegalArgumentException("ReconnectionWarningThreshold must be greater or equals than 0");
+            }
+
+            this.reconnectionWarningThreshold = reconnectionWarningThreshold;
+            return this;
         }
 
         public long selectTimeout() {
@@ -912,11 +952,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder selectorSpinLoopCount(int selectorSpinLoopCount) {
             if(selectorSpinLoopCount != -1 && selectorSpinLoopCount <= 0) {
-                throw new IllegalArgumentException("SelectorSpinLoopCount must be greather than 0 or -1 (disabled)");
+                throw new IllegalArgumentException("SelectorSpinLoopCount must be greater than 0 or -1 (disabled)");
             }
 
             this.selectorSpinLoopCount = selectorSpinLoopCount;
-
             return this;
         }
 
@@ -926,7 +965,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder readSpinCount(int readSpinCount) {
             if(readSpinCount != -1 && readSpinCount <= 0) {
-                throw new IllegalArgumentException("ReadSpinCount must be greather than 0 or -1 (disabled)");
+                throw new IllegalArgumentException("ReadSpinCount must be greater than 0 or -1 (disabled)");
             }
 
             this.readSpinCount = readSpinCount;

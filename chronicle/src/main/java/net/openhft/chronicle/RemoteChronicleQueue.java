@@ -90,21 +90,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return this.excerpt = new StatelessExcerpt();
     }
 
-    private void openConnection() {
-        for(int i=0; !connection.isOpen(); i++) {
+    private boolean openConnection() {
+        if(!connection.isOpen()) {
             try {
                 connection.open(this.blocking);
             } catch (IOException e) {
-                if(i > 10) {
-                    try {
-                        Thread.sleep(builder.reconnectTimeoutMillis());
-                    } catch (InterruptedException ex) {
-                    }
-
-                    LOGGER.warn("", e);
-                }
             }
         }
+
+        return connection.isOpen();
     }
 
     private void closeConnection() {
@@ -171,7 +165,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public void finish() {
             if(!isFinished()) {
                 if(!connection.isOpen()) {
-                    openConnection();
+                    if(!openConnection()) {
+                        throw new IllegalStateException("Unable to connect to the Source");
+                    }
                 }
 
                 try {
@@ -286,7 +282,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public boolean index(long index) {
             try {
                 if(!connection.isOpen()) {
-                    openConnection();
+                    if(!openConnection()) {
+                        return false;
+                    }
+
                     cleanup();
                 }
 

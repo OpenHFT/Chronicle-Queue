@@ -43,11 +43,11 @@ public abstract class SinkTcp extends TcpConnection {
         return this.name;
     }
 
-    public SinkTcp open() throws IOException {
+    public boolean open() throws IOException {
         return open(false);
     }
 
-    public SinkTcp open(boolean blocking) throws IOException {
+    public boolean open(boolean blocking) throws IOException {
         close();
         running.set(true);
 
@@ -66,12 +66,11 @@ public abstract class SinkTcp extends TcpConnection {
             }
 
             super.setSocketChannel(socketChannel);
-
         }
 
         running.set(false);
 
-        return this;
+        return socketChannel != null;
     }
 
     public void close() throws IOException {
