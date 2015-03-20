@@ -1,12 +1,11 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStoreBytes;
-import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.isData;
 
@@ -58,7 +58,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     public SingleChronicleQueue(String filename, long blockSize) throws IOException {
         mappedFile = MappedFile.mappedFile(filename, blockSize);
-
         headerMemory = mappedFile.acquireBytes(0);
         bytes = mappedFile.bytes();
         wire = new ChronicleWire(new BinaryWire(bytes));
@@ -93,7 +92,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     @Override
     public long lastIndex() {
-        long value = header.lastIndex.getVolatileValue();
+        long value = header.lastIndex().getVolatileValue();
         if (value == -1)
             throw new IllegalStateException("No data has been written to   chronicle.");
         return value;
@@ -128,7 +127,15 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         waitForTheHeaderToBeBuilt(bytes);
 
         bytes.position(HEADER_OFFSET);
-        wire.readDocument($ -> wire.read().marshallable(header), null);
+
+        Consumer<WireIn> nullConsumer = o -> {
+        };
+
+        Consumer<WireIn> dataConsumer = $ -> {
+            wire.read().marshallable(header);
+        };
+
+        wire.readDocument(dataConsumer, nullConsumer);
         firstBytes = bytes.position();
     }
 
@@ -241,7 +248,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     long indexToIndex() {
         for (; ; ) {
 
-            long index2Index = header.index2Index.getVolatileValue();
+            long index2Index = header.index2Index().getVolatileValue();
 
             if (index2Index == NOT_READY)
                 continue;
@@ -249,11 +256,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             if (index2Index != UNINITIALISED)
                 return index2Index;
 
-            if (!header.index2Index.compareAndSwapValue(UNINITIALISED, NOT_READY))
+            if (!header.index2Index().compareAndSwapValue(UNINITIALISED, NOT_READY))
                 continue;
 
             long indexToIndex = newIndex();
-            header.index2Index.setOrderedValue(indexToIndex);
+            header.index2Index().setOrderedValue(indexToIndex);
             return indexToIndex;
         }
     }
@@ -271,9 +278,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     long newIndex() {
 
         long indexSize = 1L << 17L;
-        try (DirectStore allocate = DirectStore.allocate(6)) {
 
-            final DirectBytes buffer = allocate.bytes();
+        try (NativeStore<Void> allocate = NativeStore.nativeStore(6)) {
+
+            final Bytes<Void> buffer = allocate.bytes();
+
             new BinaryWire(buffer).write(() -> "Index");
             buffer.flip();
 
@@ -283,7 +292,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             if (length > MAX_LENGTH)
                 throw new IllegalStateException("Length too large: " + length);
 
-            final LongValue writeByte = header.writeByte;
+            final LongValue writeByte = header.writeByte();
             final long lastByte = writeByte.getVolatileValue();
 
             for (; ; ) {
@@ -291,7 +300,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
                     long lastByte2 = lastByte + 4 + buffer.remaining() + indexSize;
                     bytes.write(lastByte + 4, buffer);
 
-                    header.lastIndex.addAtomicValue(1);
+                    header.lastIndex().addAtomicValue(1);
                     writeByte.setOrderedValue(lastByte2);
                     bytes.writeOrderedInt(lastByte, (int) (6 + indexSize));
                     long start = lastByte + 4;
@@ -302,9 +311,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
                 bytes.skip(length2);
                 Jvm.checkInterrupted();
             }
-
-
+        } catch (Exception e) {
+            throw new IORuntimeException(e);
         }
+
+
     }
 
     @Override
@@ -313,21 +324,26 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         if (length > MAX_LENGTH)
             throw new IllegalStateException("Length too large: " + length);
 
-        LongValue writeByte = header.writeByte;
+        LongValue writeByte = header.writeByte();
         long lastByte = writeByte.getVolatileValue();
 
         for (; ; ) {
+
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
-                long lastIndex = header.lastIndex.addAtomicValue(1);
+                long lastIndex = header.lastIndex().addAtomicValue(1);
                 writeByte.setOrderedValue(lastByte2);
                 bytes.writeOrderedInt(lastByte, (int) length);
                 return lastIndex;
             }
             int length2 = length30(bytes.readVolatileInt());
             bytes.skip(length2);
-            Jvm.checkInterrupted();
+            try {
+                Jvm.checkInterrupted();
+            } catch (InterruptedException e) {
+                throw new InterruptedRuntimeException(e);
+            }
         }
     }
 

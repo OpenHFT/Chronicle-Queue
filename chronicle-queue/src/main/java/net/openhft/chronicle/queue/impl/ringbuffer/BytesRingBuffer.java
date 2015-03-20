@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Multi writer single Reader, zero GC, ring buffer, which takes bytes
@@ -61,6 +62,8 @@ public class BytesRingBuffer {
             for (; ; ) {
 
                 long writeLocation = this.writeLocation();
+
+                assert writeLocation >= 0;
 
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
@@ -228,40 +231,47 @@ public class BytesRingBuffer {
 
         }
 
-        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+        final AtomicLong writeLocationAtomic = new AtomicLong();
+        final AtomicLong readLocationAtomic = new AtomicLong();
+        final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
+
+        private synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+            return writeLocationAtomic.compareAndSet(expectedValue, newValue);
+
+            // return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
-        private void setWriteLocation(long value) {
-            buffer.writeOrderedLong(writeLocationOffset, value);
-        }
-
-
-        private long getWriteLocation() {
-            return buffer.readVolatileLong(writeLocationOffset);
-        }
-
-        /**
-         * sets the point at which you should not write any additional bits
-         */
-        private void setWriteUpTo(long value) {
-            buffer.writeOrderedLong(writeUpToOffset, value);
+        private synchronized long getWriteLocation() {
+            return writeLocationAtomic.get();
+            // return buffer.readVolatileLong(writeLocationOffset);
         }
 
         /**
          * @return the point at which you should not write any additional bits
          */
         private long getWriteUpTo() {
-            return buffer.readVolatileLong(writeUpToOffset);
+            // return buffer.readVolatileLong(writeUpToOffset);
+            return writeUpToOffsetAtomic.get();
         }
 
-        private void setReadLocation(long value) {
-            buffer.writeOrderedLong(readLocationOffset, value);
+        /**
+         * sets the point at which you should not write any additional bits
+         */
+        private void setWriteUpTo(long value) {
+            //  buffer.writeOrderedLong(writeUpToOffset, value);
+            writeUpToOffsetAtomic.set(value);
         }
 
         private long getReadLocation() {
-            return buffer.readVolatileLong(readLocationOffset);
+            return readLocationAtomic.get();
+            // return buffer.readVolatileLong(readLocationOffset);
         }
+
+        private void setReadLocation(long value) {
+            readLocationAtomic.set(value);
+            // buffer.writeOrderedLong(readLocationOffset, value);
+        }
+
     }
 
     /**

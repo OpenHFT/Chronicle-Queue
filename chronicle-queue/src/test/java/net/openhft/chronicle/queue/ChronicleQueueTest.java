@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -11,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 
 import static org.junit.Assert.assertTrue;
 
@@ -71,9 +69,9 @@ public class ChronicleQueueTest {
         ExcerptTailer tailer = chronicle.createTailer();
         StringBuilder sb = new StringBuilder();
         // TODO check this is still needed in future versions.
-        Function<WireIn, WireIn> reader = wire -> wire.read(TestKey.test).text(sb);
+
         for (int i = 0; i < RUNS; i++) {
-            assertTrue(tailer.readDocument(reader));
+            assertTrue(tailer.readDocument(wireIn -> wireIn.read(TestKey.test).text(sb)));
         }
     }
 

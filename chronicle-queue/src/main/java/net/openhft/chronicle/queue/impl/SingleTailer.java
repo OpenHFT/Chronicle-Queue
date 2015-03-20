@@ -1,9 +1,11 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStoreBytes;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.values.CodeTemplate;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
@@ -11,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
@@ -23,8 +24,9 @@ public class SingleTailer implements ExcerptTailer {
     @NotNull
     private final SingleChronicleQueue chronicle;
     long index;
-    private final BytesStoreBytes bytes = new BytesStoreBytes(null);
+    private final BytesStoreBytes bytes = new BytesStoreBytes(Bytes.elasticByteBuffer());
     private final Wire wire = new BinaryWire(bytes);
+    private CodeTemplate codeTemplate = CodeTemplate.direct();
 
     public SingleTailer(ChronicleQueue chronicle) {
         this.chronicle = (SingleChronicleQueue) chronicle;
@@ -39,7 +41,13 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
-        wire.readDocument(null, reader);
+        Consumer<WireIn> metaDataConsumer = new Consumer<WireIn>() {
+            @Override
+            public void accept(WireIn wireIn) {
+                // skip the meta data
+            }
+        };
+        wire.readDocument(metaDataConsumer, reader);
         return true;
     }
 
@@ -98,8 +106,7 @@ public class SingleTailer implements ExcerptTailer {
 
         }
 
-
-        final LongValue position = DataValueClasses.newInstance(LongValue.class);
+        final LongValue position = codeTemplate.newInstance(LongValue.class);
         long last = chronicle.lastIndex();
 
 
@@ -107,17 +114,17 @@ public class SingleTailer implements ExcerptTailer {
         for (long i = start; i < last; i++) {
             final long j = i;
 
-            Function<WireIn, Object> reader = wireIn -> {
-
+            final Consumer<WireIn> metaDataConsumer = wireIn -> {
                 if (index == j)
                     position.setValue(wire.bytes().position() - 4);
 
                 wireIn.bytes().skip(wireIn.bytes().remaining());
-                return null;
-
             };
 
-            wire.readDocument(reader);
+            final Consumer<WireIn> dataConsumer = wireIn -> wireIn.bytes().skip(wireIn.bytes().remaining());
+
+            wire.readDocument(metaDataConsumer, dataConsumer);
+
 
             if (position.getValue() != 0) {
                 wire.bytes().position(position.getValue());
