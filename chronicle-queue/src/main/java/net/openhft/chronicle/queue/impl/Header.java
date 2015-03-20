@@ -6,6 +6,7 @@ import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -32,9 +33,9 @@ class Header implements Marshallable {
     private LongValue lastIndex = null;
 
 
-    private LongValue tempWriteByte = new LongValueInstance();
-    private LongValue tempIndex2Index = new LongValueInstance();
-    private LongValue tempLastIndex = new LongValueInstance();
+    private LongValueInstance tempWriteByte = new LongValueInstance();
+    private LongValueInstance tempIndex2Index = new LongValueInstance();
+    private LongValueInstance tempLastIndex = new LongValueInstance();
 
     {
         tempLastIndex.setValue(-1);
@@ -114,16 +115,32 @@ class Header implements Marshallable {
     private void newIndex2Index(LongValue x) {
         lastIndex = x;
         lastIndex.setValue(tempLastIndex.getValue());
+        try {
+            tempLastIndex.close();
+        } catch (IOException e) {
+
+        }
     }
 
     private void newWriteByte(LongValue x) {
         writeByte = x;
         writeByte.setValue(tempWriteByte.getValue());
+        try {
+            tempWriteByte.close();
+        } catch (IOException e) {
+
+        }
     }
 
     private void newLastIndex(LongValue x) {
         lastIndex = x;
         lastIndex.setValue(tempLastIndex.getValue());
+
+        try {
+            tempLastIndex.close();
+        } catch (IOException e) {
+
+        }
     }
 
     public long getWriteByte() {
