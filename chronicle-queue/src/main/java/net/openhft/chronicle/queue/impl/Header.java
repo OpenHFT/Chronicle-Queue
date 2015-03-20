@@ -6,11 +6,9 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import sun.security.util.Debug;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 /**
  * Data structure to bind to an off heap representation.  This is required to support persistence
@@ -30,30 +28,34 @@ class Header implements Marshallable {
     // support binding to off heap memory with thread safe operations.
 
     // This is set to null as that it can pick up the right time the first time it is used.
-    LongValue writeByte = null;
-    LongValue index2Index = null;
-    LongValue lastIndex = null;
+    private LongValue writeByte = null;
+    private LongValue index2Index = null;
+    private LongValue lastIndex = null;
 
-    private LongValue writeByte() {
+    LongValue writeByte() {
         if (writeByte == null)
-            writeByte = new LongTextReference();
+            writeByte = new LongValueInstance();
         return writeByte;
     }
 
 
-    private LongValue index2Index() {
+    LongValue index2Index() {
+
+        // todo change how we do this when wire can create and instance of the correct type
         if (index2Index == null)
-            index2Index = new LongTextReference();
+            index2Index = new LongValueInstance();
         return index2Index;
     }
 
 
-    private LongValue lastIndex() {
-        if (lastIndex == null) {
-            lastIndex = new LongTextReference();
-            lastIndex.setValue(-1);
+    LongValue lastIndex() {
 
+        // todo change how we do this when wire can create and instance of the correct type
+        if (lastIndex == null) {
+            lastIndex = new LongValueInstance();
+            lastIndex.setValue(-1);
         }
+
         return lastIndex;
     }
 
@@ -124,8 +126,7 @@ class Header implements Marshallable {
         h.init(Compression.NONE);
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
         tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
-        Bytes<?> flip = tw.bytes().flip();
-        System.out.println(Bytes.toDebugString(flip));
+        System.out.println(tw.bytes().flip().toString());
 
     }
 }
