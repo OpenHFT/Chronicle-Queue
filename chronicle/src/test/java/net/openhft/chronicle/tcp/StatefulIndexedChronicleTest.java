@@ -47,8 +47,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
 
         // NOTE: the sink and source must have different chronicle files.
         // TODO, make more robust.
@@ -122,8 +122,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testPricePublishing1() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = indexed(basePathSource)
@@ -174,8 +174,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = indexed(basePathSource)
@@ -228,8 +228,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testPricePublishing3() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = indexed(basePathSource)
@@ -422,17 +422,16 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      */
     @Test
     public void testIndexedJira77() throws IOException {
-        String basePath = getIndexedTestPath();
-
-        Chronicle chronicleSrc = indexed(basePath + "-src").build();
+        Chronicle chronicleSrc = indexed(getIndexedTestPath("source")).build();
         chronicleSrc.clear();
 
-        Chronicle chronicleTarget = indexed(basePath + "-target").build();
+        Chronicle chronicleTarget = indexed(getIndexedTestPath("target")).build();
         chronicleTarget.clear();
 
         testJira77(
-                chronicleSrc,
-                chronicleTarget);
+            chronicleSrc,
+            chronicleTarget
+        );
     }
 
     /**
@@ -442,11 +441,9 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      */
     @Test
     public void testIndexedJira80() throws IOException {
-        String basePath = getIndexedTestPath();
-
         testJira80(
-                indexed(basePath + "-master"),
-                indexed(basePath + "-slave")
+            indexed(getIndexedTestPath("master")),
+            indexed(getIndexedTestPath("slave"))
         );
     }
 
@@ -455,8 +452,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      */
     @Test
     public void testIndexedClientReconnection() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
         final CountDownLatch latch = new CountDownLatch(items);
@@ -557,10 +554,9 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testReplicationLatencyPerf() throws IOException, InterruptedException {
-        String basePath = getIndexedTestPath();
-        String sourcePath = basePath + "-latency-source";
+
         final Chronicle source = ChronicleQueueBuilder
-                .indexed(sourcePath)
+                .indexed(getIndexedTestPath("latencysource"))
                 .source()
                 .bindAddress(54321)
                 .build();
@@ -594,12 +590,12 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         });
         t.start();
 
-        String sinkPath = basePath + "-latency-sink";
         Chronicle sink = ChronicleQueueBuilder
-                .indexed(sinkPath)
+                .indexed(getIndexedTestPath("latencysink"))
                 .sink()
                 .connectAddress("localhost", 54321)
                 .build();
+
         AffinityLock lock = AffinityLock.acquireLock();
         try {
             ExcerptTailer tailer = sink.createTailer();
@@ -634,15 +630,15 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         source.close();
         sink.close();
-        assertIndexedClean(sourcePath);
-        assertIndexedClean(sinkPath);
 
+        assertIndexedClean(source.name());
+        assertIndexedClean(sink.name());
     }
 
     @Test
     public void testIndexedNonBlockingClient() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
-        final String basePathSink = getIndexedTestPath("-sink");
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
 
         final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)

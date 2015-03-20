@@ -22,51 +22,13 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.io.IOTools;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
 import static org.junit.Assert.*;
 
 public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
-    protected static final String PREFIX = "ch-statefull-";
-
-    protected synchronized String getIndexedTestPath() {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
-
-    protected synchronized String getIndexedTestPath(String suffix) {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
-
-    protected static void assertIndexedClean(String path) {
-        assertNotNull(path);
-        assertTrue(new File(path + ".index").delete());
-        assertTrue(new File(path + ".data").delete());
-    }
-
-    protected synchronized String getVanillaTestPath() {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
-        IOTools.deleteDir(path);
-
-        return path;
-    }
-
-    protected synchronized String getVanillaTestPath(String suffix) {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
-        IOTools.deleteDir(path);
-
-        return path;
-    }
 
     // *************************************************************************
     //

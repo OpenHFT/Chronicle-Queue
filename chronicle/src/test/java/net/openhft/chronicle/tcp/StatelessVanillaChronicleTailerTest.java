@@ -58,7 +58,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testVanillaStatelessSink_001() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -113,7 +113,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testVanillaStatelessSink_002() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -166,7 +166,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final int tailers = 4;
         final int items = 1000000;
 
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -233,7 +233,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testVanillaStatelessSink_005() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -281,7 +281,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testVanillaStatelessSink_006() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -351,7 +351,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testStatelessVanillaNonBlockingClient() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
@@ -381,10 +381,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
-    @Test
     @Ignore
+    @Test
     public void testVanillaClientReconnection() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
         final CountDownLatch latch = new CountDownLatch(items);
@@ -394,27 +394,26 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             public void run() {
                 try {
                     final Chronicle sink = remoteTailer()
-                            .connectAddressProvider(new AddressProvider() {
-                                @Override
-                                public InetSocketAddress get() {
-                                    return new InetSocketAddress(
-                                            "localhost",
-                                            portSupplier.getAndAssertOnError());
-                                }
-                            })
-                            .build();
+                        .connectAddressProvider(new AddressProvider() {
+                            @Override
+                            public InetSocketAddress get() {
+                                return new InetSocketAddress(
+                                    "localhost",
+                                    portSupplier.getAndAssertOnError());
+                            }
+                        })
+                        .build();
 
                     ExcerptTailer tailer = sink.createTailer();
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
                             long expected = items - latch.getCount() + 1;
                             long actual = tailer.readLong();
-                            System.out.println("read " + expected + " - " + actual);
                             assertEquals(expected, actual);
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(10);
+                            Thread.sleep(1000);
                         }
                     }
 
@@ -472,15 +471,12 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
         final Chronicle check = vanilla(basePathSource).build();
         final ExcerptTailer checkTailer = check.createTailer();
-        for (long i = 1; i <= items; i++) {
+        for (long i = 1; i <= items; ) {
             if(checkTailer.nextIndex()) {
                 long actual = checkTailer.readLong();
-                System.out.println(i + " - " + actual);
                 assertEquals(i, actual);
                 checkTailer.finish();
-            } else {
-                i--;
-                Thread.sleep(1);
+                i++;
             }
         }
 
@@ -500,7 +496,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testVanillaJiraChron74() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -517,7 +513,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testVanillaJiraChron75() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -534,7 +530,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testVanillaJiraChron78() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
@@ -551,7 +547,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testVanillaJiraChron81() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
