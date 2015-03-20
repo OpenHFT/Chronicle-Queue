@@ -32,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 
 public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
-    public void testPersistedLocalIndexedSink_001() throws Exception {
+    public void testPersistedLocalIndexedSink() throws Exception {
         final String basePath = getIndexedTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 

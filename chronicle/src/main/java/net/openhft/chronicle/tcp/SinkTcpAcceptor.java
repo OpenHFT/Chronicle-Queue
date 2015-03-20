@@ -26,30 +26,36 @@ import java.nio.channels.SocketChannel;
 import java.util.Set;
 
 public class SinkTcpAcceptor extends SinkTcp {
+    private ServerSocketChannel socketChannel;
+    private VanillaSelector selector;
+
     public SinkTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         super("sink-acceptor", builder);
+
+        this.socketChannel = null;
+        this.selector = null;
     }
 
-
     @Override
-    public SocketChannel openSocketChannel(boolean retrying) throws IOException {
-        final ServerSocketChannel socketChannel = ServerSocketChannel.open();
-        socketChannel.socket().setReuseAddress(true);
-        socketChannel.socket().bind(builder.bindAddress());
-        socketChannel.configureBlocking(false);
+    public SocketChannel openSocketChannel() throws IOException {
+        if(this.socketChannel == null ) {
+            this.socketChannel = ServerSocketChannel.open();
+            this.socketChannel.socket().setReuseAddress(true);
+            this.socketChannel.socket().bind(builder.bindAddress());
+            this.socketChannel.configureBlocking(false);
 
-
-        final VanillaSelector selector = new VanillaSelector()
-                .open()
-                .register(socketChannel, SelectionKey.OP_ACCEPT,new Attached());
+            this.selector = new VanillaSelector();
+            this.selector.open();
+            this.selector.register(socketChannel, SelectionKey.OP_ACCEPT, new Attached());
+        }
 
         final long selectTimeout = builder.selectTimeout();
         final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
 
+        int attempts = 0;
         SocketChannel channel = null;
         while (running.get() && channel == null) {
             int nbKeys = selector.select(0, selectTimeout);
-
             if (nbKeys > 0) {
                 if (selectionKeys != null) {
                     final SelectionKey[] keys = selectionKeys.keys();
@@ -79,10 +85,30 @@ public class SinkTcpAcceptor extends SinkTcp {
                     keys.clear();
                 }
             }
+
+            if(channel == null) {
+                attempts++;
+
+                if(attempts > builder.reconnectionWarningThreshold()) {
+                    logger.warn("Failed to get a connection on {}, retrying", builder.bindAddress());
+                }
+
+                if(builder.reconnectionAttempts() > 0) {
+                    if(attempts >= builder.reconnectionAttempts()) {
+                        if(logger.isDebugEnabled()) {
+                            logger.debug("Maximum reconnection attempt reached");
+                        }
+
+                        break;
+                    }
+                }
+            }
         }
 
         selector.close();
+        selector = null;
         socketChannel.close();
+        socketChannel = null;
 
         return channel;
     }

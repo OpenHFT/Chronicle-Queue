@@ -43,15 +43,15 @@ public abstract class SinkTcp extends TcpConnection {
         return this.name;
     }
 
-    public SinkTcp open() throws IOException {
-        return open(false, true);
+    public boolean open() throws IOException {
+        return open(false);
     }
 
-    public SinkTcp open(boolean blocking, boolean retrying) throws IOException {
+    public boolean open(boolean blocking) throws IOException {
         close();
         running.set(true);
 
-        SocketChannel socketChannel = openSocketChannel(retrying);
+        SocketChannel socketChannel = openSocketChannel();
         if(socketChannel != null) {
             socketChannel.configureBlocking(blocking);
             socketChannel.socket().setTcpNoDelay(true);
@@ -66,12 +66,11 @@ public abstract class SinkTcp extends TcpConnection {
             }
 
             super.setSocketChannel(socketChannel);
-
         }
 
         running.set(false);
 
-        return this;
+        return socketChannel != null;
     }
 
     public void close() throws IOException {
@@ -81,5 +80,5 @@ public abstract class SinkTcp extends TcpConnection {
 
     public abstract boolean isLocalhost();
 
-    protected abstract SocketChannel openSocketChannel(boolean retrying) throws IOException;
+    protected abstract SocketChannel openSocketChannel() throws IOException;
 }

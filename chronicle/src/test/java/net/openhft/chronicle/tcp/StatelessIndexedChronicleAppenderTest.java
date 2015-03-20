@@ -28,7 +28,7 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
 
     @Test(expected = IllegalStateException.class)
     public void testIndexedStatelessAppenderReject() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = indexed(basePathSource)
@@ -60,7 +60,7 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testIndexedStatelessAppenderDiscard() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = indexed(basePathSource)

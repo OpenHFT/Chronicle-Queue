@@ -54,7 +54,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testVanillaStatelessAppender() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)
@@ -107,7 +107,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testVanillaStatelessAppenderResizeWriteBuffer() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)
@@ -165,7 +165,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testVanillaStatelessAppenderAndTailer() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)
@@ -222,7 +222,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testVanillaStatelessAppenderAndTailerMT() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)
@@ -310,7 +310,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test
     public void testVanillaStatelessAppenderIndices() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)
@@ -358,7 +358,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
     @Test( expected = IllegalStateException.class)
     public void testVanillaStatelessAppenderExceptionOnDisconnect() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
+        final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(basePathSource)

@@ -22,14 +22,12 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.serialization.BytesMarshallable;
 import net.openhft.lang.model.constraints.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Date;
@@ -38,46 +36,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
-    protected static final String PREFIX = "ch-stateless-";
-
-    protected synchronized String getIndexedTestPath() {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
-
-    protected synchronized String getIndexedTestPath(String suffix) {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
-
-    protected synchronized String getVanillaTestPath() {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName();
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
-
-        return path;
-    }
-
-    protected synchronized String getVanillaTestPath(String suffix) {
-        final String path = getTmpDir() + "/" + PREFIX + testName.getMethodName() + suffix;
-        final File f = new File(path);
-        if(f.exists()) {
-            f.delete();
-        }
-
-        return path;
-    }
 
     // *************************************************************************
     //

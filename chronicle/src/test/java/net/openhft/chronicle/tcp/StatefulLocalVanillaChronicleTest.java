@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
 public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
-    public void testPersistedLocalVanillaSink_001() throws Exception {
+    public void testPersistedLocalVanillaSink() throws Exception {
         final String basePath = getVanillaTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
 
