@@ -1,13 +1,16 @@
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import sun.security.util.Debug;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Data structure to bind to an off heap representation.  This is required to support persistence
@@ -31,9 +34,29 @@ class Header implements Marshallable {
     LongValue index2Index = null;
     LongValue lastIndex = null;
 
-    {
-        lastIndex.setValue(-1);
+    private LongValue writeByte() {
+        if (writeByte == null)
+            writeByte = new LongTextReference();
+        return writeByte;
     }
+
+
+    private LongValue index2Index() {
+        if (index2Index == null)
+            index2Index = new LongTextReference();
+        return index2Index;
+    }
+
+
+    private LongValue lastIndex() {
+        if (lastIndex == null) {
+            lastIndex = new LongTextReference();
+            lastIndex.setValue(-1);
+
+        }
+        return lastIndex;
+    }
+
 
     @NotNull
     public Header init(@NotNull Compression compression) {
@@ -42,7 +65,7 @@ class Header implements Marshallable {
         user = System.getProperty("user.name");
         host = SingleChronicleQueue.getHostName();
         this.compression = compression.name();
-        writeByte.setOrderedValue(PADDED_SIZE);
+        writeByte().setOrderedValue(PADDED_SIZE);
         return this;
     }
 
@@ -56,36 +79,44 @@ class Header implements Marshallable {
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
-                .write(Field.writeByte).int64(writeByte)
+                .write(Field.writeByte).int64(writeByte())
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
                 .write(Field.host).text(host)
                 .write(Field.compression).text(compression)
                 .write(Field.indexCount).int32(indexCount)
                 .write(Field.indexSpacing).int32(indexSpacing)
-                .write(Field.index2Index).int64(index2Index);
+                .write(Field.index2Index).int64(index2Index());
         out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
     }
 
     @Override
     public void readMarshallable(@NotNull WireIn in) {
         in.read(Field.uuid).uuid(u -> uuid = u)
-                .read(Field.writeByte).int64(writeByte, x -> writeByte = x)
+                .read(Field.writeByte).int64(writeByte(), Header.this::writeByte)
                 .read(Field.created).zonedDateTime(c -> created = c)
                 .read(Field.user).text(u -> user = u)
                 .read(Field.host).text(h -> host = h)
                 .read(Field.compression).text(h -> compression = h)
                 .read(Field.indexCount).int32(h -> indexCount = h)
                 .read(Field.indexSpacing).int32(h -> indexSpacing = h)
-                .read(Field.index2Index).int64(index2Index, x -> index2Index = x);
+                .read(Field.index2Index).int64(index2Index(), this::index2Index);
+    }
+
+    private void index2Index(LongValue x) {
+        index2Index = x;
+    }
+
+    private void writeByte(LongValue x) {
+        writeByte = x;
     }
 
     public long getWriteByte() {
-        return writeByte.getVolatileValue();
+        return writeByte().getVolatileValue();
     }
 
     public void setWriteByteLazy(long writeByte) {
-        this.writeByte.setOrderedValue(writeByte);
+        this.writeByte().setOrderedValue(writeByte);
     }
 
     public static void main(String... args) {
@@ -93,7 +124,8 @@ class Header implements Marshallable {
         h.init(Compression.NONE);
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
         tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
-        System.out.println(tw.bytes().flip().toString());
+        Bytes<?> flip = tw.bytes().flip();
+        System.out.println(Bytes.toDebugString(flip));
 
     }
 }
