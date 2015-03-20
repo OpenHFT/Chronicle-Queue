@@ -79,5 +79,6 @@ public abstract class SinkTcp extends TcpConnection {
     }
 
     public abstract boolean isLocalhost();
+
     protected abstract SocketChannel openSocketChannel() throws IOException;
 }

@@ -46,6 +46,7 @@ public class SinkTcpInitiator extends SinkTcp {
                 logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
             } catch(IOException e) {
                 attempts++;
+                channel = null;
 
                 if(attempts > builder.reconnectionWarningThreshold()) {
                     logger.warn("Failed to connect to {}, retrying", builder.connectAddress());
@@ -54,7 +55,7 @@ public class SinkTcpInitiator extends SinkTcp {
                 if(builder.reconnectionAttempts() > 0) {
                     logger.warn("Maximum reconnection attempt reached");
                     if(attempts > builder.reconnectionAttempts()) {
-                        return null;
+                        break;
                     }
                 }
 
@@ -63,8 +64,6 @@ public class SinkTcpInitiator extends SinkTcp {
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
-
-                channel = null;
             }
         }
 

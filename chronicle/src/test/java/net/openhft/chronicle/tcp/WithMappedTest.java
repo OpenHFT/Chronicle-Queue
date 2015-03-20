@@ -562,7 +562,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 long v = from.readLong();
 
                 Date date = new Date(v);
-                int day = Integer.parseInt(new SimpleDateFormat("dd").format(date));
+                int day = date.getDay();
 
                 boolean isEvenDay = (day % 2) == 0;
 

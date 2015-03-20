@@ -86,7 +86,7 @@ public class SinkTcpAcceptor extends SinkTcp {
                 }
             }
 
-            if(channel != null) {
+            if(channel == null) {
                 attempts++;
 
                 if(attempts > builder.reconnectionWarningThreshold()) {
@@ -96,19 +96,16 @@ public class SinkTcpAcceptor extends SinkTcp {
                 if(builder.reconnectionAttempts() > 0) {
                     if(attempts > builder.reconnectionAttempts()) {
                         logger.warn("Maximum reconnection attempt reached");
-                        channel = null;
                         break;
                     }
                 }
             }
         }
 
-        if(channel != null) {
-            selector.close();
-            selector = null;
-            socketChannel.close();
-            socketChannel = null;
-        }
+        selector.close();
+        selector = null;
+        socketChannel.close();
+        socketChannel = null;
 
         return channel;
     }
