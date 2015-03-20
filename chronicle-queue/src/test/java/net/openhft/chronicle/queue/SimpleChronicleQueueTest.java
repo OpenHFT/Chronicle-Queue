@@ -23,6 +23,7 @@ public class SimpleChronicleQueueTest {
 
         File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
+
         try {
 
             DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
@@ -35,10 +36,12 @@ public class SimpleChronicleQueueTest {
             StringBuilder surname = new StringBuilder();
 
             final ExcerptTailer tailer = chronicle.createTailer();
+
             tailer.readDocument(wire -> wire.read(() -> "FirstName").text(first));
             tailer.readDocument(wire -> wire.read(() -> "Surname").text(surname));
 
             Assert.assertEquals("Steve Jobs", first + " " + surname);
+
         } finally {
             file.delete();
         }

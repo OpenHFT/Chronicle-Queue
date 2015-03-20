@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.Compression;
@@ -33,15 +32,16 @@ class Header implements Marshallable {
     private LongValue lastIndex = null;
 
     LongValue writeByte() {
+        // todo change how we do this, so that when wire can create and instance of the correct type
         if (writeByte == null)
-            writeByte = new LongValueInstance();
-        return writeByte;
+              writeByte = new LongValueInstance();
+      return writeByte;
     }
 
 
     LongValue index2Index() {
 
-        // todo change how we do this when wire can create and instance of the correct type
+        // todo change how we do this, so that when wire can create and instance of the correct type
         if (index2Index == null)
             index2Index = new LongValueInstance();
         return index2Index;
@@ -50,7 +50,7 @@ class Header implements Marshallable {
 
     LongValue lastIndex() {
 
-        // todo change how we do this when wire can create and instance of the correct type
+        /// todo change how we do this, so that when wire can create and instance of the correct type
         if (lastIndex == null) {
             lastIndex = new LongValueInstance();
             lastIndex.setValue(-1);
