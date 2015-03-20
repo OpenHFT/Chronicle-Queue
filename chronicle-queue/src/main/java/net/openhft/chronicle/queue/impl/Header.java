@@ -31,29 +31,33 @@ class Header implements Marshallable {
     private LongValue index2Index = null;
     private LongValue lastIndex = null;
 
+
+    private LongValue tempWriteByte = new LongValueInstance();
+    private LongValue tempIndex2Index = new LongValueInstance();
+    private LongValue tempLastIndex = new LongValueInstance();
+
+    {
+        tempLastIndex.setValue(-1);
+    }
+
     LongValue writeByte() {
-        // todo change how we do this, so that when wire can create and instance of the correct type
         if (writeByte == null)
-              writeByte = new LongValueInstance();
+            return tempWriteByte;
       return writeByte;
     }
 
 
     LongValue index2Index() {
-
-        // todo change how we do this, so that when wire can create and instance of the correct type
         if (index2Index == null)
-            index2Index = new LongValueInstance();
+            return tempIndex2Index;
         return index2Index;
     }
 
 
     LongValue lastIndex() {
 
-        /// todo change how we do this, so that when wire can create and instance of the correct type
         if (lastIndex == null) {
-            lastIndex = new LongValueInstance();
-            lastIndex.setValue(-1);
+            return tempLastIndex;
         }
 
         return lastIndex;
@@ -75,7 +79,7 @@ class Header implements Marshallable {
         type,
         uuid, created, user, host, compression,
         indexCount, indexSpacing,
-        writeByte, index2Index
+        writeByte, index2Index,lastIndex
     }
 
     @Override
@@ -88,29 +92,38 @@ class Header implements Marshallable {
                 .write(Field.compression).text(compression)
                 .write(Field.indexCount).int32(indexCount)
                 .write(Field.indexSpacing).int32(indexSpacing)
-                .write(Field.index2Index).int64(index2Index());
+                .write(Field.index2Index).int64(index2Index())
+                .write(Field.lastIndex).int64(lastIndex());
         out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
     }
 
     @Override
     public void readMarshallable(@NotNull WireIn in) {
         in.read(Field.uuid).uuid(u -> uuid = u)
-                .read(Field.writeByte).int64(writeByte(), Header.this::writeByte)
+                .read(Field.writeByte).int64(writeByte, Header.this::newWriteByte)
                 .read(Field.created).zonedDateTime(c -> created = c)
                 .read(Field.user).text(u -> user = u)
                 .read(Field.host).text(h -> host = h)
                 .read(Field.compression).text(h -> compression = h)
                 .read(Field.indexCount).int32(h -> indexCount = h)
                 .read(Field.indexSpacing).int32(h -> indexSpacing = h)
-                .read(Field.index2Index).int64(index2Index(), this::index2Index);
+                .read(Field.index2Index).int64(index2Index, this::newIndex2Index)
+                .read(Field.lastIndex).int64(lastIndex, this::newLastIndex);
     }
 
-    private void index2Index(LongValue x) {
-        index2Index = x;
+    private void newIndex2Index(LongValue x) {
+        lastIndex = x;
+        lastIndex.setValue(tempLastIndex.getValue());
     }
 
-    private void writeByte(LongValue x) {
+    private void newWriteByte(LongValue x) {
         writeByte = x;
+        writeByte.setValue(tempWriteByte.getValue());
+    }
+
+    private void newLastIndex(LongValue x) {
+        lastIndex = x;
+        lastIndex.setValue(tempLastIndex.getValue());
     }
 
     public long getWriteByte() {

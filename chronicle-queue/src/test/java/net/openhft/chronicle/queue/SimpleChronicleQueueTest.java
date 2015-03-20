@@ -42,6 +42,10 @@ public class SimpleChronicleQueueTest {
 
             Assert.assertEquals("Steve Jobs", first + " " + surname);
 
+            Bytes bytes = chronicle.bytes();
+            bytes.flip();
+            System.out.println(Bytes.toDebugString(bytes));
+
         } finally {
             file.delete();
         }
