@@ -90,10 +90,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return this.excerpt = new StatelessExcerpt();
     }
 
-    private void openConnection() {
+    void openConnection(boolean retrying) {
         for(int i=0; !connection.isOpen(); i++) {
             try {
-                connection.open(this.blocking);
+                connection.open(this.blocking, retrying);
             } catch (IOException e) {
                 if(i > 10) {
                     try {
@@ -104,6 +104,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     LOGGER.warn("", e);
                 }
             }
+            if (!retrying)
+                break;
         }
     }
 
@@ -171,7 +173,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public void finish() {
             if(!isFinished()) {
                 if(!connection.isOpen()) {
-                    openConnection();
+                    openConnection(true);
                 }
 
                 try {
@@ -236,6 +238,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         private final ByteBuffer writeBuffer;
         private long index;
         private int readCount;
+        private long lastAttemptMS = 0, reconnectIntervalMS;
 
         public StatelessExcerpt() {
             super(builder.minBufferSize());
@@ -244,6 +247,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.index       = -1;
             this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
             this.readCount   = builder.readSpinCount();
+            this.reconnectIntervalMS = builder.reconnectTimeoutMillis();
         }
 
         @Override
@@ -284,9 +288,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public boolean index(long index) {
+            return index(index, true);
+        }
+
+        boolean index(long index, boolean retrying) {
             try {
                 if(!connection.isOpen()) {
-                    openConnection();
+                    openConnection(retrying);
+                    if (!connection.isOpen())
+                        return false;
                     cleanup();
                 }
 
@@ -330,7 +340,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             try {
                 if(!connection.isOpen()) {
-                    if(index(this.index)) {
+                    long now = System.currentTimeMillis();
+                    if (now < lastAttemptMS + reconnectIntervalMS)
+                        return false;
+                    lastAttemptMS = now;
+                    if (index(this.index, false)) {
                         return nextIndex();
                     } else {
                         return false;

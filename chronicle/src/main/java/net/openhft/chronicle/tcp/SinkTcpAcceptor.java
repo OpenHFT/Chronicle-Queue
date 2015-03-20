@@ -32,7 +32,7 @@ public class SinkTcpAcceptor extends SinkTcp {
 
 
     @Override
-    public SocketChannel openSocketChannel() throws IOException {
+    public SocketChannel openSocketChannel(boolean retrying) throws IOException {
         final ServerSocketChannel socketChannel = ServerSocketChannel.open();
         socketChannel.socket().setReuseAddress(true);
         socketChannel.socket().bind(builder.bindAddress());

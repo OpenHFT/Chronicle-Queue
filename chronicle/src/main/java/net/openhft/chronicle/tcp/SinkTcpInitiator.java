@@ -29,7 +29,7 @@ public class SinkTcpInitiator extends SinkTcp {
     }
 
     @Override
-    public SocketChannel openSocketChannel() throws IOException {
+    public SocketChannel openSocketChannel(boolean retrying) throws IOException {
         SocketChannel channel = null;
         while (running.get() && channel == null) {
             try {
@@ -46,6 +46,8 @@ public class SinkTcpInitiator extends SinkTcp {
             } catch(IOException e) {
                 logger.info("Failed to connect to {}, retrying", builder.connectAddress());
 
+                if (!retrying)
+                    break;
                 try {
                     Thread.sleep(builder.reconnectTimeoutMillis());
                 } catch (InterruptedException ie) {

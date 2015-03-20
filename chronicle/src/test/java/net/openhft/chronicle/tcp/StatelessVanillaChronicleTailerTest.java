@@ -409,7 +409,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(1000);
+                            Thread.sleep(10);
                         }
                     }
 
@@ -442,7 +442,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Thread.sleep(250);
+            Thread.sleep(25);
         }
 
         source1.close();
@@ -471,6 +471,9 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             if(checkTailer.nextIndex()) {
                 assertEquals(i, checkTailer.readLong());
                 checkTailer.finish();
+            } else {
+                i--;
+                Thread.sleep(1);
             }
         }
 
