@@ -19,15 +19,14 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.Chronicle;
-import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.lang.io.IOTools;
+import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.Jvm;
 import org.junit.Assert;
 import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ErrorCollector;
-import org.junit.rules.TestName;
+import org.junit.rules.*;
+import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,17 +34,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static junit.framework.TestCase.assertTrue;
-import static net.openhft.chronicle.ChronicleQueueBuilder.remoteTailer;
-import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
-import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -54,29 +50,85 @@ public class ChronicleTcpTestBase {
 
     @Rule
     public final TestName testName = new TestName();
-
+    @Rule
+    public final TemporaryFolder folder= new TemporaryFolder(new File(Jvm.TMP));
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
+
+    private final SecureRandom random = new SecureRandom();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            LOGGER.debug("Starting test: {}.{}",
+                    description.getClassName(),
+                    description.getMethodName()
+            );
+        }
+    };
 
     // *************************************************************************
     //
     // *************************************************************************
 
-    protected synchronized String getTestName() {
-        return testName.getMethodName();
+    protected String getTmpDir(String name) {
+        try {
+            String mn = testName.getMethodName();
+            File path = mn == null
+                ? folder.newFolder(getClass().getSimpleName(), name)
+                : folder.newFolder(getClass().getSimpleName(), mn, name);
+
+            LOGGER.debug("tmpdir: " + path);
+
+            return path.getAbsolutePath();
+        } catch(IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-     static String getTmpDir() {
-        return System.getProperty("java.io.tmpdir");
+    protected String getTmpDir(String prefix, String name) {
+        try {
+            String mn = testName.getMethodName();
+            File path = mn == null
+                    ? folder.newFolder(getClass().getSimpleName(), prefix, name)
+                    : folder.newFolder(getClass().getSimpleName(), mn, prefix, name);
+
+            LOGGER.debug("tmpdir: " + path);
+
+            return path.getAbsolutePath();
+        } catch(IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    synchronized String getVanillaTestPath() {
+        return getVanillaTestPath("vanilla-" + Math.abs(random.nextLong()));
     }
 
     synchronized String getVanillaTestPath(String suffix) {
-        final String path = getTmpDir() + "/" + "chronicle-" + testName
-                .getMethodName() + suffix;
-        final File f = new File(path);
-        if (f.exists()) {
-            f.delete();
-        }
+        return getTmpDir(suffix);
+    }
+
+    synchronized String getVanillaTestPath(String prefix, String suffix) {
+        return getTmpDir(prefix, suffix);
+    }
+
+    protected synchronized String getIndexedTestPath() {
+       final String path = getTmpDir("indexed-" + Math.abs(random.nextLong()));
+        ChronicleTools.deleteOnExit(path);
+        return path;
+    }
+
+    protected synchronized String getIndexedTestPath(String suffix) {
+        final String path = getTmpDir(suffix);
+        ChronicleTools.deleteOnExit(path);
+
+        return path;
+    }
+
+    protected synchronized String getIndexedTestPath(String prefix, String suffix) {
+        final String path = getTmpDir(prefix, suffix);
+        ChronicleTools.deleteOnExit(path);
 
         return path;
     }
@@ -127,9 +179,20 @@ public class ChronicleTcpTestBase {
             final int port = port();
             assertNotEquals(-1, port);
 
-            //LOGGER.info("{} : listening on port {}", getTestName(), port);
-
             return port;
+        }
+    }
+
+    protected static void assertIndexedClean(String path) {
+        assertNotNull(path);
+        File index = new File(path + ".index");
+        File data = new File(path + ".data");
+
+        if(index.exists()) {
+            Assert.assertTrue(index.delete());
+        }
+        if(data.exists()) {
+            Assert.assertTrue(data.delete());
         }
     }
 

@@ -40,8 +40,6 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static java.util.Arrays.asList;
-import static net.openhft.chronicle.tcp.WithMappedTest.TypeOfQueue.INDEXED;
-import static net.openhft.chronicle.tcp.WithMappedTest.TypeOfQueue.VANILLA;
 import static org.junit.Assert.assertFalse;
 
 /**
@@ -58,7 +56,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return asList(new Object[][]{{INDEXED}, {VANILLA}});
+        return asList(new Object[][]{ {TypeOfQueue.INDEXED}, {TypeOfQueue.VANILLA} });
     }
 
     public WithMappedTest(TypeOfQueue typeOfQueue) {
@@ -376,9 +374,20 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     @Test
     public void testReplicationWithPriceMarketDataFilter() throws Throwable {
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow");
-        final String sinkCloseBasePath = getVanillaTestPath("-sink-close");
+        final String sourceBasePath;
+        final String sinkHighLowBasePath;
+        final String sinkCloseBasePath;
+
+        final String testId = "testReplicationWithPriceMarketDataFilter";
+        if(typeOfQueue == TypeOfQueue.VANILLA) {
+            sourceBasePath = getVanillaTestPath(testId, "source");
+            sinkHighLowBasePath = getVanillaTestPath(testId, "sink-highlow");
+            sinkCloseBasePath = getVanillaTestPath(testId, "sink-close");
+        } else {
+            sourceBasePath = getIndexedTestPath(testId, "source");
+            sinkHighLowBasePath = getIndexedTestPath(testId, "sink-highlow");
+            sinkCloseBasePath = getIndexedTestPath(testId, "sink-close");
+        }
 
         final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
 
@@ -541,10 +550,15 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             source.close();
             source.clear();
 
-            // check cleanup
-            assertFalse(new File(sourceBasePath).exists());
-            assertFalse(new File(sinkCloseBasePath).exists());
-            assertFalse(new File(sinkHighLowBasePath).exists());
+            if(typeOfQueue == TypeOfQueue.VANILLA) {
+                assertFalse(new File(sourceBasePath).exists());
+                assertFalse(new File(sinkCloseBasePath).exists());
+                assertFalse(new File(sinkHighLowBasePath).exists());
+            } else {
+                assertIndexedClean(sourceBasePath);
+                assertIndexedClean(sinkCloseBasePath);
+                assertIndexedClean(sinkHighLowBasePath);
+            }
         }
     }
 
@@ -595,32 +609,31 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     @Test
     public void testReplicationWithEvenDayFilter() throws Throwable {
+        final String sourceBasePath;
+        final String sinkHighLowBasePath;
 
-        final String sourceBasePath = getVanillaTestPath("-source-vanilla");
-        final String sinkHighLowBasePath = getVanillaTestPath("-sink-highlow-vanilla");
-        final String sinkCloseBasePath = getVanillaTestPath("-sink-close-vanilla");
+        final String testId = "testReplicationWithEvenDayFilter";
+        if(typeOfQueue == TypeOfQueue.VANILLA) {
+            sourceBasePath = getVanillaTestPath(testId, "source");
+            sinkHighLowBasePath = getVanillaTestPath(testId, "sink-highlow");
+        } else {
+            sourceBasePath = getIndexedTestPath(testId, "source");
+            sinkHighLowBasePath = getIndexedTestPath(testId, "sink-highlow");
+        }
 
         final ChronicleTcpTestBase.PortSupplier portSupplier = new ChronicleTcpTestBase.PortSupplier();
-
         final Chronicle source = source(sourceBasePath)
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
         final int port = portSupplier.getAndAssertOnError();
-
-
         try {
-
-
             final Collection<MarketData> marketRecords = loadMarketData();
-
-            final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
-
+            final Map<Date, MarketData> expectedMarketDate = new HashMap<>();
             for (MarketData marketRecord : marketRecords) {
                 expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
             }
-
 
             Callable<Void> appenderCallable = new Callable<Void>() {
                 public Void call() throws Exception {
@@ -644,7 +657,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> dayFilterCallable = new Callable<Void>() {
-
                 public Void call() throws Exception {
 
                     final Chronicle highLowSink = sink(sinkHighLowBasePath)
@@ -655,13 +667,11 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     AffinityLock lock = AffinityLock.acquireLock();
 
                     try (final ExcerptTailer tailer = highLowSink.createTailer()) {
-
-
                         while (tailer.nextIndex()) {
-
                             // skip the empty messages
-                            if (tailer.limit() == 0)
+                            if (tailer.limit() == 0) {
                                 continue;
+                            }
 
                             MarketData actual = new MarketData();
                             actual.readMarshallable(tailer);
@@ -672,17 +682,14 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             // check the data is reasonable
                             Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
 
-                            final MarketData expected = expectedMarketDate.get(new Date(actual
-                                    .date));
-
+                            final MarketData expected = expectedMarketDate.get(new Date(actual.date));
                             Assert.assertEquals(expected, actual);
 
                             tailer.finish();
-
                         }
-
                     } finally {
                         lock.release();
+                        highLowSink.close();
                         highLowSink.clear();
                     }
                     return null;
@@ -691,7 +698,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
 
             try {
-
                 ThreadFactory appenderFactory = new ThreadFactory() {
                     @Override
                     public Thread newThread(Runnable r) {
@@ -722,9 +728,13 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             source.clear();
 
             // check cleanup
-            assertFalse(new File(sourceBasePath).exists());
-            assertFalse(new File(sinkCloseBasePath).exists());
-            assertFalse(new File(sinkHighLowBasePath).exists());
+            if(typeOfQueue == TypeOfQueue.VANILLA) {
+                assertFalse(new File(sourceBasePath).exists());
+                assertFalse(new File(sinkHighLowBasePath).exists());
+            } else {
+                assertIndexedClean(sourceBasePath);
+                assertIndexedClean(sinkHighLowBasePath);
+            }
         }
     }
 

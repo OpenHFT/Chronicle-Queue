@@ -94,8 +94,11 @@ public class SinkTcpAcceptor extends SinkTcp {
                 }
 
                 if(builder.reconnectionAttempts() > 0) {
-                    if(attempts > builder.reconnectionAttempts()) {
-                        logger.warn("Maximum reconnection attempt reached");
+                    if(attempts >= builder.reconnectionAttempts()) {
+                        if(logger.isDebugEnabled()) {
+                            logger.debug("Maximum reconnection attempt reached");
+                        }
+
                         break;
                     }
                 }

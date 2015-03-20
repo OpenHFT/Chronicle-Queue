@@ -38,6 +38,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean blocking;
     private volatile boolean closed;
+    private long lastReconnectionAttemptMS;
+    private long reconnectionIntervalMS;
     private ExcerptCommon excerpt;
 
     protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection, boolean blocking) {
@@ -47,6 +49,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
         this.closed = false;
         this.blocking = blocking;
         this.excerpt = null;
+        this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
+        this.lastReconnectionAttemptMS = 0;
     }
 
     @Override
@@ -114,6 +118,17 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return null;
     }
 
+    protected boolean shouldConnect() {
+        long now = System.currentTimeMillis();
+        if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+            return false;
+        }
+
+        lastReconnectionAttemptMS = now;
+
+        return true;
+    }
+
     // *************************************************************************
     // STATELESS
     // *************************************************************************
@@ -130,11 +145,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public StatelessExcerptAppender() {
             super(builder.minBufferSize());
 
-            this.logger        = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.readBuffer    = ChronicleTcp.createBufferOfSize(12);
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            this.readBuffer = ChronicleTcp.createBufferOfSize(12);
             this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
-            this.lastIndex     = -1;
-            this.actionType    = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
+            this.lastIndex = -1;
+            this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
+
         }
 
         @Override
@@ -166,6 +182,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             if(!isFinished()) {
                 if(!connection.isOpen()) {
                     if(!openConnection()) {
+                        super.finish();
                         throw new IllegalStateException("Unable to connect to the Source");
                     }
                 }
@@ -232,16 +249,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
         private final ByteBuffer writeBuffer;
         private long index;
         private int readCount;
-        private long lastAttemptMS = 0, reconnectIntervalMS;
 
         public StatelessExcerpt() {
             super(builder.minBufferSize());
 
-            this.logger      = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.index       = -1;
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            this.index = -1;
             this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
-            this.readCount   = builder.readSpinCount();
-            this.reconnectIntervalMS = builder.reconnectTimeoutMillis();
+            this.readCount = builder.readSpinCount();
         }
 
         @Override
@@ -282,10 +297,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public boolean index(long index) {
-            return index(index, true);
-        }
-
-        boolean index(long index, boolean retrying) {
             try {
                 if(!connection.isOpen()) {
                     if(!openConnection()) {
@@ -335,11 +346,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             try {
                 if(!connection.isOpen()) {
-                    long now = System.currentTimeMillis();
-                    if (now < lastAttemptMS + reconnectIntervalMS)
-                        return false;
-                    lastAttemptMS = now;
-                    if (index(this.index, false)) {
+                    LOGGER.info("shouldConnect");
+                    if (shouldConnect() && index(this.index)) {
                         return nextIndex();
                     } else {
                         return false;

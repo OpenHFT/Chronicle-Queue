@@ -45,8 +45,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testReplication1() throws Exception {
         final int RUNS = 100;
 
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
+        final String sourceBasePath = getVanillaTestPath("source");
+        final String sinkBasePath = getVanillaTestPath("sink");
 
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -134,8 +134,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
 
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
+        final String sourceBasePath = getVanillaTestPath("source");
+        final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
                 .entriesPerCycle(1L << 20)
@@ -233,8 +233,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testReplicationWithRolling2() throws Exception {
         final int RUNS = 100;
 
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
+        final String sourceBasePath = getVanillaTestPath("source");
+        final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
                 .entriesPerCycle(1L << 20)
@@ -339,8 +339,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     public void testSourceSinkStartResumeRollingEverySecond() throws Exception {
         //This is the config that is required to make the VanillaChronicle roll every second
 
-        final String sourceBasePath = getVanillaTestPath("-source");
-        final String sinkBasePath = getVanillaTestPath("-sink");
+        final String sourceBasePath = getVanillaTestPath("source");
+        final String sinkBasePath = getVanillaTestPath("sink");
         assertNotNull(sourceBasePath);
         assertNotNull(sinkBasePath);
 
@@ -485,8 +485,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
      */
     @Test
     public void testVanillaClientReconnection() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
-        final String basePathSink = getVanillaTestPath("-sink");
+        final String basePathSource = getVanillaTestPath("source");
+        final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
         final CountDownLatch latch = new CountDownLatch(items);
@@ -583,8 +583,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testVanillaNonBlockingClient() throws Exception {
-        final String basePathSource = getVanillaTestPath("-source");
-        final String basePathSink = getVanillaTestPath("-sink");
+        final String basePathSource = getVanillaTestPath("source");
+        final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
 
         final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)

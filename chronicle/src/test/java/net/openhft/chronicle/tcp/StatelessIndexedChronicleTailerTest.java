@@ -41,7 +41,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testIndexedStatelessSink_001() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
@@ -95,7 +95,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testIndexedStatelessSink_002() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
@@ -145,7 +145,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     @Ignore // Sometimes it fails or stales
     @Test
     public void testIndexedStatelessSink_003() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
@@ -198,7 +198,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
         final int tailers = 4;
         final int items = 1000000;
 
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final ExecutorService executor = Executors.newFixedThreadPool(tailers);
 
         final PortSupplier portSupplier = new PortSupplier();
@@ -265,7 +265,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testIndexedStatelessSink_005() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
@@ -307,7 +307,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testIndexedStatelessSink_006() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.indexed(basePathSource)
@@ -357,7 +357,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Test
     public void testStatelessIndexedNonBlockingClient() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
@@ -387,9 +387,10 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-103
      */
+    @Ignore
     @Test
     public void testIndexedRemoteClientReconnection() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
         final CountDownLatch latch = new CountDownLatch(items);
@@ -399,21 +400,23 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
             public void run() {
                 try {
                     final Chronicle sink = remoteTailer()
-                            .connectAddressProvider(new AddressProvider() {
-                                @Override
-                                public InetSocketAddress get() {
-                                    return new InetSocketAddress(
-                                            "localhost",
-                                            portSupplier.getAndAssertOnError());
-                                }
-                            })
-                            .build();
+                        .connectAddressProvider(new AddressProvider() {
+                            @Override
+                            public InetSocketAddress get() {
+                                return new InetSocketAddress(
+                                        "localhost",
+                                        portSupplier.getAndAssertOnError());
+                            }
+                        })
+                        .build();
 
                     ExcerptTailer tailer = sink.createTailer();
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
-                            if (tailer.remaining() >= 8)
-                                assertEquals(items - latch.getCount(), tailer.readLong());
+                            if (tailer.remaining() >= 8) {
+                                assertEquals(items - latch.getCount() + 1, tailer.readLong());
+                            }
+
                             tailer.finish();
                             latch.countDown();
                         } else {
@@ -443,7 +446,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
         ExcerptAppender appender1 = source1.createAppender();
         for(long i=0; i < items / 2 ; i++) {
             appender1.startExcerpt(8);
-            appender1.writeLong(i);
+            appender1.writeLong(i + 1);
             appender1.finish();
         }
 
@@ -467,7 +470,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
         ExcerptAppender appender2 = source2.createAppender();
         for(long i=items / 2; i < items; i++) {
             appender2.startExcerpt(8);
-            appender2.writeLong(i);
+            appender2.writeLong(i + 1);
             appender2.finish();
         }
 
@@ -475,7 +478,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
         final Chronicle check = vanilla(basePathSource).build();
         final ExcerptTailer checkTailer = check.createTailer();
-        for(long i=0; i<items; i++) {
+        for(long i=1; i<items; i++) {
             if(checkTailer.nextIndex()) {
                 assertEquals(i, checkTailer.readLong());
                 checkTailer.finish();
@@ -496,7 +499,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testIndexedJiraChron74() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePathSource)
@@ -513,7 +516,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testIndexedJiraChron75() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePathSource)
@@ -530,7 +533,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testIndexedJiraChron78() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePathSource)
@@ -547,7 +550,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      */
     @Test
     public void testIndexedJiraChron81() throws Exception {
-        final String basePathSource = getIndexedTestPath("-source");
+        final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePathSource)

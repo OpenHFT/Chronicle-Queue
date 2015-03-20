@@ -570,10 +570,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         private AddressProvider bindAddressProvider;
         private AddressProvider connectAddressProvider;
-        private long reconnectTimeout;
         private int reconnectionAttempts;
         private int reconnectionWarningThreshold;
-        private TimeUnit reconnectTimeoutUnit;
+        private long reconnectionInterval;
+        private TimeUnit reconnectionIntervalUnit;
         private long selectTimeout;
         private TimeUnit selectTimeoutUnit;
         private int receiveBufferSize;
@@ -608,8 +608,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
             this.bindAddressProvider = null;
             this.connectAddressProvider = null;
-            this.reconnectTimeout = 500;
-            this.reconnectTimeoutUnit = TimeUnit.MILLISECONDS;
+            this.reconnectionInterval = 500;
+            this.reconnectionIntervalUnit = TimeUnit.MILLISECONDS;
             this.reconnectionAttempts = 0;
             this.reconnectionWarningThreshold = 10;
             this.selectTimeout = 1000;
@@ -689,31 +689,31 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return connectAddress(new InetSocketAddress(host, port));
         }
 
-        public long reconnectTimeout() {
-            return reconnectTimeout;
+        public long reconnectionreconnectionInterval() {
+            return reconnectionInterval;
         }
 
-        public ReplicaChronicleQueueBuilder reconnectTimeout(long reconnectTimeout) {
-            this.reconnectTimeout = reconnectTimeout;
+        public ReplicaChronicleQueueBuilder reconnectionInterval(long reconnectTimeout) {
+            this.reconnectionInterval = reconnectTimeout;
             return this;
         }
 
-        public long reconnectTimeoutMillis() {
-            return this.reconnectTimeoutUnit.toMillis(this.reconnectTimeout);
+        public long reconnectionIntervalMillis() {
+            return this.reconnectionIntervalUnit.toMillis(this.reconnectionInterval);
         }
 
-        public ReplicaChronicleQueueBuilder reconnectTimeout(long reconnectTimeout, TimeUnit reconnectTimeoutUnit) {
-            this.reconnectTimeout = reconnectTimeout;
-            this.reconnectTimeoutUnit = reconnectTimeoutUnit;
+        public ReplicaChronicleQueueBuilder reconnectionInterval(long reconnectionInterval, TimeUnit reconnectionIntervalUnit) {
+            this.reconnectionInterval = reconnectionInterval;
+            this.reconnectionIntervalUnit = reconnectionIntervalUnit;
             return this;
         }
 
-        public TimeUnit getReconnectTimeoutUnit() {
-            return this.reconnectTimeoutUnit;
+        public TimeUnit reconnectionIntervalUnit() {
+            return this.reconnectionIntervalUnit;
         }
 
-        public ReplicaChronicleQueueBuilder getReconnectTimeoutUnit(TimeUnit reconnectTimeoutUnit) {
-            this.reconnectTimeoutUnit = reconnectTimeoutUnit;
+        public ReplicaChronicleQueueBuilder reconnectionIntervalUnit(TimeUnit reconnectionInterval) {
+            this.reconnectionIntervalUnit = reconnectionInterval;
             return this;
         }
 

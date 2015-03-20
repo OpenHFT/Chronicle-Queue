@@ -53,14 +53,17 @@ public class SinkTcpInitiator extends SinkTcp {
                 }
 
                 if(builder.reconnectionAttempts() > 0) {
-                    logger.warn("Maximum reconnection attempt reached");
-                    if(attempts > builder.reconnectionAttempts()) {
+                    if(attempts >= builder.reconnectionAttempts()) {
+                        if(logger.isDebugEnabled()) {
+                            logger.debug("Maximum reconnection attempt reached");
+                        }
+
                         break;
                     }
                 }
 
                 try {
-                    Thread.sleep(builder.reconnectTimeoutMillis());
+                    Thread.sleep(builder.reconnectionIntervalMillis());
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
