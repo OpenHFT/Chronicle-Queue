@@ -26,35 +26,37 @@ public class MappingReferenceCountTest {
         File tempFile = File.createTempFile("chronicle", "q");
 
         try {
-            int BLOCK_SIZE = 64;
+            int BLOCK_SIZE = 4096;
             final MappedFile mappedFile = MappedFile.mappedFile(tempFile.getName(), BLOCK_SIZE, 8);
             final Bytes bytes = mappedFile.bytes();
-
-
+            
             // write into block 1
-            bytes.writeLong(64 + 8, Long.MAX_VALUE);
+            bytes.writeLong(4096 + 8, Long.MAX_VALUE);
 //            Assert.assertEquals(1, mappedFile.getRefCount(1));
-            assertEquals("", mappedFile.referenceCounts());
+            assertEquals("refCount: 2, 0, 2", mappedFile.referenceCounts());
 
             // we move from block 1 to block 2
-            bytes.writeLong((64 * 2) + 8, Long.MAX_VALUE);
+            bytes.writeLong((4096 * 2) + 8, Long.MAX_VALUE);
 //            assertEquals(0, mappedFile.getRefCount(1));
 //            assertEquals(1, mappedFile.getRefCount(2));
-            assertEquals("", mappedFile.referenceCounts());
+            assertEquals("refCount: 3, 0, 1, 2", mappedFile.referenceCounts());
 
 
             // we move from block 2 back to block 1
-            bytes.writeLong((64 * 1) + 8, Long.MAX_VALUE);
+            bytes.writeLong((4096 * 1) + 8, Long.MAX_VALUE);
 //            assertEquals(1, mappedFile.getRefCount(1));
 //            assertEquals(0, mappedFile.getRefCount(2));
-            assertEquals("", mappedFile.referenceCounts());
+            assertEquals("refCount: 3, 0, 2, 1", mappedFile.referenceCounts());
 
             // we move from block 2 back to block 1
-            bytes.writeLong((64 * 3) + 8, Long.MAX_VALUE);
+            bytes.writeLong((4096 * 3) + 8, Long.MAX_VALUE);
 //            assertEquals(1, mappedFile.getRefCount(3));
-            assertEquals("", mappedFile.referenceCounts());
+            assertEquals("refCount: 4, 0, 1, 1, 2", mappedFile.referenceCounts());
 
+            bytes.release();
+            mappedFile.close();
 
+            assertEquals("refCount: 0, 0, 0, 0, 0", mappedFile.referenceCounts());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } finally {

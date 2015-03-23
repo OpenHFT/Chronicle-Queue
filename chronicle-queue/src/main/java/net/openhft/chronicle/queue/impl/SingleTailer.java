@@ -40,13 +40,7 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
-        Consumer<WireIn> metaDataConsumer = new Consumer<WireIn>() {
-            @Override
-            public void accept(WireIn wireIn) {
-                // skip the meta data
-            }
-        };
-        wire.readDocument(metaDataConsumer, reader);
+        wire.readDocument(null, reader);
         return true;
     }
 
@@ -105,7 +99,7 @@ public class SingleTailer implements ExcerptTailer {
 
         }
 
-        final LongValue position = new LongDirectReference();
+        final LongDirectReference position = new LongDirectReference();
         long last = chronicle.lastIndex();
 
 
@@ -125,7 +119,7 @@ public class SingleTailer implements ExcerptTailer {
             wire.readDocument(metaDataConsumer, dataConsumer);
 
 
-            if (position.getValue() != 0) {
+            if (position.bytes() != null) {
                 wire.bytes().position(position.getValue());
                 return true;
             }

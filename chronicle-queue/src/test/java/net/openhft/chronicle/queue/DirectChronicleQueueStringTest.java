@@ -1,10 +1,10 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -35,10 +35,38 @@ public class DirectChronicleQueueStringTest {
     public static final String EXPECTED_STRING = "Hello World23456789012345678901234567890";
     public static final byte[] EXPECTED_BYTES = EXPECTED_STRING.getBytes();
     public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
-    private static final Logger LOG = LoggerFactory.getLogger(DirectChronicleQueueStringTest.class.getName());
 
     @Test
     public void testCreateAppender() throws Exception {
+        for (int r = 0; r < 2; r++) {
+            long start = System.nanoTime();
+
+            String name = TMP + "/single" + start + ".q";
+            File file = new File(name);
+            file.deleteOnExit();
+
+            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
+                    .build();
+
+            writeSome(chronicle);
+
+            long mid = System.nanoTime();
+
+            DirectChronicleQueue chronicle2 = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
+                    .build();
+
+            readSome(chronicle2);
+
+            long end = System.nanoTime();
+            System.out.printf("Write rate %.1f M/s - Read rate %.1f M/s%n",
+                    RUNS * 1e3 / (mid - start), RUNS * 1e3 / (end - mid));
+        }
+    }
+
+
+    @Test
+    @Ignore
+    public void testCreateAppenderMT() throws Exception {
         for (int r = 0; r < 2; r++) {
             for (int t = 1; t < Runtime.getRuntime().availableProcessors(); t++) {
                 List<Future<?>> futureList = new ArrayList<>();
@@ -87,7 +115,7 @@ public class DirectChronicleQueueStringTest {
     }
 
     private void readSome(DirectChronicleQueue chronicle) {
-        NativeByteStore allocate = NativeByteStore.nativeStore(EXPECTED_BYTES.length);
+        NativeBytesStore allocate = NativeBytesStore.nativeStore(EXPECTED_BYTES.length);
         final Bytes toRead = allocate.bytes();
         AtomicLong offset = new AtomicLong(chronicle.firstBytes());
         for (int i = 0; i < RUNS; i++) {
@@ -97,11 +125,12 @@ public class DirectChronicleQueueStringTest {
     }
 
     private void writeSome(DirectChronicleQueue chronicle) {
-        NativeByteStore allocate = NativeByteStore.nativeStore(EXPECTED_BYTES.length);
+        NativeBytesStore allocate = NativeBytesStore.nativeStore(EXPECTED_BYTES.length);
         final Bytes toWrite = allocate.bytes();
-        toWrite.write(EXPECTED_BYTES);
         for (int i = 0; i < RUNS; i++) {
             toWrite.clear();
+            toWrite.write(EXPECTED_BYTES);
+            toWrite.flip();
             chronicle.appendDocument(toWrite);
         }
     }

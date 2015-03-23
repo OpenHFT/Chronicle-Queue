@@ -128,14 +128,8 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
         bytes.position(HEADER_OFFSET);
 
-        Consumer<WireIn> nullConsumer = o -> {
-        };
-
-        Consumer<WireIn> dataConsumer = $ -> {
-            wire.read().marshallable(header);
-        };
-
-        wire.readDocument(dataConsumer, nullConsumer);
+        if (!wire.readDocument(w -> w.read().marshallable(header), null))
+            throw new AssertionError("No header!?");
         firstBytes = bytes.position();
     }
 
@@ -296,13 +290,13 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             final long lastByte = writeByte.getVolatileValue();
 
             for (; ; ) {
-                if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                if (bytes.compareAndSwapInt(lastByte, 0, META_DATA | NOT_READY | (int) length)) {
                     long lastByte2 = lastByte + 4 + buffer.remaining() + indexSize;
                     bytes.write(lastByte + 4, buffer);
 
                     header.lastIndex().addAtomicValue(1);
                     writeByte.setOrderedValue(lastByte2);
-                    bytes.writeOrderedInt(lastByte, (int) (6 + indexSize));
+                    bytes.writeOrderedInt(lastByte, META_DATA | (int) (6 + indexSize));
                     long start = lastByte + 4;
                     bytes.zeroOut(start + keyLen, start + keyLen + length);
                     return start + keyLen;

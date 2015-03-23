@@ -66,17 +66,18 @@
     <dependencies>
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-network</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
         </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-threads</artifactId>
+            <version>1.0.0-alpha-SNAPSHOT</version>
         </dependency>
 
         <dependency>

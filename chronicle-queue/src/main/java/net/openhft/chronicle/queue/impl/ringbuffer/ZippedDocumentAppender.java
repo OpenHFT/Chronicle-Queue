@@ -1,8 +1,8 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.network.internal.NamedThreadFactory;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

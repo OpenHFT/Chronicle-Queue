@@ -67,15 +67,15 @@ class Header implements Marshallable {
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
-                .write(Field.writeByte).int64(writeByte())
+                .write(Field.writeByte).int64forBinding(PADDED_SIZE)
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
                 .write(Field.host).text(host)
                 .write(Field.compression).text(compression)
                 .write(Field.indexCount).int32(indexCount)
                 .write(Field.indexSpacing).int32(indexSpacing)
-                .write(Field.index2Index).int64(index2Index())
-                .write(Field.lastIndex).int64(lastIndex());
+                .write(Field.index2Index).int64forBinding(0L)
+                .write(Field.lastIndex).int64forBinding(-1L);
         out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
     }
 
