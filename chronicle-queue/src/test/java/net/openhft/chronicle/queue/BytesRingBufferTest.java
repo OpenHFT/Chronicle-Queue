@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue;
 
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.NativeStore;
+import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -27,10 +27,10 @@ public class BytesRingBufferTest {
     Bytes<ByteBuffer> input = Bytes.wrap(ByteBuffer.allocate(12));
     Bytes<ByteBuffer> output;
     Bytes<ByteBuffer> out;
-    NativeStore outBuffer;
+    NativeBytesStore outBuffer;
     @Before
     public void setup() {
-        outBuffer = NativeStore.nativeStore(12);
+        outBuffer = NativeBytesStore.nativeStore(12);
         out = outBuffer.bytes();
         out.writeUTFΔ(EXPECTED);
         output = out.flip().bytes();
@@ -44,7 +44,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(24)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
 
@@ -71,7 +71,7 @@ public class BytesRingBufferTest {
     @Test
     public void testSimpledSingleThreadedWriteRead() throws Exception {
 
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(150)) {
+        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             bytesRingBuffer.offer(data());
@@ -82,7 +82,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testPollWithNoData() throws Exception {
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(150)) {
+        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(150)) {
 
             assert nativeStore.isNative();
 
@@ -96,7 +96,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(150)) {
+        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(150)) {
             assert nativeStore.isNative();
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
             data();
@@ -113,7 +113,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(150)) {
+        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(150)) {
 
             System.out.println(nativeStore.realCapacity());
             System.out.println(nativeStore.capacity());
@@ -137,7 +137,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWrite3read3SingleThreadedWrite() throws Exception {
-        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(150)) {
+        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             assert nativeStore.bytes().capacity() < (1 << 12);
@@ -180,7 +180,7 @@ public class BytesRingBufferTest {
     @Test
     public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws Exception {
 
-        try (NativeStore allocate = NativeStore.nativeStore(1000)) {
+        try (NativeByteStore allocate = NativeByteStore.nativeStore(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
 
@@ -193,7 +193,7 @@ public class BytesRingBufferTest {
                 for (int i = 0; i < iterations; i++) {
                     final int j = i;
                     executorService.submit(() -> {
-                        try (NativeStore<Void> nativeStore = NativeStore.nativeStore(iterations)) {
+                        try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(iterations)) {
                             final Bytes out = nativeStore.bytes();
                             String expected = EXPECTED_VALUE + j;
                             out.clear();
@@ -223,7 +223,7 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try {
-                            try (NativeStore<Void> nativeStore = NativeStore.nativeStore(25)) {
+                            try (NativeByteStore<Void> nativeStore = NativeByteStore.nativeStore(25)) {
                                 Bytes bytes = nativeStore.bytes();
                                 Bytes result = null;
                                 do {
@@ -260,7 +260,7 @@ public class BytesRingBufferTest {
     @Test
     public void testMultiThreadedWithIntValues() throws Exception {
 
-        try (NativeStore allocate = NativeStore.nativeStore(1000)) {
+        try (NativeByteStore allocate = NativeByteStore.nativeStore(1000)) {
 
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
@@ -276,7 +276,7 @@ public class BytesRingBufferTest {
                     final int j = i;
                     executorService.submit(() -> {
 
-                        try (NativeStore allocate2 = NativeStore.nativeStore(iterations)) {
+                        try (NativeByteStore allocate2 = NativeByteStore.nativeStore(iterations)) {
                             final Bytes out = allocate2.bytes();
 
                             out.clear();
@@ -307,7 +307,7 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try {
-                            try (NativeStore allocate3 = NativeStore.nativeStore(25)) {
+                            try (NativeByteStore allocate3 = NativeByteStore.nativeStore(25)) {
                                 final Bytes bytes = allocate3.bytes();
                                 Bytes result = null;
                                 do {

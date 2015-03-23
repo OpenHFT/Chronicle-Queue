@@ -279,7 +279,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
         long indexSize = 1L << 17L;
 
-        try (NativeStore<Void> allocate = NativeStore.nativeStore(6)) {
+        try (NativeBytesStore<Void> allocate = NativeBytesStore.nativeStore(6)) {
 
             final Bytes<Void> buffer = allocate.bytes();
 

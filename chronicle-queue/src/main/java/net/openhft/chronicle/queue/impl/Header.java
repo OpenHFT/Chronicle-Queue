@@ -32,35 +32,17 @@ class Header implements Marshallable {
     private LongValue index2Index = null;
     private LongValue lastIndex = null;
 
-
-    private LongValueInstance tempWriteByte = new LongValueInstance();
-    private LongValueInstance tempIndex2Index = new LongValueInstance();
-    private LongValueInstance tempLastIndex = new LongValueInstance();
-
-    {
-        tempLastIndex.setValue(-1);
-    }
-
     LongValue writeByte() {
-        if (writeByte == null)
-            return tempWriteByte;
       return writeByte;
     }
 
 
     LongValue index2Index() {
-        if (index2Index == null)
-            return tempIndex2Index;
         return index2Index;
     }
 
 
     LongValue lastIndex() {
-
-        if (lastIndex == null) {
-            return tempLastIndex;
-        }
-
         return lastIndex;
     }
 
@@ -72,7 +54,6 @@ class Header implements Marshallable {
         user = System.getProperty("user.name");
         host = SingleChronicleQueue.getHostName();
         this.compression = compression.name();
-        writeByte().setOrderedValue(PADDED_SIZE);
         return this;
     }
 
@@ -101,46 +82,15 @@ class Header implements Marshallable {
     @Override
     public void readMarshallable(@NotNull WireIn in) {
         in.read(Field.uuid).uuid(u -> uuid = u)
-                .read(Field.writeByte).int64(writeByte, Header.this::newWriteByte)
+                .read(Field.writeByte).int64(writeByte, x -> writeByte = x)
                 .read(Field.created).zonedDateTime(c -> created = c)
                 .read(Field.user).text(u -> user = u)
                 .read(Field.host).text(h -> host = h)
                 .read(Field.compression).text(h -> compression = h)
                 .read(Field.indexCount).int32(h -> indexCount = h)
                 .read(Field.indexSpacing).int32(h -> indexSpacing = h)
-                .read(Field.index2Index).int64(index2Index, this::newIndex2Index)
-                .read(Field.lastIndex).int64(lastIndex, this::newLastIndex);
-    }
-
-    private void newIndex2Index(LongValue x) {
-        lastIndex = x;
-        lastIndex.setValue(tempLastIndex.getValue());
-        try {
-            tempLastIndex.close();
-        } catch (IOException e) {
-
-        }
-    }
-
-    private void newWriteByte(LongValue x) {
-        writeByte = x;
-        writeByte.setValue(tempWriteByte.getValue());
-        try {
-            tempWriteByte.close();
-        } catch (IOException e) {
-
-        }
-    }
-
-    private void newLastIndex(LongValue x) {
-        lastIndex = x;
-        lastIndex.setValue(tempLastIndex.getValue());
-
-        try {
-            tempLastIndex.close();
-        } catch (IOException e) {
-
-        }
+                .read(Field.index2Index).int64(index2Index, x -> index2Index = x)
+                .read(Field.lastIndex).int64(lastIndex, x -> lastIndex = x);
     }
 
     public long getWriteByte() {

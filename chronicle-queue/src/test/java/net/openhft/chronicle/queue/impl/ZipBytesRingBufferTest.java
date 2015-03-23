@@ -2,20 +2,14 @@ package net.openhft.chronicle.queue.impl;
 
 import junit.framework.TestCase;
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.NativeStore;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.queue.impl.ringbuffer.ZippedDocumentAppender;
-import net.openhft.chronicle.wire.TextWire;
-
-import net.openhft.lang.io.DirectBytes;
-import net.openhft.lang.io.DirectStore;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ZipBytesRingBufferTest extends TestCase {
@@ -27,8 +21,8 @@ public class ZipBytesRingBufferTest extends TestCase {
         try {
 
 
-            NativeStore allocate =  NativeStore.nativeStore(1024);
-            NativeStore msgBytes = NativeStore.nativeStore(150);
+            NativeByteStore allocate =  NativeByteStore.nativeStore(1024);
+            NativeByteStore msgBytes = NativeByteStore.nativeStore(150);
 
             net.openhft.chronicle.bytes.Bytes message = msgBytes.bytes();
             message.writeUTFΔ("Hello World");
@@ -59,7 +53,7 @@ public class ZipBytesRingBufferTest extends TestCase {
             }
 
             // read the data from chronicle into actual
-            Bytes actual = NativeStore.nativeStore(100).bytes();
+            Bytes actual = NativeByteStore.nativeStore(100).bytes();
             chronicle.readDocument(offset, actual);
 
             // "Hello World" zipped should be 13 chars
