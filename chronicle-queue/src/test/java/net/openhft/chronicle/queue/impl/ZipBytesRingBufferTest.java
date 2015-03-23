@@ -1,21 +1,22 @@
 package net.openhft.chronicle.queue.impl;
 
-import junit.framework.TestCase;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.queue.impl.ringbuffer.ZippedDocumentAppender;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class ZipBytesRingBufferTest extends TestCase {
+public class ZipBytesRingBufferTest {
 
     @Test
+    @Ignore
     public void testZipAndAppend() throws Exception {
         File file = null;
 

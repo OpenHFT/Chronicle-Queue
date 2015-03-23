@@ -5,6 +5,7 @@ import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
 import net.openhft.chronicle.queue.impl.Indexer;
 import net.openhft.chronicle.wire.WireKey;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -20,6 +21,7 @@ public class SimpleChronicleQueueTest {
     }
 
     @Test
+    @Ignore
     public void testSimpleWire() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -196,6 +198,7 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
+    @Ignore
     public void testHeaderIndexReadAtIndex() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -229,6 +232,7 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
+    @Ignore
     public void testReadAtIndexWithIndexes() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -265,6 +269,7 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
+    @Ignore
     public void testReadAtIndexWithIndexesAtStart() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -303,6 +308,7 @@ public class SimpleChronicleQueueTest {
     }
 
     @Test
+    @Ignore
     public void testScanFromLastKnownIndex() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
