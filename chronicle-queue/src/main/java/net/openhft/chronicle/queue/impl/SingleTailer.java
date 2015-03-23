@@ -5,8 +5,8 @@ import net.openhft.chronicle.bytes.BytesStoreBytes;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.values.CodeTemplate;
 import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.LongDirectReference;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +26,6 @@ public class SingleTailer implements ExcerptTailer {
     long index;
     private final BytesStoreBytes bytes = new BytesStoreBytes(Bytes.elasticByteBuffer());
     private final Wire wire = new BinaryWire(bytes);
-    private CodeTemplate codeTemplate = CodeTemplate.direct();
 
     public SingleTailer(ChronicleQueue chronicle) {
         this.chronicle = (SingleChronicleQueue) chronicle;
@@ -106,7 +105,7 @@ public class SingleTailer implements ExcerptTailer {
 
         }
 
-        final LongValue position = codeTemplate.newInstance(LongValue.class);
+        final LongValue position = new LongDirectReference();
         long last = chronicle.lastIndex();
 
 
