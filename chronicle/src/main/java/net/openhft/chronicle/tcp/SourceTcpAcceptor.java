@@ -73,7 +73,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                     while (running.get()) {
                         int nbKeys = selector.select(0, selectTimeout);
 
-                        if (nbKeys > 0) {
+                        if (nbKeys > 0 && running.get()) {
                             if (selectionKeys != null) {
                                 final SelectionKey[] keys = selectionKeys.keys();
                                 final int size = selectionKeys.size();
@@ -116,8 +116,8 @@ public final class SourceTcpAcceptor extends SourceTcp {
                         }
                     }
 
-                    selector.close();
                     socketChannel.close();
+                    selector.close();
                 } catch (IOException e) {
                     builder.connectionListener().onError(socketChannel, e);
                     logger.warn("", e);

@@ -610,7 +610,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.connectAddressProvider = null;
             this.reconnectionInterval = 500;
             this.reconnectionIntervalUnit = TimeUnit.MILLISECONDS;
-            this.reconnectionAttempts = 0;
+            this.reconnectionAttempts = 1;
             this.reconnectionWarningThreshold = 10;
             this.selectTimeout = 1000;
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;

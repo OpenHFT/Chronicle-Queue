@@ -481,7 +481,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         }
                     }
 

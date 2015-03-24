@@ -69,8 +69,7 @@ public abstract class SourceTcp {
             executor.awaitTermination(
                     builder.selectTimeout() * 2,
                     builder.selectTimeoutUnit());
-        } catch (InterruptedException e) {
-            // Ignored
+        } catch (InterruptedException ignored) {
         }
 
         return !running.get();

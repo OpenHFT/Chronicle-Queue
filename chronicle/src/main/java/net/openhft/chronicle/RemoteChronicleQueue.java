@@ -40,6 +40,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     private volatile boolean closed;
     private long lastReconnectionAttemptMS;
     private long reconnectionIntervalMS;
+    private long lastReconnectionAttempt;
     private ExcerptCommon excerpt;
 
     protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection, boolean blocking) {
@@ -51,6 +52,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         this.excerpt = null;
         this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
         this.lastReconnectionAttemptMS = 0;
+        this.lastReconnectionAttempt = 0;
     }
 
     @Override
@@ -102,7 +104,22 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
         }
 
-        return connection.isOpen();
+        boolean connected = connection.isOpen();
+        if(connected) {
+            this.lastReconnectionAttempt = 0;
+            this.lastReconnectionAttemptMS = 0;
+        } else {
+            lastReconnectionAttempt++;
+            if(builder.reconnectionWarningThreshold() > 0) {
+                if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
+                    LOGGER.warn("Failed to establish a connection {}",
+                        ChronicleTcp.connectionName("", builder)
+                    );
+                }
+            }
+        }
+
+        return connected;
     }
 
     private void closeConnection() {
@@ -119,12 +136,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     protected boolean shouldConnect() {
-        long now = System.currentTimeMillis();
-        if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-            return false;
-        }
+        if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+            long now = System.currentTimeMillis();
+            if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+                return false;
+            }
 
-        lastReconnectionAttemptMS = now;
+            lastReconnectionAttemptMS = now;
+        }
 
         return true;
     }
@@ -181,7 +200,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public void finish() {
             if(!isFinished()) {
                 if(!connection.isOpen()) {
-                    if(!openConnection()) {
+                    if(!waitForConnection()) {
                         super.finish();
                         throw new IllegalStateException("Unable to connect to the Source");
                     }
@@ -239,6 +258,21 @@ class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public long lastWrittenIndex() {
             return this.lastIndex;
+        }
+
+        private boolean waitForConnection() {
+            for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i++) {
+                openConnection();
+
+                if(!connection.isOpen()) {
+                    try {
+                        Thread.sleep(builder.reconnectionIntervalMillis());
+                    } catch(InterruptedException ignored) {
+                    }
+                }
+            }
+
+            return connection.isOpen();
         }
     }
 
@@ -299,11 +333,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public boolean index(long index) {
             try {
                 if(!connection.isOpen()) {
-                    if(!openConnection()) {
+                    if(shouldConnect()) {
+                        if(!openConnection()) {
+                            return false;
+                        }
+
+                        cleanup();
+                    } else {
                         return false;
                     }
-                    
-                    cleanup();
                 }
 
                 connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_SUBSCRIBE, index);
@@ -334,7 +372,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
             } catch (IOException e) {
-                logger.warn("", e);
+                if (e instanceof EOFException) {
+                    logger.trace("", e);
+                } else {
+                    logger.warn("", e);
+                }
             }
 
             return false;
@@ -346,8 +388,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             try {
                 if(!connection.isOpen()) {
-                    LOGGER.info("shouldConnect");
-                    if (shouldConnect() && index(this.index)) {
+                    if (index(this.index)) {
                         return nextIndex();
                     } else {
                         return false;
@@ -378,15 +419,16 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 index = receivedIndex;
             } catch (IOException e1) {
-                if (e1 instanceof EOFException)
-                    logger.trace("Exception reading nextExcerpt", e1);
-                else
-                logger.warn("Exception reading nextExcerpt", e1);
+                if (e1 instanceof EOFException) {
+                    logger.trace("Exception reading from socket", e1);
+                } else {
+                    logger.warn("Exception reading from socket", e1);
+                }
 
                 try {
                     connection.close();
                 } catch (IOException e2) {
-                    logger.warn("Error closing socketChannel", e2);
+                    logger.warn("Error closing soocket", e2);
                 }
 
                 return false;

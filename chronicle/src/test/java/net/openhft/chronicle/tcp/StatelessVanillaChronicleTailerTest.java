@@ -21,7 +21,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -381,7 +380,6 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
-    @Ignore
     @Test
     public void testVanillaClientReconnection() throws Exception {
         final String basePathSource = getVanillaTestPath("source");
@@ -413,7 +411,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         }
                     }
 
