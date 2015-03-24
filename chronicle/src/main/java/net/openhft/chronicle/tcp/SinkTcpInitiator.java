@@ -20,7 +20,6 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 
 import java.io.IOException;
-import java.net.NetworkInterface;
 import java.nio.channels.SocketChannel;
 
 public class SinkTcpInitiator extends SinkTcp {
@@ -30,60 +29,27 @@ public class SinkTcpInitiator extends SinkTcp {
 
     @Override
     public SocketChannel openSocketChannel() throws IOException {
-        int attempts = 0;
-        SocketChannel channel = null;
-        while (running.get() && channel == null) {
-            try {
-                channel = SocketChannel.open();
-                channel.configureBlocking(true);
+        try {
+            SocketChannel channel = SocketChannel.open();
+            channel.configureBlocking(true);
 
-                if(builder.bindAddress() != null) {
-                    channel.bind(builder.bindAddress());
-                }
-
-                channel.connect(builder.connectAddress());
-
-                logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
-            } catch(IOException e) {
-                attempts++;
-                channel = null;
-
-                if(attempts > builder.reconnectionWarningThreshold()) {
-                    logger.warn("Failed to connect to {}, retrying", builder.connectAddress());
-                }
-
-                if(builder.reconnectionAttempts() > 0) {
-                    if(attempts >= builder.reconnectionAttempts()) {
-                        if(logger.isDebugEnabled()) {
-                            logger.debug("Maximum reconnection attempt reached");
-                        }
-
-                        break;
-                    }
-                }
-
-                try {
-                    Thread.sleep(builder.reconnectionIntervalMillis());
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
+            if(builder.bindAddress() != null) {
+                channel.bind(builder.bindAddress());
             }
+
+            channel.connect(builder.connectAddress());
+
+            logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
+
+            return channel;
+        } catch(IOException e) {
         }
 
-        return channel;
+        return null;
     }
 
     @Override
     public boolean isLocalhost() {
-        if(builder.connectAddress().getAddress().isLoopbackAddress()) {
-            return true;
-        }
-
-        try {
-            return NetworkInterface.getByInetAddress(builder.connectAddress().getAddress()) != null;
-        } catch (Exception ignored) {
-        }
-
-        return false;
+        return ChronicleTcp.isLocalhost(builder.connectAddress());
     }
 }

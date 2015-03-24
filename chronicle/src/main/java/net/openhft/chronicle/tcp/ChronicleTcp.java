@@ -17,10 +17,12 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.lang.model.constraints.NotNull;
 import sun.nio.ch.DirectBuffer;
 
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -83,12 +85,29 @@ public class ChronicleTcp {
         return sb.toString();
     }
 
+    public static String connectionName(String name, ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
+        return connectionName(name, builder.bindAddress(), builder.connectAddress());
+    }
+
     public static long address(@NotNull ByteBuffer buffer) {
         return ((DirectBuffer) buffer).address();
     }
 
     public static boolean hasCapacityOf(ByteBuffer buffer, int size) {
         return buffer != null ? buffer.capacity() >= size : false;
+    }
+
+    public static boolean isLocalhost(@NotNull InetSocketAddress address) {
+        if(address.getAddress().isLoopbackAddress()) {
+            return true;
+        }
+
+        try {
+            return NetworkInterface.getByInetAddress(address.getAddress()) != null;
+        } catch (Exception ignored) {
+        }
+
+        return false;
     }
 }
 

@@ -92,7 +92,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     }
 
     // *************************************************************************
-    // STATEFULL
+    // STATEFUL
     // *************************************************************************
 
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
@@ -102,6 +102,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         protected final ByteBuffer readBuffer;
         private long lastReconnectionAttemptMS;
         private long reconnectionIntervalMS;
+        private long lastReconnectionAttempt;
 
         protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
             super(excerpt);
@@ -112,6 +113,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
             this.lastReconnectionAttemptMS = 0;
+            this.lastReconnectionAttempt = 0;
         }
 
         @Override
@@ -136,13 +138,41 @@ class ChronicleQueueSink extends WrappedChronicle {
             ChronicleQueueSink.this.excerpt = null;
         }
 
-        protected boolean shouldConnect() {
-            long now = System.currentTimeMillis();
-            if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-                return false;
+        protected boolean openConnection() {
+            if(!connection.isOpen()) {
+                try {
+                    connection.open();
+                } catch (IOException e) {
+                }
             }
 
-            lastReconnectionAttemptMS = now;
+            boolean connected = connection.isOpen();
+            if(connected) {
+                this.lastReconnectionAttempt = 0;
+                this.lastReconnectionAttemptMS = 0;
+            } else {
+                lastReconnectionAttempt++;
+                if(builder.reconnectionWarningThreshold() > 0) {
+                    if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
+                        logger.warn("Failed to establish a connection {}",
+                            ChronicleTcp.connectionName("", builder)
+                        );
+                    }
+                }
+            }
+
+            return connected;
+        }
+
+        protected boolean shouldConnect() {
+            if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+                long now = System.currentTimeMillis();
+                if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+                    return false;
+                }
+
+                lastReconnectionAttemptMS = now;
+            }
 
             return true;
         }
@@ -196,13 +226,9 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         protected boolean readNext() {
             if (!closed && !connection.isOpen() && shouldConnect()) {
-                try {
-                    connection.open();
+                if(openConnection()) {
                     readBuffer.clear();
                     readBuffer.limit(0);
-                } catch (IOException e) {
-                    logger.warn("Error closing socketChannel", e);
-                    return false;
                 }
             }
 
@@ -216,7 +242,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                     if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
                         final int size = readBuffer.getInt();
-                        // conmsume data
+                        // consume data
                         readBuffer.getLong();
 
                         switch (size) {
@@ -231,7 +257,11 @@ class ChronicleQueueSink extends WrappedChronicle {
                     }
                 }
             } catch (IOException e1) {
-                logger.warn("Exception reading nextExcerpt", e1);
+                if (e1 instanceof EOFException) {
+                    logger.debug("Error reading from socket", e1);
+                } else {
+                    logger.warn("Error reading from socket", e1);
+                }
 
                 try {
                     connection.close();
@@ -259,19 +289,25 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         protected boolean readNext() {
             if (!closed && !connection.isOpen() && shouldConnect()) {
-                try {
-                    connection.open();
+                if(openConnection()) {
                     readBuffer.clear();
                     readBuffer.limit(0);
 
-                    if (this.adapter == null) {
-                        this.adapter = createAppenderAdapter();
-                    }
+                    try {
+                        if (this.adapter == null) {
+                            this.adapter = createAppenderAdapter();
+                        }
 
-                    subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
-                } catch (IOException e) {
-                    logger.warn("Error closing socketChannel", e);
-                    return false;
+                        subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
+                    } catch (IOException e) {
+                        if (e instanceof EOFException) {
+                            logger.debug("Error reading from socket", e);
+                        } else {
+                            logger.warn("Error reading from socket", e);
+                        }
+
+                        return false;
+                    }
                 }
             }
 
@@ -334,10 +370,11 @@ class ChronicleQueueSink extends WrappedChronicle {
                     return readNextExcerpt();
                 }
             } catch (IOException e1) {
-                if (e1 instanceof EOFException)
-                    logger.trace("Exception reading nextExcerpt", e1);
-                else
-                    logger.warn("Exception reading nextExcerpt", e1);
+                if (e1 instanceof EOFException) {
+                    logger.trace("Exception reading from socket", e1);
+                } else {
+                    logger.warn("Exception reading from socket", e1);
+                }
 
                 try {
                     connection.close();

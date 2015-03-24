@@ -31,7 +31,7 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
     }
 
     @Test
-    public void testRemoteTailerReconnectWithDelay() throws IOException {
+    public void testRemoteTailerReconnectWithSpin() throws IOException {
         try (Chronicle chronicle = ChronicleQueueBuilder
                 .remoteTailer()
                 .connectAddress("localhost", 1)

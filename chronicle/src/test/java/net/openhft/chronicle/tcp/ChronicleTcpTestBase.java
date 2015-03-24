@@ -48,6 +48,8 @@ import static org.junit.Assert.assertNotNull;
 public class ChronicleTcpTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleTcpTestBase.class);
 
+    protected static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("openhft.traceTestExecution");
+
     @Rule
     public final TestName testName = new TestName();
     @Rule
@@ -60,10 +62,12 @@ public class ChronicleTcpTestBase {
     @Rule
     public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
-            LOGGER.debug("Starting test: {}.{}",
+            if(TRACE_TEST_EXECUTION) {
+                LOGGER.info("Starting test: {}.{}",
                     description.getClassName(),
                     description.getMethodName()
-            );
+                );
+            }
         }
     };
 

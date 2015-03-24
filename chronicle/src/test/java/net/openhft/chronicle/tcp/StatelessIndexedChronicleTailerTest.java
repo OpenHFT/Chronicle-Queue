@@ -32,10 +32,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertTrue;
 import static net.openhft.chronicle.ChronicleQueueBuilder.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestBase {
 
@@ -387,7 +387,6 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-103
      */
-    @Ignore
     @Test
     public void testIndexedRemoteClientReconnection() throws Exception {
         final String basePathSource = getIndexedTestPath("source");
@@ -420,7 +419,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         }
                     }
 

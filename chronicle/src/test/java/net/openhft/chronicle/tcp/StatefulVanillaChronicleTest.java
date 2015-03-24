@@ -35,9 +35,7 @@ import java.util.concurrent.TimeUnit;
 import static junit.framework.TestCase.assertTrue;
 import static net.openhft.chronicle.ChronicleQueueBuilder.ReplicaChronicleQueueBuilder;
 import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
@@ -514,7 +512,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         }
                     }
 

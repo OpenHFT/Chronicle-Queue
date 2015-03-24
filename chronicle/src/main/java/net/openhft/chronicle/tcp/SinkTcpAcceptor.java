@@ -52,56 +52,35 @@ public class SinkTcpAcceptor extends SinkTcp {
         final long selectTimeout = builder.selectTimeout();
         final VanillaSelectionKeySet selectionKeys = selector.vanillaSelectionKeys();
 
-        int attempts = 0;
         SocketChannel channel = null;
-        while (running.get() && channel == null) {
-            int nbKeys = selector.select(0, selectTimeout);
-            if (nbKeys > 0) {
-                if (selectionKeys != null) {
-                    final SelectionKey[] keys = selectionKeys.keys();
-                    final int size = selectionKeys.size();
+        int nbKeys = selector.select(0, selectTimeout);
+        if (nbKeys > 0) {
+            if (selectionKeys != null) {
+                final SelectionKey[] keys = selectionKeys.keys();
+                final int size = selectionKeys.size();
 
-                    for (int k = 0; k < size; k++) {
-                        final SelectionKey key = keys[k];
-                        if (key != null) {
-                            if (key.isAcceptable()) {
-                                channel = socketChannel.accept();
-                                logger.info("Accepted connection from: " + channel.getRemoteAddress());
-                            }
-                        }
-                    }
-
-                    selectionKeys.clear();
-                } else {
-                    final Set<SelectionKey> keys = selector.selectionKeys();
-
-                    for (final SelectionKey key : keys) {
+                for (int k = 0; k < size; k++) {
+                    final SelectionKey key = keys[k];
+                    if (key != null) {
                         if (key.isAcceptable()) {
                             channel = socketChannel.accept();
                             logger.info("Accepted connection from: " + channel.getRemoteAddress());
                         }
                     }
-
-                    keys.clear();
-                }
-            }
-
-            if(channel == null) {
-                attempts++;
-
-                if(attempts > builder.reconnectionWarningThreshold()) {
-                    logger.warn("Failed to get a connection on {}, retrying", builder.bindAddress());
                 }
 
-                if(builder.reconnectionAttempts() > 0) {
-                    if(attempts >= builder.reconnectionAttempts()) {
-                        if(logger.isDebugEnabled()) {
-                            logger.debug("Maximum reconnection attempt reached");
-                        }
+                selectionKeys.clear();
+            } else {
+                final Set<SelectionKey> keys = selector.selectionKeys();
 
-                        break;
+                for (final SelectionKey key : keys) {
+                    if (key.isAcceptable()) {
+                        channel = socketChannel.accept();
+                        logger.info("Accepted connection from: " + channel.getRemoteAddress());
                     }
                 }
+
+                keys.clear();
             }
         }
 
