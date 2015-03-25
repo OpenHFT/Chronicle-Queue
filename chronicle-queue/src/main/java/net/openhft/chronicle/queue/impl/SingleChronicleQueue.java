@@ -14,9 +14,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,8 +33,8 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
-    static final long BUILDING = asLong("BUILDING");
-    static final long QUEUE_CREATED = asLong("QUEUE400");
+    static final long BUILDING = BytesUtil.asLong("BUILDING");
+    static final long QUEUE_CREATED = BytesUtil.asLong("QUEUE400");
     static final int NOT_READY = 1 << 30;
     static final int META_DATA = 1 << 31;
     static final int LENGTH_MASK = -1 >>> 2;
@@ -170,11 +167,6 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
                 return "localhost";
             }
         }
-    }
-
-    private static long asLong(@NotNull String str) {
-        ByteBuffer bb = ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1)).order(ByteOrder.nativeOrder());
-        return bb.getLong();
     }
 
     @Override
