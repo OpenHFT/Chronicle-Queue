@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStoreBytes;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
@@ -119,7 +118,7 @@ public class SingleTailer implements ExcerptTailer {
             wire.readDocument(metaDataConsumer, dataConsumer);
 
 
-            if (position.bytes() != null) {
+            if (position.bytesStore() != null) {
                 wire.bytes().position(position.getValue());
                 return true;
             }

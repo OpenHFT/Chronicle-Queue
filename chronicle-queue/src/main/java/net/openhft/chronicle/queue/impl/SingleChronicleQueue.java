@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.isData;
 
@@ -101,7 +99,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     @Override
     public boolean index(long index, @NotNull BytesStoreBytes bytes) {
         if (index == -1) {
-            bytes.setByteStore(headerMemory, HEADER_OFFSET, headerMemory.length() - HEADER_OFFSET);
+            bytes.bytesStore(headerMemory, HEADER_OFFSET, headerMemory.length() - HEADER_OFFSET);
             return true;
         }
         return false;
