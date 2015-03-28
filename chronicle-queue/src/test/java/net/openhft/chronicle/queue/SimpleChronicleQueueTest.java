@@ -84,6 +84,7 @@ public class SimpleChronicleQueueTest {
 
     }
 
+    @Ignore
     @Test
     public void testReadAtIndex() throws Exception {
 
@@ -106,12 +107,12 @@ public class SimpleChronicleQueueTest {
             tailer.index(5);
 
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));
-/*
+
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
 
             Assert.assertEquals("value=5", sb.toString());
-*/
+
 
         } finally {
             file.delete();
