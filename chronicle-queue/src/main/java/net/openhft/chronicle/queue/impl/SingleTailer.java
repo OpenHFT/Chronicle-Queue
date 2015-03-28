@@ -9,7 +9,6 @@ import net.openhft.chronicle.wire.LongDirectReference;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -31,7 +30,6 @@ public class SingleTailer implements ExcerptTailer {
         toStart();
     }
 
-    @Nullable
     @Override
     public WireIn wire() {
         return new ChronicleWireIn(null);

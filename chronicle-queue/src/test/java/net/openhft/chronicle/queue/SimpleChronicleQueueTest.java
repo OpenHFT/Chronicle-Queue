@@ -9,7 +9,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.PrintWriter;
 
 /**
  * @author Rob Austin.
@@ -21,7 +20,6 @@ public class SimpleChronicleQueueTest {
     }
 
     @Test
-    @Ignore
     public void testSimpleWire() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -29,7 +27,8 @@ public class SimpleChronicleQueueTest {
 
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            final DirectChronicleQueue
+                    chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
@@ -47,7 +46,6 @@ public class SimpleChronicleQueueTest {
 
             Bytes bytes = chronicle.bytes();
             bytes.flip();
-            System.out.println(Bytes.toDebugString(bytes));
 
         } finally {
             file.delete();
@@ -89,7 +87,7 @@ public class SimpleChronicleQueueTest {
     @Test
     public void testReadAtIndex() throws Exception {
 
-        File file = File.createTempFile("chronicle.", "q");
+        final File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
 
         try {
@@ -107,7 +105,7 @@ public class SimpleChronicleQueueTest {
             final ExcerptTailer tailer = chronicle.createTailer();
             tailer.index(5);
 
-            QueueDumpMain.dump(file, new PrintWriter(System.out));
+            //   QueueDumpMain.dump(file, new PrintWriter(System.out));
 /*
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
@@ -294,12 +292,14 @@ public class SimpleChronicleQueueTest {
             final ExcerptTailer tailer = chronicle.createTailer();
 
 
-            tailer.index(67);
+            int index = 70;
+
+            tailer.index(index);
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
 
-            Assert.assertEquals("value=67", sb.toString());
+            Assert.assertEquals("value=" + index, sb.toString());
 
         } finally {
             file.delete();

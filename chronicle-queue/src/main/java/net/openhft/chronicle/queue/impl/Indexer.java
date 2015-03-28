@@ -14,7 +14,7 @@ import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.UNINITIALISE
 public class Indexer {
 
     /**
-     * sans through every excerpts and records every 64th addresss in the index2indexs'
+     * sans through every excerpts and records every 64th address in the index2indexs'
      *
      * @param chronicle
      * @throws Exception
@@ -26,7 +26,7 @@ public class Indexer {
         final long index2Index = single.indexToIndex();
 
         final ExcerptTailer tailer = chronicle.createTailer();
-
+        System.out.println(" single.lastIndex()=" + single.lastIndex());
         for (long i = 0; i <= single.lastIndex(); i++) {
 
             final long index = i;
@@ -34,6 +34,10 @@ public class Indexer {
 
             tailer.readDocument(wireIn -> {
                 long address = wireIn.bytes().position() - 4;
+                System.out.println("index=" + index);
+                System.out.println("index2Index=" + index2Index);
+                System.out.println("address=" + address);
+
                 recordAddress(index, address, single, index2Index);
                 wireIn.bytes().skip(wireIn.bytes().remaining());
             });
