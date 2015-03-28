@@ -281,6 +281,7 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
+        public String getActiveWorkingDirectory();
     }
 
     // *************************************************************************
@@ -685,6 +686,16 @@ public class VanillaChronicle implements Chronicle {
         public ExcerptTailer toEnd() {
             super.toEnd();
             return this;
+        }
+
+        /**
+         * Calculate working directory path from current cycle
+         * @return directory path
+         */
+        @Override
+        public String getActiveWorkingDirectory() {
+            int cycle = (int)((index() >> 40) & 0xFFFFFF);
+            return dateCache.formatFor(cycle);
         }
     }
 
