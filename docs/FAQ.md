@@ -9,6 +9,9 @@ VanillaChronicle vs IndexedChronicle latency : I've been comparison testing thes
 
 The main thing to watch is the number of files you are writing to. The more files the more work you put onto your disk sub system.
 In Queue v4 we are moving to supporting concurrent writing to just one file partly for this reason.
+- Have you tried increasing the dirty ration in the sysctl configuration ?
+- In atop you want to look at the write queue length and queue latency ?
+
 
 ## With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
