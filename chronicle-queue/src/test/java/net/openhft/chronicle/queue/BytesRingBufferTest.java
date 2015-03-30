@@ -44,7 +44,6 @@ public class BytesRingBufferTest {
 
     @Test
     @Ignore("BufferOverflow")
-
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
