@@ -84,7 +84,6 @@ public class SimpleChronicleQueueTest {
 
     }
 
-    @Ignore
     @Test
     public void testReadAtIndex() throws Exception {
 
@@ -147,9 +146,7 @@ public class SimpleChronicleQueueTest {
         File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
         try {
-
             DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
-
             final ExcerptAppender appender = chronicle.createAppender();
             appender.lastWrittenIndex();
 
@@ -197,7 +194,6 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
-    @Ignore
     public void testHeaderIndexReadAtIndex() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -231,7 +227,6 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
-    @Ignore
     public void testReadAtIndexWithIndexes() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -268,7 +263,6 @@ public class SimpleChronicleQueueTest {
 
 
     @Test
-    @Ignore
     public void testReadAtIndexWithIndexesAtStart() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");
@@ -309,7 +303,6 @@ public class SimpleChronicleQueueTest {
     }
 
     @Test
-    @Ignore
     public void testScanFromLastKnownIndex() throws Exception {
 
         File file = File.createTempFile("chronicle.", "q");

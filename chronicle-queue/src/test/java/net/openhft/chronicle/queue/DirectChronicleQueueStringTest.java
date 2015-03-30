@@ -65,7 +65,6 @@ public class DirectChronicleQueueStringTest {
 
 
     @Test
-    @Ignore
     public void testCreateAppenderMT() throws Exception {
         for (int r = 0; r < 2; r++) {
             for (int t = 1; t < Runtime.getRuntime().availableProcessors(); t++) {

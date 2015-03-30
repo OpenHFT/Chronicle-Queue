@@ -18,7 +18,7 @@ public class ChronicleQueueTest {
     public static final int RUNS = 1000000;
     public static final String TMP = System.getProperty("java.io.tmpdir");
 
-    @Ignore("performance test")
+    @Ignore("ignored only because this is a performance test")
     @Test
     public void testCreateAppender() throws Exception {
         for (int r = 0; r < 2; r++) {

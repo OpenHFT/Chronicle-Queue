@@ -16,12 +16,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ZipBytesRingBufferTest {
 
     @Test
-    @Ignore
     public void testZipAndAppend() throws Exception {
         File file = null;
 
         try {
-
 
             NativeBytesStore allocate =  NativeBytesStore.nativeStore(1024);
             NativeBytesStore msgBytes = NativeBytesStore.nativeStore(150);
@@ -58,8 +56,8 @@ public class ZipBytesRingBufferTest {
             Bytes actual = NativeBytesStore.nativeStore(100).bytes();
             chronicle.readDocument(offset, actual);
 
-            // "Hello World" zipped should be 13 chars
-            Assert.assertEquals(13, actual.flip().remaining());
+            // "Hello World" zipped should be 12 chars
+            Assert.assertEquals(12, actual.flip().remaining());
 
 
         } finally {

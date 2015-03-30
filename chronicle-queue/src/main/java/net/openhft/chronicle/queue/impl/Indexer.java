@@ -31,13 +31,8 @@ public class Indexer {
 
             final long index = i;
 
-
             tailer.readDocument(wireIn -> {
                 long address = wireIn.bytes().position() - 4;
-                System.out.println("index=" + index);
-                System.out.println("index2Index=" + index2Index);
-                System.out.println("address=" + address);
-
                 recordAddress(index, address, single, index2Index);
                 wireIn.bytes().skip(wireIn.bytes().remaining());
             });

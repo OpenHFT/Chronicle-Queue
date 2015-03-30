@@ -5,11 +5,11 @@ import net.openhft.chronicle.bytes.BytesStoreBytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.LongDirectReference;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
@@ -96,28 +96,21 @@ public class SingleTailer implements ExcerptTailer {
 
         }
 
-        final LongDirectReference position = new LongDirectReference();
+        final AtomicLong position = new AtomicLong(-1);
         long last = chronicle.lastIndex();
-
 
         // linear scan the last part
         for (long i = start; i < last; i++) {
             final long j = i;
 
-            final Consumer<WireIn> metaDataConsumer = wireIn -> {
+            wire.readDocument(null, wireIn -> {
                 if (index == j)
-                    position.setValue(wire.bytes().position() - 4);
-
-                wireIn.bytes().skip(wireIn.bytes().remaining());
-            };
-
-            final Consumer<WireIn> dataConsumer = wireIn -> wireIn.bytes().skip(wireIn.bytes().remaining());
-
-            wire.readDocument(metaDataConsumer, dataConsumer);
+                    position.set(wire.bytes().position() - 4);
+            });
 
 
-            if (position.bytesStore() != null) {
-                wire.bytes().position(position.getValue());
+            if (position.get() != -1) {
+                wire.bytes().position(position.get());
                 return true;
             }
         }
