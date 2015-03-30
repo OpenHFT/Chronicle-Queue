@@ -55,7 +55,7 @@ public class BytesRingBuffer {
      * @param bytes the {@code bytes} that you wish to add to the ring buffer
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
-    public synchronized boolean offer(@NotNull Bytes bytes) throws InterruptedException {
+    public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
 
         try {
 
@@ -109,7 +109,7 @@ public class BytesRingBuffer {
     }
 
     @NotNull
-    public synchronized Bytes take(@NotNull BytesProvider bytesProvider) throws
+    public Bytes take(@NotNull BytesProvider bytesProvider) throws
             InterruptedException,
             IllegalStateException {
         Bytes poll;
@@ -127,7 +127,7 @@ public class BytesRingBuffer {
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     @Nullable
-    public synchronized Bytes poll(@NotNull BytesProvider bytesProvider) throws
+    public Bytes poll(@NotNull BytesProvider bytesProvider) throws
             InterruptedException,
             IllegalStateException {
 
@@ -237,41 +237,42 @@ public class BytesRingBuffer {
         final AtomicLong readLocationAtomic = new AtomicLong();
         final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
 
-        private synchronized boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             return writeLocationAtomic.compareAndSet(expectedValue, newValue);
-
-            // return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+            // todo replace the above with this :   return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
-        private synchronized long getWriteLocation() {
+        private long getWriteLocation() {
             return writeLocationAtomic.get();
-            // return buffer.readVolatileLong(writeLocationOffset);
+            // todo replace the above with this :   return buffer.readVolatileLong(writeLocationOffset);
         }
 
         /**
          * @return the point at which you should not write any additional bits
          */
-        private synchronized long getWriteUpTo() {
-            // return buffer.readVolatileLong(writeUpToOffset);
+        private long getWriteUpTo() {
             return writeUpToOffsetAtomic.get();
+            // todo replace the above with this :   return buffer.readVolatileLong(writeUpToOffset);
+
         }
 
         /**
          * sets the point at which you should not write any additional bits
          */
-        private synchronized  void setWriteUpTo(long value) {
-            //  buffer.writeOrderedLong(writeUpToOffset, value);
+        private void setWriteUpTo(long value) {
+
             writeUpToOffsetAtomic.set(value);
+            // todo replace the above with this :   buffer.writeOrderedLong(writeUpToOffset, value);
         }
 
-        private synchronized long getReadLocation() {
+        private long getReadLocation() {
             return readLocationAtomic.get();
-            // return buffer.readVolatileLong(readLocationOffset);
+            // todo replace the above with this :    return buffer.readVolatileLong(readLocationOffset);
         }
 
-        private synchronized void setReadLocation(long value) {
+        private void setReadLocation(long value) {
             readLocationAtomic.set(value);
-            // buffer.writeOrderedLong(readLocationOffset, value);
+            // todo replace the above with this :   buffer.writeOrderedLong(readLocationOffset, value);
         }
 
     }
