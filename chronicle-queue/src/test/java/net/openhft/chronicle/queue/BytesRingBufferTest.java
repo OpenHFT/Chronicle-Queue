@@ -43,14 +43,11 @@ public class BytesRingBufferTest {
 
 
     @Test
-    @Ignore("BufferOverflow")
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
-
             for (int i = 0; i < 100; i++) {
-
 
                 bytesRingBuffer.offer(data());
                 Bytes bytes = bytesRingBuffer.take(new BytesRingBuffer.BytesProvider() {
@@ -113,7 +110,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    @Ignore
+
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
 
@@ -138,7 +135,6 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    @Ignore
     public void testWrite3read3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -179,7 +175,7 @@ public class BytesRingBufferTest {
         }
     }
 
-    @Ignore("works in lang-bytes")
+   // @Ignore("works in lang-bytes")
     @Test
     public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws Exception {
 
@@ -258,8 +254,9 @@ public class BytesRingBufferTest {
         }
     }
 
-    @Ignore("works in lang-bytes, appears to be a visibility issue that can be fixed by adding a" +
-            " synchronized to ringbuffer.poll() and ringbuffer.offer()")
+   // @Ignore("works in lang-bytes, appears to be a visibility issue that can be fixed by adding
+   // a" +
+    //        " synchronized to ringbuffer.poll() and ringbuffer.offer()")
     @Test
     public void testMultiThreadedWithIntValues() throws Exception {
 

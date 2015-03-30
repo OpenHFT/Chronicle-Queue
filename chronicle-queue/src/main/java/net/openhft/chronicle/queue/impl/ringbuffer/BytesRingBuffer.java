@@ -55,7 +55,7 @@ public class BytesRingBuffer {
      * @param bytes the {@code bytes} that you wish to add to the ring buffer
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
-    public boolean offer(@NotNull Bytes bytes) throws InterruptedException {
+    public synchronized boolean offer(@NotNull Bytes bytes) throws InterruptedException {
 
         try {
 
@@ -109,7 +109,8 @@ public class BytesRingBuffer {
     }
 
     @NotNull
-    public Bytes take(@NotNull BytesProvider bytesProvider) throws InterruptedException,
+    public synchronized Bytes take(@NotNull BytesProvider bytesProvider) throws
+            InterruptedException,
             IllegalStateException {
         Bytes poll;
         do {
@@ -126,7 +127,8 @@ public class BytesRingBuffer {
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     @Nullable
-    public Bytes poll(@NotNull BytesProvider bytesProvider) throws InterruptedException,
+    public synchronized Bytes poll(@NotNull BytesProvider bytesProvider) throws
+            InterruptedException,
             IllegalStateException {
 
         long writeLoc = writeLocation();
@@ -249,7 +251,7 @@ public class BytesRingBuffer {
         /**
          * @return the point at which you should not write any additional bits
          */
-        private long getWriteUpTo() {
+        private synchronized long getWriteUpTo() {
             // return buffer.readVolatileLong(writeUpToOffset);
             return writeUpToOffsetAtomic.get();
         }
@@ -257,17 +259,17 @@ public class BytesRingBuffer {
         /**
          * sets the point at which you should not write any additional bits
          */
-        private void setWriteUpTo(long value) {
+        private synchronized  void setWriteUpTo(long value) {
             //  buffer.writeOrderedLong(writeUpToOffset, value);
             writeUpToOffsetAtomic.set(value);
         }
 
-        private long getReadLocation() {
+        private synchronized long getReadLocation() {
             return readLocationAtomic.get();
             // return buffer.readVolatileLong(readLocationOffset);
         }
 
-        private void setReadLocation(long value) {
+        private synchronized void setReadLocation(long value) {
             readLocationAtomic.set(value);
             // buffer.writeOrderedLong(readLocationOffset, value);
         }
