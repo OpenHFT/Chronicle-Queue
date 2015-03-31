@@ -561,6 +561,33 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
     .build();
 ```
 
+
+
+##  How the Indexer works and how it stores its data
+
+In chronicle the indexer is use to index your excerpts, it creates indexes and these indexes are 
+stored in a number of excerpts, in the chronicle header then index2index tells chronicle where (
+ in other words the address of where ) the root first level index is stored.
+
+The indexing works like a tree, but only 2 levels deep, the root of the tree is at index2index 
+( this first level index is 1MB in size and there is only one of them, 
+it only holds the addresses of the second level indexes, 
+there will be many second level indexes ( created on demand ), 
+each is about 1MB in size  (this second level index only stores the position of every 64th excerpt), 
+so from every 64th excerpt a linear scan occurs.
+
+The indexes are only built when the indexer is run, this could be on a background thread. Each 
+index is created into chronicle as an excerpt
+
+So say that you had 64 excerpt, ran the indexer and then added another 1000 excerpts, if you 
+wanted excerpt at index 192, the linear scan would only have to look at another 128 entries from 
+index 64 ( as this is the last known index ), but ideally you would have the background thread 
+continuously index the excerpts as they are added.  More not thing to mention that that we are 
+looking to support a TextWire. 
+In this case, the structure is the same however the size of the index: and infex2index:
+ is larger to accommodate the text format. 
+ 
+ 
 [Full example](https://github.com/lburgazzoli/Chronicle-Queue/blob/master/chronicle/src/test/java/net/openhft/chronicle/tcp/WithMappedTest.java)
 
 
