@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -114,7 +113,7 @@ public class DirectChronicleQueueStringTest {
     }
 
     private void readSome(DirectChronicleQueue chronicle) {
-        NativeBytesStore allocate = NativeBytesStore.nativeStore(EXPECTED_BYTES.length);
+        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
         final Bytes toRead = allocate.bytes();
         AtomicLong offset = new AtomicLong(chronicle.firstBytes());
         for (int i = 0; i < RUNS; i++) {
@@ -124,7 +123,7 @@ public class DirectChronicleQueueStringTest {
     }
 
     private void writeSome(DirectChronicleQueue chronicle) {
-        NativeBytesStore allocate = NativeBytesStore.nativeStore(EXPECTED_BYTES.length);
+        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
         final Bytes toWrite = allocate.bytes();
         for (int i = 0; i < RUNS; i++) {
             toWrite.clear();

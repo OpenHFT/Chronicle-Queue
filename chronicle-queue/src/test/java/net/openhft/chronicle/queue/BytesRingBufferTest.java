@@ -30,7 +30,7 @@ public class BytesRingBufferTest {
     NativeBytesStore outBuffer;
     @Before
     public void setup() {
-        outBuffer = NativeBytesStore.nativeStore(12);
+        outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);
         out = outBuffer.bytes();
         out.writeUTFΔ(EXPECTED);
         output = out.flip().bytes();
@@ -44,7 +44,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(24)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             for (int i = 0; i < 100; i++) {
@@ -69,7 +69,7 @@ public class BytesRingBufferTest {
     @Test
     public void testSimpledSingleThreadedWriteRead() throws Exception {
 
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             bytesRingBuffer.offer(data());
@@ -80,7 +80,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testPollWithNoData() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
 
             assert nativeStore.isNative();
 
@@ -94,7 +94,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             assert nativeStore.isNative();
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
             data();
@@ -112,7 +112,7 @@ public class BytesRingBufferTest {
     @Test
 
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
 
             System.out.println(nativeStore.realCapacity());
             System.out.println(nativeStore.capacity());
@@ -136,7 +136,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWrite3read3SingleThreadedWrite() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             assert nativeStore.bytes().capacity() < (1 << 12);
@@ -179,7 +179,7 @@ public class BytesRingBufferTest {
     @Test
     public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws Exception {
 
-        try (NativeBytesStore allocate = NativeBytesStore.nativeStore(1000)) {
+        try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
 
@@ -192,7 +192,7 @@ public class BytesRingBufferTest {
                 for (int i = 0; i < iterations; i++) {
                     final int j = i;
                     executorService.submit(() -> {
-                        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(iterations)) {
+                        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(iterations)) {
                             final Bytes out = nativeStore.bytes();
                             String expected = EXPECTED_VALUE + j;
                             out.clear();
@@ -222,7 +222,7 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try {
-                            try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStore(25)) {
+                            try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
                                 Bytes bytes = nativeStore.bytes();
                                 Bytes result = null;
                                 do {
@@ -260,7 +260,7 @@ public class BytesRingBufferTest {
     @Test
     public void testMultiThreadedWithIntValues() throws Exception {
 
-        try (NativeBytesStore allocate = NativeBytesStore.nativeStore(1000)) {
+        try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
 
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
@@ -276,7 +276,7 @@ public class BytesRingBufferTest {
                     final int j = i;
                     executorService.submit(() -> {
 
-                        try (NativeBytesStore allocate2 = NativeBytesStore.nativeStore(iterations)) {
+                        try (NativeBytesStore allocate2 = NativeBytesStore.nativeStoreWithFixedCapacity(iterations)) {
                             final Bytes out = allocate2.bytes();
 
                             out.clear();
@@ -307,7 +307,7 @@ public class BytesRingBufferTest {
                     executorService.submit(() -> {
 
                         try {
-                            try (NativeBytesStore allocate3 = NativeBytesStore.nativeStore(25)) {
+                            try (NativeBytesStore allocate3 = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
                                 final Bytes bytes = allocate3.bytes();
                                 Bytes result = null;
                                 do {
