@@ -216,7 +216,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         throw new UnsupportedOperationException();
     }
 

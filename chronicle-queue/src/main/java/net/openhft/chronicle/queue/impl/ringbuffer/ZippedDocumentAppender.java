@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.zip.Deflater;
@@ -65,11 +64,9 @@ public class ZippedDocumentAppender implements Closeable {
 
     /**
      * terminates the background thread
-     *
-     * @throws IOException
      */
     @Override
-    public void close() throws IOException {
+    public void close() {
         qReader.shutdown();
     }
 

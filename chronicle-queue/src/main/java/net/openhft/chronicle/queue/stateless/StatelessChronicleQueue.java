@@ -95,7 +95,7 @@ public class StatelessChronicleQueue implements ChronicleQueue {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         // todo drop the socket connection
     }
 }
