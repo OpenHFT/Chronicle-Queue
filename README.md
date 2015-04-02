@@ -2,23 +2,10 @@
 
 *Or you may already be using Chronicle and just want some help - [find out more..](http://openhft.net/support/)*
 
-
-
-
-
-[![Build Status](https://travis-ci.org/raphw/byte-buddy.svg?branch=master)](https://travis-ci.org/raphw/byte-buddy)
-[![Coverage Status](http://img.shields.io/coveralls/raphw/byte-buddy/master.svg)](https://coveralls.io/r/raphw/byte-buddy?branch=master)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.bytebuddy/byte-buddy-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.bytebuddy/byte-buddy-parent)
-[![Download from Bintray](https://api.bintray.com/packages/raphw/maven/ByteBuddy/images/download.svg) ](https://bintray.com/raphw/maven/ByteBuddy/_latestVersion) 
-
-
-
-
 # Chronicle Queue
 
 Inter Process Communication ( IPC ) with sub millisecond latency and able to store every message:
 ![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
-
 
 
 Releases are available on maven central as
