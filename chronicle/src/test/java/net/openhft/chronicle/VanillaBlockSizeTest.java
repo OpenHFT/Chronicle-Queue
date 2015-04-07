@@ -18,8 +18,8 @@ public class VanillaBlockSizeTest {
         Random random = new Random();
 
         Chronicle chronicle = ChronicleQueueBuilder.vanilla("blocksizetest")
-                .dataBlockSize(Integer.MAX_VALUE)
-                .indexBlockSize(Integer.MAX_VALUE)
+                .dataBlockSize(1073741824)
+                .indexBlockSize(1073741824)
                 .build();
         ExcerptAppender appender = chronicle.createAppender();
 
