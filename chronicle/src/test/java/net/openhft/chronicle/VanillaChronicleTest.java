@@ -35,12 +35,10 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static final int N_THREADS = 4;
 
     private static void appendValues(final ExcerptAppender appender, final long startValue, final long endValue) {
-        long counter = startValue;
-        while (counter < endValue) {
+        for (long counter = startValue; counter < endValue; counter++) {
             appender.startExcerpt(20);
             appender.writeUTF("data-" + counter);
             appender.finish();
-            counter++;
         }
     }
 

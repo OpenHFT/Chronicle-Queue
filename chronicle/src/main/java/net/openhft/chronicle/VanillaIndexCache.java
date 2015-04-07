@@ -21,6 +21,8 @@ package net.openhft.chronicle;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -28,6 +30,7 @@ import java.io.IOException;
 import java.text.ParseException;
 
 public class VanillaIndexCache implements Closeable {
+    public static final Logger LOGGER = LoggerFactory.getLogger(VanillaIndexCache.class);
     public static final String FILE_NAME_PREFIX = "index-";
 
     private final String basePath;
@@ -112,7 +115,7 @@ public class VanillaIndexCache implements Closeable {
 
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle = cycle;
-        key.indexCount = indexCount << blockBits;
+        key.indexCount = indexCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
@@ -165,7 +168,7 @@ public class VanillaIndexCache implements Closeable {
             int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
 
         int localIndex = this.appenderCycles[0][1];
-        int indexToUpdate = -1;
+        int indexToUpdate = 0;
 
         if(this.appenderCycles[0][0] < cycle) {
             // New cycle detected, swap references
@@ -173,13 +176,15 @@ public class VanillaIndexCache implements Closeable {
             this.appenderCycles[1][1] = this.appenderCycles[0][1];
             this.appenderCycles[0][0] = cycle;
             this.appenderCycles[0][1] = 0;
+
+            localIndex = 0;
         } else if(this.appenderCycles[0][0] > cycle) {
             if(this.appenderCycles[1][0] == cycle) {
                 // Old cycle detected
                 localIndex = this.appenderCycles[1][1];
                 indexToUpdate = 1;
             } else {
-                // Untracked cycle, search for last index file
+                // un-tracked cycle, search for last index file
                 localIndex = lastIndexFile(cycle, 0);
                 indexToUpdate = -1;
             }
@@ -200,7 +205,9 @@ public class VanillaIndexCache implements Closeable {
             vmb.release();
         }
 
-        throw new AssertionError();
+        throw new AssertionError(
+            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.formatFor(cycle) + ")"
+        );
     }
 
     public long firstCycle() {
@@ -223,16 +230,18 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public long lastCycle() {
-        File[] files = baseFile.listFiles();
-        if (files == null)
+        final File[] files = baseFile.listFiles();
+        if (files == null) {
             return -1;
+        }
 
         long firstDate = Long.MIN_VALUE;
         for (File file : files) {
             try {
                 long date = dateCache.parseCount(file.getName());
-                if (firstDate < date)
+                if (firstDate < date) {
                     firstDate = date;
+                }
             } catch (ParseException ignored) {
                 // ignored
             }
@@ -256,7 +265,10 @@ public class VanillaIndexCache implements Closeable {
 
         @Override
         public boolean equals(Object obj) {
-            if (!(obj instanceof IndexKey)) return false;
+            if (!(obj instanceof IndexKey)) {
+                return false;
+            }
+
             IndexKey key = (IndexKey) obj;
             return indexCount == key.indexCount && cycle == key.cycle;
         }
