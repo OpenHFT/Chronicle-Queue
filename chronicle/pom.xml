@@ -102,6 +102,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.hdrhistogram</groupId>
+            <artifactId>HdrHistogram</artifactId>
+            <version>2.1.4</version>
+        </dependency>
+
         <!-- on linux install with sudo apt-get install libjna-java -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
