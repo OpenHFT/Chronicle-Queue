@@ -138,8 +138,9 @@ public class VanillaDataCache implements Closeable {
             for (File file : files) {
                 if (file.getName().startsWith(dataPrefix)) {
                     final int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
-                    if (maxCount < count)
+                    if (maxCount < count) {
                         maxCount = count;
+                    }
                 }
             }
         }

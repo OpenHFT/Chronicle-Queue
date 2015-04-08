@@ -516,7 +516,7 @@ public class VanillaChronicle implements Chronicle {
         private boolean nextSynchronous;
         private long lastWrittenIndex;
         private long[] positionArr = {0L};
-        private int dataCount;
+        private int lastDataIndex;
 
         public VanillaAppenderImpl() {
             this.lastCycle = Integer.MIN_VALUE;
@@ -525,7 +525,7 @@ public class VanillaChronicle implements Chronicle {
             this.appenderCycle = -1;
             this.appenderThreadId = -1;
             this.nextSynchronous = builder.synchronous();
-            this.dataCount = 0;
+            this.lastDataIndex = 0;
         }
 
         @Override
@@ -560,16 +560,14 @@ public class VanillaChronicle implements Chronicle {
                     lastThreadId = appenderThreadId;
                 }
 
-                if (dataBytes == null || indexBytes == null) {
-                    dataCount = dataCache.findNextDataCount(appenderCycle, appenderThreadId);
-                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, dataCount, true);
+                if (dataBytes == null) {
+                    lastDataIndex = dataCache.findNextDataCount(appenderCycle, appenderThreadId);
+                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, lastDataIndex, true);
                 }
 
                 if (dataBytes.remaining() < capacity + 4) {
                     dataBytes.release();
-                    dataBytes = null;
-                    dataCount++;
-                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, dataCount, true);
+                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, ++lastDataIndex, true);
                 }
 
                 startAddr = positionAddr = dataBytes.positionAddr() + 4;
@@ -598,8 +596,10 @@ public class VanillaChronicle implements Chronicle {
         }
         @Override
         public void finish() {
-            if (finished)
+            if (finished) {
                 throw new IllegalStateException("Not started");
+            }
+
             super.finish();
             if (dataBytes == null) {
                 return;
@@ -615,7 +615,6 @@ public class VanillaChronicle implements Chronicle {
 
             try {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
-                long lvindex = -1;
                 if (position < 0) {
                     if (indexBytes != null) {
                         indexBytes.release();
@@ -623,12 +622,10 @@ public class VanillaChronicle implements Chronicle {
                     }
 
                     indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
-                    lvindex = indexFrom(appenderCycle, indexBytes.index(), positionArr[0]);
+                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), positionArr[0]));
                 } else {
-                    lvindex = indexFrom(appenderCycle, indexBytes.index(), position);
+                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), position));
                 }
-
-                setLastWrittenIndex(lvindex);
             } catch (IOException e) {
                 throw new AssertionError(e);
             }

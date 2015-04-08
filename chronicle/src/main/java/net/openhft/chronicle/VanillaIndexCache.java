@@ -140,6 +140,11 @@ public class VanillaIndexCache implements Closeable {
         this.cache.close();
     }
 
+    int lastIndexFile() {
+        int lastCycle = (int)lastCycle();
+        return lastIndexFile(lastCycle);
+    }
+
     int lastIndexFile(int cycle) {
         return lastIndexFile(cycle, 0);
     }
@@ -212,15 +217,17 @@ public class VanillaIndexCache implements Closeable {
 
     public long firstCycle() {
         File[] files = baseFile.listFiles();
-        if (files == null)
+        if (files == null) {
             return -1;
+        }
 
         long firstDate = Long.MAX_VALUE;
         for (File file : files) {
             try {
                 long date = dateCache.parseCount(file.getName());
-                if (firstDate > date)
+                if (firstDate > date) {
                     firstDate = date;
+                }
             } catch (ParseException ignored) {
                 // ignored
             }
