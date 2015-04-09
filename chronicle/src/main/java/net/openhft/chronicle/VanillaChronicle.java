@@ -517,6 +517,7 @@ public class VanillaChronicle implements Chronicle {
         private long lastWrittenIndex;
         private long[] positionArr = {0L};
         private int lastDataIndex;
+        private int lastIndexIndex;
 
         public VanillaAppenderImpl() {
             this.lastCycle = Integer.MIN_VALUE;
@@ -526,6 +527,7 @@ public class VanillaChronicle implements Chronicle {
             this.appenderThreadId = -1;
             this.nextSynchronous = builder.synchronous();
             this.lastDataIndex = 0;
+            this.lastIndexIndex = 0;
         }
 
         @Override
@@ -546,17 +548,25 @@ public class VanillaChronicle implements Chronicle {
                 appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
 
-                if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
-                    if (dataBytes != null) {
-                        dataBytes.release();
-                        dataBytes = null;
-                    }
+                if (appenderCycle != lastCycle) {
                     if (indexBytes != null) {
                         indexBytes.release();
                         indexBytes = null;
                     }
+                    if (dataBytes != null) {
+                        dataBytes.release();
+                        dataBytes = null;
+                    }
 
                     lastCycle = appenderCycle;
+                    lastIndexIndex = indexCache.lastIndexFile(lastCycle);
+                    lastThreadId = appenderThreadId;
+                } else if (appenderThreadId != lastThreadId) {
+                    if (dataBytes != null) {
+                        dataBytes.release();
+                        dataBytes = null;
+                    }
+
                     lastThreadId = appenderThreadId;
                 }
 
@@ -617,14 +627,16 @@ public class VanillaChronicle implements Chronicle {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
                 if (position < 0) {
                     if (indexBytes != null) {
+                        lastIndexIndex = (int)indexBytes.index() + 1;
                         indexBytes.release();
                         indexBytes = null;
                     }
 
-                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
-                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), positionArr[0]));
+                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, lastIndexIndex, positionArr);
+                    lastIndexIndex = (int)indexBytes.index();
+                    setLastWrittenIndex(appenderCycle, indexBytes.index(), positionArr[0]);
                 } else {
-                    setLastWrittenIndex(indexFrom(appenderCycle, indexBytes.index(), position));
+                    setLastWrittenIndex(appenderCycle, indexBytes.index(), position);
                 }
             } catch (IOException e) {
                 throw new AssertionError(e);
@@ -656,6 +668,10 @@ public class VanillaChronicle implements Chronicle {
             return lastWrittenIndex;
         }
 
+
+        protected void setLastWrittenIndex(long cycle, long indexCount, long indexPosition) {
+            setLastWrittenIndex(indexFrom(cycle, indexCount, indexPosition));
+        }
 
         protected void setLastWrittenIndex(long lastWrittenIndex) {
             this.lastWrittenIndex = lastWrittenIndex;

@@ -39,7 +39,7 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
-    private final int[][] appenderCycles;
+    //private final int[][] appenderCycles;
 
     VanillaIndexCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
@@ -58,12 +58,14 @@ public class VanillaIndexCache implements Closeable {
             builder.cleanupOnClose()
         );
 
+        /*
         int lastCycle = (int)lastCycle();
         int lastIndex = lastIndexFile(lastCycle);
         this.appenderCycles = new int[][]{
             new int[]{ lastCycle, lastIndex },
             new int[]{ 0, 0 }
         };
+        */
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -107,12 +109,6 @@ public class VanillaIndexCache implements Closeable {
         return indices;
     }
 
-    public File fileFor(int cycle, int indexCount, boolean forAppend) throws IOException {
-        return new File(
-            new File(basePath, dateCache.formatFor(cycle)),
-            FILE_NAME_PREFIX + indexCount);
-    }
-
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle = cycle;
         key.indexCount = indexCount;
@@ -138,6 +134,25 @@ public class VanillaIndexCache implements Closeable {
     @Override
     public synchronized void close() {
         this.cache.close();
+    }
+
+    public VanillaMappedBytes append(
+            int cycle, long indexValue, boolean synchronous, int lastIndex, long[] position) throws IOException {
+
+        for (int indexCount = lastIndex; indexCount < 10000; indexCount++) {
+            VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
+            long position0 = append(vmb, indexValue, synchronous);
+            if (position0 >= 0) {
+                position[0] = position0;
+                return vmb;
+            }
+
+            vmb.release();
+        }
+
+        throw new AssertionError(
+            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.formatFor(cycle) + ")"
+        );
     }
 
     int lastIndexFile() {
@@ -167,52 +182,6 @@ public class VanillaIndexCache implements Closeable {
         }
 
         return maxIndex != -1 ? maxIndex : defaultCycle;
-    }
-
-    public synchronized VanillaMappedBytes append(
-            int cycle, long indexValue, boolean synchronous, long[] position) throws IOException {
-
-        int localIndex = this.appenderCycles[0][1];
-        int indexToUpdate = 0;
-
-        if(this.appenderCycles[0][0] < cycle) {
-            // New cycle detected, swap references
-            this.appenderCycles[1][0] = this.appenderCycles[0][0];
-            this.appenderCycles[1][1] = this.appenderCycles[0][1];
-            this.appenderCycles[0][0] = cycle;
-            this.appenderCycles[0][1] = 0;
-
-            localIndex = 0;
-        } else if(this.appenderCycles[0][0] > cycle) {
-            if(this.appenderCycles[1][0] == cycle) {
-                // Old cycle detected
-                localIndex = this.appenderCycles[1][1];
-                indexToUpdate = 1;
-            } else {
-                // un-tracked cycle, search for last index file
-                localIndex = lastIndexFile(cycle, 0);
-                indexToUpdate = -1;
-            }
-        }
-
-        for (int indexCount = localIndex; indexCount < 10000; indexCount++) {
-            VanillaMappedBytes vmb = indexFor(cycle, indexCount, true);
-            long position0 = append(vmb, indexValue, synchronous);
-            if (position0 >= 0) {
-                position[0] = position0;
-                if(indexToUpdate == 0 || indexToUpdate == 1) {
-                    this.appenderCycles[indexToUpdate][1] = indexCount;
-                }
-
-                return vmb;
-            }
-
-            vmb.release();
-        }
-
-        throw new AssertionError(
-            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.formatFor(cycle) + ")"
-        );
     }
 
     public long firstCycle() {
