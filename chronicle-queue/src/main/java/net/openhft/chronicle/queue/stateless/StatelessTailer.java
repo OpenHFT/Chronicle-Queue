@@ -41,7 +41,8 @@ public class StatelessTailer implements ExcerptTailer {
     private final Function<Bytes, Wire> wireFunction;
     private long index = -1;
 
-    public StatelessTailer(ChronicleQueue chronicleQueue, Function<Bytes, Wire> wireFunction,
+    public StatelessTailer(ChronicleQueue chronicleQueue,
+                           Function<Bytes, Wire> wireFunction,
                            StatelessRawBytesTailer statelessRawBytesTailer) {
         this.wireFunction = wireFunction;
         this.statelessRawBytesTailer = statelessRawBytesTailer;
