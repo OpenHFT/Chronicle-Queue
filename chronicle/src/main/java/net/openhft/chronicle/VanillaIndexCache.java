@@ -245,6 +245,10 @@ public class VanillaIndexCache implements Closeable {
                 return false;
             }
 
+            if(obj == this) {
+                return true;
+            }
+
             IndexKey key = (IndexKey) obj;
             return indexCount == key.indexCount && cycle == key.cycle;
         }

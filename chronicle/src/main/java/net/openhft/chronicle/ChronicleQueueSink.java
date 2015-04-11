@@ -17,24 +17,23 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tcp.AppenderAdapter;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-class ChronicleQueueSink extends WrappedChronicle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueSink.class);
+import static net.openhft.chronicle.tcp.AppenderAdapter.createAppenderAdapter;
+import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
+class ChronicleQueueSink extends WrappedChronicle {
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
@@ -257,11 +256,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                     }
                 }
             } catch (IOException e1) {
-                if (e1 instanceof EOFException) {
-                    logger.debug("Error reading from socket", e1);
-                } else {
-                    logger.warn("Error reading from socket", e1);
-                }
+                logIOException(logger, "Exception reading from socket", e1);
 
                 try {
                     connection.close();
@@ -295,17 +290,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                     try {
                         if (this.adapter == null) {
-                            this.adapter = createAppenderAdapter();
+                            this.adapter = createAppenderAdapter(wrappedChronicle);
                         }
 
                         subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
                     } catch (IOException e) {
-                        if (e instanceof EOFException) {
-                            logger.debug("Error reading from socket", e);
-                        } else {
-                            logger.warn("Error reading from socket", e);
-                        }
-
+                        logIOException(logger, "Exception reading from socket", e);
                         return false;
                     }
                 }
@@ -370,11 +360,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                     return readNextExcerpt();
                 }
             } catch (IOException e1) {
-                if (e1 instanceof EOFException) {
-                    logger.trace("Exception reading from socket", e1);
-                } else {
-                    logger.warn("Exception reading from socket", e1);
-                }
+                logIOException(logger, "Exception reading from socket", e1);
 
                 try {
                     connection.close();
@@ -394,88 +380,6 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             super.close();
-        }
-    }
-
-    // *************************************************************************
-    // Appender adapters
-    // *************************************************************************
-
-    /**
-     * Creates a SinkAppenderAdapter.
-     *
-     * @return the SinkAppenderAdapter
-     * @throws java.io.IOException
-     */
-    private AppenderAdapter createAppenderAdapter() throws IOException {
-        if (wrappedChronicle instanceof IndexedChronicle) {
-            return new IndexedAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
-        }
-
-        if (wrappedChronicle instanceof VanillaChronicle) {
-            return new VanillaAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
-        }
-
-        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
-    }
-
-    private abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppender> {
-
-        public AppenderAdapter(@NotNull ExcerptAppender appender) {
-            super(appender);
-        }
-
-        public abstract void writePaddedEntry();
-
-        public abstract void startExcerpt(long capacity, long index);
-    }
-
-    /**
-     * IndexedChronicle AppenderAdapter
-     */
-    private final class IndexedAppenderAdapter extends AppenderAdapter {
-        private final IndexedChronicle chronicle;
-
-        public IndexedAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
-            super(appender);
-
-            this.chronicle = (IndexedChronicle) chronicle;
-        }
-
-        @Override
-        public void writePaddedEntry() {
-            super.wrapped.addPaddedEntry();
-        }
-
-        @Override
-        public void startExcerpt(long capacity, long index) {
-            super.wrapped.startExcerpt(capacity);
-        }
-    }
-
-    /**
-     * VanillaChronicle AppenderAdapter
-     */
-    private final class VanillaAppenderAdapter extends AppenderAdapter {
-        private final VanillaChronicle chronicle;
-        private final VanillaChronicle.VanillaAppender appender;
-
-        public VanillaAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
-            super(appender);
-
-            this.chronicle = (VanillaChronicle) chronicle;
-            this.appender = (VanillaChronicle.VanillaAppender) appender;
-        }
-
-        @Override
-        public void writePaddedEntry() {
-            LOGGER.warn("VanillaChronicle should not receive padded entries");
-        }
-
-        @Override
-        public void startExcerpt(long capacity, long index) {
-            int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
-            this.appender.startExcerpt(capacity, cycle);
         }
     }
 }

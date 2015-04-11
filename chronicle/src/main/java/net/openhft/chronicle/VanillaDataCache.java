@@ -51,29 +51,13 @@ public class VanillaDataCache implements Closeable {
         );
     }
 
-    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
-        return new File(
-            new File(basePath, dateCache.formatFor(cycle)),
-            FILE_NAME_PREFIX + threadId + "-" + dataCount);
+    @Override
+    public synchronized void close() {
+        this.cache.close();
     }
 
-    public File fileFor(int cycle, int threadId) throws IOException {
-        String cycleStr = dateCache.formatFor(cycle);
-        String cyclePath = basePath + "/" + cycleStr;
-        String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
-        int maxCount = 0;
-        File[] files = new File(cyclePath).listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.getName().startsWith(dataPrefix)) {
-                    int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
-                    if (maxCount < count)
-                        maxCount = count;
-                }
-            }
-        }
-
-        return fileFor(cycle, threadId, maxCount, true);
+    int nextWordAlignment(int len) {
+        return (len + 3) & ~3;
     }
 
     public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
@@ -99,6 +83,31 @@ public class VanillaDataCache implements Closeable {
         return vmb;
     }
 
+    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+        return new File(
+                new File(basePath, dateCache.formatFor(cycle)),
+                FILE_NAME_PREFIX + threadId + "-" + dataCount);
+    }
+
+    public File fileFor(int cycle, int threadId) throws IOException {
+        String cycleStr = dateCache.formatFor(cycle);
+        String cyclePath = basePath + "/" + cycleStr;
+        String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
+        int maxCount = 0;
+        File[] files = new File(cyclePath).listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.getName().startsWith(dataPrefix)) {
+                    int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
+                    if (maxCount < count)
+                        maxCount = count;
+                }
+            }
+        }
+
+        return fileFor(cycle, threadId, maxCount, true);
+    }
+
     private void findEndOfData(final VanillaMappedBytes buffer) {
         for (int i = 0, max = 1 << blockBits; i < max; i += 4) {
             int len = buffer.readInt(buffer.position());
@@ -113,15 +122,6 @@ public class VanillaDataCache implements Closeable {
             buffer.position(buffer.position() + len2 + 4);
         }
         throw new AssertionError();
-    }
-
-    int nextWordAlignment(int len) {
-        return (len + 3) & ~3;
-    }
-
-    @Override
-    public synchronized void close() {
-        this.cache.close();
     }
 
     /**
@@ -166,6 +166,10 @@ public class VanillaDataCache implements Closeable {
         public boolean equals(Object obj) {
             if (!(obj instanceof DataKey)) {
                 return false;
+            }
+
+            if(obj == this) {
+                return true;
             }
 
             DataKey key = (DataKey) obj;

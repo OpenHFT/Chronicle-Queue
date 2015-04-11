@@ -18,9 +18,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
+import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectByteBufferBytes;
-import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
 import org.jetbrains.annotations.Nullable;
@@ -130,7 +130,7 @@ public abstract class SourceTcp {
         protected final ByteBuffer writeBuffer;
 
         // this could be re-sized so cannot be final
-        protected IByteBufferBytes readBuffer;
+        protected final ResizableDirectByteBufferBytes readBuffer;
         private Bytes withMappedBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
@@ -141,7 +141,7 @@ public abstract class SourceTcp {
             this.lastHeartbeat = 0;
             this.lastUnpausedNS = 0;
 
-            this.readBuffer = new DirectByteBufferBytes(16);
+            this.readBuffer = new ResizableDirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
 
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
@@ -307,18 +307,8 @@ public abstract class SourceTcp {
             setLastHeartbeat();
         }
 
-        protected IByteBufferBytes readUpTo(int size) throws IOException {
-            if (readBuffer.capacity() < size) {
-                // resize the buffer
-                this.readBuffer = new DirectByteBufferBytes(size);
-            }
-
-            readBuffer.clear();
-            readBuffer.buffer().clear();
-
-            readBuffer.limit(size);
-            readBuffer.buffer().limit(size);
-
+        protected DirectByteBufferBytes readUpTo(int size) throws IOException {
+            readBuffer.resetToSize(size);
             connection.readFullyOrEOF(readBuffer.buffer());
             readBuffer.buffer().flip();
             readBuffer.position(0);
