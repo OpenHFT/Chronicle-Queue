@@ -212,7 +212,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     @Override
     public long lastWrittenIndex() {
-        throw new UnsupportedOperationException();
+        return 0;
     }
 
     @Override
