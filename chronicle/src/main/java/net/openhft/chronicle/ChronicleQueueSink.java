@@ -20,9 +20,12 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.AppenderAdapter;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.ByteBufferBytes;
+import net.openhft.lang.io.DirectByteBufferBytes;
+import net.openhft.lang.io.IByteBufferBytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,8 +99,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
-        protected final ByteBuffer writeBuffer;
-        protected final ByteBufferBytes writeBufferBytes;
+        protected final ResizableDirectByteBufferBytes writeBuffer;
         protected final ByteBuffer readBuffer;
         private long lastReconnectionAttemptMS;
         private long reconnectionIntervalMS;
@@ -107,8 +109,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             super(excerpt);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp.createBuffer(16);
-            this.writeBufferBytes = new ByteBufferBytes(writeBuffer);
+            this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
             this.lastReconnectionAttemptMS = 0;
@@ -147,6 +148,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             boolean connected = connection.isOpen();
             if(connected) {
+                builder.connectionListener().onConnect(connection.socketChannel());
                 this.lastReconnectionAttempt = 0;
                 this.lastReconnectionAttemptMS = 0;
             } else {
@@ -177,39 +179,33 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected void subscribe(long index) throws IOException {
-            writeBuffer.clear();
-            writeBufferBytes.clear();
-
-            writeBufferBytes.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
-            writeBufferBytes.writeLong(index);
+            writeBuffer.clearAll();
+            writeBuffer.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+            writeBuffer.writeLong(index);
 
             MappingFunction mapping = withMapping();
             if (mapping != null) {
                 // write with mapping and len
-                writeBufferBytes.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
-                long pos = writeBufferBytes.position();
+                writeBuffer.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
+                long pos = writeBuffer.position();
 
-                writeBufferBytes.skip(4);
-                long start = writeBufferBytes.position();
+                writeBuffer.skip(4);
+                long start = writeBuffer.position();
 
-                writeBufferBytes.writeObject(mapping);
-                int len = (int) (writeBufferBytes.position() - start);
-
-                writeBufferBytes.writeInt(pos, len);
-
+                writeBuffer.writeObject(mapping);
+                writeBuffer.writeInt(pos, (int) (writeBuffer.position() - start));
             }
 
-            writeBuffer.position(0);
-            writeBuffer.limit((int) writeBufferBytes.position());
+            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
             connection.writeAllOrEOF(writeBuffer);
         }
 
         protected void query(long index) throws IOException {
-            writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp.ACTION_QUERY);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
+            writeBuffer.clearAll();
+            writeBuffer.writeLong(ChronicleTcp.ACTION_QUERY);
+            writeBuffer.writeLong(index);
+            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
             connection.writeAllOrEOF(writeBuffer);
         }
@@ -221,7 +217,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 } catch(IOException e) {
                     logIOException(logger, "Exception reading from socket", e);
                     if(!closed) {
-                        //builder.connectionListener().onError(connection.socket(), e);
+                        builder.connectionListener().onError(connection.socketChannel(), e);
                     }
                 }
             }
@@ -237,12 +233,12 @@ class ChronicleQueueSink extends WrappedChronicle {
             } catch (IOException e) {
                 logIOException(logger, "Exception reading from socket", e);
                 if(!closed) {
-                    //builder.connectionListener().onError(connection.socket(), e);
+                    builder.connectionListener().onError(connection.socketChannel(), e);
                 }
 
                 try {
                     connection.close();
-                    //builder.connectionListener().onDisconnect(connection.socket());
+                    builder.connectionListener().onDisconnect(connection.socketChannel());
                 } catch (IOException e2) {
                     logger.warn("Error closing socketChannel", e2);
                 }
@@ -282,14 +278,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
                 final int size = readBuffer.getInt();
-                // consume data
-                readBuffer.getLong();
+                readBuffer.getLong(); // consume data
 
                 switch (size) {
                     case ChronicleTcp.IN_SYNC_LEN:
                         return false;
                     case ChronicleTcp.PADDED_LEN:
-                        //TODO: Indexed Vs Vanilla
                         return false;
                     case ChronicleTcp.SYNC_IDX_LEN:
                         return true;

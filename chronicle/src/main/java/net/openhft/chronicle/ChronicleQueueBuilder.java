@@ -780,6 +780,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.heartbeatIntervalUnit;
         }
 
+        public int defaultSocketBufferSize() {
+            return DEFAULT_SOCKET_BUFFER_SIZE;
+        }
+
         public int receiveBufferSize() {
             return receiveBufferSize;
         }

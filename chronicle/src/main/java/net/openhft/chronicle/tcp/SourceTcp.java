@@ -120,7 +120,7 @@ public abstract class SourceTcp {
     private abstract class SessionHandler implements Runnable, Closeable {
         private final SocketChannel socketChannel;
 
-        private long lastUnpausedNS;
+        private long lastUnPausedNS;
 
         protected final TcpConnection connection;
         protected ExcerptTailer tailer;
@@ -139,7 +139,7 @@ public abstract class SourceTcp {
             this.tailer = null;
             this.appender = null;
             this.lastHeartbeat = 0;
-            this.lastUnpausedNS = 0;
+            this.lastUnPausedNS = 0;
 
             this.readBuffer = new ResizableDirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
@@ -282,12 +282,12 @@ public abstract class SourceTcp {
         }
 
         protected void pauseReset() {
-            lastUnpausedNS = System.nanoTime();
+            lastUnPausedNS = System.nanoTime();
             pauser.reset();
         }
 
         protected void pause() {
-            if (lastUnpausedNS + ChronicleTcp.BUSY_WAIT_TIME_NS > System.nanoTime()) {
+            if (lastUnPausedNS + ChronicleTcp.BUSY_WAIT_TIME_NS > System.nanoTime()) {
                 return;
             }
 
