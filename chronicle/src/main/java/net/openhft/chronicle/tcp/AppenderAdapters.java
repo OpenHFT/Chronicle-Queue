@@ -20,14 +20,17 @@ package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AppenderProviders {
+import java.io.IOException;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AppenderProviders.class);
+public class AppenderAdapters {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AppenderAdapters.class);
 
     static final class IndexedAppenderAdapter extends AppenderAdapter {
         public IndexedAppenderAdapter(
@@ -72,5 +75,25 @@ public class AppenderProviders {
             int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
             this.appender.startExcerpt(capacity, cycle);
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static AppenderAdapter createAdapter(Chronicle chronicle) throws IOException {
+        if (chronicle instanceof IndexedChronicle) {
+            return new AppenderAdapters.IndexedAppenderAdapter(
+                    chronicle,
+                    chronicle.createAppender());
+        }
+
+        if (chronicle instanceof VanillaChronicle) {
+            return new AppenderAdapters.VanillaAppenderAdapter(
+                    chronicle,
+                    chronicle.createAppender());
+        }
+
+        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
     }
 }

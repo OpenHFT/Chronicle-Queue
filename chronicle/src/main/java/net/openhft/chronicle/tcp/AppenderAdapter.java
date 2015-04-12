@@ -35,24 +35,4 @@ public abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppe
 
     public abstract void writePaddedEntry();
     public abstract void startExcerpt(long capacity, long index);
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-    
-    public static AppenderAdapter createAppenderAdapter(Chronicle chronicle) throws IOException {
-        if (chronicle instanceof IndexedChronicle) {
-            return new AppenderProviders.IndexedAppenderAdapter(
-                    chronicle,
-                    chronicle.createAppender());
-        }
-
-        if (chronicle instanceof VanillaChronicle) {
-            return new AppenderProviders.VanillaAppenderAdapter(
-                    chronicle,
-                    chronicle.createAppender());
-        }
-
-        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
-    }
 }

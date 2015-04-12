@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-import static net.openhft.chronicle.tcp.AppenderAdapter.createAppenderAdapter;
+import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
 import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
 class ChronicleQueueSink extends WrappedChronicle {
@@ -290,7 +290,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                     try {
                         if (this.adapter == null) {
-                            this.adapter = createAppenderAdapter(wrappedChronicle);
+                            this.adapter = createAdapter(wrappedChronicle);
                         }
 
                         subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
