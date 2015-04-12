@@ -24,7 +24,6 @@ import java.nio.channels.SocketChannel;
 public interface TcpConnectionListener {
     public void onError(SelectableChannel channel, Exception exception);
     public void onListen(ServerSocketChannel channel);
-    public void onAccept(ServerSocketChannel serverChannel, SocketChannel clientChannel);
     public void onConnect(SocketChannel channel);
     public void onDisconnect(SocketChannel channel);
 }

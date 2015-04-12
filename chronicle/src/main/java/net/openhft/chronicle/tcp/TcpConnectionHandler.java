@@ -31,10 +31,6 @@ public class TcpConnectionHandler implements TcpConnectionListener {
     }
 
     @Override
-    public void onAccept(ServerSocketChannel serverChannel, SocketChannel clientChannel) {
-    }
-
-    @Override
     public void onConnect(SocketChannel channel) {
     }
 
