@@ -99,8 +99,10 @@ public abstract class SourceTcp {
         final Chronicle chronicle = builder.chronicle();
         if (chronicle != null) {
             if (chronicle instanceof IndexedChronicle) {
+                builder.connectionListener().onConnect(socketChannel);
                 return new IndexedSessionHandler(socketChannel);
             } else if (chronicle instanceof VanillaChronicle) {
+                builder.connectionListener().onConnect(socketChannel);
                 return new VanillaSessionHandler(socketChannel);
             } else {
                 throw new IllegalStateException("Chronicle must be Indexed or Vanilla");
@@ -115,23 +117,21 @@ public abstract class SourceTcp {
     // *************************************************************************
 
     /**
-     * Abstract class for Indexed and Vanilla chronicle replicaton
+     * Abstract class for Indexed and Vanilla chronicle replication
      */
     private abstract class SessionHandler implements Runnable, Closeable {
         private final SocketChannel socketChannel;
-
-        private long lastUnPausedNS;
-
         protected final TcpConnection connection;
+
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
         protected long lastHeartbeat;
+        private long lastUnPausedNS;
 
         protected final ByteBuffer writeBuffer;
-
-        // this could be re-sized so cannot be final
         protected final ResizableDirectByteBufferBytes readBuffer;
-        private Bytes withMappedBuffer;
+
+        private ResizableDirectByteBufferBytes withMappedBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
@@ -143,11 +143,10 @@ public abstract class SourceTcp {
 
             this.readBuffer = new ResizableDirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
-
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.writeBuffer.limit(0);
 
-            this.withMappedBuffer = new DirectByteBufferBytes(1024);
+            this.withMappedBuffer = new ResizableDirectByteBufferBytes(1024);
         }
 
 
@@ -437,7 +436,7 @@ public abstract class SourceTcp {
 
             withMappedBuffer.clear();
             if (withMappedBuffer.capacity() < source.limit()) {
-                withMappedBuffer = new DirectByteBufferBytes((int)source.capacity());
+                withMappedBuffer.resetToSize((int)source.capacity());
             }
 
             try {
@@ -449,8 +448,11 @@ public abstract class SourceTcp {
                         throw e;
                     }
 
-                    int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
-                    withMappedBuffer = new DirectByteBufferBytes(newSize);
+                    withMappedBuffer.resetToSize(
+                        Math.min(
+                            Integer.MAX_VALUE,
+                            (int) (withMappedBuffer.capacity() * 1.5))
+                    );
                 } else {
                     throw e;
                 }

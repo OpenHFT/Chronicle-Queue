@@ -35,19 +35,25 @@ public class ResizableDirectByteBufferBytes extends DirectByteBufferBytes {
         super(buffer, start, capacity);
     }
 
-    public void clearAll() {
+    public ResizableDirectByteBufferBytes clearAll() {
         buffer().clear();
         clear();
+
+        return this;
     }
 
-    public void setBufferPositionAndLimit(int position, int limit) {
+    public ResizableDirectByteBufferBytes setBufferPositionAndLimit(int position, int limit) {
         buffer().position(position);
         buffer().limit(limit);
+
+        return this;
     }
 
-    public void setBufferPositionAndLimit(int position, long limit) {
+    public ResizableDirectByteBufferBytes setBufferPositionAndLimit(int position, long limit) {
         buffer().position(position);
         buffer().limit((int)limit);
+
+        return this;
     }
 
     public ResizableDirectByteBufferBytes resizeIfNeeded(int newCapacity) {
@@ -59,12 +65,14 @@ public class ResizableDirectByteBufferBytes extends DirectByteBufferBytes {
     }
 
     public ResizableDirectByteBufferBytes resetToSize(int size) {
-        resizeIfNeeded(size);
-
-        clear();
-        buffer().clear();
-        limit(size);
-        buffer().limit(size);
+        if (capacity() < size) {
+            resize(size, false, false);
+        } else {
+            clear();
+            buffer().clear();
+            limit(size);
+            buffer().limit(size);
+        }
 
         return this;
     }
