@@ -33,7 +33,7 @@
     <version>3.3.4-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>OpenHFT/Chronicle-Queue</name>
+    <name>OpenHFT/Chronicle-Queue-Root</name>
     <description>High Performance Logging and Persisted Messaging</description>
 
     <modules>

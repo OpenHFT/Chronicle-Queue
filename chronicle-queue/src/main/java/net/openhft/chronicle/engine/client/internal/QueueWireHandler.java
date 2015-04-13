@@ -72,10 +72,15 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
 
         try {
 
+
+            // writes out the tid
             outWire.writeDocument(true, wire -> outWire.write(CoreFields.tid).int64(tid));
 
+            // todo we should have a better way to get the queue
             if (EventId.lastWrittenIndex.contentEquals(eventName))
                 writeData(wireOut -> wireOut.write(reply).int64(queue.lastWrittenIndex()));
+
+            // todo add the others here
 
         } finally {
 
