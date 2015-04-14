@@ -2,21 +2,15 @@ package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.TimeZone;
 
 public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
-	private static SimpleDateFormat getSimpleDateFormat() {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
-		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-		return sdf;
-	}
 
 	private static byte[] generateByteArray(int dataSize) throws UnsupportedEncodingException {
 		byte[] result = new byte[dataSize];
@@ -44,9 +38,7 @@ public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
 
 	@Test
 	public void testLargeFile() throws Exception {
-        if(!Jvm.is64Bit()) {
-            return;
-        }
+		Assume.assumeTrue(Jvm.is64Bit());
 
         String basePath = getTestPath();
 

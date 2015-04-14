@@ -141,7 +141,7 @@ public class ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    protected final class PortSupplier implements TcpConnectionListener {
+    protected final class PortSupplier extends TcpConnectionHandler {
         private final AtomicInteger port;
         private final CountDownLatch latch;
 
@@ -157,7 +157,7 @@ public class ChronicleTcpTestBase {
         }
 
         @Override
-        public void onError(SelectableChannel channel, IOException exception) {
+        public void onError(SelectableChannel channel, Exception exception) {
             errorCollector.addError(exception);
 
             this.port.set(-1);

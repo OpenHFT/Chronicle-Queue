@@ -60,8 +60,12 @@ public class ChronicleTcp {
     }
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
-        int newSize = (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
-        return createBufferOfSize(newSize, byteOrder);
+
+        return createBufferOfSize(minBufferSize(minSize), byteOrder);
+    }
+
+    public static int minBufferSize(int minSize) {
+        return (minSize + INITIAL_BUFFER_SIZE - 1) / INITIAL_BUFFER_SIZE * INITIAL_BUFFER_SIZE;
     }
 
     public static String connectionName(String name, final InetSocketAddress bindAddress, final InetSocketAddress connectAddress) {

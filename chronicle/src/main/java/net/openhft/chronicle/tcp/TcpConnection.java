@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.tcp;
 
+import net.openhft.lang.io.DirectByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
@@ -41,6 +42,10 @@ class TcpConnection {
         }
 
         this.socketChannel = socketChannel;
+    }
+
+    public SocketChannel socketChannel() {
+        return this.socketChannel;
     }
 
     public boolean isOpen() {
@@ -81,12 +86,19 @@ class TcpConnection {
         return this.socketChannel.write(buffer);
     }
 
+    public void writeAllOrEOF(final DirectByteBufferBytes bb) throws IOException {
+        writeAllOrEOF(bb.buffer());
+    }
+
     public void writeAllOrEOF(final ByteBuffer bb) throws IOException {
-//        System.out.println("w - "+ChronicleTools.asString(bb));
         writeAll(bb);
         if (bb.remaining() > 0) {
             throw new EOFException();
         }
+    }
+
+    public void writeAll(final DirectByteBufferBytes bb) throws IOException {
+        writeAll(bb.buffer());
     }
 
     public void writeAll(final ByteBuffer bb) throws IOException {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Higher Frequency Trading
+ * Copyright 2015 Higher Frequency Trading
  *
  * http://www.higherfrequencytrading.com
  *
@@ -15,26 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.openhft.chronicle.tcp;
 
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.IndexedChronicle;
+import net.openhft.chronicle.VanillaChronicle;
+import net.openhft.chronicle.tools.WrappedExcerptAppender;
+import net.openhft.lang.model.constraints.NotNull;
 
-public class TcpConnectionHandler implements TcpConnectionListener {
-    @Override
-    public void onError(SelectableChannel channel, Exception exception) {
+import java.io.IOException;
+
+public abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppender> {
+
+    public AppenderAdapter(@NotNull ExcerptAppender appender) {
+        super(appender);
     }
 
-    @Override
-    public void onListen(ServerSocketChannel channel) {
-    }
-
-    @Override
-    public void onConnect(SocketChannel channel) {
-    }
-
-    @Override
-    public void onDisconnect(SocketChannel channel) {
-    }
+    public abstract void writePaddedEntry();
+    public abstract void startExcerpt(long capacity, long index);
 }

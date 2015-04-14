@@ -563,6 +563,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
     public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder
             implements MappingProvider<ReplicaChronicleQueueBuilder> {
 
+        public static final int DEFAULT_SOCKET_BUFFER_SIZE = 256 * 1024;
         public static final TcpConnectionListener CONNECTION_LISTENER = new TcpConnectionHandler();
 
         private final ChronicleQueueBuilder builder;
@@ -616,9 +617,9 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.heartbeatInterval = 2500;
             this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
-            this.receiveBufferSize = 256 * 1024;
-            this.sendBufferSize = -1;
-            this.minBufferSize = this.receiveBufferSize;
+            this.receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
+            this.sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
+            this.minBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
             this.sharedChronicle = false;
             this.acceptorMaxBacklog = 50;
             this.acceptorDefaultThreads = 0;
@@ -777,6 +778,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public TimeUnit heartbeatIntervalUnit() {
             return this.heartbeatIntervalUnit;
+        }
+
+        public int defaultSocketBufferSize() {
+            return DEFAULT_SOCKET_BUFFER_SIZE;
         }
 
         public int receiveBufferSize() {

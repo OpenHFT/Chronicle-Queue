@@ -31,7 +31,8 @@ public class VanillaChronicleUtils {
         return LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
     }
 
-    public static File mkFiles(String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
+    public static File mkFiles(
+            String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
         File dir = new File(basePath, cycleStr);
 
         if (!forAppend) {
@@ -57,5 +58,13 @@ public class VanillaChronicleUtils {
         }
 
         return file;
+    }
+
+
+    public static File fileFor(
+            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) throws IOException {
+        return new File(
+            new File(basePath, dateCache.formatFor(cycle)),
+            VanillaIndexCache.FILE_NAME_PREFIX + indexCount);
     }
 }
