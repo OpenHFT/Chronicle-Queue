@@ -23,6 +23,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.ThreadLocal.withInitial;
+import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
 import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.UNINITIALISED;
 
@@ -97,16 +98,12 @@ public class Indexer {
 
             rootIndex.read(() -> "index").int64array(array, null);
 
-            long index0 = IndexOffset.toAddress0(index);
-            long secondaryAddress = array.getValueAt(index0);
+            long secondaryAddress = array.getValueAt(toAddress0(index));
 
-            if (secondaryAddress == UNINITIALISED) {
-                secondaryAddress = chronicle.newIndex();
-                array.setValueAt(index, secondaryAddress);
-            }
+            if (secondaryAddress == UNINITIALISED)
+                array.setValueAt(index, secondaryAddress = chronicle.newIndex());
 
             chronicle.wire().readDocument(secondaryAddress, secondaryIndex -> {
-
                 secondaryIndex.read(() -> "index").int64array(array, null);
                 array.setValueAt(toAddress1(index), address);
 

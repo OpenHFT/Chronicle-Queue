@@ -59,7 +59,6 @@ public class BytesRingBufferTest {
         outBuffer.release();
     }
 
-
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(24)) {
