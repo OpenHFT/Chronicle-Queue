@@ -188,6 +188,9 @@ public class SingleTailer implements ExcerptTailer {
 
         if (address != 0)
             bytes.position(address);
+        else
+            // start to read just after the header
+            bytes.position(Header.PADDED_SIZE);
 
         bytes.limit(writeByte);
         long last = chronicle.lastIndex();

@@ -33,7 +33,7 @@ import java.util.UUID;
  * and sharing of this data structure.
  */
 class Header implements Marshallable {
-    private static final long PADDED_SIZE = 512;
+    public static final long PADDED_SIZE = 512;
     // fields which can be serialized/deserialized in the normal way.
     UUID uuid;
     ZonedDateTime created;

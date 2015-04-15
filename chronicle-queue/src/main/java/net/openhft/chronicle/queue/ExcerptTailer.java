@@ -35,9 +35,9 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return the wire associated with this tailer.
      */
     @Nullable
-    public WireIn wire();
+    WireIn wire();
 
-    public boolean readDocument(Consumer<WireIn> reader);
+    boolean readDocument(Consumer<WireIn> reader);
 
     /**
      * Randomly select an Excerpt.

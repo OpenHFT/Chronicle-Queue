@@ -330,14 +330,26 @@ public class SimpleChronicleQueueTest {
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
+            {
+                int expected = 150;
+                tailer.index(expected);
 
-            int expected = 150;
-            tailer.index(expected);
+                StringBuilder sb = new StringBuilder();
+                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
 
-            StringBuilder sb = new StringBuilder();
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                Assert.assertEquals("value=" + expected, sb.toString());
+            }
 
-            Assert.assertEquals("value=" + expected, sb.toString());
+            //read back earlier
+            {
+                int expected = 167;
+                tailer.index(expected);
+
+                StringBuilder sb = new StringBuilder();
+                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+
+                Assert.assertEquals("value=" + expected, sb.toString());
+            }
 
         } finally {
             file.delete();
