@@ -128,7 +128,6 @@ public class BytesRingBufferTest {
     }
 
     @Test
-
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
 
