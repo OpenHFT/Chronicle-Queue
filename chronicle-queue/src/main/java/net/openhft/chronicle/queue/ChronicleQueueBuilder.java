@@ -1,6 +1,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.SingleChronicleQueue;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -11,6 +13,7 @@ import java.io.IOException;
 public class ChronicleQueueBuilder {
     private String name;
     private long blockSize = 64 << 20;
+    private Class<? extends Wire> wireType = BinaryWire.class;
 
     public ChronicleQueueBuilder(String name) {
         this.name = name;
@@ -22,8 +25,14 @@ public class ChronicleQueueBuilder {
         return this;
     }
 
+    public ChronicleQueueBuilder wireType(Class<? extends Wire> wireType) {
+        this.wireType = wireType;
+        return this;
+    }
+
+
     @NotNull
-    public ChronicleQueue build() throws IOException {
-        return new SingleChronicleQueue(name, blockSize);
+    public SingleChronicleQueue build() throws IOException {
+        return new SingleChronicleQueue(name, blockSize, wireType);
     }
 }

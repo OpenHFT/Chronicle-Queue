@@ -3,10 +3,11 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.queue.Compression;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,13 +19,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.impl.Indexer.NUMBER_OF_ENTRIES_IN_EACH_INDEX;
 import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
  * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on
  * 30/01/15.
  */
-public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueue {
+public class SingleChronicleQueue extends AbstractChronicle {
 
     // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
     private static final long MAGIC_OFFSET = 0L;
@@ -35,28 +37,54 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     static final long UNINITIALISED = 0L;
     static final long BUILDING = BytesUtil.asLong("BUILDING");
     static final long QUEUE_CREATED = BytesUtil.asLong("QUEUE400");
-    static final int NOT_READY = 1 << 30;
-    static final int META_DATA = 1 << 31;
-    static final int LENGTH_MASK = -1 >>> 2;
+    static final int NOT_READY = Wires.NOT_READY;
+    static final int META_DATA = Wires.META_DATA;
+    static final int LENGTH_MASK = Wires.LENGTH_MASK;
     static final int MAX_LENGTH = LENGTH_MASK;
 
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
+
     @NotNull
     private final MappedFile mappedFile;
     private final Bytes headerMemory;
-    private final Header header = new Header();
+    final Header header = new Header();
     @NotNull
-    private final ChronicleWire wire;
+    final ChronicleWire wire;
     @NotNull
     private final Bytes bytes;
+    private final Class<? extends Wire> wireType;
     private long firstBytes = -1;
 
-    public SingleChronicleQueue(String filename, long blockSize) throws IOException {
+
+    // used in the indexer
+    private final ThreadLocal<ByteableLongArrayValues> longArray;
+
+    public SingleChronicleQueue(@NotNull final String filename,
+                                long blockSize,
+                                @NotNull final Class<? extends Wire> wireType) throws IOException {
+
         mappedFile = MappedFile.mappedFile(filename, blockSize);
         headerMemory = mappedFile.acquireBytes(0);
         bytes = mappedFile.bytes();
-        wire = new ChronicleWire(new BinaryWire(bytes));
+        this.wire = createWire(wireType, bytes);
+        this.wireType = wireType;
+        longArray = Indexer.newLongArrayValuesPool(wireType());
+
         initialiseHeader();
+    }
+
+    private static ChronicleWire createWire(@NotNull final Class<? extends Wire> wireType,
+                                            @NotNull final Bytes bytes) {
+        final Wire rootWire;
+
+        if (BinaryWire.class.isAssignableFrom(wireType)) {
+            rootWire = new BinaryWire(bytes);
+        } else if (TextWire.class.isAssignableFrom(wireType)) {
+            rootWire = new TextWire(bytes);
+        } else
+            throw new UnsupportedOperationException("todo");
+
+        return new ChronicleWire(rootWire);
     }
 
 
@@ -89,7 +117,7 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     public long lastIndex() {
         long value = header.lastIndex().getVolatileValue();
         if (value == -1)
-            throw new IllegalStateException("No data has been written to   chronicle.");
+            throw new IllegalStateException("No data has been written to chronicle.");
         return value;
     }
 
@@ -104,6 +132,16 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
 
     private int length30(int i) {
         return i & LENGTH_MASK;
+    }
+
+    @Override
+    Wire wire() {
+        return wire;
+    }
+
+    @Override
+    public Class<? extends Wire> wireType() {
+        return wireType;
     }
 
     enum MetaDataKey implements WireKey {
@@ -183,7 +221,12 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new SingleTailer(this);
+        if (TextWire.class.isAssignableFrom(wireType()))
+            return new SingleTailer(this, TextWire::new);
+        else if (BinaryWire.class.isAssignableFrom(wireType()))
+            return new SingleTailer(this, BinaryWire::new);
+        else
+            throw new UnsupportedOperationException("todo");
     }
 
     @NotNull
@@ -261,46 +304,19 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
      */
     long newIndex() {
 
-        long indexSize = 1L << 17L;
+        final ByteableLongArrayValues array = longArray.get();
 
-        try (NativeBytesStore<Void> allocate = NativeBytesStore.nativeStoreWithFixedCapacity(6)) {
+        final long size = array.sizeInBytes(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
+        final Bytes buffer = NativeBytes.nativeBytes(size);
+        buffer.zeroOut(0, size);
 
-            final Bytes<Void> buffer = allocate.bytes();
-
-            new BinaryWire(buffer).write(() -> "Index");
-            buffer.flip();
-
-            final long keyLen = buffer.limit();
-
-            final long length = buffer.remaining();
-            if (length > MAX_LENGTH)
-                throw new IllegalStateException("Length too large: " + length);
-
-            final LongValue writeByte = header.writeByte();
-            final long lastByte = writeByte.getVolatileValue();
-
-            for (; ; ) {
-                if (bytes.compareAndSwapInt(lastByte, 0, META_DATA | NOT_READY | (int) length)) {
-                    long lastByte2 = lastByte + 4 + buffer.remaining() + indexSize;
-                    bytes.write(lastByte + 4, buffer);
-
-                    header.lastIndex().addAtomicValue(1);
-                    writeByte.setOrderedValue(lastByte2);
-                    bytes.writeOrderedInt(lastByte, META_DATA | (int) (6 + indexSize));
-                    long start = lastByte + 4;
-                    bytes.zeroOut(start + keyLen, start + keyLen + length);
-                    return start + keyLen;
-                }
-                int length2 = length30(bytes.readVolatileInt());
-                bytes.skip(length2);
-                Jvm.checkInterrupted();
-            }
-        } catch (Exception e) {
-            throw new IORuntimeException(e);
-        }
-
+        final Wire wire = new BinaryWire(buffer);
+        wire.write(() -> "index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
+        buffer.flip();
+        return appendMetaDataReturnAddress(buffer);
 
     }
+
 
     @Override
     public long appendDocument(@NotNull Bytes buffer) {
@@ -309,9 +325,11 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
             throw new IllegalStateException("Length too large: " + length);
 
         LongValue writeByte = header.writeByte();
-        long lastByte = writeByte.getVolatileValue();
+
 
         for (; ; ) {
+
+            long lastByte = writeByte.getVolatileValue();
 
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
@@ -331,5 +349,39 @@ public class SingleChronicleQueue implements ChronicleQueue, DirectChronicleQueu
         }
     }
 
+    /**
+     * This method does not update the index, as indexs are not used for meta data
+     *
+     * @param buffer
+     * @return the address of the appended data
+     */
+   private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+
+        LongValue writeByte = header.writeByte();
+        long lastByte = writeByte.getVolatileValue();
+
+        for (; ; ) {
+
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                writeByte.setOrderedValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) (META_DATA | length));
+                return lastByte;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            try {
+                Jvm.checkInterrupted();
+            } catch (InterruptedException e) {
+                throw new InterruptedRuntimeException(e);
+            }
+        }
+    }
+
 }
+
 

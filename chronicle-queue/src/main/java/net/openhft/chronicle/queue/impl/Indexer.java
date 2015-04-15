@@ -1,39 +1,60 @@
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
-import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.BUILDING;
+import static java.lang.ThreadLocal.withInitial;
+import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
 import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.UNINITIALISED;
 
 /**
+ * this class is not threadsafe - first CAS has to be implemented
+ *
  * @author Rob Austin.
  */
 public class Indexer {
 
+    // 1 << 20 ( is 1MB ), a long is 8 Bytes, if we were to just store the longs in 1Mb this
+    // would give use 1 << 17 longs.
+    public static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
+    private final AbstractChronicle chronicle;
+    private ThreadLocal<ByteableLongArrayValues> array;
+
+    public Indexer(@NotNull final AbstractChronicle chronicle) {
+        this.array = newLongArrayValuesPool(chronicle.wireType());
+        this.chronicle = chronicle;
+    }
+
+    public static ThreadLocal<ByteableLongArrayValues>
+    newLongArrayValuesPool(Class<? extends Wire> wireType) {
+
+        if (TextWire.class.isAssignableFrom(wireType))
+            return withInitial(LongArrayTextReference::new);
+        if (BinaryWire.class.isAssignableFrom(wireType))
+            return withInitial(LongArrayDirectReference::new);
+        else
+            throw new IllegalStateException("todo, unsupported type=" + wireType);
+
+    }
+
     /**
      * sans through every excerpts and records every 64th address in the index2indexs'
      *
-     * @param chronicle
      * @throws Exception
      */
-    public static void index(@NotNull final ChronicleQueue chronicle) throws Exception {
 
-        final SingleChronicleQueue single = (SingleChronicleQueue) chronicle;
-
-        final long index2Index = single.indexToIndex();
+    public synchronized void index() throws Exception {
 
         final ExcerptTailer tailer = chronicle.createTailer();
-        System.out.println(" single.lastIndex()=" + single.lastIndex());
-        for (long i = 0; i <= single.lastIndex(); i++) {
+
+        for (long i = 0; i <= chronicle.lastIndex(); i++) {
 
             final long index = i;
 
             tailer.readDocument(wireIn -> {
                 long address = wireIn.bytes().position() - 4;
-                recordAddress(index, address, single, index2Index);
+                recordAddress(index, address);
                 wireIn.bytes().skip(wireIn.bytes().remaining());
             });
 
@@ -43,46 +64,43 @@ public class Indexer {
     /**
      * records every 64th address in the index2index
      *
-     * @param index          the index of the Excerpts
-     * @param address        the address of the Excerpts
-     * @param chronicleQueue the chronicle queue
-     * @param index2Index    the index2index address
+     * @param index   the index of the Excerpts which we are going to record
+     * @param address the address of the Excerpts which we are going to record
      */
-    private static void recordAddress(long index,
-                                      long address,
-                                      @NotNull final SingleChronicleQueue chronicleQueue,
-                                      final long index2Index) {
+    private void recordAddress(long index, long address) {
 
         if (index % 64 != 0)
             return;
 
-        long offset = IndexOffset.toAddress0(index);
-        Bytes chronicleBytes = chronicleQueue.bytes();
-        long rootOffset = index2Index + offset;
+        final ByteableLongArrayValues array = this.array.get();
+        final long index2Index = chronicle.indexToIndex();
 
-        long refToSecondary = chronicleBytes.readVolatileLong(rootOffset);
+        chronicle.wire().readDocument(index2Index, rootIndex -> {
 
-        if (refToSecondary == UNINITIALISED) {
-            boolean success = chronicleBytes.compareAndSwapLong(rootOffset, UNINITIALISED, BUILDING);
-            if (!success) {
-                refToSecondary = chronicleBytes.readVolatileLong(rootOffset);
-            } else {
-                refToSecondary = chronicleQueue.newIndex();
+            rootIndex.read(() -> "index").int64array(array, null);
 
-                chronicleBytes.writeOrderedLong(rootOffset, refToSecondary);
+            long index0 = IndexOffset.toAddress0(index);
+            long secondaryAddress = array.getValueAt(index0);
+
+            if (secondaryAddress == UNINITIALISED) {
+                secondaryAddress = chronicle.newIndex();
+                array.setValueAt(index, secondaryAddress);
             }
-        }
 
-        long l = chronicleBytes.bytes().readLong(refToSecondary + IndexOffset.toAddress1(index));
-        assert l == UNINITIALISED;
+            chronicle.wire().readDocument(secondaryAddress, secondaryIndex -> {
 
-        long offset1 = refToSecondary + IndexOffset.toAddress1(index);
-        chronicleBytes.bytes().writeOrderedLong(offset1, address);
+                secondaryIndex.read(() -> "index").int64array(array, null);
+                array.setValueAt(toAddress1(index), address);
+
+            }, null);
+
+        }, null);
 
 
     }
 
-    public  enum IndexOffset {
+
+    public enum IndexOffset {
         ;
 
         static long toAddress0(long index) {
@@ -106,8 +124,8 @@ public class Indexer {
         }
 
 
-       @NotNull
-       public static String toBinaryString(long i) {
+        @NotNull
+        public static String toBinaryString(long i) {
 
             StringBuilder sb = new StringBuilder();
 
@@ -118,7 +136,7 @@ public class Indexer {
         }
 
         @NotNull
-        public  static String toScale() {
+        public static String toScale() {
 
             StringBuilder units = new StringBuilder();
             StringBuilder tens = new StringBuilder();

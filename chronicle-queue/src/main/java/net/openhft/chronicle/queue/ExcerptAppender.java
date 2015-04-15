@@ -34,12 +34,12 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @return the underlying Wire.
      */
     @Nullable
-    public WireOut wire();
+    WireOut wire();
 
     /**
      * @param writer to write one excerpt.
      */
-    public void writeDocument(Consumer<WireOut> writer);
+    void writeDocument(Consumer<WireOut> writer);
 
 
     /**

@@ -1,11 +1,12 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.queue.impl.DirectChronicleQueue;
-import net.openhft.chronicle.queue.impl.Indexer;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.WireKey;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,10 +15,6 @@ import java.io.File;
  * @author Rob Austin.
  */
 public class SimpleChronicleQueueTest {
-
-    enum Field implements WireKey {
-        TEXT
-    }
 
     @Test
     public void testSimpleWire() throws Exception {
@@ -72,16 +69,18 @@ public class SimpleChronicleQueueTest {
 
         final ExcerptTailer tailer = chronicle.createTailer();
 
-        for (int i = 0; i < chronicle.lastIndex(); i++) {
+        for (int j = 0; j < chronicle.lastIndex(); j++) {
+            StringBuilder sb = new StringBuilder();
 
             tailer.readDocument(wireIn -> {
-                Bytes bytes1 = wireIn.bytes();
-                long remaining = bytes1.remaining();
-                bytes1.skip(remaining);
+                wireIn.read(() -> "key").text(sb);
             });
+
+            Assert.assertEquals("value=" + j, sb.toString());
+
+
         }
-
-
+        ;
     }
 
     @Test
@@ -139,7 +138,6 @@ public class SimpleChronicleQueueTest {
 
     }
 
-
     @Test(expected = IllegalStateException.class)
     public void testLastWrittenIndexPerAppenderNoData() throws Exception {
 
@@ -175,7 +173,6 @@ public class SimpleChronicleQueueTest {
 
     }
 
-
     @Test(expected = IllegalStateException.class)
     public void testLastIndexPerChronicleNoData() throws Exception {
 
@@ -184,14 +181,13 @@ public class SimpleChronicleQueueTest {
         try {
 
             DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
-            Assert.assertEquals(0, chronicle.lastIndex());
+            Assert.assertEquals(-1, chronicle.lastIndex());
 
         } finally {
             file.delete();
         }
 
     }
-
 
     @Test
     public void testHeaderIndexReadAtIndex() throws Exception {
@@ -225,7 +221,6 @@ public class SimpleChronicleQueueTest {
 
     }
 
-
     @Test
     public void testReadAtIndexWithIndexes() throws Exception {
 
@@ -233,7 +228,9 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            AbstractChronicle chronicle = new ChronicleQueueBuilder(file.getAbsolutePath())
+                    .wireType(BinaryWire.class)
+                    .build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 
@@ -243,10 +240,11 @@ public class SimpleChronicleQueueTest {
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
 
             // creates the indexes
-            Indexer.index(chronicle);
+            new Indexer(chronicle).index();
+
+            final ExcerptTailer tailer = chronicle.createTailer();
 
             tailer.index(67);
 
@@ -261,44 +259,44 @@ public class SimpleChronicleQueueTest {
 
     }
 
-
     @Test
     public void testReadAtIndexWithIndexesAtStart() throws Exception {
 
-        File file = File.createTempFile("chronicle.", "q");
+
+        final File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
+
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            AbstractChronicle chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 
-            appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + 0));
-
-            // creates the indexes - index's 1 and 2 are created by the indexer
-            Indexer.index(chronicle);
-
             // create 100 documents
-            for (int i = 3; i < 100; i++) {
+            for (int i = 0; i < 100; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
+
+            new Indexer(chronicle).index();
+
+            long index = 67;
             final ExcerptTailer tailer = chronicle.createTailer();
-
-
-            int index = 70;
-
             tailer.index(index);
+
+            //   QueueDumpMain.dump(file, new PrintWriter(System.out));
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
 
-            Assert.assertEquals("value=" + index, sb.toString());
+            Assert.assertEquals("value="+index, sb.toString());
+
 
         } finally {
             file.delete();
         }
+
 
     }
 
@@ -309,7 +307,8 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            AbstractChronicle chronicle = new ChronicleQueueBuilder(file.getAbsolutePath())
+                    .build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 
@@ -321,7 +320,8 @@ public class SimpleChronicleQueueTest {
 
 
             // creates the indexes - index's 1 and 2 are created by the indexer
-            Indexer.index(chronicle);
+            new Indexer(chronicle).index();
+
 
             // create 100 documents
             for (long i = chronicle.lastIndex() + 1; i < 200; i++) {
@@ -330,7 +330,6 @@ public class SimpleChronicleQueueTest {
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
-
 
             int expected = 150;
             tailer.index(expected);
@@ -344,5 +343,9 @@ public class SimpleChronicleQueueTest {
             file.delete();
         }
 
+    }
+
+    enum Field implements WireKey {
+        TEXT
     }
 }
