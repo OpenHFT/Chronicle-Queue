@@ -38,8 +38,7 @@ import java.util.function.Consumer;
 public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient implements ChronicleQueue {
 
     public ClientWiredChronicleQueueStateless(ClientWiredStatelessTcpConnectionHub hub, String name) {
-        super(name, hub);
-        this.csp = "//" + name + "#QUEUE";
+        super(name, hub, "QUEUE", 0);
     }
 
     @Override
