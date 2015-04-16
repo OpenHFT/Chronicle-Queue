@@ -91,12 +91,6 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
         return proxyReturnLong(EventId.lastWrittenIndex);
     }
 
-
-    @Override
-    protected Consumer<ValueOut> toParameters(@NotNull ParameterizeWireKey eventId, Object... args) {
-        throw new UnsupportedOperationException("todo");
-    }
-
     enum EventId implements ParameterizeWireKey {
         lastWrittenIndex;
 
