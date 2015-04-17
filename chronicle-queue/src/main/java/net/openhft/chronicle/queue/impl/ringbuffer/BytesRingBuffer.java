@@ -252,13 +252,13 @@ public class BytesRingBuffer {
 //        final AtomicLong readLocationAtomic = new AtomicLong();
 //        final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
 
-        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+        boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             //return writeLocationAtomic.compareAndSet(expectedValue, newValue);
             // todo replace the above with this :   
             return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
-        private long getWriteLocation() {
+        long getWriteLocation() {
             //return writeLocationAtomic.get();
             // todo replace the above with this :   
             return buffer.readVolatileLong(writeLocationOffset);
@@ -267,7 +267,7 @@ public class BytesRingBuffer {
         /**
          * @return the point at which you should not write any additional bits
          */
-        private long getWriteUpTo() {
+        long getWriteUpTo() {
             //return writeUpToOffsetAtomic.get();
             // todo replace the above with this :  
             return buffer.readVolatileLong(writeUpToOffset);

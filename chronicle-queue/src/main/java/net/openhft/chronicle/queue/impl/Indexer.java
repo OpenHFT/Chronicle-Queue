@@ -49,9 +49,9 @@ public class Indexer {
     newLongArrayValuesPool(Class<? extends Wire> wireType) {
 
         if (TextWire.class.isAssignableFrom(wireType))
-            return withInitial(LongArrayTextReference::new);
+            return withInitial(TextLongArrayReference::new);
         if (BinaryWire.class.isAssignableFrom(wireType))
-            return withInitial(LongArrayDirectReference::new);
+            return withInitial(BinaryLongArrayReference::new);
         else
             throw new IllegalStateException("todo, unsupported type=" + wireType);
 

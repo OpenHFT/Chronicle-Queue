@@ -62,14 +62,14 @@ public class DirectChronicleQueueStringTest {
             File file = new File(name);
             file.deleteOnExit();
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(name)
                     .build();
 
             writeSome(chronicle);
 
             long mid = System.nanoTime();
 
-            DirectChronicleQueue chronicle2 = (DirectChronicleQueue) new ChronicleQueueBuilder(name)
+            DirectChronicleQueue chronicle2 = new ChronicleQueueBuilder(name)
                     .build();
 
             readSome(chronicle2);
@@ -80,6 +80,26 @@ public class DirectChronicleQueueStringTest {
         }
     }
 
+    private void writeSome(DirectChronicleQueue chronicle) {
+        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
+        final Bytes toWrite = allocate.bytes();
+        for (int i = 0; i < RUNS; i++) {
+            toWrite.clear();
+            toWrite.write(EXPECTED_BYTES);
+            toWrite.flip();
+            chronicle.appendDocument(toWrite);
+        }
+    }
+
+    private void readSome(DirectChronicleQueue chronicle) {
+        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
+        final Bytes toRead = allocate.bytes();
+        AtomicLong offset = new AtomicLong(chronicle.firstBytes());
+        for (int i = 0; i < RUNS; i++) {
+            toRead.clear();
+            chronicle.readDocument(offset, toRead);
+        }
+    }
 
     @Test
     public void testCreateAppenderMT() throws Exception {
@@ -127,27 +147,6 @@ public class DirectChronicleQueueStringTest {
                     f.delete();
                 }
             }
-        }
-    }
-
-    private void readSome(DirectChronicleQueue chronicle) {
-        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
-        final Bytes toRead = allocate.bytes();
-        AtomicLong offset = new AtomicLong(chronicle.firstBytes());
-        for (int i = 0; i < RUNS; i++) {
-            toRead.clear();
-            chronicle.readDocument(offset, toRead);
-        }
-    }
-
-    private void writeSome(DirectChronicleQueue chronicle) {
-        NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(EXPECTED_BYTES.length);
-        final Bytes toWrite = allocate.bytes();
-        for (int i = 0; i < RUNS; i++) {
-            toWrite.clear();
-            toWrite.write(EXPECTED_BYTES);
-            toWrite.flip();
-            chronicle.appendDocument(toWrite);
         }
     }
 }

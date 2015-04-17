@@ -22,8 +22,10 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
-import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * @author Rob Austin.
@@ -46,12 +49,18 @@ public class BytesRingBufferTest {
     Bytes<ByteBuffer> output;
     Bytes<ByteBuffer> out;
     NativeBytesStore outBuffer;
+
     @Before
     public void setup() {
-        outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);
-        out = outBuffer.bytes();
-        out.writeUTFΔ(EXPECTED);
-        output = out.flip().bytes();
+        try {
+            outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);
+            out = outBuffer.bytes();
+            out.writeUTFΔ(EXPECTED);
+            output = out.flip().bytes();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 
     @After
@@ -67,13 +76,9 @@ public class BytesRingBufferTest {
             for (int i = 0; i < 100; i++) {
 
                 bytesRingBuffer.offer(data());
-                Bytes bytes = bytesRingBuffer.take(new BytesRingBuffer.BytesProvider() {
-                    @NotNull
-                    @Override
-                    public Bytes provide(long maxSize) {
-                        Bytes<ByteBuffer> clear = input.clear();
-                        return clear;
-                    }
+                Bytes bytes = bytesRingBuffer.take(maxSize -> {
+                    Bytes<ByteBuffer> clear = input.clear();
+                    return clear;
                 });
 
                 assertEquals(EXPECTED, bytes.readUTFΔ());
@@ -82,6 +87,10 @@ public class BytesRingBufferTest {
         }
     }
 
+    private Bytes<ByteBuffer> data() {
+        output.clear();
+        return output;
+    }
 
     @Test
     public void testSimpledSingleThreadedWriteRead() throws Exception {
@@ -119,11 +128,6 @@ public class BytesRingBufferTest {
             Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
             assertEquals(EXPECTED, actual.readUTFΔ());
         }
-    }
-
-    private Bytes<ByteBuffer> data() {
-        output.clear();
-        return output;
     }
 
     @Test
@@ -165,13 +169,9 @@ public class BytesRingBufferTest {
                 //   assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
                 if (i == 29)
                     System.out.println("");
-                Bytes bytes = bytesRingBuffer.take(new BytesRingBuffer.BytesProvider() {
-                    @NotNull
-                    @Override
-                    public Bytes provide(long maxSize) {
-                        Bytes<ByteBuffer> clear = input.clear();
-                        return clear;
-                    }
+                Bytes bytes = bytesRingBuffer.take(maxSize -> {
+                    Bytes<ByteBuffer> clear = input.clear();
+                    return clear;
                 });
 
                 try {
@@ -191,16 +191,16 @@ public class BytesRingBufferTest {
         }
     }
 
-   // @Ignore("works in lang-bytes")
+    // @Ignore("works in lang-bytes")
     @Test
-    public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws Exception {
-
+    public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws InterruptedException {
+        System.out.println("Hello World");
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
 
             //writer
-            int iterations = 20_000;
+            final int iterations = 100_000;
             {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
 
@@ -219,8 +219,9 @@ public class BytesRingBufferTest {
                             do {
                                 offer = bytesRingBuffer.offer(out);
                             } while (!offer);
+                            System.out.println("+");
 
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             e.printStackTrace();
                         }
                     });
@@ -229,6 +230,7 @@ public class BytesRingBufferTest {
 
 
             CountDownLatch count = new CountDownLatch(iterations);
+            System.out.println(count);
 
 
             //reader
@@ -237,30 +239,26 @@ public class BytesRingBufferTest {
                 for (int i = 0; i < iterations; i++) {
                     executorService.submit(() -> {
 
-                        try {
-                            try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
-                                Bytes bytes = nativeStore.bytes();
-                                Bytes result = null;
-                                do {
-                                    try {
-                                        result = bytesRingBuffer.poll(maxSize -> bytes);
-                                    } catch (InterruptedException e) {
-                                        return;
-                                    }
-                                } while (result == null);
+                        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(25)) {
+                            Bytes bytes = nativeStore.bytes();
+                            Bytes result = null;
+                            do {
+                                try {
+                                    result = bytesRingBuffer.poll(maxSize -> bytes);
+                                } catch (InterruptedException e) {
+                                    return;
+                                }
+                            } while (result == null);
 
-                                result.clear();
-                                String actual = result.readUTFΔ();
+                            result.clear();
+                            String actual = result.readUTFΔ();
 
-                                if (actual.startsWith(EXPECTED_VALUE))
-                                    count.countDown();
-                            } catch (Error e) {
-                                e.printStackTrace();
-                            }
-                        } catch (Exception e) {
+                            if (actual.startsWith(EXPECTED_VALUE))
+                                count.countDown();
+                            System.out.println("-");
+                        } catch (Throwable e) {
                             e.printStackTrace();
                         }
-
                     });
                 }
             }
@@ -270,8 +268,8 @@ public class BytesRingBufferTest {
         }
     }
 
-   // @Ignore("works in lang-bytes, appears to be a visibility issue that can be fixed by adding
-   // a" +
+    // @Ignore("works in lang-bytes, appears to be a visibility issue that can be fixed by adding
+    // a" +
     //        " synchronized to ringbuffer.poll() and ringbuffer.offer()")
     @Test
     public void testMultiThreadedWithIntValues() throws Exception {

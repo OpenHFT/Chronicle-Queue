@@ -29,7 +29,6 @@ import net.openhft.chronicle.network.event.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.impl.ChronicleWire;
 import net.openhft.chronicle.wire.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +47,14 @@ import static net.openhft.chronicle.engine.client.internal.QueueWireHandler.Fiel
  */
 public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(QueueWireHandler.class);
     public static final int SIZE_OF_SIZE = ClientWiredStatelessTcpConnectionHub.SIZE_OF_SIZE;
-
+    private static final Logger LOG = LoggerFactory.getLogger(QueueWireHandler.class);
+    final StringBuilder cspText = new StringBuilder();
+    final StringBuilder eventName = new StringBuilder();
+    // assume there is a handler for each connection.
+    long tid = -1;
+    long cid = -1;
+    ChronicleQueue queue = null;
     private WireHandlers publishLater;
     private Wire inWire;
     private Wire outWire;
@@ -59,13 +63,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     private ConcurrentHashMap<String, ChronicleQueue> fileNameToChronicle = new ConcurrentHashMap<>();
     private AtomicInteger cidCounter = new AtomicInteger();
     private Map<ChronicleQueue, ExcerptAppender> queueToAppender = new ConcurrentHashMap<>();
-
-    // assume there is a handler for each connection.
-    long tid = -1;
-    long cid = -1;
-    final StringBuilder cspText = new StringBuilder();
-    final StringBuilder eventName = new StringBuilder();
-    ChronicleQueue queue = null;
 
     public QueueWireHandler() {
     }
@@ -124,10 +121,13 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                         });
 
                 outWire.writeDocument(false, wireOut -> {
+                    throw new UnsupportedOperationException();
+/*
                     QueueAppenderResponse qar = new QueueAppenderResponse();
                     qar.setCid(cid);
                     qar.setCsp(cspText);
                     wireOut.write(reply).typedMarshallable(qar);
+*/
                 });
             } else if (EventId.submit.contentEquals(eventName)) {
                 ExcerptAppender appender = queueToAppender.get(queue);

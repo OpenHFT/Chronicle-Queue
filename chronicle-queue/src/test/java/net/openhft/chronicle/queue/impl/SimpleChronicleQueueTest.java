@@ -25,7 +25,7 @@ public class SimpleChronicleQueueTest {
         try {
 
             final DirectChronicleQueue
-                    chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+                    chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
@@ -57,7 +57,7 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
 
 
-        DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+        DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
         final ExcerptAppender appender = chronicle.createAppender();
 
@@ -91,7 +91,7 @@ public class SimpleChronicleQueueTest {
 
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 
@@ -125,7 +125,7 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 
@@ -144,7 +144,7 @@ public class SimpleChronicleQueueTest {
         File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
         try {
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
             final ExcerptAppender appender = chronicle.createAppender();
             appender.lastWrittenIndex();
 
@@ -161,7 +161,7 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
             final ExcerptAppender appender = chronicle.createAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
@@ -180,7 +180,7 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
             Assert.assertEquals(-1, chronicle.lastIndex());
 
         } finally {
@@ -196,7 +196,7 @@ public class SimpleChronicleQueueTest {
         file.deleteOnExit();
         try {
 
-            DirectChronicleQueue chronicle = (DirectChronicleQueue) new ChronicleQueueBuilder(file.getAbsolutePath()).build();
+            DirectChronicleQueue chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
 
             final ExcerptAppender appender = chronicle.createAppender();
 

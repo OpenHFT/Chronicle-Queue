@@ -22,13 +22,13 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Created by peter.lawrey on 30/01/15.
@@ -37,22 +37,20 @@ public class SingleAppender implements ExcerptAppender {
 
     @NotNull
     private final DirectChronicleQueue chronicle;
-    @Nullable
-    private final ChronicleWireOut wireOut;
     private final Bytes buffer = NativeBytes.nativeBytes();
-    private final Wire wire = new BinaryWire(buffer);
+    private final Wire wire;
 
     private long lastWrittenIndex = -1;
 
-    public SingleAppender(ChronicleQueue chronicle) {
+    public SingleAppender(ChronicleQueue chronicle, Function<Bytes, Wire> bytesToWire) {
         this.chronicle = (DirectChronicleQueue) chronicle;
-        wireOut = new ChronicleWireOut(wire);
+        wire = bytesToWire.apply(buffer);
     }
 
     @Nullable
     @Override
     public WireOut wire() {
-        return wireOut;
+        return wire;
     }
 
     @Override

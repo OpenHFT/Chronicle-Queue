@@ -36,20 +36,15 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.Indexer.NUMBER_OF_ENTRIES_IN_EACH_INDEX;
 import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on
- * 30/01/15.
+ * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on 30/01/15.
  */
 public class SingleChronicleQueue extends AbstractChronicle {
-
-    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
-    private static final long MAGIC_OFFSET = 0L;
-
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
 
     static final long HEADER_OFFSET = 8L;
     static final long UNINITIALISED = 0L;
@@ -59,23 +54,23 @@ public class SingleChronicleQueue extends AbstractChronicle {
     static final int META_DATA = Wires.META_DATA;
     static final int LENGTH_MASK = Wires.LENGTH_MASK;
     static final int MAX_LENGTH = LENGTH_MASK;
-
+    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
+    private static final long MAGIC_OFFSET = 0L;
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
+    final Header header = new Header();
+    @NotNull
+    final Wire wire;
     private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
-
     @NotNull
     private final MappedFile mappedFile;
     private final Bytes headerMemory;
-    final Header header = new Header();
-    @NotNull
-    final ChronicleWire wire;
     @NotNull
     private final Bytes bytes;
     private final Class<? extends Wire> wireType;
-    private long firstBytes = -1;
-
-
+    private final Function<Bytes, Wire> bytesToWireFunction;
     // used in the indexer
     private final ThreadLocal<ByteableLongArrayValues> longArray;
+    private long firstBytes = -1;
 
     public SingleChronicleQueue(@NotNull final String filename,
                                 long blockSize,
@@ -86,25 +81,257 @@ public class SingleChronicleQueue extends AbstractChronicle {
         bytes = mappedFile.bytes();
         this.wire = createWire(wireType, bytes);
         this.wireType = wireType;
+        this.bytesToWireFunction = byteToWireFor(wireType);
         longArray = Indexer.newLongArrayValuesPool(wireType());
 
         initialiseHeader();
     }
 
-    private static ChronicleWire createWire(@NotNull final Class<? extends Wire> wireType,
+    private static Wire createWire(@NotNull final Class<? extends Wire> wireType,
                                             @NotNull final Bytes bytes) {
-        final Wire rootWire;
-
-        if (BinaryWire.class.isAssignableFrom(wireType)) {
-            rootWire = new BinaryWire(bytes);
-        } else if (TextWire.class.isAssignableFrom(wireType)) {
-            rootWire = new TextWire(bytes);
-        } else
-            throw new UnsupportedOperationException("todo");
-
-        return new ChronicleWire(rootWire);
+        return byteToWireFor(wireType).apply(bytes);
     }
 
+    static Function<Bytes, Wire> byteToWireFor(Class<? extends Wire> wireType) {
+        if (TextWire.class.isAssignableFrom(wireType))
+            return TextWire::new;
+        else if (BinaryWire.class.isAssignableFrom(wireType))
+            return BinaryWire::new;
+        else if (RawWire.class.isAssignableFrom(wireType))
+            return RawWire::new;
+        else
+            throw new UnsupportedOperationException("todo");
+    }
+
+    private void initialiseHeader() throws IOException {
+        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINITIALISED, BUILDING)) {
+            buildHeader();
+        }
+        readHeader();
+    }
+
+    private void buildHeader() {
+        // skip the magic number.
+        bytes.position(HEADER_OFFSET);
+
+        wire.writeDocument(true, w -> w
+                .write(MetaDataKey.header).marshallable(header.init(Compression.NONE)));
+
+        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
+            throw new AssertionError("Concurrent writing of the header");
+    }
+
+    private void readHeader() throws IOException {
+        // skip the magic number.
+        waitForTheHeaderToBeBuilt(bytes);
+
+        bytes.position(HEADER_OFFSET);
+
+        if (!wire.readDocument(w -> w.read().marshallable(header), null))
+            throw new AssertionError("No header!?");
+        firstBytes = bytes.position();
+    }
+
+    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
+        for (int i = 0; i < 1000; i++) {
+            long magic = bytes.readVolatileLong(MAGIC_OFFSET);
+            if (magic == BUILDING) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new IOException("Interrupted waiting for the header to be built");
+                }
+            } else if (magic == QUEUE_CREATED) {
+                return;
+            } else {
+                throw new AssertionError("Invalid magic number " + Long.toHexString(magic) + " in file " + name());
+            }
+        }
+        throw new AssertionError("Timeout waiting to build the file " + name());
+    }
+
+    @Override
+    public String name() {
+        return mappedFile.name();
+    }
+
+    @NotNull
+    @Override
+    public Excerpt createExcerpt() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @NotNull
+    @Override
+    public ExcerptTailer createTailer() throws IOException {
+        return new SingleTailer(this, bytesToWireFunction);
+    }
+
+    @NotNull
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        ExcerptAppender appender = localAppender.get();
+        if (appender == null)
+            localAppender.set(appender = new SingleAppender(this, bytesToWireFunction));
+        return appender;
+    }
+
+    @Override
+    public long size() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void clear() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long firstAvailableIndex() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long lastWrittenIndex() {
+        return 0;
+    }
+
+    static String getHostName() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            try {
+                return Files.readAllLines(Paths.get("etc", "hostname")).get(0);
+            } catch (Exception e2) {
+                return "localhost";
+            }
+        }
+    }
+
+    @Override
+    Wire wire() {
+        return wire;
+    }
+
+    @Override
+    public Class<? extends Wire> wireType() {
+        return wireType;
+    }
+
+    /**
+     * @return gets the index2index, or creates it, if it does not exist.
+     */
+    long indexToIndex() {
+        for (; ; ) {
+
+            long index2Index = header.index2Index().getVolatileValue();
+
+            if (index2Index == NOT_READY)
+                continue;
+
+            if (index2Index != UNINITIALISED)
+                return index2Index;
+
+            if (!header.index2Index().compareAndSwapValue(UNINITIALISED, NOT_READY))
+                continue;
+
+            long indexToIndex = newIndex();
+            header.index2Index().setOrderedValue(indexToIndex);
+            return indexToIndex;
+        }
+    }
+
+    /**
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is used for creating
+     * both the primary and secondary indexes. Chronicle Queue uses a root primary index ( each entry in the primary
+     * index points to a unique a secondary index. The secondary index only records the address of every 64th except,
+     * the except are linearly scanned from there on.
+     *
+     * @return the address of the Excerpt containing the usable index, just after the header
+     */
+    long newIndex() {
+
+        final ByteableLongArrayValues array = longArray.get();
+
+        final long size = array.sizeInBytes(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
+        final Bytes buffer = NativeBytes.nativeBytes(size);
+        buffer.zeroOut(0, size);
+
+        final Wire wire = new BinaryWire(buffer);
+        wire.write(() -> "index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
+        buffer.flip();
+        return appendMetaDataReturnAddress(buffer);
+
+    }
+
+    /**
+     * This method does not update the index, as indexs are not used for meta data
+     *
+     * @param buffer
+     * @return the address of the appended data
+     */
+    private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+
+        LongValue writeByte = header.writeByte();
+        long lastByte = writeByte.getVolatileValue();
+
+        for (; ; ) {
+
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                writeByte.setOrderedValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) (META_DATA | length));
+                return lastByte;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            try {
+                Jvm.checkInterrupted();
+            } catch (InterruptedException e) {
+                throw new InterruptedRuntimeException(e);
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long appendDocument(@NotNull Bytes buffer) {
+        long length = buffer.remaining();
+        if (length > MAX_LENGTH)
+            throw new IllegalStateException("Length too large: " + length);
+
+        LongValue writeByte = header.writeByte();
+
+
+        for (; ; ) {
+
+            long lastByte = writeByte.getVolatileValue();
+
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                long lastIndex = header.lastIndex().addAtomicValue(1);
+                writeByte.setOrderedValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) length);
+                return lastIndex;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            try {
+                Jvm.checkInterrupted();
+            } catch (InterruptedException e) {
+                throw new InterruptedRuntimeException(e);
+            }
+        }
+    }
 
     @Override
     public boolean readDocument(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
@@ -148,256 +375,17 @@ public class SingleChronicleQueue extends AbstractChronicle {
         return false;
     }
 
-    private int length30(int i) {
-        return i & LENGTH_MASK;
-    }
-
-    @Override
-    Wire wire() {
-        return wire;
-    }
-
-    @Override
-    public Class<? extends Wire> wireType() {
-        return wireType;
-    }
-
-    enum MetaDataKey implements WireKey {
-        header, index2index, index
-    }
-
-    private void initialiseHeader() throws IOException {
-        if (bytes.compareAndSwapLong(MAGIC_OFFSET, UNINITIALISED, BUILDING)) {
-            buildHeader();
-        }
-        readHeader();
-    }
-
-    private void readHeader() throws IOException {
-        // skip the magic number. 
-        waitForTheHeaderToBeBuilt(bytes);
-
-        bytes.position(HEADER_OFFSET);
-
-        if (!wire.readDocument(w -> w.read().marshallable(header), null))
-            throw new AssertionError("No header!?");
-        firstBytes = bytes.position();
-    }
-
-    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
-        for (int i = 0; i < 1000; i++) {
-            long magic = bytes.readVolatileLong(MAGIC_OFFSET);
-            if (magic == BUILDING) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    throw new IOException("Interrupted waiting for the header to be built");
-                }
-            } else if (magic == QUEUE_CREATED) {
-                return;
-            } else {
-                throw new AssertionError("Invalid magic number " + Long.toHexString(magic) + " in file " + name());
-            }
-        }
-        throw new AssertionError("Timeout waiting to build the file " + name());
-    }
-
-    private void buildHeader() {
-        // skip the magic number.
-        bytes.position(HEADER_OFFSET);
-
-        wire.writeDocument(true, w -> w
-                .write(MetaDataKey.header).marshallable(header.init(Compression.NONE)));
-
-        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
-            throw new AssertionError("Concurrent writing of the header");
-    }
-
-    static String getHostName() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            try {
-                return Files.readAllLines(Paths.get("etc", "hostname")).get(0);
-            } catch (Exception e2) {
-                return "localhost";
-            }
-        }
-    }
-
-    @Override
-    public String name() {
-        return mappedFile.name();
-    }
-
-    @NotNull
-    @Override
-    public Excerpt createExcerpt() throws IOException {
-        throw new UnsupportedOperationException();
-    }
-
-    @NotNull
-    @Override
-    public ExcerptTailer createTailer() throws IOException {
-        if (TextWire.class.isAssignableFrom(wireType()))
-            return new SingleTailer(this, TextWire::new);
-        else if (BinaryWire.class.isAssignableFrom(wireType()))
-            return new SingleTailer(this, BinaryWire::new);
-        else
-            throw new UnsupportedOperationException("todo");
-    }
-
-    @NotNull
-    @Override
-    public ExcerptAppender createAppender() throws IOException {
-        ExcerptAppender appender = localAppender.get();
-        if (appender == null)
-            localAppender.set(appender = new SingleAppender(this));
-        return appender;
-    }
-
-    @Override
-    public long size() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void clear() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long firstAvailableIndex() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long lastWrittenIndex() {
-        return 0;
-    }
-
-    @Override
-    public void close() {
-        throw new UnsupportedOperationException();
-    }
-
     @Override
     public long firstBytes() {
         return firstBytes;
     }
 
-
-    /**
-     * @return gets the index2index, or creates it, if it does not exist.
-     */
-    long indexToIndex() {
-        for (; ; ) {
-
-            long index2Index = header.index2Index().getVolatileValue();
-
-            if (index2Index == NOT_READY)
-                continue;
-
-            if (index2Index != UNINITIALISED)
-                return index2Index;
-
-            if (!header.index2Index().compareAndSwapValue(UNINITIALISED, NOT_READY))
-                continue;
-
-            long indexToIndex = newIndex();
-            header.index2Index().setOrderedValue(indexToIndex);
-            return indexToIndex;
-        }
+    private int length30(int i) {
+        return i & LENGTH_MASK;
     }
 
-
-    /**
-     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
-     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
-     * index ( each entry in the primary index points to a unique a secondary index. The secondary
-     * index only records the address of every 64th except, the except are linearly scanned from
-     * there on.
-     *
-     * @return the address of the Excerpt containing the usable index, just after the header
-     */
-    long newIndex() {
-
-        final ByteableLongArrayValues array = longArray.get();
-
-        final long size = array.sizeInBytes(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
-        final Bytes buffer = NativeBytes.nativeBytes(size);
-        buffer.zeroOut(0, size);
-
-        final Wire wire = new BinaryWire(buffer);
-        wire.write(() -> "index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
-        buffer.flip();
-        return appendMetaDataReturnAddress(buffer);
-
-    }
-
-
-    @Override
-    public long appendDocument(@NotNull Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
-
-        LongValue writeByte = header.writeByte();
-
-
-        for (; ; ) {
-
-            long lastByte = writeByte.getVolatileValue();
-
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                long lastByte2 = lastByte + 4 + buffer.remaining();
-                bytes.write(lastByte + 4, buffer);
-                long lastIndex = header.lastIndex().addAtomicValue(1);
-                writeByte.setOrderedValue(lastByte2);
-                bytes.writeOrderedInt(lastByte, (int) length);
-                return lastIndex;
-            }
-            int length2 = length30(bytes.readVolatileInt());
-            bytes.skip(length2);
-            try {
-                Jvm.checkInterrupted();
-            } catch (InterruptedException e) {
-                throw new InterruptedRuntimeException(e);
-            }
-        }
-    }
-
-    /**
-     * This method does not update the index, as indexs are not used for meta data
-     *
-     * @param buffer
-     * @return the address of the appended data
-     */
-   private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
-
-        LongValue writeByte = header.writeByte();
-        long lastByte = writeByte.getVolatileValue();
-
-        for (; ; ) {
-
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                long lastByte2 = lastByte + 4 + buffer.remaining();
-                bytes.write(lastByte + 4, buffer);
-                writeByte.setOrderedValue(lastByte2);
-                bytes.writeOrderedInt(lastByte, (int) (META_DATA | length));
-                return lastByte;
-            }
-            int length2 = length30(bytes.readVolatileInt());
-            bytes.skip(length2);
-            try {
-                Jvm.checkInterrupted();
-            } catch (InterruptedException e) {
-                throw new InterruptedRuntimeException(e);
-            }
-        }
+    enum MetaDataKey implements WireKey {
+        header, index2index, index
     }
 
 }

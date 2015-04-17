@@ -25,13 +25,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.function.Consumer;
 
 /**
  * Created by Rob Austin
@@ -68,7 +65,8 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new ClientWiredExcerptAppenderStateless(this, hub, TextWire::new);
+        throw new UnsupportedOperationException();
+//        return new ClientWiredExcerptAppenderStateless(this, hub, TextWire::new);
     }
 
     @Override
@@ -86,14 +84,13 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
         throw new UnsupportedOperationException("todo");
     }
 
+    public long lastWrittenIndex() {
+        return proxyReturnLong(EventId.lastWrittenIndex);
+    }
 
     @Override
     public void close() throws IOException {
         // todo add ref count
-    }
-
-    public long lastWrittenIndex() {
-        return proxyReturnLong(EventId.lastWrittenIndex);
     }
 
     enum EventId implements ParameterizeWireKey {

@@ -42,13 +42,17 @@ public class SingleTailer implements ExcerptTailer {
     @NotNull
 
     private final SingleChronicleQueue chronicle;
-
-    private long index;
-
     private final BytesStoreBytes bytes = new BytesStoreBytes(Bytes.elasticByteBuffer());
-
     private final Wire wire;
-
+    /**
+     * reads an item in the index, the index is stored in meta data
+     *
+     * @param offset the address of the document
+     * @param index  the index of of the array item
+     * @return returns a long at array {@code index}
+     */
+    LongArrayValues values = null;
+    private long index;
     private ThreadLocal<ByteableLongArrayValues> value;
 
     public SingleTailer(@NotNull final AbstractChronicle chronicle,
@@ -61,49 +65,13 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public WireIn wire() {
-        return new ChronicleWireIn(null);
+        return wire;
     }
 
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
         wire.readDocument(null, reader);
         return true;
-    }
-
-
-    /**
-     * reads an item in the index, the index is stored in meta data
-     *
-     * @param offset the address of the document
-     * @param index  the index of of the array item
-     * @return returns a long at array {@code index}
-     */
-    private long readIndexAt(long offset, long index) {
-
-        if (offset == 0)
-            return 0;
-
-        long pos = chronicle.bytes().position();
-
-        try {
-
-            final LongArrayValues values = value.get();
-            final long[] result = new long[1];
-
-            chronicle.bytes().position(offset);
-            chronicle.wire.readDocument(wireIn -> {
-
-                wireIn.read(() -> "index").int64array(values, null);
-                result[0] = values.getVolatileValueAt(index);
-
-            }, null);
-
-            return result[0];
-
-        } finally {
-            chronicle.bytes().position(pos);
-        }
-
     }
 
     /**
@@ -225,6 +193,34 @@ public class SingleTailer implements ExcerptTailer {
     public ExcerptTailer toEnd() {
         index(chronicle.lastIndex());
         return this;
+    }
+
+    private long readIndexAt(long offset, long index) {
+
+        if (offset == 0)
+            return 0;
+
+        long pos = chronicle.bytes().position();
+
+        try {
+
+//            final LongArrayValues values = value.get();
+            final long[] result = new long[1];
+
+            chronicle.bytes().position(offset);
+            chronicle.wire.readDocument(wireIn -> {
+
+                wireIn.read(() -> "index").int64array(values, v -> values = v);
+                result[0] = values.getVolatileValueAt(index);
+
+            }, null);
+
+            return result[0];
+
+        } finally {
+            chronicle.bytes().position(pos);
+        }
+
     }
 
     @NotNull
