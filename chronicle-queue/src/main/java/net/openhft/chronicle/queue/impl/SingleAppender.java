@@ -46,7 +46,7 @@ public class SingleAppender implements ExcerptAppender {
 
     public SingleAppender(ChronicleQueue chronicle) {
         this.chronicle = (DirectChronicleQueue) chronicle;
-        wireOut = new ChronicleWireOut(null);
+        wireOut = new ChronicleWireOut(wire);
     }
 
     @Nullable

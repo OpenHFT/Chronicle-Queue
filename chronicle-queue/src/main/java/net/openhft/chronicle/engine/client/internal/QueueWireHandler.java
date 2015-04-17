@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle.engine.client.internal;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub.CoreFields;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
@@ -25,16 +27,18 @@ import net.openhft.chronicle.network.WireHandler;
 import net.openhft.chronicle.network.event.EventGroup;
 import net.openhft.chronicle.network.event.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.Wires;
-import org.jetbrains.annotations.NotNull;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.ChronicleWire;
+import net.openhft.chronicle.wire.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static net.openhft.chronicle.engine.client.internal.QueueWireHandler.Fields.reply;
@@ -50,10 +54,20 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     private WireHandlers publishLater;
     private Wire inWire;
     private Wire outWire;
-    private ChronicleQueue queue;
+    private Map<Long, ChronicleQueue> cidToQueue = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Integer> cspToCid = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ChronicleQueue> fileNameToChronicle = new ConcurrentHashMap<>();
+    private AtomicInteger cidCounter = new AtomicInteger();
+    private Map<ChronicleQueue, ExcerptAppender> queueToAppender = new ConcurrentHashMap<>();
 
-    public QueueWireHandler(@NotNull final ChronicleQueue queue) {
-        this.queue = queue;
+    // assume there is a handler for each connection.
+    long tid = -1;
+    long cid = -1;
+    final StringBuilder cspText = new StringBuilder();
+    final StringBuilder eventName = new StringBuilder();
+    ChronicleQueue queue = null;
+
+    public QueueWireHandler() {
     }
 
     @Override
@@ -72,33 +86,62 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
         }
     }
 
-    long tid;
-
     @SuppressWarnings("UnusedReturnValue")
     void onEvent() throws IOException {
+        //Be careful not to use Wires.acquireStringBuilder() as we
+        //need to store the value
 
-        final StringBuilder cspText = Wires.acquireStringBuilder();
-        final StringBuilder eventName = Wires.acquireStringBuilder();
+        Bytes[] tmpBytes = {null};
 
         inWire.readDocument(
-                metaWireIn -> {
-                    inWire.read(CoreFields.csp).text(cspText);
-                    tid = inWire.read(CoreFields.tid).int64();
+                w -> {
+                    w.read(CoreFields.csp).text(cspText)
+                            .read(CoreFields.tid).int64(x -> tid = x)
+                            .read(CoreFields.cid).int64(x -> cid = x);
+                    queue = getQueue(cspText);
                 }, dataWireIn -> {
-                    inWire.readEventName(eventName);
+                    ValueIn vin = inWire.readEventName(eventName);
+                    tmpBytes[0] = NativeBytes.nativeBytes();
+                    vin.bytes(tmpBytes[0]);
                 });
 
         try {
-
-
             // writes out the tid
             outWire.writeDocument(true, wire -> outWire.write(CoreFields.tid).int64(tid));
 
-            // todo we should have a better way to get the queue
-            if (EventId.lastWrittenIndex.contentEquals(eventName))
+            if (EventId.lastWrittenIndex.contentEquals(eventName)) {
                 writeData(wireOut -> wireOut.write(reply).int64(queue.lastWrittenIndex()));
+            } else if (EventId.createAppender.contentEquals(eventName)) {
+                //only need one appender per queue
+                queueToAppender.computeIfAbsent(queue,
+                        s -> {
+                            try {
+                                return queue.createAppender();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        });
 
-            // todo add the others here
+                outWire.writeDocument(false, wireOut -> {
+                    QueueAppenderResponse qar = new QueueAppenderResponse();
+                    qar.setCid(cid);
+                    qar.setCsp(cspText);
+                    wireOut.write(reply).typedMarshallable(qar);
+                });
+            } else if (EventId.submit.contentEquals(eventName)) {
+                ExcerptAppender appender = queueToAppender.get(queue);
+
+                // new BinaryWire(tmpBytes).copyTo(new TextWire(appender.wire().bytes()));
+                tmpBytes[0].flip();
+                System.out.println(tmpBytes[0]);
+                appender.writeDocument(wo -> wo.bytes().write(tmpBytes[0]));
+
+                long index = appender.lastWrittenIndex();
+
+                outWire.writeDocument(false, wire -> wire.write(EventId.index).int64(appender.lastWrittenIndex()));
+            }
+
 
         } finally {
 
@@ -116,6 +159,34 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 }
             }
         }
+    }
+
+    private ChronicleQueue getQueue(StringBuilder cspText) {
+        ChronicleQueue queue;
+        if (cid == 0) {
+            //cid hasn't been passed in need to map it from csp
+            cid = cspToCid.computeIfAbsent(cspText.toString(),
+                    s -> cidCounter.incrementAndGet());
+            String[] parts = cspText.toString().split("/");
+
+            String filename = "/tmp/" + parts[1] + "/" + parts[2] + ".q";
+
+            queue = fileNameToChronicle.computeIfAbsent
+                    (filename, s -> {
+                        try {
+                            return new ChronicleQueueBuilder(filename).build();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    });
+            cidToQueue.put(cid, queue);
+        } else {
+            //if the cid has been created then there must be a corresponding queue
+            queue = cidToQueue.get(cid);
+            assert queue != null;
+        }
+        return queue;
     }
 
     private void writeData(Consumer<WireOut> c) {
@@ -140,5 +211,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     public enum Fields implements WireKey {
         reply
     }
+
 }
 
