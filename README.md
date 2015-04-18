@@ -294,7 +294,6 @@ final Event event = DataValueClasses.newDirectInstance(Event.class);
 try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
     ExcerptAppender appender = chronicle.createAppender();
     for(int i=0; i<items; i++) {
-        event.bytes(appender, 0);
         event.setOwner(0);
         event.setType(i / 10);
         event.setTimestamp(System.currentTimeMillis());
