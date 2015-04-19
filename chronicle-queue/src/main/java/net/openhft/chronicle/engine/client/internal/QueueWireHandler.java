@@ -121,13 +121,10 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                         });
 
                 outWire.writeDocument(false, wireOut -> {
-                    throw new UnsupportedOperationException();
-/*
                     QueueAppenderResponse qar = new QueueAppenderResponse();
                     qar.setCid(cid);
                     qar.setCsp(cspText);
                     wireOut.write(reply).typedMarshallable(qar);
-*/
                 });
             } else if (EventId.submit.contentEquals(eventName)) {
                 ExcerptAppender appender = queueToAppender.get(queue);

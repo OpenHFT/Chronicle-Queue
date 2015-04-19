@@ -25,6 +25,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
 
@@ -65,8 +66,7 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        throw new UnsupportedOperationException();
-//        return new ClientWiredExcerptAppenderStateless(this, hub, TextWire::new);
+        return new ClientWiredExcerptAppenderStateless(this, hub, TextWire::new);
     }
 
     @Override
