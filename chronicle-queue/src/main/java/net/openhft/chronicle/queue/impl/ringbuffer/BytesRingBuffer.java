@@ -277,20 +277,20 @@ public class BytesRingBuffer {
         /**
          * sets the point at which you should not write any additional bits
          */
-        private void setWriteUpTo(long value) {
+        void setWriteUpTo(long value) {
 
             //writeUpToOffsetAtomic.set(value);
             // todo replace the above with this : 
             buffer.writeOrderedLong(writeUpToOffset, value);
         }
 
-        private long getReadLocation() {
+        long getReadLocation() {
             //return readLocationAtomic.get();
             // todo replace the above with this :    
             return buffer.readVolatileLong(readLocationOffset);
         }
 
-        private void setReadLocation(long value) {
+        void setReadLocation(long value) {
             //readLocationAtomic.set(value);
             // todo replace the above with this : 
             buffer.writeOrderedLong(readLocationOffset, value);
