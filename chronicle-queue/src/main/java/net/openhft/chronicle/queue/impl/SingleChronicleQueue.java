@@ -367,7 +367,16 @@ public class SingleChronicleQueue extends AbstractChronicle {
     }
 
     @Override
-    public boolean index(long index, @NotNull BytesStoreBytes bytes) {
+    public boolean index(long index, @NotNull VanillaBytes bytes) {
+        if (index == -1) {
+            bytes.bytesStore(headerMemory, HEADER_OFFSET, headerMemory.length() - HEADER_OFFSET);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean index(long index, @NotNull VanillaBytes bytes) {
         if (index == -1) {
             bytes.bytesStore(headerMemory, HEADER_OFFSET, headerMemory.length() - HEADER_OFFSET);
             return true;

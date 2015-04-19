@@ -24,12 +24,14 @@ import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.queue.impl.ringbuffer.ZippedDocumentAppender;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class ZipBytesRingBufferTest {
 
     @Test
@@ -84,14 +86,14 @@ public class ZipBytesRingBufferTest {
 
     }
 
-    public static long lastWrite(SingleChronicleQueue chronicle) throws Exception {
-        return getHeader(chronicle).writeByte().getVolatileValue();
-    }
-
     public static Header getHeader(SingleChronicleQueue singleChronicleQueue) throws Exception {
         Field header = singleChronicleQueue.getClass().getDeclaredField("header");
         header.setAccessible(true);
 
         return (Header) header.get(singleChronicleQueue);
+    }
+
+    public static long lastWrite(SingleChronicleQueue chronicle) throws Exception {
+        return getHeader(chronicle).writeByte().getVolatileValue();
     }
 }

@@ -22,10 +22,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
@@ -40,6 +37,7 @@ import static org.junit.Assert.fail;
 /**
  * @author Rob Austin.
  */
+@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class BytesRingBufferTest {
 
 

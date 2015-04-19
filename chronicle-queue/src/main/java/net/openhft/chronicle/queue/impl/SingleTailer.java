@@ -19,7 +19,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStoreBytes;
+import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -42,7 +42,7 @@ public class SingleTailer implements ExcerptTailer {
     @NotNull
 
     private final SingleChronicleQueue chronicle;
-    private final BytesStoreBytes bytes = new BytesStoreBytes(Bytes.elasticByteBuffer());
+    private final VanillaBytes bytes = new VanillaBytes(Bytes.elasticByteBuffer());
     private final Wire wire;
     /**
      * reads an item in the index, the index is stored in meta data
