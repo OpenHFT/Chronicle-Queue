@@ -4,11 +4,9 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,10 +20,10 @@ import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQ
  */
 public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient implements ExcerptTailer {
 
-    private ChronicleQueue queue;
-    private long cid;
     private final Bytes source = Bytes.elasticByteBuffer();
     private final Wire wire;
+    private ChronicleQueue queue;
+    private long cid;
     private long lastWrittenIndex;
 
 
@@ -49,10 +47,10 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
 
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
-        source.clear();
-        reader.accept(wire);
-        source.flip();
-        lastWrittenIndex = proxyBytesReturnLong(EventId.hasNext, source, ClientWiredStatelessTcpConnectionHub.CoreFields.reply);
+        proxyReturnWireConsumer(EventId.hasNext, (Function<WireIn, Void>) w -> {
+            w.read(() -> "reply").bytes(reader);
+            return null;
+        });
         return true;
     }
 
