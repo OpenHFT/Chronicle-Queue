@@ -18,15 +18,11 @@ public class SimpleChronicleQueueTest {
 
     @Test
     public void testSimpleWire() throws Exception {
-
         File file = File.createTempFile("chronicle.", "q");
         file.deleteOnExit();
 
         try {
-
-            final DirectChronicleQueue
-                    chronicle = new ChronicleQueueBuilder(file.getAbsolutePath()).build();
-
+            final DirectChronicleQueue chronicle = ChronicleQueueBuilder.binary(file).build();
             final ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
             appender.writeDocument(wire -> wire.write(() -> "Surname").text("Jobs"));
@@ -47,7 +43,31 @@ public class SimpleChronicleQueueTest {
         } finally {
             file.delete();
         }
+    }
 
+    @Test
+    public void testSimpleTextWire() throws Exception {
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+
+        try {
+            final DirectChronicleQueue chronicle = ChronicleQueueBuilder.text(file).build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
+            appender.writeDocument(wire -> wire.write(() -> "Surname").text("Jobs"));
+
+            StringBuilder first = new StringBuilder();
+            StringBuilder surname = new StringBuilder();
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+            tailer.readDocument(wire -> wire.read(() -> "FirstName").text(first));
+            tailer.readDocument(wire -> wire.read(() -> "Surname").text(surname));
+
+            Assert.assertEquals("Steve Jobs", first + " " + surname);
+        } finally {
+            file.delete();
+        }
     }
 
     @Test

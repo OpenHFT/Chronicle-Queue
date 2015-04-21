@@ -19,10 +19,10 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.ByteableLongArrayValues;
+import net.openhft.chronicle.wire.util.WireUtil;
 import org.jetbrains.annotations.NotNull;
 
-import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
 import static net.openhft.chronicle.queue.impl.SingleChronicleQueue.UNINITIALISED;
@@ -41,20 +41,8 @@ public class Indexer {
     private ThreadLocal<ByteableLongArrayValues> array;
 
     public Indexer(@NotNull final AbstractChronicle chronicle) {
-        this.array = newLongArrayValuesPool(chronicle.wireType());
+        this.array = WireUtil.newLongArrayValuesPool(chronicle.wireType());
         this.chronicle = chronicle;
-    }
-
-    public static ThreadLocal<ByteableLongArrayValues>
-    newLongArrayValuesPool(Class<? extends Wire> wireType) {
-
-        if (TextWire.class.isAssignableFrom(wireType))
-            return withInitial(TextLongArrayReference::new);
-        if (BinaryWire.class.isAssignableFrom(wireType))
-            return withInitial(BinaryLongArrayReference::new);
-        else
-            throw new IllegalStateException("todo, unsupported type=" + wireType);
-
     }
 
     /**

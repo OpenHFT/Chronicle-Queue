@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -28,7 +27,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Created by peter.lawrey on 30/01/15.
@@ -36,15 +34,16 @@ import java.util.function.Function;
 public class SingleAppender implements ExcerptAppender {
 
     @NotNull
-    private final DirectChronicleQueue chronicle;
-    private final Bytes buffer = NativeBytes.nativeBytes();
+    private final SingleChronicleQueue chronicle;
+    private final Bytes buffer;
     private final Wire wire;
 
     private long lastWrittenIndex = -1;
 
-    public SingleAppender(ChronicleQueue chronicle, Function<Bytes, Wire> bytesToWire) {
-        this.chronicle = (DirectChronicleQueue) chronicle;
-        wire = bytesToWire.apply(buffer);
+    public SingleAppender(@NotNull final SingleChronicleQueue chronicle) {
+        this.buffer = NativeBytes.nativeBytes();
+        this.chronicle = chronicle;
+        this.wire = chronicle.createWire(buffer);
     }
 
     @Nullable
@@ -68,10 +67,11 @@ public class SingleAppender implements ExcerptAppender {
     @Override
     public long lastWrittenIndex() {
         if (lastWrittenIndex == -1) {
-            String message = "No document has been written using this appender, so the " +
-                    "lastWrittenIndex() is not available.";
-            throw new IllegalStateException(message);
+            throw new IllegalStateException(
+                    "No document has been written using this appender, so the "
+                    + "lastWrittenIndex() is not available.");
         }
+
         return lastWrittenIndex;
     }
 

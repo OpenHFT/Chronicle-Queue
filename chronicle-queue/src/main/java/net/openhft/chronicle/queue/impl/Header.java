@@ -24,13 +24,12 @@ import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
- * Data structure to bind to an off heap representation.  This is required to support persistence
- * and sharing of this data structure.
+ * Data structure to bind to an off heap representation. This is required to
+ * support persistence and sharing of this data structure.
  */
 class Header implements Marshallable {
     public static final long PADDED_SIZE = 512;
@@ -85,7 +84,7 @@ class Header implements Marshallable {
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
-                .write(Field.writeByte).int64forBinding(PADDED_SIZE)
+                .write(Field.writeByte).int64forBinding(PADDED_SIZE + 2)
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
                 .write(Field.host).text(host)
@@ -125,6 +124,5 @@ class Header implements Marshallable {
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
         tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
         System.out.println(tw.bytes().flip().toString());
-
     }
 }

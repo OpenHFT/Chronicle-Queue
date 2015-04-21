@@ -15,17 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.Compression;
-import net.openhft.chronicle.queue.Excerpt;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.util.WireUtil;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +33,14 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.Indexer.NUMBER_OF_ENTRIES_IN_EACH_INDEX;
 import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on 30/01/15.
+ * SingleChronicle implements Chronicle over a single streaming file.
+ *
+ * Created by peter.lawrey on 30/01/15.
  */
 public class SingleChronicleQueue extends AbstractChronicle {
 
@@ -54,53 +52,49 @@ public class SingleChronicleQueue extends AbstractChronicle {
     static final int META_DATA = Wires.META_DATA;
     static final int LENGTH_MASK = Wires.LENGTH_MASK;
     static final int MAX_LENGTH = LENGTH_MASK;
-    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
+
     private static final long MAGIC_OFFSET = 0L;
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class.getName());
-    final Header header = new Header();
+
+    @NotNull
+    final Header header;
+
     @NotNull
     final Wire wire;
-    private final ThreadLocal<ExcerptAppender> localAppender = new ThreadLocal<>();
+
+    @NotNull
+    private final ThreadLocal<ExcerptAppender> localAppender;
+
     @NotNull
     private final MappedFile mappedFile;
     private final Bytes headerMemory;
+
     @NotNull
     private final Bytes bytes;
-    private final Class<? extends Wire> wireType;
-    private final Function<Bytes, Wire> bytesToWireFunction;
+    //private final Function<Bytes, Wire> bytesToWireFunction;
+
     // used in the indexer
     private final ThreadLocal<ByteableLongArrayValues> longArray;
-    private long firstBytes = -1;
+    private long firstBytes;
 
-    public SingleChronicleQueue(@NotNull final String filename,
-                                long blockSize,
-                                @NotNull final Class<? extends Wire> wireType) throws IOException {
+    private final ChronicleQueueBuilder builder;
 
-        mappedFile = MappedFile.mappedFile(filename, blockSize);
-        headerMemory = mappedFile.acquireBytes(0);
-        bytes = mappedFile.bytes();
-        this.wire = createWire(wireType, bytes);
-        this.wireType = wireType;
-        this.bytesToWireFunction = byteToWireFor(wireType);
-        longArray = Indexer.newLongArrayValuesPool(wireType());
+    public SingleChronicleQueue(@NotNull final ChronicleQueueBuilder builder) throws IOException {
+        this.builder = builder.clone();
+        this.header = new Header();
+        this.localAppender = new ThreadLocal<>();
+        this.firstBytes = -1;
+        this.mappedFile = MappedFile.mappedFile(this.builder.name(), this.builder.blockSize());
+        this.headerMemory = mappedFile.acquireBytes(0);
+        this.bytes = mappedFile.bytes();
+        this.wire = WireUtil.createWire(this.builder.wireType(), bytes);
+        this.longArray = WireUtil.newLongArrayValuesPool(wireType());
 
         initialiseHeader();
     }
 
-    private static Wire createWire(@NotNull final Class<? extends Wire> wireType,
-                                            @NotNull final Bytes bytes) {
-        return byteToWireFor(wireType).apply(bytes);
-    }
-
-    static Function<Bytes, Wire> byteToWireFor(Class<? extends Wire> wireType) {
-        if (TextWire.class.isAssignableFrom(wireType))
-            return TextWire::new;
-        else if (BinaryWire.class.isAssignableFrom(wireType))
-            return BinaryWire::new;
-        else if (RawWire.class.isAssignableFrom(wireType))
-            return RawWire::new;
-        else
-            throw new UnsupportedOperationException("todo");
+    Wire createWire(@NotNull final Bytes bytes) {
+        return WireUtil.createWire(this.builder.wireType(), bytes);
     }
 
     private void initialiseHeader() throws IOException {
@@ -114,11 +108,15 @@ public class SingleChronicleQueue extends AbstractChronicle {
         // skip the magic number.
         bytes.position(HEADER_OFFSET);
 
-        wire.writeDocument(true, w -> w
-                .write(MetaDataKey.header).marshallable(header.init(Compression.NONE)));
+        wire.writeDocument(
+                true,
+                w -> w.write(MetaDataKey.header).marshallable(header.init(Compression.NONE))
+        );
 
-        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED))
+
+        if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED)) {
             throw new AssertionError("Concurrent writing of the header");
+        }
     }
 
     private void readHeader() throws IOException {
@@ -164,15 +162,17 @@ public class SingleChronicleQueue extends AbstractChronicle {
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new SingleTailer(this, bytesToWireFunction);
+        return new SingleTailer(this);
     }
 
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         ExcerptAppender appender = localAppender.get();
-        if (appender == null)
-            localAppender.set(appender = new SingleAppender(this, bytesToWireFunction));
+        if (appender == null) {
+            localAppender.set(appender = new SingleAppender(this));
+        }
+
         return appender;
     }
 
@@ -215,7 +215,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     @Override
     public Class<? extends Wire> wireType() {
-        return wireType;
+        return builder.wireType();
     }
 
     /**

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -26,14 +25,13 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ByteableLongArrayValues;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.util.WireUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress1;
-import static net.openhft.chronicle.queue.impl.Indexer.newLongArrayValuesPool;
 
 /**
  * Created by peter.lawrey on 30/01/15.
@@ -42,24 +40,19 @@ public class SingleTailer implements ExcerptTailer {
     @NotNull
 
     private final SingleChronicleQueue chronicle;
-    private final VanillaBytes bytes = new VanillaBytes(Bytes.elasticByteBuffer());
+    private final VanillaBytes bytes;
     private final Wire wire;
-    /**
-     * reads an item in the index, the index is stored in meta data
-     *
-     * @param offset the address of the document
-     * @param index  the index of of the array item
-     * @return returns a long at array {@code index}
-     */
-    LongArrayValues values = null;
     private long index;
     private ThreadLocal<ByteableLongArrayValues> value;
+    private LongArrayValues values;
 
-    public SingleTailer(@NotNull final AbstractChronicle chronicle,
-                        @NotNull final Function<Bytes, Wire> wireProvider) {
-        this.chronicle = (SingleChronicleQueue) chronicle;
-        this.wire = wireProvider.apply(bytes);
-        this.value = newLongArrayValuesPool(chronicle.wireType());
+    public SingleTailer(@NotNull final SingleChronicleQueue chronicle) {
+        this.bytes = new VanillaBytes(Bytes.elasticByteBuffer());
+        this.chronicle = chronicle;
+        this.wire = chronicle.createWire(bytes);
+        this.value = WireUtil.newLongArrayValuesPool(chronicle.wireType());
+        this.values = null;
+
         toStart();
     }
 
