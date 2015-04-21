@@ -19,7 +19,6 @@
 package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub.CoreFields;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
@@ -150,13 +149,10 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 });
             }else if (EventId.hasNext.contentEquals(eventName)) {
                 ExcerptTailer tailer = queueToTailer.get(queue);
-                vin.marshallable(rm -> {
+                vin.marshallable((ReadMarshallable) rm -> {
                     long index = rm.read(() -> "index").int64();
-                    tailer.index(index);
-                    tailer.readDocument(wireIn ->
-                            outWire.writeDocument(false, ow ->
-                                    ow.write(EventId.index).int64(index)
-                                            .write(CoreFields.reply).bytes(wireIn.bytes())));
+
+                    sendBackMessage(tailer, index);
                 });
 
             }
@@ -179,6 +175,18 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             }
         }
                 });
+    }
+
+    private void sendBackMessage(ExcerptTailer tailer, long index) {
+        tailer.index(index);
+        tailer.readDocument(wireIn ->
+                writeIndexedDocument(index, wireIn.bytes()));
+    }
+
+    private void writeIndexedDocument(long index, Bytes<?> bytes) {
+        outWire.writeDocument(false, ow ->
+                ow.write(EventId.index).int64(index)
+                        .write(CoreFields.reply).bytes(bytes));
     }
 
     private ChronicleQueue getQueue(StringBuilder cspText) {
