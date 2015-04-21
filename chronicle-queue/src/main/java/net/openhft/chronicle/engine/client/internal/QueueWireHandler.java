@@ -88,7 +88,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
         //Be careful not to use Wires.acquireStringBuilder() as we
         //need to store the value
 
-        Bytes[] tmpBytes = {null};
 
         inWire.readDocument(
                 w -> {
@@ -98,9 +97,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     queue = getQueue(cspText);
                 }, dataWireIn -> {
                     ValueIn vin = inWire.readEventName(eventName);
-                    tmpBytes[0] = NativeBytes.nativeBytes();
-                    vin.bytes(tmpBytes[0]);
-                });
+
 
         try {
             // writes out the tid
@@ -127,10 +124,10 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     wireOut.write(CoreFields.reply).typedMarshallable(qar);
                 });
             } else if (EventId.submit.contentEquals(eventName)) {
-                tmpBytes[0].flip();
+
 
                 ExcerptAppender appender = queueToAppender.get(queue);
-                appender.writeDocument(wo -> wo.bytes().write(tmpBytes[0]));
+                appender.writeDocument(wo -> wo.bytes().write(vin.bytes()));
 
                 outWire.writeDocument(false, wire -> wire.write(EventId.index).int64(appender.lastWrittenIndex()));
             } else if (EventId.createTailer.contentEquals(eventName)) {
@@ -153,13 +150,17 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 });
             }else if (EventId.hasNext.contentEquals(eventName)) {
                 ExcerptTailer tailer = queueToTailer.get(queue);
-                TextWire tw = new TextWire(tmpBytes[0]);
-                long index  = tw.read(()->"index").int64();
-                tailer.index(index);
-                tailer.readDocument(wireIn ->
-                        outWire.writeDocument(false, ow ->
-                                ow.write(CoreFields.reply).bytes(wireIn.bytes())));
+                vin.marshallable(rm -> {
+                    long index = rm.read(() -> "index").int64();
+                    tailer.index(index);
+                    tailer.readDocument(wireIn ->
+                            outWire.writeDocument(false, ow ->
+                                    ow.write(EventId.index).int64(index)
+                                            .write(CoreFields.reply).bytes(wireIn.bytes())));
+                });
+
             }
+
 
         } finally {
 
@@ -177,6 +178,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 }
             }
         }
+                });
     }
 
     private ChronicleQueue getQueue(StringBuilder cspText) {

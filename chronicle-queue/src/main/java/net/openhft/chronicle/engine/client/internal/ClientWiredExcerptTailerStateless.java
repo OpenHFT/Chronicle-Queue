@@ -5,8 +5,10 @@ import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,10 +47,17 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
         return wire;
     }
 
+    long index =-1;
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
-        proxyReturnWireConsumer(EventId.hasNext, (Function<WireIn, Void>) w -> {
-            w.read(() -> "reply").bytes(reader);
+        proxyReturnWireConsumerInOut(EventId.hasNext,
+                (Consumer<ValueOut>)valueOut -> {
+                    WriteMarshallable writeMarshallable = w -> w.write(EventId.index).int64(index + 1);
+                    valueOut.marshallable(writeMarshallable);
+                },
+                (Function<WireIn, Void>) w -> {
+            w.read(EventId.index).int64(x -> index = x)
+             .read(ClientWiredStatelessTcpConnectionHub.CoreFields.reply).bytes(reader);
             return null;
         });
         return true;
