@@ -29,6 +29,7 @@ import net.openhft.chronicle.network.event.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +40,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import static net.openhft.chronicle.engine.client.internal.QueueWireHandler.Fields.reply;
 
 /**
  * Created by Rob Austin
@@ -63,6 +62,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     private ConcurrentHashMap<String, ChronicleQueue> fileNameToChronicle = new ConcurrentHashMap<>();
     private AtomicInteger cidCounter = new AtomicInteger();
     private Map<ChronicleQueue, ExcerptAppender> queueToAppender = new ConcurrentHashMap<>();
+    private Map<ChronicleQueue, ExcerptTailer> queueToTailer = new ConcurrentHashMap<>();
 
     public QueueWireHandler() {
     }
@@ -107,7 +107,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             outWire.writeDocument(true, wire -> outWire.write(CoreFields.tid).int64(tid));
 
             if (EventId.lastWrittenIndex.contentEquals(eventName)) {
-                writeData(wireOut -> wireOut.write(reply).int64(queue.lastWrittenIndex()));
+                writeData(wireOut -> wireOut.write(CoreFields.reply).int64(queue.lastWrittenIndex()));
             } else if (EventId.createAppender.contentEquals(eventName)) {
                 //only need one appender per queue
                 queueToAppender.computeIfAbsent(queue,
@@ -124,21 +124,42 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     QueueAppenderResponse qar = new QueueAppenderResponse();
                     qar.setCid(cid);
                     qar.setCsp(cspText);
-                    wireOut.write(reply).typedMarshallable(qar);
+                    wireOut.write(CoreFields.reply).typedMarshallable(qar);
                 });
             } else if (EventId.submit.contentEquals(eventName)) {
-                ExcerptAppender appender = queueToAppender.get(queue);
-
-                // new BinaryWire(tmpBytes).copyTo(new TextWire(appender.wire().bytes()));
                 tmpBytes[0].flip();
-                System.out.println(tmpBytes[0]);
+
+                ExcerptAppender appender = queueToAppender.get(queue);
                 appender.writeDocument(wo -> wo.bytes().write(tmpBytes[0]));
 
-                long index = appender.lastWrittenIndex();
-
                 outWire.writeDocument(false, wire -> wire.write(EventId.index).int64(appender.lastWrittenIndex()));
-            }
+            } else if (EventId.createTailer.contentEquals(eventName)) {
+                //only need one appender per queue
+                queueToTailer.computeIfAbsent(queue,
+                        s -> {
+                            try {
+                                return queue.createTailer();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        });
 
+                outWire.writeDocument(false, wireOut -> {
+                    QueueTailerResponse qar = new QueueTailerResponse();
+                    qar.setCid(cid);
+                    qar.setCsp(cspText);
+                    wireOut.write(CoreFields.reply).typedMarshallable(qar);
+                });
+            }else if (EventId.hasNext.contentEquals(eventName)) {
+                ExcerptTailer tailer = queueToTailer.get(queue);
+                TextWire tw = new TextWire(tmpBytes[0]);
+                long index  = tw.read(()->"index").int64();
+                tailer.index(index);
+                tailer.readDocument(wireIn ->
+                        outWire.writeDocument(false, ow ->
+                                ow.write(CoreFields.reply).bytes(wireIn.bytes())));
+            }
 
         } finally {
 
@@ -193,7 +214,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             outWire.writeDocument(false, c);
         } catch (Exception e) {
             outWire.bytes().reset();
-            final WireOut o = outWire.write(reply)
+            final WireOut o = outWire.write(CoreFields.reply)
                     .type(e.getClass().getSimpleName());
 
             if (e.getMessage() != null)
@@ -202,12 +223,5 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             LOG.error("", e);
         }
     }
-
-
-    // note : peter has asked for these to be in camel case
-    public enum Fields implements WireKey {
-        reply
-    }
-
 }
 
