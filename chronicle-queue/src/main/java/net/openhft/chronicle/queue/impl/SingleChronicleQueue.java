@@ -193,7 +193,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     @Override
     public long lastWrittenIndex() {
-        return 0;
+        return header.lastIndex().getValue();
     }
 
     static String getHostName() {
