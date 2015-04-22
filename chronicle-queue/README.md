@@ -598,6 +598,37 @@ In this case, the structure is the same however the size of the index: and infex
 * [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
 
 
+
+# Tuning Chronicle Queue
+
+
+The main thing to look for in terms of Chronicle Queue is the update rate (MB/s), the dirty buffer size (MB) and write latency to disk (queue length in ms)
+You can see all these in the utility ‘atop' 
+The update rate is the rate you write data, provided this is lower than the write bandwidth of your disk subsystem over say 5 seconds, you should avoid most serious pauses in the system.  The dirty buffer (which is also visible in /proc/meminfo) tells you how much data is yet to be written to disk and you want this to be well below 10% of main memory.  This is a default hard limit at which point the application stops rather than writing more data.  You can tune this, but in general you want to avoid needing to tune this.
+
+YourKit is something you should use in testing your application to ensure that the application runs cleanly.  It should be done regularly like housework and it help keep down technical debt.  If you do this regularly and you suddenly have a problem it should be really obvious in this tool what is wrong.  If you don't do it regularly you get "noise" building up and it can be fairly hard to diagnose a problem quickly.  If this does happen, the best solution is an extensive tuning session to fix the software by reducing the level of noise.
+
+The CPU cache statistics are interesting but a bit too low level.  Chronicle Queue reads/write sequentially by design and has a near optimal cpu cache profile. e.g. it can produce half the cpu cache to cache traffic of an in cache ring buffer.   If you have a problem with it, it is usually down to something the hardware or OS is doing rather than something you will see in the CPU.  i.e. when you have a problem, its not very subtle, your dirty cache is full and you are seeing multi-milli-seconds delays.
+
+Monitoring the latency distribution is valuable, however coordinated omission is harder in Chronicle Queue due to the fact we make very little use of flow control.  The TCP replication has flow control as it uses TCP, but that is about it.  If you have a slow, or even off line consumer, the producer has no idea and thus doesn't slow down (in fact flow control is not supported)  All messages are asynchronous.  If you construct a synchronous request/reply protocol on top of Queue, then you can get coordinated omission, but this should be apparent to you.,
+
+Repeatable processes are really essential in diagnosing subtle bugs.
+
+Chronicle tends to use lots of busy waiting tasks.  This means you need to dedicate CPUs to those threads and the number of these can add up.  If you can fit all your critical threads onto your system (with a few to spare) with hyper threading, this may help.  However, it is more important to have the right number of threads running all the time than disabling HT. (in general I leave it on)
+
+Swappiness - I would avoid the system needing to swap.  Chronicle Queue encourages you to put the bulk of your data into the queue and thus results in paging.  The OS tends to page more aggressively than it swaps. If you tune the paging (mostly by making sure you have the right hardware) you should be fine.
+
+For IRQ balancing you want to turn it off our move as many interrupts away from critical threads as possible.  The only exception might be the thread which is handling your network adapter.  I haven't experimented enough to say whether it is a good thing to have it on the same thread as the one processing its data or not. (though it sounds like it might be)
+
+I suggest using the affinity library to bind to isolated CPUs.  You can do this with taskset, but java doesn't make this easy.  You want to avoid binding more than one thread to a CPU.  This is usually worse than doing nothing.
+
+I would set the -Xmx32G and reduce it if you feel this is too much.  I would set the Young generation size to be large e.g. -Xmn24G and play with the survivor ration with -XX:SurvivorRatio=8 depending on how full the survivor space gets.  Ideally your Eden never fills during the day and you can set the ration to 100.  You can set the -Xms to be the same as the -Xmn but this means you really will use this much memory rather than the JVM work it out.
+
+Ideally you shouldn't be GCing except very rarely.  If you do this how you tune the GC and even which GC you use doesn't matter so much.  You might find the G1 collector is worth trying.  It depends on what your profile looks like.  If you only GC once a day, the (default) parallel collector will be fastest.
+
+- Peter
+
+
 # Questions and Answers
 
 #### Question
