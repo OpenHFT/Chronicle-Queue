@@ -59,7 +59,7 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        throw new UnsupportedOperationException("todo");
+        return new ClientWiredExcerptTailerStateless(this, hub, TextWire::new);
 
     }
 
@@ -96,8 +96,11 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
     enum EventId implements ParameterizeWireKey {
         lastWrittenIndex,
         createAppender,
+        createTailer,
         submit,
+        hasNext,
         index;
+
 
         private final WireKey[] params;
 

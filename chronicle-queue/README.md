@@ -1,11 +1,11 @@
-*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - [Contact Us](sales@higherfrequencytrading.com)*
+*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - [Contact Us](sales@chronicle.software)*
 
-*Or you may already be using Chronicle and just want some help - [find out more..](http://openhft.net/support/)*
+*Or you may already be using Chronicle and just want some help - [find out more..](http://chronicle.software/support/)*
 
 # Chronicle Queue
 
 Inter Process Communication ( IPC ) with sub millisecond latency and able to store every message:
-![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
+![Chronicle](http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
 
 
 
@@ -51,7 +51,7 @@ Click here to get the [Latest Version Number](http://search.maven.org/#search%7C
 ## Overview
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
-![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
+![](http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
 At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
@@ -60,7 +60,7 @@ Chronicle uses RandomAccessFiles while managing memory and this choice brings lo
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
-![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
+![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
 ## Building Blocks
 Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface.
@@ -172,7 +172,7 @@ chronicle.close();
 
 Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements.
 
-![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
+![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
 ### Source
 
@@ -360,7 +360,7 @@ try (ExcerptTailer tailer = chronicle.createTailer()) {
 
 #### Ordering fields of DataValueClasses
 
-![](http://openhft.net/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
+![](http://chronicle.software/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
 
 By default when classes generated via DataValueClasses are serialized, their fields will be ordered by field size ( smallest first ), however sometimes, especially when you add new fields, you may not want new small fields to be serialize towards the top, You may wish to preserve the existing order of your fields, you can do this by using the @Group annotation to each method. The serialization order of the fields are determined by adding @Group to the set() method, If you wish you can have a number of different methods with the same value in @Group(), Methods with the same value continue to be ordered by size ( smallest first).
 
@@ -596,6 +596,37 @@ In this case, the structure is the same however the size of the index: and infex
 * [Chronicle support on StackOverflow](http://stackoverflow.com/tags/chronicle/info)
 * [Chronicle support on Google Groups](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 * [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
+
+
+
+# Tuning Chronicle Queue
+
+
+The main thing to look for in terms of Chronicle Queue is the update rate (MB/s), the dirty buffer size (MB) and write latency to disk (queue length in ms)
+You can see all these in the utility ‘atop' 
+The update rate is the rate you write data, provided this is lower than the write bandwidth of your disk subsystem over say 5 seconds, you should avoid most serious pauses in the system.  The dirty buffer (which is also visible in /proc/meminfo) tells you how much data is yet to be written to disk and you want this to be well below 10% of main memory.  This is a default hard limit at which point the application stops rather than writing more data.  You can tune this, but in general you want to avoid needing to tune this.
+
+YourKit is something you should use in testing your application to ensure that the application runs cleanly.  It should be done regularly like housework and it help keep down technical debt.  If you do this regularly and you suddenly have a problem it should be really obvious in this tool what is wrong.  If you don't do it regularly you get "noise" building up and it can be fairly hard to diagnose a problem quickly.  If this does happen, the best solution is an extensive tuning session to fix the software by reducing the level of noise.
+
+The CPU cache statistics are interesting but a bit too low level.  Chronicle Queue reads/write sequentially by design and has a near optimal cpu cache profile. e.g. it can produce half the cpu cache to cache traffic of an in cache ring buffer.   If you have a problem with it, it is usually down to something the hardware or OS is doing rather than something you will see in the CPU.  i.e. when you have a problem, its not very subtle, your dirty cache is full and you are seeing multi-milli-seconds delays.
+
+Monitoring the latency distribution is valuable, however coordinated omission is harder in Chronicle Queue due to the fact we make very little use of flow control.  The TCP replication has flow control as it uses TCP, but that is about it.  If you have a slow, or even off line consumer, the producer has no idea and thus doesn't slow down (in fact flow control is not supported)  All messages are asynchronous.  If you construct a synchronous request/reply protocol on top of Queue, then you can get coordinated omission, but this should be apparent to you.,
+
+Repeatable processes are really essential in diagnosing subtle bugs.
+
+Chronicle tends to use lots of busy waiting tasks.  This means you need to dedicate CPUs to those threads and the number of these can add up.  If you can fit all your critical threads onto your system (with a few to spare) with hyper threading, this may help.  However, it is more important to have the right number of threads running all the time than disabling HT. (in general I leave it on)
+
+Swappiness - I would avoid the system needing to swap.  Chronicle Queue encourages you to put the bulk of your data into the queue and thus results in paging.  The OS tends to page more aggressively than it swaps. If you tune the paging (mostly by making sure you have the right hardware) you should be fine.
+
+For IRQ balancing you want to turn it off our move as many interrupts away from critical threads as possible.  The only exception might be the thread which is handling your network adapter.  I haven't experimented enough to say whether it is a good thing to have it on the same thread as the one processing its data or not. (though it sounds like it might be)
+
+I suggest using the affinity library to bind to isolated CPUs.  You can do this with taskset, but java doesn't make this easy.  You want to avoid binding more than one thread to a CPU.  This is usually worse than doing nothing.
+
+I would set the -Xmx32G and reduce it if you feel this is too much.  I would set the Young generation size to be large e.g. -Xmn24G and play with the survivor ration with -XX:SurvivorRatio=8 depending on how full the survivor space gets.  Ideally your Eden never fills during the day and you can set the ration to 100.  You can set the -Xms to be the same as the -Xmn but this means you really will use this much memory rather than the JVM work it out.
+
+Ideally you shouldn't be GCing except very rarely.  If you do this how you tune the GC and even which GC you use doesn't matter so much.  You might find the G1 collector is worth trying.  It depends on what your profile looks like.  If you only GC once a day, the (default) parallel collector will be fastest.
+
+- Peter
 
 
 # Questions and Answers

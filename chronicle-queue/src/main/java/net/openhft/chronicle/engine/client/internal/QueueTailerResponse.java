@@ -1,0 +1,41 @@
+package net.openhft.chronicle.engine.client.internal;
+
+import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
+
+/**
+ * Created by daniel on 20/04/15.
+ */
+public class QueueTailerResponse extends QueueAppenderResponse {
+    long start;
+
+    public long getStart() {
+        return start;
+    }
+
+    public void setStart(long start) {
+        this.start = start;
+    }
+
+    @Override
+    public void readMarshallable(WireIn wire) throws IllegalStateException {
+        super.readMarshallable(wire);
+        wire.read(ClientWiredStatelessTcpConnectionHub.CoreFields.start).int64(x->start = x);
+    }
+
+    @Override
+    public void writeMarshallable(WireOut wire) {
+        super.writeMarshallable(wire);
+        wire.write(ClientWiredStatelessTcpConnectionHub.CoreFields.start).int64(start);
+    }
+
+    @Override
+    public String toString() {
+        return "QueueAppender{" +
+                "cid=" + getCid() +
+                ", csp=" + getCsp() +
+                ", start=" + getStart() +
+                '}';
+    }
+}

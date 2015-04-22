@@ -70,8 +70,7 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
-        wire.readDocument(null, reader);
-        return true;
+        return wire.readDocument(null, reader);
     }
 
     /**

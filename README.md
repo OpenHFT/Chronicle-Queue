@@ -1,11 +1,11 @@
-*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - [Contact Us](sales@higherfrequencytrading.com)*
+*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - [Contact Us](sales@chronicle.software)*
 
-*Or you may already be using Chronicle and just want some help - [find out more..](http://openhft.net/support/)*
+*Or you may already be using Chronicle and just want some help - [find out more..](http://chronicle.software/support/)*
 
 # Chronicle Queue
 
 Inter Process Communication ( IPC ) with sub millisecond latency and able to store every message:
-![Chronicle](http://openhft.net/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
+![Chronicle](http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png)
 
 
 Releases are available on maven central as
@@ -50,7 +50,7 @@ Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repos
 ## Overview
 Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications. 
 
-![](http://openhft.net/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
+![](http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
 At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised. 
 
@@ -59,7 +59,7 @@ Chronicle uses RandomAccessFiles while managing memory and this choice brings lo
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
-![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
+![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
 ## Building Blocks
 Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface. 
@@ -171,7 +171,7 @@ chronicle.close();
 
 Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements. 
 
-![](http://openhft.net/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
+![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
 ### Source
 
@@ -358,7 +358,7 @@ try (ExcerptTailer tailer = chronicle.createTailer()) {
 
 #### Ordering fields of DataValueClasses
  
-![](http://openhft.net/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
+![](http://chronicle.software/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
 
 By default when classes generated via DataValueClasses are serialized, their fields will be ordered by field size ( smallest first ), however sometimes, especially when you add new fields, you may not want new small fields to be serialize towards the top, You may wish to preserve the existing order of your fields, you can do this by using the @Group annotation to each method. The serialization order of the fields are determined by adding @Group to the set() method, If you wish you can have a number of different methods with the same value in @Group(), Methods with the same value continue to be ordered by size ( smallest first).
 

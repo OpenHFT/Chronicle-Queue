@@ -19,7 +19,6 @@
 package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub.CoreFields;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
@@ -29,6 +28,7 @@ import net.openhft.chronicle.network.event.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +39,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import static net.openhft.chronicle.engine.client.internal.QueueWireHandler.Fields.reply;
 
 /**
  * Created by Rob Austin
@@ -63,6 +61,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     private ConcurrentHashMap<String, ChronicleQueue> fileNameToChronicle = new ConcurrentHashMap<>();
     private AtomicInteger cidCounter = new AtomicInteger();
     private Map<ChronicleQueue, ExcerptAppender> queueToAppender = new ConcurrentHashMap<>();
+    private Map<ChronicleQueue, ExcerptTailer> queueToTailer = new ConcurrentHashMap<>();
 
     public QueueWireHandler() {
     }
@@ -88,7 +87,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
         //Be careful not to use Wires.acquireStringBuilder() as we
         //need to store the value
 
-        Bytes[] tmpBytes = {null};
 
         inWire.readDocument(
                 w -> {
@@ -98,16 +96,14 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     queue = getQueue(cspText);
                 }, dataWireIn -> {
                     ValueIn vin = inWire.readEventName(eventName);
-                    tmpBytes[0] = NativeBytes.nativeBytes();
-                    vin.bytes(tmpBytes[0]);
-                });
+
 
         try {
             // writes out the tid
             outWire.writeDocument(true, wire -> outWire.write(CoreFields.tid).int64(tid));
 
             if (EventId.lastWrittenIndex.contentEquals(eventName)) {
-                writeData(wireOut -> wireOut.write(reply).int64(queue.lastWrittenIndex()));
+                writeData(wireOut -> wireOut.write(CoreFields.reply).int64(queue.lastWrittenIndex()));
             } else if (EventId.createAppender.contentEquals(eventName)) {
                 //only need one appender per queue
                 queueToAppender.computeIfAbsent(queue,
@@ -124,19 +120,41 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     QueueAppenderResponse qar = new QueueAppenderResponse();
                     qar.setCid(cid);
                     qar.setCsp(cspText);
-                    wireOut.write(reply).typedMarshallable(qar);
+                    wireOut.write(CoreFields.reply).typedMarshallable(qar);
                 });
             } else if (EventId.submit.contentEquals(eventName)) {
+
+
                 ExcerptAppender appender = queueToAppender.get(queue);
-
-                // new BinaryWire(tmpBytes).copyTo(new TextWire(appender.wire().bytes()));
-                tmpBytes[0].flip();
-                System.out.println(tmpBytes[0]);
-                appender.writeDocument(wo -> wo.bytes().write(tmpBytes[0]));
-
-                long index = appender.lastWrittenIndex();
+                appender.writeDocument(wo -> wo.bytes().write(vin.bytes()));
 
                 outWire.writeDocument(false, wire -> wire.write(EventId.index).int64(appender.lastWrittenIndex()));
+            } else if (EventId.createTailer.contentEquals(eventName)) {
+                //only need one appender per queue
+                queueToTailer.computeIfAbsent(queue,
+                        s -> {
+                            try {
+                                return queue.createTailer();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        });
+
+                outWire.writeDocument(false, wireOut -> {
+                    QueueTailerResponse qar = new QueueTailerResponse();
+                    qar.setCid(cid);
+                    qar.setCsp(cspText);
+                    wireOut.write(CoreFields.reply).typedMarshallable(qar);
+                });
+            }else if (EventId.hasNext.contentEquals(eventName)) {
+                ExcerptTailer tailer = queueToTailer.get(queue);
+                vin.marshallable((ReadMarshallable) rm -> {
+                    long index = rm.read(() -> "index").int64();
+
+                    sendBackMessage(tailer, index);
+                });
+
             }
 
 
@@ -156,6 +174,19 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 }
             }
         }
+                });
+    }
+
+    private void sendBackMessage(ExcerptTailer tailer, long index) {
+        tailer.index(index);
+        tailer.readDocument(wireIn ->
+                writeIndexedDocument(index, wireIn.bytes()));
+    }
+
+    private void writeIndexedDocument(long index, Bytes<?> bytes) {
+        outWire.writeDocument(false, ow ->
+                ow.write(EventId.index).int64(index)
+                        .write(CoreFields.reply).bytes(bytes));
     }
 
     private ChronicleQueue getQueue(StringBuilder cspText) {
@@ -193,7 +224,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             outWire.writeDocument(false, c);
         } catch (Exception e) {
             outWire.bytes().reset();
-            final WireOut o = outWire.write(reply)
+            final WireOut o = outWire.write(CoreFields.reply)
                     .type(e.getClass().getSimpleName());
 
             if (e.getMessage() != null)
@@ -202,12 +233,5 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
             LOG.error("", e);
         }
     }
-
-
-    // note : peter has asked for these to be in camel case
-    public enum Fields implements WireKey {
-        reply
-    }
-
 }
 
