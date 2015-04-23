@@ -512,7 +512,6 @@ public class VanillaChronicle implements Chronicle {
         private int lastCycle;
         private int lastThreadId;
         private int appenderCycle;
-        private int appenderThreadId;
         private boolean nextSynchronous;
         private long lastWrittenIndex;
         private long[] positionArr = {0L};
@@ -524,7 +523,6 @@ public class VanillaChronicle implements Chronicle {
             this.lastThreadId = Integer.MIN_VALUE;
             this.lastWrittenIndex = -1;
             this.appenderCycle = -1;
-            this.appenderThreadId = -1;
             this.nextSynchronous = builder.synchronous();
             this.lastDataIndex = 0;
             this.lastIndexIndex = 0;
@@ -545,7 +543,7 @@ public class VanillaChronicle implements Chronicle {
             checkNotClosed();
             try {
                 appenderCycle = cycle;
-                appenderThreadId = AffinitySupport.getThreadId();
+                int appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
 
                 if (appenderCycle != lastCycle) {
@@ -621,7 +619,7 @@ public class VanillaChronicle implements Chronicle {
             // position of the start not the end.
             int offset = (int) (startAddr - dataBytes.address());
             long dataOffset = dataBytes.index() * builder.dataBlockSize() + offset;
-            long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+            long indexValue = ((long) lastThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
 
             try {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
