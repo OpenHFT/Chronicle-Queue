@@ -96,7 +96,8 @@ public class Indexer {
 
         chronicle.wire().readDocument(index2Index, rootIndex -> {
 
-            rootIndex.read(() -> "index").int64array(array, null);
+            rootIndex.read(() -> "index").int64array(array, longArrayValues -> {
+            });
 
             long secondaryAddress = array.getValueAt(toAddress0(index));
 
@@ -104,7 +105,9 @@ public class Indexer {
                 array.setValueAt(index, secondaryAddress = chronicle.newIndex());
 
             chronicle.wire().readDocument(secondaryAddress, secondaryIndex -> {
-                secondaryIndex.read(() -> "index").int64array(array, null);
+                secondaryIndex.read(() -> "index").int64array(array, longArrayValues -> {
+                });
+
                 array.setValueAt(toAddress1(index), address);
 
             }, null);
