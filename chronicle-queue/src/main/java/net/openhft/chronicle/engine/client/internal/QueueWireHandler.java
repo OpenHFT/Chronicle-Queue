@@ -20,11 +20,11 @@ package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub.CoreFields;
+import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
-import net.openhft.chronicle.network.WireHandler;
+import net.openhft.chronicle.wire.WireHandler;
 import net.openhft.chronicle.network.event.EventGroup;
-import net.openhft.chronicle.network.event.WireHandlers;
+import net.openhft.chronicle.wire.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;

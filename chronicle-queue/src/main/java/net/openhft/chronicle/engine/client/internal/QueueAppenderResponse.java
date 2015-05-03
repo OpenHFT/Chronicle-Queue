@@ -1,7 +1,6 @@
 package net.openhft.chronicle.engine.client.internal;
 
-import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
@@ -15,14 +14,14 @@ public class QueueAppenderResponse implements Marshallable {
 
     @Override
     public void readMarshallable(WireIn wire) throws IllegalStateException {
-        wire.read(ClientWiredStatelessTcpConnectionHub.CoreFields.csp).text(csp)
-                .read(ClientWiredStatelessTcpConnectionHub.CoreFields.cid).int32(x -> cid = x);
+        wire.read(CoreFields.csp).text(csp)
+                .read(CoreFields.cid).int32(x -> cid = x);
     }
 
     @Override
     public void writeMarshallable(WireOut wire) {
-        wire.write(ClientWiredStatelessTcpConnectionHub.CoreFields.csp).text(csp);
-        wire.write(ClientWiredStatelessTcpConnectionHub.CoreFields.cid).int32(cid);
+        wire.write(CoreFields.csp).text(csp);
+        wire.write(CoreFields.cid).int32(cid);
     }
 
     @Override

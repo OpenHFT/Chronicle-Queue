@@ -2,6 +2,7 @@ package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
+import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -51,13 +52,13 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
         proxyReturnWireConsumerInOut(EventId.hasNext,
-                (Consumer<ValueOut>)valueOut -> {
+                CoreFields.reply, (Consumer<ValueOut>)valueOut -> {
                     WriteMarshallable writeMarshallable = w -> w.write(EventId.index).int64(index + 1);
                     valueOut.marshallable(writeMarshallable);
                 },
                 (Function<WireIn, Void>) w -> {
             w.read(EventId.index).int64(x -> index = x)
-             .read(ClientWiredStatelessTcpConnectionHub.CoreFields.reply).bytes(reader);
+             .read(CoreFields.reply).bytes(reader);
             return null;
         });
         return true;

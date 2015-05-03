@@ -19,7 +19,7 @@
 package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.engine.client.ParameterizeWireKey;
+import net.openhft.chronicle.wire.ParameterizeWireKey;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;

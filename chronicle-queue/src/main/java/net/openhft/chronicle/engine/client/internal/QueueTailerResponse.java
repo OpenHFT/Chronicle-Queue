@@ -1,6 +1,6 @@
 package net.openhft.chronicle.engine.client.internal;
 
-import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
+import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 
@@ -21,13 +21,13 @@ public class QueueTailerResponse extends QueueAppenderResponse {
     @Override
     public void readMarshallable(WireIn wire) throws IllegalStateException {
         super.readMarshallable(wire);
-        wire.read(ClientWiredStatelessTcpConnectionHub.CoreFields.start).int64(x->start = x);
+        wire.read(()->"start").int64(x -> start = x);
     }
 
     @Override
     public void writeMarshallable(WireOut wire) {
         super.writeMarshallable(wire);
-        wire.write(ClientWiredStatelessTcpConnectionHub.CoreFields.start).int64(start);
+        wire.write(()->"start").int64(start);
     }
 
     @Override
