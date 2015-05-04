@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.queue.stateless;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -56,8 +55,10 @@ public class StatelessTailer implements ExcerptTailer {
      */
     @Override
     public WireIn wire() {
-        if (index == -1)
+        if (index == -1) {
             index = statelessRawBytesTailer.lastWrittenIndex();
+        }
+
         final Bytes bytes = statelessRawBytesTailer.readExcept(index);
         index++;
         return wireFunction.apply(bytes);

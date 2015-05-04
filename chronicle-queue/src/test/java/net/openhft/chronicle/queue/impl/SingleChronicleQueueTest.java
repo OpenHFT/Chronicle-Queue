@@ -25,8 +25,8 @@ import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.Wire;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-//@RunWith(Parameterized.class)
+@RunWith(Parameterized.class)
 public class SingleChronicleQueueTest {
 
     @Parameterized.Parameters
@@ -51,10 +51,8 @@ public class SingleChronicleQueueTest {
 
     private final Class<? extends Wire> wireType;
 
-    //public SingleChronicleQueueTest(final Class<? extends Wire> wireType) {
-    public SingleChronicleQueueTest() {
-        //this.wireType = wireType;
-        this.wireType = TextWire.class;
+    public SingleChronicleQueueTest(final Class<? extends Wire> wireType) {
+        this.wireType = wireType;
     }
 
     protected File createTempFile(String suffix) throws IOException {
@@ -232,7 +230,7 @@ public class SingleChronicleQueueTest {
         }
     }
 
-    @Ignore("Fails with TextWire")
+
     @Test
     public void testReadAtIndexWithIndexes() throws Exception {
         final File file = createTempFile(this.wireType.getSimpleName());
@@ -256,14 +254,11 @@ public class SingleChronicleQueueTest {
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
 
             Assert.assertEquals("value=67", sb.toString());
-
         } finally {
             file.delete();
         }
     }
 
-
-    @Ignore("Fails with TextWire")
     @Test
     public void testReadAtIndexWithIndexesAtStart() throws Exception {
         final File file = createTempFile(this.wireType.getSimpleName());
@@ -293,7 +288,7 @@ public class SingleChronicleQueueTest {
         }
     }
 
-    @Ignore("Fails with TextWire")
+
     @Test
     public void testScanFromLastKnownIndex() throws Exception {
         final File file = createTempFile(this.wireType.getSimpleName());
