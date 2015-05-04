@@ -56,7 +56,10 @@ public class SingleChronicleQueueTest {
     }
 
     protected File createTempFile(String suffix) throws IOException {
-        File file = File.createTempFile("chronicle.queue.v4.", "." + suffix);
+        File file = File.createTempFile(
+                "chronicle.queue.v4.", "." + this.wireType.getSimpleName() + "." + suffix
+        );
+
         file.deleteOnExit();
 
         return file;
@@ -72,7 +75,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testSingleWire() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testSingleWire");
 
         try {
             final ChronicleQueue chronicle = createQueue(file);
@@ -97,7 +100,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testSingleDirect() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testSingleDirect");
 
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
@@ -125,7 +128,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testLastWrittenIndexPerAppender() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testLastWrittenIndexPerAppender");
         try {
 
             final ChronicleQueue chronicle = createQueue(file);
@@ -140,7 +143,7 @@ public class SingleChronicleQueueTest {
 
     @Test(expected = IllegalStateException.class)
     public void testLastWrittenIndexPerAppenderNoData() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testLastWrittenIndexPerAppenderNoData");
         try {
             final ChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -152,7 +155,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testLastIndexPerChronicle() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testLastIndexPerChronicle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -166,7 +169,7 @@ public class SingleChronicleQueueTest {
 
     @Test(expected = IllegalStateException.class)
     public void testLastIndexPerChronicleNoData() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testLastIndexPerChronicleNoData");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
             Assert.assertEquals(-1, chronicle.lastIndex());
@@ -179,7 +182,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testReadAtIndexSingle() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testReadAtIndexSingle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -204,7 +207,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testReadAtIndex() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testReadAtIndex");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -233,7 +236,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testReadAtIndexWithIndexes() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testReadAtIndexWithIndexes");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -261,7 +264,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testReadAtIndexWithIndexesAtStart() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testReadAtIndexWithIndexesAtStart");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
@@ -291,7 +294,7 @@ public class SingleChronicleQueueTest {
 
     @Test
     public void testScanFromLastKnownIndex() throws Exception {
-        final File file = createTempFile(this.wireType.getSimpleName());
+        final File file = createTempFile("testScanFromLastKnownIndex");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
             final ExcerptAppender appender = chronicle.createAppender();
