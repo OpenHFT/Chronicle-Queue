@@ -24,13 +24,12 @@ import net.openhft.chronicle.queue.Compression;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
- * Data structure to bind to an off heap representation.  This is required to support persistence
- * and sharing of this data structure.
+ * Data structure to bind to an off heap representation. This is required to
+ * support persistence and sharing of this data structure.
  */
 class Header implements Marshallable {
     public static final long PADDED_SIZE = 512;
@@ -94,7 +93,15 @@ class Header implements Marshallable {
                 .write(Field.indexSpacing).int32(indexSpacing)
                 .write(Field.index2Index).int64forBinding(0L)
                 .write(Field.lastIndex).int64forBinding(-1L);
-        out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
+
+        // TODO: this is an hack and should be properly implemented.
+        // The header is written as document which is enclosed between brackets
+        // so it add a few more bytes thus the writeByte is invalid.
+        if(out instanceof TextWire) {
+            out.addPadding((int) (PADDED_SIZE - 2 - out.bytes().position()));
+        } else {
+            out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
+        }
     }
 
     @Override
@@ -125,6 +132,5 @@ class Header implements Marshallable {
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
         tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
         System.out.println(tw.bytes().flip().toString());
-
     }
 }
