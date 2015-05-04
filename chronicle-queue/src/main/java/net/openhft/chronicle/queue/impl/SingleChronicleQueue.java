@@ -272,15 +272,12 @@ public class SingleChronicleQueue extends AbstractChronicle {
      * @return the address of the appended data
      */
     private long appendMetaDataReturnAddress(@NotNull Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
+        long length = checkRemainingForAppend(buffer);
 
         LongValue writeByte = header.writeByte();
         long lastByte = writeByte.getVolatileValue();
 
         for (; ; ) {
-
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
@@ -305,15 +302,11 @@ public class SingleChronicleQueue extends AbstractChronicle {
 
     @Override
     public long appendDocument(@NotNull Bytes buffer) {
-        long length = buffer.remaining();
-        if (length > MAX_LENGTH)
-            throw new IllegalStateException("Length too large: " + length);
+        long length = checkRemainingForAppend(buffer);
 
         LongValue writeByte = header.writeByte();
 
-
         for (; ; ) {
-
             long lastByte = writeByte.getVolatileValue();
 
             if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
@@ -348,8 +341,10 @@ public class SingleChronicleQueue extends AbstractChronicle {
                 offset.set(lastByte);
                 return isData(length);
             }
-            if (Thread.currentThread().isInterrupted())
+
+            if (Thread.currentThread().isInterrupted()) {
                 return false;
+            }
         }
     }
 
@@ -362,8 +357,10 @@ public class SingleChronicleQueue extends AbstractChronicle {
     @Override
     public long lastIndex() {
         long value = header.lastIndex().getVolatileValue();
-        if (value == -1)
+        if (value == -1) {
             throw new IllegalStateException("No data has been written to chronicle.");
+        }
+
         return value;
     }
 
@@ -389,6 +386,12 @@ public class SingleChronicleQueue extends AbstractChronicle {
         header, index2index, index
     }
 
+    protected long checkRemainingForAppend(@NotNull Bytes buffer) {
+        long remaining = buffer.remaining();
+        if (remaining > MAX_LENGTH) {
+            throw new IllegalStateException("Length too large: " + remaining);
+        }
+
+        return remaining;
+    }
 }
-
-

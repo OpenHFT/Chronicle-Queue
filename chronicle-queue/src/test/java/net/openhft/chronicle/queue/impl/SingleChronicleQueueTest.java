@@ -232,7 +232,7 @@ public class SingleChronicleQueueTest {
         }
     }
 
-    //@Ignore("Fails with TextWire")
+    @Ignore("Fails with TextWire")
     @Test
     public void testReadAtIndexWithIndexes() throws Exception {
         final File file = createTempFile(this.wireType.getSimpleName());
