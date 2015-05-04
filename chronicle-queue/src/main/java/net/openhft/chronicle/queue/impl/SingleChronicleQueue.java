@@ -257,15 +257,16 @@ public class SingleChronicleQueue extends AbstractChronicle {
         final Bytes buffer = NativeBytes.nativeBytes(size);
         buffer.zeroOut(0, size);
 
-        final Wire wire = new BinaryWire(buffer);
+        final Wire wire = WireUtil.createWire(this.builder.wireType(), buffer);
         wire.write(() -> "index").int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
         buffer.flip();
+
         return appendMetaDataReturnAddress(buffer);
 
     }
 
     /**
-     * This method does not update the index, as indexs are not used for meta data
+     * This method does not update the index, as indexes are not used for meta data
      *
      * @param buffer
      * @return the address of the appended data

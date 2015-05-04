@@ -84,7 +84,7 @@ class Header implements Marshallable {
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Field.uuid).uuid(uuid)
-                .write(Field.writeByte).int64forBinding(PADDED_SIZE + 2)
+                .write(Field.writeByte).int64forBinding(PADDED_SIZE)
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
                 .write(Field.host).text(host)
@@ -93,7 +93,15 @@ class Header implements Marshallable {
                 .write(Field.indexSpacing).int32(indexSpacing)
                 .write(Field.index2Index).int64forBinding(0L)
                 .write(Field.lastIndex).int64forBinding(-1L);
-        out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
+
+        // TODO: this is an hack and should be properly implemented.
+        // The header is written as document which is enclosed between brackets
+        // so it add a few more bytes thus the writeByte is invalid.
+        if(out instanceof TextWire) {
+            out.addPadding((int) (PADDED_SIZE - 2 - out.bytes().position()));
+        } else {
+            out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
+        }
     }
 
     @Override
