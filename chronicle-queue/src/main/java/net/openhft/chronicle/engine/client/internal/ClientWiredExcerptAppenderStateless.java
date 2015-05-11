@@ -29,7 +29,7 @@ public class ClientWiredExcerptAppenderStateless extends AbstactStatelessClient 
                                                Function<Bytes, Wire> wireWrapper) {
         super(queue.name(), hub, "QUEUE", 0);
         this.queue = queue;
-        this.csp = "//" + queue.name() + "#QUEUE";
+        this.csp = "//" + queue.name() + "?view=QUEUE";
         QueueAppenderResponse qar = (QueueAppenderResponse) proxyReturnMarshallable(EventId.createAppender);
         this.cid = qar.getCid();
         this.wire = wireWrapper.apply(source);
