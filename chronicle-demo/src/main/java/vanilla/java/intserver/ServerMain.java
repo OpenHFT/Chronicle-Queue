@@ -56,6 +56,7 @@ public class ServerMain {
                 // did something
                 readCount++;
                 count = 0;
+
             } else if (count++ > 1000000) {
                 // do something else like pause.
                 long processed = readCount;

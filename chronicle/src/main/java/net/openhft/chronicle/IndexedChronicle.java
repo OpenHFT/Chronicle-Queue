@@ -323,7 +323,6 @@ public class IndexedChronicle implements Chronicle {
         // which index does this refer to?
         private long indexStartOffset;
 
-
         // the start of this entry
         // inherited - long startAddr;
         // inherited - long positionAddr;
@@ -442,10 +441,12 @@ public class IndexedChronicle implements Chronicle {
                     indexPositionAddr += 4;
                     padding = false;
                     return true;
+
                 } else if (dataOffsetEnd == 0) {
                     limitAddr = startAddr;
                     padding = false;
                     return false;
+
                 } else /* if (dataOffsetEnd < 0) */ {
                     padding = true;
                     return false;
@@ -468,6 +469,7 @@ public class IndexedChronicle implements Chronicle {
         void indexForAppender(long l) throws IOException {
             if (l < 0) {
                 throw new IndexOutOfBoundsException("index: " + l);
+
             } else if (l == 0) {
                 indexStartOffset = 0;
                 loadIndexBuffer();
@@ -624,6 +626,7 @@ public class IndexedChronicle implements Chronicle {
                 case 0:
                     newIndexLine();
                     break;
+
                 case 4:
                     throw new AssertionError();
             }
@@ -672,6 +675,7 @@ public class IndexedChronicle implements Chronicle {
                 long index2 = index;
                 if (indexForRead(index() + 1)) {
                     return true;
+
                 } else {
                     // rewind on a failure
                     index = index2;
@@ -732,10 +736,12 @@ public class IndexedChronicle implements Chronicle {
                     lo1 = mid + 1;
                     if (both)
                         lo2 = lo1;
+
                 } else if (cmp > 0) {
                     hi1 = mid - 1;
                     if (both)
                         hi2 = hi1;
+
                 } else {
                     hi1 = mid - 1;
                     if (both)
@@ -757,6 +763,7 @@ public class IndexedChronicle implements Chronicle {
 
                 if (cmp <= 0) {
                     lo2 = mid + 1;
+
                 } else {
                     hi2 = mid - 1;
                 }
@@ -910,6 +917,7 @@ public class IndexedChronicle implements Chronicle {
                 case 0:
                     newIndexLine();
                     break;
+
                 case 4:
                     throw new AssertionError();
             }
@@ -1001,6 +1009,7 @@ public class IndexedChronicle implements Chronicle {
                     // skip the base until we have the offset.
                     indexPositionAddr += 8;
                     break;
+
                 case 4:
                     throw new AssertionError();
             }

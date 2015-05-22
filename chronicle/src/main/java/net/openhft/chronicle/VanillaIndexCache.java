@@ -45,7 +45,6 @@ public class VanillaIndexCache implements Closeable {
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
             int blocksBits) {
-
         this.baseFile = builder.path();
         this.basePath = this.baseFile.getAbsolutePath();
 
@@ -101,6 +100,7 @@ public class VanillaIndexCache implements Closeable {
         for (long offset = 0; offset < buffer.capacity(); offset += 8) {
             if (buffer.readLong(offset) != 0) {
                 indices++;
+
             } else {
                 break;
             }

@@ -36,7 +36,6 @@ public class AppenderAdapters {
         public IndexedAppenderAdapter(
                 @NotNull final Chronicle chronicle,
                 @NotNull final ExcerptAppender appender) {
-
             super(appender);
         }
 
@@ -58,7 +57,6 @@ public class AppenderAdapters {
         public VanillaAppenderAdapter(
                 @NotNull final Chronicle chronicle,
                 @NotNull final ExcerptAppender appender) {
-
             super(appender);
 
             this.chronicle = (VanillaChronicle) chronicle;

@@ -103,4 +103,3 @@ public class WriteSerializableTest extends VanillaChronicleTestBase {
     }
 }
 
-

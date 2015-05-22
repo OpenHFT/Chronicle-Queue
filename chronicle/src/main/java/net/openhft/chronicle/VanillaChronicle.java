@@ -297,11 +297,9 @@ public class VanillaChronicle implements Chronicle {
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
 
-
         public AbstractVanillaExcerpt() {
             super(acquireSerializer(), NO_PAGE, NO_PAGE, null);
         }
-
 
         @Override
         public boolean unmapped() {
@@ -453,6 +451,7 @@ public class VanillaChronicle implements Chronicle {
             long lastIndex = lastIndex();
             if (lastIndex >= 0) {
                 index(lastIndex);
+
             } else {
                 return toStart();
             }
@@ -559,6 +558,7 @@ public class VanillaChronicle implements Chronicle {
                     lastCycle = appenderCycle;
                     lastIndexIndex = indexCache.lastIndexFile(lastCycle);
                     lastThreadId = appenderThreadId;
+
                 } else if (appenderThreadId != lastThreadId) {
                     if (dataBytes != null) {
                         dataBytes.release();
@@ -633,6 +633,7 @@ public class VanillaChronicle implements Chronicle {
                     indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, lastIndexIndex, positionArr);
                     lastIndexIndex = (int)indexBytes.index();
                     setLastWrittenIndex(appenderCycle, indexBytes.index(), positionArr[0]);
+
                 } else {
                     setLastWrittenIndex(appenderCycle, indexBytes.index(), position);
                 }
@@ -665,7 +666,6 @@ public class VanillaChronicle implements Chronicle {
         public long lastWrittenIndex() {
             return lastWrittenIndex;
         }
-
 
         protected void setLastWrittenIndex(long cycle, long indexCount, long indexPosition) {
             setLastWrittenIndex(indexFrom(cycle, indexCount, indexPosition));

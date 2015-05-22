@@ -32,7 +32,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class MappingReferenceCountTest {
 
-
     /**
      * tests that blocks are acquired and released as needed
      *
@@ -58,7 +57,6 @@ public class MappingReferenceCountTest {
 //            assertEquals(0, mappedFile.getRefCount(1));
 //            assertEquals(1, mappedFile.getRefCount(2));
             assertEquals("refCount: 3, 0, 1, 2", mappedFile.referenceCounts());
-
 
             // we move from block 2 back to block 1
             bytes.writeLong((4096 * 1) + 8, Long.MAX_VALUE);

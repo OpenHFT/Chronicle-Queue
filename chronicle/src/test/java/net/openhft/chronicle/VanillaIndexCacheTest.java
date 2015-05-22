@@ -107,7 +107,6 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             // Check that the index file count starts at 0 when the data directory is empty
             assertEquals(0, cache.lastIndexFile(cycle));
 
-
             final VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
             assertEquals("index-0", VanillaChronicleUtils.fileFor(baseDir, cycle, 0, dateCache).getName());
             vanillaBuffer0.release();
@@ -226,5 +225,4 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             }
         };
     }
-
 }

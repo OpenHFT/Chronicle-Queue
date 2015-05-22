@@ -38,7 +38,6 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
                 .connectAddress("localhost", 1)
                 .reconnectionAttempts(1)
                 .build()) {
-
             ExcerptTailer tailer = chronicle.createTailer();
             for (int i = 0; i < 1000; i++) {
                 assertFalse(tailer.nextIndex());
@@ -57,7 +56,6 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
                 .reconnectionAttempts(4)
                 .reconnectionWarningThreshold(3)
                 .build()) {
-
             ExcerptTailer tailer = chronicle.createTailer();
             for (int i = 0; i < 10; i++) {
                 assertFalse(tailer.nextIndex());

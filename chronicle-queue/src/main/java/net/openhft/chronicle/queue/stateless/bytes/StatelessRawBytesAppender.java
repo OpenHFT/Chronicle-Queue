@@ -42,6 +42,5 @@ public interface StatelessRawBytesAppender {
      */
     void append(long offset, @NotNull Bytes bytes);
 
-
     void append(@NotNull UnaryOperator<Bytes> unaryOperator);
 }

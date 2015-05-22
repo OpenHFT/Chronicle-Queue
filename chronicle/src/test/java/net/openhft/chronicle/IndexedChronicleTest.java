@@ -79,6 +79,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         int ehi = Collections.binarySearch(ints, mec.hi);
         if (ehi < 0) {
             ehi = ~ehi;
+
         } else {
             ehi++;
         }
@@ -646,5 +647,4 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             assertClean(basePath);
         }
     }
-
 }

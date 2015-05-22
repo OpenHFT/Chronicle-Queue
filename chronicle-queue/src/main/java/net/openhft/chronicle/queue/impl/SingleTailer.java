@@ -78,7 +78,6 @@ public class SingleTailer implements ExcerptTailer {
      */
     @Override
     public boolean index(final long index) {
-
         assert bytes.capacity() > 0;
         long writeByte = this.chronicle.header.getWriteByte();
         assert bytes.capacity() > 0;
@@ -95,19 +94,18 @@ public class SingleTailer implements ExcerptTailer {
         long address2;
 
         if (address1 != 0) {
-
             address2 = readIndexAt(address1, toAddress1(index));
 
             if (address2 != 0) {
                 wire.bytes().position(address2);
                 start = ((index / 64L)) * 64L;
                 address = address2;
+
             } else {
 
                 long lastKnownIndex = start;
                 long lastKnownAddress = this.chronicle.firstBytes();
                 for (long count = 0; count < ((int) (1L << 17L)); count++) {
-
                     address = readIndexAt(address1, count);
 
                     if (address != 0) {
@@ -127,13 +125,12 @@ public class SingleTailer implements ExcerptTailer {
         } else {
             long lastKnownIndex = 0;
             for (long count = 0; count < ((int) (1L << 17L)); count++) {
-
-
                 address = readIndexAt(chronicle.indexToIndex(), count);
 
                 if (address != 0) {
                     if (count > 0)
                         lastKnownIndex += (1L << (6L));
+
                 } else {
                     start = lastKnownIndex;
 
@@ -144,7 +141,6 @@ public class SingleTailer implements ExcerptTailer {
         }
 
         assert bytes.capacity() > 0;
-
 
         if (address != 0)
             bytes.position(address);
@@ -164,12 +160,10 @@ public class SingleTailer implements ExcerptTailer {
 
             readDocument(wireIn -> {
             });
-
         }
 
         wire.bytes().position(pos);
         return false;
-
     }
 
     @NotNull
@@ -188,7 +182,6 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     private long readIndexAt(long offset, long index) {
-
         if (offset == 0)
             return 0;
 
@@ -204,11 +197,9 @@ public class SingleTailer implements ExcerptTailer {
 
                 wireIn.read(() -> "index").int64array(values, v -> values = v);
                 result[0] = values.getVolatileValueAt(index);
-
             }, null);
 
             return result[0];
-
         } finally {
             chronicle.bytes().position(pos);
         }
@@ -221,5 +212,4 @@ public class SingleTailer implements ExcerptTailer {
         return chronicle;
     }
 }
-
 

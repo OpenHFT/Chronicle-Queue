@@ -129,6 +129,7 @@ class TcpConnection {
         if (rem < threshod) {
             if (buffer.remaining() == 0) {
                 buffer.clear();
+
             } else {
                 buffer.compact();
             }
@@ -148,13 +149,12 @@ class TcpConnection {
         return true;
     }
 
-
-
     public boolean read(final ByteBuffer buffer, int threshod, int size, int readCount) throws IOException {
         int rem = buffer.remaining();
         if (rem < threshod) {
             if (buffer.remaining() == 0) {
                 buffer.clear();
+
             } else {
                 buffer.compact();
             }
@@ -166,6 +166,7 @@ class TcpConnection {
                 int rb = this.socketChannel.read(buffer);
                 if (rb < 0) {
                     throw new EOFException();
+
                 } else if(bytes == 0 && rb == 0 && readCount > -1) {
                     if(spins++ >= readCount) {
                         buffer.flip();
@@ -186,6 +187,7 @@ class TcpConnection {
     public boolean readAtLeast(final ByteBuffer buffer, int size, int readCount) throws IOException {
         if (buffer.remaining() == 0) {
             buffer.clear();
+
         } else {
             buffer.compact();
         }
@@ -197,6 +199,7 @@ class TcpConnection {
             int rb = this.socketChannel.read(buffer);
             if (rb < 0) {
                 throw new EOFException();
+
             } else if(bytes == 0 && rb == 0 && readCount > -1) {
                 if(spins++ >= readCount) {
                     return false;
@@ -219,6 +222,7 @@ class TcpConnection {
             int rb = this.socketChannel.read(buffer);
             if (rb < 0) {
                 throw new EOFException();
+
             } else if(bytes == 0 && rb == 0 && readCount > -1) {
                 if(spins++ >= readCount) {
                     return false;
@@ -255,6 +259,7 @@ class TcpConnection {
 
         if(readCount == -1) {
             readFullyOrEOF(buffer);
+
         } else {
             if(!readAllOrNone(buffer, readCount)) {
                 buffer.clear();

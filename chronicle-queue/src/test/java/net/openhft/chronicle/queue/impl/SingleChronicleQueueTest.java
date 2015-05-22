@@ -179,7 +179,6 @@ public class SingleChronicleQueueTest {
 
     }
 
-
     @Test
     public void testReadAtIndexSingle() throws Exception {
         final File file = createTempFile("testReadAtIndexSingle");
@@ -233,7 +232,6 @@ public class SingleChronicleQueueTest {
         }
     }
 
-
     @Test
     public void testReadAtIndexWithIndexes() throws Exception {
         final File file = createTempFile("testReadAtIndexWithIndexes");
@@ -275,7 +273,6 @@ public class SingleChronicleQueueTest {
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
-
             new Indexer(chronicle).index();
 
             long index = 67;
@@ -290,7 +287,6 @@ public class SingleChronicleQueueTest {
             file.delete();
         }
     }
-
 
     @Test
     public void testScanFromLastKnownIndex() throws Exception {

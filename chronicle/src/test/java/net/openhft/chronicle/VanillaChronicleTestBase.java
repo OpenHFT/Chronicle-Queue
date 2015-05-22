@@ -84,6 +84,7 @@ public class VanillaChronicleTestBase {
         String cmd = null;
         if(new File("/usr/sbin/lsof").exists()) {
             cmd = "/usr/sbin/lsof";
+
         } else if(new File("/usr/bin/lsof").exists()) {
             cmd = "/usr/bin/lsof";
         }

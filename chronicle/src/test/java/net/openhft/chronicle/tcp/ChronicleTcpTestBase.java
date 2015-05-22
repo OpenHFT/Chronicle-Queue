@@ -227,7 +227,6 @@ public class ChronicleTcpTestBase {
 
                     appender.close();
                     LOGGER.info("Finished writing messages");
-
                 } catch (AssertionError e) {
                     errorCollector.addError(e);
                 } catch (Exception e) {
@@ -263,6 +262,7 @@ public class ChronicleTcpTestBase {
                             i++;
 
                             tailer.finish();
+
                         } else {
                             noNextIndex++;
                         }

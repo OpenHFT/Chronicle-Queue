@@ -18,8 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
-
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
 

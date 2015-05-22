@@ -60,7 +60,6 @@ public class ChronicleTcp {
     }
 
     public static ByteBuffer createBuffer(int minSize, ByteOrder byteOrder) {
-
         return createBufferOfSize(minBufferSize(minSize), byteOrder);
     }
 
@@ -76,10 +75,12 @@ public class ChronicleTcp {
             sb.append(" -> ");
             sb.append(connectAddress);
             sb.append("]");
+
         } else if (bindAddress != null) {
             sb.append("[");
             sb.append(bindAddress);
             sb.append("]");
+
         } else if (connectAddress != null) {
             sb.append("[");
             sb.append(connectAddress);

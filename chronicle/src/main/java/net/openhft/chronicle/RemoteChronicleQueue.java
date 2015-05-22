@@ -108,6 +108,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         if(connected) {
             this.lastReconnectionAttempt = 0;
             this.lastReconnectionAttemptMS = 0;
+
         } else {
             lastReconnectionAttempt++;
             if(builder.reconnectionWarningThreshold() > 0) {
@@ -169,7 +170,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
             this.lastIndex = -1;
             this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
-
         }
 
         @Override
@@ -222,6 +222,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                             case ChronicleTcp.ACK_LEN:
                                 this.lastIndex = recIndex;
                                 break;
+
                             case ChronicleTcp.NACK_LEN:
                                 throw new IllegalStateException(
                                     "Message discarded by server, reason: " + (
@@ -339,6 +340,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         }
 
                         cleanup();
+
                     } else {
                         return false;
                     }
@@ -356,11 +358,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         case ChronicleTcp.SYNC_IDX_LEN:
                             if (index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
+
                             } else if (index == ChronicleTcp.IDX_TO_END) {
                                 return advanceIndex();
+
                             } else if (index == receivedIndex) {
                                 return advanceIndex();
                             }
+
                         case ChronicleTcp.IN_SYNC_LEN:
                         case ChronicleTcp.PADDED_LEN:
                             return false;
@@ -374,6 +379,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             } catch (IOException e) {
                 if (e instanceof EOFException) {
                     logger.trace("", e);
+
                 } else {
                     logger.warn("", e);
                 }
@@ -390,6 +396,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 if(!connection.isOpen()) {
                     if (index(this.index)) {
                         return nextIndex();
+
                     } else {
                         return false;
                     }
@@ -421,6 +428,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             } catch (IOException e1) {
                 if (e1 instanceof EOFException) {
                     logger.trace("Exception reading from socket", e1);
+
                 } else {
                     logger.warn("Exception reading from socket", e1);
                 }
@@ -441,6 +449,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             if(nextIndex()) {
                 finish();
                 return true;
+
             } else {
                 return false;
             }

@@ -63,6 +63,7 @@ public enum ChronicleTools {
     public static void logIOException(Logger logger, String message, IOException e) {
         if (e instanceof EOFException) {
             logger.trace(message, e);
+
         } else {
             logger.warn(message, e);
         }
@@ -133,6 +134,7 @@ public enum ChronicleTools {
     public static ClassLoader getSystemClassLoader() {
         if (System.getSecurityManager() == null) {
             return ClassLoader.getSystemClassLoader();
+
         } else {
             return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
                 @Override

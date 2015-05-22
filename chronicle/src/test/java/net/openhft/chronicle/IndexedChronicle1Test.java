@@ -300,6 +300,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
 
             if (!ok) {
                 ChronicleIndexReader.main(basePath);
+
             } else {
                 assertClean(basePath);
             }

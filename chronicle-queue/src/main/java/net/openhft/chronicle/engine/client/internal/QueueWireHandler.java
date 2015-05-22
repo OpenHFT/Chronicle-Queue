@@ -20,11 +20,8 @@ package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
-import net.openhft.chronicle.wire.WireHandler;
 import net.openhft.chronicle.network.event.EventGroup;
-import net.openhft.chronicle.wire.WireHandlers;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -87,7 +84,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
         //Be careful not to use Wires.acquireStringBuilder() as we
         //need to store the value
 
-
         inWire.readDocument(
                 w -> {
                     w.read(CoreFields.csp).text(cspText)
@@ -97,13 +93,13 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 }, dataWireIn -> {
                     ValueIn vin = inWire.readEventName(eventName);
 
-
         try {
             // writes out the tid
             outWire.writeDocument(true, wire -> outWire.write(CoreFields.tid).int64(tid));
 
             if (EventId.lastWrittenIndex.contentEquals(eventName)) {
                 writeData(wireOut -> wireOut.write(CoreFields.reply).int64(queue.lastWrittenIndex()));
+
             } else if (EventId.createAppender.contentEquals(eventName)) {
                 //only need one appender per queue
                 queueToAppender.computeIfAbsent(queue,
@@ -122,13 +118,13 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                     qar.setCsp(cspText);
                     wireOut.write(CoreFields.reply).typedMarshallable(qar);
                 });
+
             } else if (EventId.submit.contentEquals(eventName)) {
-
-
                 ExcerptAppender appender = queueToAppender.get(queue);
                 appender.writeDocument(wo -> wo.bytes().write(vin.bytes()));
 
                 outWire.writeDocument(false, wire -> wire.write(EventId.index).int64(appender.lastWrittenIndex()));
+
             } else if (EventId.createTailer.contentEquals(eventName)) {
                 //only need one appender per queue
                 queueToTailer.computeIfAbsent(queue,
@@ -154,9 +150,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
 
                     sendBackMessage(tailer, index);
                 });
-
             }
-
 
         } finally {
 
@@ -165,12 +159,12 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                 if (len == 0) {
                     System.out.println("--------------------------------------------\n" +
                             "server writes:\n\n<EMPTY>");
+
                 } else {
 
                     System.out.println("--------------------------------------------\n" +
                             "server writes:\n\n" +
                             Wires.fromSizePrefixedBlobs(outWire.bytes(), SIZE_OF_SIZE, len));
-
                 }
             }
         }
@@ -209,6 +203,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
                         return null;
                     });
             cidToQueue.put(cid, queue);
+
         } else {
             //if the cid has been created then there must be a corresponding queue
             queue = cidToQueue.get(cid);
@@ -218,7 +213,6 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
     }
 
     private void writeData(Consumer<WireOut> c) {
-
         try {
             outWire.bytes().mark();
             outWire.writeDocument(false, c);

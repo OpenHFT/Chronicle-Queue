@@ -52,6 +52,7 @@ public class WrappedExcerptAppenders {
 
                 limit(capacity);
                 buffer().limit((int) capacity);
+
             } else {
                 throw new IllegalStateException("Excerpt's size can't exceed Excerpt's capacity");
             }

@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
@@ -39,7 +38,6 @@ import static org.junit.Assert.fail;
  */
 @Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class BytesRingBufferTest {
-
 
     private final String EXPECTED = "hello world";
     private final String EXPECTED_VALUE = "value=";
@@ -72,7 +70,6 @@ public class BytesRingBufferTest {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
             for (int i = 0; i < 100; i++) {
-
                 bytesRingBuffer.offer(data());
                 Bytes bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
@@ -80,7 +77,6 @@ public class BytesRingBufferTest {
                 });
 
                 assertEquals(EXPECTED, bytes.readUTFΔ());
-
             }
         }
     }
@@ -105,7 +101,6 @@ public class BytesRingBufferTest {
     @Test
     public void testPollWithNoData() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-
             assert nativeStore.isNative();
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -131,7 +126,6 @@ public class BytesRingBufferTest {
     @Test
     public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-
             System.out.println(nativeStore.realCapacity());
             System.out.println(nativeStore.capacity());
             System.out.println(nativeStore.limit());
@@ -159,8 +153,6 @@ public class BytesRingBufferTest {
 
             assert nativeStore.bytes().capacity() < (1 << 12);
             for (int i = 0; i < 100; i++) {
-
-
                 bytesRingBuffer.offer(data());
                 //      bytesRingBuffer.offer(data());
                 //        bytesRingBuffer.offer(data());
@@ -174,17 +166,13 @@ public class BytesRingBufferTest {
 
                 try {
 
-
                     String s = bytes.readUTFΔ();
-
                 } catch (AssertionError e) {
                     System.out.println(Bytes.toHex(bytes));
-
                 }
 
                 //   System.out.println("hex="+Bytes.toHex(bytes));
                 //   assertEquals(EXPECTED, bytes.readUTFΔ());
-
             }
         }
     }
@@ -196,12 +184,10 @@ public class BytesRingBufferTest {
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
-
             //writer
             final int iterations = 100_000;
             {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
-
 
                 for (int i = 0; i < iterations; i++) {
                     final int j = i;
@@ -218,7 +204,6 @@ public class BytesRingBufferTest {
                                 offer = bytesRingBuffer.offer(out);
                             } while (!offer);
                             System.out.println("+");
-
                         } catch (Throwable e) {
                             e.printStackTrace();
                         }
@@ -226,10 +211,8 @@ public class BytesRingBufferTest {
                 }
             }
 
-
             CountDownLatch count = new CountDownLatch(iterations);
             System.out.println(count);
-
 
             //reader
             {
@@ -262,7 +245,6 @@ public class BytesRingBufferTest {
             }
 
             Assert.assertTrue(count.await(5000, TimeUnit.SECONDS));
-
         }
     }
 
@@ -273,8 +255,6 @@ public class BytesRingBufferTest {
     public void testMultiThreadedWithIntValues() throws Exception {
 
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
-
-
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());
 
             AtomicInteger counter = new AtomicInteger();
@@ -282,7 +262,6 @@ public class BytesRingBufferTest {
             int iterations = 20_000;
             {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
-
 
                 for (int i = 0; i < iterations; i++) {
                     final int j = i;
@@ -300,7 +279,6 @@ public class BytesRingBufferTest {
                             do {
                                 offer = bytesRingBuffer.offer(out);
                             } while (!offer);
-
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -308,9 +286,7 @@ public class BytesRingBufferTest {
                 }
             }
 
-
             CountDownLatch count = new CountDownLatch(iterations);
-
 
             //reader
             {
@@ -329,7 +305,6 @@ public class BytesRingBufferTest {
                                         return;
                                     }
                                 } while (result == null);
-
 
                                 int value = result.readInt();
                                 counter.addAndGet(-value);

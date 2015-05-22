@@ -43,6 +43,7 @@ public class ToChronicle implements InvocationHandler {
         appender.writeUTFΔ(method.getName());
         if (args == null) {
             appender.writeStopBit(0);
+
         } else {
             appender.writeStopBit(args.length);
             for (Object arg : args) {

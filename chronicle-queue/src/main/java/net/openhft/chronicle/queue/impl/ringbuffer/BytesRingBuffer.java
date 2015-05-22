@@ -61,7 +61,6 @@ public class BytesRingBuffer {
         try {
 
             for (; ; ) {
-
                 long writeLocation = this.writeLocation();
 
                 assert writeLocation >= 0;
@@ -191,13 +190,11 @@ public class BytesRingBuffer {
         return using;
     }
 
-
     private static void checkSize(@NotNull Bytes using, long elementSize) {
         if (using.remaining() < elementSize)
             throw new IllegalStateException("requires size=" + elementSize +
                     " bytes, but only " + using.remaining() + " remaining.");
     }
-
 
     private enum States {BUSY, READY, USED}
 
@@ -224,12 +221,10 @@ public class BytesRingBuffer {
         private final long readLocationOffset;
         private final Bytes buffer;
 
-
         /**
          * @param buffer the bytes for the header
          */
         private Header(@NotNull Bytes buffer) {
-
             if (buffer.remaining() < 24) {
                 final String message = "buffer too small, buffer size=" + buffer.remaining();
                 throw new IllegalStateException(message);
@@ -245,7 +240,6 @@ public class BytesRingBuffer {
             buffer.skip(8);
 
             this.buffer = buffer.bytes();
-
         }
 
 //        final AtomicLong writeLocationAtomic = new AtomicLong();
@@ -271,14 +265,12 @@ public class BytesRingBuffer {
             //return writeUpToOffsetAtomic.get();
             // todo replace the above with this :  
             return buffer.readVolatileLong(writeUpToOffset);
-
         }
 
         /**
          * sets the point at which you should not write any additional bits
          */
         void setWriteUpTo(long value) {
-
             //writeUpToOffsetAtomic.set(value);
             // todo replace the above with this : 
             buffer.writeOrderedLong(writeUpToOffset, value);
@@ -313,9 +305,7 @@ public class BytesRingBuffer {
             isBytesBigEndian = buffer.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 
-
         private long write(long offset, @NotNull Bytes bytes) {
-
             long result = offset + bytes.remaining();
             offset %= capacity();
 
@@ -344,7 +334,6 @@ public class BytesRingBuffer {
         }
 
         long nextOffset(long offset, long increment) {
-
             long result = offset + increment;
             if (result < capacity())
                 return result;
@@ -353,7 +342,6 @@ public class BytesRingBuffer {
         }
 
         private long write(long offset, long value) {
-
             long result = offset + 8;
             offset %= capacity();
 
@@ -390,7 +378,6 @@ public class BytesRingBuffer {
         }
 
         long readLong(long offset) {
-
             offset %= capacity();
             if (nextOffset(offset, 8) > offset)
                 return buffer.readLong(offset);
@@ -456,5 +443,4 @@ public class BytesRingBuffer {
             buffer.writeByte(nextOffset(offset), (byte) (value >> 56));
         }
     }
-
 }

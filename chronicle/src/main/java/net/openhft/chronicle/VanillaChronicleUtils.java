@@ -51,15 +51,16 @@ public class VanillaChronicleUtils {
         File file = new File(dir, name);
         if (file.exists()) {
              getLogger().trace("Opening {}", file);
+
         } else if (forAppend) {
              getLogger().trace("Creating {}", file);
+
         } else {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 
         return file;
     }
-
 
     public static File fileFor(
             String basePath, int cycle, int indexCount, VanillaDateCache dateCache) throws IOException {

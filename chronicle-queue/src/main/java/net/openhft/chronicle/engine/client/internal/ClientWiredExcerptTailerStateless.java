@@ -2,14 +2,10 @@ package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.ValueOut;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +25,6 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
     private long cid;
     private long lastWrittenIndex;
 
-
     public ClientWiredExcerptTailerStateless(ClientWiredChronicleQueueStateless queue,
                                              ClientWiredStatelessTcpConnectionHub hub,
                                              Function<Bytes, Wire> wireWrapper) {
@@ -40,7 +35,6 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
         this.cid = qar.getCid();
         this.wire = wireWrapper.apply(source);
     }
-
 
     @Nullable
     @Override
@@ -81,10 +75,8 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
         return null;
     }
 
-
     @Override
     public ChronicleQueue chronicle() {
         return queue;
     }
-
 }

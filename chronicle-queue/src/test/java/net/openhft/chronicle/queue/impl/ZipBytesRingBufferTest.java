@@ -53,8 +53,6 @@ public class ZipBytesRingBufferTest {
 
             final long writeAddress = getHeader((SingleChronicleQueue) chronicle).getWriteByte();
 
-
-
             final BytesRingBuffer ring = new BytesRingBuffer(allocate.bytes());
 
             final ZippedDocumentAppender zippedDocumentAppender = new ZippedDocumentAppender(
@@ -77,8 +75,6 @@ public class ZipBytesRingBufferTest {
 
             // "Hello World" zipped should be 12 chars
             Assert.assertEquals(12, actual.flip().remaining());
-
-
         } finally {
             if (file != null)
                 file.delete();

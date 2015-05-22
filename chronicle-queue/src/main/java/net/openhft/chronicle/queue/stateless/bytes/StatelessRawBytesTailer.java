@@ -28,7 +28,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface StatelessRawBytesTailer {
 
-
     /**
      * reads bytes for a given index into the buffer
      *

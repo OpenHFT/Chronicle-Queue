@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.tcp;
 
-
 import java.net.InetSocketAddress;
 
 public class AddressProviders {

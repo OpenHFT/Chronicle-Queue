@@ -363,6 +363,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                     listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
                     break;
                 }
+
                 default:
                     throw new AssertionError("Unexpected code " + ch);
             }
@@ -480,6 +481,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
+
                         } else {
                             Thread.sleep(100);
                         }

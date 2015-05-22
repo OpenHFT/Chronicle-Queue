@@ -21,7 +21,10 @@ import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.ByteableLongArrayValues;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.util.WireUtil;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -113,7 +116,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
                 w -> w.write(MetaDataKey.header).marshallable(header.init(Compression.NONE))
         );
 
-
         if (!bytes.compareAndSwapLong(MAGIC_OFFSET, BUILDING, QUEUE_CREATED)) {
             throw new AssertionError("Concurrent writing of the header");
         }
@@ -141,6 +143,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
                 }
             } else if (magic == QUEUE_CREATED) {
                 return;
+
             } else {
                 throw new AssertionError("Invalid magic number " + Long.toHexString(magic) + " in file " + name());
             }
@@ -223,7 +226,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
      */
     long indexToIndex() {
         for (; ; ) {
-
             long index2Index = header.index2Index().getVolatileValue();
 
             if (index2Index == NOT_READY)
@@ -250,7 +252,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
      * @return the address of the Excerpt containing the usable index, just after the header
      */
     long newIndex() {
-
         final ByteableLongArrayValues array = longArray.get();
 
         final long size = array.sizeInBytes(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
@@ -262,7 +263,6 @@ public class SingleChronicleQueue extends AbstractChronicle {
         buffer.flip();
 
         return appendMetaDataReturnAddress(buffer);
-
     }
 
     /**

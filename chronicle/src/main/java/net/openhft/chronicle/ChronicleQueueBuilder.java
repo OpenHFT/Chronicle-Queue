@@ -860,7 +860,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.acceptorMaxThreads;
         }
 
-
         public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAlive(long acceptorThreadPoolKeepAliveTime, TimeUnit acceptorThreadPoolKeepAliveTimeUnit) {
             this.acceptorThreadPoolKeepAliveTime = acceptorThreadPoolKeepAliveTime;
             this.acceptorThreadPoolKeepAliveTimeUnit = acceptorThreadPoolKeepAliveTimeUnit;
@@ -888,8 +887,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public long acceptorThreadPoolkeepAliveTimeMillis() {
             return this.acceptorThreadPoolKeepAliveTimeUnit.toMillis(this.acceptorThreadPoolKeepAliveTime);
         }
-
-
 
         public ReplicaChronicleQueueBuilder busyPeriod(long busyPeriod, TimeUnit busyPeriodTimeUnit) {
             this.busyPeriod = busyPeriod;
@@ -919,8 +916,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.busyPeriodTimeUnit.toNanos(this.busyPeriod);
         }
 
-
-
         public ReplicaChronicleQueueBuilder parkPeriod(long parkPeriod, TimeUnit parkPeriodTimeUnit) {
             this.parkPeriod = parkPeriod;
             this.parkPeriodTimeUnit = parkPeriodTimeUnit;
@@ -948,8 +943,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public long parkPeriodTimeNanos() {
             return this.parkPeriodTimeUnit.toNanos(this.parkPeriod);
         }
-
-
 
         public int selectorSpinLoopCount() {
             return this.selectorSpinLoopCount;
@@ -1068,8 +1061,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
             if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if (connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1106,8 +1101,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
             if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SourceTcpAcceptor(this);
+
             } else if (connectAddress() != null) {
                 cnx = new SourceTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1140,8 +1137,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
             if(bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if(connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1174,8 +1173,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
             if(bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if(connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }

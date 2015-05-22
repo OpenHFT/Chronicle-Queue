@@ -90,10 +90,8 @@ public class Indexer {
                 secondaryIndex.read(() -> "index").int64array(array, longArrayValues -> {});
                 array.setValueAt(toAddress1(index), address);
             }, null);
-
         }, null);
     }
-
 
     public enum IndexOffset {
         ;
@@ -115,7 +113,6 @@ public class Indexer {
             // convert to an offset
             return maskedShiftedIndex * 8L;
         }
-
 
         @NotNull
         public static String toBinaryString(long i) {

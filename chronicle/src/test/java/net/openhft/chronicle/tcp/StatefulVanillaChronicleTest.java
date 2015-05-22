@@ -124,10 +124,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         }
     }
 
-
-
-
-
     @Test
     public void testReplicationWithRolling1() throws Exception {
         final int RUNS = 500;
@@ -477,7 +473,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         );
     }
 
-
     /*
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
@@ -511,6 +506,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
+
                         } else {
                             Thread.sleep(100);
                         }

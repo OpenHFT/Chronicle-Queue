@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -71,10 +70,12 @@ public enum Excerpts {
                 lo1 = mid + 1;
                 if (both)
                     lo2 = lo1;
+
             } else if (cmp > 0) {
                 hi1 = mid - 1;
                 if (both)
                     hi2 = hi1;
+
             } else {
                 hi1 = mid - 1;
                 if (both)
@@ -95,6 +96,7 @@ public enum Excerpts {
 
             if (cmp <= 0) {
                 lo2 = mid + 1;
+
             } else {
                 hi2 = mid - 1;
             }

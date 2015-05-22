@@ -88,7 +88,6 @@ public abstract class SourceTcp {
 
     protected abstract Runnable createHandler();
 
-
     /**
      * Creates a session handler according to the Chronicle the sources is connected to.
      *
@@ -101,9 +100,11 @@ public abstract class SourceTcp {
             if (chronicle instanceof IndexedChronicle) {
                 builder.connectionListener().onConnect(socketChannel);
                 return new IndexedSessionHandler(socketChannel);
+
             } else if (chronicle instanceof VanillaChronicle) {
                 builder.connectionListener().onConnect(socketChannel);
                 return new VanillaSessionHandler(socketChannel);
+
             } else {
                 throw new IllegalStateException("Chronicle must be Indexed or Vanilla");
             }
@@ -148,7 +149,6 @@ public abstract class SourceTcp {
 
             this.withMappedBuffer = new ResizableDirectByteBufferBytes(1024);
         }
-
 
         @Override
         public void close() throws IOException {
@@ -195,6 +195,7 @@ public abstract class SourceTcp {
 
                 if (selectionKeys != null) {
                     vanillaNioLoop(selector, selectionKeys);
+
                 } else {
                     nioLoop(selector);
                 }
@@ -210,6 +211,7 @@ public abstract class SourceTcp {
                                     || msg.contains("Broken pipe")
                                     || msg.contains("was aborted by"))) {
                         logger.info("Connection {} closed from the other end: ", socketChannel, e.getMessage());
+
                     } else {
                         logger.info("Connection {} died", socketChannel, e);
                     }
@@ -379,7 +381,6 @@ public abstract class SourceTcp {
             return true;
         }
 
-
         protected boolean onQuery(final SelectionKey key, long data) throws IOException {
             if (tailer.index(data)) {
                 final long now = System.currentTimeMillis();
@@ -390,6 +391,7 @@ public abstract class SourceTcp {
                         sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, tailer.index());
                         tailer.finish();
                         break;
+
                     } else {
                         if (lastHeartbeat <= now) {
                             sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
@@ -423,7 +425,6 @@ public abstract class SourceTcp {
          */
         protected Bytes applyMapping(@NotNull final ExcerptTailer source,
                                      @Nullable Object attached) {
-
             if (attached == null) {
                 return source;
             }
@@ -453,6 +454,7 @@ public abstract class SourceTcp {
                             Integer.MAX_VALUE,
                             (int) (withMappedBuffer.capacity() * 1.5))
                     );
+
                 } else {
                     throw e;
                 }
@@ -482,6 +484,7 @@ public abstract class SourceTcp {
             this.index = data;
             if (this.index == ChronicleTcp.IDX_TO_START) {
                 this.index = -1;
+
             } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.index = tailer.toEnd().index();
             }
@@ -557,6 +560,7 @@ public abstract class SourceTcp {
                             count--;
 
                             tailer.finish();
+
                         } else {
                             break;
                         }
@@ -564,6 +568,7 @@ public abstract class SourceTcp {
                         if(hasRoomFor(writeBuffer, ChronicleTcp.HEADER_SIZE)) {
                             writeBuffer.putInt(ChronicleTcp.PADDED_LEN);
                             writeBuffer.putLong(index);
+
                         } else {
                             break;
                         }
@@ -606,6 +611,7 @@ public abstract class SourceTcp {
                 this.nextIndex = true;
                 this.tailer = tailer.toStart();
                 this.index = -1;
+
             } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.nextIndex = false;
                 this.tailer = tailer.toEnd();
@@ -655,6 +661,7 @@ public abstract class SourceTcp {
             } else {
                 if (!tailer.index(this.index)) {
                     return false;
+
                 } else {
                     this.nextIndex = true;
                 }
@@ -703,6 +710,7 @@ public abstract class SourceTcp {
                         count--;
 
                         tailer.finish();
+
                     } else {
                         tailer.finish();
                         // if there is no space, go back to the previous index

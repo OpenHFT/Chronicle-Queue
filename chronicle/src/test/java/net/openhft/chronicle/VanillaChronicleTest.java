@@ -84,6 +84,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         int ehi = Collections.binarySearch(ints, mec.hi);
         if (ehi < 0) {
             ehi = ~ehi;
+
         } else {
             ehi++;
         }
@@ -803,6 +804,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                     // ok.
                 } else if (lastMajor + 1 == major) {
                     System.out.println("Major: " + major);
+
                 } else {
                     assertEquals("major jumped", lastMajor + 1, major);
                 }
@@ -1063,5 +1065,4 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertFalse(new File(baseDir).exists());
         }
     }
-
 }

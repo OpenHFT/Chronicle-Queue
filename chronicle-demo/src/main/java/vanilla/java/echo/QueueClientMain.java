@@ -53,7 +53,6 @@ public class QueueClientMain {
                     lock = AffinitySupport.acquireLock();
                     ExcerptAppender appender = outbound.createAppender();
                     for (int i = 0; i < TESTS; i++) {
-
                         long now = System.nanoTime();
                         long spacing = 1000000000 / RATE;
                         for (int j = 0; j < COUNT; j++) {
@@ -116,6 +115,7 @@ public class QueueClientMain {
                             times[times.length - times.length / 10000 - 1] / 1000
                     );
                     count = 0;
+
                 } else if (count < times.length) {
                     times[count++] = System.nanoTime() - timestamp;
 /*                    System.out.print(".");

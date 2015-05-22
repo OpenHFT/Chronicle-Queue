@@ -53,16 +53,13 @@ class Header implements Marshallable {
       return writeByte;
     }
 
-
     LongValue index2Index() {
         return index2Index;
     }
 
-
     LongValue lastIndex() {
         return lastIndex;
     }
-
 
     @NotNull
     public Header init(@NotNull Compression compression) {
@@ -99,6 +96,7 @@ class Header implements Marshallable {
         // so it add a few more bytes thus the writeByte is invalid.
         if(out instanceof TextWire) {
             out.addPadding((int) (PADDED_SIZE - 2 - out.bytes().position()));
+
         } else {
             out.addPadding((int) (PADDED_SIZE - out.bytes().position()));
         }

@@ -418,6 +418,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
                             tailer.finish();
                             latch.countDown();
+
                         } else {
                             Thread.sleep(100);
                         }

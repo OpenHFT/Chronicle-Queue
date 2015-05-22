@@ -18,12 +18,10 @@
 
 package net.openhft.chronicle.queue;
 
-
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low latency messaging

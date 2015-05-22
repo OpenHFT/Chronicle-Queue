@@ -67,6 +67,7 @@ public class ResizableDirectByteBufferBytes extends DirectByteBufferBytes {
     public ResizableDirectByteBufferBytes resetToSize(int size) {
         if (capacity() < size) {
             resize(size, false, false);
+
         } else {
             clear();
             buffer().clear();

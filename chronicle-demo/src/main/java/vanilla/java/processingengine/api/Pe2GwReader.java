@@ -58,6 +58,7 @@ public class Pe2GwReader {
                 gwEvents.report(metaData, report);
                 break;
             }
+
             default:
                 System.err.println("Unknown message type " + mt);
                 break;

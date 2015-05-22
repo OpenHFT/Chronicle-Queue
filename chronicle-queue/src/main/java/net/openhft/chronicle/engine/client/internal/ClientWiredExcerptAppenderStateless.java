@@ -5,13 +5,14 @@ import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.*;
+import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQueueStateless.EventId;
 
 /**
  * Created by daniel on 14/04/15.
@@ -47,7 +48,6 @@ public class ClientWiredExcerptAppenderStateless extends AbstactStatelessClient 
         writer.accept(wire);
         source.flip();
         lastWrittenIndex = proxyBytesReturnLong(EventId.submit, source, EventId.index);
-
     }
 
     @Override
@@ -59,5 +59,4 @@ public class ClientWiredExcerptAppenderStateless extends AbstactStatelessClient 
     public ChronicleQueue chronicle() {
         return queue;
     }
-
 }

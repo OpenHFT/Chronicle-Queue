@@ -42,6 +42,7 @@ public class S2CReader {
                 client.response(request, response, args);
                 break;
             }
+
             default:
                 System.err.println("Unknown command " + ch);
                 break;

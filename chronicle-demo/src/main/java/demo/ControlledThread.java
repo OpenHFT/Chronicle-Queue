@@ -37,6 +37,7 @@ public abstract class ControlledThread extends Thread {
             if (isRunning.get()) {
                 if(loopTime!=0)sleepnx(loopTime);
                 loop();
+
             } else {
                 sleepnx(200);
             }

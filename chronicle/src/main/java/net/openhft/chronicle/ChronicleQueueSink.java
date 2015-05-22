@@ -151,6 +151,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 builder.connectionListener().onConnect(connection.socketChannel());
                 this.lastReconnectionAttempt = 0;
                 this.lastReconnectionAttemptMS = 0;
+
             } else {
                 lastReconnectionAttempt++;
                 if(builder.reconnectionWarningThreshold() > 0) {
@@ -374,6 +375,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 }
 
                 adapter.finish();
+
             } else {
                 readBuffer.position(readBuffer.position() + size);
                 return readNextExcerpt();

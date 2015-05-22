@@ -108,6 +108,7 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     public Excerpt toStart() {
         if (wrappedTailer == null) {
             wrappedExcerpt.toStart();
+
         } else {
             wrappedTailer.toStart();
         }
@@ -136,5 +137,4 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         wrappedExcerpt.findRange(startEnd, comparator);
     }
-
 }

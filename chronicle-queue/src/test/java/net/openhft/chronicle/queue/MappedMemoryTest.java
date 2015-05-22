@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 public class MappedMemoryTest {
 
     private static final long SHIFT = 26L;
@@ -59,7 +58,6 @@ public class MappedMemoryTest {
                 MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
                 Bytes bytes1 = mappedFile.acquire(1).bytes();
 
-
                 long startTime = System.nanoTime();
                 for (long i = 0; i < BLOCK_SIZE; i += 8L) {
                     bytes1.writeLong(i);
@@ -67,7 +65,6 @@ public class MappedMemoryTest {
 
                 System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of longs written=" + BLOCK_SIZE / 8));
                 mappedFile.close();
-
             } finally {
                 tempFile.delete();
             }
@@ -80,7 +77,6 @@ public class MappedMemoryTest {
     public void testShowComparablePerformanceOfBytes() throws IOException {
 
         for (int x = 0; x < 5; x++) {
-
             System.out.println("\n\niteration " + x);
             File tempFile = File.createTempFile("chronicle", "q");
             try {
@@ -94,11 +90,9 @@ public class MappedMemoryTest {
                 }
 
                 System.out.println("With MappedNativeBytes,\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
-
             } finally {
                 tempFile.delete();
             }
-
 
             File tempFile2 = File.createTempFile("chronicle", "q");
             try {
@@ -106,21 +100,17 @@ public class MappedMemoryTest {
                 MappedFile mappedFile = new MappedFile(tempFile.getName(), BLOCK_SIZE, 8);
                 Bytes bytes1 = mappedFile.acquire(1).bytes();
 
-
                 long startTime = System.nanoTime();
                 for (long i = 0; i < BLOCK_SIZE; i++) {
                     bytes1.writeByte('X');
                 }
 
                 System.out.println("With NativeBytes,\t\t time=" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) + ("ms, number of bytes written= 1L << " + SHIFT + " = " + BLOCK_SIZE));
-
-
             } finally {
                 tempFile2.delete();
             }
             System.out.println("");
         }
-
 
     }
 

@@ -19,12 +19,12 @@
 package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.wire.ParameterizeWireKey;
 import net.openhft.chronicle.map.AbstactStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.ParameterizeWireKey;
 import net.openhft.chronicle.wire.TextWire;
 import net.openhft.chronicle.wire.WireKey;
 import org.jetbrains.annotations.NotNull;
@@ -60,7 +60,6 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new ClientWiredExcerptTailerStateless(this, hub, TextWire::new);
-
     }
 
     @NotNull
@@ -101,7 +100,6 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
         hasNext,
         index;
 
-
         private final WireKey[] params;
 
         <P extends WireKey> EventId(P... params) {
@@ -112,5 +110,4 @@ public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient i
             return (P[]) this.params;
         }
     }
-
 }

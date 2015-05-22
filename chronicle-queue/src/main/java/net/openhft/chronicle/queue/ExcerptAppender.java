@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +39,6 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @param writer to write one excerpt.
      */
     void writeDocument(Consumer<WireOut> writer);
-
 
     /**
      * @return the index last written to including padded entries.

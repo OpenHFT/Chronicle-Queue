@@ -312,6 +312,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
                 if(i == 1) {
                     startIndex = st.index();
+
                 } else if(i == items) {
                     endIndex = st.index();
                 }
@@ -410,6 +411,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                             assertEquals(expected, actual);
                             tailer.finish();
                             latch.countDown();
+
                         } else {
                             Thread.sleep(100);
                         }

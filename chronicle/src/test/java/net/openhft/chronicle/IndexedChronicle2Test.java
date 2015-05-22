@@ -249,5 +249,4 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
         assertClean(basePath);
     }
-
 }

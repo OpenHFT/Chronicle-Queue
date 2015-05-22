@@ -39,7 +39,6 @@ public class VanillaDataCache implements Closeable {
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
             int blockBits) {
-
         this.basePath = builder.path().getAbsolutePath();
         this.blockBits = blockBits;
         this.dateCache = dateCache;

@@ -40,7 +40,6 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
         return wrapped.chronicle();
     }
 
-
     public boolean wasPadding() {
         return wrapped.wasPadding();
     }
@@ -64,5 +63,4 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
     public boolean nextSynchronous() {
         return wrapped.nextSynchronous();
     }
-
 }

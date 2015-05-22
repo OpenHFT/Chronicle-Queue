@@ -65,7 +65,6 @@ public class ZippedDocumentAppender implements Closeable {
         qReader.submit(new Consumer());
     }
 
-
     /**
      * the bytes that you wish to append, this bytes will become zipped and appended to the
      * chronicle using a background thread
@@ -118,7 +117,6 @@ public class ZippedDocumentAppender implements Closeable {
         public void run() {
             try {
                 for (; ; ) {
-
                     if (Thread.currentThread().isInterrupted())
                         return;
 
@@ -130,7 +128,6 @@ public class ZippedDocumentAppender implements Closeable {
 
                     compresser.setInput(input, (int) value.position(), (int) value.remaining());
                     compresser.finish();
-
 
                     int limit = compresser.deflate(output);
                     compresser.end();
@@ -150,7 +147,6 @@ public class ZippedDocumentAppender implements Closeable {
         @NotNull
         @Override
         public Bytes provide(final long maxSize) {
-
             if (maxSize < inputBuffer.capacity())
                 return inputBuffer.clear();
 
@@ -168,7 +164,5 @@ public class ZippedDocumentAppender implements Closeable {
             return inputBuffer;
         }
 
-
     }
-
 }
