@@ -104,17 +104,17 @@ public class WrappedExcerptAppenders {
 
     public static class ByteBufferBytesExcerptAppenderWrapper extends WrappedExcerptAppender<ByteBufferBytesAppender> {
 
-        private final int defaulCapacity;
+        private final int defaultCapacity;
 
-        public ByteBufferBytesExcerptAppenderWrapper(int defaulCapacity) {
-            super(ByteBufferBytesAppender.withSize(defaulCapacity));
+        public ByteBufferBytesExcerptAppenderWrapper(int defaultCapacity) {
+            super(ByteBufferBytesAppender.withSize(defaultCapacity));
 
-            this.defaulCapacity = defaulCapacity;
+            this.defaultCapacity = defaultCapacity;
         }
 
         @Override
         public void startExcerpt() {
-            this.startExcerpt(this.defaulCapacity);
+            this.startExcerpt(this.defaultCapacity);
         }
 
         @Override
