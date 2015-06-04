@@ -22,6 +22,8 @@ import net.openhft.chronicle.*;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.StreamCorruptedException;
+
 /**
  * @author peter.lawrey
  */
@@ -136,5 +138,15 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     @Override
     public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
         wrappedExcerpt.findRange(startEnd, comparator);
+    }
+
+    @Override
+    public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+        return wrappedExcerpt.read8bitText(stringBuilder);
+    }
+
+    @Override
+    public void write8bitText(CharSequence charSequence) {
+        wrappedExcerpt.write8bitText(charSequence);
     }
 }

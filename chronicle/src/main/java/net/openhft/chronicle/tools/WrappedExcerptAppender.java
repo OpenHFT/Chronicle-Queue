@@ -22,6 +22,8 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.StreamCorruptedException;
+
 public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBytes<T> implements ExcerptAppender {
 
     public WrappedExcerptAppender(final @NotNull T appender) {
@@ -62,5 +64,15 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
 
     public boolean nextSynchronous() {
         return wrapped.nextSynchronous();
+    }
+
+    @Override
+    public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+        return wrapped.read8bitText(stringBuilder);
+    }
+
+    @Override
+    public void write8bitText(CharSequence charSequence) {
+        wrapped.write8bitText(charSequence);
     }
 }
