@@ -17,7 +17,7 @@ Releases are available on maven central as
   <version><!--replace with the latest version, see below--></version>
 </dependency>
 ```
-Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22) 
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22)
 
 Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle)
 
@@ -42,45 +42,45 @@ Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repos
     * [Read with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#read-with-direct-reference)
     * [Ordering fields of DataValueClasses](https://github.com/OpenHFT/Chronicle-Queue#ordering-fields-of-DataValueClasses)
   * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
-  * [Non blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
+  * [Non-blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
   * [Data Filtering](https://github.com/OpenHFT/Chronicle-Queue#data-filtering)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ## Overview
-Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications. 
+Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
-At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised. 
+At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
-Using non-heap storage options(RandomAccessFile) Chronicle provides a processing environment where applications do not suffer from GarbageCollection. While implementing high performance and memory-intensive applications ( you heard the fancy term "bigdata"?) in Java; one of the biggest problems is GarbageCollection. GarbageCollection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
-Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. Random access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory. 
+Using non-heap storage options (RandomAccessFile) Chronicle provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. RandomAccessFiles permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
 ## Building Blocks
-Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using Chronicle interface. 
+Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
 
 Chronicle has three main concepts:
   * Tailer (sequential reads)
   * Excerpt (random reads)
   * Appender (sequential writes).
 
-An Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing Excerpt at the end. 
+An Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing the Excerpt at the end.
 A Tailer is an Excerpt optimized for sequential reads.
-An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle. 
+An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle.
 
 ## Chronicle Queue V3
 
-Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations. 
+Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations.
 
-### IndexedChronicle 
-IndexedChronicle is a single writer multiple reader Chronicle. 
+### IndexedChronicle
+IndexedChronicle is a single writer multiple reader Chronicle.
 
-For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory this is why it named as "Indexed". But this index is just sequential index, first object has index 0, second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
+For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory. This is why it is named as "Indexed". But this index is just a sequential index, the first object has index 0, the second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
 
 ```
 base-directory /
@@ -88,8 +88,8 @@ base-directory /
     name.data
 ```
 
-### VanillaChronicle 
-Vanilla Chronicle is a designed for more features rather than just speed and it supports:
+### VanillaChronicle
+Vanilla Chronicle is a designed for more features rather than just speed. It supports:
  - rolling files on a daily, weekly or hourly basis.
  - concurrent writers on the same machine.
  - concurrent readers on the same machine or across multiple machines via TCP replication.
@@ -97,7 +97,7 @@ Vanilla Chronicle is a designed for more features rather than just speed and it 
  - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
  - synchronous persistence as required. (commit to disk before continuing)
  - exact length of entries
- 
+
 The directory structure is as follows.
 
 ```
@@ -114,7 +114,7 @@ This is used to avoid seeing regular data as a length and detect corruption.  Th
 ## Getting Started
 
 ### Chronicle Construction
-Creating an instance of Chronicle is a little more complex than just calling a constructor. 
+Creating an instance of Chronicle is a little more complex than just calling a constructor.
 To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
@@ -122,7 +122,7 @@ String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 ```
 
-In this example we have created an IndexedChronicle which creates two RandomAccessFile one for indexes and one for data having names relatively:
+In this example we have created an IndexedChronicle which creates two RandomAccessFiles one for indexes and one for data having names relatively:
 
 ${java.io.tmpdir}/getting-started.index
 ${java.io.tmpdir}/getting-started.data
@@ -132,13 +132,13 @@ ${java.io.tmpdir}/getting-started.data
 // Obtain an ExcerptAppender
 ExcerptAppender appender = chronicle.createAppender();
 
-// Configure the appender to write up to 100 bytes 
-appender.startExcerpt(100); 
+// Configure the appender to write up to 100 bytes
+appender.startExcerpt(100);
 
-// Copy the content of the Object as binary 
+// Copy the content of the Object as binary
 appender.writeObject("TestMessage");
 
-// Commit 
+// Commit
 appender.finish();
 ```
 
@@ -169,13 +169,13 @@ chronicle.close();
 
 ## Replication
 
-Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwith requirements. 
+Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwitdh requirements.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
 ### Source
 
-A Chronicle-Queue Source is the master source of data  
+A Chronicle-Queue Source is the master source of data
 ```java
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-source"
 
@@ -196,7 +196,7 @@ Chronicle source = ChronicleQueueBuilder
 
 ### Sink
 
-A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica). 
+A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica).
 
 ```java
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-sink"
@@ -207,7 +207,7 @@ Chronicle sink = ChronicleQueueBuilder
     .sink()
     .connectAddress("localhost", 1234)
     .build();
-    
+
 // Wrap an existing Chronicle-Queue
 Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/statefull")
 Chronicle sink = ChronicleQueueBuilder
@@ -237,7 +237,7 @@ Chronicle chronicle = ChronicleQueueBuilder
     .remoteAppender()
     .connectAddress("localhost", 1234)
     .build();
-    
+
 ExcerptAppender appender.createAppender();
 appender.startExcerpt();
 appender.writeLong(100)
@@ -258,7 +258,7 @@ Chronicle chronicle = ChronicleQueueBuilder
 
 ### Off-Heap Data Structures
 
-An Exceprt provide all the low-level primitive to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.   
+An Exceprt provides all the low-level primitives to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.
 
 As example, we want to store some events to Chronicle-Queue so we can write an interface like that:
 
@@ -277,14 +277,14 @@ public static interface Event extends Byteable {
     void setTimestamp(long timestamp);
     long getTimestamp();
 }
-```   
+```
 Now we have the option to automatically generate a concrete class with:
-  * DataValueClasses.newDirectInstance(Event.class) which creates a concrete implementation of the given interface baked by an off-heap buffer
-  * DataValueClasses.newDirectReference(Event.class) which reates a concrete implementation of the given interface which need to be supplied with a buffer to write to
+  * DataValueClasses.newDirectInstance(Event.class) which creates a concrete implementation of the given interface backed by an off-heap buffer
+  * DataValueClasses.newDirectReference(Event.class) which creates a concrete implementation of the given interface which needs to be supplied with a buffer to write to
 
 #### Write with Direct Instance
 
-When we write to an object created with newDirectInstance we write to an off-heap buffer owned by the generated class itself so we do not write directly to an Excerpt, once done we can write to the Excerpt as usual:  
+When we write to an object created with newDirectInstance we write to an off-heap buffer owned by the generated class itself so we do not write directly to an Excerpt. Once done we can write to the Excerpt as usual:
 
 ```java
 final int items = 100;
@@ -310,7 +310,7 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
 
 #### Write with Direct Reference
 
-An object created with newDirectReference does not hold any buffer so we need to provide one which can be an Excerp. By doing so we directly write to the Excerpt's buffer. 
+An object created with newDirectReference does not hold any buffer so we need to provide one which can be an Excerpt. By doing so we directly write to the Excerpt's buffer.
 
 ```java
 final int items = 100;
@@ -338,9 +338,9 @@ try (Chronicle chronicle = ChronicleQueueBuilder.vanilla(path).build()) {
 
 #### Read with Direct Reference
 
-Reading data from an Excerp via a class generated via newDirectReference is very efficient as 
-  * it does not involve any copy because the de-serialization is performed lazily and only on the needed fileds
-  * you do not have to deal with data offsets as it the code to do so is generated for you by newDirectReference
+Reading data from an Excerpt via a class generated via newDirectReference is very efficient as:
+  * it does not involve any copy because the de-serialization is performed lazily and only on the needed fields
+  * you do not have to deal with data offsets as the code to do so is generated for you by newDirectReference
 
 ```java
 try (ExcerptTailer tailer = chronicle.createTailer()) {
@@ -357,10 +357,10 @@ try (ExcerptTailer tailer = chronicle.createTailer()) {
 
 
 #### Ordering fields of DataValueClasses
- 
+
 ![](http://chronicle.software/wp-content/uploads/2014/09/Chronicle-Queue-Group_01.jpg)
 
-By default when classes generated via DataValueClasses are serialized, their fields will be ordered by field size ( smallest first ), however sometimes, especially when you add new fields, you may not want new small fields to be serialize towards the top, You may wish to preserve the existing order of your fields, you can do this by using the @Group annotation to each method. The serialization order of the fields are determined by adding @Group to the set() method, If you wish you can have a number of different methods with the same value in @Group(), Methods with the same value continue to be ordered by size ( smallest first).
+By default when classes generated via DataValueClasses are serialized, their fields will be ordered by field size (smallest first), however sometimes, especially when you add new fields, you may not want new small fields to be serialized towards the top. If you wish to preserve the existing order of your fields, you can do this by using the @Group annotation on each method. The serialization order of the fields is determined by adding @Group to the set() methods. If you wish you can have a number of different methods with the same value in @Group(). Methods with the same value continue to be ordered by size (smallest first).
 
 See test below
 ``` java
@@ -440,7 +440,7 @@ public class GroupTest {
             Assert.assertEquals("Hello World", baseInterface.getStr());
         }
     }
-    
+
     public interface BaseInterface {
         String getStr();
         void setStr(@MaxSize(15) String str);
@@ -459,10 +459,10 @@ public class GroupTest {
 
 ### Reading the Chronicle after a shutdown
 
-Let's say my Chronicle Reader Thread dies. When the reader thread is up again, how do we ensure that the reader will read from the point where he left off? 
+Let's say my Chronicle Reader Thread dies. When the reader thread is up again, how do we ensure that the reader will read from the point where it left off?
 
-here is a number of solutions. You can:
-  * write the results of the message to an output chronicle with with meta data like timings and the source index. If you reread the output to reconstruct your state you can also determine which entry was processed ie. You want to replay any entries read but for which there was no output.
+Here is a number of solutions. You can:
+  * write the results of the message to an output chronicle with meta data like timings and the source index. If you reread the output to reconstruct your state you can also determine which entry was processed, i.e. you want to replay any entries read but for which there was no output.
   * you can record the index of the last entry processed in a ChronicleMap.
   * you can reread all the entries and check via some other means whether it is a duplicate or not.
   * you can mark entries on the input, either for load balancing or timestamp in when the entry was read. The last entry read can be found by finding the last entry without a time stamp. You can use the binary search facility to do this efficiently.
@@ -495,7 +495,7 @@ protected static class Reader implements Runnable  {
                     // Try to acquire the Excerpt and mark the event as being processed by this Reader
                     else if (event.compareAndSwapOwner(0, this.id * 100)) {
                         // Do something with the Event
-                        
+
                         // Mark the event as processed by this Reader
                         event.compareAndSwapOwner(this.id * 100, this.id);
                     }
@@ -510,9 +510,9 @@ protected static class Reader implements Runnable  {
 }
 ```
 
-### Non blocking Remote Client
+### Non-blocking Remote Client
 
-On a remote client (Synk or Tailer) nextIndex() waits untill some data is received from the Source before return true or false (in case the client receives an heart-Beat, nextIndex returns false) but sometimes you do not want this behavior, i.e. you want to monitor moultiple chronicles so you can set the number of times the client checks for data before giving up:
+On a remote client (Sink or Tailer) nextIndex() waits until some data is received from the Source before returning true or false (in case the client receives a heartbeat, nextIndex returns false) but sometimes you do not want this behavior, i.e. you want to monitor multiple chronicles so you can set the number of times the client checks for data before giving up:
 
 ```java
 Chronicle[] chronicles = new Chronicle[] {
@@ -523,9 +523,9 @@ Chronicle[] chronicles = new Chronicle[] {
     ChronicleQueueBuilder.remoteTailer()
         .connectAddress("localhost", 1235)
         .readSpinCount(5)
-        .build() 
+        .build()
  };
- 
+
  for(Chronicle chronicle : chronicles) {
      if(chronicle.nextIndex()) {
          // do something
@@ -545,13 +545,13 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
         public void apply(Bytes from, Bytes to) {
             //date
             to.writeLong(from.readLong());
-            
+
             //open which we not send out
             from.readDouble();
-            
+
             // high
             to.writeDouble(from.readDouble());
-            
+
             //low
             to.writeDouble(from.readDouble());
         })
