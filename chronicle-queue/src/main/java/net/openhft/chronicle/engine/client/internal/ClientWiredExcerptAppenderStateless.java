@@ -2,7 +2,7 @@ package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.map.AbstactStatelessClient;
+import net.openhft.chronicle.map.AbstractStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.Wire;
@@ -17,7 +17,7 @@ import static net.openhft.chronicle.engine.client.internal.ClientWiredChronicleQ
 /**
  * Created by daniel on 14/04/15.
  */
-public class ClientWiredExcerptAppenderStateless extends AbstactStatelessClient implements ExcerptAppender {
+public class ClientWiredExcerptAppenderStateless extends AbstractStatelessClient implements ExcerptAppender {
 
     private ChronicleQueue queue;
     private long cid;

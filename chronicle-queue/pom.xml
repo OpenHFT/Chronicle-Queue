@@ -50,7 +50,7 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
                 <type>pom</type>
-                <version>1.0.6</version>
+                <version>1.3.3-SNAPSHOT</version>
                 <scope>import</scope>
             </dependency>
 
