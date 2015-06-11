@@ -19,7 +19,7 @@
 package net.openhft.chronicle.engine.client.internal;
 
 import net.openhft.chronicle.engine.client.ClientWiredStatelessTcpConnectionHub;
-import net.openhft.chronicle.map.AbstactStatelessClient;
+import net.openhft.chronicle.map.AbstractStatelessClient;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -34,7 +34,7 @@ import java.io.IOException;
 /**
  * Created by Rob Austin
  */
-public class ClientWiredChronicleQueueStateless extends AbstactStatelessClient implements ChronicleQueue {
+public class ClientWiredChronicleQueueStateless extends AbstractStatelessClient implements ChronicleQueue {
 
     private ClientWiredStatelessTcpConnectionHub hub;
     private String name;
