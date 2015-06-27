@@ -640,4 +640,39 @@ The locking mechanism detects when you take a long time to get a lock. This mean
 - you are writing at a high rate which has resulted in some blocking paging/IO operation. You can monitor this in Unix with atop. Look for heavy write activity. You can tune the kernel to reduce the impact.
 - you are performing a long operation while holding a lock (Unlikely in your case)
 
+#### Question
+can I configure my queue to always write to disk if desired?
+#### Answer
+Yes
+
+#### Question
+Are the objects stored in the queue always written to disk or is there some kind of configuration that keeps objects in memory first and when required stores to disk?
+#### Answer
+By default, Queue writes synchronously to the OS and lets the OS write the data when it can. You can change this so that it will not return from finish() unless the OS says it has written the data to disk.
+
+#### Question
+Is the memory used by the JVM not managed by itself but by the OS (through the use of memory mapped file)?
+#### Answer
+The memory is managed by the OS so there is nothing for the JVM to do as such.  This memory doesn't use any heap (except a few objects to manage the native memory)
+
+#### Question
+Does it mean if the JVM crash, what was not yet written to disk is not lost? And will be written to disk eventually?
+#### Answer
+After finish() returns, and the JVM crashes, the data will still be written to disk. If the JVM crashes in the middle of writing a message, the message is truncated. If the OS crashes before data has been written, it can be lost. If this is a concern you can use replication to mitigate this.
+
+#### Question
+If I start the application again, will it be able to resume reading and writing to the same queue without loss of message?
+#### Answer
+If the OS hasn't died, you will be able to continue reading and writing from where you were up date.
+
+#### Question
+To be able to continue reading after a crash, do I must know the index where I was?
+#### Answer
+To continue after a restart you need to know the index to read from. This can mean storing the index in another file like Chronicle Map or marking the entries as you process them e.g. with a time stamp or a flag.
+
+#### Question
+Data stored in the queue is not removed after it has been read? Should I take care of it if I want to remove things? Is there some configurable way of doing that automatically like keeping N messages or keeping for a given time? OR Should it be done outside of the JVM?
+#### Answer
+The Queue is a persistent Queue where old entries are never removed. The assumption is that they will be archived or deleted as whole files when you no longer need them. It has to be done outside the JVM at the moment. The assumption is that disk space is cheap. If you are not writing at a high rate you might find you use only a few GB per day and you can delete the files after they rotate at the end of the day. You can also do hourly rotation if you need (or faster)
+
 ---
