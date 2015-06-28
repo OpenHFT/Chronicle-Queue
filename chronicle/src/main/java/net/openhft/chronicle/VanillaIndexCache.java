@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.text.ParseException;
 
 public class VanillaIndexCache implements Closeable {
-    public static final Logger LOGGER = LoggerFactory.getLogger(VanillaIndexCache.class);
     public static final String FILE_NAME_PREFIX = "index-";
 
     private final String basePath;
@@ -39,7 +38,6 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
-    //private final int[][] appenderCycles;
 
     VanillaIndexCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
@@ -56,22 +54,14 @@ public class VanillaIndexCache implements Closeable {
             true,
             builder.cleanupOnClose()
         );
-
-        /*
-        int lastCycle = (int)lastCycle();
-        int lastIndex = lastIndexFile(lastCycle);
-        this.appenderCycles = new int[][]{
-            new int[]{ lastCycle, lastIndex },
-            new int[]{ 0, 0 }
-        };
-        */
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
-        // Position can be changed by another thread, so take a snapshot each loop so that
-        // buffer overflows are not generated when advancing to the next position.
-        // As a result, the position could step backwards when this method is called concurrently,
-        // but the compareAndSwapLong call ensures that data is never overwritten.
+        // Position can be changed by another thread, so take a snapshot each loop
+        // so that buffer overflows are not generated when advancing to the next
+        // position. As a result, the position could step backwards when this method
+        // is called concurrently, but the compareAndSwapLong call ensures that
+        // data is never overwritten.
 
         if (bytes != null) {
             boolean endOfFile = false;

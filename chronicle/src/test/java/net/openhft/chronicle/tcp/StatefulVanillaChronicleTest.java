@@ -593,11 +593,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
-        final Chronicle sinnk = sinkBuilder.build();
+        final Chronicle sink = sinkBuilder.build();
 
         testNonBlockingClient(
                 source,
-                sinnk,
+                sink,
                 sinkBuilder.heartbeatIntervalMillis()
         );
     }
