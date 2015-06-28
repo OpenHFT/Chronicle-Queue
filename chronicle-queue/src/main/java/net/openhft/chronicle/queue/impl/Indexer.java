@@ -49,9 +49,9 @@ public class Indexer {
     /**
      * Scans through every excerpts and records every 64th address in the index2index'
      *
-     * @throws Exception
+     * @
      */
-    public synchronized void index() throws Exception {
+    public synchronized void index()   {
         final ExcerptTailer tailer = chronicle.createTailer();
 
         for (long i = 0; i <= chronicle.lastIndex(); i++) {

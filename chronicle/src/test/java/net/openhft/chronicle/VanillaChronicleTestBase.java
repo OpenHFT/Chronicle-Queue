@@ -76,11 +76,11 @@ public class VanillaChronicleTestBase {
         }
     }
 
-    public void lsof(final String pid) throws Exception {
+    public void lsof(final String pid)   {
         lsof(pid, null);
     }
 
-    public void lsof(final String pid, final String pattern) throws Exception {
+    public void lsof(final String pid, final String pattern)   {
         String cmd = null;
         if(new File("/usr/sbin/lsof").exists()) {
             cmd = "/usr/sbin/lsof";

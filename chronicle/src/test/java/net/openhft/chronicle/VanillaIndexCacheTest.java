@@ -34,7 +34,7 @@ import static org.junit.Assert.*;
 
 public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     @Test
-    public void testIndexFor() throws Exception {
+    public void testIndexFor()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -89,7 +89,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testLastIndexFile() throws Exception {
+    public void testLastIndexFile()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -132,7 +132,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testConcurrentAppend() throws Exception {
+    public void testConcurrentAppend()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -212,7 +212,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     private Callable<Void> createAppendTask(final VanillaIndexCache cache, final int cycle, final long startValue, final long endValue) {
         return new Callable<Void>() {
             @Override
-            public Void call() throws Exception {
+            public Void call()   {
                 int lastIndex = 0;
                 for (long counter = startValue; counter < endValue; counter++) {
                     final VanillaMappedBytes vmb = cache.append(cycle, counter, false, lastIndex, new long[1]);

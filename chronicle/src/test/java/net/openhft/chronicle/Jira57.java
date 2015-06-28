@@ -58,7 +58,7 @@ public class Jira57 {
         return new TickDataTest(timeStamp, price, volume, type);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args)   {
         String dir = System.getProperty("java.io.tmpdir");
         String basePath = dir + "/test123";
         ChronicleTools.deleteOnExit(basePath);

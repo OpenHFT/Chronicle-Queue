@@ -25,13 +25,13 @@ import org.junit.Test;
 public class IndexOffsetTest {
 
     @Test
-    public void testFindExcerpt2() throws Exception {
+    public void testFindExcerpt2()   {
 
         Assert.assertEquals(1 * 8, IndexOffset.toAddress0(1L << (17L + 6L)));
     }
 
     @Test
-    public void testFindExcerpt() throws Exception {
+    public void testFindExcerpt()   {
 
         Assert.assertEquals(1 * 8, IndexOffset.toAddress1(64));
         Assert.assertEquals(1 * 8, IndexOffset.toAddress1(65));

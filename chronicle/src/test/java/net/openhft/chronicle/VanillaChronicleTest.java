@@ -63,7 +63,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static Callable<Void> createAppendTask(final VanillaChronicle chronicle, final long startValue, final long endValue) {
         return new Callable<Void>() {
             @Override
-            public Void call() throws Exception {
+            public Void call()   {
                 final ExcerptAppender appender = chronicle.createAppender();
                 try {
                     appendValues(appender, startValue, endValue);
@@ -768,7 +768,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         Actual   :1396197287
      */
     @Test
-    public void testReplicationWithRollingFilesEverySecond() throws Exception {
+    public void testReplicationWithRollingFilesEverySecond()   {
 //        TODO int RUNS = 100000;
         final int RUNS = 5 * 1000;
 
@@ -828,7 +828,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testReplicationWithRollingFilesEverySecond2() throws Exception {
+    public void testReplicationWithRollingFilesEverySecond2()   {
         final int RUNS = 10;
 
         final String baseDir = getTestPath();
@@ -877,7 +877,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testConcurrentAppend() throws Exception {
+    public void testConcurrentAppend()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -924,7 +924,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles() throws Exception {
+    public void testMultipleCycles()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -978,7 +978,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles2() throws Exception {
+    public void testMultipleCycles2()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -1021,7 +1021,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testLastIndex() throws Exception {
+    public void testLastIndex()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 

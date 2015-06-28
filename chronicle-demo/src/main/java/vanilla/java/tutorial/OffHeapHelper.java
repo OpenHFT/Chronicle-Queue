@@ -30,7 +30,7 @@ import static net.openhft.lang.model.DataValueClasses.newDirectReference;
 
 public class OffHeapHelper {
 
-    protected static void process(Chronicle chronicle, int items) throws Exception {
+    protected static void process(Chronicle chronicle, int items)   {
         final int readers = items / 10;
         ExecutorService ex = Executors.newFixedThreadPool(readers * 2);
         for (int i = 0; i < readers * 2; i++) {

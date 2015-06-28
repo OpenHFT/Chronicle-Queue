@@ -40,7 +40,7 @@ import static org.junit.Assert.assertTrue;
 public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestBase {
 
     @Test
-    public void testIndexedStatelessSink_001() throws Exception {
+    public void testIndexedStatelessSink_001()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -94,7 +94,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testIndexedStatelessSink_002() throws Exception {
+    public void testIndexedStatelessSink_002()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -144,7 +144,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
 
     @Ignore // Sometimes it fails or stales
     @Test
-    public void testIndexedStatelessSink_003() throws Exception {
+    public void testIndexedStatelessSink_003()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -194,7 +194,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testIndexedStatelessSink_004() throws Exception {
+    public void testIndexedStatelessSink_004()   {
         final int tailers = 4;
         final int items = 1000000;
 
@@ -264,7 +264,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testIndexedStatelessSink_005() throws Exception {
+    public void testIndexedStatelessSink_005()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -306,7 +306,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testIndexedStatelessSink_006() throws Exception {
+    public void testIndexedStatelessSink_006()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -356,7 +356,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testStatelessIndexedNonBlockingClient() throws Exception {
+    public void testStatelessIndexedNonBlockingClient()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -388,7 +388,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-103
      */
     @Test
-    public void testIndexedRemoteClientReconnection() throws Exception {
+    public void testIndexedRemoteClientReconnection()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
@@ -498,7 +498,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
      */
     @Test
-    public void testIndexedJiraChron74() throws Exception {
+    public void testIndexedJiraChron74()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -515,7 +515,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
      */
     @Test
-    public void testIndexedJiraChron75() throws Exception {
+    public void testIndexedJiraChron75()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -532,7 +532,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-78
      */
     @Test
-    public void testIndexedJiraChron78() throws Exception {
+    public void testIndexedJiraChron78()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -549,7 +549,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-81
      */
     @Test
-    public void testIndexedJiraChron81() throws Exception {
+    public void testIndexedJiraChron81()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 

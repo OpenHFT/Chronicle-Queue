@@ -27,7 +27,7 @@ import static net.openhft.chronicle.ChronicleQueueBuilder.remoteAppender;
 public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTestBase {
 
     @Test(expected = IllegalStateException.class)
-    public void testIndexedStatelessAppenderReject() throws Exception {
+    public void testIndexedStatelessAppenderReject()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -59,7 +59,7 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testIndexedStatelessAppenderDiscard() throws Exception {
+    public void testIndexedStatelessAppenderDiscard()   {
         final String basePathSource = getIndexedTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 

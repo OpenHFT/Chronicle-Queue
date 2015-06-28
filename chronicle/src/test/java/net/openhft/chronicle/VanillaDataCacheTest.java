@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     @Test
-    public void testDataFor() throws Exception {
+    public void testDataFor()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -86,7 +86,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testDataForPerf() throws Exception {
+    public void testDataForPerf()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -135,7 +135,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testFindNextDataCount() throws Exception {
+    public void testFindNextDataCount()   {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 

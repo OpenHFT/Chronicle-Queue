@@ -65,7 +65,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWriteAndRead3SingleThreadedWrite() throws Exception {
+    public void testWriteAndRead3SingleThreadedWrite()   {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(24)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
@@ -87,7 +87,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testSimpledSingleThreadedWriteRead() throws Exception {
+    public void testSimpledSingleThreadedWriteRead()   {
 
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -99,7 +99,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testPollWithNoData() throws Exception {
+    public void testPollWithNoData()   {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             assert nativeStore.isNative();
 
@@ -112,7 +112,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWriteAndRead() throws Exception {
+    public void testWriteAndRead()   {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             assert nativeStore.isNative();
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
@@ -124,7 +124,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
+    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers()   {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             System.out.println(nativeStore.realCapacity());
             System.out.println(nativeStore.capacity());
@@ -147,7 +147,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void testWrite3read3SingleThreadedWrite() throws Exception {
+    public void testWrite3read3SingleThreadedWrite()   {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytes());
 
@@ -252,7 +252,7 @@ public class BytesRingBufferTest {
     // a" +
     //        " synchronized to ringbuffer.poll() and ringbuffer.offer()")
     @Test
-    public void testMultiThreadedWithIntValues() throws Exception {
+    public void testMultiThreadedWithIntValues()   {
 
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytes());

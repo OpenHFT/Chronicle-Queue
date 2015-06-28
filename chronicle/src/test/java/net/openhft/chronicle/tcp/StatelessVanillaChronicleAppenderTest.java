@@ -35,7 +35,7 @@ import static org.junit.Assert.assertFalse;
 public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTestBase {
 
     @Test(expected = UnsupportedOperationException.class)
-    public void testVanillaStatelessExceptionOnCreateTailer() throws Exception {
+    public void testVanillaStatelessExceptionOnCreateTailer()   {
         ChronicleQueueBuilder.remoteAppender()
             .connectAddress("localhost", 9876)
             .build()
@@ -43,7 +43,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testVanillaStatelessExceptionOnCreatAppenderTwice() throws Exception {
+    public void testVanillaStatelessExceptionOnCreatAppenderTwice()   {
         Chronicle ch = remoteAppender()
             .connectAddress("localhost", 9876)
             .build();
@@ -53,7 +53,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testVanillaStatelessAppender() throws Exception {
+    public void testVanillaStatelessAppender()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -106,7 +106,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testVanillaStatelessAppenderResizeWriteBuffer() throws Exception {
+    public void testVanillaStatelessAppenderResizeWriteBuffer()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -164,7 +164,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testVanillaStatelessAppenderAndTailer() throws Exception {
+    public void testVanillaStatelessAppenderAndTailer()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -221,7 +221,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testVanillaStatelessAppenderAndTailerMT() throws Exception {
+    public void testVanillaStatelessAppenderAndTailerMT()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -309,7 +309,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test
-    public void testVanillaStatelessAppenderIndices() throws Exception {
+    public void testVanillaStatelessAppenderIndices()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -357,7 +357,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
     }
 
     @Test( expected = IllegalStateException.class)
-    public void testVanillaStatelessAppenderExceptionOnDisconnect() throws Exception {
+    public void testVanillaStatelessAppenderExceptionOnDisconnect()   {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 

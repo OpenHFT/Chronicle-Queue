@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ZipBytesRingBufferTest {
 
     @Test
-    public void testZipAndAppend() throws Exception {
+    public void testZipAndAppend()   {
         File file = null;
 
         try {
@@ -82,14 +82,14 @@ public class ZipBytesRingBufferTest {
 
     }
 
-    public static Header getHeader(SingleChronicleQueue singleChronicleQueue) throws Exception {
+    public static Header getHeader(SingleChronicleQueue singleChronicleQueue)   {
         Field header = singleChronicleQueue.getClass().getDeclaredField("header");
         header.setAccessible(true);
 
         return (Header) header.get(singleChronicleQueue);
     }
 
-    public static long lastWrite(SingleChronicleQueue chronicle) throws Exception {
+    public static long lastWrite(SingleChronicleQueue chronicle)   {
         return getHeader(chronicle).writeByte().getVolatileValue();
     }
 }

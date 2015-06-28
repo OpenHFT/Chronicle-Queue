@@ -44,7 +44,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    protected void testJiraChron74(final int port, final Chronicle source) throws Exception {
+    protected void testJiraChron74(final int port, final Chronicle source)   {
         Chronicle sink = null;
         ExcerptTailer tailer = null;
 
@@ -105,7 +105,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
         }
     }
 
-    protected void testJiraChron75(final int port, final Chronicle source) throws Exception {
+    protected void testJiraChron75(final int port, final Chronicle source)   {
         final int items = 1000000;
         final int clients = 4;
         final int warmup = 100;
@@ -195,7 +195,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
         }
     }
 
-    protected void testJiraChron78(final int port, final Chronicle source) throws Exception {
+    protected void testJiraChron78(final int port, final Chronicle source)   {
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();
@@ -230,7 +230,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
         }
     }
 
-    protected void testJiraChron81(final int port, final Chronicle source) throws Exception {
+    protected void testJiraChron81(final int port, final Chronicle source)   {
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", port)
             .build();

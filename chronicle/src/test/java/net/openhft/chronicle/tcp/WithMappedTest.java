@@ -382,7 +382,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         try {
             Callable<Void> appenderCallable = new Callable<Void>() {
-                public Void call() throws Exception {
+                public Void call()   {
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -403,7 +403,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> highLowCallable = new Callable<Void>() {
-                public Void call() throws Exception {
+                public Void call()   {
                     final Chronicle highLowSink = sink(sinkHighLowBasePath)
                             .withMapping(HighLow.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
@@ -440,7 +440,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> closeCallable = new Callable<Void>() {
-                public Void call() throws Exception {
+                public Void call()   {
                     final Chronicle closeSink = sink(sinkCloseBasePath)
                             .withMapping(Close.fromMarketData()) // this is sent to the source
                             .connectAddress("localhost", port)
@@ -609,7 +609,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             }
 
             Callable<Void> appenderCallable = new Callable<Void>() {
-                public Void call() throws Exception {
+                public Void call()   {
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -630,7 +630,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> dayFilterCallable = new Callable<Void>() {
-                public Void call() throws Exception {
+                public Void call()   {
 
                     final Chronicle highLowSink = sink(sinkHighLowBasePath)
                             .withMapping(evenDayFilter()) // this is sent to the source

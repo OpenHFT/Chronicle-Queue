@@ -204,7 +204,7 @@ public class ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws Exception {
+    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout)   {
         final int messages = 1000;
 
         final Thread t1 = new Thread(new Runnable() {

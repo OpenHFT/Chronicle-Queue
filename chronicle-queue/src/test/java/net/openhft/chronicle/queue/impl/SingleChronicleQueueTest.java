@@ -74,7 +74,7 @@ public class SingleChronicleQueueTest {
     // *************************************************************************
 
     @Test
-    public void testSingleWire() throws Exception {
+    public void testSingleWire()   {
         final File file = createTempFile("testSingleWire");
 
         try {
@@ -99,7 +99,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testSingleDirect() throws Exception {
+    public void testSingleDirect()   {
         final File file = createTempFile("testSingleDirect");
 
         try {
@@ -127,7 +127,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testLastWrittenIndexPerAppender() throws Exception {
+    public void testLastWrittenIndexPerAppender()   {
         final File file = createTempFile("testLastWrittenIndexPerAppender");
         try {
 
@@ -142,7 +142,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testLastWrittenIndexPerAppenderNoData() throws Exception {
+    public void testLastWrittenIndexPerAppenderNoData()   {
         final File file = createTempFile("testLastWrittenIndexPerAppenderNoData");
         try {
             final ChronicleQueue chronicle = createQueue(file);
@@ -154,7 +154,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testLastIndexPerChronicle() throws Exception {
+    public void testLastIndexPerChronicle()   {
         final File file = createTempFile("testLastIndexPerChronicle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
@@ -168,7 +168,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testLastIndexPerChronicleNoData() throws Exception {
+    public void testLastIndexPerChronicleNoData()   {
         final File file = createTempFile("testLastIndexPerChronicleNoData");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
@@ -180,7 +180,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testReadAtIndexSingle() throws Exception {
+    public void testReadAtIndexSingle()   {
         final File file = createTempFile("testReadAtIndexSingle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
@@ -205,7 +205,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testReadAtIndex() throws Exception {
+    public void testReadAtIndex()   {
         final File file = createTempFile("testReadAtIndex");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
@@ -233,7 +233,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testReadAtIndexWithIndexes() throws Exception {
+    public void testReadAtIndexWithIndexes()   {
         final File file = createTempFile("testReadAtIndexWithIndexes");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
@@ -261,7 +261,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testReadAtIndexWithIndexesAtStart() throws Exception {
+    public void testReadAtIndexWithIndexesAtStart()   {
         final File file = createTempFile("testReadAtIndexWithIndexesAtStart");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
@@ -289,7 +289,7 @@ public class SingleChronicleQueueTest {
     }
 
     @Test
-    public void testScanFromLastKnownIndex() throws Exception {
+    public void testScanFromLastKnownIndex()   {
         final File file = createTempFile("testScanFromLastKnownIndex");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);

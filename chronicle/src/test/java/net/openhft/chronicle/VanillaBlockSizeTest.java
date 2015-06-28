@@ -84,7 +84,7 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
 
     @Ignore
     @Test
-    public void testMaxSizeTail() throws Exception {
+    public void testMaxSizeTail()   {
         final File root = tmpdir.newFolder(testName.getMethodName());
         root.deleteOnExit();
 

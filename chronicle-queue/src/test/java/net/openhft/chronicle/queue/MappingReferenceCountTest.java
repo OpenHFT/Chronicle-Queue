@@ -35,10 +35,10 @@ public class MappingReferenceCountTest {
     /**
      * tests that blocks are acquired and released as needed
      *
-     * @throws Exception
+     * @
      */
     @Test
-    public void testMappingReferenceCount() throws Exception {
+    public void testMappingReferenceCount()   {
 
         File tempFile = File.createTempFile("chronicle", "q");
 
