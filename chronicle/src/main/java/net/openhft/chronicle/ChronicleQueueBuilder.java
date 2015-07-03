@@ -100,6 +100,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int dataBlockSize;
         private int messageCapacity;
         private int indexBlockSize;
+        private long maxDataBlocks = Long.MAX_VALUE;
 
         /**
          * On 64 bit JVMs it has the following params: <ul> <li>data block size <b>128M</b></li>
@@ -317,6 +318,23 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder source() {
             return new SourceChronicleQueueBuilder(this);
+        }
+
+        /**
+         * Sets the maximum number of data block increments that will be allowed by the chronicle.
+         *
+         * This provides a hard cap on the max size of the underlying data file.
+         *
+         * @param maxDataBlocks max number of data blocks allowed
+         * @return this builder object back
+         */
+        public IndexedChronicleQueueBuilder maxDataBlocks(long maxDataBlocks) {
+            this.maxDataBlocks = maxDataBlocks;
+            return this;
+        }
+
+        public long maxDataBlocks() {
+            return maxDataBlocks;
         }
 
         @Override

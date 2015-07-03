@@ -803,6 +803,12 @@ public class IndexedChronicle implements Chronicle {
                 checkNewIndexLine();
                 writePaddedEntry();
 
+                // check we not going to bust the maxDataBlocks limit
+                if ((dataStartOffset + dataBlockSize) / dataBlockSize == IndexedChronicle.this.builder.maxDataBlocks()) {
+                    throw new IllegalStateException("Exceed maxDataBlocks :"
+                            + IndexedChronicle.this.builder.maxDataBlocks());
+                }
+
                 try {
                     loadNextDataBuffer();
                 } catch (IOException e) {
