@@ -17,29 +17,53 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class GitHub174 {
-    @Test
-    public void testError() throws Exception {
-        String dir = System.getProperty("java.io.tmpdir");
-        if (new File(dir, "error.data").exists()) {
-            new File(dir, "error.data").delete();
-            new File(dir, "error.index").delete();
-        }
 
-        write(dir, 2);
-        write(dir, 2);
-        assertEquals(4, readCount(dir));
+    @Parameterized.Parameters
+    public static Collection dataBlockSize() {
+        return Arrays.asList(new Object[][] {
+                {  64               },
+                {  64 * 128         },
+                { 128 * 1024        },
+                {  32 * 1024 * 1024 },
+                {  64 * 1024 * 1024 },
+                { 128 * 1024 * 1024 },
+                { 256 * 1024 * 1024 }
+        });
     }
 
-    private void write(String dir, int count) throws IOException {
-        try (Chronicle chronicle = chronicle(dir)) {
+    private final int dataBlockSize;
+
+    public GitHub174(int dataBlockSize) {
+        this.dataBlockSize = dataBlockSize;
+    }
+
+    @Test
+    public void testError() throws Exception {
+        String tmpdir = System.getProperty("java.io.tmpdir");
+        String path = tmpdir + "/error_" + this.dataBlockSize;
+
+        ChronicleTools.deleteOnExit(path);
+
+        write(path, 2);
+        write(path, 2);
+        assertEquals(4, readCount(path));
+    }
+
+    private void write(String path, int count) throws IOException {
+        try (Chronicle chronicle = chronicle(path)) {
             ExcerptAppender appender = chronicle.createAppender();
             for (int i = 0; i < count; i++) {
                 appender.startExcerpt(32);
@@ -51,12 +75,13 @@ public class GitHub174 {
         }
     }
 
-    private int readCount(String dir) throws IOException {
-        try (Chronicle chronicle = chronicle(dir)) {
+    private int readCount(String path) throws IOException {
+        try (Chronicle chronicle = chronicle(path)) {
             ExcerptTailer tailer = chronicle.createTailer();
             int i = 0;
             while (tailer.nextIndex()) {
-                System.out.println(tailer.readInt());
+                tailer.readInt();
+                tailer.finish();
                 i++;
             }
             tailer.close();
@@ -64,11 +89,10 @@ public class GitHub174 {
         }
     }
 
-    private Chronicle chronicle(String dir) throws IOException {
+    private Chronicle chronicle(String path) throws IOException {
         return ChronicleQueueBuilder
-                .indexed(dir, "error")
-                .dataBlockSize(64)
-                .indexBlockSize(64)
-                .build();
+            .indexed(path)
+            .dataBlockSize(this.dataBlockSize)
+            .build();
     }
 }
