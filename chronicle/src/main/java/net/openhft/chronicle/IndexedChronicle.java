@@ -499,6 +499,7 @@ public class IndexedChronicle implements Chronicle {
             startAddr = positionAddr = dataStartAddr + dataLookupMod;
             index = l + 1;
             indexPositionAddr = indexStartAddr + indexLineStart + inLine + 4;
+            capacityAddr = startAddr + dataBuffer.capacity();
         }
 
         private void setDataBuffer(long dataLookup) throws IOException {

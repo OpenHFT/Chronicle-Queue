@@ -31,8 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
-
 /**
  * @author luke
  *         Date: 4/7/15
@@ -41,7 +39,7 @@ import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
 public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
 
     @Rule
-    public final TemporaryFolder tmpdir = new TemporaryFolder(new File(Jvm.TMP));
+    public final TemporaryFolder tmpdir = new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
 
     @Rule
     public final TestName testName = new TestName();
@@ -84,7 +82,7 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
 
     @Ignore
     @Test
-    public void testMaxSizeTail()   {
+    public void testMaxSizeTail() throws IOException, InterruptedException {
         final File root = tmpdir.newFolder(testName.getMethodName());
         root.deleteOnExit();
 

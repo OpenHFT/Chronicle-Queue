@@ -54,7 +54,7 @@ import java.util.Random;
 public class VanillaLatencyTest {
 
     @Rule
-    public final TemporaryFolder tmpdir = new TemporaryFolder(new File(Jvm.TMP));
+    public final TemporaryFolder tmpdir = new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
 
     final int SAMPLE = 1000000;  //  10000000
     final int COUNT = SAMPLE * 10; // 100000000

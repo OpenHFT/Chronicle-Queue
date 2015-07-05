@@ -452,7 +452,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
     @Test
-    public void testIndexedClientReconnection()   {
+    public void testIndexedClientReconnection() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
         final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
@@ -638,7 +638,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     }
 
     @Test
-    public void testIndexedNonBlockingClient()   {
+    public void testIndexedNonBlockingClient() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
         final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();

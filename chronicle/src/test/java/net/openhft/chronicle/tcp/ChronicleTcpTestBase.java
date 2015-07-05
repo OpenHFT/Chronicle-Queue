@@ -53,7 +53,7 @@ public class ChronicleTcpTestBase {
     @Rule
     public final TestName testName = new TestName();
     @Rule
-    public final TemporaryFolder folder= new TemporaryFolder(new File(Jvm.TMP));
+    public final TemporaryFolder folder= new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
@@ -204,7 +204,7 @@ public class ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout)   {
+    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws IOException, InterruptedException  {
         final int messages = 1000;
 
         final Thread t1 = new Thread(new Runnable() {

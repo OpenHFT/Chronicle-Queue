@@ -64,11 +64,15 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         return new Callable<Void>() {
             @Override
             public Void call()   {
-                final ExcerptAppender appender = chronicle.createAppender();
+                ExcerptAppender appender = null;
                 try {
+                    appender = chronicle.createAppender();
                     appendValues(appender, startValue, endValue);
+                } catch(IOException e) {
                 } finally {
-                    appender.close();
+                    if(appender != null) {
+                        appender.close();
+                    }
                 }
                 return null;
             }
@@ -768,7 +772,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         Actual   :1396197287
      */
     @Test
-    public void testReplicationWithRollingFilesEverySecond()   {
+    public void testReplicationWithRollingFilesEverySecond() throws IOException, InterruptedException {
 //        TODO int RUNS = 100000;
         final int RUNS = 5 * 1000;
 
@@ -828,7 +832,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testReplicationWithRollingFilesEverySecond2()   {
+    public void testReplicationWithRollingFilesEverySecond2() throws IOException, InterruptedException {
         final int RUNS = 10;
 
         final String baseDir = getTestPath();
@@ -877,7 +881,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testConcurrentAppend()   {
+    public void testConcurrentAppend() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -924,7 +928,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles()   {
+    public void testMultipleCycles() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -978,7 +982,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles2()   {
+    public void testMultipleCycles2() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -1021,7 +1025,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testLastIndex()   {
+    public void testLastIndex() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 

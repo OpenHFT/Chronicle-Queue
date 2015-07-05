@@ -55,7 +55,7 @@ public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
     }
 
 	@Test
-	public void testLargeFile()   {
+	public void testLargeFile() throws IOException {
 		Assume.assumeTrue(Jvm.is64Bit());
 
         String basePath = getTestPath();

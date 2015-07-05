@@ -34,7 +34,7 @@ import static org.junit.Assert.*;
 
 public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     @Test
-    public void testIndexFor()   {
+    public void testIndexFor() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -89,7 +89,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testLastIndexFile()   {
+    public void testLastIndexFile() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -132,7 +132,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testConcurrentAppend()   {
+    public void testConcurrentAppend() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -213,14 +213,18 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         return new Callable<Void>() {
             @Override
             public Void call()   {
-                int lastIndex = 0;
-                for (long counter = startValue; counter < endValue; counter++) {
-                    final VanillaMappedBytes vmb = cache.append(cycle, counter, false, lastIndex, new long[1]);
-                    if(vmb != null) {
-                        lastIndex = (int)vmb.index();
-                        vmb.release();
+                try {
+                    int lastIndex = 0;
+                    for (long counter = startValue; counter < endValue; counter++) {
+                        final VanillaMappedBytes vmb = cache.append(cycle, counter, false, lastIndex, new long[1]);
+                        if (vmb != null) {
+                            lastIndex = (int) vmb.index();
+                            vmb.release();
+                        }
                     }
+                } catch(IOException e) {
                 }
+
                 return null;
             }
         };

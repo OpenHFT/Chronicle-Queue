@@ -40,7 +40,7 @@ import static org.junit.Assert.*;
 public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
-    public void testReplication1()   {
+    public void testReplication1() throws IOException, InterruptedException {
         final int RUNS = 100;
 
         final String sourceBasePath = getVanillaTestPath("source");
@@ -125,7 +125,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     }
 
     @Test
-    public void testReplicationWithRolling1()   {
+    public void testReplicationWithRolling1() throws IOException, InterruptedException {
         final int RUNS = 500;
 
         final String sourceBasePath = getVanillaTestPath("source");
@@ -224,7 +224,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     }
 
     @Test
-    public void testReplicationWithRolling2()   {
+    public void testReplicationWithRolling2() throws IOException, InterruptedException {
         final int RUNS = 100;
 
         final String sourceBasePath = getVanillaTestPath("source");
@@ -330,7 +330,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
      */
     //@Ignore // need to investigate why toEnd does not find the righ message
     @Test
-    public void testSourceSinkStartResumeRollingEverySecond()   {
+    public void testSourceSinkStartResumeRollingEverySecond() throws IOException, InterruptedException {
         //This is the config that is required to make the VanillaChronicle roll every second
 
         final String sourceBasePath = getVanillaTestPath("source");
@@ -477,7 +477,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
     @Test
-    public void testVanillaClientReconnection()   {
+    public void testVanillaClientReconnection() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
@@ -576,7 +576,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
     // *************************************************************************
 
     @Test
-    public void testVanillaNonBlockingClient()   {
+    public void testVanillaNonBlockingClient() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();

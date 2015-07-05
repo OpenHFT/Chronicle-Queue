@@ -229,7 +229,7 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
      * @author AndrasMilassin
      */
     @Test
-    public void testBoolean()   {
+    public void testBoolean() throws IOException {
         final String basePath = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 

@@ -24,6 +24,7 @@ import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +39,7 @@ import static org.junit.Assert.assertFalse;
 public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestBase {
 
     @Test(expected = UnsupportedOperationException.class)
-    public void testVanillaStatelessExceptionOnCreateAppender()   {
+    public void testVanillaStatelessExceptionOnCreateAppender() throws IOException, InterruptedException {
         ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", 9876)
             .build()
@@ -46,7 +47,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testVanillaStatelessExceptionOnCreatTailerTwice()   {
+    public void testVanillaStatelessExceptionOnCreatTailerTwice() throws IOException, InterruptedException {
         Chronicle ch = ChronicleQueueBuilder.remoteTailer()
             .connectAddress("localhost", 9876)
             .build();
@@ -56,7 +57,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testVanillaStatelessSink_001()   {
+    public void testVanillaStatelessSink_001() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -111,7 +112,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testVanillaStatelessSink_002()   {
+    public void testVanillaStatelessSink_002() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -161,7 +162,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testVanillaStatelessSink_004()   {
+    public void testVanillaStatelessSink_004() throws IOException, InterruptedException {
         final int tailers = 4;
         final int items = 1000000;
 
@@ -231,7 +232,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testVanillaStatelessSink_005()   {
+    public void testVanillaStatelessSink_005() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -279,7 +280,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     }
 
     @Test
-    public void testVanillaStatelessSink_006()   {
+    public void testVanillaStatelessSink_006() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -350,7 +351,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     // *************************************************************************
 
     @Test
-    public void testStatelessVanillaNonBlockingClient()   {
+    public void testStatelessVanillaNonBlockingClient() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -382,7 +383,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
     @Test
-    public void testVanillaClientReconnection()   {
+    public void testVanillaClientReconnection() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
         final int items = 20;
@@ -495,7 +496,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-74
      */
     @Test
-    public void testVanillaJiraChron74()   {
+    public void testVanillaJiraChron74() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -512,7 +513,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-75
      */
     @Test
-    public void testVanillaJiraChron75()   {
+    public void testVanillaJiraChron75() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -529,7 +530,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-78
      */
     @Test
-    public void testVanillaJiraChron78()   {
+    public void testVanillaJiraChron78() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
@@ -546,7 +547,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-81
      */
     @Test
-    public void testVanillaJiraChron81()   {
+    public void testVanillaJiraChron81() throws IOException, InterruptedException {
         final String basePathSource = getVanillaTestPath("source");
         final PortSupplier portSupplier = new PortSupplier();
 
