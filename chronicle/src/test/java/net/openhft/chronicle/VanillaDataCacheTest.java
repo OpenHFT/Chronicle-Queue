@@ -24,13 +24,14 @@ import net.openhft.lang.io.VanillaMappedBytes;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     @Test
-    public void testDataFor()   {
+    public void testDataFor() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -86,7 +87,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testDataForPerf()   {
+    public void testDataForPerf() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -135,7 +136,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testFindNextDataCount()   {
+    public void testFindNextDataCount() throws IOException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 

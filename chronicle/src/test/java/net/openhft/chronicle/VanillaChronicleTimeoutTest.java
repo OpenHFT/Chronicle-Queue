@@ -80,7 +80,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
     }
 
     @Test(timeout = 31000)
-    public void testDataCacheTimeout()   {
+    public void testDataCacheTimeout() throws IOException {
         final String baseDir = getTestPath();
 
         final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =

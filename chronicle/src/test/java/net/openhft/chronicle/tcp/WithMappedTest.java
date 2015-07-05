@@ -31,6 +31,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -404,78 +405,86 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
             Callable<Void> highLowCallable = new Callable<Void>() {
                 public Void call()   {
-                    final Chronicle highLowSink = sink(sinkHighLowBasePath)
-                            .withMapping(HighLow.fromMarketData()) // this is sent to the source
-                            .connectAddress("localhost", port)
-                            .build();
+                    try {
+                        final Chronicle highLowSink = sink(sinkHighLowBasePath)
+                                .withMapping(HighLow.fromMarketData()) // this is sent to the source
+                                .connectAddress("localhost", port)
+                                .build();
 
-                    AffinityLock lock = AffinityLock.acquireLock();
-                    try (final ExcerptTailer tailer = highLowSink.createTailer()) {
-                        while (tailer.nextIndex()) {
-                            HighLow actual = new HighLow();
-                            actual.readMarshallable(tailer);
+                        AffinityLock lock = AffinityLock.acquireLock();
+                        try (final ExcerptTailer tailer = highLowSink.createTailer()) {
+                            while (tailer.nextIndex()) {
+                                HighLow actual = new HighLow();
+                                actual.readMarshallable(tailer);
 
-                            // check the data is reasonable
-                            Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
-                            Assert.assertTrue(actual.date < DATE_FORMAT.parse("2016-01-01").getTime());
+                                // check the data is reasonable
+                                Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
+                                Assert.assertTrue(actual.date < DATE_FORMAT.parse("2016-01-01").getTime());
 
-                            Assert.assertTrue(actual.high > 5000);
-                            Assert.assertTrue(actual.high < 8000);
+                                Assert.assertTrue(actual.high > 5000);
+                                Assert.assertTrue(actual.high < 8000);
 
-                            Assert.assertTrue(actual.low > 5000);
-                            Assert.assertTrue(actual.low < 8000);
+                                Assert.assertTrue(actual.low > 5000);
+                                Assert.assertTrue(actual.low < 8000);
 
-                            MarketData expected = expectedMarketDate.get(new Date(actual.date));
-                            Assert.assertEquals(expected.high, actual.high, 0.0);
-                            Assert.assertEquals(expected.low, actual.low, 0.0);
+                                MarketData expected = expectedMarketDate.get(new Date(actual.date));
+                                Assert.assertEquals(expected.high, actual.high, 0.0);
+                                Assert.assertEquals(expected.low, actual.low, 0.0);
 
-                            tailer.finish();
+                                tailer.finish();
+                            }
+                        } finally {
+                            lock.release();
+                            highLowSink.clear();
                         }
-                    } finally {
-                        lock.release();
-                        highLowSink.clear();
+                    } catch(Exception e) {
+                        LOGGER.warn("", e);
                     }
+
                     return null;
                 }
             };
 
             Callable<Void> closeCallable = new Callable<Void>() {
                 public Void call()   {
-                    final Chronicle closeSink = sink(sinkCloseBasePath)
-                            .withMapping(Close.fromMarketData()) // this is sent to the source
-                            .connectAddress("localhost", port)
-                            .build();
+                    try {
+                        final Chronicle closeSink = sink(sinkCloseBasePath)
+                                .withMapping(Close.fromMarketData()) // this is sent to the source
+                                .connectAddress("localhost", port)
+                                .build();
 
-                    AffinityLock lock = AffinityLock.acquireLock();
-                    try (final ExcerptTailer tailer = closeSink.createTailer()) {
-                        while (tailer.nextIndex()) {
-                            Close actual = new Close();
-                            actual.readMarshallable(tailer);
+                        AffinityLock lock = AffinityLock.acquireLock();
+                        try(final ExcerptTailer tailer = closeSink.createTailer()) {
+                            while (tailer.nextIndex()) {
+                                Close actual = new Close();
+                                actual.readMarshallable(tailer);
 
-                            // check the data is reasonable
+                                // check the data is reasonable
 
-                            Assert.assertTrue(actual.date > _2014_01_01);
-                            Assert.assertTrue(actual.date < _2016_01_01);
+                                Assert.assertTrue(actual.date > _2014_01_01);
+                                Assert.assertTrue(actual.date < _2016_01_01);
 
-                            Assert.assertTrue(actual.adjClose > 5000);
-                            Assert.assertTrue(actual.adjClose < 8000);
+                                Assert.assertTrue(actual.adjClose > 5000);
+                                Assert.assertTrue(actual.adjClose < 8000);
 
-                            Assert.assertTrue(actual.close > 5000);
-                            Assert.assertTrue(actual.close < 8000);
+                                Assert.assertTrue(actual.close > 5000);
+                                Assert.assertTrue(actual.close < 8000);
 
-                            final MarketData expected = expectedMarketDate.get(new Date(actual.date));
+                                final MarketData expected = expectedMarketDate.get(new Date(actual.date));
 
-                            String message = "expected=" + expected + "actual=" + actual;
+                                String message = "expected=" + expected + "actual=" + actual;
 
-                            Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0);
-                            Assert.assertEquals(message, expected.close, actual.close, 0.0);
+                                Assert.assertEquals(message, expected.adjClose, actual.adjClose, 0.0);
+                                Assert.assertEquals(message, expected.close, actual.close, 0.0);
 
-                            tailer.finish();
-                        }
-
-                    } finally {
-                        lock.release();
-                        closeSink.clear();
+                                tailer.finish();
+                            }
+                        }finally {
+                                lock.release();
+                                closeSink.clear();
+                            }
+                    } catch(Exception e) {
+                        LOGGER.warn("", e);
                     }
 
                     return null;
@@ -632,38 +641,42 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             Callable<Void> dayFilterCallable = new Callable<Void>() {
                 public Void call()   {
 
-                    final Chronicle highLowSink = sink(sinkHighLowBasePath)
-                            .withMapping(evenDayFilter()) // this is sent to the source
-                            .connectAddress("localhost", port)
-                            .build();
+                    try {
+                        final Chronicle highLowSink = sink(sinkHighLowBasePath)
+                                .withMapping(evenDayFilter()) // this is sent to the source
+                                .connectAddress("localhost", port)
+                                .build();
 
-                    AffinityLock lock = AffinityLock.acquireLock();
+                        AffinityLock lock = AffinityLock.acquireLock();
 
-                    try (final ExcerptTailer tailer = highLowSink.createTailer()) {
-                        while (tailer.nextIndex()) {
-                            // skip the empty messages
-                            if (tailer.limit() == 0) {
-                                continue;
+                        try (final ExcerptTailer tailer = highLowSink.createTailer()) {
+                            while (tailer.nextIndex()) {
+                                // skip the empty messages
+                                if (tailer.limit() == 0) {
+                                    continue;
+                                }
+
+                                MarketData actual = new MarketData();
+                                actual.readMarshallable(tailer);
+
+                                //check that he date is even
+                                Assert.assertTrue(actual.date % 2 == 0);
+
+                                // check the data is reasonable
+                                Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
+
+                                final MarketData expected = expectedMarketDate.get(new Date(actual.date));
+                                Assert.assertEquals(expected, actual);
+
+                                tailer.finish();
                             }
-
-                            MarketData actual = new MarketData();
-                            actual.readMarshallable(tailer);
-
-                            //check that he date is even
-                            Assert.assertTrue(actual.date % 2 == 0);
-
-                            // check the data is reasonable
-                            Assert.assertTrue(actual.date > DATE_FORMAT.parse("2014-01-01").getTime());
-
-                            final MarketData expected = expectedMarketDate.get(new Date(actual.date));
-                            Assert.assertEquals(expected, actual);
-
-                            tailer.finish();
+                        } finally {
+                            lock.release();
+                            highLowSink.close();
+                            highLowSink.clear();
                         }
-                    } finally {
-                        lock.release();
-                        highLowSink.close();
-                        highLowSink.clear();
+                    } catch(Exception e) {
+                        LOGGER.warn("", e);
                     }
                     return null;
                 }

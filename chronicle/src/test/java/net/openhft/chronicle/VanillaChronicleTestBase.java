@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
@@ -43,14 +44,14 @@ public class VanillaChronicleTestBase {
     public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getTestPath() {
-        final String path = Jvm.TMP + "/vc-" + testName.getMethodName();
+        final String path = System.getProperty("java.io.tmpdir") + "/vc-" + testName.getMethodName();
         IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getTestPath(String suffix) {
-        final String path = Jvm.TMP + "/vc-" + testName.getMethodName() + suffix;
+        final String path = System.getProperty("java.io.tmpdir") + "/vc-" + testName.getMethodName() + suffix;
         IOTools.deleteDir(path);
 
         return path;
@@ -76,11 +77,11 @@ public class VanillaChronicleTestBase {
         }
     }
 
-    public void lsof(final String pid)   {
+    public void lsof(final String pid) throws IOException {
         lsof(pid, null);
     }
 
-    public void lsof(final String pid, final String pattern)   {
+    public void lsof(final String pid, final String pattern) throws IOException {
         String cmd = null;
         if(new File("/usr/sbin/lsof").exists()) {
             cmd = "/usr/sbin/lsof";

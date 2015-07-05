@@ -29,7 +29,7 @@ public class TestIndex {
 
     private static volatile boolean running = true;
 
-    public static void main(String[] args)   {
+    public static void main(String[] args) throws Exception {
         final Chronicle chronicle1 = ChronicleQueueBuilder.vanilla("./test1")
                 // use small blocks to increase the chances of a bug showing.
                 .dataBlockSize(4 << 10) // 4K
