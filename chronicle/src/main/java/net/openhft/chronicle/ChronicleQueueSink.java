@@ -24,8 +24,7 @@ import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.io.DirectByteBufferBytes;
-import net.openhft.lang.io.IByteBufferBytes;
+import net.openhft.lang.io.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +99,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ResizableDirectByteBufferBytes writeBuffer;
-        protected final ByteBuffer readBuffer;
+        protected final Bytes readBuffer;
         private long lastReconnectionAttemptMS;
         private long reconnectionIntervalMS;
         private long lastReconnectionAttempt;
@@ -110,7 +109,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
-            this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
+            this.readBuffer = ByteBufferBytes.wrap(ChronicleTcp.createBuffer(builder.minBufferSize()));
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
             this.lastReconnectionAttemptMS = 0;
             this.lastReconnectionAttempt = 0;
@@ -278,8 +277,8 @@ class ChronicleQueueSink extends WrappedChronicle {
             query(wrappedChronicle.lastIndex());
 
             if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
-                final int size = readBuffer.getInt();
-                readBuffer.getLong(); // consume data
+                final int size = readBuffer.readInt();
+                readBuffer.readLong(); // consume data
 
                 switch (size) {
                     case ChronicleTcp.IN_SYNC_LEN:
@@ -326,16 +325,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
-            if (!connection.read(
-                    readBuffer,
-                    ChronicleTcp.HEADER_SIZE,
-                    ChronicleTcp.HEADER_SIZE + 8,
-                    readSpinCount)) {
+            if (!readAtLeastHeader()) {
                 return false;
             }
 
-            final int size = readBuffer.getInt();
-            final long scIndex = readBuffer.getLong();
+            final int size = readBuffer.readInt();
+            final long scIndex = readBuffer.readLong();
 
             switch (size) {
                 case ChronicleTcp.IN_SYNC_LEN:
@@ -357,7 +352,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 this.adapter.startExcerpt(size, scIndex);
 
                 long remaining = size;
-                int limit = readBuffer.limit();
+                long limit = readBuffer.limit();
                 int size2 = (int) Math.min(readBuffer.remaining(), remaining);
 
                 remaining -= size2;
@@ -382,6 +377,31 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             return true;
+        }
+
+        private boolean readAtLeastHeader() throws IOException {
+            long rem = readBuffer.remaining();
+            if (rem < ChronicleTcp.HEADER_SIZE) {
+                if (readBuffer.remaining() == 0) {
+                    readBuffer.clear();
+                } else {
+                    compact(readBuffer);
+                }
+
+                return connection.read(
+                        readBuffer,
+                        ChronicleTcp.HEADER_SIZE + 8,
+                        readSpinCount);
+            }
+
+            return true;
+        }
+
+        private void compact(Bytes bytes) {
+            long pos = bytes.position();
+            long rem = bytes.remaining();
+            bytes.clear();
+            bytes.write(bytes, pos, rem);
         }
 
         @Override

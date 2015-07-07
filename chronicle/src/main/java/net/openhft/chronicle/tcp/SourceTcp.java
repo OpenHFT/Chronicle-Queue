@@ -307,7 +307,7 @@ public abstract class SourceTcp {
 
         protected DirectByteBufferBytes readUpTo(int size) throws IOException {
             readBuffer.resetToSize(size);
-            connection.readFullyOrEOF(readBuffer.buffer());
+            connection.readUpTo(readBuffer.buffer(), size, -1);
             readBuffer.buffer().flip();
             readBuffer.position(0);
             readBuffer.limit(readBuffer.limit());
