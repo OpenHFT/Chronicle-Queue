@@ -161,14 +161,15 @@ class TcpConnection {
         return read0(bytes.sliceAsByteBuffer(buffer), size, readAttempts);
     }
 
-    private boolean read0(ByteBuffer buffer, int size, int readAttempts) throws IOException {
+    private boolean read0(ByteBuffer buffer, int toRead, int readAttempts) throws IOException {
         int spins = 0;
-        int bytes = 0;
-        while (bytes < size) {
+        int bytesRead = 0;
+        while (bytesRead < toRead) {
             int rb = this.socketChannel.read(buffer);
+            System.out.println("Read " + rb + " bytes");
             if (rb < 0) {
                 throw new EOFException();
-            } else if (bytes == 0 && rb == 0 && readAttempts > -1) {
+            } else if (bytesRead == 0 && rb == 0 && readAttempts > -1) {
                 if (spins++ >= readAttempts) {
                     buffer.flip();
                     // this can only return false when nothing has been read.
@@ -177,7 +178,7 @@ class TcpConnection {
                 }
             } else {
                 spins = 0;
-                bytes += rb;
+                bytesRead += rb;
             }
         }
         buffer.flip();
