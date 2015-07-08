@@ -325,6 +325,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
+            System.out.println("About to read header");
             if (!readAtLeastHeader()) {
                 return false;
             }
@@ -387,7 +388,6 @@ class ChronicleQueueSink extends WrappedChronicle {
                 } else {
                     compact(readBuffer);
                 }
-                System.out.println("About to read header");
                 return connection.read(
                         readBuffer,
                         ChronicleTcp.HEADER_SIZE + 8,
