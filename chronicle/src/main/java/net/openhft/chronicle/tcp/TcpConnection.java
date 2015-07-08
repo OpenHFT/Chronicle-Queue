@@ -87,7 +87,6 @@ class TcpConnection {
     }
 
     public int write(final ByteBuffer buffer) throws IOException {
-        System.out.println("write " + buffer.remaining() + " bytes");
         return this.socketChannel.write(buffer);
     }
 
@@ -110,7 +109,6 @@ class TcpConnection {
 
     public void writeAll(final ByteBuffer bb) throws IOException {
         int bw = 0;
-        System.out.println("write " + bb.remaining() + " bytes");
         while (bb.remaining() > 0) {
             bw = this.socketChannel.write(bb);
             if (bw < 0) {
@@ -160,19 +158,17 @@ class TcpConnection {
 */
 
     public boolean read(final Bytes bytes, int size, int readAttempts) throws IOException {
-        return read0(bytes.sliceAsByteBuffer(buffer), size, readAttempts);
+        final ByteBuffer buffer = bytes.sliceAsByteBuffer(this.buffer);
+        boolean result = read0(buffer, size, readAttempts);
+        bytes.limit(buffer.limit() + bytes.position()).position(0); // bytes.flip();
+        return result;
     }
 
     private boolean read0(ByteBuffer buffer, int toRead, int readAttempts) throws IOException {
         int spins = 0;
         int bytesRead = 0;
-        System.out.println("br=" + bytesRead + ",tr=" + toRead);
         while (bytesRead < toRead) {
-            System.out.println("br=" + bytesRead + ",tr=" + toRead);
-            long start = System.nanoTime();
             int rb = this.socketChannel.read(buffer);
-            final long end = System.nanoTime();
-            System.out.println("Read " + rb + " bytes in " + (end - start) + "ns");
             if (rb < 0) {
                 throw new EOFException();
             } else if (bytesRead == 0 && rb == 0 && readAttempts > -1) {
@@ -241,7 +237,7 @@ class TcpConnection {
     }
 
     public boolean readUpTo(Bytes bytes, int size, int readAttempts) throws IOException {
-        return readUpTo(bytes.sliceAsByteBuffer(buffer), size, readAttempts);
+        return read(bytes, size, readAttempts);
     }
 
     public boolean readUpTo(ByteBuffer buffer, int size, int readAttempts) throws IOException {
