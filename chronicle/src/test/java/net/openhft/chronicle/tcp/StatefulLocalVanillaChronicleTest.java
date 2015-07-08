@@ -33,7 +33,7 @@ public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase
     @Test
     public void testPersistedLocalVanillaSink() throws IOException, InterruptedException{
         final String basePath = getVanillaTestPath();
-        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(1L << 20).build();
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(chronicle)

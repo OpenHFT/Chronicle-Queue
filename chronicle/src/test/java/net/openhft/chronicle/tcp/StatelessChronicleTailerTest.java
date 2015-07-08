@@ -32,6 +32,7 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
 
     @Test
     public void testRemoteTailerReconnect() throws IOException {
+        final int attempts = 10;
         long start = System.currentTimeMillis();
         try (Chronicle chronicle = ChronicleQueueBuilder
                 .remoteTailer()
@@ -39,12 +40,12 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
                 .reconnectionAttempts(1)
                 .build()) {
             ExcerptTailer tailer = chronicle.createTailer();
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < attempts; i++) {
                 assertFalse(tailer.nextIndex());
             }
         }
 
-        System.out.printf("Took %,d ms for 1000 failed attempts%n", System.currentTimeMillis() - start);
+        System.out.printf("Took %,d ms for %d failed attempts%n", System.currentTimeMillis() - start, attempts);
     }
 
     @Test
