@@ -132,6 +132,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -139,6 +140,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         final Chronicle sinkChronicle = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -343,6 +345,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -373,6 +376,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         //create a tailer to get the first 50 items then exit the tailer
         final Chronicle sink1 = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -399,6 +403,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         //now resume the tailer to get the first 50 items
         final Chronicle sink2 = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -528,6 +533,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         // Source 1
         Chronicle source1 = vanilla(basePathSource)
+                .dataBlockSize(1L << 20)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -552,6 +558,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         // Source 2
         Chronicle source2 = vanilla(basePathSource)
+                .dataBlockSize(1L << 20)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
