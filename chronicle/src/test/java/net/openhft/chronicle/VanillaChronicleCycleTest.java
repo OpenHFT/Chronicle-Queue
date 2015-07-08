@@ -77,8 +77,8 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
-        svc.execute(createWriter(createChronicle(basePath, cycle), cycle));
-        svc.execute(createReader(createChronicle(basePath, cycle), cycle, latch));
+        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle));
+        svc.execute(createReader(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, latch));
         svc.shutdown();
         svc.awaitTermination(1, TimeUnit.MINUTES);
 
@@ -90,6 +90,60 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
+    public void testCycleEverySecondWithOneSubdirectory() throws Exception {
+        final String basePath = getTestPath();
+        IOTools.deleteDir(basePath);
+
+        final CountDownLatch latch = new CountDownLatch(20);
+        final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
+        final ExecutorService svc = Executors.newFixedThreadPool(2);
+
+        svc.execute(
+            createWriter(
+                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                cycle)
+        );
+        svc.execute(
+            createReader(
+                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                cycle,
+                latch)
+        );
+
+        svc.shutdown();
+        svc.awaitTermination(1, TimeUnit.MINUTES);
+
+        Assert.assertEquals(0, latch.getCount());
+    }
+
+    @Test
+    public void testCycleEverySecondWithTwoSubdirectory() throws Exception {
+        final String basePath = getTestPath();
+        IOTools.deleteDir(basePath);
+
+        final CountDownLatch latch = new CountDownLatch(20);
+        final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
+        final ExecutorService svc = Executors.newFixedThreadPool(2);
+
+        svc.execute(
+            createWriter(
+                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                cycle)
+        );
+        svc.execute(
+            createReader(
+                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                cycle,
+                latch)
+        );
+
+        svc.shutdown();
+        svc.awaitTermination(1, TimeUnit.MINUTES);
+
+        Assert.assertEquals(0, latch.getCount());
+    }
+
+    @Test
     public void testCycleEveryMinute() throws Exception {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
@@ -98,8 +152,8 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.MINUTES;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
-        svc.execute(createWriter(createChronicle(basePath, cycle), cycle));
-        svc.execute(createReader(createChronicle(basePath, cycle), cycle, latch));
+        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle));
+        svc.execute(createReader(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, latch));
         svc.shutdown();
         svc.awaitTermination(10, TimeUnit.MINUTES);
 
@@ -130,7 +184,6 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
                     }
                 } catch (Exception e) {
                     LOGGER.warn("", e);
-
                 }
             }
         };
@@ -153,9 +206,5 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
                 }
             }
         };
-    }
-
-    static Chronicle createChronicle(String basePath, VanillaChronicle.Cycle cycle) throws IOException {
-        return ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build();
     }
 }
