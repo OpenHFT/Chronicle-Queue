@@ -21,8 +21,13 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
+import net.openhft.chronicle.tools.WrappedExcerpt;
 import net.openhft.chronicle.tools.WrappedExcerptAppenders;
 import net.openhft.chronicle.tools.WrappedExcerpts;
+import net.openhft.lang.io.ByteBufferBytes;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.WrappedBytes;
+import net.openhft.lang.model.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +35,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
+
+import static net.openhft.chronicle.tcp.ChronicleTcp.createBufferOfSize;
+import static net.openhft.lang.io.ByteBufferBytes.wrap;
 
 class RemoteChronicleQueue extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteChronicleQueue.class);
@@ -166,8 +174,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
             super(builder.minBufferSize());
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.readBuffer = ChronicleTcp.createBufferOfSize(12);
-            this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.readBuffer = createBufferOfSize(12);
+            this.commandBuffer = createBufferOfSize(16);
             this.lastIndex = -1;
             this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
         }
@@ -277,21 +285,52 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
     }
 
-    private final class StatelessExcerpt
-            extends WrappedExcerpts.ByteBufferBytesExcerptWrapper {
+    private abstract class AbstractStatelessExcerpt extends WrappedBytes<Bytes> implements Excerpt {
 
+        protected AbstractStatelessExcerpt(Bytes wrapped) {
+            super(wrapped);
+        }
+
+        protected Bytes resize(long capacity) {
+            if(capacity > Integer.MAX_VALUE) {
+                throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
+            }
+
+            if(capacity > capacity()) {
+                wrapped =  wrap(createBufferOfSize((int) capacity));
+            }
+
+            clear();
+            limit((int) capacity);
+            return this;
+        }
+
+        protected void cleanup() {
+            clear();
+        }
+
+    }
+
+    private final class StatelessExcerpt
+//            extends WrappedExcerpts.ByteBufferBytesExcerptWrapper {
+    extends AbstractStatelessExcerpt {
         private final Logger logger;
         private final ByteBuffer writeBuffer;
         private long index;
         private int readCount;
 
         public StatelessExcerpt() {
-            super(builder.minBufferSize());
+            super(wrap(createBufferOfSize(builder.minBufferSize())));
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.index = -1;
-            this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.writeBuffer = createBufferOfSize(16);
             this.readCount = builder.readSpinCount();
+        }
+
+        @Override
+        public boolean wasPadding() {
+            return false;
         }
 
         @Override
@@ -317,6 +356,16 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
+        public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void write8bitText(CharSequence charSequence) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public synchronized void close() {
             try {
                 connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_UNSUBSCRIBE, ChronicleTcp.IDX_NONE);
@@ -328,6 +377,16 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             super.close();
             RemoteChronicleQueue.this.excerpt = null;
+        }
+
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -349,10 +408,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_SUBSCRIBE, index);
 
                 while (true) {
-                    connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, -1);
+                    connection.read(resize(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, -1);
 
-                    int  receivedSize  = buffer().getInt();
-                    long receivedIndex = buffer().getLong();
+                    int  receivedSize  = readInt();
+                    long receivedIndex = readLong();
 
                     switch(receivedSize) {
                         case ChronicleTcp.SYNC_IDX_LEN:
@@ -373,7 +432,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                     // skip excerpt
                     if (receivedSize > 0) {
-                        connection.readUpTo(buffer(), receivedSize, -1);
+                        connection.read(resize(receivedSize), receivedSize, -1);
                     }
                 }
             } catch (IOException e) {
@@ -402,12 +461,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
 
-                if(!connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, this.readCount)) {
+                if(!connection.read(resize(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, this.readCount)) {
                     return false;
                 }
 
-                int  receivedSize  = buffer().getInt();
-                long receivedIndex = buffer().getLong();
+                int  receivedSize  = readInt();
+                long receivedIndex = readLong();
 
                 switch (receivedSize) {
                     case ChronicleTcp.IN_SYNC_LEN:
@@ -421,8 +480,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     throw new StreamCorruptedException("Size was " + receivedSize);
                 }
 
-                resize(receivedSize);
-                connection.readUpTo(buffer(), receivedSize, -1);
+                connection.read(resize(receivedSize), receivedSize, -1);
 
                 index = receivedIndex;
             } catch (IOException e1) {
