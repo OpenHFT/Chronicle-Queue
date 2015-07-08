@@ -73,11 +73,12 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
-        final CountDownLatch latch = new CountDownLatch(20);
+        final int iterations = 20;
+        final CountDownLatch latch = new CountDownLatch(iterations);
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
-        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle));
+        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, iterations));
         svc.execute(createReader(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, latch));
         svc.shutdown();
         svc.awaitTermination(1, TimeUnit.MINUTES);
@@ -94,14 +95,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
-        final CountDownLatch latch = new CountDownLatch(20);
+        final int iterations = 20;
+        final CountDownLatch latch = new CountDownLatch(iterations);
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
             createWriter(
                 ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
-                cycle)
+                cycle,
+                iterations)
         );
         svc.execute(
             createReader(
@@ -121,14 +124,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
-        final CountDownLatch latch = new CountDownLatch(20);
+        final int iterations = 20;
+        final CountDownLatch latch = new CountDownLatch(iterations);
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.SECONDS;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
             createWriter(
                 ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
-                cycle)
+                cycle,
+                iterations)
         );
         svc.execute(
             createReader(
@@ -148,11 +153,12 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
-        final CountDownLatch latch = new CountDownLatch(20);
+        final int iterations = 20;
+        final CountDownLatch latch = new CountDownLatch(iterations);
         final VanillaChronicle.Cycle cycle = VanillaChronicle.Cycle.MINUTES;
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
-        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle));
+        svc.execute(createWriter(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, iterations));
         svc.execute(createReader(ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).build(), cycle, latch));
         svc.shutdown();
         svc.awaitTermination(10, TimeUnit.MINUTES);
@@ -189,12 +195,12 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         };
     }
 
-    static Runnable createWriter(final Chronicle chron, final VanillaChronicle.Cycle cycle) {
+    static Runnable createWriter(final Chronicle chron, final VanillaChronicle.Cycle cycle, final int loops) {
         return new Runnable() {
             @Override
             public void run() {
                 try(ExcerptAppender appender = chron.createAppender()) {
-                    for (int i = 0; i < 20; i++) {
+                    for (int i = 0; i < loops; i++) {
                         appender.startExcerpt(4);
                         appender.writeInt(i);
                         appender.finish();

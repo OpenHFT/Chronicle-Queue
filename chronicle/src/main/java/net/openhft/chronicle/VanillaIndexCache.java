@@ -208,7 +208,7 @@ public class VanillaIndexCache implements Closeable {
                     firstDate = date;
                 }
             } catch (ParseException ignored) {
-                String x = "";
+                // ignored
             }
         }
 

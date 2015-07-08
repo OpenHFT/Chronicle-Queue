@@ -77,13 +77,6 @@ public class VanillaChronicleUtils {
         final List<File> files =  findLeafDirectories(new ArrayList<File>(), root);
         files.remove(root);
 
-        /*
-        getLogger().info("Leafs:");
-        for(File f : files) {
-            getLogger().info("> {}", f);
-        }
-        */
-
         return files;
     }
 
