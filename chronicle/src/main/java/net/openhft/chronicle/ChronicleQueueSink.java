@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.ByteBuffer;
 
 import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
 import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
@@ -99,7 +98,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
         protected final ResizableDirectByteBufferBytes writeBuffer;
-        protected final Bytes readBuffer;
+        protected final Bytes bytesIn;
         private long lastReconnectionAttemptMS;
         private long reconnectionIntervalMS;
         private long lastReconnectionAttempt;
@@ -109,7 +108,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
             this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
-            this.readBuffer = ByteBufferBytes.wrap(ChronicleTcp.createBuffer(builder.minBufferSize()));
+            this.bytesIn = ByteBufferBytes.wrap(ChronicleTcp.createBuffer(builder.minBufferSize()));
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
             this.lastReconnectionAttemptMS = 0;
             this.lastReconnectionAttempt = 0;
@@ -263,8 +262,8 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         protected boolean doReadNext() throws IOException {
             if(openConnection()) {
-                readBuffer.clear();
-                readBuffer.limit(0);
+                bytesIn.clear();
+                bytesIn.limit(0);
 
                 return true;
             }
@@ -276,9 +275,9 @@ class ChronicleQueueSink extends WrappedChronicle {
         protected boolean doReadNextExcerpt()  throws IOException {
             query(wrappedChronicle.lastIndex());
 
-            if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
-                final int size = readBuffer.readInt();
-                readBuffer.readLong(); // consume data
+            if (connection.read(bytesIn.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, readSpinCount)) {
+                final int size = bytesIn.readInt();
+                bytesIn.readLong(); // consume data
 
                 switch (size) {
                     case ChronicleTcp.IN_SYNC_LEN:
@@ -309,8 +308,8 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         protected boolean doReadNext() throws IOException {
             if(openConnection()) {
-                readBuffer.clear();
-                readBuffer.limit(0);
+                bytesIn.clear();
+                bytesIn.limit(0);
 
                 if (this.adapter == null) {
                     this.adapter = createAdapter(wrappedChronicle);
@@ -329,8 +328,8 @@ class ChronicleQueueSink extends WrappedChronicle {
                 return false;
             }
 
-            final int size = readBuffer.readInt();
-            final long scIndex = readBuffer.readLong();
+            final int size = bytesIn.readInt();
+            final long scIndex = bytesIn.readLong();
 
             switch (size) {
                 case ChronicleTcp.IN_SYNC_LEN:
@@ -352,27 +351,27 @@ class ChronicleQueueSink extends WrappedChronicle {
                 this.adapter.startExcerpt(size, scIndex);
 
                 long remaining = size;
-                long limit = readBuffer.limit();
-                int size2 = (int) Math.min(readBuffer.remaining(), remaining);
+                long limit = bytesIn.limit();
+                int size2 = (int) Math.min(bytesIn.remaining(), remaining);
 
                 remaining -= size2;
-                readBuffer.limit(readBuffer.position() + size2);
-                adapter.write(readBuffer);
+                bytesIn.limit(bytesIn.position() + size2);
+                adapter.write(bytesIn);
                 // reset the limit;
-                readBuffer.limit(limit);
+                bytesIn.limit(limit);
 
                 // needs more than one read.
                 while (remaining > 0) {
-                    int size3 = (int) Math.min(readBuffer.capacity(), remaining);
-                    connection.read(readBuffer.clear().limit(size3), size3, -1);
-                    remaining -= readBuffer.remaining();
-                    adapter.write(readBuffer);
+                    int size3 = (int) Math.min(bytesIn.capacity(), remaining);
+                    connection.read(bytesIn.clear().limit(size3), size3, -1);
+                    remaining -= bytesIn.remaining();
+                    adapter.write(bytesIn);
                 }
 
                 adapter.finish();
 
             } else {
-                readBuffer.position(readBuffer.position() + size);
+                bytesIn.position(bytesIn.position() + size);
                 return readNextExcerpt();
             }
 
@@ -380,15 +379,15 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         private boolean readAtLeastHeader() throws IOException {
-            long rem = readBuffer.remaining();
+            long rem = bytesIn.remaining();
             if (rem < ChronicleTcp.HEADER_SIZE) {
-                if (readBuffer.remaining() == 0) {
-                    readBuffer.clear();
+                if (bytesIn.remaining() == 0) {
+                    bytesIn.clear();
                 } else {
-                    compact(readBuffer);
+                    compact(bytesIn);
                 }
                 return connection.read(
-                        readBuffer,
+                        bytesIn,
                         ChronicleTcp.HEADER_SIZE + 8,
                         readSpinCount);
             }

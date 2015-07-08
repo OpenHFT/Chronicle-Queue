@@ -126,7 +126,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testReplicationWithRolling1() throws IOException, InterruptedException {
-        final int RUNS = 500;
+        final int RUNS = 5;
 
         final String sourceBasePath = getVanillaTestPath("source");
         final String sinkBasePath = getVanillaTestPath("sink");
