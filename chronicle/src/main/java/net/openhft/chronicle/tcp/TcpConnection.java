@@ -165,8 +165,10 @@ class TcpConnection {
         int spins = 0;
         int bytesRead = 0;
         while (bytesRead < toRead) {
+            long start = System.nanoTime();
             int rb = this.socketChannel.read(buffer);
-            System.out.println("Read " + rb + " bytes");
+            final long end = System.nanoTime();
+            System.out.println("Read " + rb + " bytes in " + (end - start) + "ns");
             if (rb < 0) {
                 throw new EOFException();
             } else if (bytesRead == 0 && rb == 0 && readAttempts > -1) {
