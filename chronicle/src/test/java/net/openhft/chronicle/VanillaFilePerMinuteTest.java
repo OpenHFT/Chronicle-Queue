@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit;
 @Ignore
 public class VanillaFilePerMinuteTest extends VanillaChronicleTestBase {
 
-    static final String FMT = "yyyyMMdd"; //HHmm";
-    static final int    MIN = 24 * 60 * 60 * 1000;
+    static final String CYCLE_FORMAT   = "yyyyMMddHHmm";
+    static final int    CYCLE_ENTRIES = 60 * 1000; //24 * 60 * 60 * 1000
 
     @Test
     public void filePerMinuteTest() throws Exception {
@@ -92,10 +92,8 @@ public class VanillaFilePerMinuteTest extends VanillaChronicleTestBase {
 
     static Chronicle createChronicle(String basePath) throws IOException {
         return ChronicleQueueBuilder.vanilla(basePath)
-            .cycleLength(MIN, false)
-            .cycleFormat(FMT)
-            //.entriesPerCycle(1L << 20)
-            //.indexBlockSize(16L << 10)
+            .cycleLength(CYCLE_ENTRIES, false)
+            .cycleFormat(CYCLE_FORMAT)
             .build();
     }
 }

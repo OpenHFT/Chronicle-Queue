@@ -109,6 +109,21 @@ public class VanillaChronicle implements Chronicle {
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
+
+        /*
+        System.out.println("Cycle:");
+        System.out.println("> cycleFormat         : " + this.builder.cycleFormat());
+        System.out.println("> cycleLength         : " + this.builder.cycleLength());
+        System.out.println("> entriesPerCycle     : " + this.builder.entriesPerCycle());
+        System.out.println("Bits:");
+        System.out.println("> indexBlockSizeBits  : " + indexBlockSizeBits );
+        System.out.println("> dataBlockSizeBits   : " + dataBlockSizeBits  );
+        System.out.println("* indexBlockLongsBits : " + indexBlockLongsBits);
+        System.out.println("* entriesForCycleBits : " + entriesForCycleBits);
+
+        // bitsToRepresent(cycle) + bitsRepresent(entriesPerCycle) < 64
+        // return (cycle << entriesForCycleBits) + (indexCount << indexBlockLongsBits) + (indexPosition >> 3);
+        */
     }
 
     void checkNotClosed() {
