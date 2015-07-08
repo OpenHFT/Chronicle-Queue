@@ -18,6 +18,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.IOTools;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -25,17 +26,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Ignore
 public class VanillaFilePerMinuteTest extends VanillaChronicleTestBase {
 
-    static final String FMT = "yyyyMMddHHmm";
-    static final int    MIN = 60 * 1000;
+    static final String FMT = "yyyyMMdd"; //HHmm";
+    static final int    MIN = 24 * 60 * 60 * 1000;
 
     @Test
     public void filePerMinuteTest() throws Exception {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
-        LOGGER.info("Basepath is {}", basePath);
+        LOGGER.info("Base Path is {}", basePath);
 
         final ExecutorService svc = Executors.newFixedThreadPool(2);
         svc.execute(createWriter(createChronicle(basePath)));
@@ -92,6 +94,8 @@ public class VanillaFilePerMinuteTest extends VanillaChronicleTestBase {
         return ChronicleQueueBuilder.vanilla(basePath)
             .cycleLength(MIN, false)
             .cycleFormat(FMT)
+            //.entriesPerCycle(1L << 20)
+            //.indexBlockSize(16L << 10)
             .build();
     }
 }
