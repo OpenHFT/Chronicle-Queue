@@ -40,15 +40,15 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.18</version>
+                <version>3.4.20</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
+                <version>1.5.4</version>
                 <type>pom</type>
-                <version>1.4.3</version>
                 <scope>import</scope>
             </dependency>
 
@@ -70,6 +70,7 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-values</artifactId>
+            <version>1.0.1-alpha-SNAPSHOT</version>
         </dependency>
 
         <dependency>
