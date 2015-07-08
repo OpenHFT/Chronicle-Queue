@@ -387,7 +387,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 } else {
                     compact(readBuffer);
                 }
-
+                System.out.println("About to read header");
                 return connection.read(
                         readBuffer,
                         ChronicleTcp.HEADER_SIZE + 8,
