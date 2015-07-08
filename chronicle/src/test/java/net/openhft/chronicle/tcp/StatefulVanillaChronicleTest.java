@@ -49,7 +49,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(sourceBasePath)
-//                .dataBlockSize(2L << 20)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
@@ -57,7 +56,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = vanilla(sinkBasePath)
-//                .dataBlockSize(2L << 20)
                 .sink()
                 .connectAddress("localhost", port)
                 .build();
@@ -110,7 +108,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             };
 
             at.start();
-//            Thread.sleep(1000);
             tt.start();
 
             at.join();
@@ -234,6 +231,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -241,6 +239,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         final Chronicle sinkChronicle = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
