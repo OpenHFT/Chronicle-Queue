@@ -30,35 +30,21 @@ import java.util.List;
 
 public class VanillaChronicleUtils {
 
-    private static Logger getLogger() {
-        return LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
-    }
-
     public static File mkFiles(
             String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
-        File dir = new File(basePath, cycleStr);
+
+        final File dir = new File(basePath, cycleStr);
+        final File file = new File(dir, name);
 
         if (!forAppend) {
             //This test needs to be done before any directories are created.
-            File f = new File(dir, name);
-            if (!f.exists()) {
-                throw new FileNotFoundException(f.getAbsolutePath());
+            if (!file.exists()) {
+                throw new FileNotFoundException(file.getAbsolutePath());
             }
         }
 
-        if (!dir.isDirectory()) {
-            boolean created = dir.mkdirs();
-            getLogger().trace("Created {} is {}", dir, created);
-        }
-
-        File file = new File(dir, name);
-        if (file.exists()) {
-             getLogger().trace("Opening {}", file);
-
-        } else if (forAppend) {
-             getLogger().trace("Creating {}", file);
-
-        } else {
+        dir.mkdirs();
+        if(!file.exists() && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 

@@ -150,9 +150,10 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final int numberOfTasks = 2;
         final int countPerTask = 1000;
 
+
         try {
             // Create tasks that append to the index
-            final List<Callable<Void>> tasks = new ArrayList<Callable<Void>>();
+            final List<Callable<Void>> tasks = new ArrayList<>();
             long nextValue = countPerTask;
             for (int i = 0; i < numberOfTasks; i++) {
                 final long endValue = nextValue + countPerTask;
@@ -165,7 +166,9 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
 
             // Verify that all values can be read back from the index
             final Set<Long> indexValues = readAllIndexValues(cache, cycle);
-            assertEquals(createRangeSet(countPerTask, nextValue), indexValues);
+            final Set<Long> rangeSet = createRangeSet(countPerTask, nextValue);
+
+            assertEquals(rangeSet, indexValues);
 
             cache.checkCounts(1, 1);
         } finally {
@@ -181,8 +184,9 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     // *************************************************************************
 
     private Set<Long> readAllIndexValues(final VanillaIndexCache cache, final int cycle) throws IOException {
-        final Set<Long> indexValues = new TreeSet<Long>();
-        for (int i = 0; i <= cache.lastIndexFile(cycle); i++) {
+        final Set<Long> indexValues = new TreeSet<>();
+        final int lastIndex = cache.lastIndexFile(cycle);
+        for (int i = 0; i <= lastIndex; i++) {
             final VanillaMappedBytes vanillaBuffer = cache.indexFor(cycle, i, false);
             indexValues.addAll(readAllIndexValues(vanillaBuffer));
             vanillaBuffer.release();
@@ -191,16 +195,19 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     }
 
     private Set<Long> readAllIndexValues(final VanillaMappedBytes vanillaBuffer) {
-        final Set<Long> indexValues = new TreeSet<Long>();
+        final Set<Long> indexValues = new TreeSet<>();
         vanillaBuffer.position(0);
         while (vanillaBuffer.remaining() >= 8) {
-            indexValues.add(vanillaBuffer.readLong());
+            long l = vanillaBuffer.readLong();
+            if(l != 0) {
+                indexValues.add(l);
+            }
         }
         return indexValues;
     }
 
     private static Set<Long> createRangeSet(final long start, final long end) {
-        final Set<Long> values = new TreeSet<Long>();
+        final Set<Long> values = new TreeSet<>();
         long counter = start;
         while (counter < end) {
             values.add(counter);
