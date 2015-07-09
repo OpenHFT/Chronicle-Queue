@@ -18,7 +18,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.io.DirectByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
@@ -86,15 +85,12 @@ class TcpConnection {
         return "[] -> []";
     }
 
-    public int write(final ByteBuffer buffer) throws IOException {
-        return this.socketChannel.write(buffer);
+    public void write(final Bytes bytes) throws IOException {
+        final ByteBuffer bb = bytes.sliceAsByteBuffer(buffer);
+        write(bb);
     }
 
-    public void writeAllOrEOF(final DirectByteBufferBytes bb) throws IOException {
-        writeAllOrEOF(bb.buffer());
-    }
-
-    public void writeAllOrEOF(final ByteBuffer bb) throws IOException {
+    public void write(final ByteBuffer bb) throws IOException {
         writeAll(bb);
         if (bb.remaining() > 0) {
             throw new EOFException();
@@ -220,40 +216,13 @@ class TcpConnection {
     }
 */
 
-    private boolean readFullyOrEOF(@NotNull ByteBuffer bb) throws IOException {
-        while (bb.remaining() > 0) {
-            if (this.socketChannel.read(bb) < 0) {
-                break;
-            }
-        }
-
-//        System.out.println("r - "+ChronicleTools.asString(bb));
-        if (bb.remaining() > 0) {
-            throw new EOFException();
-        }
-
-        bb.flip();
-        return true;
-    }
-
-    public boolean readUpTo(Bytes bytes, int size, int readAttempts) throws IOException {
-        return read(bytes, size, readAttempts);
-    }
-
-    public boolean readUpTo(ByteBuffer buffer, int size, int readAttempts) throws IOException {
-        buffer.clear();
-        buffer.limit(size);
-
-        return readAttempts == -1 ? readFullyOrEOF(buffer) : read0(buffer, size, readAttempts);
-    }
-
     public void writeSizeAndIndex(ByteBuffer buffer, int size, long index) throws IOException {
         buffer.clear();
         buffer.putInt(size);
         buffer.putLong(index);
         buffer.flip();
 
-        writeAllOrEOF(buffer);
+        write(buffer);
     }
 
     public void writeAction(ByteBuffer buffer, long action, long index) throws IOException {
@@ -262,6 +231,6 @@ class TcpConnection {
         buffer.putLong(index);
         buffer.flip();
 
-        writeAllOrEOF(buffer);
+        write(buffer);
     }
 }
