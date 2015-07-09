@@ -21,7 +21,6 @@ import net.openhft.chronicle.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectByteBufferBytes;
-import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
 import org.jetbrains.annotations.Nullable;
@@ -132,7 +131,7 @@ public abstract class SourceTcp {
         protected long lastHeartbeat;
         private long lastUnPausedNS;
 
-        protected final Bytes writeBuffer;
+        protected final Bytes bytesOut;
         protected final ResizableDirectByteBufferBytes readBuffer;
 
         private ResizableDirectByteBufferBytes withMappedBuffer;
@@ -147,8 +146,8 @@ public abstract class SourceTcp {
 
             this.readBuffer = new ResizableDirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
-            this.writeBuffer = wrap(createBuffer(builder.minBufferSize()));
-            this.writeBuffer.limit(0);
+            this.bytesOut = wrap(createBuffer(builder.minBufferSize()));
+            this.bytesOut.limit(0);
 
             this.withMappedBuffer = new ResizableDirectByteBufferBytes(1024);
         }
@@ -307,10 +306,10 @@ public abstract class SourceTcp {
         }
 
         protected void sendSizeAndIndex(int size, long index) throws IOException {
-            writeBuffer.clear();
-            writeBuffer.writeInt(size);
-            writeBuffer.writeLong(index);
-            connection.write(writeBuffer.flip());
+            bytesOut.clear();
+            bytesOut.writeInt(size);
+            bytesOut.writeLong(index);
+            connection.write(bytesOut.flip());
             setLastHeartbeat();
         }
 
@@ -531,41 +530,33 @@ public abstract class SourceTcp {
             Bytes bytes = applyMapping(tailer, attached);
             int size = (int) bytes.limit();
 
-            writeBuffer.clear();
-            writeBuffer.writeInt(size);
-            writeBuffer.writeLong(tailer.index());
+            bytesOut.clear();
+            bytesOut.writeInt(size);
+            bytesOut.writeLong(tailer.index());
 
             // for large objects send one at a time.
-            if (size > writeBuffer.capacity() / 2) {
+            if (size > bytesOut.capacity() / 2) {
                 while (size > 0) {
-                    int minSize = (int) Math.min(size, writeBuffer.remaining());
-                    writeBuffer.write(bytes, bytes.position(), minSize);
-                    bytes.skip(minSize);
-//                    bytes.read(writeBuffer, minSize);
-//                    writeBuffer.flip();
-                    connection.write(writeBuffer.flip());
+                    int minSize = (int) Math.min(size, bytesOut.remaining());
+                    bytesOut.write(bytes);
+                    connection.write(bytesOut.flip());
 
                     size -= minSize;
                     if (size > 0) {
-                        writeBuffer.clear();
+                        bytesOut.clear();
                     }
                 }
             } else {
-                writeBuffer.write(bytes, bytes.position(), size);
-                // NativeBytes.write doesn't move the position along of the read Bytes, so we need to skip them here
-                bytes.skip(size);
-//                bytes.read(writeBuffer, size);
+                bytesOut.write(bytes);
                 for (int count = builder.maxExcerptsPerMessage(); (count > 0) && tailer.index(index + 1); ) {
                     if (!tailer.wasPadding()) {
                         bytes = applyMapping(tailer, attached);
                         // if there is free space, copy another one.
-                        if (hasRoomForExcerpt(writeBuffer, bytes)) {
+                        if (hasRoomForExcerpt(bytesOut, bytes)) {
                             size = (int) bytes.limit();
-                            writeBuffer.writeInt(size);
-                            writeBuffer.writeLong(tailer.index());
-                            writeBuffer.write(bytes, bytes.position(), size);
-                            bytes.skip(size);
-//                            bytes.read(writeBuffer, size);
+                            bytesOut.writeInt(size);
+                            bytesOut.writeLong(tailer.index());
+                            bytesOut.write(bytes);
 
                             index++;
                             count--;
@@ -576,9 +567,9 @@ public abstract class SourceTcp {
                             break;
                         }
                     } else {
-                        if (hasRoomFor(writeBuffer, ChronicleTcp.HEADER_SIZE)) {
-                            writeBuffer.writeInt(ChronicleTcp.PADDED_LEN);
-                            writeBuffer.writeLong(index);
+                        if (hasRoomFor(bytesOut, ChronicleTcp.HEADER_SIZE)) {
+                            bytesOut.writeInt(ChronicleTcp.PADDED_LEN);
+                            bytesOut.writeLong(index);
 
                         } else {
                             break;
@@ -588,11 +579,10 @@ public abstract class SourceTcp {
                     }
                 }
 
-//                writeBuffer.flip();
-                connection.write(writeBuffer.flip());
+                connection.write(bytesOut.flip());
             }
 
-            if (writeBuffer.remaining() > 0) {
+            if (bytesOut.remaining() > 0) {
                 throw new EOFException("Failed to send index=" + index);
             }
 
@@ -680,36 +670,28 @@ public abstract class SourceTcp {
 
             pauseReset();
 
-            System.out.println("running? " + running.get());
             Bytes bytes = applyMapping(tailer, attached);
             int size = (int) bytes.limit();
 
-            writeBuffer.clear();
-            writeBuffer.writeInt(size);
-            writeBuffer.writeLong(tailer.index());
+            bytesOut.clear();
+            bytesOut.writeInt(size);
+            bytesOut.writeLong(tailer.index());
 
             // for large objects send one at a time.
-            if (size > writeBuffer.limit() / 2) {
+            if (size > bytesOut.limit() / 2) {
                 while (size > 0) {
-                    int minSize = (int) Math.min(size, writeBuffer.remaining());
-                    writeBuffer.write(bytes, 0, size);
-                    bytes.skip(size);
-//                    bytes.read(writeBuffer, size);
-//                    writeBuffer.flip();
-                    connection.write(writeBuffer.flip());
-                    writeBuffer.clear();
+                    int minSize = (int) Math.min(size, bytesOut.remaining());
+                    bytesOut.write(bytes);
+                    connection.write(bytesOut.flip());
+                    bytesOut.clear();
 
                     size -= minSize;
                     if (size > 0) {
-                        writeBuffer.clear();
+                        bytesOut.clear();
                     }
                 }
             } else {
-                System.out.println("SourceTCP write index: " + tailer.index() + ", value: " + bytes.position(0).readLong());
-//                bytes.flip();
-                writeBuffer.write(bytes, 0, size);
-                bytes.skip(size);
-//                bytes.read(writeBuffer, size);
+                bytesOut.write(bytes);
 
                 long previousIndex = tailer.index();
                 long currentIndex;
@@ -718,16 +700,12 @@ public abstract class SourceTcp {
                     bytes = applyMapping(tailer, attached);
 
                     // if there is free space, copy another one.
-                    if (hasRoomForExcerpt(writeBuffer, bytes)) {
+                    if (hasRoomForExcerpt(bytesOut, bytes)) {
                         size = (int) bytes.limit();
                         previousIndex = currentIndex;
-                        writeBuffer.writeInt(size);
-                        writeBuffer.writeLong(currentIndex);
-                        System.out.println("SourceTCP (more room) write index: " + currentIndex + ", value: " + bytes.position(0).readLong());
-//                        bytes.flip();
-                        writeBuffer.write(bytes, 0, size);
-                        bytes.skip(size);
-//                        bytes.read(writeBuffer, size);
+                        bytesOut.writeInt(size);
+                        bytesOut.writeLong(currentIndex);
+                        bytesOut.write(bytes);
                         count--;
 
                         tailer.finish();
@@ -741,11 +719,10 @@ public abstract class SourceTcp {
                     }
                 }
 
-//                writeBuffer.flip();
-                connection.write(writeBuffer.flip());
+                connection.write(bytesOut.flip());
             }
 
-            if (writeBuffer.remaining() > 0) {
+            if (bytesOut.remaining() > 0) {
                 throw new EOFException("Failed to send index=" + tailer.index());
             }
 
