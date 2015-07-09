@@ -227,29 +227,33 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 }
 
                 try {
-                    connection.writeAction(commandBuffer, actionType, position());
-                    connection.write(flip());
+                    flip();
+                    if (remaining() > 0) {
+                        // only write anything if there is anything to write
+                        connection.writeAction(commandBuffer, actionType, limit());
+                        connection.write(this);
 
-                    if(builder.appendRequireAck()) {
-                        connection.read(readBuffer.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, -1);
+                        if (builder.appendRequireAck()) {
+                            connection.read(readBuffer.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, -1);
 
-                        int  recType  = readBuffer.readInt();
-                        long recIndex = readBuffer.readLong();
+                            int recType = readBuffer.readInt();
+                            long recIndex = readBuffer.readLong();
 
-                        switch(recType) {
-                            case ChronicleTcp.ACK_LEN:
-                                this.lastIndex = recIndex;
-                                break;
+                            switch (recType) {
+                                case ChronicleTcp.ACK_LEN:
+                                    this.lastIndex = recIndex;
+                                    break;
 
-                            case ChronicleTcp.NACK_LEN:
-                                throw new IllegalStateException(
-                                    "Message discarded by server, reason: " + (
-                                        recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
-                                            ? "unsupported"
-                                            : "unknown")
-                                );
-                            default:
-                                logger.warn("Unknown message received {}, {}", recType, recIndex);
+                                case ChronicleTcp.NACK_LEN:
+                                    throw new IllegalStateException(
+                                            "Message discarded by server, reason: " + (
+                                                    recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
+                                                            ? "unsupported"
+                                                            : "unknown")
+                                    );
+                                default:
+                                    logger.warn("Unknown message received {}, {}", recType, recIndex);
+                            }
                         }
                     }
                 } catch(IOException e) {
