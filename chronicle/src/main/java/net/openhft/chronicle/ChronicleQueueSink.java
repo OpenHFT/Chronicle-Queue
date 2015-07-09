@@ -28,6 +28,7 @@ import net.openhft.lang.io.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 
@@ -195,18 +196,23 @@ class ChronicleQueueSink extends WrappedChronicle {
                 writeBuffer.writeInt(pos, (int) (writeBuffer.position() - start));
             }
 
-            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
-
             connection.write(writeBuffer.flip());
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to subscribe with index " + index);
+            }
         }
 
         protected void query(long index) throws IOException {
             writeBuffer.clearAll();
             writeBuffer.writeLong(ChronicleTcp.ACTION_QUERY);
             writeBuffer.writeLong(index);
-            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
             connection.write(writeBuffer.flip());
+
+            if (writeBuffer.remaining() > 0) {
+                throw new EOFException("Failed to write query for index " + index);
+            }
         }
 
         protected boolean readNext() {

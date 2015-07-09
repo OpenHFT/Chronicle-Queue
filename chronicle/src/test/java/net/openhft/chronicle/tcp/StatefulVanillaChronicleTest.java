@@ -510,7 +510,9 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                     ExcerptTailer tailer = sink.createTailer();
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            final long actual = tailer.readLong();
+                            System.out.println("read " + actual + ", index " + tailer.index());
+                            assertEquals(items - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
 
