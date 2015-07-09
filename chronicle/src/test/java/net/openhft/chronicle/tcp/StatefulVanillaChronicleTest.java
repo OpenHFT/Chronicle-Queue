@@ -488,8 +488,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getVanillaTestPath("source");
         final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
-        final int items = 20;
-        final CountDownLatch latch = new CountDownLatch(items);
+        final int runs = 50;
+        final int itemsPerRun = 15;
+        final int totalItems = runs * itemsPerRun;
+        final CountDownLatch latch = new CountDownLatch(totalItems);
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -511,8 +513,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
                             final long actual = tailer.readLong();
-                            System.out.println("read " + actual + ", index " + tailer.index());
-                            assertEquals(items - latch.getCount(), actual);
+                            assertEquals(totalItems - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
 
@@ -533,53 +534,58 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         t.start();
 
-        // Source 1
-        Chronicle source1 = vanilla(basePathSource)
-                .dataBlockSize(1L << 20)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier)
-                .build();
 
-        ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
-            appender1.startExcerpt(8);
-            appender1.writeLong(i);
-            appender1.finish();
+        for (int i = 0; i < runs; i ++) {
+            final int expectedLatchCount = totalItems - ((i + 1) * itemsPerRun);
+            appendToSource(portSupplier, basePathSource, itemsPerRun, i, new Runnable() {
+                @Override
+                public void run() {
+                    if (expectedLatchCount > 0) {
+                        while (latch.getCount() > expectedLatchCount) {
+                            try {
+                                Thread.sleep(250);
+                            } catch (InterruptedException e) {
+                                // do nothing
+                            }
+                        }
+                    } else {
+                        try {
+                            latch.await(5, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            // do nothing
+                        }
+                    }
+                }
+            });
         }
 
-        appender1.close();
+        assertEquals(0, latch.getCount());
+    }
 
-        while(latch.getCount() > 10) {
-            Thread.sleep(250);
-        }
-
-        source1.close();
-
+    private void appendToSource(PortSupplier portSupplier, String basePathSource, int items, int run, Runnable waiter) throws IOException {
         portSupplier.reset();
 
-        // Source 2
-        Chronicle source2 = vanilla(basePathSource)
+        // Source 1
+        Chronicle source = vanilla(basePathSource)
                 .dataBlockSize(1L << 20)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
-        ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
-            appender2.startExcerpt(8);
-            appender2.writeLong(i);
-            appender2.finish();
+        ExcerptAppender appender = source.createAppender();
+        for(long i = 0; i < items; i++) {
+            appender.startExcerpt(8);
+            appender.writeLong((run * items) + i);
+            appender.finish();
         }
 
-        appender2.close();
+        appender.close();
 
-        latch.await(5, TimeUnit.SECONDS);
-        assertEquals(0, latch.getCount());
+        waiter.run();
 
-        source2.close();
-        source2.clear();
+        source.close();
+//        source.clear();
     }
 
     // *************************************************************************
