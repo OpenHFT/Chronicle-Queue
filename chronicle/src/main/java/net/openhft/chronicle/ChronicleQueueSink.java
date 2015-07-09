@@ -197,7 +197,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
-            connection.writeAllOrEOF(writeBuffer);
+            connection.write(writeBuffer.flip());
         }
 
         protected void query(long index) throws IOException {
@@ -206,7 +206,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             writeBuffer.writeLong(index);
             writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
-            connection.writeAllOrEOF(writeBuffer);
+            connection.write(writeBuffer.flip());
         }
 
         protected boolean readNext() {

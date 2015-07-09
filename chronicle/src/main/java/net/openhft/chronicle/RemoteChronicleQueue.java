@@ -21,10 +21,6 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
-import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.chronicle.tools.WrappedExcerptAppenders;
-import net.openhft.chronicle.tools.WrappedExcerpts;
-import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -162,27 +158,22 @@ class RemoteChronicleQueue extends WrappedChronicle {
     // *************************************************************************
 
     private final class StatelessExcerptAppender
-            extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppenderWrapper {
+            extends AbstractStatelessExcerpt implements ExcerptAppender {
 
         private final Logger logger;
-        private final ByteBuffer readBuffer;
+        private final Bytes readBuffer;
         private final ByteBuffer commandBuffer;
         private long lastIndex;
         private long actionType;
 
         public StatelessExcerptAppender() {
-            super(builder.minBufferSize());
+            super(wrap(createBufferOfSize(builder.minBufferSize())));
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.readBuffer = createBufferOfSize(12);
+            this.readBuffer = wrap(createBufferOfSize(12));
             this.commandBuffer = createBufferOfSize(16);
             this.lastIndex = -1;
             this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
-        }
-
-        @Override
-        public long capacity() {
-            return super.limit();
         }
 
         @Override
@@ -191,12 +182,33 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
-        public void startExcerpt(long excerptSize) {
+        public void startExcerpt(long size) {
             if(!isFinished()) {
                 finish();
             }
 
-            super.startExcerpt(excerptSize);
+            if(size <= capacity()) {
+                clear();
+                limit(size);
+            } else {
+                wrapped = wrap(createBufferOfSize((int) size));
+            }
+
+        }
+
+        @Override
+        public void addPaddedEntry() {
+
+        }
+
+        @Override
+        public boolean nextSynchronous() {
+            return false;
+        }
+
+        @Override
+        public void nextSynchronous(boolean nextSynchronous) {
+
         }
 
         @Override
@@ -216,15 +228,13 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 try {
                     connection.writeAction(commandBuffer, actionType, position());
-                    ByteBuffer buffer = wrapped.buffer();
-                    buffer.limit((int) wrapped.position());
-                    connection.writeAllOrEOF(buffer);
+                    connection.write(flip());
 
                     if(builder.appendRequireAck()) {
-                        connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);
+                        connection.read(readBuffer.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, -1);
 
-                        int  recType  = readBuffer.getInt();
-                        long recIndex = readBuffer.getLong();
+                        int  recType  = readBuffer.readInt();
+                        long recIndex = readBuffer.readLong();
 
                         switch(recType) {
                             case ChronicleTcp.ACK_LEN:
@@ -252,11 +262,26 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
+        public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+            return false;
+        }
+
+        @Override
+        public void write8bitText(CharSequence charSequence) {
+
+        }
+
+        @Override
         public synchronized void close() {
             closeConnection();
 
             super.close();
             RemoteChronicleQueue.this.excerpt = null;
+        }
+
+        @Override
+        public boolean wasPadding() {
+            return false;
         }
 
         @Override
@@ -282,6 +307,36 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
 
             return connection.isOpen();
+        }
+
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+
+        }
+
+        @Override
+        public boolean index(long l) {
+            return false;
+        }
+
+        @Override
+        public boolean nextIndex() {
+            return false;
+        }
+
+        @Override
+        public Excerpt toStart() {
+            return null;
+        }
+
+        @Override
+        public Excerpt toEnd() {
+            return null;
         }
     }
 
