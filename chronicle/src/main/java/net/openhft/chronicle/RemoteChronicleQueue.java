@@ -233,6 +233,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         connection.writeAction(commandBuffer, actionType, limit());
                         connection.write(this);
 
+                        if (remaining() > 0) {
+                            throw new EOFException("Failed to write content for index " + index());
+                        }
+
                         if (builder.appendRequireAck()) {
                             connection.read(readBuffer.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, -1);
 

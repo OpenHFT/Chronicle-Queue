@@ -18,7 +18,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.lang.io.Bytes;
-import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -85,16 +84,11 @@ class TcpConnection {
         return "[] -> []";
     }
 
-    public void write(final Bytes bytes) throws IOException {
+    public int write(final Bytes bytes) throws IOException {
         final ByteBuffer bb = bytes.sliceAsByteBuffer(buffer);
-        write(bb);
-    }
-
-    public void write(final ByteBuffer bb) throws IOException {
-        writeAll(bb);
-        if (bb.remaining() > 0) {
-            throw new EOFException();
-        }
+        int bw = write(bb);
+        bytes.position(bb.position());
+        return bw;
     }
 
 /*
@@ -103,7 +97,7 @@ class TcpConnection {
     }
 */
 
-    public void writeAll(final ByteBuffer bb) throws IOException {
+    public int write(final ByteBuffer bb) throws IOException {
         int bw = 0;
         while (bb.remaining() > 0) {
             bw = this.socketChannel.write(bb);
@@ -111,6 +105,7 @@ class TcpConnection {
                 break;
             }
         }
+        return bw;
     }
 
 /*
@@ -216,6 +211,7 @@ class TcpConnection {
     }
 */
 
+/*
     public void writeSizeAndIndex(ByteBuffer buffer, int size, long index) throws IOException {
         buffer.clear();
         buffer.putInt(size);
@@ -224,6 +220,7 @@ class TcpConnection {
 
         write(buffer);
     }
+*/
 
     public void writeAction(ByteBuffer buffer, long action, long size) throws IOException {
         buffer.clear();
