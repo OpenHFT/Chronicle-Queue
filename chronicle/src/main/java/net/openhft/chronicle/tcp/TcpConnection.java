@@ -225,10 +225,10 @@ class TcpConnection {
         write(buffer);
     }
 
-    public void writeAction(ByteBuffer buffer, long action, long index) throws IOException {
+    public void writeAction(ByteBuffer buffer, long action, long size) throws IOException {
         buffer.clear();
         buffer.putLong(action);
-        buffer.putLong(index);
+        buffer.putLong(size);
         buffer.flip();
 
         write(buffer);
