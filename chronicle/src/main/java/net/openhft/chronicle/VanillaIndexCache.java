@@ -21,13 +21,14 @@ package net.openhft.chronicle;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class VanillaIndexCache implements Closeable {
     public static final String FILE_NAME_PREFIX = "index-";
@@ -38,6 +39,7 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
+    private final Map<IndexKey, File> cyclePathMap;
 
     VanillaIndexCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
@@ -54,6 +56,8 @@ public class VanillaIndexCache implements Closeable {
             true,
             builder.cleanupOnClose()
         );
+
+        this.cyclePathMap = new HashMap<>();
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -97,6 +101,21 @@ public class VanillaIndexCache implements Closeable {
         }
 
         return indices;
+    }
+
+    public synchronized File cyclePathFor(int cycle) {
+        key.cycle = cycle;
+        key.indexCount = 0;
+
+        File path = this.cyclePathMap.get(key);
+        if(path == null) {
+            this.cyclePathMap.put(
+                key.clone(),
+                path = new File(baseFile, dateCache.formatFor(cycle))
+            );
+        }
+
+        return path;
     }
 
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
@@ -157,13 +176,12 @@ public class VanillaIndexCache implements Closeable {
     int lastIndexFile(int cycle, int defaultCycle) {
         int maxIndex = -1;
 
-        final File cyclePath = new File(baseFile, dateCache.formatFor(cycle));
-        final File[] files = cyclePath.listFiles();
+        final File cyclePath = cyclePathFor(cycle);
+        final String[] files = cyclePath.list();
         if (files != null) {
-            for (final File file : files) {
-                String name = file.getName();
-                if (name.startsWith(FILE_NAME_PREFIX)) {
-                    int index = Integer.parseInt(name.substring(FILE_NAME_PREFIX.length()));
+            for (int i=files.length - 1; i>=0; i--) {
+                if (files[i].startsWith(FILE_NAME_PREFIX)) {
+                    int index = Integer.parseInt(files[i].substring(FILE_NAME_PREFIX.length()));
                     if (maxIndex < index) {
                         maxIndex = index;
                     }
@@ -175,15 +193,16 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public long firstCycle() {
-        File[] files = baseFile.listFiles();
-        if (files == null) {
+        final List<File> files = VanillaChronicleUtils.findLeafDirectories(baseFile);
+        if (files.isEmpty()) {
             return -1;
         }
 
         long firstDate = Long.MAX_VALUE;
-        for (File file : files) {
+        for (int i=files.size() - 1; i >= 0; i--) {
             try {
-                long date = dateCache.parseCount(file.getName());
+                String name = files.get(i).getAbsolutePath().substring(basePath.length() + 1);
+                long date = dateCache.parseCount(name);
                 if (firstDate > date) {
                     firstDate = date;
                 }
@@ -196,15 +215,16 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public long lastCycle() {
-        final File[] files = baseFile.listFiles();
-        if (files == null) {
+        final List<File> files = VanillaChronicleUtils.findLeafDirectories(baseFile);
+        if (files.isEmpty()) {
             return -1;
         }
 
         long firstDate = Long.MIN_VALUE;
-        for (File file : files) {
+        for (int i=files.size() - 1; i >= 0; i--) {
             try {
-                long date = dateCache.parseCount(file.getName());
+                String name = files.get(i).getAbsolutePath().substring(basePath.length() + 1);
+                long date = dateCache.parseCount(name);
                 if (firstDate < date) {
                     firstDate = date;
                 }

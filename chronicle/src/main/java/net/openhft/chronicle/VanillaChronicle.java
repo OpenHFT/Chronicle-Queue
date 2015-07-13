@@ -42,6 +42,59 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by peter
  */
 public class VanillaChronicle implements Chronicle {
+
+    public enum Cycle {
+            SECONDS ("yyyyMMddHHmmss", 1000, 1L << 28),
+            MINUTES ("yyyyMMddHHmm"  , 60 * 1000, 1L << 34),
+            HOURS   ("yyyyMMddHH"    , 60 * 60 * 1000, 1L << 40),
+            DAYS    ("yyyyMMdd"      , 24 * 60 * 60 * 1000, 1L << 40),
+        ;
+
+        private static Cycle[] VALUES = values();
+
+        private final String format;
+        private final int length;
+        private final long entries;
+
+        Cycle(String format, int length, long entries) {
+            this.format = format;
+            this.length = length;
+            this.entries = entries;
+        }
+
+        public String format() {
+            return this.format;
+        }
+
+        public int length() {
+            return this.length;
+        }
+
+        public long entries() {
+            return this.entries;
+        }
+
+        public static Cycle forLength(int length) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].length == length) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
+        }
+
+        public static Cycle forFormat(String format) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].format == format || VALUES[i].format.equals(format)) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
+        }
+    }
+
     public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
 
     /**
@@ -109,6 +162,21 @@ public class VanillaChronicle implements Chronicle {
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
+
+        /*
+        System.out.println("Cycle:");
+        System.out.println("> cycleFormat         : " + this.builder.cycleFormat());
+        System.out.println("> cycleLength         : " + this.builder.cycleLength());
+        System.out.println("> entriesPerCycle     : " + this.builder.entriesPerCycle());
+        System.out.println("Bits:");
+        System.out.println("> indexBlockSizeBits  : " + indexBlockSizeBits );
+        System.out.println("> dataBlockSizeBits   : " + dataBlockSizeBits  );
+        System.out.println("* indexBlockLongsBits : " + indexBlockLongsBits);
+        System.out.println("* entriesForCycleBits : " + entriesForCycleBits);
+
+        // bitsToRepresent(cycle) + bitsRepresent(entriesPerCycle) < 64
+        // return (cycle << entriesForCycleBits) + (indexCount << indexBlockLongsBits) + (indexPosition >> 3);
+        */
     }
 
     void checkNotClosed() {

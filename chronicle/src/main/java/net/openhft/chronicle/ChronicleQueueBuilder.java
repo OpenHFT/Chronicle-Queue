@@ -362,14 +362,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.path = path;
             this.synchronous = false;
             this.useCheckedExcerpt = false;
-            this.cycleFormat = "yyyyMMdd";
-            this.cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
             this.defaultMessageSize = 128 << 10; // 128 KB.
             this.dataCacheCapacity = 32;
             this.indexCacheCapacity = 32;
             this.indexBlockSize = 16L << 20; // 16 MB
             this.dataBlockSize = 64L << 20; // 64 MB
-            this.entriesPerCycle = 1L << 40; // one trillion per day or per hour.
+            this.cycleFormat = VanillaChronicle.Cycle.DAYS.format();
+            this.cycleLength = VanillaChronicle.Cycle.DAYS.length();
+            this.entriesPerCycle = VanillaChronicle.Cycle.DAYS.entries();
             this.cleanupOnClose = false;
             this.useCompressedObjectSerializer = true;
         }
@@ -444,6 +444,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             }
 
             this.cycleLength = cycleLength;
+            entriesPerCycle(VanillaChronicle.Cycle.forLength(this.cycleLength).entries());
+
             return this;
         }
 
@@ -466,6 +468,13 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public VanillaChronicleQueueBuilder dataBlockSize(long dataBlockSize) {
             this.dataBlockSize = dataBlockSize;
+            return this;
+        }
+
+        public VanillaChronicleQueueBuilder cycle(VanillaChronicle.Cycle cycle) {
+            cycleFormat(cycle.format());
+            cycleLength(cycle.length(), false);
+            entriesPerCycle(cycle.entries());
             return this;
         }
 
