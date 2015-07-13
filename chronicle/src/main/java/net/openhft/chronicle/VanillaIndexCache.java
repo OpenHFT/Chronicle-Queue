@@ -177,13 +177,11 @@ public class VanillaIndexCache implements Closeable {
         int maxIndex = -1;
 
         final File cyclePath = cyclePathFor(cycle);
-        final String cyclePathName = cyclePath.getAbsolutePath();
-        final File[] files = cyclePath.listFiles();
+        final String[] files = cyclePath.list();
         if (files != null) {
             for (int i=files.length - 1; i>=0; i--) {
-                String name = files[i].getAbsolutePath().substring(cyclePathName.length() + 1);
-                if (name.startsWith(FILE_NAME_PREFIX)) {
-                    int index = Integer.parseInt(name.substring(FILE_NAME_PREFIX.length()));
+                if (files[i].startsWith(FILE_NAME_PREFIX)) {
+                    int index = Integer.parseInt(files[i].substring(FILE_NAME_PREFIX.length()));
                     if (maxIndex < index) {
                         maxIndex = index;
                     }
