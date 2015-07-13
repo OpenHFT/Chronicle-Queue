@@ -86,7 +86,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         File[] files = new File(basePath).listFiles();
         Assert.assertNotNull(files);
-        Assert.assertTrue(files.length > 5);
+        Assert.assertTrue(files.length >= 5);
     }
 
     @Test
