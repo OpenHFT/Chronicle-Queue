@@ -104,6 +104,7 @@
             <groupId>org.hdrhistogram</groupId>
             <artifactId>HdrHistogram</artifactId>
             <version>2.1.4</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- on linux install with sudo apt-get install libjna-java -->
