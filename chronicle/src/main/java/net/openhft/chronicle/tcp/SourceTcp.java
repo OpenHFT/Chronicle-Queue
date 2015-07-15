@@ -18,6 +18,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
+import net.openhft.chronicle.network.InvalidEventHandlerException;
+import net.openhft.chronicle.network.SimpleSessionDetailsProvider;
+import net.openhft.chronicle.network.TcpEventHandler;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectByteBufferBytes;
@@ -36,6 +39,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static net.openhft.chronicle.network.TcpPipeline.pipeline;
 import static net.openhft.chronicle.tcp.ChronicleTcp.createBuffer;
 import static net.openhft.lang.io.ByteBufferBytes.wrap;
 
@@ -96,7 +100,7 @@ public abstract class SourceTcp {
      * @param socketChannel The {@link java.nio.channels.SocketChannel}
      * @return The Runnable
      */
-    protected Runnable createSessionHandler(final @NotNull SocketChannel socketChannel) {
+    protected Runnable createSessionHandler(final @NotNull SocketChannel socketChannel) throws IOException {
         final Chronicle chronicle = builder.chronicle();
         if (chronicle != null) {
             if (chronicle instanceof IndexedChronicle) {
@@ -122,9 +126,12 @@ public abstract class SourceTcp {
     /**
      * Abstract class for Indexed and Vanilla chronicle replication
      */
-    private abstract class SessionHandler implements Runnable, Closeable {
+    private abstract class SessionHandler implements SourceTcpHandler.SubscriptionListener, Runnable, Closeable {
         private final SocketChannel socketChannel;
-        protected final TcpConnection connection;
+//        protected final TcpConnection connection;
+        protected TcpEventHandler tcpEventHandler;
+        private final SourceTcpHandler sourceTcpHandler;
+        private final SimpleSessionDetailsProvider sessionDetails;
 
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
@@ -136,9 +143,17 @@ public abstract class SourceTcp {
 
         private ResizableDirectByteBufferBytes withMappedBuffer;
 
-        private SessionHandler(final @NotNull SocketChannel socketChannel) {
+        private SessionHandler(final @NotNull SocketChannel socketChannel, SourceTcpHandler sourceTcpHandler) throws IOException {
             this.socketChannel = socketChannel;
-            this.connection = new TcpConnection(socketChannel);
+//            this.connection = new TcpConnection(socketChannel);
+            this.sourceTcpHandler = sourceTcpHandler;
+            this.sourceTcpHandler.setSubscriptionListener(this);
+            this.sourceTcpHandler.setRunning(running);
+            this.sourceTcpHandler.setPauser(pauser);
+            this.sourceTcpHandler.setMaxExcerptsPerMessage(builder.maxExcerptsPerMessage());
+            this.sourceTcpHandler.setHeartbeatIntervalMillis(builder.heartbeatIntervalMillis());
+            this.sessionDetails = new SimpleSessionDetailsProvider();
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sourceTcpHandler), sessionDetails);
             this.tailer = null;
             this.appender = null;
             this.lastHeartbeat = 0;
@@ -150,6 +165,17 @@ public abstract class SourceTcp {
             this.bytesOut.limit(0);
 
             this.withMappedBuffer = new ResizableDirectByteBufferBytes(1024);
+        }
+
+        @Override
+        public void subscribed() {
+            sessionDetails.get(SelectionKey.class).interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        }
+
+        @Override
+        public void unsubscribed() {
+            final SelectionKey selectionKey = sessionDetails.get(SelectionKey.class);
+            selectionKey.interestOps(selectionKey.interestOps() & ~SelectionKey.OP_WRITE);
         }
 
         @Override
@@ -193,11 +219,13 @@ public abstract class SourceTcp {
                 tailer = builder.chronicle().createTailer();
                 appender = builder.chronicle().createAppender();
 
+                sourceTcpHandler.setTailer(tailer);
+                sourceTcpHandler.setAppender(appender);
+
                 selectionKeys = selector.vanillaSelectionKeys();
 
                 if (selectionKeys != null) {
                     vanillaNioLoop(selector, selectionKeys);
-
                 } else {
                     nioLoop(selector);
                 }
@@ -309,18 +337,32 @@ public abstract class SourceTcp {
             bytesOut.clear();
             bytesOut.writeInt(size);
             bytesOut.writeLong(index);
-            connection.write(bytesOut.flip());
+            // TODO
+//            connection.write(bytesOut.flip());
+
             setLastHeartbeat();
         }
 
         protected DirectByteBufferBytes readUpTo(int size) throws IOException {
-            connection.read(readBuffer.resetToSize(size), size, -1);
+            // TODO
+//            connection.read(readBuffer.resetToSize(size), size, -1);
             return readBuffer;
         }
 
         protected boolean onSelectionKey(final SelectionKey key) throws IOException {
             if (key != null) {
-                if (key.isReadable()) {
+                if (key.isReadable() || key.isWritable()) {
+                    try {
+                        sessionDetails.set(SelectionKey.class, key);
+                        sessionDetails.set(MappingProvider.class, (MappingProvider) key.attachment());
+                        return tcpEventHandler.action();
+                    } catch (InvalidEventHandlerException e) {
+                        throw new IOException(e);
+                    } finally {
+                        sessionDetails.set(SelectionKey.class, null);
+                    }
+                }
+/*
                     if (!onRead(key)) {
                         return false;
                     }
@@ -329,6 +371,7 @@ public abstract class SourceTcp {
                         return false;
                     }
                 }
+*/
             }
 
             return true;
@@ -477,8 +520,8 @@ public abstract class SourceTcp {
     private class IndexedSessionHandler extends SessionHandler {
         private long index;
 
-        private IndexedSessionHandler(final @NotNull SocketChannel socketChannel) {
-            super(socketChannel);
+        private IndexedSessionHandler(final @NotNull SocketChannel socketChannel) throws IOException {
+            super(socketChannel, SourceTcpHandler.indexed());
             this.index = -1;
         }
 
@@ -539,7 +582,8 @@ public abstract class SourceTcp {
                 while (size > 0) {
                     int minSize = (int) Math.min(size, bytesOut.remaining());
                     bytesOut.write(bytes);
-                    connection.write(bytesOut.flip());
+                    // TODO
+//                    connection.write(bytesOut.flip());
 
                     size -= minSize;
                     if (size > 0) {
@@ -579,7 +623,8 @@ public abstract class SourceTcp {
                     }
                 }
 
-                connection.write(bytesOut.flip());
+                // TODO
+//                connection.write(bytesOut.flip());
             }
 
             if (bytesOut.remaining() > 0) {
@@ -598,8 +643,8 @@ public abstract class SourceTcp {
         private boolean nextIndex;
         private long index;
 
-        private VanillaSessionHandler(final @NotNull SocketChannel socketChannel) {
-            super(socketChannel);
+        private VanillaSessionHandler(final @NotNull SocketChannel socketChannel) throws IOException {
+            super(socketChannel, SourceTcpHandler.vanilla());
 
             this.nextIndex = true;
             this.index = -1;
@@ -682,7 +727,8 @@ public abstract class SourceTcp {
                 while (size > 0) {
                     int minSize = (int) Math.min(size, bytesOut.remaining());
                     bytesOut.write(bytes);
-                    connection.write(bytesOut.flip());
+                    // TODO
+//                    connection.write(bytesOut.flip());
                     bytesOut.clear();
 
                     size -= minSize;
@@ -719,7 +765,8 @@ public abstract class SourceTcp {
                     }
                 }
 
-                connection.write(bytesOut.flip());
+                // TODO
+//                connection.write(bytesOut.flip());
             }
 
             if (bytesOut.remaining() > 0) {

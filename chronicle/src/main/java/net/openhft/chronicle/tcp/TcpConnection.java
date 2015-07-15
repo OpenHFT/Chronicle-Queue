@@ -86,18 +86,12 @@ class TcpConnection {
 
     public int write(final Bytes bytes) throws IOException {
         final ByteBuffer bb = bytes.sliceAsByteBuffer(buffer);
-        int bw = write(bb);
+        int bw = write0(bb);
         bytes.position(bb.position());
         return bw;
     }
 
-/*
-    public void writeAll(final DirectByteBufferBytes bb) throws IOException {
-        writeAll(bb.buffer());
-    }
-*/
-
-    public int write(final ByteBuffer bb) throws IOException {
+    private int write0(final ByteBuffer bb) throws IOException {
         int bw = 0;
         while (bb.remaining() > 0) {
             bw = this.socketChannel.write(bb);
@@ -107,46 +101,6 @@ class TcpConnection {
         }
         return bw;
     }
-
-/*
-    public int read(final ByteBuffer buffer) throws IOException {
-        int nb = this.socketChannel.read(buffer);
-        if (nb < 0) {
-            throw new EOFException();
-        }
-
-        return 0;
-    }
-
-    public boolean read(final ByteBuffer buffer, int size) throws IOException {
-        return read(buffer, size, size);
-    }
-
-    public boolean read(final ByteBuffer buffer, int threshod, int size) throws IOException {
-        int rem = buffer.remaining();
-        if (rem < threshod) {
-            if (buffer.remaining() == 0) {
-                buffer.clear();
-
-            } else {
-                buffer.compact();
-            }
-
-            int targetPosition = buffer.position() + size;
-            while (buffer.position() < targetPosition) {
-                int rb = this.socketChannel.read(buffer);
-                if (rb < 0) {
-                    this.socketChannel.close();
-                    return false;
-                }
-            }
-
-            buffer.flip();
-        }
-
-        return true;
-    }
-*/
 
     public boolean read(final Bytes bytes, int size, int readAttempts) throws IOException {
         final ByteBuffer buffer = bytes.sliceAsByteBuffer(this.buffer);
@@ -178,56 +132,12 @@ class TcpConnection {
         return true;
     }
 
-/*
-    public boolean readAtLeast(final ByteBuffer buffer, int size, int readCount) throws IOException {
-        if (buffer.remaining() == 0) {
-            buffer.clear();
-
-        } else {
-            buffer.compact();
-        }
-
-        int spins = 0;
-        int bytes = 0;
-        int targetPosition = buffer.position() + size;
-        while (buffer.position() < targetPosition) {
-            int rb = this.socketChannel.read(buffer);
-            if (rb < 0) {
-                throw new EOFException();
-
-            } else if(bytes == 0 && rb == 0 && readCount > -1) {
-                if(spins++ >= readCount) {
-                    return false;
-                }
-            } else {
-                spins = 0;
-                bytes += rb;
-            }
-        }
-
-        buffer.flip();
-
-        return true;
-    }
-*/
-
-/*
-    public void writeSizeAndIndex(ByteBuffer buffer, int size, long index) throws IOException {
-        buffer.clear();
-        buffer.putInt(size);
-        buffer.putLong(index);
-        buffer.flip();
-
-        write(buffer);
-    }
-*/
-
     public void writeAction(ByteBuffer buffer, long action, long size) throws IOException {
         buffer.clear();
         buffer.putLong(action);
         buffer.putLong(size);
         buffer.flip();
 
-        write(buffer);
+        write0(buffer);
     }
 }
