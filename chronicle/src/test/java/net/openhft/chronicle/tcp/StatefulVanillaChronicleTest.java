@@ -24,6 +24,7 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.Jvm;
 import org.junit.Test;
 
 import java.io.File;
@@ -513,6 +514,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
                             final long actual = tailer.readLong();
+                            System.out.println("read=" + actual + ", index=" + tailer.index());
                             assertEquals(totalItems - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
@@ -575,9 +577,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         ExcerptAppender appender = source.createAppender();
         for(long i = 0; i < items; i++) {
+            final long l = (run * items) + i;
             appender.startExcerpt(8);
-            appender.writeLong((run * items) + i);
+            appender.writeLong(l);
             appender.finish();
+            System.out.println("appended " + l);
         }
 
         appender.close();
