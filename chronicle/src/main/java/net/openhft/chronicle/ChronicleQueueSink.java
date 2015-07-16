@@ -36,19 +36,19 @@ import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
 import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
 class ChronicleQueueSink extends WrappedChronicle {
-    private final SinkTcp connection;
+    private final SinkTcp sinkTcp;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
     private final int readSpinCount;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    ChronicleQueueSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection) {
+    ChronicleQueueSink(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp sinkTcp) {
         super(builder.chronicle());
-        this.connection = connection;
+        this.sinkTcp = sinkTcp;
         this.builder = builder.clone();
         this.closed = false;
-        this.isLocal = builder.sharedChronicle() && connection.isLocalhost();
+        this.isLocal = builder.sharedChronicle() && sinkTcp.isLocalhost();
         this.excerpt = null;
         this.readSpinCount = builder.readSpinCount();
     }
@@ -57,8 +57,8 @@ class ChronicleQueueSink extends WrappedChronicle {
     public void close() throws IOException {
         if (!closed) {
             closed = true;
-            if (this.connection != null) {
-                this.connection.close();
+            if (this.sinkTcp != null) {
+                this.sinkTcp.close();
             }
         }
 
@@ -107,7 +107,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
             super(excerpt);
 
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + sinkTcp.toString());
             this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
             this.bytesIn = ByteBufferBytes.wrap(ChronicleTcp.createBuffer(builder.minBufferSize()));
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
@@ -128,7 +128,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         public synchronized void close() {
             try {
-                connection.close();
+                sinkTcp.close();
             } catch (IOException e) {
                 logger.warn("Error closing socketChannel", e);
             }
@@ -138,16 +138,16 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean openConnection() {
-            if(!connection.isOpen()) {
+            if(!sinkTcp.isOpen()) {
                 try {
-                    connection.open();
+                    sinkTcp.open();
                 } catch (IOException e) {
                 }
             }
 
-            boolean connected = connection.isOpen();
+            boolean connected = sinkTcp.isOpen();
             if(connected) {
-                builder.connectionListener().onConnect(connection.socketChannel());
+                builder.connectionListener().onConnect(sinkTcp.socketChannel());
                 this.lastReconnectionAttempt = 0;
                 this.lastReconnectionAttemptMS = 0;
 
@@ -196,7 +196,8 @@ class ChronicleQueueSink extends WrappedChronicle {
                 writeBuffer.writeInt(pos, (int) (writeBuffer.position() - start));
             }
 
-            connection.write(writeBuffer.flip());
+            // todo
+//            sinkTcp.write(writeBuffer.flip());
 
             if (writeBuffer.remaining() > 0) {
                 throw new EOFException("Failed to subscribe with index " + index);
@@ -208,7 +209,8 @@ class ChronicleQueueSink extends WrappedChronicle {
             writeBuffer.writeLong(ChronicleTcp.ACTION_QUERY);
             writeBuffer.writeLong(index);
 
-            connection.write(writeBuffer.flip());
+            // todo
+//            sinkTcp.write(writeBuffer.flip());
 
             if (writeBuffer.remaining() > 0) {
                 throw new EOFException("Failed to write query for index " + index);
@@ -216,18 +218,18 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean readNext() {
-            if (!closed && !connection.isOpen() && shouldConnect()) {
+            if (!closed && !sinkTcp.isOpen() && shouldConnect()) {
                 try {
                     doReadNext();
                 } catch(IOException e) {
                     logIOException(logger, "Exception reading from socket", e);
                     if(!closed) {
-                        builder.connectionListener().onError(connection.socketChannel(), e);
+                        builder.connectionListener().onError(sinkTcp.socketChannel(), e);
                     }
                 }
             }
 
-            return !closed && connection.isOpen() && readNextExcerpt();
+            return !closed && sinkTcp.isOpen() && readNextExcerpt();
         }
 
         protected boolean readNextExcerpt() {
@@ -238,12 +240,12 @@ class ChronicleQueueSink extends WrappedChronicle {
             } catch (IOException e) {
                 logIOException(logger, "Exception reading from socket", e);
                 if(!closed) {
-                    builder.connectionListener().onError(connection.socketChannel(), e);
+                    builder.connectionListener().onError(sinkTcp.socketChannel(), e);
                 }
 
                 try {
-                    connection.close();
-                    builder.connectionListener().onDisconnect(connection.socketChannel());
+                    sinkTcp.close();
+                    builder.connectionListener().onDisconnect(sinkTcp.socketChannel());
                 } catch (IOException e2) {
                     logger.warn("Error closing socketChannel", e2);
                 }
@@ -281,7 +283,9 @@ class ChronicleQueueSink extends WrappedChronicle {
         protected boolean doReadNextExcerpt()  throws IOException {
             query(wrappedChronicle.lastIndex());
 
-            if (connection.read(bytesIn.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, readSpinCount)) {
+            // todo
+/*
+            if (sinkTcp.read(bytesIn.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, readSpinCount)) {
                 final int size = bytesIn.readInt();
                 bytesIn.readLong(); // consume data
 
@@ -294,6 +298,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                         return true;
                 }
             }
+*/
 
             return false;
         }
@@ -369,7 +374,8 @@ class ChronicleQueueSink extends WrappedChronicle {
                 // needs more than one read.
                 while (remaining > 0) {
                     int size3 = (int) Math.min(bytesIn.capacity(), remaining);
-                    connection.read(bytesIn.clear().limit(size3), size3, -1);
+                    // todo
+//                    sinkTcp.read(bytesIn.clear().limit(size3), size3, -1);
                     remaining -= bytesIn.remaining();
                     adapter.write(bytesIn);
                 }
@@ -392,10 +398,14 @@ class ChronicleQueueSink extends WrappedChronicle {
                 } else {
                     compact(bytesIn);
                 }
-                return connection.read(
+                // todo
+                return true;
+/*
+                return sinkTcp.read(
                         bytesIn,
                         ChronicleTcp.HEADER_SIZE + 8,
                         readSpinCount);
+*/
             }
 
             return true;
