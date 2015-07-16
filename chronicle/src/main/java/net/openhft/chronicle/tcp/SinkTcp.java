@@ -18,24 +18,46 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.Excerpt;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.network.*;
+import net.openhft.lang.thread.LightPauser;
+import net.openhft.lang.thread.Pauser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class SinkTcp extends TcpConnection {
+import static net.openhft.chronicle.network.TcpPipeline.pipeline;
+
+public abstract class SinkTcp {// extends TcpConnection {
     protected final Logger logger;
     protected final String name;
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
+    protected final SessionDetailsProvider sessionDetailsProvider = new SimpleSessionDetailsProvider();
+    protected TcpEventHandler tcpEventHandler;
+    protected SocketChannel socketChannel;
+
+    private long reconnectionIntervalMS;
+    private long lastReconnectionAttempt;
+    private long lastReconnectionAttemptMS;
+    private ConnectionListener connectionListener;
+    private TcpHandler sinkTcpHandler;
 
     protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         this.builder = builder;
         this.name = ChronicleTcp.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
+        this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
+    }
+
+    public void setSinkTcpHandler(TcpHandler sinkTcpHandler) {
+        this.sinkTcpHandler = sinkTcpHandler;
     }
 
     @Override
@@ -53,6 +75,7 @@ public abstract class SinkTcp extends TcpConnection {
 
         SocketChannel socketChannel = openSocketChannel();
         if(socketChannel != null) {
+
             socketChannel.configureBlocking(blocking);
             socketChannel.socket().setTcpNoDelay(true);
             socketChannel.socket().setSoTimeout(0);
@@ -65,7 +88,8 @@ public abstract class SinkTcp extends TcpConnection {
                 socketChannel.socket().setSendBufferSize(this.builder.sendBufferSize());
             }
 
-            super.setSocketChannel(socketChannel);
+            this.socketChannel = socketChannel;
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sinkTcpHandler), sessionDetailsProvider);
         }
 
         running.set(false);
@@ -75,10 +99,82 @@ public abstract class SinkTcp extends TcpConnection {
 
     public void close() throws IOException {
         this.running.set(false);
-        super.close();
+        if (socketChannel != null) {
+            socketChannel.close();
+        }
+    }
+
+    public boolean isOpen() {
+        return socketChannel != null && socketChannel.isOpen();
+    }
+
+    protected boolean shouldConnect() {
+        if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+            long now = System.currentTimeMillis();
+            if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+                return false;
+            }
+
+            lastReconnectionAttemptMS = now;
+        }
+
+        return true;
+    }
+
+    public boolean connect(boolean blocking) {
+        if (isOpen()) {
+            return true;
+        } else if (!shouldConnect()) {
+            return false;
+        } else if (!isOpen()) {
+            try {
+                open(blocking);
+            } catch (IOException e) {
+            }
+        }
+
+        boolean connected = isOpen();
+        if(connected) {
+            this.lastReconnectionAttempt = 0;
+            this.lastReconnectionAttemptMS = 0;
+            if (connectionListener != null) {
+                connectionListener.onConnect();
+            }
+        } else {
+            lastReconnectionAttempt++;
+            if(builder.reconnectionWarningThreshold() > 0) {
+                if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
+                    logger.warn("Failed to establish a connection {}",
+                            ChronicleTcp.connectionName("", builder)
+                    );
+                }
+            }
+        }
+
+        return connected;
+    }
+
+    public void sink() throws IOException {
+        try {
+            tcpEventHandler.action();
+        } catch (InvalidEventHandlerException e) {
+            throw new IOException("Failed to sink to remote chronicle.", e);
+        }
     }
 
     public abstract boolean isLocalhost();
 
     protected abstract SocketChannel openSocketChannel() throws IOException;
+
+    public void setConnectionListener(ConnectionListener connectionListener) {
+        this.connectionListener = connectionListener;
+    }
+
+    public SocketChannel socketChannel() {
+        return socketChannel;
+    }
+
+    public interface ConnectionListener {
+        void onConnect();
+    }
 }

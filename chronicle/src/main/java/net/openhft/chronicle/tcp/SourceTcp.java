@@ -128,8 +128,7 @@ public abstract class SourceTcp {
      */
     private abstract class SessionHandler implements SourceTcpHandler.SubscriptionListener, Runnable, Closeable {
         private final SocketChannel socketChannel;
-//        protected final TcpConnection connection;
-        protected TcpEventHandler tcpEventHandler;
+        protected final TcpEventHandler tcpEventHandler;
         private final SourceTcpHandler sourceTcpHandler;
         private final SimpleSessionDetailsProvider sessionDetails;
 
@@ -145,7 +144,6 @@ public abstract class SourceTcp {
 
         private SessionHandler(final @NotNull SocketChannel socketChannel, SourceTcpHandler sourceTcpHandler) throws IOException {
             this.socketChannel = socketChannel;
-//            this.connection = new TcpConnection(socketChannel);
             this.sourceTcpHandler = sourceTcpHandler;
             this.sourceTcpHandler.setSubscriptionListener(this);
             this.sourceTcpHandler.setRunning(running);
