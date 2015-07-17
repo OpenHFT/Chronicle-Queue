@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 import net.openhft.lang.io.IOTools;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
@@ -147,6 +148,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         Assert.assertEquals(0, latch.getCount());
     }
 
+    @Ignore("Test is taking too much time on CI")
     @Test
     public void testCycleEveryMinute() throws Exception {
         final String basePath = getTestPath();
