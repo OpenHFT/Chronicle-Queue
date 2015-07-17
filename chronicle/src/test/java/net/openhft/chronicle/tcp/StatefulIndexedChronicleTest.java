@@ -478,7 +478,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                     ExcerptTailer tailer = sink.createTailer();
                     while(latch.getCount() > 0) {
                         if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            long actual = tailer.readLong();
+                            assertEquals(items - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
 
@@ -539,11 +540,13 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         appender2.close();
 
-        latch.await(5, TimeUnit.SECONDS);
+        latch.await(500, TimeUnit.SECONDS);
         assertEquals(0, latch.getCount());
 
+/*
         source2.close();
         source2.clear();
+*/
     }
     
     // *************************************************************************

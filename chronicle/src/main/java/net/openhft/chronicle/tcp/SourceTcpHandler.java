@@ -34,8 +34,6 @@ public abstract class SourceTcpHandler implements TcpHandler {
 
     private long lastHeartbeat;
 
-    protected AtomicBoolean running;
-
     protected int maxExcerptsPerMessage;
 
     private long heartbeatIntervalMillis;
@@ -50,10 +48,6 @@ public abstract class SourceTcpHandler implements TcpHandler {
 
     public void setTailer(ExcerptTailer tailer) {
         this.tailer = tailer;
-    }
-
-    public void setRunning(AtomicBoolean running) {
-        this.running = running;
     }
 
     public void setPauser(Pauser pauser) {
@@ -296,7 +290,7 @@ public abstract class SourceTcpHandler implements TcpHandler {
             if (nextIndex) {
                 if (!tailer.nextIndex()) {
                     pauser.pause();
-                    if (running.get() && !tailer.nextIndex()) {
+                    if (!tailer.nextIndex()) {
                         return false;
                     }
                 }
@@ -450,7 +444,7 @@ public abstract class SourceTcpHandler implements TcpHandler {
 
                 pauser.pause();
 
-                if (running.get() && !tailer.index(index)) {
+                if (!tailer.index(index)) {
                     return false;
                 }
             }
