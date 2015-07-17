@@ -146,7 +146,6 @@ public abstract class SourceTcp {
             this.socketChannel = socketChannel;
             this.sourceTcpHandler = sourceTcpHandler;
             this.sourceTcpHandler.setSubscriptionListener(this);
-            this.sourceTcpHandler.setRunning(running);
             this.sourceTcpHandler.setPauser(pauser);
             this.sourceTcpHandler.setMaxExcerptsPerMessage(builder.maxExcerptsPerMessage());
             this.sourceTcpHandler.setHeartbeatIntervalMillis(builder.heartbeatIntervalMillis());

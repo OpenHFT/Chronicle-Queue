@@ -18,10 +18,8 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tcp.ChronicleTcp;
-import net.openhft.chronicle.tcp.SinkTcp;
-import net.openhft.chronicle.tcp.SinkTcpRemoteAppenderHandler;
-import net.openhft.chronicle.tcp.SinkTcpRemoteExcerptHandler;
+import net.openhft.chronicle.network.TcpEventHandler;
+import net.openhft.chronicle.tcp.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.lang.io.Bytes;
@@ -36,6 +34,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.tcp.ChronicleTcp.createBufferOfSize;
@@ -353,7 +352,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
     private final class StatelessExcerpt
 //            extends WrappedExcerpts.ByteBufferBytesExcerptWrapper {
-            extends AbstractStatelessExcerpt implements SinkTcp.ConnectionListener {
+            extends AbstractStatelessExcerpt {
         private final Logger logger;
         private final ByteBuffer writeBuffer;
         private long index;
@@ -368,7 +367,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.index = -1;
             this.writeBuffer = createBufferOfSize(16);
             this.readCount = builder.readSpinCount();
-            sinkTcp.setConnectionListener(this);
+            sinkTcp.addConnectionListener(new TcpConnectionHandler(){
+                @Override
+                public void onConnect(SocketChannel channel) {
+                    cleanup();
+                }
+            });
             sinkTcp.setSinkTcpHandler(sinkTcpRemoteExcerptHandler);
             sinkTcpRemoteExcerptHandler.setContent((ResizableDirectByteBufferBytes) super.wrapped);
         }
@@ -501,6 +505,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
             return false;
         }
 
+        private long last;
+
         @Override
         public boolean nextIndex() {
             finish();
@@ -513,12 +519,20 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 int attempts = 0;
                 //noinspection LoopStatementThatDoesntLoop
                 do {
+                    if (TcpEventHandler.LOG.get()) {
+                        long current = System.nanoTime();
+                        double time = last == 0 ? Double.NaN : (current - last) / 1000.0;
+                        last = current;
+                        System.out.println("sink attempt: " + attempts + ", index: " + index + ", time(us): " + time);
+                    }
                     sinkTcp.sink();
                     switch (sinkTcpRemoteExcerptHandler.getState()) {
                         case INDEX_NOT_FOUND:
+                            pauser.reset();
                             return false;
                         case INDEX_FOUND:
                             index = sinkTcpRemoteExcerptHandler.index();
+                            pauser.reset();
                             return true;
                     }
                     pauser.pause();
@@ -579,9 +593,5 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
         }
 
-        @Override
-        public void onConnect() {
-            cleanup();
-        }
     }
 }

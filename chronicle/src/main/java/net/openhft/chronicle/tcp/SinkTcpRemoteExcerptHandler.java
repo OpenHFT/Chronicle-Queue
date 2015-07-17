@@ -1,6 +1,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.network.SessionDetailsProvider;
+import net.openhft.chronicle.network.TcpEventHandler;
 import net.openhft.chronicle.network.TcpHandler;
 import net.openhft.chronicle.network.TcpHandlingException;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
@@ -25,8 +26,12 @@ public class SinkTcpRemoteExcerptHandler implements TcpHandler {
 
     @Override
     public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+        long start = System.nanoTime();
         processIncoming(in);
         processOutgoing(out);
+        if (TcpEventHandler.LOG.get()) {
+            System.out.println("remoteExcerptHandler.process; time(us): " + ((System.nanoTime() - start) / 1000.0));
+        }
     }
 
     private void processOutgoing(Bytes out) {

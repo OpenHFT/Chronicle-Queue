@@ -12,6 +12,13 @@ import java.nio.channels.SocketChannel;
 import static net.openhft.lang.io.ByteBufferBytes.wrap;
 
 public class TcpEventHandler {
+    public static final ThreadLocal<Boolean> LOG = new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return Boolean.FALSE;
+        }
+    };
+
     public static final int CAPACITY = 1 << 23;
     private static final int TOO_MUCH_TO_WRITE = 32 << 10;
 
@@ -67,6 +74,7 @@ public class TcpEventHandler {
     }
 
     boolean invokeHandler() throws IOException {
+        long start = System.nanoTime();
         boolean busy = false;
         // inBBB.readLimit(inBB.position());
         inBBB.limit(inBB.position());
@@ -83,19 +91,27 @@ public class TcpEventHandler {
             busy = true;
         }
 
+        long compact = System.nanoTime();
+        long inBBCompactStart = -1, inBBCompactEnd = -1;
         // TODO Optimise.
         // if it read some data compact();
         // if (inBBB.readPosition() > 0) {
-        if (inBBB.position() > 0) {
+        if (inBBB.position() > (inBB.limit() / 2)) {
             // inBB.position((int) inBBB.readPosition());
             inBB.position((int) inBBB.position());
             // inBB.limit((int) inBBB.readLimit());
             inBB.limit((int) inBBB.limit());
+            inBBCompactStart = System.nanoTime();
             inBB.compact();
+            inBBCompactEnd = System.nanoTime();
             inBBB.position(0);
             // inBBB.readLimit(inBB.position());
             inBBB.limit(inBB.position());
             busy = true;
+        }
+        if (LOG.get()) {
+            long now = System.nanoTime();
+            System.out.println("invokeHandler; time; compact(us): " + ((now - compact) / 1000.0) + ", inBB.compact(us): " + ((inBBCompactEnd - inBBCompactStart) / 1000.0) + ", total(us): " + ((now - start) / 1000.0));
         }
         return busy;
     }

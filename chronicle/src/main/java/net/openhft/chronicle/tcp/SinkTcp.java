@@ -18,17 +18,14 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.Excerpt;
-import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.network.*;
-import net.openhft.lang.thread.LightPauser;
-import net.openhft.lang.thread.Pauser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.network.TcpPipeline.pipeline;
@@ -45,8 +42,8 @@ public abstract class SinkTcp {// extends TcpConnection {
     private long reconnectionIntervalMS;
     private long lastReconnectionAttempt;
     private long lastReconnectionAttemptMS;
-    private ConnectionListener connectionListener;
     private TcpHandler sinkTcpHandler;
+    private final List<TcpConnectionListener> connectionListeners = new ArrayList<>();
 
     protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         this.builder = builder;
@@ -54,6 +51,7 @@ public abstract class SinkTcp {// extends TcpConnection {
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
+        this.connectionListeners.add(builder.connectionListener());
     }
 
     public void setSinkTcpHandler(TcpHandler sinkTcpHandler) {
@@ -137,8 +135,8 @@ public abstract class SinkTcp {// extends TcpConnection {
         if(connected) {
             this.lastReconnectionAttempt = 0;
             this.lastReconnectionAttemptMS = 0;
-            if (connectionListener != null) {
-                connectionListener.onConnect();
+            for (int i = 0; i < connectionListeners.size(); i++) {
+                connectionListeners.get(i).onConnect(socketChannel);
             }
         } else {
             lastReconnectionAttempt++;
@@ -166,15 +164,12 @@ public abstract class SinkTcp {// extends TcpConnection {
 
     protected abstract SocketChannel openSocketChannel() throws IOException;
 
-    public void setConnectionListener(ConnectionListener connectionListener) {
-        this.connectionListener = connectionListener;
+    public void addConnectionListener(TcpConnectionListener connectionListener) {
+        this.connectionListeners.add(connectionListener);
     }
 
     public SocketChannel socketChannel() {
         return socketChannel;
     }
 
-    public interface ConnectionListener {
-        void onConnect();
-    }
 }

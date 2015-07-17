@@ -17,9 +17,10 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tcp.AppenderAdapter;
-import net.openhft.chronicle.tcp.ChronicleTcp;
-import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.network.SessionDetailsProvider;
+import net.openhft.chronicle.network.TcpHandler;
+import net.openhft.chronicle.network.TcpHandlingException;
+import net.openhft.chronicle.tcp.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
@@ -31,7 +32,9 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.nio.channels.SocketChannel;
 
+import static net.openhft.chronicle.network.TcpPipeline.pipeline;
 import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
 import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
@@ -137,36 +140,8 @@ class ChronicleQueueSink extends WrappedChronicle {
             ChronicleQueueSink.this.excerpt = null;
         }
 
-        protected boolean openConnection() {
-            if(!sinkTcp.isOpen()) {
-                try {
-                    sinkTcp.open();
-                } catch (IOException e) {
-                }
-            }
-
-            boolean connected = sinkTcp.isOpen();
-            if(connected) {
-                builder.connectionListener().onConnect(sinkTcp.socketChannel());
-                this.lastReconnectionAttempt = 0;
-                this.lastReconnectionAttemptMS = 0;
-
-            } else {
-                lastReconnectionAttempt++;
-                if(builder.reconnectionWarningThreshold() > 0) {
-                    if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
-                        logger.warn("Failed to establish a connection {}",
-                                ChronicleTcp.connectionName("", builder)
-                        );
-                    }
-                }
-            }
-
-            return connected;
-        }
-
         protected boolean shouldConnect() {
-            if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+            if (lastReconnectionAttempt >= builder.reconnectionAttempts()) {
                 long now = System.currentTimeMillis();
                 if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
                     return false;
@@ -178,31 +153,12 @@ class ChronicleQueueSink extends WrappedChronicle {
             return true;
         }
 
+/*
         protected void subscribe(long index) throws IOException {
-            writeBuffer.clearAll();
-            writeBuffer.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
-            writeBuffer.writeLong(index);
-
-            MappingFunction mapping = withMapping();
-            if (mapping != null) {
-                // write with mapping and len
-                writeBuffer.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
-                long pos = writeBuffer.position();
-
-                writeBuffer.skip(4);
-                long start = writeBuffer.position();
-
-                writeBuffer.writeObject(mapping);
-                writeBuffer.writeInt(pos, (int) (writeBuffer.position() - start));
-            }
-
-            // todo
-//            sinkTcp.write(writeBuffer.flip());
-
-            if (writeBuffer.remaining() > 0) {
-                throw new EOFException("Failed to subscribe with index " + index);
-            }
+            queueSinkTcpHandler.subscribeTo(index, withMapping());
+            sinkTcp.sink();
         }
+*/
 
         protected void query(long index) throws IOException {
             writeBuffer.clearAll();
@@ -218,18 +174,24 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean readNext() {
+/*
+            if (!closed && !sinkTcp.connect(false)) {
+                builder.connectionListener().onError(sinkTcp.socketChannel(), null);
+            }
+
             if (!closed && !sinkTcp.isOpen() && shouldConnect()) {
                 try {
                     doReadNext();
-                } catch(IOException e) {
+                } catch (IOException e) {
                     logIOException(logger, "Exception reading from socket", e);
-                    if(!closed) {
+                    if (!closed) {
                         builder.connectionListener().onError(sinkTcp.socketChannel(), e);
                     }
                 }
             }
+*/
 
-            return !closed && sinkTcp.isOpen() && readNextExcerpt();
+            return !closed && sinkTcp.connect(false) && readNextExcerpt();
         }
 
         protected boolean readNextExcerpt() {
@@ -239,7 +201,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 }
             } catch (IOException e) {
                 logIOException(logger, "Exception reading from socket", e);
-                if(!closed) {
+                if (!closed) {
                     builder.connectionListener().onError(sinkTcp.socketChannel(), e);
                 }
 
@@ -254,7 +216,8 @@ class ChronicleQueueSink extends WrappedChronicle {
             return false;
         }
 
-        protected abstract boolean doReadNext()  throws IOException;
+//        protected abstract boolean doReadNext() throws IOException;
+
         protected abstract boolean doReadNextExcerpt() throws IOException;
     }
 
@@ -265,11 +228,19 @@ class ChronicleQueueSink extends WrappedChronicle {
     private class StatefulLocalExcerpt extends AbstractStatefulExcerpt {
         public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
+            sinkTcp.addConnectionListener(new TcpConnectionHandler(){
+                @Override
+                public void onConnect(SocketChannel channel) {
+                    bytesIn.clear();
+                    bytesIn.limit(0);
+                }
+            });
         }
 
+/*
         @Override
         protected boolean doReadNext() throws IOException {
-            if(openConnection()) {
+            if (sinkTcp.connect(false)) {
                 bytesIn.clear();
                 bytesIn.limit(0);
 
@@ -278,9 +249,10 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             return false;
         }
+*/
 
         @Override
-        protected boolean doReadNextExcerpt()  throws IOException {
+        protected boolean doReadNextExcerpt() throws IOException {
             query(wrappedChronicle.lastIndex());
 
             // todo
@@ -305,8 +277,12 @@ class ChronicleQueueSink extends WrappedChronicle {
     }
 
     private final class StatefulExcerpt extends AbstractStatefulExcerpt {
+
         private AppenderAdapter adapter;
+
         private long lastLocalIndex;
+
+        private StatefulExcerptTcpHandler tcpHandler = new StatefulExcerptTcpHandler();
 
         public StatefulExcerpt(final ExcerptCommon common) {
             super(common);
@@ -314,11 +290,33 @@ class ChronicleQueueSink extends WrappedChronicle {
             this.adapter = null;
             this.lastLocalIndex = -1;
             this.withMapping(builder.withMapping());
+            ChronicleQueueSink.this.sinkTcp.setSinkTcpHandler(pipeline(tcpHandler));
+            ChronicleQueueSink.this.sinkTcp.addConnectionListener(new TcpConnectionHandler() {
+                @Override
+                public void onConnect(SocketChannel channel) {
+                    try {
+                        bytesIn.clear();
+                        bytesIn.limit(0);
+
+                        if (adapter == null) {
+                            adapter = createAdapter(wrappedChronicle);
+                        }
+
+                        tcpHandler.subscribeTo(lastLocalIndex = wrappedChronicle.lastIndex(), withMapping());
+                        sinkTcp.sink();
+                    } catch (IOException ioe) {
+                        builder.connectionListener().onError(sinkTcp.socketChannel(), ioe);
+                    }
+                }
+            });
         }
 
+/*
         @Override
         protected boolean doReadNext() throws IOException {
-            if(openConnection()) {
+*/
+/*
+            if (sinkTcp.connect(false)) {
                 bytesIn.clear();
                 bytesIn.limit(0);
 
@@ -330,11 +328,26 @@ class ChronicleQueueSink extends WrappedChronicle {
                 return true;
             }
 
+*//*
+
             return false;
+        }
+*/
+
+        private boolean headerNotFound(int attempts) {
+            return (tcpHandler.state == TcpHandlerState.EXCERPT_NOT_FOUND && (attempts < readSpinCount && readSpinCount > -1));
         }
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
+            int attempts = 0;
+            do {
+                sinkTcp.sink();
+            } while (headerNotFound(attempts++) || excerptIncomplete());
+
+            return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
+
+/*
             if (!readAtLeastHeader()) {
                 return false;
             }
@@ -388,6 +401,11 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             return true;
+*/
+        }
+
+        private boolean excerptIncomplete() {
+            return tcpHandler.state == TcpHandlerState.EXCERPT_INCOMPLETE;
         }
 
         private boolean readAtLeastHeader() throws IOException {
@@ -427,5 +445,139 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             super.close();
         }
+
+        private class StatefulExcerptTcpHandler implements TcpHandler {
+
+            private boolean subscriptionRequired;
+
+            private long subscribedIndex;
+
+            private MappingFunction mappingFunction;
+
+            private TcpHandlerState state;
+
+            @Override
+            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                processIncoming(in);
+                processOutgoing(out);
+            }
+
+            private void processIncoming(Bytes in) {
+                if (state == TcpHandlerState.EXCERPT_INCOMPLETE) {
+                    appendToExcerpt(in);
+                } else if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                    int receivedSize = in.readInt();
+                    long receivedIndex = in.readLong();
+
+                    switch (receivedSize) {
+                        case ChronicleTcp.IN_SYNC_LEN:
+                            // heartbeat
+                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                            return;
+                        case ChronicleTcp.PADDED_LEN:
+                            // write padded entry
+                            StatefulExcerpt.this.adapter.writePaddedEntry();
+                            processIncoming(in);
+                            return;
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                            //Sync IDX message, re-try
+                            processIncoming(in);
+                            return;
+                    }
+
+                    if (receivedSize > 128 << 20 || receivedSize < 0) {
+                        throw new TcpHandlingException("size was " + receivedSize);
+                    }
+
+                    if (lastLocalIndex != receivedIndex) {
+                        StatefulExcerpt.this.adapter.startExcerpt(receivedSize, receivedIndex);
+
+                        appendToExcerpt(in);
+/*
+                        while (remaining > 0) {
+                            int size3 = (int) Math.min(bytesIn.capacity(), remaining);
+                            // todo
+//                    sinkTcp.read(bytesIn.clear().limit(size3), size3, -1);
+                            remaining -= bytesIn.remaining();
+                            adapter.write(bytesIn);
+                        }
+*/
+
+//                        adapter.finish();
+
+                    } else {
+                        // skip the excerpt as we already have it
+                        in.skip(receivedSize);
+//                        in.position(in.position() + receivedSize);
+                        processIncoming(in);
+                    }
+
+                } else {
+                    state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                }
+
+            }
+
+            private void appendToExcerpt(Bytes in) {
+                long inLimit = in.limit();
+                int bytesToWrite = (int) Math.min(in.remaining(), adapter.remaining());
+
+                try {
+                    in.limit(in.position() + bytesToWrite);
+                    adapter.write(in);
+
+                    // needs more than one read.
+                    if (adapter.remaining() > 0) {
+                        state = TcpHandlerState.EXCERPT_INCOMPLETE;
+                    } else {
+                        state = TcpHandlerState.EXCERPT_COMPLETE;
+                        adapter.finish();
+                    }
+                } finally {
+                    // reset the limit;
+                    in.limit(inLimit);
+                }
+            }
+
+            private void processOutgoing(Bytes out) {
+                if (subscriptionRequired) {
+                    out.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+                    out.writeLong(subscribedIndex);
+
+                    if (mappingFunction != null) {
+                        // write with mapping and len
+                        out.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
+                        long pos = out.position();
+
+                        out.skip(4);
+                        long start = out.position();
+
+                        out.writeObject(mappingFunction);
+                        out.writeInt(pos, (int) (out.position() - start));
+                    }
+
+                    subscriptionRequired = false;
+                }
+            }
+
+            @Override
+            public void onEndOfConnection() {
+
+            }
+
+            public void subscribeTo(long index, MappingFunction mappingFunction) {
+                this.subscribedIndex = index;
+                this.subscriptionRequired = true;
+                this.mappingFunction = mappingFunction;
+            }
+
+        }
+
+    }
+
+    public enum TcpHandlerState {
+        EXCERPT_INCOMPLETE,
+        EXCERPT_COMPLETE,
+        EXCERPT_NOT_FOUND
     }
 }
