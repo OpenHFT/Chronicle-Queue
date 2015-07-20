@@ -295,11 +295,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                         tcpHandler.subscribeTo(lastLocalIndex = wrappedChronicle.lastIndex(), withMapping());
 
-                        boolean busy;
-                        int attempts = 0;
-//                        do {
-                            busy = sinkTcp.sink();
-//                        } while (excerptNotRead(busy, attempts++) || !tcpHandler.subscribed);
+                        sinkTcp.sink();
                     } catch (IOException ioe) {
                         builder.connectionListener().onError(sinkTcp.socketChannel(), ioe);
                     }
