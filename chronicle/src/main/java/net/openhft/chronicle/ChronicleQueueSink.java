@@ -20,7 +20,10 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.network.SessionDetailsProvider;
 import net.openhft.chronicle.network.TcpHandler;
 import net.openhft.chronicle.network.TcpHandlingException;
-import net.openhft.chronicle.tcp.*;
+import net.openhft.chronicle.tcp.AppenderAdapter;
+import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.tcp.TcpConnectionHandler;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
@@ -29,9 +32,7 @@ import net.openhft.lang.io.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.StreamCorruptedException;
 import java.nio.channels.SocketChannel;
 
 import static net.openhft.chronicle.network.TcpPipeline.pipeline;
@@ -140,57 +141,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             ChronicleQueueSink.this.excerpt = null;
         }
 
-        protected boolean shouldConnect() {
-            if (lastReconnectionAttempt >= builder.reconnectionAttempts()) {
-                long now = System.currentTimeMillis();
-                if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-                    return false;
-                }
-
-                lastReconnectionAttemptMS = now;
-            }
-
-            return true;
-        }
-
-/*
-        protected void subscribe(long index) throws IOException {
-            queueSinkTcpHandler.subscribeTo(index, withMapping());
-            sinkTcp.sink();
-        }
-*/
-
-        protected void query(long index) throws IOException {
-            writeBuffer.clearAll();
-            writeBuffer.writeLong(ChronicleTcp.ACTION_QUERY);
-            writeBuffer.writeLong(index);
-
-            // todo
-//            sinkTcp.write(writeBuffer.flip());
-
-            if (writeBuffer.remaining() > 0) {
-                throw new EOFException("Failed to write query for index " + index);
-            }
-        }
-
         protected boolean readNext() {
-/*
-            if (!closed && !sinkTcp.connect(false)) {
-                builder.connectionListener().onError(sinkTcp.socketChannel(), null);
-            }
-
-            if (!closed && !sinkTcp.isOpen() && shouldConnect()) {
-                try {
-                    doReadNext();
-                } catch (IOException e) {
-                    logIOException(logger, "Exception reading from socket", e);
-                    if (!closed) {
-                        builder.connectionListener().onError(sinkTcp.socketChannel(), e);
-                    }
-                }
-            }
-*/
-
             return !closed && sinkTcp.connect(false) && readNextExcerpt();
         }
 
@@ -216,8 +167,6 @@ class ChronicleQueueSink extends WrappedChronicle {
             return false;
         }
 
-//        protected abstract boolean doReadNext() throws IOException;
-
         protected abstract boolean doReadNextExcerpt() throws IOException;
     }
 
@@ -226,9 +175,13 @@ class ChronicleQueueSink extends WrappedChronicle {
     // *************************************************************************
 
     private class StatefulLocalExcerpt extends AbstractStatefulExcerpt {
+
+        private StatefulLocalExcerptTcpHandler tcpHandler = new StatefulLocalExcerptTcpHandler();
+
         public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
-            sinkTcp.addConnectionListener(new TcpConnectionHandler(){
+            sinkTcp.setSinkTcpHandler(pipeline(tcpHandler));
+            sinkTcp.addConnectionListener(new TcpConnectionHandler() {
                 @Override
                 public void onConnect(SocketChannel channel) {
                     bytesIn.clear();
@@ -237,42 +190,80 @@ class ChronicleQueueSink extends WrappedChronicle {
             });
         }
 
-/*
-        @Override
-        protected boolean doReadNext() throws IOException {
-            if (sinkTcp.connect(false)) {
-                bytesIn.clear();
-                bytesIn.limit(0);
-
-                return true;
-            }
-
-            return false;
+        private boolean excerptNotRead(boolean busy, int attempts) {
+            return (!busy && (attempts < readSpinCount || readSpinCount == -1));
         }
-*/
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
-            query(wrappedChronicle.lastIndex());
+            tcpHandler.query(wrappedChronicle.lastIndex());
+            sinkTcp.sink();
 
-            // todo
-/*
-            if (sinkTcp.read(bytesIn.clear().limit(ChronicleTcp.HEADER_SIZE), ChronicleTcp.HEADER_SIZE, readSpinCount)) {
-                final int size = bytesIn.readInt();
-                bytesIn.readLong(); // consume data
+            int attempts = 0;
+            boolean busy;
+            do {
+                busy = sinkTcp.sink();
+            } while (excerptNotRead(busy, attempts++));
 
-                switch (size) {
-                    case ChronicleTcp.IN_SYNC_LEN:
-                        return false;
-                    case ChronicleTcp.PADDED_LEN:
-                        return false;
-                    case ChronicleTcp.SYNC_IDX_LEN:
-                        return true;
+            return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
+        }
+
+        private class StatefulLocalExcerptTcpHandler implements TcpHandler {
+
+            private long queryIndex;
+
+            private boolean queryRequired;
+
+            private TcpHandlerState state;
+
+            @Override
+            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                processIncoming(in);
+                processOutgoing(out);
+            }
+
+            private void processOutgoing(Bytes out) {
+                if (queryRequired) {
+                    state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                    out.writeLong(ChronicleTcp.ACTION_QUERY);
+                    out.writeLong(queryIndex);
+                    queryRequired = false;
                 }
             }
-*/
 
-            return false;
+            private void processIncoming(Bytes in) {
+                if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                    int size = in.readInt();
+                    in.readLong(); // index
+
+                    switch (size) {
+                        case ChronicleTcp.IN_SYNC_LEN:
+                            // heartbeat
+                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                            return;
+                        case ChronicleTcp.PADDED_LEN:
+                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                            return;
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                            // in sync
+                            state = TcpHandlerState.EXCERPT_COMPLETE;
+                            return;
+                    }
+
+                    state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                }
+            }
+
+            @Override
+            public void onEndOfConnection() {
+
+            }
+
+            protected void query(long index) throws IOException {
+                queryIndex = index;
+                queryRequired = true;
+            }
+
         }
     }
 
@@ -303,7 +294,12 @@ class ChronicleQueueSink extends WrappedChronicle {
                         }
 
                         tcpHandler.subscribeTo(lastLocalIndex = wrappedChronicle.lastIndex(), withMapping());
-                        sinkTcp.sink();
+
+                        boolean busy;
+                        int attempts = 0;
+//                        do {
+                            busy = sinkTcp.sink();
+//                        } while (excerptNotRead(busy, attempts++) || !tcpHandler.subscribed);
                     } catch (IOException ioe) {
                         builder.connectionListener().onError(sinkTcp.socketChannel(), ioe);
                     }
@@ -311,129 +307,23 @@ class ChronicleQueueSink extends WrappedChronicle {
             });
         }
 
-/*
-        @Override
-        protected boolean doReadNext() throws IOException {
-*/
-/*
-            if (sinkTcp.connect(false)) {
-                bytesIn.clear();
-                bytesIn.limit(0);
-
-                if (this.adapter == null) {
-                    this.adapter = createAdapter(wrappedChronicle);
-                }
-
-                subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
-                return true;
-            }
-
-*//*
-
-            return false;
-        }
-*/
-
-        private boolean headerNotFound(int attempts) {
-            return (tcpHandler.state == TcpHandlerState.EXCERPT_NOT_FOUND && (attempts < readSpinCount && readSpinCount > -1));
+        private boolean excerptNotRead(boolean busy, int attempts) {
+            return (!busy && (attempts < readSpinCount || readSpinCount == -1));
         }
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
             int attempts = 0;
+            boolean busy;
             do {
-                sinkTcp.sink();
-            } while (headerNotFound(attempts++) || excerptIncomplete());
+                busy = sinkTcp.sink();
+            } while (excerptNotRead(busy, attempts++) || excerptIncomplete());
 
             return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
-
-/*
-            if (!readAtLeastHeader()) {
-                return false;
-            }
-
-            final int size = bytesIn.readInt();
-            final long scIndex = bytesIn.readLong();
-
-            switch (size) {
-                case ChronicleTcp.IN_SYNC_LEN:
-                    //Heartbeat message ignore and return false
-                    return false;
-                case ChronicleTcp.PADDED_LEN:
-                    this.adapter.writePaddedEntry();
-                    return readNextExcerpt();
-                case ChronicleTcp.SYNC_IDX_LEN:
-                    //Sync IDX message, re-try
-                    return readNextExcerpt();
-            }
-
-            if (size > 128 << 20 || size < 0) {
-                throw new StreamCorruptedException("size was " + size);
-            }
-
-            if (lastLocalIndex != scIndex) {
-                this.adapter.startExcerpt(size, scIndex);
-
-                long remaining = size;
-                long limit = bytesIn.limit();
-                int size2 = (int) Math.min(bytesIn.remaining(), remaining);
-
-                remaining -= size2;
-                bytesIn.limit(bytesIn.position() + size2);
-                adapter.write(bytesIn);
-                // reset the limit;
-                bytesIn.limit(limit);
-
-                // needs more than one read.
-                while (remaining > 0) {
-                    int size3 = (int) Math.min(bytesIn.capacity(), remaining);
-                    // todo
-//                    sinkTcp.read(bytesIn.clear().limit(size3), size3, -1);
-                    remaining -= bytesIn.remaining();
-                    adapter.write(bytesIn);
-                }
-
-                adapter.finish();
-
-            } else {
-                bytesIn.position(bytesIn.position() + size);
-                return readNextExcerpt();
-            }
-
-            return true;
-*/
         }
 
         private boolean excerptIncomplete() {
             return tcpHandler.state == TcpHandlerState.EXCERPT_INCOMPLETE;
-        }
-
-        private boolean readAtLeastHeader() throws IOException {
-            long rem = bytesIn.remaining();
-            if (rem < ChronicleTcp.HEADER_SIZE) {
-                if (bytesIn.remaining() == 0) {
-                    bytesIn.clear();
-                } else {
-                    compact(bytesIn);
-                }
-                // todo
-                return true;
-/*
-                return sinkTcp.read(
-                        bytesIn,
-                        ChronicleTcp.HEADER_SIZE + 8,
-                        readSpinCount);
-*/
-            }
-
-            return true;
-        }
-
-        private void compact(Bytes bytes) {
-            long pos = bytes.position();
-            long rem = bytes.remaining();
-            bytes.clear();
-            bytes.write(bytes, pos, rem);
         }
 
         @Override
@@ -456,6 +346,8 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             private TcpHandlerState state;
 
+            private boolean subscribed;
+
             @Override
             public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
                 processIncoming(in);
@@ -463,6 +355,44 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             private void processIncoming(Bytes in) {
+                if (!subscribed) {
+                    processSubscription(in);
+                } else {
+                    processExcerpt(in);
+                }
+            }
+
+            private void processSubscription(Bytes in) {
+                if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                    long startPos = in.position();
+                    int receivedSize = in.readInt();
+                    in.readLong(); // index
+
+                    switch (receivedSize) {
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                            subscribed = true;
+                            processExcerpt(in);
+                            return;
+                        case ChronicleTcp.IN_SYNC_LEN:
+                            // heartbeat
+                            return;
+                        case ChronicleTcp.PADDED_LEN:
+                            // padding
+                            return;
+                    }
+
+                    // skip excerpt
+                    if (in.remaining() >= receivedSize) {
+                        in.skip(receivedSize);
+                        state = TcpHandlerState.SEARCHING;
+                    } else {
+                        in.position(startPos);
+                    }
+                }
+                subscribed = false;
+            }
+
+            private void processExcerpt(Bytes in) {
                 if (state == TcpHandlerState.EXCERPT_INCOMPLETE) {
                     appendToExcerpt(in);
                 } else if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
@@ -477,11 +407,11 @@ class ChronicleQueueSink extends WrappedChronicle {
                         case ChronicleTcp.PADDED_LEN:
                             // write padded entry
                             StatefulExcerpt.this.adapter.writePaddedEntry();
-                            processIncoming(in);
+                            processExcerpt(in);
                             return;
                         case ChronicleTcp.SYNC_IDX_LEN:
                             //Sync IDX message, re-try
-                            processIncoming(in);
+                            processExcerpt(in);
                             return;
                     }
 
@@ -493,23 +423,10 @@ class ChronicleQueueSink extends WrappedChronicle {
                         StatefulExcerpt.this.adapter.startExcerpt(receivedSize, receivedIndex);
 
                         appendToExcerpt(in);
-/*
-                        while (remaining > 0) {
-                            int size3 = (int) Math.min(bytesIn.capacity(), remaining);
-                            // todo
-//                    sinkTcp.read(bytesIn.clear().limit(size3), size3, -1);
-                            remaining -= bytesIn.remaining();
-                            adapter.write(bytesIn);
-                        }
-*/
-
-//                        adapter.finish();
-
                     } else {
                         // skip the excerpt as we already have it
                         in.skip(receivedSize);
-//                        in.position(in.position() + receivedSize);
-                        processIncoming(in);
+                        processExcerpt(in);
                     }
 
                 } else {
@@ -578,6 +495,7 @@ class ChronicleQueueSink extends WrappedChronicle {
     public enum TcpHandlerState {
         EXCERPT_INCOMPLETE,
         EXCERPT_COMPLETE,
+        SEARCHING,
         EXCERPT_NOT_FOUND
     }
 }

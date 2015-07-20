@@ -366,7 +366,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
             Thread.sleep(100);
 
-            if(i % 10 ==0) {
+            if (i % 10 == 0) {
                 LOGGER.info(".");
             }
         }
@@ -389,8 +389,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
         LOGGER.info("Sink1 reading first 50 items then stopping");
-        for( int count=0; count < 50 ;) {
-            if(tailer1.nextIndex()) {
+        for (int count = 0; count < 50; ) {
+            if (tailer1.nextIndex()) {
                 assertEquals(1000000000 + count, tailer1.parseLong());
                 tailer1.finish();
 
@@ -417,10 +417,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
         assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
-        
+
         LOGGER.info("Sink2 restarting to continue to read the next 50 items");
-        for(int count=50 ; count < 100 ; ) {
-            if(tailer2.nextIndex()) {
+        for (int count = 50; count < 100; ) {
+            if (tailer2.nextIndex()) {
                 assertEquals(1000000000 + count, tailer2.parseLong());
                 tailer2.finish();
 
@@ -511,8 +511,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
                             final long actual = tailer.readLong();
                             System.out.println("read=" + actual + ", index=" + tailer.index());
                             assertEquals(totalItems - latch.getCount(), actual);
@@ -537,7 +537,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         t.start();
 
 
-        for (int i = 0; i < runs; i ++) {
+        for (int i = 0; i < runs; i++) {
             final int expectedLatchCount = totalItems - ((i + 1) * itemsPerRun);
             appendToSource(portSupplier, basePathSource, itemsPerRun, i, new Runnable() {
                 @Override
@@ -576,7 +576,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender = source.createAppender();
-        for(long i = 0; i < items; i++) {
+        for (long i = 0; i < items; i++) {
             final long l = (run * items) + i;
             appender.startExcerpt(8);
             appender.writeLong(l);
@@ -620,6 +620,39 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 source,
                 sink,
                 sinkBuilder.heartbeatIntervalMillis()
+        );
+    }
+
+    // Tests that a large (size greater than a single write) excerpt can be fully sourced
+    @Test
+    public void testLargeExcerpt() throws Exception {
+        final String basePathSource = getVanillaTestPath("source");
+        final String basePathSink = getVanillaTestPath("sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .readSpinCount(5)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle sink = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sink,
+//                sinkBuilder.heartbeatIntervalMillis()
+                500000
         );
     }
 }

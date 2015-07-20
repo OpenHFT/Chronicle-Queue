@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.network.TcpPipeline.pipeline;
 
-public abstract class SinkTcp {// extends TcpConnection {
+public abstract class SinkTcp {
     protected final Logger logger;
     protected final String name;
     protected final AtomicBoolean running;
@@ -87,7 +87,7 @@ public abstract class SinkTcp {// extends TcpConnection {
             }
 
             this.socketChannel = socketChannel;
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sinkTcpHandler), sessionDetailsProvider);
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sinkTcpHandler), sessionDetailsProvider, builder.sendBufferSize(), builder.receiveBufferSize());
         }
 
         running.set(false);
@@ -152,9 +152,9 @@ public abstract class SinkTcp {// extends TcpConnection {
         return connected;
     }
 
-    public void sink() throws IOException {
+    public boolean sink() throws IOException {
         try {
-            tcpEventHandler.action();
+            return tcpEventHandler.action();
         } catch (InvalidEventHandlerException e) {
             throw new IOException("Failed to sink to remote chronicle.", e);
         }
