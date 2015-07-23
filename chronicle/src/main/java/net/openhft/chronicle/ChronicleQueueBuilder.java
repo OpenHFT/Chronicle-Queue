@@ -17,6 +17,8 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.network.TcpHandler;
+import net.openhft.chronicle.network.TcpPipeline;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
@@ -26,7 +28,12 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Collections.addAll;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
 
@@ -612,6 +619,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         @Nullable
         private MappingFunction mapping;
 
+        private List<TcpHandler> tcpHandlers = new ArrayList<>();
+
         private ReplicaChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
             this.builder = builder;
             this.chronicle = chronicle;
@@ -1004,6 +1013,19 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public Chronicle chronicle() {
             return this.chronicle;
+        }
+
+        public ReplicaChronicleQueueBuilder tcpHandlers(TcpHandler ... tcpHandlers) {
+            if (tcpHandlers != null) {
+                addAll(this.tcpHandlers, tcpHandlers);
+            }
+            return this;
+        }
+
+        public TcpPipeline tcpPipeline(TcpHandler tcpHandler) {
+            TcpHandler[] handlers = tcpHandlers.toArray(new TcpHandler[tcpHandlers.size() + 1]);
+            handlers[handlers.length - 1] = tcpHandler;
+            return TcpPipeline.pipeline(handlers);
         }
 
         @Override

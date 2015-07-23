@@ -221,7 +221,6 @@ public class ChronicleTcpTestBase {
                         appender.writeLong(i);
                         appender.writeLong(i + 1);
                         appender.finish();
-                        System.out.println("Appender; i: " + i + ", index: " + appender.lastWrittenIndex() + ", " + i + ", " + (i + 1));
 
                         Thread.sleep(random.nextInt(10));
                     }
@@ -260,7 +259,6 @@ public class ChronicleTcpTestBase {
                         if(hasNext) {
                             long first = tailer.readLong();
                             long second = tailer.readLong();
-                            System.out.println("Tailer; i: " + i + ", index: " + tailer.index() + ", " + first + ", " + second);
                             assertEquals(i, first);
                             assertEquals(i + 1, second);
                             i++;

@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static net.openhft.chronicle.network.TcpPipeline.pipeline;
-
 public abstract class SinkTcp {
     protected final Logger logger;
     protected final String name;
@@ -87,7 +85,7 @@ public abstract class SinkTcp {
             }
 
             this.socketChannel = socketChannel;
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sinkTcpHandler), sessionDetailsProvider, builder.sendBufferSize(), builder.receiveBufferSize());
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sinkTcpHandler), sessionDetailsProvider, builder.sendBufferSize(), builder.receiveBufferSize());
         }
 
         running.set(false);
@@ -99,6 +97,12 @@ public abstract class SinkTcp {
         this.running.set(false);
         if (socketChannel != null) {
             socketChannel.close();
+            try {
+                // this will cause the TcpHandlers to close following the closure of the socket.
+                tcpEventHandler.action();
+            } catch (InvalidEventHandlerException iehe) {
+                // expected to be thrown
+            }
         }
     }
 

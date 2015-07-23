@@ -37,10 +37,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static net.openhft.chronicle.network.TcpPipeline.pipeline;
-import static net.openhft.chronicle.tcp.ChronicleTcp.createBuffer;
-import static net.openhft.lang.io.ByteBufferBytes.wrap;
-
 public abstract class SourceTcp {
     protected final Logger logger;
     protected final String name;
@@ -132,10 +128,6 @@ public abstract class SourceTcp {
 
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
-        protected long lastHeartbeat;
-
-        protected final Bytes bytesOut;
-        protected final ResizableDirectByteBufferBytes readBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel, SourceTcpHandler sourceTcpHandler) throws IOException {
             this.socketChannel = socketChannel;
@@ -145,15 +137,9 @@ public abstract class SourceTcp {
             this.sourceTcpHandler.setMaxExcerptsPerMessage(builder.maxExcerptsPerMessage());
             this.sourceTcpHandler.setHeartbeatIntervalMillis(builder.heartbeatIntervalMillis());
             this.sessionDetails = new SimpleSessionDetailsProvider();
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, pipeline(sourceTcpHandler), sessionDetails, builder.sendBufferSize(), builder.receiveBufferSize());
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sourceTcpHandler), sessionDetails, builder.sendBufferSize(), builder.receiveBufferSize());
             this.tailer = null;
             this.appender = null;
-            this.lastHeartbeat = 0;
-
-            this.readBuffer = new ResizableDirectByteBufferBytes(16);
-            this.readBuffer.clearThreadAssociation();
-            this.bytesOut = wrap(createBuffer(builder.minBufferSize()));
-            this.bytesOut.limit(0);
         }
 
         @Override
@@ -179,8 +165,14 @@ public abstract class SourceTcp {
                 this.appender = null;
             }
 
-            if (this.socketChannel.isOpen()) {
+            if (this.socketChannel != null) {
                 this.socketChannel.close();
+                try {
+                    // trigger onEndOfConnection on the tcp handlers of the event handler.
+                    tcpEventHandler.action();
+                } catch (InvalidEventHandlerException iehe) {
+                    // this is expected as the socket is closed.
+                }
             }
         }
 
@@ -477,7 +469,7 @@ public abstract class SourceTcp {
         }
 
         @Override
-        public void onEndOfConnection() {
+        public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
 
         }
 
@@ -596,7 +588,6 @@ public abstract class SourceTcp {
 
             state = content.remaining() > 0 ? TcpHandlerState.EXCERPT_INCOMPLETE : TcpHandlerState.EXCERPT_COMPLETE;
 
-            System.out.println("SourceTcp.writePartial; index: " + tailer.index() + ", state: " + state.name());
         }
 
         protected boolean hasRoomForExcerpt(Bytes bytes, Bytes tailer) {
@@ -652,7 +643,6 @@ public abstract class SourceTcp {
                 int size = (int) content.remaining();
 
                 if (out.remaining() >= ChronicleTcp.HEADER_SIZE) {
-                    System.out.println("SourceTcp.write; index: " + tailer.index());
                     writeSizeAndIndex(out, (int) content.limit(), tailer.index());
 
                     // for large objects send one at a time.

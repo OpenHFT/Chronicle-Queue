@@ -514,7 +514,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                     while (latch.getCount() > 0) {
                         if (tailer.nextIndex()) {
                             final long actual = tailer.readLong();
-                            System.out.println("read=" + actual + ", index=" + tailer.index());
                             assertEquals(totalItems - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
@@ -581,7 +580,6 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             appender.startExcerpt(8);
             appender.writeLong(l);
             appender.finish();
-            System.out.println("appended " + l);
         }
 
         appender.close();
