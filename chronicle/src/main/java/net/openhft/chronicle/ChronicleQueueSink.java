@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static net.openhft.chronicle.network.TcpPipeline.pipeline;
 import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
 import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
@@ -104,9 +103,6 @@ class ChronicleQueueSink extends WrappedChronicle {
         protected final Logger logger;
         protected final ResizableDirectByteBufferBytes writeBuffer;
         protected final Bytes bytesIn;
-        private long lastReconnectionAttemptMS;
-        private long reconnectionIntervalMS;
-        private long lastReconnectionAttempt;
 
         protected AbstractStatefulExcerpt(final ExcerptCommon excerpt) {
             super(excerpt);
@@ -114,9 +110,6 @@ class ChronicleQueueSink extends WrappedChronicle {
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + sinkTcp.toString());
             this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
             this.bytesIn = ByteBufferBytes.wrap(ChronicleTcp.createBuffer(builder.minBufferSize()));
-            this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
-            this.lastReconnectionAttemptMS = 0;
-            this.lastReconnectionAttempt = 0;
         }
 
         @Override
@@ -180,7 +173,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
-            sinkTcp.setSinkTcpHandler(pipeline(tcpHandler));
+            sinkTcp.setSinkTcpHandler(builder.tcpPipeline(tcpHandler));
             sinkTcp.addConnectionListener(new TcpConnectionHandler() {
                 @Override
                 public void onConnect(SocketChannel channel) {
@@ -255,7 +248,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             @Override
-            public void onEndOfConnection() {
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
 
             }
 
@@ -281,7 +274,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             this.adapter = null;
             this.lastLocalIndex = -1;
             this.withMapping(builder.withMapping());
-            ChronicleQueueSink.this.sinkTcp.setSinkTcpHandler(pipeline(tcpHandler));
+            ChronicleQueueSink.this.sinkTcp.setSinkTcpHandler(builder.tcpPipeline(tcpHandler));
             ChronicleQueueSink.this.sinkTcp.addConnectionListener(new TcpConnectionHandler() {
                 @Override
                 public void onConnect(SocketChannel channel) {
@@ -474,7 +467,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             @Override
-            public void onEndOfConnection() {
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
 
             }
 

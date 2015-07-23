@@ -18,10 +18,7 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.network.SessionDetailsProvider;
-import net.openhft.chronicle.network.TcpEventHandler;
-import net.openhft.chronicle.network.TcpHandler;
-import net.openhft.chronicle.network.TcpHandlingException;
+import net.openhft.chronicle.network.*;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
@@ -346,7 +343,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
 
             @Override
-            public void onEndOfConnection() {
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
 
             }
 
@@ -531,12 +528,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 boolean busy;
                 //noinspection LoopStatementThatDoesntLoop
                 do {
-                    if (TcpEventHandler.LOG.get()) {
-                        long current = System.nanoTime();
-                        double time = last == 0 ? Double.NaN : (current - last) / 1000.0;
-                        last = current;
-                        System.out.println("sink attempt: " + attempts + ", index: " + index + ", time(us): " + time);
-                    }
                     busy = sinkTcp.sink();
                     switch (tcpHandler.getState()) {
                         case EXCERPT_NOT_FOUND:
@@ -582,16 +573,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             private long index = -1;
 
-            private TcpHandlerState state;
+            private TcpHandlerState state = TcpHandlerState.EXCERPT_INCOMPLETE;
 
             @Override
             public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
-                long start = System.nanoTime();
                 processIncoming(in);
                 processOutgoing(out);
-                if (TcpEventHandler.LOG.get()) {
-                    System.out.println("remoteExcerptHandler.process; time(us): " + ((System.nanoTime() - start) / 1000.0));
-                }
             }
 
             private void processOutgoing(Bytes out) {
@@ -710,7 +697,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
 
             @Override
-            public void onEndOfConnection() {
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
 
             }
 

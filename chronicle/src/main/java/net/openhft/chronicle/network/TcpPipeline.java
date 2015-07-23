@@ -1,9 +1,7 @@
 package net.openhft.chronicle.network;
 
-import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.lang.io.Bytes;
 
-import javax.swing.table.TableColumn;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +15,7 @@ public class TcpPipeline implements TcpHandler {
         handlers.add(handler);
     }
 
-    public static TcpPipeline pipeline(TcpHandler ... handlers) {
+    public static TcpPipeline pipeline(TcpHandler... handlers) {
         final TcpPipeline pipeline = new TcpPipeline();
         if (handlers != null) {
             for (int i = 0; i < handlers.length; i++) {
@@ -39,8 +37,14 @@ public class TcpPipeline implements TcpHandler {
     }
 
     @Override
-    public void onEndOfConnection() {
+    public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
+        if (handlers.isEmpty()) {
+            return;
+        }
 
+        for (int i = 0; i < handlers.size(); i++) {
+            handlers.get(i).onEndOfConnection(sessionDetailsProvider);
+        }
     }
 
     private class PipelineCoordinator implements PipelineContext {

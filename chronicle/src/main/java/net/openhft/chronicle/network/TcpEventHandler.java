@@ -12,13 +12,6 @@ import java.nio.channels.SocketChannel;
 import static net.openhft.lang.io.ByteBufferBytes.wrap;
 
 public class TcpEventHandler {
-    public static final ThreadLocal<Boolean> LOG = new ThreadLocal<Boolean>() {
-        @Override
-        protected Boolean initialValue() {
-            return Boolean.FALSE;
-        }
-    };
-
     public static final int CAPACITY = 1 << 23;
     private static final int TOO_MUCH_TO_WRITE = 32 << 10;
 
@@ -60,7 +53,7 @@ public class TcpEventHandler {
 
     public boolean action() throws InvalidEventHandlerException {
         if (!sc.isOpen()) {
-            handler.onEndOfConnection();
+            handler.onEndOfConnection(sessionDetails);
             throw new InvalidEventHandlerException("Cannot process, socket chanel is not open.");
         }
 
@@ -118,10 +111,6 @@ public class TcpEventHandler {
             busy |= true;
         } else {
             busy |= inBBBPos < inBBB.position(); // we have read something, so deemed busy.
-        }
-        if (LOG.get()) {
-            long now = System.nanoTime();
-            System.out.println("invokeHandler; time; compact(us): " + ((now - compact) / 1000.0) + ", inBB.compact(us): " + ((inBBCompactEnd - inBBCompactStart) / 1000.0) + ", total(us): " + ((now - start) / 1000.0));
         }
         return busy;
     }

@@ -12,6 +12,6 @@ public interface TcpHandler {
     void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider);
 
     // Still only Java 7 support, can't use default methods
-    void onEndOfConnection();
+    void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider);
 
 }
