@@ -188,8 +188,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 try {
                     flip();
 
-                    sinkTcp.sink();
-                    pauser.reset();
+                    sinkTcpHandler.markUnsent();
+                    // A pipeline attached to a sinkTcp may need to be called multiple
+                    // times in order for the excerpt to actually be isSent.  This could
+                    // be caused by a TcpHandler higher up in the pipeline.
+                    do {
+                        sinkTcp.sink();
+                        pauser.pause();
+                    } while (!sinkTcpHandler.isSent());
+
                     while (sinkTcpHandler.waitingForAck()) {
                         pauser.pause();
                         sinkTcp.sink();
@@ -291,6 +298,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             private boolean waitingForAck;
 
+            private boolean sent = false;
+
             public StatelessExcerptAppenderTcpHandler(ExcerptAppender appender) {
                 this.appender = appender;
             }
@@ -340,6 +349,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                     waitingForAck = appendRequireAck;
                 }
+                sent = true;
             }
 
             @Override
@@ -358,6 +368,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
             public long getLastIndex() {
                 return lastIndex;
             }
+
+            public void markUnsent() {
+                sent = false;
+            }
+
+            public boolean isSent() {
+                return sent;
+            }
         }
 
     }
@@ -366,20 +384,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         protected AbstractStatelessExcerpt(Bytes wrapped) {
             super(wrapped);
-        }
-
-        protected Bytes resize(long capacity) {
-            if (capacity > Integer.MAX_VALUE) {
-                throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
-            }
-
-            if (capacity > capacity()) {
-                wrapped = wrap(createBufferOfSize((int) capacity));
-            }
-
-            clear();
-            limit((int) capacity);
-            return this;
         }
 
         protected void cleanup() {
@@ -391,7 +395,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
     private final class StatelessExcerpt
             extends AbstractStatelessExcerpt {
         private final Logger logger;
-        private final ByteBuffer writeBuffer;
         private long index;
         private int readSpinCount;
         private RemoteExcerptTcpHandler tcpHandler = new RemoteExcerptTcpHandler();
@@ -402,7 +405,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.pauser = new LightPauser(builder.busyPeriodTimeNanos(), builder.parkPeriodTimeNanos());
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + sinkTcp.toString());
             this.index = -1;
-            this.writeBuffer = createBufferOfSize(16);
             this.readSpinCount = builder.readSpinCount();
             sinkTcp.addConnectionListener(new TcpConnectionHandler(){
                 @Override

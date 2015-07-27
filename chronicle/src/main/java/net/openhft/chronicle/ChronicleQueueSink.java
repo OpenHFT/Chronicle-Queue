@@ -173,7 +173,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         public StatefulLocalExcerpt(final ExcerptCommon common) {
             super(common);
-            sinkTcp.setSinkTcpHandler(builder.tcpPipeline(tcpHandler));
+            sinkTcp.setSinkTcpHandler(tcpHandler);
             sinkTcp.addConnectionListener(new TcpConnectionHandler() {
                 @Override
                 public void onConnect(SocketChannel channel) {
@@ -274,7 +274,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             this.adapter = null;
             this.lastLocalIndex = -1;
             this.withMapping(builder.withMapping());
-            ChronicleQueueSink.this.sinkTcp.setSinkTcpHandler(builder.tcpPipeline(tcpHandler));
+            ChronicleQueueSink.this.sinkTcp.setSinkTcpHandler(tcpHandler);
             ChronicleQueueSink.this.sinkTcp.addConnectionListener(new TcpConnectionHandler() {
                 @Override
                 public void onConnect(SocketChannel channel) {
