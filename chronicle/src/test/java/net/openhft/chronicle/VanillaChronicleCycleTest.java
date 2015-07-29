@@ -102,13 +102,13 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         svc.execute(
             createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmmss").build(),
+                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(1024).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmmss").build(),
                 cycle,
                 iterations)
         );
         svc.execute(
             createReader(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmmss").build(),
+                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(1024).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmmss").build(),
                 cycle,
                 latch)
         );
@@ -131,13 +131,13 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         svc.execute(
             createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(2L << 20).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmm" + File.separator + "ss").build(),
+                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(1024).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmm" + File.separator + "ss").build(),
                 cycle,
                 iterations)
         );
         svc.execute(
             createReader(
-                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(2L << 20).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmm" + File.separator + "ss").build(),
+                ChronicleQueueBuilder.vanilla(basePath).dataBlockSize(1024).cycle(cycle).cycleFormat("yyyyMMdd" + File.separator + "HHmm" + File.separator + "ss").build(),
                 cycle,
                 latch)
         );
