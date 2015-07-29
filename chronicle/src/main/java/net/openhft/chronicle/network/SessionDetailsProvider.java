@@ -3,7 +3,9 @@ package net.openhft.chronicle.network;
 import java.net.InetSocketAddress;
 
 /**
- * Created by lear on 10/07/15.
+ * Taken from: https://github.com/OpenHFT/Chronicle-Network/blob/master/src/main/java/net/openhft/chronicle/network/api/session/SessionDetailsProvider.java
+ *
+ * for future integration ease
  */
 public interface SessionDetailsProvider extends SessionDetails {
 

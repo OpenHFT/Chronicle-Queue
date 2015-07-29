@@ -6,7 +6,9 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 /**
- * Created by lear on 10/07/15.
+ * Taken from: https://github.com/OpenHFT/Chronicle-Network/blob/master/src/main/java/net/openhft/chronicle/network/api/session/SessionDetails.java
+ *
+ * for future integration ease.
  */
 public interface SessionDetails {
 

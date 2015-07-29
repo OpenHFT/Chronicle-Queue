@@ -1,9 +1,7 @@
 package net.openhft.chronicle.network;
 
-import java.io.IOException;
-
 /**
- * Created by lear on 15/07/2015.
+ * Author: Ryan Lea
  */
 public class TcpHandlingException extends RuntimeException {
 
