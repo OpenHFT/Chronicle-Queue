@@ -18,11 +18,13 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.network.*;
+import net.openhft.chronicle.tcp.network.*;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,18 +36,21 @@ public abstract class SinkTcp {
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final SessionDetailsProvider sessionDetailsProvider = new SimpleSessionDetailsProvider();
-    protected TcpEventHandler tcpEventHandler;
+    protected SinkTcpEventHandler tcpEventHandler;
     protected SocketChannel socketChannel;
 
     private long reconnectionIntervalMS;
     private long lastReconnectionAttempt;
     private long lastReconnectionAttemptMS;
     private TcpHandler sinkTcpHandler;
+    private boolean blocking;
+
     private final List<TcpConnectionListener> connectionListeners = new ArrayList<>();
 
-    protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
+    protected SinkTcp(String name, final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, boolean blocking) {
         this.builder = builder;
         this.name = ChronicleTcp.connectionName(name, this.builder.bindAddress(), this.builder.connectAddress());
+        this.blocking = blocking;
         this.logger = LoggerFactory.getLogger(this.name);
         this.running = new AtomicBoolean(false);
         this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
@@ -61,31 +66,14 @@ public abstract class SinkTcp {
         return this.name;
     }
 
-    public boolean open() throws IOException {
-        return open(false);
-    }
-
-    public boolean open(boolean blocking) throws IOException {
+    private boolean open() throws IOException {
         close();
         running.set(true);
 
         SocketChannel socketChannel = openSocketChannel();
-        if(socketChannel != null) {
-
-            socketChannel.configureBlocking(blocking);
-            socketChannel.socket().setTcpNoDelay(true);
-            socketChannel.socket().setSoTimeout(0);
-            socketChannel.socket().setSoLinger(false, 0);
-
-            if(this.builder.receiveBufferSize() > 0) {
-                socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
-            }
-            if(this.builder.sendBufferSize() > 0) {
-                socketChannel.socket().setSendBufferSize(this.builder.sendBufferSize());
-            }
-
+        if (socketChannel != null) {
             this.socketChannel = socketChannel;
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sinkTcpHandler), sessionDetailsProvider, builder.sendBufferSize(), builder.receiveBufferSize());
+            this.tcpEventHandler = new SinkTcpEventHandler(socketChannel, builder.tcpPipeline(sinkTcpHandler), sessionDetailsProvider, builder.sendBufferSize(), builder.receiveBufferSize());
         }
 
         running.set(false);
@@ -111,7 +99,7 @@ public abstract class SinkTcp {
     }
 
     protected boolean shouldConnect() {
-        if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+        if (lastReconnectionAttempt >= builder.reconnectionAttempts()) {
             long now = System.currentTimeMillis();
             if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
                 return false;
@@ -123,20 +111,20 @@ public abstract class SinkTcp {
         return true;
     }
 
-    public boolean connect(boolean blocking) {
+    public boolean connect() {
         if (isOpen()) {
             return true;
         } else if (!shouldConnect()) {
             return false;
         } else if (!isOpen()) {
             try {
-                open(blocking);
+                open();
             } catch (IOException e) {
             }
         }
 
         boolean connected = isOpen();
-        if(connected) {
+        if (connected) {
             this.lastReconnectionAttempt = 0;
             this.lastReconnectionAttemptMS = 0;
             for (int i = 0; i < connectionListeners.size(); i++) {
@@ -144,7 +132,7 @@ public abstract class SinkTcp {
             }
         } else {
             lastReconnectionAttempt++;
-            if(builder.reconnectionWarningThreshold() > 0) {
+            if (builder.reconnectionWarningThreshold() > 0) {
                 if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
                     logger.warn("Failed to establish a connection {}",
                             ChronicleTcp.connectionName("", builder)
@@ -156,12 +144,12 @@ public abstract class SinkTcp {
         return connected;
     }
 
-    public boolean sink() throws IOException {
-        try {
-            return tcpEventHandler.action();
-        } catch (InvalidEventHandlerException e) {
-            throw new IOException("Failed to sink to remote chronicle.", e);
-        }
+    public boolean read() throws IOException {
+        return tcpEventHandler.read();
+    }
+
+    public boolean write() throws IOException {
+        return tcpEventHandler.write();
     }
 
     public abstract boolean isLocalhost();
@@ -176,4 +164,45 @@ public abstract class SinkTcp {
         return socketChannel;
     }
 
+    private class SinkTcpEventHandler extends TcpEventHandler {
+
+        private boolean readWasBusy;
+
+        public SinkTcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetailsProvider sessionDetails, int sendCapacity, int receiveCapacity) throws IOException {
+            super(sc, handler, sessionDetails, sendCapacity, receiveCapacity);
+            sc.configureBlocking(blocking);
+        }
+
+        public boolean write() throws IOException {
+            try {
+                if (blocking) {
+                    return invokeHandler();
+                } else {
+                    return action();
+                }
+            } catch (InvalidEventHandlerException e) {
+                throw new IOException(e);
+            }
+        }
+
+        public boolean read() throws IOException {
+            try {
+                if (blocking && readWasBusy) {
+                    // if the last read was busy, try just invoking the handler as we might have data to read
+                    // directly from the buffer
+                    readWasBusy = invokeHandler();
+                }
+
+                if (!blocking || !readWasBusy) {
+                    // try a full read, which involves reading from the socket as well
+                    readWasBusy = action();
+                }
+
+            } catch (InvalidEventHandlerException e) {
+                throw new IOException(e);
+            }
+            return readWasBusy;
+        }
+
+    }
 }

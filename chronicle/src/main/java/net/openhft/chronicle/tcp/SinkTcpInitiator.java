@@ -23,15 +23,14 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 public class SinkTcpInitiator extends SinkTcp {
-    public SinkTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
-        super("sink-initiator", builder);
+    public SinkTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, boolean blocking) {
+        super("sink-initiator", builder, blocking);
     }
 
     @Override
     public SocketChannel openSocketChannel() throws IOException {
         try {
             SocketChannel channel = SocketChannel.open();
-            channel.configureBlocking(true);
 
             if(builder.bindAddress() != null) {
                 channel.bind(builder.bindAddress());

@@ -18,7 +18,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
-import net.openhft.chronicle.network.*;
+import net.openhft.chronicle.tcp.network.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.model.constraints.NotNull;
@@ -181,18 +181,6 @@ public abstract class SourceTcp {
             VanillaSelectionKeySet selectionKeys = null;
 
             try {
-                socketChannel.configureBlocking(false);
-                socketChannel.socket().setTcpNoDelay(true);
-                socketChannel.socket().setSoTimeout(0);
-                socketChannel.socket().setSoLinger(false, 0);
-
-                if (builder.receiveBufferSize() > 0) {
-                    socketChannel.socket().setReceiveBufferSize(builder.receiveBufferSize());
-                }
-                if (builder.sendBufferSize() > 0) {
-                    socketChannel.socket().setSendBufferSize(builder.sendBufferSize());
-                }
-
                 final VanillaSelector selector = new VanillaSelector()
                         .open()
                         .register(socketChannel, SelectionKey.OP_READ, new Attached());
@@ -345,9 +333,11 @@ public abstract class SourceTcp {
 
         private long lastHeartbeat;
 
-        protected int maxExcerptsPerMessage;
-
         private long heartbeatIntervalMillis;
+
+        private final BusyChecker busyChecker = new BusyChecker();
+
+        protected int maxExcerptsPerMessage;
 
         protected long index;
 
@@ -382,9 +372,11 @@ public abstract class SourceTcp {
         }
 
         @Override
-        public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+        public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            busyChecker.mark(in, out);
             processIncoming(in, out, sessionDetailsProvider);
             processOutgoing(out, sessionDetailsProvider);
+            return busyChecker.busy(in, out);
         }
 
         private void processIncoming(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {

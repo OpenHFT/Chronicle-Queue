@@ -17,8 +17,8 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.network.TcpHandler;
-import net.openhft.chronicle.network.TcpPipeline;
+import net.openhft.chronicle.tcp.network.TcpHandler;
+import net.openhft.chronicle.tcp.TcpPipeline;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
@@ -30,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -1141,11 +1140,12 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            boolean blocking = readSpinCount() <= 0;
             if (bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
+                cnx = new SinkTcpAcceptor(this, blocking);
 
             } else if (connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
+                cnx = new SinkTcpInitiator(this, blocking);
 
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
@@ -1217,12 +1217,11 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            boolean blocking = readSpinCount() <= 0;
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
-
+                cnx = new SinkTcpAcceptor(this, blocking);
             } else if(connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
-
+                cnx = new SinkTcpInitiator(this, blocking);
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1257,11 +1256,13 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            boolean blocking = readSpinCount() <= 0;
+
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
+                cnx = new SinkTcpAcceptor(this, blocking);
 
             } else if(connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
+                cnx = new SinkTcpInitiator(this, blocking);
 
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");

@@ -18,7 +18,7 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.network.*;
+import net.openhft.chronicle.tcp.network.*;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 
@@ -45,16 +44,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
     private final SinkTcp sinkTcp;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
-    private final boolean blocking;
     private volatile boolean closed;
     private ExcerptCommon excerpt;
 
-    protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp sinkTcp, boolean blocking) {
+    protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp sinkTcp) {
         super(builder.chronicle());
         this.sinkTcp = sinkTcp;
         this.builder = builder.clone();
         this.closed = false;
-        this.blocking = blocking;
         this.excerpt = null;
     }
 
@@ -193,13 +190,13 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     // times in order for the excerpt to actually be isSent.  This could
                     // be caused by a TcpHandler higher up in the pipeline.
                     do {
-                        sinkTcp.sink();
+                        sinkTcp.write();
                         pauser.pause();
                     } while (!sinkTcpHandler.isSent());
 
                     while (sinkTcpHandler.waitingForAck()) {
                         pauser.pause();
-                        sinkTcp.sink();
+                        sinkTcp.read();
                     }
                 } catch (IOException e) {
                     LOGGER.trace("", e);
@@ -245,7 +242,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         private boolean waitForConnection() {
             for (int i = builder.reconnectionAttempts(); !sinkTcp.isOpen() && i > 0; i--) {
-                sinkTcp.connect(blocking);
+                sinkTcp.connect();
 
                 if (!sinkTcp.isOpen()) {
                     try {
@@ -292,6 +289,8 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             private final Logger logger = LoggerFactory.getLogger(StatelessExcerptAppenderTcpHandler.class);
 
+            private final BusyChecker busyChecker = new BusyChecker();
+
             private ExcerptAppender appender;
 
             private boolean appendRequireAck;
@@ -305,9 +304,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
             }
 
             @Override
-            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
                 processIncoming(in);
                 processOutgoing(out);
+                return busyChecker.busy(in, out);
             }
 
             private void processIncoming(Bytes in) {
@@ -457,7 +458,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         public synchronized void close() {
             try {
                 tcpHandler.unsubscribe();
-                sinkTcp.sink();
+                sinkTcp.write();
                 closeConnection();
             } catch (IOException e) {
                 logger.warn("", e);
@@ -480,14 +481,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public boolean index(long index) {
             try {
-                if (!sinkTcp.connect(blocking)) {
+                if (!sinkTcp.connect()) {
                     return false;
                 }
 
                 tcpHandler.subscribeTo(index);
+                sinkTcp.write();
 
                 while (true) {
-                    sinkTcp.sink();
                     switch (tcpHandler.getState()) {
                         case EXCERPT_COMPLETE:
                             this.index = tcpHandler.index();
@@ -496,7 +497,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                             return false;
                     }
                     pauser.pause();
-
+                    sinkTcp.read();
                 }
             } catch (IOException e) {
                 if (e instanceof EOFException) {
@@ -509,8 +510,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             return false;
         }
-
-        private long last;
 
         private boolean excerptNotRead(boolean busy, int attempts) {
             return (!busy && (attempts < readSpinCount || readSpinCount == -1));
@@ -530,7 +529,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 boolean busy;
                 //noinspection LoopStatementThatDoesntLoop
                 do {
-                    busy = sinkTcp.sink();
+                    busy = sinkTcp.read();
                     switch (tcpHandler.getState()) {
                         case EXCERPT_NOT_FOUND:
                             return false;
@@ -577,10 +576,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
             private TcpHandlerState state = TcpHandlerState.EXCERPT_INCOMPLETE;
 
+            private final BusyChecker busyChecker = new BusyChecker();
+
             @Override
-            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
                 processIncoming(in);
                 processOutgoing(out);
+                return busyChecker.busy(in, out);
             }
 
             private void processOutgoing(Bytes out) {

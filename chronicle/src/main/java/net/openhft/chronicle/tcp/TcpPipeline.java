@@ -1,5 +1,21 @@
-package net.openhft.chronicle.network;
+/*
+ *     Copyright (C) 2015  higherfrequencytrading.com
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Lesser General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Lesser General Public License
+ */
+package net.openhft.chronicle.tcp;
 
+import net.openhft.chronicle.tcp.network.SessionDetailsProvider;
+import net.openhft.chronicle.tcp.network.TcpHandler;
 import net.openhft.lang.io.Bytes;
 
 import java.util.ArrayList;
@@ -10,6 +26,8 @@ public class TcpPipeline implements TcpHandler {
     private final List<TcpHandler> handlers = new ArrayList<>();
 
     private final PipelineCoordinator coordinator = new PipelineCoordinator();
+
+    private boolean busy;
 
     public void addHandler(TcpHandler handler) {
         handlers.add(handler);
@@ -26,14 +44,16 @@ public class TcpPipeline implements TcpHandler {
     }
 
     @Override
-    public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+    public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
         if (handlers.isEmpty()) {
-            return;
+            return false;
         }
 
+        busy = false;
         sessionDetailsProvider.set(PipelineContext.class, coordinator);
         coordinator.reset();
         coordinator.next(in, out, sessionDetailsProvider);
+        return busy;
     }
 
     @Override
@@ -57,18 +77,9 @@ public class TcpPipeline implements TcpHandler {
         public void next(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
             if (idx < handlers.size()) {
                 nextHandler = handlers.get(idx++);
-                nextHandler.process(in, out, sessionDetailsProvider);
+                busy |= nextHandler.process(in, out, sessionDetailsProvider);
+                idx--;
             }
-        }
-
-        @Override
-        public void cancel() {
-
-        }
-
-        @Override
-        public void done() {
-            // necessary ?
         }
 
         public void reset() {

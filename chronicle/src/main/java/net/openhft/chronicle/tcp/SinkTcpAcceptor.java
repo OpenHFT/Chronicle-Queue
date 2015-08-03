@@ -29,8 +29,8 @@ public class SinkTcpAcceptor extends SinkTcp {
     private ServerSocketChannel socketChannel;
     private VanillaSelector selector;
 
-    public SinkTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
-        super("sink-acceptor", builder);
+    public SinkTcpAcceptor(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, boolean blocking) {
+        super("sink-acceptor", builder, blocking);
 
         this.socketChannel = null;
         this.selector = null;
