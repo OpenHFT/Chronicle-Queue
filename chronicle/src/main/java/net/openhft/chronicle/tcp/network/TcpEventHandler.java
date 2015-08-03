@@ -1,8 +1,24 @@
-package net.openhft.chronicle.network;
+/*
+ *     Copyright (C) 2015  higherfrequencytrading.com
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Lesser General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Lesser General Public License
+ */
+package net.openhft.chronicle.tcp.network;
 
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,6 +30,7 @@ import static net.openhft.lang.io.ByteBufferBytes.wrap;
 public class TcpEventHandler {
     public static final int CAPACITY = 1 << 23;
     private static final int TOO_MUCH_TO_WRITE = 32 << 10;
+    private static final Logger log = LoggerFactory.getLogger(TcpEventHandler.class);
 
     private final SocketChannel sc;
     private final TcpHandler handler;
@@ -32,6 +49,8 @@ public class TcpEventHandler {
         sc.socket().setTcpNoDelay(true);
         sc.socket().setReceiveBufferSize(inBB.capacity());
         sc.socket().setSendBufferSize(outBB.capacity());
+        sc.socket().setSoTimeout(0);
+        sc.socket().setSoLinger(false, 0);
 
         this.handler = handler;
         this.sessionDetails = sessionDetails;
@@ -73,15 +92,15 @@ public class TcpEventHandler {
         return false;
     }
 
-    boolean invokeHandler() throws IOException {
-        long start = System.nanoTime();
+    protected boolean invokeHandler() throws IOException {
         boolean busy = false;
         long inBBBPos = inBBB.position();
         // inBBB.readLimit(inBB.position());
         inBBB.limit(inBB.position());
         // outBBB.writePosition(outBB.limit());
         outBBB.position(outBB.limit());
-        handler.process(inBBB, outBBB, sessionDetails);
+
+        busy |= handler.process(inBBB, outBBB, sessionDetails);
 
         // did it write something?
         // if (outBBB.writePosition() > outBB.limit() || outBBB.writePosition() >= 4) {
@@ -92,8 +111,6 @@ public class TcpEventHandler {
             busy |= true;
         }
 
-        long compact = System.nanoTime();
-        long inBBCompactStart = -1, inBBCompactEnd = -1;
         // TODO Optimise.
         // if it read some data compact();
         // if (inBBB.readPosition() > 0) {
@@ -102,9 +119,7 @@ public class TcpEventHandler {
             inBB.position((int) inBBB.position());
             // inBB.limit((int) inBBB.readLimit());
             inBB.limit((int) inBBB.limit());
-            inBBCompactStart = System.nanoTime();
             inBB.compact();
-            inBBCompactEnd = System.nanoTime();
             inBBB.position(0);
             // inBBB.readLimit(inBB.position());
             inBBB.limit(inBB.position());
@@ -132,8 +147,9 @@ public class TcpEventHandler {
     }
 
     void handleIOE(@NotNull IOException e) {
-        if (!(e instanceof ClosedByInterruptException))
-            e.printStackTrace();
+        if (!(e instanceof ClosedByInterruptException)) {
+            log.warn("", e);
+        }
         closeSC();
     }
 

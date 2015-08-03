@@ -17,9 +17,9 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.network.SessionDetailsProvider;
-import net.openhft.chronicle.network.TcpHandler;
-import net.openhft.chronicle.network.TcpHandlingException;
+import net.openhft.chronicle.tcp.network.SessionDetailsProvider;
+import net.openhft.chronicle.tcp.network.TcpHandler;
+import net.openhft.chronicle.tcp.TcpHandlingException;
 import net.openhft.chronicle.tcp.AppenderAdapter;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
@@ -135,7 +135,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean readNext() {
-            return !closed && sinkTcp.connect(false) && readNextExcerpt();
+            return !closed && sinkTcp.connect() && readNextExcerpt();
         }
 
         protected boolean readNextExcerpt() {
@@ -190,18 +190,20 @@ class ChronicleQueueSink extends WrappedChronicle {
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
             tcpHandler.query(wrappedChronicle.lastIndex());
-            sinkTcp.sink();
+            sinkTcp.write();
 
             int attempts = 0;
             boolean busy;
             do {
-                busy = sinkTcp.sink();
+                busy = sinkTcp.read();
             } while (excerptNotRead(busy, attempts++));
 
             return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
         }
 
         private class StatefulLocalExcerptTcpHandler implements TcpHandler {
+
+            private final BusyChecker busyChecker = new BusyChecker();
 
             private long queryIndex;
 
@@ -210,9 +212,11 @@ class ChronicleQueueSink extends WrappedChronicle {
             private TcpHandlerState state;
 
             @Override
-            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
                 processIncoming(in);
                 processOutgoing(out);
+                return busyChecker.busy(in, out);
             }
 
             private void processOutgoing(Bytes out) {
@@ -288,7 +292,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
                         tcpHandler.subscribeTo(lastLocalIndex = wrappedChronicle.lastIndex(), withMapping());
 
-                        sinkTcp.sink();
+                        sinkTcp.write();
                     } catch (IOException ioe) {
                         builder.connectionListener().onError(sinkTcp.socketChannel(), ioe);
                     }
@@ -305,7 +309,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             int attempts = 0;
             boolean busy;
             do {
-                busy = sinkTcp.sink();
+                busy = sinkTcp.read();
             } while (excerptNotRead(busy, attempts++) || excerptIncomplete());
 
             return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
@@ -327,6 +331,8 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         private class StatefulExcerptTcpHandler implements TcpHandler {
 
+            private final BusyChecker busyChecker = new BusyChecker();
+
             private boolean subscriptionRequired;
 
             private long subscribedIndex;
@@ -338,9 +344,11 @@ class ChronicleQueueSink extends WrappedChronicle {
             private boolean subscribed;
 
             @Override
-            public void process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
                 processIncoming(in);
                 processOutgoing(out);
+                return busyChecker.busy(in, out);
             }
 
             private void processIncoming(Bytes in) {

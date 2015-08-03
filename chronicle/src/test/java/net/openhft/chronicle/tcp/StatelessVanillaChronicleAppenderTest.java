@@ -21,7 +21,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.network.TcpEventHandler;
 import org.junit.Test;
 
 import java.io.File;
@@ -201,8 +200,6 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             }
 
             appender.close();
-
-//            TcpEventHandler.LOG.set(Boolean.TRUE);
 
             int count = 0;
             for (long i = 1; i <= items; i++) {

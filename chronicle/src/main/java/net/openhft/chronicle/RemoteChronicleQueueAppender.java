@@ -24,7 +24,7 @@ import java.io.IOException;
 
 class RemoteChronicleQueueAppender extends RemoteChronicleQueue {
     RemoteChronicleQueueAppender(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
-        super(builder, connection, true);
+        super(builder, connection);
     }
 
     @Override
