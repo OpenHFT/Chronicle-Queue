@@ -108,7 +108,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
         if(connected) {
             this.lastReconnectionAttempt = 0;
             this.lastReconnectionAttemptMS = 0;
-
         } else {
             lastReconnectionAttempt++;
             if(builder.reconnectionWarningThreshold() > 0) {
@@ -137,15 +136,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     protected boolean shouldConnect() {
-        if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
-            long now = System.currentTimeMillis();
-            if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-                return false;
-            }
-
-            lastReconnectionAttemptMS = now;
+        long now = System.currentTimeMillis();
+        if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+            return false;
         }
 
+        lastReconnectionAttemptMS = now;
         return true;
     }
 
@@ -265,7 +261,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i--) {
                 openConnection();
 
-                if(!connection.isOpen()) {
+                if(!openConnection()) {
                     try {
                         Thread.sleep(builder.reconnectionIntervalMillis());
                     } catch(InterruptedException ignored) {
