@@ -39,7 +39,7 @@ public class StatelessChronicleTailerTest extends StatelessChronicleTestBase {
                 .reconnectionAttempts(1)
                 .build()) {
             ExcerptTailer tailer = chronicle.createTailer();
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < 10; i++) {
                 assertFalse(tailer.nextIndex());
             }
         }
