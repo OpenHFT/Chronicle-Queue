@@ -154,11 +154,11 @@ public class VanillaChronicle implements Chronicle {
         this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
-        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits);
+        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits, builder.fileLifecycleListener());
 
         this.dataBlockSizeBits = Maths.intLog2(builder.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
-        this.dataCache = new VanillaDataCache(this.builder, dateCache, dataBlockSizeBits);
+        this.dataCache = new VanillaDataCache(this.builder, dateCache, dataBlockSizeBits, builder.fileLifecycleListener());
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;

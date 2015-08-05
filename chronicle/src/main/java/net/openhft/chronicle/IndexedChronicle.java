@@ -43,7 +43,7 @@ import java.util.ConcurrentModificationException;
  * name "Indexed". But this index is just sequential index, first object has index 0, second object
  * has index 1, and so on. If you want to access objects with other logical keys you have to manage
  * your own mapping from logical key to index.</p>
- * <p/>
+ * <p>
  * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data
  * file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file
  * name&#62;.index</li> </ul> , <tt>base file name</tt> (or <tt>basePath</tt>) is provided on
@@ -86,8 +86,10 @@ public class IndexedChronicle implements Chronicle {
             parentFile.mkdirs();
         }
 
-        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"), builder.indexBlockSize());
-        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"), builder.dataBlockSize());
+        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"),
+                builder.indexBlockSize(), builder.fileLifecycleListener());
+        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"),
+                builder.dataBlockSize(), builder.fileLifecycleListener());
 
         findTheLastIndex();
     }
@@ -355,14 +357,14 @@ public class IndexedChronicle implements Chronicle {
         protected AbstractIndexedExcerpt() throws IOException {
             //super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
             super(
-                BytesMarshallableSerializer.create(
-                    new VanillaBytesMarshallerFactory(),
-                    builder.useCompressedObjectSerializer()
-                            ? JDKZObjectSerializer.INSTANCE
-                            : JDKObjectSerializer.INSTANCE),
-                NO_PAGE,
-                NO_PAGE,
-                null
+                    BytesMarshallableSerializer.create(
+                            new VanillaBytesMarshallerFactory(),
+                            builder.useCompressedObjectSerializer()
+                                    ? JDKZObjectSerializer.INSTANCE
+                                    : JDKObjectSerializer.INSTANCE),
+                    NO_PAGE,
+                    NO_PAGE,
+                    null
             );
 
             cacheLineSize = IndexedChronicle.this.builder.cacheLineSize();

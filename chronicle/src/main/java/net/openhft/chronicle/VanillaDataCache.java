@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
@@ -34,19 +35,21 @@ public class VanillaDataCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
+    private final FileLifecycleListener fileLifecycleListener;
 
     VanillaDataCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
-            int blockBits) {
+            int blockBits, FileLifecycleListener fileLifecycleListener) {
+        this.fileLifecycleListener = fileLifecycleListener;
         this.basePath = builder.path().getAbsolutePath();
         this.blockBits = blockBits;
         this.dateCache = dateCache;
 
         this.cache = new VanillaMappedCache<>(
-            builder.dataCacheCapacity(),
-            true,
-            builder.cleanupOnClose()
+                builder.dataCacheCapacity(),
+                true,
+                builder.cleanupOnClose()
         );
     }
 
@@ -65,16 +68,19 @@ public class VanillaDataCache implements Closeable {
         key.dataCount = dataCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
-        if(vmb == null || vmb.refCount() < 1) {
+        if (vmb == null || vmb.refCount() < 1) {
+            long start = System.nanoTime(), ;
+            String name = FILE_NAME_PREFIX + threadId + "-" + dataCount;
             vmb = this.cache.put(
-                key.clone(),
-                VanillaChronicleUtils.mkFiles(
-                    basePath,
-                    dateCache.formatFor(cycle),
-                    FILE_NAME_PREFIX + threadId + "-" + dataCount,
-                    forWrite),
-                1L << blockBits,
-                dataCount);
+                    key.clone(),
+                    VanillaChronicleUtils.mkFiles(
+                            basePath,
+                            dateCache.formatFor(cycle),
+                            name,
+                            forWrite),
+                    1L << blockBits,
+                    dataCount);
+            fileLifecycleListener.onFileGrowth(new File(name), System.nanoTime() - start);
         }
 
         vmb.reserve();
@@ -148,7 +154,7 @@ public class VanillaDataCache implements Closeable {
     }
 
     public void checkCounts(int min, int max) {
-        this.cache.checkCounts(min,max);
+        this.cache.checkCounts(min, max);
     }
 
     static class DataKey implements Cloneable {
@@ -167,7 +173,7 @@ public class VanillaDataCache implements Closeable {
                 return false;
             }
 
-            if(obj == this) {
+            if (obj == this) {
                 return true;
             }
 
@@ -187,9 +193,9 @@ public class VanillaDataCache implements Closeable {
         @Override
         public String toString() {
             return "DataKey ["
-                + "cycle="     + cycle     + ","
-                + "threadId="  + threadId  + ","
-                + "dataCount=" + dataCount + "]";
+                    + "cycle=" + cycle + ","
+                    + "threadId=" + threadId + ","
+                    + "dataCount=" + dataCount + "]";
         }
     }
 }

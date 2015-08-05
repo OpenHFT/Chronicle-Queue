@@ -20,6 +20,7 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.model.constraints.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -100,6 +101,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int dataBlockSize;
         private int messageCapacity;
         private int indexBlockSize;
+
+        private FileLifecycleListener fileLifecycleListener = FileLifecycleListener.FileLifecycleListeners.IGNORE;
 
         /**
          * On 64 bit JVMs it has the following params: <ul> <li>data block size <b>128M</b></li>
@@ -319,6 +322,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return new SourceChronicleQueueBuilder(this);
         }
 
+        public IndexedChronicleQueueBuilder fileGrowthListener(FileLifecycleListener fileLifecycleListener) {
+            this.fileLifecycleListener = fileLifecycleListener;
+            return this;
+        }
+
+        public FileLifecycleListener fileLifecycleListener() {
+            return fileLifecycleListener;
+        }
         @Override
         public Chronicle build() throws IOException {
             return new IndexedChronicle(this);
@@ -357,6 +368,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private long dataBlockSize;
         private long entriesPerCycle;
         private boolean cleanupOnClose;
+        private FileLifecycleListener fileLifecycleListener = FileLifecycleListener.FileLifecycleListeners.IGNORE;
 
         private VanillaChronicleQueueBuilder(File path) {
             this.path = path;
@@ -541,6 +553,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public ReplicaChronicleQueueBuilder source() {
             return new SourceChronicleQueueBuilder(this);
+        }
+
+        public VanillaChronicleQueueBuilder fileLifecycleListener(FileLifecycleListener fileLifecycleListener) {
+            this.fileLifecycleListener = fileLifecycleListener;
+            return this;
+        }
+
+        public FileLifecycleListener fileLifecycleListener() {
+            return fileLifecycleListener;
         }
 
         @Override

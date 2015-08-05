@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
@@ -40,11 +41,13 @@ public class VanillaIndexCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
     private final Map<IndexKey, File> cyclePathMap;
+    private final FileLifecycleListener fileLifecycleListener;
 
     VanillaIndexCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
-            int blocksBits) {
+            int blocksBits, FileLifecycleListener fileLifecycleListener) {
+        this.fileLifecycleListener = fileLifecycleListener;
         this.baseFile = builder.path();
         this.basePath = this.baseFile.getAbsolutePath();
 
@@ -124,15 +127,18 @@ public class VanillaIndexCache implements Closeable {
 
         VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
+            long start = System.nanoTime();
+            String name = FILE_NAME_PREFIX + indexCount;
             vmb = this.cache.put(
                 key.clone(),
                 VanillaChronicleUtils.mkFiles(
                     basePath,
                     dateCache.formatFor(cycle),
-                    FILE_NAME_PREFIX + indexCount,
+                        name,
                     forAppend),
                 1L << blockBits,
                 indexCount);
+            fileLifecycleListener.onFileGrowth(new File(name), System.nanoTime() - start);
         }
 
         vmb.reserve();
