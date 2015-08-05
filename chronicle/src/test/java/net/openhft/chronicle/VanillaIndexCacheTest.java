@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.VanillaMappedBytes;
 import org.junit.Test;
@@ -40,11 +41,12 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
 
         final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
                 ChronicleQueueBuilder.vanilla(baseDir)
-                    .indexCacheCapacity(32)
-                    .cleanupOnClose(false);
+                        .indexCacheCapacity(32)
+                        .cleanupOnClose(false);
 
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3);
+        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3,
+                FileLifecycleListener.FileLifecycleListeners.CONSOLE);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
@@ -99,7 +101,8 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
                         .cleanupOnClose(false);
 
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
-        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3);
+        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3,
+                FileLifecycleListener.FileLifecycleListeners.CONSOLE);
 
         final int cycle = (int) (System.currentTimeMillis() / 1000);
 
@@ -144,7 +147,9 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
 
         // Use a small index file size so that the test frequently generates new index files
-        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 5);
+        final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 5,
+                FileLifecycleListener.FileLifecycleListeners.CONSOLE);
+
 
         final int cycle = (int) (System.currentTimeMillis() / 1000);
         final int numberOfTasks = 2;
@@ -199,7 +204,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         vanillaBuffer.position(0);
         while (vanillaBuffer.remaining() >= 8) {
             long l = vanillaBuffer.readLong();
-            if(l != 0) {
+            if (l != 0) {
                 indexValues.add(l);
             }
         }
@@ -219,7 +224,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
     private Callable<Void> createAppendTask(final VanillaIndexCache cache, final int cycle, final long startValue, final long endValue) {
         return new Callable<Void>() {
             @Override
-            public Void call()   {
+            public Void call() {
                 try {
                     int lastIndex = 0;
                     for (long counter = startValue; counter < endValue; counter++) {
@@ -229,7 +234,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
                             vmb.release();
                         }
                     }
-                } catch(IOException e) {
+                } catch (IOException e) {
                 }
 
                 return null;

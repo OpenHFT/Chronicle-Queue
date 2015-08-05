@@ -40,6 +40,13 @@ public class VanillaDataCache implements Closeable {
     VanillaDataCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
+            int blockBits) {
+        this(builder, dateCache, blockBits, FileLifecycleListener.FileLifecycleListeners.CONSOLE);
+    }
+
+    VanillaDataCache(
+            @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
+            @NotNull VanillaDateCache dateCache,
             int blockBits, FileLifecycleListener fileLifecycleListener) {
         this.fileLifecycleListener = fileLifecycleListener;
         this.basePath = builder.path().getAbsolutePath();
@@ -69,7 +76,7 @@ public class VanillaDataCache implements Closeable {
 
         VanillaMappedBytes vmb = this.cache.get(key);
         if (vmb == null || vmb.refCount() < 1) {
-            long start = System.nanoTime(), ;
+            long start = System.nanoTime();
             String name = FILE_NAME_PREFIX + threadId + "-" + dataCount;
             vmb = this.cache.put(
                     key.clone(),
