@@ -62,8 +62,8 @@ public class StatelessExcerpt implements Excerpt {
     }
 
     @Override
-    public boolean readDocument(@NotNull Consumer<WireIn> reader) {
-        reader.accept(wire());
+    public boolean readDocument(@NotNull ReadMarshallable reader) {
+        reader.readMarshallable(wire());
         return true;
     }
 

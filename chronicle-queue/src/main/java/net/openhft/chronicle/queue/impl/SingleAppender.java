@@ -53,7 +53,7 @@ public class SingleAppender implements ExcerptAppender {
     }
 
     @Override
-    public void writeDocument(@NotNull Consumer<WireOut> writer) {
+    public void writeDocument(@NotNull WriteMarshallable writer) {
         buffer.clear();
         writer.accept(wire);
         buffer.flip();

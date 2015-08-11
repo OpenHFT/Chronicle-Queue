@@ -43,7 +43,7 @@ public class ClientWiredExcerptAppenderStateless extends AbstractStatelessClient
     }
 
     @Override
-    public void writeDocument(Consumer<WireOut> writer) {
+    public void writeDocument(WriteMarshallable writer) {
         source.clear();
         writer.accept(wire);
         source.flip();

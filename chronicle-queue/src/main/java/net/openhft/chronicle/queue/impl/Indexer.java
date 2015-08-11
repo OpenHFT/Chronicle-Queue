@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ByteableLongArrayValues;
-import net.openhft.chronicle.wire.util.WireUtil;
 import org.jetbrains.annotations.NotNull;
 
 import static net.openhft.chronicle.queue.impl.Indexer.IndexOffset.toAddress0;

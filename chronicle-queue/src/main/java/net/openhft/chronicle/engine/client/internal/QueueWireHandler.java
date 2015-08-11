@@ -212,7 +212,7 @@ public class QueueWireHandler implements WireHandler, Consumer<WireHandlers> {
         return queue;
     }
 
-    private void writeData(Consumer<WireOut> c) {
+    private void writeData(WriteMashallable c) {
         try {
             outWire.bytes().mark();
             outWire.writeDocument(false, c);

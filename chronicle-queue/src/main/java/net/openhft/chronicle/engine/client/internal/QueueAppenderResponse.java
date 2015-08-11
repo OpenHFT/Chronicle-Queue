@@ -1,6 +1,5 @@
 package net.openhft.chronicle.engine.client.internal;
 
-import net.openhft.chronicle.wire.CoreFields;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;

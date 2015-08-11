@@ -22,6 +22,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.stateless.bytes.StatelessRawBytesAppender;
 import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
@@ -52,9 +53,9 @@ public class StatelessAppender implements ExcerptAppender {
     }
 
     @Override
-    public void writeDocument(@NotNull Consumer<WireOut> writer) {
+    public void writeDocument(@NotNull WriteMarshallable writer) {
         WireOut wire = wire();
-        writer.accept(wire);
+        writer.writeMarshallable(wire);
         lastWrittenIndex = statelessRawBytesAppender.appendExcept(wire.bytes());
     }
 
