@@ -58,18 +58,27 @@ public interface ChronicleQueue extends Closeable {
 
     /**
      * An Excerpt can be used access entries randomly and optionally change them.
+     *
+     * @return Excerpt
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     Excerpt createExcerpt() throws IOException;
 
     /**
      * A Tailer can be used to read sequentially from the start of a given position.
+     *
+     * @return ExcerptTailer
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     ExcerptTailer createTailer() throws IOException;
 
     /**
      * An Appender can be used to write new excerpts sequentially to the end.
+     *
+     * @return ExcerptAppender
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     ExcerptAppender createAppender() throws IOException;
