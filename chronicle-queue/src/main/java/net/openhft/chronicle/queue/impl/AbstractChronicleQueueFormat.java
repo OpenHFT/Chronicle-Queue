@@ -13,17 +13,21 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.queue;
 
-import org.jetbrains.annotations.NotNull;
+package net.openhft.chronicle.queue.impl;
 
-import java.io.IOException;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
 
-/**
- * Created by peter.lawrey on 30/01/15.
- */
-public interface ChronicleQueueBuilder extends Cloneable {
+public abstract class AbstractChronicleQueueFormat implements ChronicleQueueFormat {
 
-    @NotNull
-    public ChronicleQueue build() throws IOException;
+    @Override
+    public void readMarshallable(WireIn wireIn) throws IllegalStateException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void writeMarshallable(WireOut wireOut) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }

@@ -15,16 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.impl.ChronicleQueueFormat;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
 
-public class SingleChronicleQueueFormat implements ChronicleQueueFormat {
-    @Override
-    public void readMarshallable(WireIn wireIn) throws IllegalStateException {
-    }
-
-    @Override
-    public void writeMarshallable(WireOut wireOut) {
-    }
+class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 }

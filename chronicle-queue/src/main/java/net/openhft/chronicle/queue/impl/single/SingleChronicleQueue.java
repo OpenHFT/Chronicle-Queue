@@ -18,5 +18,5 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 
-public class SingleChronicleQueue extends AbstractChronicleQueue {
+class SingleChronicleQueue extends AbstractChronicleQueue {
 }
