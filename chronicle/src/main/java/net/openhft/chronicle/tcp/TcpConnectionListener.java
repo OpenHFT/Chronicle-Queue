@@ -25,5 +25,5 @@ public interface TcpConnectionListener {
     public void onError(SelectableChannel channel, Exception exception);
     public void onListen(ServerSocketChannel channel);
     public void onConnect(SocketChannel channel);
-    public void onDisconnect(SocketChannel channel);
+    public void onDisconnect(SocketChannel channel, String message);
 }

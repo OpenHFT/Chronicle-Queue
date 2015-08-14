@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -137,7 +136,7 @@ public abstract class SourceTcp {
             this.sourceTcpHandler.setMaxExcerptsPerMessage(builder.maxExcerptsPerMessage());
             this.sourceTcpHandler.setHeartbeatIntervalMillis(builder.heartbeatIntervalMillis());
             this.sessionDetails = new SimpleSessionDetailsProvider();
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sourceTcpHandler), sessionDetails, builder.sendBufferSize(), builder.receiveBufferSize());
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sourceTcpHandler), sessionDetails, builder.connectionListener(), builder.sendBufferSize(), builder.receiveBufferSize());
             this.tailer = null;
             this.appender = null;
         }
@@ -198,22 +197,13 @@ public abstract class SourceTcp {
                 } else {
                     nioLoop(selector);
                 }
-            } catch (EOFException e) {
+            } catch (InvalidEventHandlerException e) {
                 if (running.get()) {
                     logger.info("Connection {} died", socketChannel);
                 }
             } catch (Exception e) {
                 if (running.get()) {
-                    String msg = e.getMessage();
-                    if (msg != null &&
-                            (msg.contains("reset by peer")
-                                    || msg.contains("Broken pipe")
-                                    || msg.contains("was aborted by"))) {
-                        logger.info("Connection {} closed from the other end: ", socketChannel, e.getMessage());
-
-                    } else {
-                        logger.info("Connection {} died", socketChannel, e);
-                    }
+                    logger.info("Connection {} died", socketChannel, e);
                 }
             } finally {
                 if (selectionKeys != null) {
@@ -228,7 +218,7 @@ public abstract class SourceTcp {
             }
         }
 
-        private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException {
+        private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException, InvalidEventHandlerException {
             final int spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
@@ -253,7 +243,7 @@ public abstract class SourceTcp {
             }
         }
 
-        private void nioLoop(final VanillaSelector selector) throws IOException {
+        private void nioLoop(final VanillaSelector selector) throws IOException, InvalidEventHandlerException {
             final int spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
 
@@ -273,15 +263,13 @@ public abstract class SourceTcp {
             }
         }
 
-        protected boolean onSelectionKey(final SelectionKey key) throws IOException {
+        protected boolean onSelectionKey(final SelectionKey key) throws InvalidEventHandlerException {
             if (key != null) {
                 if (key.isReadable() || key.isWritable()) {
                     try {
                         sessionDetails.set(SelectionKey.class, key);
                         sessionDetails.set(MappingProvider.class, (MappingProvider) key.attachment());
                         return tcpEventHandler.action();
-                    } catch (InvalidEventHandlerException e) {
-                        throw new IOException(e);
                     } finally {
                         sessionDetails.set(SelectionKey.class, null);
                     }

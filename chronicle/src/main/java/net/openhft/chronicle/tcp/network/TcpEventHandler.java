@@ -14,6 +14,8 @@
  */
 package net.openhft.chronicle.tcp.network;
 
+import net.openhft.chronicle.tcp.TcpConnectionHandler;
+import net.openhft.chronicle.tcp.TcpConnectionListener;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.Bytes;
 import org.jetbrains.annotations.NotNull;
@@ -39,10 +41,18 @@ public class TcpEventHandler {
     private final Bytes inBBB;
     private final Bytes outBBB;
     private final SessionDetailsProvider sessionDetails;
+    private final TcpConnectionListener tcpConnectionListener;
 
-    public TcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetailsProvider sessionDetails, int sendCapacity, int receiveCapacity) throws IOException {
-        inBB = ByteBuffer.allocateDirect(receiveCapacity > 0 ? receiveCapacity : CAPACITY);
-        outBB = ByteBuffer.allocateDirect(sendCapacity > 0 ? sendCapacity : CAPACITY);
+    public TcpEventHandler(
+            @NotNull SocketChannel sc,
+            TcpHandler handler,
+            SessionDetailsProvider sessionDetails,
+            TcpConnectionListener tcpConnectionListener,
+            int sendCapacity,
+            int receiveCapacity) throws IOException {
+        this.tcpConnectionListener = tcpConnectionListener;
+        this.inBB = ByteBuffer.allocateDirect(receiveCapacity > 0 ? receiveCapacity : CAPACITY);
+        this.outBB = ByteBuffer.allocateDirect(sendCapacity > 0 ? sendCapacity : CAPACITY);
 
         this.sc = sc;
         sc.configureBlocking(false);
@@ -59,15 +69,14 @@ public class TcpEventHandler {
         // inBBB.clearThreadAssociation();
         //  outBBB.clearThreadAssociation();
 
-        inBBB = wrap(inBB.slice());
-        outBBB = wrap(outBB.slice());
+        this.inBBB = wrap(inBB.slice());
+        this.outBBB = wrap(outBB.slice());
         // must be set after we take a slice();
-        outBB.limit(0);
+        this.outBB.limit(0);
     }
 
-//    public TcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetails sessionDetails, boolean unchecked) throws IOException {
     public TcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetailsProvider sessionDetails) throws IOException {
-        this(sc, handler, sessionDetails, CAPACITY, CAPACITY);
+        this(sc, handler, sessionDetails, new TcpConnectionHandler(), CAPACITY, CAPACITY);
     }
 
     public boolean action() throws InvalidEventHandlerException {
@@ -148,7 +157,11 @@ public class TcpEventHandler {
 
     void handleIOE(@NotNull IOException e) {
         if (!(e instanceof ClosedByInterruptException)) {
-            log.warn("", e);
+            if (remoteDisconnection(e)) {
+                tcpConnectionListener.onDisconnect(sc, e.getMessage());
+            } else {
+                tcpConnectionListener.onError(sc, e);
+            }
         }
         closeSC();
     }
@@ -158,5 +171,14 @@ public class TcpEventHandler {
             sc.close();
         } catch (IOException ignored) {
         }
+    }
+
+    private boolean remoteDisconnection(IOException ioe) {
+        String msg = ioe.getMessage();
+        return (msg != null && (
+                    msg.contains("reset by peer") ||
+                    msg.contains("Broken pipe") ||
+                    msg.contains("was aborted by")));
+
     }
 }

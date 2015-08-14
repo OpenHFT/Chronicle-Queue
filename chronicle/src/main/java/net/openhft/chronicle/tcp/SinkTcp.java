@@ -169,7 +169,7 @@ public abstract class SinkTcp {
         private boolean readWasBusy;
 
         public SinkTcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetailsProvider sessionDetails, int sendCapacity, int receiveCapacity) throws IOException {
-            super(sc, handler, sessionDetails, sendCapacity, receiveCapacity);
+            super(sc, handler, sessionDetails, builder.connectionListener(), sendCapacity, receiveCapacity);
             sc.configureBlocking(blocking);
         }
 
