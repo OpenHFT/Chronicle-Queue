@@ -552,7 +552,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 try {
                     sinkTcp.close();
                 } catch (IOException e2) {
-                    logger.warn("Error closing soocket", e2);
+                    logger.warn("Error closing socket", e2);
                 }
 
                 return false;

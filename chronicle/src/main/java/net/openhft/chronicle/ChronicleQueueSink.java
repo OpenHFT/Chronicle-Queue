@@ -17,13 +17,9 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tcp.*;
 import net.openhft.chronicle.tcp.network.SessionDetailsProvider;
 import net.openhft.chronicle.tcp.network.TcpHandler;
-import net.openhft.chronicle.tcp.TcpHandlingException;
-import net.openhft.chronicle.tcp.AppenderAdapter;
-import net.openhft.chronicle.tcp.ChronicleTcp;
-import net.openhft.chronicle.tcp.SinkTcp;
-import net.openhft.chronicle.tcp.TcpConnectionHandler;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
@@ -36,7 +32,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
-import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
 class ChronicleQueueSink extends WrappedChronicle {
     private final SinkTcp sinkTcp;
@@ -144,14 +139,13 @@ class ChronicleQueueSink extends WrappedChronicle {
                     return doReadNextExcerpt();
                 }
             } catch (IOException e) {
-                logIOException(logger, "Exception reading from socket", e);
                 if (!closed) {
                     builder.connectionListener().onError(sinkTcp.socketChannel(), e);
                 }
 
                 try {
                     sinkTcp.close();
-                    builder.connectionListener().onDisconnect(sinkTcp.socketChannel());
+                    builder.connectionListener().onDisconnect(sinkTcp.socketChannel(), e.getMessage());
                 } catch (IOException e2) {
                     logger.warn("Error closing socketChannel", e2);
                 }
