@@ -540,7 +540,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         appender2.close();
 
-        latch.await(500, TimeUnit.SECONDS);
+        latch.await(5, TimeUnit.SECONDS);
         assertEquals(0, latch.getCount());
 
 /*
