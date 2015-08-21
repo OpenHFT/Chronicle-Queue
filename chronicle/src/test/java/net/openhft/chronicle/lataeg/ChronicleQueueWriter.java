@@ -6,7 +6,7 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.lang.model.DataValueClasses;
 
 public class ChronicleQueueWriter {
-    private int noOfRecords = 6000000;
+    private int noOfRecords = 18 * 1000 * 1000;
     private int noOfRuns = 10;
     private Chronicle chronicle;
 
@@ -34,7 +34,7 @@ public class ChronicleQueueWriter {
     }
 
     private void createQueue() throws Exception {
-        chronicle = ChronicleQueueBuilder.vanilla("/tmp/indexed").build();
+        chronicle = ChronicleQueueBuilder.indexed("/tmp/indexed").build();
         System.out.println("Created Queue..");
     }
 
@@ -46,6 +46,8 @@ public class ChronicleQueueWriter {
         for (int i = 0; i < noOfRuns; i++) {
             long startTime = System.nanoTime();
             for (int j = 0; j < noOfRecords; j++) {
+                appender.startExcerpt(iChronicleQueueData.maxSize());
+                iChronicleQueueData.bytes(appender, 0);
                 iChronicleQueueData.setIntField1(chronicleQueueData.getIntField1());
                 iChronicleQueueData.setIntField2(chronicleQueueData.getIntField2());
                 iChronicleQueueData.setIntField3(chronicleQueueData.getIntField3());
@@ -66,12 +68,13 @@ public class ChronicleQueueWriter {
                 iChronicleQueueData.setIntField18(chronicleQueueData.getIntField18());
                 iChronicleQueueData.setIntField19(chronicleQueueData.getIntField19());
                 iChronicleQueueData.setIntField20(chronicleQueueData.getIntField20());
-                appender.startExcerpt(iChronicleQueueData.maxSize());
-                appender.write(iChronicleQueueData);
+                appender.skip(iChronicleQueueData.maxSize());
                 appender.finish();
             }
             long endTime = System.nanoTime();
             writeToFile(i, startTime, endTime);
+            // give the previous test time to write to disk or we are effectively
+            Thread.sleep(noOfRecords / 100000);
         }
         appender.close();
     }
