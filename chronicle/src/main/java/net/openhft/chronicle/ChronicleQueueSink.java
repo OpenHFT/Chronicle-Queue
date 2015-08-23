@@ -294,17 +294,19 @@ class ChronicleQueueSink extends WrappedChronicle {
             });
         }
 
-        private boolean excerptNotRead(boolean busy, int attempts) {
+        private boolean excerptNotRead(boolean busy, int attempts, int readSpinCount) {
             return (!busy && (attempts < readSpinCount || readSpinCount == -1));
         }
 
         @Override
         protected boolean doReadNextExcerpt() throws IOException {
+            final int readSpinCount = ChronicleQueueSink.this.readSpinCount;
+            final SinkTcp sinkTcp = ChronicleQueueSink.this.sinkTcp;
             int attempts = 0;
             boolean busy;
             do {
                 busy = sinkTcp.read();
-            } while (excerptNotRead(busy, attempts++) || excerptIncomplete());
+            } while (excerptNotRead(busy, attempts++, readSpinCount) || excerptIncomplete());
 
             return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
         }
@@ -339,6 +341,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             @Override
             public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                final BusyChecker busyChecker = this.busyChecker;
                 busyChecker.mark(in, out);
                 processIncoming(in);
                 processOutgoing(out);
@@ -385,11 +388,12 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             private void processExcerpt(Bytes in) {
                 if (state == TcpHandlerState.EXCERPT_INCOMPLETE) {
-                    appendToExcerpt(in);
+                    appendToExcerpt(in, StatefulExcerpt.this.adapter);
                 } else if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
                     int receivedSize = in.readInt();
                     long receivedIndex = in.readLong();
 
+                    final AppenderAdapter adapter = StatefulExcerpt.this.adapter;
                     switch (receivedSize) {
                         case ChronicleTcp.IN_SYNC_LEN:
                             // heartbeat
@@ -397,7 +401,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                             return;
                         case ChronicleTcp.PADDED_LEN:
                             // write padded entry
-                            StatefulExcerpt.this.adapter.writePaddedEntry();
+                            adapter.writePaddedEntry();
                             processExcerpt(in);
                             return;
                         case ChronicleTcp.SYNC_IDX_LEN:
@@ -411,9 +415,9 @@ class ChronicleQueueSink extends WrappedChronicle {
                     }
 
                     if (lastLocalIndex != receivedIndex) {
-                        StatefulExcerpt.this.adapter.startExcerpt(receivedSize, receivedIndex);
+                        adapter.startExcerpt(receivedSize, receivedIndex);
 
-                        appendToExcerpt(in);
+                        appendToExcerpt(in, adapter);
                     } else {
                         // skip the excerpt as we already have it
                         in.skip(receivedSize);
@@ -426,7 +430,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             }
 
-            private void appendToExcerpt(Bytes in) {
+            private void appendToExcerpt(Bytes in, final AppenderAdapter adapter) {
                 long inLimit = in.limit();
                 int bytesToWrite = (int) Math.min(in.remaining(), adapter.remaining());
 

@@ -111,7 +111,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         long time = System.nanoTime() - start;
 
         System.out.println("There were " + count + " InSynk messages");
-        System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+        System.out.printf("Time: %.3fs.  Messages per second %,d, avg. %.2f%n", time / 1e9, (int) (messages * 1e9 / time), time / messages / 1e3);
 
         sink.close();
         source.close();
