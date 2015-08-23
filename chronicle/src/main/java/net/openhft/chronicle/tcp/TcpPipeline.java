@@ -58,11 +58,13 @@ public class TcpPipeline implements TcpHandler {
 
     @Override
     public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
-        if (handlers.isEmpty()) {
+        final List<TcpHandler> handlers = this.handlers;
+        final int size = handlers.size();
+        if (size == 0) {
             return;
         }
 
-        for (int i = 0; i < handlers.size(); i++) {
+        for (int i = 0; i < size; i++) {
             handlers.get(i).onEndOfConnection(sessionDetailsProvider);
         }
     }
@@ -71,12 +73,11 @@ public class TcpPipeline implements TcpHandler {
 
         private int idx;
 
-        private TcpHandler nextHandler;
-
         @Override
         public void next(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+            final List<TcpHandler> handlers = TcpPipeline.this.handlers;
             if (idx < handlers.size()) {
-                nextHandler = handlers.get(idx++);
+                final TcpHandler nextHandler = handlers.get(idx++);
                 busy |= nextHandler.process(in, out, sessionDetailsProvider);
                 idx--;
             }

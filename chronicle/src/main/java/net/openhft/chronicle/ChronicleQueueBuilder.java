@@ -1075,10 +1075,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this;
         }
 
-        public TcpPipeline tcpPipeline(TcpHandler tcpHandler) {
-            TcpHandler[] handlers = tcpHandlers.toArray(new TcpHandler[tcpHandlers.size() + 1]);
-            handlers[handlers.length - 1] = tcpHandler;
-            return TcpPipeline.pipeline(handlers);
+        public TcpHandler tcpPipeline(TcpHandler tcpHandler) {
+            if (tcpHandlers.isEmpty()) {
+                return tcpHandler;
+            } else {
+                TcpHandler[] handlers = tcpHandlers.toArray(new TcpHandler[tcpHandlers.size() + 1]);
+                handlers[handlers.length - 1] = tcpHandler;
+                return TcpPipeline.pipeline(handlers);
+            }
         }
 
         public boolean blocking() {

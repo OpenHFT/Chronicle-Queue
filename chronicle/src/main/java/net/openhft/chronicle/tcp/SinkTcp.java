@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,14 +35,14 @@ public abstract class SinkTcp {
     protected final AtomicBoolean running;
     protected final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     protected final SessionDetailsProvider sessionDetailsProvider = new SimpleSessionDetailsProvider();
+    private final boolean blocking;
     protected SinkTcpEventHandler tcpEventHandler;
-    protected SocketChannel socketChannel;
 
+    protected SocketChannel socketChannel;
     private long reconnectionIntervalMS;
     private long lastReconnectionAttempt;
     private long lastReconnectionAttemptMS;
     private TcpHandler sinkTcpHandler;
-    private boolean blocking;
 
     private final List<TcpConnectionListener> connectionListeners = new ArrayList<>();
 
