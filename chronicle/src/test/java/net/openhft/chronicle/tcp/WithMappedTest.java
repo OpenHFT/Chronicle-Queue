@@ -31,7 +31,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -49,40 +48,23 @@ import static org.junit.Assert.assertFalse;
 public class WithMappedTest extends ChronicleTcpTestBase {
 
     public static final int TIMEOUT = 20;
-
-    enum TypeOfQueue {INDEXED, VANILLA}
-
+    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    private static long _2014_01_01 = timeFrom("2014-01-01");
+    private static long _2016_01_01 = timeFrom("2016-01-01");
+    @Rule
+    public final TestName testName = new TestName();
+    final Collection<MarketData> marketRecords = loadMarketData();
+    final Map<Date, MarketData> expectedMarketDate = expectedMarketData();
     private final TypeOfQueue typeOfQueue;
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return asList(new Object[][]{ {TypeOfQueue.INDEXED}, {TypeOfQueue.VANILLA} });
-    }
 
     public WithMappedTest(TypeOfQueue typeOfQueue) {
         this.typeOfQueue = typeOfQueue;
     }
 
-    @Rule
-    public final TestName testName = new TestName();
-
-    final Collection<MarketData> marketRecords = loadMarketData();
-
-    final Map<Date, MarketData> expectedMarketDate = expectedMarketData();
-
-    private Map<Date, MarketData> expectedMarketData() {
-        final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
-        for (MarketData marketRecord : marketRecords) {
-            expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
-        }
-
-        return expectedMarketDate;
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return asList(new Object[][]{ {TypeOfQueue.INDEXED}, {TypeOfQueue.VANILLA} });
     }
-
-    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-
-    private static long _2014_01_01 = timeFrom("2014-01-01");
-    private static long _2016_01_01 = timeFrom("2016-01-01");
 
     private static long timeFrom(String data) {
         try {
@@ -92,243 +74,56 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         }
     }
 
-    private static class HighLow implements BytesMarshallable {
+    /**
+     * @return a filters records to only send records that contain an even data ( for example will
+     * send records that contain a date with 2nd and 4th in the month not a 3rd ) this is just to
+     * show we we can use filters to skip records as well.
+     */
+    private static MappingFunction evenDayFilter() {
+        return new MappingFunction() {
+            @Override
+            public void apply(Bytes from, Bytes to) {
+                //date
+                long v = from.readLong();
 
-        private long date;
-        private double high;
-        private double low;
+                Date date = new Date(v);
+                int day = date.getDay();
 
-        @Override
-        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
-            date = in.readLong();
-            high = in.readDouble();
-            low = in.readDouble();
-        }
+                boolean isEvenDay = (day % 2) == 0;
 
-        @Override
-        public void writeMarshallable(@NotNull Bytes out) {
-            out.writeLong(date);
-            out.writeDouble(high);
-            out.writeDouble(low);
-        }
+                if (!isEvenDay)
+                    return;
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+                to.writeLong(v);
 
-            HighLow highLow = (HighLow) o;
+                //open - skipping
+                to.writeDouble(from.readDouble());
 
-            if (date != highLow.date) return false;
+                // high - skipping
+                to.writeDouble(from.readDouble());
 
-            return true;
-        }
+                // low - skipping
+                to.writeDouble(from.readDouble());
 
-        private static MappingFunction fromMarketData() {
-            return new MappingFunction() {
-                @Override
-                public void apply(Bytes from, Bytes to) {
-                    //date
-                    to.writeLong(from.readLong());
+                // close - skipping
+                to.writeDouble(from.readDouble());
 
-                    //open which we not send out
-                    from.readDouble();
+                // volume - skipping
+                to.writeDouble(from.readDouble());
 
-                    // high
-                    to.writeDouble(from.readDouble());
-
-                    //low
-                    to.writeDouble(from.readDouble());
-                }
-            };
-        }
-
-        @Override
-        public int hashCode() {
-            return (int) (date ^ (date >>> 32));
-        }
-
-        @Override
-        public String toString() {
-            return "PriceData{" +
-                    "date=" + new Date(date) +
-                    ", high=" + high +
-                    ", low=" + low +
-                    '}';
-        }
-    }
-
-    private static class Close implements BytesMarshallable {
-
-        private long date;
-        private double close;
-        private double adjClose;
-
-        @Override
-        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
-            date = in.readLong();
-            close = in.readDouble();
-            adjClose = in.readDouble();
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull Bytes out) {
-            out.writeLong(date);
-            out.writeDouble(close);
-            out.writeDouble(adjClose);
-        }
-
-        @Override
-        public String toString() {
-            return "PriceData{" +
-                    "date=" + new Date(date) +
-                    ", close=" + close +
-                    ", adjClose=" + adjClose +
-                    '}';
-        }
-
-        /**
-         * applys a filter to only send the close and adjusted close
-         *
-         * @return filtered data
-         */
-        private static MappingFunction fromMarketData() {
-            return new MappingFunction() {
-                @Override
-                public void apply(Bytes from, Bytes to) {
-                    //date
-                    to.writeLong(from.readLong());
-
-                    //open - skipping
-                    from.readDouble();
-
-                    // high - skipping
-                    from.readDouble();
-
-                    // low - skipping
-                    from.readDouble();
-
-                    // close - skipping
-                    to.writeDouble(from.readDouble());
-
-                    // volume - skipping
-                    from.readDouble();
-
-                    // adjClose
-                    to.writeDouble(from.readDouble());
-                }
-            };
-        }
-
-    }
-
-    private static class MarketData implements BytesMarshallable {
-        private long date;
-        private double open;
-        private double high;
-        private double low;
-        private double close;
-        private double volume;
-        private double adjClose;
-
-        public MarketData() {
-        }
-
-        public MarketData(String... args) throws ParseException {
-            int i = 0;
-            try {
-                date = DATE_FORMAT.parse(args[i++]).getTime();
-                open = Double.valueOf(args[i++]);
-                high = Double.valueOf(args[i++]);
-                low = Double.valueOf(args[i++]);
-                close = Double.valueOf(args[i++]);
-                volume = Double.valueOf(args[i++]);
-                adjClose = Double.valueOf(args[i]);
-            } catch (Exception e) {
-                throw e;
+                // adjClose
+                to.writeDouble(from.readDouble());
             }
+        };
+    }
+
+    private Map<Date, MarketData> expectedMarketData() {
+        final Map<Date, MarketData> expectedMarketDate = new HashMap<Date, MarketData>();
+        for (MarketData marketRecord : marketRecords) {
+            expectedMarketDate.put(new Date(marketRecord.date), marketRecord);
         }
 
-        @Override
-        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
-
-            date = in.readLong();
-            open = in.readDouble();
-            high = in.readDouble();
-            low = in.readDouble();
-            close = in.readDouble();
-            volume = in.readDouble();
-            adjClose = in.readDouble();
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull Bytes out) {
-            out.writeLong(date);
-            out.writeDouble(open);
-            out.writeDouble(high);
-            out.writeDouble(low);
-            out.writeDouble(close);
-            out.writeDouble(volume);
-            out.writeDouble(adjClose);
-
-            // uncomment this if you want to see the bytes that are sent
-            /*out.flip();
-            System.out.println("writeMarshallable=>" + AbstractBytes.toHex(out));
-            out.position(out.limit());
-            out.limit(out.capacity()) ;*/
-
-        }
-
-        @Override
-        public String toString() {
-            return "MarketData{" +
-                    "date=" + new Date(date) +
-                    ", open=" + open +
-                    ", high=" + high +
-                    ", low=" + low +
-                    ", close=" + close +
-                    ", volume=" + volume +
-                    ", adjClose=" + adjClose +
-                    '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof MarketData)) return false;
-
-            MarketData that = (MarketData) o;
-
-            if (Double.compare(that.adjClose, adjClose) != 0) return false;
-            if (Double.compare(that.close, close) != 0) return false;
-            if (date != that.date) return false;
-            if (Double.compare(that.high, high) != 0) return false;
-            if (Double.compare(that.low, low) != 0) return false;
-            if (Double.compare(that.open, open) != 0) return false;
-            if (Double.compare(that.volume, volume) != 0) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result;
-            long temp;
-            result = (int) (date ^ (date >>> 32));
-            temp = Double.doubleToLongBits(open);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            temp = Double.doubleToLongBits(high);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            temp = Double.doubleToLongBits(low);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            temp = Double.doubleToLongBits(close);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            temp = Double.doubleToLongBits(volume);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            temp = Double.doubleToLongBits(adjClose);
-            result = 31 * result + (int) (temp ^ (temp >>> 32));
-            return result;
-        }
+        return expectedMarketDate;
     }
 
     Collection<MarketData> loadMarketData() {
@@ -545,49 +340,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         }
     }
 
-    /**
-     * @return a filters records to only send records that contain an even data ( for example will
-     * send records that contain a date with 2nd and 4th in the month not a 3rd ) this is just to
-     * show we we can use filters to skip records as well.
-     */
-    private static MappingFunction evenDayFilter() {
-        return new MappingFunction() {
-            @Override
-            public void apply(Bytes from, Bytes to) {
-                //date
-                long v = from.readLong();
-
-                Date date = new Date(v);
-                int day = date.getDay();
-
-                boolean isEvenDay = (day % 2) == 0;
-
-                if (!isEvenDay)
-                    return;
-
-                to.writeLong(v);
-
-                //open - skipping
-                to.writeDouble(from.readDouble());
-
-                // high - skipping
-                to.writeDouble(from.readDouble());
-
-                // low - skipping
-                to.writeDouble(from.readDouble());
-
-                // close - skipping
-                to.writeDouble(from.readDouble());
-
-                // volume - skipping
-                to.writeDouble(from.readDouble());
-
-                // adjClose
-                to.writeDouble(from.readDouble());
-            }
-        };
-    }
-
     @Test
     public void testReplicationWithEvenDayFilter() throws Throwable {
         final String sourceBasePath;
@@ -741,6 +493,245 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                 return ChronicleQueueBuilder.indexed(path).source();
             default:
                 throw new UnsupportedOperationException();
+        }
+    }
+
+    enum TypeOfQueue {INDEXED, VANILLA}
+
+    private static class HighLow implements BytesMarshallable {
+
+        private long date;
+        private double high;
+        private double low;
+
+        private static MappingFunction fromMarketData() {
+            return new MappingFunction() {
+                @Override
+                public void apply(Bytes from, Bytes to) {
+                    //date
+                    to.writeLong(from.readLong());
+
+                    //open which we not send out
+                    from.readDouble();
+
+                    // high
+                    to.writeDouble(from.readDouble());
+
+                    //low
+                    to.writeDouble(from.readDouble());
+                }
+            };
+        }
+
+        @Override
+        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+            date = in.readLong();
+            high = in.readDouble();
+            low = in.readDouble();
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull Bytes out) {
+            out.writeLong(date);
+            out.writeDouble(high);
+            out.writeDouble(low);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            HighLow highLow = (HighLow) o;
+
+            return date == highLow.date;
+
+        }
+
+        @Override
+        public int hashCode() {
+            return (int) (date ^ (date >>> 32));
+        }
+
+        @Override
+        public String toString() {
+            return "PriceData{" +
+                    "date=" + new Date(date) +
+                    ", high=" + high +
+                    ", low=" + low +
+                    '}';
+        }
+    }
+
+    private static class Close implements BytesMarshallable {
+
+        private long date;
+        private double close;
+        private double adjClose;
+
+        /**
+         * applys a filter to only send the close and adjusted close
+         *
+         * @return filtered data
+         */
+        private static MappingFunction fromMarketData() {
+            return new MappingFunction() {
+                @Override
+                public void apply(Bytes from, Bytes to) {
+                    //date
+                    to.writeLong(from.readLong());
+
+                    //open - skipping
+                    from.readDouble();
+
+                    // high - skipping
+                    from.readDouble();
+
+                    // low - skipping
+                    from.readDouble();
+
+                    // close - skipping
+                    to.writeDouble(from.readDouble());
+
+                    // volume - skipping
+                    from.readDouble();
+
+                    // adjClose
+                    to.writeDouble(from.readDouble());
+                }
+            };
+        }
+
+        @Override
+        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+            date = in.readLong();
+            close = in.readDouble();
+            adjClose = in.readDouble();
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull Bytes out) {
+            out.writeLong(date);
+            out.writeDouble(close);
+            out.writeDouble(adjClose);
+        }
+
+        @Override
+        public String toString() {
+            return "PriceData{" +
+                    "date=" + new Date(date) +
+                    ", close=" + close +
+                    ", adjClose=" + adjClose +
+                    '}';
+        }
+
+    }
+
+    private static class MarketData implements BytesMarshallable {
+        private long date;
+        private double open;
+        private double high;
+        private double low;
+        private double close;
+        private double volume;
+        private double adjClose;
+
+        public MarketData() {
+        }
+
+        public MarketData(String... args) throws ParseException {
+            int i = 0;
+            try {
+                date = DATE_FORMAT.parse(args[i++]).getTime();
+                open = Double.valueOf(args[i++]);
+                high = Double.valueOf(args[i++]);
+                low = Double.valueOf(args[i++]);
+                close = Double.valueOf(args[i++]);
+                volume = Double.valueOf(args[i++]);
+                adjClose = Double.valueOf(args[i]);
+            } catch (Exception e) {
+                throw e;
+            }
+        }
+
+        @Override
+        public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+
+            date = in.readLong();
+            open = in.readDouble();
+            high = in.readDouble();
+            low = in.readDouble();
+            close = in.readDouble();
+            volume = in.readDouble();
+            adjClose = in.readDouble();
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull Bytes out) {
+            out.writeLong(date);
+            out.writeDouble(open);
+            out.writeDouble(high);
+            out.writeDouble(low);
+            out.writeDouble(close);
+            out.writeDouble(volume);
+            out.writeDouble(adjClose);
+
+            // uncomment this if you want to see the bytes that are sent
+            /*out.flip();
+            System.out.println("writeMarshallable=>" + AbstractBytes.toHex(out));
+            out.position(out.limit());
+            out.limit(out.capacity()) ;*/
+
+        }
+
+        @Override
+        public String toString() {
+            return "MarketData{" +
+                    "date=" + new Date(date) +
+                    ", open=" + open +
+                    ", high=" + high +
+                    ", low=" + low +
+                    ", close=" + close +
+                    ", volume=" + volume +
+                    ", adjClose=" + adjClose +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof MarketData)) return false;
+
+            MarketData that = (MarketData) o;
+
+            if (Double.compare(that.adjClose, adjClose) != 0) return false;
+            if (Double.compare(that.close, close) != 0) return false;
+            if (date != that.date) return false;
+            if (Double.compare(that.high, high) != 0) return false;
+            if (Double.compare(that.low, low) != 0) return false;
+            if (Double.compare(that.open, open) != 0) return false;
+            return Double.compare(that.volume, volume) == 0;
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result;
+            long temp;
+            result = (int) (date ^ (date >>> 32));
+            temp = Double.doubleToLongBits(open);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(high);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(low);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(close);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(volume);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(adjClose);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            return result;
         }
     }
 }
