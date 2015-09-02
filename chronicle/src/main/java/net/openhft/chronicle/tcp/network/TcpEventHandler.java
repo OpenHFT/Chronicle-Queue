@@ -72,7 +72,9 @@ public class TcpEventHandler {
         this.inBBB = wrap(inBB.slice());
         this.outBBB = wrap(outBB.slice());
         // must be set after we take a slice();
-        this.outBB.limit(0);
+        limitSocketOutput(0);
+        limitApplicationInput(0);
+        positionApplicationOutput(0);
     }
 
     public TcpEventHandler(@NotNull SocketChannel sc, TcpHandler handler, SessionDetailsProvider sessionDetails) throws IOException {
@@ -80,20 +82,13 @@ public class TcpEventHandler {
     }
 
     public boolean action() throws InvalidEventHandlerException {
+        final SocketChannel sc = this.sc;
         if (!sc.isOpen()) {
-            handler.onEndOfConnection(sessionDetails);
-            throw new InvalidEventHandlerException("Cannot process, socket chanel is not open.");
+            handleClosedSocket();
         }
 
         try {
-            int read = inBB.remaining() > 0 ? sc.read(inBB) : 1;
-            if (read < 0) {
-                closeSC();
-
-            } else if (read >= 0) {
-                // inBB.position() where the data has been read() up to.
-                return invokeHandler();
-            }
+            if (readSocket(sc)) return invokeHandler();
         } catch (IOException e) {
             handleIOE(e);
         }
@@ -101,53 +96,118 @@ public class TcpEventHandler {
         return false;
     }
 
+    private boolean readSocket(final SocketChannel sc) throws IOException {
+        final ByteBuffer inBB = this.inBB;
+        int read = inBB.remaining() > 0 ? sc.read(inBB) : 1;
+        if (read < 0) {
+            closeSC();
+            tcpConnectionListener.onDisconnect(sc, "Failed to read from socket, closing.");
+            return false;
+        }
+        limitApplicationInput(inBB.position());
+        return true;
+    }
+
+    private void handleClosedSocket() throws InvalidEventHandlerException {
+        handler.onEndOfConnection(sessionDetails);
+        throw new InvalidEventHandlerException("Cannot process, socket chanel is not open.");
+    }
+
     protected boolean invokeHandler() throws IOException {
-        boolean busy = false;
-        long inBBBPos = inBBB.position();
-        // inBBB.readLimit(inBB.position());
-        inBBB.limit(inBB.position());
-        // outBBB.writePosition(outBB.limit());
-        outBBB.position(outBB.limit());
-
-        busy |= handler.process(inBBB, outBBB, sessionDetails);
-
-        // did it write something?
-        // if (outBBB.writePosition() > outBB.limit() || outBBB.writePosition() >= 4) {
-        if (outBBB.position() > outBB.limit() || outBBB.position() >= 4) {
-            // outBB.limit(Maths.toInt32(outBBB.writePosition()));
-            outBB.limit(Maths.toInt(outBBB.position(), "Int %d out of range"));
-            tryWrite();
-            busy |= true;
-        }
-
-        // TODO Optimise.
-        // if it read some data compact();
-        // if (inBBB.readPosition() > 0) {
-        if (inBBB.position() > (inBB.limit() / 2)) {
-            // inBB.position((int) inBBB.readPosition());
-            inBB.position((int) inBBB.position());
-            // inBB.limit((int) inBBB.readLimit());
-            inBB.limit((int) inBBB.limit());
-            inBB.compact();
-            inBBB.position(0);
-            // inBBB.readLimit(inBB.position());
-            inBBB.limit(inBB.position());
-            busy |= true;
-        } else {
-            busy |= inBBBPos < inBBB.position(); // we have read something, so deemed busy.
-        }
+        final Bytes inBBB = this.inBBB;
+        final Bytes outBBB = this.outBBB;
+        final long markedInBBBPos = inBBB.position();
+        boolean busy = handler.process(inBBB, outBBB, sessionDetails);
+        busy |= postHandlerProcess(inBBB, markedInBBBPos, outBBB);
         return busy;
     }
 
-    boolean tryWrite() throws IOException {
+    private boolean postHandlerProcess(Bytes inBBB, long inBBBPos, Bytes outBBB) throws IOException {
+        boolean busy = writeHandlerOutput(outBBB);
+        busy |= compactInput(inBBB, inBBBPos);
+        return busy;
+    }
+
+    private boolean compactInput(Bytes inBBB, long markedInBBBPos) {
+        // TODO Optimise.
+        // if it read some data compact();
+        // if (inBBB.readPosition() > 0) {
+        final long inBBBPos = inBBB.position();
+        if (markedInBBBPos == inBBBPos) {
+            return false;
+        }
+        if (shouldCompact(inBBBPos)) {
+            performCompaction((int) inBBBPos);
+        }
+        return true;
+    }
+
+    private void positionApplicationOutput(int position) {
+        // outBBB.writePosition(outBB.limit());
+        outBBB.position(position);
+    }
+
+    private void limitApplicationInput(int limit) {
+        // inBBB.readLimit(inBB.position());
+        inBBB.limit(limit);
+    }
+
+    private void performCompaction(int inBBBPos) {
+        alignInputBuffers(inBBBPos);
+        compactSocketInput();
+        resetApplicationInput();
+        limitApplicationInput(inBB.position());
+    }
+
+    private boolean shouldCompact(long inBBBPos) {
+        return (inBBBPos << 1) > inBB.limit();
+    }
+
+    private void resetApplicationInput() {
+        inBBB.position(0);
+        limitApplicationInput(inBB.position());
+    }
+
+    private void compactSocketInput() {
+        inBB.compact();
+    }
+
+    private void alignInputBuffers(int inBBBPos) {
+        // inBB.position((int) inBBB.readPosition());
+        inBB.position(inBBBPos);
+        // inBB.limit((int) inBBB.readLimit());
+        inBB.limit((int) inBBB.limit());
+    }
+
+    private boolean writeHandlerOutput(Bytes outBBB) throws IOException {
+        // did it write something?
+        // if (outBBB.writePosition() > outBB.limit() || outBBB.writePosition() >= 4) {
+        final long outBBBPos = outBBB.position();
+        if (handlerWroteSomething(outBBBPos)) {
+            // outBB.limit(Maths.toInt32(outBBB.writePosition()));
+            limitSocketOutput(outBBBPos);
+            tryWrite(outBBB);
+            return true;
+        }
+        return false;
+    }
+
+    private void limitSocketOutput(long newLimit) {
+        outBB.limit(Maths.toInt(newLimit, "Int %d out of range"));
+    }
+
+    private boolean handlerWroteSomething(final long outBBBPos) {
+        return outBBBPos > outBB.limit() || outBBBPos >= 4;
+    }
+
+    boolean tryWrite(Bytes outBBB) throws IOException {
         int wrote = sc.write(outBB);
         if (wrote < 0) {
             closeSC();
-
+            tcpConnectionListener.onDisconnect(sc, "Failed to write to socket, closing.");
         } else if (wrote > 0) {
             outBB.compact().flip();
-            // outBBB.writePosition(outBB.limit());
-            outBBB.position(outBB.limit());
+            positionApplicationOutput(outBB.limit());
             // outBBB.writeLimit(outBB.capacity());
             outBBB.limit(outBB.capacity());
             return true;

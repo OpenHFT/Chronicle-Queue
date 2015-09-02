@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
@@ -128,6 +129,8 @@ public abstract class SourceTcp {
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
 
+        private boolean sessionActive;
+
         private SessionHandler(final @NotNull SocketChannel socketChannel, SourceTcpHandler sourceTcpHandler) throws IOException {
             this.socketChannel = socketChannel;
             this.sourceTcpHandler = sourceTcpHandler;
@@ -136,7 +139,7 @@ public abstract class SourceTcp {
             this.sourceTcpHandler.setMaxExcerptsPerMessage(builder.maxExcerptsPerMessage());
             this.sourceTcpHandler.setHeartbeatIntervalMillis(builder.heartbeatIntervalMillis());
             this.sessionDetails = new SimpleSessionDetailsProvider();
-            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sourceTcpHandler), sessionDetails, builder.connectionListener(), builder.sendBufferSize(), builder.receiveBufferSize());
+            this.tcpEventHandler = new TcpEventHandler(socketChannel, builder.tcpPipeline(sourceTcpHandler), sessionDetails, new SessionTcpConnectionHandler(), builder.sendBufferSize(), builder.receiveBufferSize());
             this.tailer = null;
             this.appender = null;
         }
@@ -177,6 +180,7 @@ public abstract class SourceTcp {
 
         @Override
         public void run() {
+            sessionActive = true;
             VanillaSelectionKeySet selectionKeys = null;
 
             try {
@@ -221,8 +225,10 @@ public abstract class SourceTcp {
         private void vanillaNioLoop(final VanillaSelector selector, final VanillaSelectionKeySet selectionKeys) throws IOException, InvalidEventHandlerException {
             final int spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
+            final TcpEventHandler tcpEventHandler = this.tcpEventHandler;
+            final SessionDetailsProvider sessionDetails = this.sessionDetails;
 
-            while (running.get()) {
+            while (sessionActive && running.get()) {
                 int nbKeys = selector.select(spinLoopCount, selectTimeout);
 
                 if (nbKeys > 0) {
@@ -232,7 +238,7 @@ public abstract class SourceTcp {
                     for (int k = 0; k < size; k++) {
                         final SelectionKey key = keys[k];
                         if (key != null) {
-                            if (!onSelectionKey(key)) {
+                            if (!onSelectionKey(key, tcpEventHandler, sessionDetails)) {
                                 break;
                             }
                         }
@@ -246,14 +252,16 @@ public abstract class SourceTcp {
         private void nioLoop(final VanillaSelector selector) throws IOException, InvalidEventHandlerException {
             final int spinLoopCount = builder.selectorSpinLoopCount();
             final long selectTimeout = builder.selectTimeout();
+            final TcpEventHandler tcpEventHandler = this.tcpEventHandler;
+            final SessionDetailsProvider sessionDetails = this.sessionDetails;
 
-            while (running.get()) {
+            while (sessionActive && running.get()) {
                 int nbKeys = selector.select(spinLoopCount, selectTimeout);
 
                 if (nbKeys > 0) {
                     final Set<SelectionKey> keys = selector.selectionKeys();
                     for (final SelectionKey key : keys) {
-                        if (!onSelectionKey(key)) {
+                        if (!onSelectionKey(key, tcpEventHandler, sessionDetails)) {
                             break;
                         }
                     }
@@ -263,20 +271,41 @@ public abstract class SourceTcp {
             }
         }
 
-        protected boolean onSelectionKey(final SelectionKey key) throws InvalidEventHandlerException {
+        private boolean onSelectionKey(final SelectionKey key, final TcpEventHandler tcpEventHandler, final SessionDetailsProvider sessionDetails) throws InvalidEventHandlerException {
             if (key != null) {
                 if (key.isReadable() || key.isWritable()) {
-                    try {
-                        sessionDetails.set(SelectionKey.class, key);
-                        sessionDetails.set(MappingProvider.class, (MappingProvider) key.attachment());
-                        return tcpEventHandler.action();
-                    } finally {
-                        sessionDetails.set(SelectionKey.class, null);
-                    }
+                    return actionSocketEvent(key, tcpEventHandler, sessionDetails);
                 }
             }
 
             return true;
+        }
+
+        private boolean actionSocketEvent(SelectionKey key, TcpEventHandler tcpEventHandler, SessionDetailsProvider sessionDetails) throws InvalidEventHandlerException {
+            initSessionDetails(key, sessionDetails);
+            return tcpEventHandler.action();
+        }
+
+        private void initSessionDetails(SelectionKey key, SessionDetailsProvider sessionDetails) {
+            sessionDetails.set(SelectionKey.class, key);
+            sessionDetails.set(MappingProvider.class, (MappingProvider) key.attachment());
+        }
+
+        private class SessionTcpConnectionHandler extends TcpConnectionHandler {
+
+            @Override
+            public void onDisconnect(SocketChannel channel, String message) {
+                logger.info("Connection {} disconnected", socketChannel);
+                sessionActive = false;
+                builder.connectionListener().onDisconnect(channel, message);
+            }
+
+            @Override
+            public void onError(SelectableChannel channel, Exception exception) {
+                logger.info("Connection {} died", socketChannel, exception);
+                sessionActive = false;
+                builder.connectionListener().onError(channel, exception);
+            }
         }
 
     }
@@ -426,10 +455,18 @@ public abstract class SourceTcp {
             final long now = System.currentTimeMillis();
 
             if (subscribed && !write(out, sessionDetailsProvider)) {
-                if (lastHeartbeat <= now && out.remaining() >= ChronicleTcp.HEADER_SIZE) {
-                    writeSizeAndIndex(out, ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
-                }
+                sendHeartbeat(out, now);
             }
+        }
+
+        private void sendHeartbeat(Bytes out, long now) {
+            if (lastHeartbeat <= now && hasRoomForHeader(out)) {
+                writeSizeAndIndex(out, ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
+            }
+        }
+
+        private static boolean hasRoomForHeader(Bytes out) {
+            return out.remaining() >= ChronicleTcp.HEADER_SIZE;
         }
 
         protected abstract boolean write(Bytes out, SessionDetailsProvider sessionDetailsProvider);
@@ -532,11 +569,26 @@ public abstract class SourceTcp {
                 return source;
             }
 
+            return applyMapping(source, mappingFunction);
+        }
+
+        private Bytes applyMapping(@NotNull ExcerptTailer source, MappingFunction mappingFunction) {
+            final ResizableDirectByteBufferBytes withMappedBuffer = resizeMappedBuffer(source);
+            applyMappingFunction(source, mappingFunction, withMappedBuffer);
+            return withMappedBuffer.flip();
+        }
+
+        @org.jetbrains.annotations.NotNull
+        private ResizableDirectByteBufferBytes resizeMappedBuffer(@NotNull ExcerptTailer source) {
+            final ResizableDirectByteBufferBytes withMappedBuffer = this.withMappedBuffer;
             withMappedBuffer.clear();
             if (withMappedBuffer.capacity() < source.limit()) {
                 withMappedBuffer.resetToSize((int) source.capacity());
             }
+            return withMappedBuffer;
+        }
 
+        private void applyMappingFunction(@NotNull ExcerptTailer source, MappingFunction mappingFunction, ResizableDirectByteBufferBytes withMappedBuffer) {
             try {
                 mappingFunction.apply(source, withMappedBuffer);
             } catch (IllegalArgumentException e) {
@@ -556,18 +608,23 @@ public abstract class SourceTcp {
                     throw e;
                 }
             }
-
-            return withMappedBuffer.flip();
         }
 
         protected void writePartial(Bytes out) {
+            final Bytes content = this.content;
             int bytesToWrite = (int) Math.min(content.remaining(), out.remaining());
-            long contentLimit = content.limit();
-            out.write(content.limit(content.position() + bytesToWrite));
-            content.limit(contentLimit);
+            writeContent(out, content, bytesToWrite);
+            determineStateAfterWrite(content);
+        }
 
+        private void writeContent(Bytes out, Bytes content, int bytesToWrite) {
+            final long contentPos = content.position();
+            out.write(content, contentPos, bytesToWrite);
+            content.position(contentPos + bytesToWrite);
+        }
+
+        private void determineStateAfterWrite(Bytes content) {
             state = content.remaining() > 0 ? TcpHandlerState.EXCERPT_INCOMPLETE : TcpHandlerState.EXCERPT_COMPLETE;
-
         }
 
         protected boolean hasRoomForExcerpt(Bytes bytes, Bytes tailer) {
@@ -622,7 +679,7 @@ public abstract class SourceTcp {
                 content = applyMapping(tailer, mappingProvider);
                 int size = (int) content.remaining();
 
-                if (out.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                if (hasRoomForHeader(out)) {
                     writeSizeAndIndex(out, (int) content.limit(), tailer.index());
 
                     // for large objects send one at a time.
@@ -738,6 +795,8 @@ public abstract class SourceTcp {
 
         public static class IndexedSourceTcpHandler extends SourceTcpHandler {
 
+            private boolean nextIndex = true;
+
             @Override
             protected boolean write(Bytes out, SessionDetailsProvider sessionDetailsProvider) {
                 if (state == TcpHandlerState.EXCERPT_INCOMPLETE) {
@@ -749,20 +808,26 @@ public abstract class SourceTcp {
                     }
                 }
 
-                if (!tailer.index(index)) {
-                    if (tailer.wasPadding()) {
-                        if (index >= 0) {
-                            writeSizeAndIndex(out, ChronicleTcp.PADDED_LEN, tailer.index());
+                long previousIndex = tailer.index();
+
+                if (nextIndex) {
+                    if (!tailer.nextIndex()) {
+                        pauser.pause();
+                        if (!tailer.nextIndex()) {
+                            return false;
                         }
-
-                        index++;
                     }
-
-                    pauser.pause();
-
+                } else {
                     if (!tailer.index(index)) {
-                        return false;
+                        writePadding(out);
+
+                        pauser.pause();
+
+                        if (!tailer.index(index)) {
+                            return false;
+                        }
                     }
+                    nextIndex = true;
                 }
 
                 pauser.reset();
@@ -771,7 +836,7 @@ public abstract class SourceTcp {
                 content = applyMapping(tailer, mappingProvider);
                 int size = (int) content.limit();
 
-                if (out.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                if (hasRoomForHeader(out)) {
                     writeSizeAndIndex(out, size, tailer.index());
 
                     // for large objects send one at a time.
@@ -779,39 +844,58 @@ public abstract class SourceTcp {
                         writePartial(out);
                     } else {
                         out.write(content);
-                        for (int count = maxExcerptsPerMessage; (count > 0) && tailer.index(index + 1); ) {
+
+                        previousIndex = tailer.index();
+                        long currentIndex;
+                        for (int count = maxExcerptsPerMessage; (count > 0) && tailer.nextIndex(); ) {
+                            currentIndex = tailer.index();
                             if (!tailer.wasPadding()) {
                                 content = applyMapping(tailer, mappingProvider);
                                 // if there is free space, copy another one.
                                 if (hasRoomForExcerpt(out, content)) {
+                                    previousIndex = currentIndex;
                                     size = (int) content.limit();
                                     writeSizeAndIndex(out, size, tailer.index());
                                     out.write(content);
 
-                                    index++;
+//                                    index++;
                                     count--;
 
                                     tailer.finish();
 
                                 } else {
+                                    tailer.finish();
+                                    tailer.index(previousIndex);
                                     break;
                                 }
                             } else {
                                 if (hasRoomFor(out, ChronicleTcp.HEADER_SIZE)) {
                                     writeSizeAndIndex(out, ChronicleTcp.PADDED_LEN, index);
                                 } else {
+                                    tailer.index(previousIndex);
                                     break;
                                 }
 
-                                index++;
+//                                index++;
                             }
                         }
                     }
 
-                    index++;
+//                    index++;
                     return true;
                 } else {
+                    tailer.index(previousIndex);
                     return false;
+                }
+            }
+
+            private void writePadding(Bytes out) {
+                if (tailer.wasPadding()) {
+                    if (index >= 0) {
+                        writeSizeAndIndex(out, ChronicleTcp.PADDED_LEN, tailer.index());
+                    }
+
+                    index++;
                 }
             }
 
@@ -819,10 +903,13 @@ public abstract class SourceTcp {
             protected boolean onSubscribe(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
                 this.index = in.readLong();
                 if (this.index == ChronicleTcp.IDX_TO_START) {
-                    this.index = -1;
-
+                    this.nextIndex = true;
+                    this.index = tailer.toStart().index();
                 } else if (this.index == ChronicleTcp.IDX_TO_END) {
                     this.index = tailer.toEnd().index();
+                    this.nextIndex = this.index == -1;
+                } else {
+                    this.nextIndex = false;
                 }
 
                 writeSizeAndIndex(out, ChronicleTcp.SYNC_IDX_LEN, this.index);

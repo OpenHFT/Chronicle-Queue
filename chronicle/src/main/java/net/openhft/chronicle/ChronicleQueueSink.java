@@ -357,7 +357,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             private void processSubscription(Bytes in) {
-                if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                if (headerFits(in)) {
                     long startPos = in.position();
                     int receivedSize = in.readInt();
                     in.readLong(); // index
@@ -387,68 +387,100 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             private void processExcerpt(Bytes in) {
-                if (state == TcpHandlerState.EXCERPT_INCOMPLETE) {
-                    appendToExcerpt(in, StatefulExcerpt.this.adapter);
-                } else if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
-                    int receivedSize = in.readInt();
-                    long receivedIndex = in.readLong();
-
-                    final AppenderAdapter adapter = StatefulExcerpt.this.adapter;
-                    switch (receivedSize) {
-                        case ChronicleTcp.IN_SYNC_LEN:
-                            // heartbeat
-                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
-                            return;
-                        case ChronicleTcp.PADDED_LEN:
-                            // write padded entry
-                            adapter.writePaddedEntry();
-                            processExcerpt(in);
-                            return;
-                        case ChronicleTcp.SYNC_IDX_LEN:
-                            //Sync IDX message, re-try
-                            processExcerpt(in);
-                            return;
-                    }
-
-                    if (receivedSize > 128 << 20 || receivedSize < 0) {
-                        throw new TcpHandlingException("size was " + receivedSize);
-                    }
-
-                    if (lastLocalIndex != receivedIndex) {
-                        adapter.startExcerpt(receivedSize, receivedIndex);
-
-                        appendToExcerpt(in, adapter);
-                    } else {
-                        // skip the excerpt as we already have it
-                        in.skip(receivedSize);
-                        processExcerpt(in);
-                    }
-
+                if (isIncomplete()) {
+                    state = appendToExcerpt(in, StatefulExcerpt.this.adapter);
+                } else if (headerFits(in)) {
+                    processPossibleExcerpt(in);
                 } else {
                     state = TcpHandlerState.EXCERPT_NOT_FOUND;
                 }
-
             }
 
-            private void appendToExcerpt(Bytes in, final AppenderAdapter adapter) {
-                long inLimit = in.limit();
-                int bytesToWrite = (int) Math.min(in.remaining(), adapter.remaining());
+            private boolean headerFits(Bytes in) {
+                return in.remaining() >= ChronicleTcp.HEADER_SIZE;
+            }
 
-                try {
-                    in.limit(in.position() + bytesToWrite);
-                    adapter.write(in);
+            private boolean isIncomplete() {
+                return state == TcpHandlerState.EXCERPT_INCOMPLETE;
+            }
 
-                    // needs more than one read.
-                    if (adapter.remaining() > 0) {
-                        state = TcpHandlerState.EXCERPT_INCOMPLETE;
-                    } else {
-                        state = TcpHandlerState.EXCERPT_COMPLETE;
-                        adapter.finish();
-                    }
-                } finally {
-                    // reset the limit;
-                    in.limit(inLimit);
+            private void processPossibleExcerpt(Bytes in) {
+                int receivedSize = in.readInt();
+                long receivedIndex = in.readLong();
+
+                final AppenderAdapter adapter = StatefulExcerpt.this.adapter;
+                switch (receivedSize) {
+                    case ChronicleTcp.IN_SYNC_LEN:
+                        // heartbeat
+                        state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                        return;
+                    case ChronicleTcp.PADDED_LEN:
+                        // write padded entry
+                        adapter.writePaddedEntry();
+                        processExcerpt(in);
+                        return;
+                    case ChronicleTcp.SYNC_IDX_LEN:
+                        //Sync IDX message, re-try
+                        processExcerpt(in);
+                        return;
                 }
+
+                ensureSize(receivedSize);
+
+                processOrSkipExcerpt(in, receivedSize, receivedIndex, adapter);
+            }
+
+            private void processOrSkipExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
+                if (lastLocalIndex != receivedIndex) {
+                    processExcerpt(in, receivedSize, receivedIndex, adapter);
+                } else {
+                    skipExcerpt(in, receivedSize);
+                }
+            }
+
+            private void skipExcerpt(Bytes in, int receivedSize) {
+                // skip the excerpt as we already have it
+                in.skip(receivedSize);
+                processExcerpt(in);
+            }
+
+            private void processExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
+                adapter.startExcerpt(receivedSize, receivedIndex);
+                state = appendToExcerpt(in, adapter);
+            }
+
+            private void ensureSize(int receivedSize) {
+                if (receivedSize > 128 << 20 || receivedSize < 0) {
+                    invalidSize(receivedSize);
+                }
+            }
+
+            private void invalidSize(int receivedSize) {
+                throw new TcpHandlingException("size was " + receivedSize);
+            }
+
+            private ChronicleQueueSink.TcpHandlerState appendToExcerpt(Bytes in, final AppenderAdapter adapter) {
+                final long inPos = in.position();
+                int bytesToWrite = bytesToWrite(in, adapter);
+                adapter.write(in, inPos, bytesToWrite);
+                in.position(inPos + bytesToWrite);
+                return determineState(adapter);
+            }
+
+            private int bytesToWrite(Bytes in, AppenderAdapter adapter) {
+                return (int) Math.min(in.remaining(), adapter.remaining());
+            }
+
+            private ChronicleQueueSink.TcpHandlerState determineState(AppenderAdapter adapter) {
+                ChronicleQueueSink.TcpHandlerState result;
+                // needs more than one read.
+                if (adapter.remaining() > 0) {
+                    result = TcpHandlerState.EXCERPT_INCOMPLETE;
+                } else {
+                    result = TcpHandlerState.EXCERPT_COMPLETE;
+                    adapter.finish();
+                }
+                return result;
             }
 
             private void processOutgoing(Bytes out) {

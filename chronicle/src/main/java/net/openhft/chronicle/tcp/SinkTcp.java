@@ -186,21 +186,27 @@ public abstract class SinkTcp {
 
         public boolean read() throws IOException {
             try {
-                if (blocking && readWasBusy) {
-                    // if the last read was busy, try just invoking the handler as we might have data to read
-                    // directly from the buffer
-                    readWasBusy = invokeHandler();
-                }
-
-                if (!blocking || !readWasBusy) {
-                    // try a full read, which involves reading from the socket as well
-                    readWasBusy = action();
-                }
-
+                tryInvokeHandler();
+                fullReadIfRequired();
             } catch (InvalidEventHandlerException e) {
                 throw new IOException(e);
             }
             return readWasBusy;
+        }
+
+        private void fullReadIfRequired() throws InvalidEventHandlerException {
+            if (!blocking || !readWasBusy) {
+                // try a full read, which involves reading from the socket as well
+                readWasBusy = action();
+            }
+        }
+
+        private void tryInvokeHandler() throws IOException {
+            if (blocking && readWasBusy) {
+                // if the last read was busy, try just invoking the handler as we might have data to read
+                // directly from the buffer
+                readWasBusy = invokeHandler();
+            }
         }
 
     }
