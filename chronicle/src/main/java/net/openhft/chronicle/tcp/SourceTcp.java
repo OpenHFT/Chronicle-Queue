@@ -121,17 +121,14 @@ public abstract class SourceTcp {
      * Abstract class for Indexed and Vanilla chronicle replication
      */
     private abstract class SessionHandler implements Runnable, Closeable {
-        private final SocketChannel socketChannel;
         protected final TcpConnection connection;
-
+        protected final ByteBuffer writeBuffer;
+        protected final ResizableDirectByteBufferBytes readBuffer;
+        private final SocketChannel socketChannel;
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
         protected long lastHeartbeat;
         private long lastUnPausedNS;
-
-        protected final ByteBuffer writeBuffer;
-        protected final ResizableDirectByteBufferBytes readBuffer;
-
         private ResizableDirectByteBufferBytes withMappedBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
@@ -406,7 +403,7 @@ public abstract class SourceTcp {
             return true;
         }
 
-        protected boolean onUnsubscribe(final SelectionKey key, long data) throws IOException {
+        protected boolean onUnsubscribe(final SelectionKey key, long data) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             return true;
         }

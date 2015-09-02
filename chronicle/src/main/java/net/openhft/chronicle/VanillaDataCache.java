@@ -89,13 +89,13 @@ public class VanillaDataCache implements Closeable {
         return vmb;
     }
 
-    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) {
         return new File(
                 new File(basePath, dateCache.formatFor(cycle)),
                 FILE_NAME_PREFIX + threadId + "-" + dataCount);
     }
 
-    public File fileFor(int cycle, int threadId) throws IOException {
+    public File fileFor(int cycle, int threadId) {
         String cycleStr = dateCache.formatFor(cycle);
         String cyclePath = basePath + "/" + cycleStr;
         String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
@@ -133,7 +133,7 @@ public class VanillaDataCache implements Closeable {
     /**
      * Find the count for the next data file to be written for a specific thread.
      */
-    public int findNextDataCount(int cycle, int threadId) throws IOException {
+    public int findNextDataCount(int cycle, int threadId) {
         final String cycleStr = dateCache.formatFor(cycle);
         final String cyclePath = basePath + "/" + cycleStr;
         final String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
