@@ -308,11 +308,11 @@ class ChronicleQueueSink extends WrappedChronicle {
                 busy = sinkTcp.read();
             } while (excerptNotRead(busy, attempts++, readSpinCount) || excerptIncomplete());
 
-            return tcpHandler.state == TcpHandlerState.EXCERPT_COMPLETE;
+            return tcpHandler.initialState == TcpHandlerState.EXCERPT_COMPLETE;
         }
 
         private boolean excerptIncomplete() {
-            return tcpHandler.state == TcpHandlerState.EXCERPT_INCOMPLETE;
+            return tcpHandler.isIncomplete();
         }
 
         @Override
@@ -335,7 +335,9 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             private MappingFunction mappingFunction;
 
-            private TcpHandlerState state;
+            private TcpHandlerState initialState;
+
+            private TcpHandlerState endState;
 
             private boolean subscribed;
 
@@ -378,7 +380,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                     // skip excerpt
                     if (in.remaining() >= receivedSize) {
                         in.skip(receivedSize);
-                        state = TcpHandlerState.SEARCHING;
+                        initialState = TcpHandlerState.SEARCHING;
                     } else {
                         in.position(startPos);
                     }
@@ -387,13 +389,38 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             private void processExcerpt(Bytes in) {
+/*
                 if (isIncomplete()) {
-                    state = appendToExcerpt(in, StatefulExcerpt.this.adapter);
+                    appendToExcerpt(in, StatefulExcerpt.this.adapter);
                 } else if (headerFits(in)) {
                     processPossibleExcerpt(in);
                 } else {
                     state = TcpHandlerState.EXCERPT_NOT_FOUND;
                 }
+*/
+                final int maxExcerpts = builder.maxExcerptsPerMessage();
+                int excerpts = 0;
+                ChronicleQueueSink.TcpHandlerState initialState = null;
+                ChronicleQueueSink.TcpHandlerState endState = null;
+
+                if (isIncomplete()) {
+                    initialState = endState = appendToExcerpt(in, StatefulExcerpt.this.adapter);
+                }
+
+                if (!headerFits(in)) {
+                    if (initialState == null) {
+                        initialState = endState = TcpHandlerState.EXCERPT_NOT_FOUND;
+                    }
+                } else {
+                    do {
+                        endState = processPossibleExcerpt(in);
+                        if (initialState == null) {
+                            initialState = endState;
+                        }
+                    } while (headerFits(in) && excerpts++ < maxExcerpts);
+                }
+                this.initialState = initialState;
+                this.endState = endState;
             }
 
             private boolean headerFits(Bytes in) {
@@ -401,10 +428,10 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             private boolean isIncomplete() {
-                return state == TcpHandlerState.EXCERPT_INCOMPLETE;
+                return endState == TcpHandlerState.EXCERPT_INCOMPLETE;
             }
 
-            private void processPossibleExcerpt(Bytes in) {
+            private ChronicleQueueSink.TcpHandlerState processPossibleExcerpt(Bytes in) {
                 int receivedSize = in.readInt();
                 long receivedIndex = in.readLong();
 
@@ -412,41 +439,38 @@ class ChronicleQueueSink extends WrappedChronicle {
                 switch (receivedSize) {
                     case ChronicleTcp.IN_SYNC_LEN:
                         // heartbeat
-                        state = TcpHandlerState.EXCERPT_NOT_FOUND;
-                        return;
+                        return TcpHandlerState.EXCERPT_NOT_FOUND;
                     case ChronicleTcp.PADDED_LEN:
                         // write padded entry
                         adapter.writePaddedEntry();
-                        processExcerpt(in);
-                        return;
+                        return TcpHandlerState.SEARCHING;
                     case ChronicleTcp.SYNC_IDX_LEN:
                         //Sync IDX message, re-try
-                        processExcerpt(in);
-                        return;
+                        return TcpHandlerState.SEARCHING;
                 }
 
                 ensureSize(receivedSize);
 
-                processOrSkipExcerpt(in, receivedSize, receivedIndex, adapter);
+                return processOrSkipExcerpt(in, receivedSize, receivedIndex, adapter);
             }
 
-            private void processOrSkipExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
+            private ChronicleQueueSink.TcpHandlerState processOrSkipExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
                 if (lastLocalIndex != receivedIndex) {
-                    processExcerpt(in, receivedSize, receivedIndex, adapter);
+                    return processExcerpt(in, receivedSize, receivedIndex, adapter);
                 } else {
-                    skipExcerpt(in, receivedSize);
+                    return skipExcerpt(in, receivedSize);
                 }
             }
 
-            private void skipExcerpt(Bytes in, int receivedSize) {
+            private ChronicleQueueSink.TcpHandlerState skipExcerpt(Bytes in, int receivedSize) {
                 // skip the excerpt as we already have it
                 in.skip(receivedSize);
-                processExcerpt(in);
+                return TcpHandlerState.SEARCHING;
             }
 
-            private void processExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
+            private ChronicleQueueSink.TcpHandlerState processExcerpt(Bytes in, int receivedSize, long receivedIndex, AppenderAdapter adapter) {
                 adapter.startExcerpt(receivedSize, receivedIndex);
-                state = appendToExcerpt(in, adapter);
+                return appendToExcerpt(in, adapter);
             }
 
             private void ensureSize(int receivedSize) {

@@ -384,6 +384,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .indexBlockSize(16L << 10)
                 .sink()
                 .connectAddress("localhost", port)
+                .maxExcerptsPerMessage(1)
                 .build();
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
