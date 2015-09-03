@@ -116,24 +116,21 @@ public class TcpEventHandler {
     protected boolean invokeHandler() throws IOException {
         final Bytes inBBB = this.inBBB;
         final Bytes outBBB = this.outBBB;
-        final long markedInBBBPos = inBBB.position();
+        final long preProcessApplicationInputPos = inBBB.position();
         boolean busy = handler.process(inBBB, outBBB, sessionDetails);
-        busy |= postHandlerProcess(inBBB, markedInBBBPos, outBBB);
+        busy |= postHandlerProcess(inBBB, preProcessApplicationInputPos, outBBB);
         return busy;
     }
 
-    private boolean postHandlerProcess(Bytes inBBB, long inBBBPos, Bytes outBBB) throws IOException {
+    private boolean postHandlerProcess(Bytes inBBB, long preProcessApplicationInputPos, Bytes outBBB) throws IOException {
         boolean busy = writeHandlerOutput(outBBB);
-        busy |= compactInput(inBBB, inBBBPos);
+        busy |= compactInput(inBBB, preProcessApplicationInputPos);
         return busy;
     }
 
-    private boolean compactInput(Bytes inBBB, long markedInBBBPos) {
-        // TODO Optimise.
-        // if it read some data compact();
-        // if (inBBB.readPosition() > 0) {
+    private boolean compactInput(Bytes inBBB, long preProcessApplicationInputPos) {
         final long inBBBPos = inBBB.position();
-        if (markedInBBBPos == inBBBPos) {
+        if (preProcessApplicationInputPos == inBBBPos) {
             return false;
         }
         if (shouldCompact(inBBBPos)) {
@@ -143,12 +140,10 @@ public class TcpEventHandler {
     }
 
     private void positionApplicationOutput(int position) {
-        // outBBB.writePosition(outBB.limit());
         outBBB.position(position);
     }
 
     private void limitApplicationInput(int limit) {
-        // inBBB.readLimit(inBB.position());
         inBBB.limit(limit);
     }
 
