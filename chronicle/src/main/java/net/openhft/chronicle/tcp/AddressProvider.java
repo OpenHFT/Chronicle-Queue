@@ -20,5 +20,5 @@ package net.openhft.chronicle.tcp;
 import java.net.InetSocketAddress;
 
 public interface AddressProvider {
-    public InetSocketAddress get();
+    InetSocketAddress get();
 }

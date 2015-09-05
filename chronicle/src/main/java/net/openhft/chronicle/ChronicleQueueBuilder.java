@@ -31,15 +31,13 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
 
-    public abstract Chronicle build() throws IOException;
+    public static IndexedChronicleQueueBuilder indexed(File path) {
+        return new IndexedChronicleQueueBuilder(path);
+    }
 
     // *************************************************************************
     //
     // *************************************************************************
-
-    public static IndexedChronicleQueueBuilder indexed(File path) {
-        return new IndexedChronicleQueueBuilder(path);
-    }
 
     public static IndexedChronicleQueueBuilder indexed(String path) {
         return indexed(new File(path));
@@ -85,9 +83,23 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return new RemoteChronicleQueueTailerBuilder();
     }
 
+    public abstract Chronicle build() throws IOException;
+
     // *************************************************************************
     //
     // *************************************************************************
+
+    /**
+     * Makes ChronicleQueueBuilder cloneable.
+     *
+     * @return a cloned copy of this ChronicleQueueBuilder instance
+     */
+    @NotNull
+    @SuppressWarnings("SourceChronicleQueueBuilder")
+    @Override
+    public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
+        return (ChronicleQueueBuilder) super.clone();
+    }
 
     public static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder implements Cloneable {
 
@@ -352,6 +364,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     public static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
         private final File path;
 
@@ -585,10 +601,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             }
         }
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder
             implements MappingProvider<ReplicaChronicleQueueBuilder> {
@@ -1052,7 +1064,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.mapping;
         }
 
-        protected abstract Chronicle doBuild() throws IOException;
+        protected abstract Chronicle doBuild();
 
         /**
          * Makes ReplicaChronicleQueueBuilder cloneable.
@@ -1086,7 +1098,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if (bindAddress() != null && connectAddress() == null) {
@@ -1126,7 +1138,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SourceTcp cnx;
 
             if (bindAddress() != null && connectAddress() == null) {
@@ -1162,7 +1174,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
@@ -1191,6 +1203,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     private static final class RemoteChronicleQueueTailerBuilder extends ReplicaChronicleQueueBuilder {
 
         private RemoteChronicleQueueTailerBuilder() {
@@ -1198,7 +1214,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
@@ -1225,21 +1241,5 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public RemoteChronicleQueueTailerBuilder clone() {
             return (RemoteChronicleQueueTailerBuilder) super.clone();
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    /**
-     * Makes ChronicleQueueBuilder cloneable.
-     *
-     * @return a cloned copy of this ChronicleQueueBuilder instance
-     */
-    @NotNull
-    @SuppressWarnings("SourceChronicleQueueBuilder")
-    @Override
-    public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
-        return (ChronicleQueueBuilder) super.clone();
     }
 }

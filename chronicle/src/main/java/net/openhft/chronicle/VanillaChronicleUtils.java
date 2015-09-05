@@ -18,9 +18,6 @@
 
 package net.openhft.chronicle;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
@@ -29,6 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VanillaChronicleUtils {
+
+    public static final FileFilter IS_DIR = new FileFilter() {
+        @Override
+        public boolean accept(File pathname) {
+            return pathname.isDirectory();
+        }
+    };
 
     public static File mkFiles(
             String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
@@ -52,12 +56,11 @@ public class VanillaChronicleUtils {
     }
 
     public static File fileFor(
-            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) throws IOException {
+            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) {
         return new File(
             new File(basePath, dateCache.formatFor(cycle)),
             VanillaIndexCache.FILE_NAME_PREFIX + indexCount);
     }
-
 
     public static List<File> findLeafDirectories(File root) {
         final List<File> files =  findLeafDirectories(new ArrayList<File>(), root);
@@ -78,12 +81,4 @@ public class VanillaChronicleUtils {
 
         return leafs;
     }
-
-
-    public static final FileFilter IS_DIR = new FileFilter() {
-        @Override
-        public boolean accept(File pathname) {
-            return pathname.isDirectory();
-        }
-    };
 }

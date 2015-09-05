@@ -43,81 +43,26 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class VanillaChronicle implements Chronicle {
 
-    public enum Cycle {
-            SECONDS ("yyyyMMddHHmmss", 1000, 1L << 28),
-            MINUTES ("yyyyMMddHHmm"  , 60 * 1000, 1L << 34),
-            HOURS   ("yyyyMMddHH"    , 60 * 60 * 1000, 1L << 40),
-            DAYS    ("yyyyMMdd"      , 24 * 60 * 60 * 1000, 1L << 40),
-        ;
-
-        private static Cycle[] VALUES = values();
-
-        private final String format;
-        private final int length;
-        private final long entries;
-
-        Cycle(String format, int length, long entries) {
-            this.format = format;
-            this.length = length;
-            this.entries = entries;
-        }
-
-        public String format() {
-            return this.format;
-        }
-
-        public int length() {
-            return this.length;
-        }
-
-        public long entries() {
-            return this.entries;
-        }
-
-        public static Cycle forLength(int length) {
-            for(int i=VALUES.length - 1; i >= 0; i--) {
-                if(VALUES[i].length == length) {
-                    return VALUES[i];
-                }
-            }
-
-            throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
-        }
-
-        public static Cycle forFormat(String format) {
-            for(int i=VALUES.length - 1; i >= 0; i--) {
-                if(VALUES[i].format == format || VALUES[i].format.equals(format)) {
-                    return VALUES[i];
-                }
-            }
-
-            throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
-        }
-    }
-
     public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
-
     /**
      * Number of most-significant bits used to hold the thread id in index entries. The remaining
      * least-significant bits of the index entry are used for the data offset info.
      */
     public static final int THREAD_ID_BITS = Integer.getInteger("os.max.pid.bits", Jvm.PID_BITS);
-
     /**
      * Mask used to validate that the thread id does not exceed the allocated number of bits.
      */
     public static final long THREAD_ID_MASK = -1L >>> -THREAD_ID_BITS;
-
     /**
      * Number of least-significant bits used to hold the data offset info in index entries.
      */
     public static final int INDEX_DATA_OFFSET_BITS = 64 - THREAD_ID_BITS;
-
     /**
      * Mask used to extract the data offset info from an index entry.
      */
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
-
+    @NotNull
+    final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
     private final String name;
     private final ThreadLocal<WeakReference<ObjectSerializer>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
@@ -137,9 +82,6 @@ public class VanillaChronicle implements Chronicle {
     //    private volatile int cycle;
     private final AtomicLong lastWrittenIndex = new AtomicLong(-1L);
     private volatile boolean closed = false;
-
-    @NotNull
-    final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
 
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
@@ -336,16 +278,68 @@ public class VanillaChronicle implements Chronicle {
         dataCache.checkCounts(min, max);
     }
 
+    public enum Cycle {
+            SECONDS ("yyyyMMddHHmmss", 1000, 1L << 28),
+            MINUTES ("yyyyMMddHHmm"  , 60 * 1000, 1L << 34),
+            HOURS   ("yyyyMMddHH"    , 60 * 60 * 1000, 1L << 40),
+            DAYS    ("yyyyMMdd"      , 24 * 60 * 60 * 1000, 1L << 40),
+        ;
+
+        private static Cycle[] VALUES = values();
+
+        private final String format;
+        private final int length;
+        private final long entries;
+
+        Cycle(String format, int length, long entries) {
+            this.format = format;
+            this.length = length;
+            this.entries = entries;
+        }
+
+        public static Cycle forLength(int length) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].length == length) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
+        }
+
+        public static Cycle forFormat(String format) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].format == format || VALUES[i].format.equals(format)) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
+        }
+
+        public String format() {
+            return this.format;
+        }
+
+        public int length() {
+            return this.length;
+        }
+
+        public long entries() {
+            return this.entries;
+        }
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
 
     public interface VanillaExcerptCommon extends ExcerptCommon {
-        public boolean unmapped();
+        boolean unmapped();
     }
 
     public interface VanillaAppender extends VanillaExcerptCommon, ExcerptAppender {
-        public void startExcerpt(long capacity, int cycle);
+        void startExcerpt(long capacity, int cycle);
     }
 
     public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
@@ -356,14 +350,13 @@ public class VanillaChronicle implements Chronicle {
     // *************************************************************************
 
     private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
+        protected VanillaMappedBytes indexBytes;
+        protected VanillaMappedBytes dataBytes;
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
         private int lastThreadId = Integer.MIN_VALUE;
         private int lastDataCount = Integer.MIN_VALUE;
-
-        protected VanillaMappedBytes indexBytes;
-        protected VanillaMappedBytes dataBytes;
 
         public AbstractVanillaExcerpt() {
             super(acquireSerializer(), NO_PAGE, NO_PAGE, null);

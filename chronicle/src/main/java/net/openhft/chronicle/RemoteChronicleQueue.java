@@ -80,7 +80,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         throw new UnsupportedOperationException();
     }
 
-    protected synchronized ExcerptCommon createAppender0() throws IOException {
+    protected synchronized ExcerptCommon createAppender0() {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
@@ -88,7 +88,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return this.excerpt = new StatelessExcerptAppender();
     }
 
-    protected synchronized ExcerptCommon createExcerpt0() throws IOException {
+    protected synchronized ExcerptCommon createExcerpt0() {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
@@ -441,7 +441,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             return true;
         }
 
-        protected boolean advanceIndex() throws IOException {
+        protected boolean advanceIndex() {
             if(nextIndex()) {
                 finish();
                 return true;
