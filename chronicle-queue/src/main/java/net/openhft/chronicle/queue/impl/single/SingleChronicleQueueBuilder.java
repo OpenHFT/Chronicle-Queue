@@ -18,9 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
-import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -29,7 +27,7 @@ import java.io.IOException;
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private String name;
     private long blockSize;
-    private Class<? extends Wire> wireType;
+    private WireType wireType;
 
     public SingleChronicleQueueBuilder(File name) {
         this(name.getAbsolutePath());
@@ -38,7 +36,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public SingleChronicleQueueBuilder(String name) {
         this.name = name;
         this.blockSize = 64L << 20;
-        this.wireType = BinaryWire.class;
+        this.wireType = WireType.BINARY;
     }
 
     public String name() {
@@ -54,18 +52,18 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.blockSize;
     }
 
-    public SingleChronicleQueueBuilder wireType(Class<? extends Wire> wireType) {
+    public SingleChronicleQueueBuilder wireType(WireType wireType) {
         this.wireType = wireType;
         return this;
     }
 
-    public Class<? extends Wire> wireType() {
+    public WireType wireType() {
         return this.wireType;
     }
 
     @NotNull
     public ChronicleQueue build() throws IOException {
-        throw new UnsupportedOperationException("Not yet implemented");
+        return new SingleChronicleQueue(this);
     }
 
     @NotNull
@@ -79,14 +77,19 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         }
     }
 
+    // *************************************************************************
+    // HELPERS
+    // *************************************************************************
+
     public static SingleChronicleQueueBuilder binary(File name) {
         return binary(name.getAbsolutePath());
     }
 
     public static SingleChronicleQueueBuilder binary(String name) {
         return new SingleChronicleQueueBuilder(name)
-                .wireType(BinaryWire.class);
+                .wireType(WireType.BINARY);
     }
+
 
     public static SingleChronicleQueueBuilder text(File name) {
         return text(name.getAbsolutePath());
@@ -94,6 +97,16 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     public static SingleChronicleQueueBuilder text(String name) {
         return new SingleChronicleQueueBuilder(name)
-                .wireType(TextWire.class);
+                .wireType(WireType.TEXT);
+    }
+
+
+    public static SingleChronicleQueueBuilder raw(File name) {
+        return raw(name.getAbsolutePath());
+    }
+
+    public static SingleChronicleQueueBuilder raw(String name) {
+        return new SingleChronicleQueueBuilder(name)
+            .wireType(WireType.RAW);
     }
 }

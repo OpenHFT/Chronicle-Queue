@@ -13,19 +13,30 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
+package net.openhft.chronicle.queue.util;
+
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.wire.BinaryWire;
+import net.openhft.chronicle.wire.RawWire;
+import net.openhft.chronicle.wire.TextWire;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 
-import java.io.File;
+import java.util.function.Function;
 
-class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
-    private final SingleChronicleQueueBuilder builder;
+public class ChronicleQueueUtil {
 
-    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) {
-        super(null, builder.blockSize(), builder.wireType());
+    public static final Function<Bytes,Wire> wireSuplierFor(WireType type) {
+        switch (type) {
+            case BINARY:
+                return BinaryWire::new;
+            case TEXT:
+                return TextWire::new;
+            case RAW:
+                return RawWire::new;
+        }
 
-        this.builder = builder.clone();
+        throw new IllegalArgumentException("Unknown WireType (" + type + ")");
     }
 }

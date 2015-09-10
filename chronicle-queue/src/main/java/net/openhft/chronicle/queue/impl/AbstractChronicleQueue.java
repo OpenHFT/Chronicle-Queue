@@ -25,6 +25,12 @@ import java.io.IOException;
 
 public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
+    private final ChronicleQueueFormat format;
+
+    protected AbstractChronicleQueue(final ChronicleQueueFormat format) {
+        this.format = format;
+    }
+
     @Override
     public String name() {
         throw new UnsupportedOperationException("Not implemented");

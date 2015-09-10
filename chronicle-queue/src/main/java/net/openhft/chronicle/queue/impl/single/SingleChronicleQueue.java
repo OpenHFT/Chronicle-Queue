@@ -19,4 +19,8 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
+
+    protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) {
+        super(new SingleChronicleQueueFormat(builder));
+    }
 }
