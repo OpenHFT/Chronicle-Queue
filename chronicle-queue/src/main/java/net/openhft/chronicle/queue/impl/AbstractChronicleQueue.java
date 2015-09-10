@@ -23,11 +23,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public abstract class AbstractChronicleQueue implements ChronicleQueue {
+public abstract class AbstractChronicleQueue<T extends ChronicleQueueFormat> implements ChronicleQueue {
 
-    private final ChronicleQueueFormat format;
+    private final T format;
 
-    protected AbstractChronicleQueue(final ChronicleQueueFormat format) {
+    protected AbstractChronicleQueue(final T format) {
         this.format = format;
     }
 
@@ -77,5 +77,13 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     @Override
     public void close() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected T format() {
+        return this.format;
     }
 }

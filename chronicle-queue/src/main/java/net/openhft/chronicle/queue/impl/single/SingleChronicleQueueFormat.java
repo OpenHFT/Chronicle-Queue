@@ -16,16 +16,10 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
-import net.openhft.chronicle.wire.WireType;
-
-import java.io.File;
 
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
-    private final SingleChronicleQueueBuilder builder;
 
     SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) {
-        super(null, builder.blockSize(), builder.wireType());
-
-        this.builder = builder.clone();
+        super(builder.wireType());
     }
 }

@@ -14,20 +14,17 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.openhft.chronicle.queue.util;
+package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.wire.BinaryWire;
-import net.openhft.chronicle.wire.RawWire;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
 
-public class ChronicleQueueUtil {
+//TODO: workaround for protected access to WireInternal
+public class WireUtil {
 
-    public static final Function<Bytes,Wire> wireSuplierFor(WireType type) {
+    public static final Function<Bytes,Wire> wireSupplierFor(WireType type) {
         switch (type) {
             case BINARY:
                 return BinaryWire::new;
@@ -38,5 +35,13 @@ public class ChronicleQueueUtil {
         }
 
         throw new IllegalArgumentException("Unknown WireType (" + type + ")");
+    }
+
+    public static void writeDataOnce(
+            @NotNull WireOut wireOut,
+            boolean metaData,
+            @NotNull WriteMarshallable writer) {
+
+        WireInternal.writeDataOnce(wireOut, metaData, writer);
     }
 }

@@ -17,31 +17,26 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.util.ChronicleQueueUtil;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.WireUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 import java.util.function.Function;
 
 public abstract class AbstractChronicleQueueFormat implements ChronicleQueueFormat {
 
-    protected final File root;
-    protected final long blocks;
     protected final Function<Bytes, Wire> wireSupplier;
     protected final Header header;
 
-    protected AbstractChronicleQueueFormat(File root, long blocks, WireType wireType) {
-        this.root = root;
-        this.blocks = blocks;
-        this.wireSupplier = ChronicleQueueUtil.wireSuplierFor(wireType);
+    protected AbstractChronicleQueueFormat(WireType wireType) {
+        this.wireSupplier = WireUtil.wireSupplierFor(wireType);
         this.header = new Header();
     }
 

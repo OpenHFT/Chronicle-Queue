@@ -17,10 +17,26 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.wire.WireUtil;
 
-class SingleChronicleQueue extends AbstractChronicleQueue {
+class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
+    private final SingleChronicleQueueBuilder builder;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) {
         super(new SingleChronicleQueueFormat(builder));
+
+        this.builder = builder;
+
+        init();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected void init() {
+        WireUtil.writeDataOnce(null, true, format());
+        //Wires.writeDataOnce(wire, true, this::buildHeader);
+        //readHeader();
     }
 }

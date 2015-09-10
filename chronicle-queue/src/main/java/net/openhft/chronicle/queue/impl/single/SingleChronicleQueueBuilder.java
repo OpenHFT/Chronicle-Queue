@@ -63,7 +63,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @NotNull
     public ChronicleQueue build() throws IOException {
-        return new SingleChronicleQueue(this);
+        return new SingleChronicleQueue(this.clone());
     }
 
     @NotNull
