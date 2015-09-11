@@ -2,13 +2,11 @@ package net.openhft.chronicle.lataeg;
 
 import net.openhft.lang.model.Byteable;
 
-
 public interface IChronicleQueueData extends Byteable {
 
     int getIntField1();
 
     void setIntField1(int intField1);
-
 
     int getIntField2();
 
