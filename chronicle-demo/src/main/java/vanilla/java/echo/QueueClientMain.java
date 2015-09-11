@@ -68,7 +68,6 @@ public class QueueClientMain {
                             if ((j & 127) == 0)
                                 System.out.println();
 */
-
                         }
                         appender.startExcerpt();
                         appender.writeLong(END_OF_TEST);

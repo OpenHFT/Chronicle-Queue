@@ -44,7 +44,6 @@ On an i7-3970X prints.
 10000001 : OffHeapTestData{ age= 9999999, importance= 0.9999999, timestamp= 1421791704499, name= Name9999999 }
 Took 0.233 seconds to read 10,000,000 records
 */
-
     public static void main(String[] args) throws IOException {
         OffHeapTestData td = DataValueClasses.newDirectReference(OffHeapTestData.class);
         String path = "/tmp/test2";

@@ -44,7 +44,6 @@ On an i7-3970X prints.
 10000001 : TestData{ age= 9999999, importance= 0.9999999, timestamp= 1421790886763, name= Name9999999 }
 Took 1.178 seconds to read 10,000,000 records
 */
-
     public static void main(String[] args) throws IOException {
         TestData td = DataValueClasses.newInstance(TestData.class);
         String path = "/tmp/test";
