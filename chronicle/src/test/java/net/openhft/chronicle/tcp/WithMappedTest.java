@@ -681,7 +681,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             System.out.println("writeMarshallable=>" + AbstractBytes.toHex(out));
             out.position(out.limit());
             out.limit(out.capacity()) ;*/
-
         }
 
         @Override
