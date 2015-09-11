@@ -13,18 +13,18 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import org.junit.Test;
 
 import java.io.IOException;
 
-class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
+public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
-    protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
-        super(new SingleChronicleQueueFormat(builder));
-
-        format().init();
+    @Test
+    public void testHeaderCreation() throws IOException {
+        new SingleChronicleQueueFormat(SingleChronicleQueueBuilder.text(getTmpFile()))
+            .init();
     }
 }

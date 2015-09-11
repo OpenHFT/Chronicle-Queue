@@ -25,22 +25,22 @@ import java.io.File;
 import java.io.IOException;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
-    private String name;
+    private File path;
     private long blockSize;
     private WireType wireType;
 
-    public SingleChronicleQueueBuilder(File name) {
-        this(name.getAbsolutePath());
+    public SingleChronicleQueueBuilder(String path) {
+        this(new File(path));
     }
 
-    public SingleChronicleQueueBuilder(String name) {
-        this.name = name;
+    public SingleChronicleQueueBuilder(File path) {
+        this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
     }
 
-    public String name() {
-        return this.name;
+    public File path() {
+        return this.path;
     }
 
     public SingleChronicleQueueBuilder blockSize(int blockSize) {

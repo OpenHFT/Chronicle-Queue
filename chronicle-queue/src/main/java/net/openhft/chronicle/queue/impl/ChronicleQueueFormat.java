@@ -16,7 +16,5 @@
 package net.openhft.chronicle.queue.impl;
 
 
-import net.openhft.chronicle.wire.Marshallable;
-
-public interface ChronicleQueueFormat extends Marshallable {
+public interface ChronicleQueueFormat {
 }

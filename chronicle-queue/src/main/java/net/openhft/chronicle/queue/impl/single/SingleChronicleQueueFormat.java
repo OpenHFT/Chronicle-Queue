@@ -15,11 +15,221 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.util.UUID;
+
+import static net.openhft.chronicle.wire.ChronicleQueueUtil.*;
 
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
-    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) {
+    private final SingleChronicleQueueBuilder builder;
+    private final MappedFile mappedFile;
+    private final Header header;
+
+    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
         super(builder.wireType());
+
+        this.builder = builder;
+        this.mappedFile = MappedFile.mappedFile(this.builder.path(), this.builder.blockSize());
+        this.header = new Header();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public SingleChronicleQueueFormat init() throws IOException {
+        writeMetaOnce(
+            wireOut(this.mappedFile, 0, super.wireSupplier),
+            this.header);
+        readMeta(
+            wireIn(this.mappedFile, 0, super.wireSupplier),
+            this.header);
+
+        /*
+        wireIn.readDocument(
+            w -> w.read().marshallable(header),
+            null
+        );
+        wireOut.writeDocument(
+            true,
+            w -> w.write(() -> "header").typedMarshallable(this.header)
+        );
+         */
+
+        return this;
+    }
+
+    /*
+    @Override
+    public long append(@NotNull Bytes buffer) {
+        long length = checkRemainingForAppend(buffer);
+
+        LongValue writeByte = header.writeByte();
+
+        for (; ; ) {
+            long lastByte = writeByte.getVolatileValue();
+
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+                long lastByte2 = lastByte + 4 + buffer.remaining();
+                bytes.write(lastByte + 4, buffer);
+                long lastIndex = header.lastIndex().addAtomicValue(1);
+                writeByte.setOrderedValue(lastByte2);
+                bytes.writeOrderedInt(lastByte, (int) length);
+                return lastIndex;
+            }
+            int length2 = length30(bytes.readVolatileInt());
+            bytes.skip(length2);
+            try {
+                Jvm.checkInterrupted();
+            } catch (InterruptedException e) {
+                throw new InterruptedRuntimeException(e);
+            }
+        }
+    }
+
+    @Override
+    public boolean read(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
+        buffer.clear();
+        long lastByte = offset.get();
+        for (; ; ) {
+            int length = bytes.readVolatileInt(lastByte);
+            int length2 = length30(length);
+            if (Wires.isReady(length)) {
+                lastByte += 4;
+                buffer.write(bytes, lastByte, length2);
+                lastByte += length2;
+                offset.set(lastByte);
+                return isData(length);
+            }
+
+            if (Thread.currentThread().isInterrupted()) {
+                return false;
+            }
+        }
+    }
+
+
+
+    protected long checkRemainingForAppend(@NotNull Bytes buffer) {
+        long remaining = buffer.remaining();
+        if (remaining > MAX_LENGTH) {
+            throw new IllegalStateException("Length too large: " + remaining);
+        }
+
+        return remaining;
+    }
+    */
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    enum MetaDataKey implements WireKey {
+        header, index2index, index
+    }
+
+    enum Field implements WireKey {
+        type,
+        uuid, created, user, host,
+        indexCount, indexSpacing,
+        writeByte, index2Index, lastIndex
+    }
+
+    private class Header implements Marshallable {
+        public static final long PADDED_SIZE = 512;
+
+        // fields which can be serialized/deserialized in the normal way.
+        private UUID uuid;
+        private ZonedDateTime created;
+        private String user;
+        private String host;
+        private int indexCount;
+        private int indexSpacing;
+
+        // support binding to off heap memory with thread safe operations.
+        private LongValue writeByte;
+        private LongValue index2Index;
+        private LongValue lastIndex;
+
+        Header() {
+            this.uuid = UUID.randomUUID();
+            this.created = ZonedDateTime.now();
+
+            this.indexCount = 128 << 10;
+            this.indexSpacing = 64;
+
+            // This is set to null as that it can pick up the right time the
+            // first time it is used.
+            this.writeByte = null;
+            this.index2Index = null;
+            this.lastIndex = null;
+        }
+
+        LongValue writeByte() {
+            return writeByte;
+        }
+
+        LongValue index2Index() {
+            return index2Index;
+        }
+
+        LongValue lastIndex() {
+            return lastIndex;
+        }
+
+        @NotNull
+        public Header init() {
+            uuid = UUID.randomUUID();
+            created = ZonedDateTime.now();
+            user = System.getProperty("user.name");
+            host = "";
+            return this;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut out) {
+            out.write(Field.uuid).uuid(uuid)
+                .write(Field.writeByte).int64forBinding(PADDED_SIZE)
+                .write(Field.created).zonedDateTime(created)
+                .write(Field.user).text(user)
+                .write(Field.host).text(host)
+                .write(Field.indexCount).int32(indexCount)
+                .write(Field.indexSpacing).int32(indexSpacing)
+                .write(Field.index2Index).int64forBinding(0L)
+                .write(Field.lastIndex).int64forBinding(-1L);
+            //out.addPadding((int) (PADDED_SIZE - out.bytes().writePosition()));
+        }
+
+        @Override
+        public void readMarshallable(@NotNull WireIn in) {
+            in.read(Field.uuid).uuid(this, (o, i) -> o.uuid = i)
+                .read(Field.writeByte).int64(this.writeByte)
+                .read(Field.created).zonedDateTime(this, (o, i) -> o.created = i)
+                .read(Field.user).text(this, (o, i) -> o.user = i)
+                .read(Field.host).text(this, (o, i) -> o.host = i)
+                .read(Field.indexCount).int32(this, (o, i) -> o.indexCount = i)
+                .read(Field.indexSpacing).int32(this, (o, i) -> o.indexSpacing =i)
+                .read(Field.index2Index).int64(this.index2Index)
+                .read(Field.lastIndex).int64(this.lastIndex);
+        }
+
+        public long getWriteByte() {
+            return writeByte().getVolatileValue();
+        }
+
+        public void setWriteByteLazy(long writeByte) {
+            this.writeByte().setOrderedValue(writeByte);
+        }
     }
 }
