@@ -16,15 +16,15 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WireUtil;
 
 import java.util.function.Function;
 
 public abstract class AbstractChronicleQueueFormat implements ChronicleQueueFormat {
 
-    protected final Function<Bytes, Wire> wireSupplier;
+    private final Function<Bytes, Wire> wireSupplier;
 
     protected AbstractChronicleQueueFormat(WireType wireType) {
         this.wireSupplier = WireUtil.wireSupplierFor(wireType);
@@ -32,5 +32,9 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
 
     protected Wire wireFor(Bytes bytes) {
         return wireSupplier.apply(bytes);
+    }
+
+    protected Function<Bytes, Wire> wireSupplier() {
+        return this.wireSupplier;
     }
 }

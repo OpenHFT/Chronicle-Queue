@@ -65,12 +65,15 @@ public class ChronicleQueueTestBase {
 
     protected File getTmpFile(String qualifier) {
         try {
-            return Files.createTempFile(
+            File tmpFile = Files.createTempFile(
                 getClass().getSimpleName() + "-",
                 "-" + ((qualifier != null && !qualifier.isEmpty())
                     ? testName.getMethodName() + "-" + qualifier
                     : testName.getMethodName()))
                 .toFile();
+
+            LOGGER.info("Tmp file: {}", tmpFile);
+            return tmpFile;
         } catch(IOException e) {
             throw new IllegalStateException(e);
         }

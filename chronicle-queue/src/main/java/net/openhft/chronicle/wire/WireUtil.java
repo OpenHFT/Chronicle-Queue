@@ -23,18 +23,26 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.function.Function;
 
 //TODO: workaround for protected access to WireInternal
-public class ChronicleQueueUtil {
+public class WireUtil {
+    public static final long SPB_HEADER_BYTE      = 0;
+    public static final long SPB_HEADER_BYTE_SIZE = 8;
+    public static final long SPB_HEADER_USET      = 0x0;
+    public static final long SPB_HEADER_BUILDING  = 0x1;
+    public static final long SPB_HEADER_BUILT     = asLong("QUEUE400");
 
     // *************************************************************************
     // MISC
     // *************************************************************************
 
-    static String hostName() {
+    public static String hostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
@@ -44,6 +52,36 @@ public class ChronicleQueueUtil {
                 return "localhost";
             }
         }
+    }
+
+    public static long asLong(@NotNull String str) {
+        return ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1))
+            .order(ByteOrder.nativeOrder())
+            .getLong();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
+        for (int i = 0; i < 1000; i++) {
+            long magic = bytes.readVolatileLong(WireUtil.SPB_HEADER_BYTE);
+            if (magic == WireUtil.SPB_HEADER_BUILDING) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new IOException("Interrupted waiting for the header to be built");
+                }
+            } else if (magic == WireUtil.SPB_HEADER_BUILT) {
+                return;
+            } else {
+                throw new AssertionError(
+                    "Invalid magic number " + Long.toHexString(magic) + " in file");
+            }
+        }
+
+        throw new AssertionError("Timeout waiting to build the file");
     }
 
     // *************************************************************************
@@ -68,6 +106,15 @@ public class ChronicleQueueUtil {
         @NotNull T writer) {
 
         WireInternal.writeDataOnce(wireOut, false, writer);
+
+        return writer;
+    }
+
+    public static <T extends WriteMarshallable> T writeMeta(
+        @NotNull WireOut wireOut,
+        @NotNull T writer) {
+
+        WireInternal.writeData(wireOut, true, false, writer);
 
         return writer;
     }
@@ -100,18 +147,32 @@ public class ChronicleQueueUtil {
     }
 
     public static WireOut wireOut(
+            @NotNull Bytes bytes,
+            @NotNull Function<Bytes,Wire> supplier)
+                throws IOException {
+        return supplier.apply(bytes);
+    }
+
+    public static WireOut wireOut(
             @NotNull MappedFile file,
             long offset,
-            Function<Bytes,Wire> supplier)
+            @NotNull Function<Bytes,Wire> supplier)
                 throws IOException {
-        return supplier.apply(file.acquireBytesForWrite(offset));
+        return wireOut(file.acquireBytesForWrite(offset), supplier);
+    }
+
+    public static WireIn wireIn(
+            @NotNull Bytes bytes,
+            @NotNull Function<Bytes,Wire> supplier)
+                throws IOException {
+        return supplier.apply(bytes);
     }
 
     public static WireIn wireIn(
             @NotNull MappedFile file,
             long offset,
-            Function<Bytes,Wire> supplier)
+            @NotNull Function<Bytes,Wire> supplier)
                 throws IOException {
-        return supplier.apply(file.acquireBytesForRead(offset));
+        return wireIn(file.acquireBytesForRead(offset), supplier);
     }
 }

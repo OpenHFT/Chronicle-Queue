@@ -15,22 +15,31 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-import static net.openhft.chronicle.wire.ChronicleQueueUtil.*;
+import static net.openhft.chronicle.wire.WireUtil.readMeta;
+import static net.openhft.chronicle.wire.WireUtil.wireIn;
+import static net.openhft.chronicle.wire.WireUtil.wireOut;
+import static net.openhft.chronicle.wire.WireUtil.writeMeta;
 
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
+    static {
+        ClassAliasPool.CLASS_ALIASES.addAlias(Header.class, "Header");
+    }
 
     private final SingleChronicleQueueBuilder builder;
     private final MappedFile mappedFile;
@@ -49,25 +58,54 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     // *************************************************************************
 
     public SingleChronicleQueueFormat init() throws IOException {
-        writeMetaOnce(
-            wireOut(this.mappedFile, 0, super.wireSupplier),
-            this.header);
-        readMeta(
-            wireIn(this.mappedFile, 0, super.wireSupplier),
-            this.header);
 
-        /*
-        wireIn.readDocument(
-            w -> w.read().marshallable(header),
-            null
+        final Bytes rb = this.mappedFile.acquireBytesForRead(WireUtil.SPB_HEADER_BYTE);
+        final Bytes wb = this.mappedFile.acquireBytesForWrite(WireUtil.SPB_HEADER_BYTE);
+
+        if(wb.compareAndSwapLong(WireUtil.SPB_HEADER_BYTE, WireUtil.SPB_HEADER_USET, WireUtil.SPB_HEADER_BUILDING)) {
+            wb.writePosition(WireUtil.SPB_HEADER_BYTE_SIZE);
+
+            writeMeta(
+                wireOut(wb, wireSupplier()),
+                w -> w.write(MetaDataKey.header).typedMarshallable(this.header)
+            );
+
+            if (!wb.compareAndSwapLong(WireUtil.SPB_HEADER_BYTE, WireUtil.SPB_HEADER_BUILDING, WireUtil.SPB_HEADER_BUILT)) {
+                throw new AssertionError("Concurrent writing of the header");
+            }
+        }
+
+
+        waitForTheHeaderToBeBuilt(rb);
+
+        rb.readPosition(WireUtil.SPB_HEADER_BYTE_SIZE);
+        readMeta(
+            wireIn(rb, wireSupplier()),
+            w -> w.read().marshallable(header)
         );
-        wireOut.writeDocument(
-            true,
-            w -> w.write(() -> "header").typedMarshallable(this.header)
-        );
-         */
 
         return this;
+    }
+
+    // TODO: configure timeout/speep
+    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
+        for (int i = 0; i < 1000; i++) {
+            long magic = bytes.readVolatileLong(WireUtil.SPB_HEADER_BYTE);
+            if (magic == WireUtil.SPB_HEADER_BUILDING) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new IOException("Interrupted waiting for the header to be built");
+                }
+            } else if (magic == WireUtil.SPB_HEADER_BUILT) {
+                return;
+            } else {
+                throw new AssertionError(
+                    "Invalid magic number " + Long.toHexString(magic) + " in file " + this.builder.path());
+            }
+        }
+
+        throw new AssertionError("Timeout waiting to build the file " + this.builder.path());
     }
 
     /*
@@ -162,9 +200,13 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         private LongValue index2Index;
         private LongValue lastIndex;
 
+        private Bytes bytes;
+
         Header() {
             this.uuid = UUID.randomUUID();
             this.created = ZonedDateTime.now();
+            this.user = System.getProperty("user.name");
+            this.host = WireUtil.hostName();
 
             this.indexCount = 128 << 10;
             this.indexSpacing = 64;
@@ -188,15 +230,6 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
             return lastIndex;
         }
 
-        @NotNull
-        public Header init() {
-            uuid = UUID.randomUUID();
-            created = ZonedDateTime.now();
-            user = System.getProperty("user.name");
-            host = "";
-            return this;
-        }
-
         @Override
         public void writeMarshallable(@NotNull WireOut out) {
             out.write(Field.uuid).uuid(uuid)
@@ -214,14 +247,14 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         @Override
         public void readMarshallable(@NotNull WireIn in) {
             in.read(Field.uuid).uuid(this, (o, i) -> o.uuid = i)
-                .read(Field.writeByte).int64(this.writeByte)
+                .read(Field.writeByte).int64(this.writeByte, this, (o, i) -> o.writeByte = i)
                 .read(Field.created).zonedDateTime(this, (o, i) -> o.created = i)
                 .read(Field.user).text(this, (o, i) -> o.user = i)
                 .read(Field.host).text(this, (o, i) -> o.host = i)
                 .read(Field.indexCount).int32(this, (o, i) -> o.indexCount = i)
-                .read(Field.indexSpacing).int32(this, (o, i) -> o.indexSpacing =i)
-                .read(Field.index2Index).int64(this.index2Index)
-                .read(Field.lastIndex).int64(this.lastIndex);
+                .read(Field.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
+                .read(Field.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
+                .read(Field.lastIndex).int64(this.lastIndex, this, (o, i ) -> o.lastIndex = i);
         }
 
         public long getWriteByte() {
