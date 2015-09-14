@@ -16,7 +16,11 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.queue.impl.AbstractExcerptAppender;
+import net.openhft.chronicle.wire.WriteMarshallable;
 
 import java.io.IOException;
 
@@ -24,5 +28,30 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         super(SingleChronicleQueueFormat.from(builder));
+    }
+
+    @Override
+    public ExcerptAppender createAppender() {
+        return new Appender();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private class Appender extends AbstractExcerptAppender {
+        @Override
+        public void writeDocument(WriteMarshallable writer) {
+            try {
+                format().append(writer);
+            } catch(IOException e) {
+                //TODO: should this method throw an exception ?
+            }
+        }
+
+        @Override
+        public ChronicleQueue chronicle() {
+            return SingleChronicleQueue.this;
+        }
     }
 }

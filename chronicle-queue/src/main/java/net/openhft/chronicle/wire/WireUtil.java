@@ -35,6 +35,7 @@ public class WireUtil {
     public static final int NOT_READY      = Wires.NOT_READY;
     public static final int META_DATA      = Wires.META_DATA;
     public static final int UNKNOWN_LENGTH = Wires.UNKNOWN_LENGTH;
+    public static final int MAX_LENGTH     = LENGTH_MASK;
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
 

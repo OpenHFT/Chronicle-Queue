@@ -15,19 +15,31 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
+public abstract class AbstractExcerptAppender implements ExcerptAppender {
+    @Nullable
+    @Override
+    public WireOut wire() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
-public interface ChronicleQueueFormat {
+    @Override
+    public void writeDocument(WriteMarshallable writer) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
-    /**
-     *
-     * @param writer
-     * @return
-     * @throws IOException
-     */
-    long append(@NotNull WriteMarshallable writer) throws IOException;
+    @Override
+    public long lastWrittenIndex() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public ChronicleQueue chronicle() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }

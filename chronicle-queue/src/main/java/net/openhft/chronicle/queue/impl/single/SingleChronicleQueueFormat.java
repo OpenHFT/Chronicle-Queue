@@ -38,6 +38,9 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     private final MappedBytesStore mappedStore;
     private final Header header;
 
+    private final ThreadLocal<WireIn> wireInCache;
+    private final ThreadLocal<WireOut> wireOutCache;
+
     SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
         super(builder.wireType());
 
@@ -45,6 +48,24 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         this.mappedFile = MappedFile.mappedFile(this.builder.path(), this.builder.blockSize());
         this.mappedStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
         this.header = new Header();
+
+        // TODO: refactor
+        this.wireInCache = ThreadLocal.withInitial(() -> {
+            try {
+                return super.wireFor(this.mappedFile.acquireBytesForRead(0));
+            } catch(Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        // TODO: refactor
+        this.wireOutCache = ThreadLocal.withInitial(() -> {
+            try {
+                return super.wireFor(this.mappedFile.acquireBytesForWrite(0));
+            } catch(Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     // *************************************************************************
@@ -56,15 +77,17 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         return this;
     }
 
-    protected long append(@NotNull WriteMarshallable writer) throws IOException {
+    @Override
+    public long append(@NotNull WriteMarshallable writer) throws IOException {
         final LongValue writeByte = header.writeByte();
 
         for (long lastByte = writeByte.getVolatileValue(); ; ) {
             if(this.mappedStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
-                Bytes wb = this.mappedStore.bytesForWrite().writePosition(lastByte);
+                WireOut wo = wireOutCache.get();
+                wo.bytes().writePosition(lastByte);
 
-                WireUtil.writeData(wireOut(wb), writer);
-                writeByte.setOrderedValue(wb.writePosition());
+                WireUtil.writeData(wo, writer);
+                writeByte.setOrderedValue(wo.bytes().writePosition());
 
                 return header.lastIndex().addAtomicValue(1);
             } else {
@@ -75,14 +98,6 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
                     // todo need to wait
                 }
             }
-
-            /*
-            try {
-                Jvm.checkInterrupted();
-            } catch (InterruptedException e) {
-                throw new InterruptedRuntimeException(e);
-            }
-            */
         }
     }
 
@@ -108,15 +123,13 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         }
     }
 
-
-
-    protected long checkRemainingForAppend(@NotNull Bytes buffer) {
-        long remaining = buffer.remaining();
-        if (remaining > MAX_LENGTH) {
+    protected boolean checkRemainingForAppend(@NotNull Bytes buffer) {
+        long remaining = buffer.writeRemaining();
+        if (remaining > WireUtil.LENGTH_MASK) {
             throw new IllegalStateException("Length too large: " + remaining);
         }
 
-        return remaining;
+        return true;
     }
     */
 

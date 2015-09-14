@@ -15,7 +15,10 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.ChronicleQueueFormat;
 import net.openhft.chronicle.wire.WireKey;
 import org.junit.Test;
 
@@ -29,13 +32,24 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testSimpleAppend() throws IOException {
-        SingleChronicleQueueFormat format =
-            SingleChronicleQueueFormat.from(SingleChronicleQueueBuilder.text(getTmpFile()));
+    public void testAppendViaFormat() throws IOException {
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.text(getTmpFile());
+        final ChronicleQueueFormat format = SingleChronicleQueueFormat.from(builder);
 
         for(int i=0; i<10; i++) {
             final int n = i;
             format.append(w -> w.write(TestKey.test).text("event " +  n));
+        }
+    }
+
+    @Test
+    public void testAppendViaAppender() throws IOException {
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpFile()).build();
+
+        final ExcerptAppender appender = queue.createAppender();
+        for(int i=0; i<10; i++) {
+            final int n = i;
+            appender.writeDocument(w -> w.write(TestKey.test).text("event " +  n));
         }
     }
 
