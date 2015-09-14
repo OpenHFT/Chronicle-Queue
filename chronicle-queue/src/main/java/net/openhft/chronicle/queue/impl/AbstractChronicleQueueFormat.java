@@ -16,7 +16,9 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,42 +54,37 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
     //
     // *************************************************************************
 
-    protected void buildHeader(MappedFile file, Marshallable header) throws IOException {
+    protected void buildHeader(@NotNull BytesStore store, Marshallable header) throws IOException {
+        final Bytes rb = store.bytesForRead();
+        rb.readPosition(SPB_HEADER_BYTE_SIZE);
 
-        final Bytes rb = file.acquireBytesForRead(SPB_HEADER_BYTE);
-        final Bytes wb = file.acquireBytesForWrite(SPB_HEADER_BYTE);
+        final Bytes wb = store.bytesForWrite();
+        wb.writePosition(SPB_HEADER_BYTE_SIZE);
 
-        if(wb.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_USET, SPB_HEADER_BUILDING)) {
-            wb.writePosition(SPB_HEADER_BYTE_SIZE);
-
+        if(store.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_USET, SPB_HEADER_BUILDING)) {
             writeMeta(
                 wireOut(wb),
                 w -> w.write(MetaDataKey.header).typedMarshallable(header)
             );
 
-            if (!wb.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
+            if (!store.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
                 throw new AssertionError("Concurrent writing of the header");
             }
         }
 
-        waitForTheHeaderToBeBuilt(rb);
+        waitForTheHeaderToBeBuilt(store);
 
-        rb.readPosition(SPB_HEADER_BYTE_SIZE);
         readMeta(
             wireIn(rb),
             w -> w.read().marshallable(header)
         );
     }
 
-    protected void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
+    protected void waitForTheHeaderToBeBuilt(@NotNull BytesStore store) throws IOException {
         for (int i = 0; i < 1000; i++) {
-            long magic = bytes.readVolatileLong(SPB_HEADER_BYTE);
+            long magic = store.readVolatileLong(SPB_HEADER_BYTE);
             if (magic == SPB_HEADER_BUILDING) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    throw new IOException("Interrupted waiting for the header to be built");
-                }
+                Jvm.pause(10);
             } else if (magic == SPB_HEADER_BUILT) {
                 return;
             } else {

@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.wire.WireKey;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -24,7 +25,21 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderCreation() throws IOException {
-        new SingleChronicleQueueFormat(SingleChronicleQueueBuilder.text(getTmpFile()))
-            .init();
+        SingleChronicleQueueFormat.from(SingleChronicleQueueBuilder.text(getTmpFile()));
+    }
+
+    @Test
+    public void testSimpleAppend() throws IOException {
+        SingleChronicleQueueFormat format =
+            SingleChronicleQueueFormat.from(SingleChronicleQueueBuilder.text(getTmpFile()));
+
+        for(int i=0; i<10; i++) {
+            final int n = i;
+            format.append(w -> w.write(TestKey.test).text("event " +  n));
+        }
+    }
+
+    enum TestKey implements WireKey {
+        test
     }
 }

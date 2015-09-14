@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
@@ -34,6 +35,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
     private final SingleChronicleQueueBuilder builder;
     private final MappedFile mappedFile;
+    private final MappedBytesStore mappedStore;
     private final Header header;
 
     SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
@@ -41,6 +43,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
         this.builder = builder;
         this.mappedFile = MappedFile.mappedFile(this.builder.path(), this.builder.blockSize());
+        this.mappedStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
         this.header = new Header();
     }
 
@@ -49,38 +52,41 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     // *************************************************************************
 
     private SingleChronicleQueueFormat buildHeader() throws IOException {
-        super.buildHeader(this.mappedFile, this.header);
+        super.buildHeader(this.mappedStore, this.header);
         return this;
     }
 
-    /*
-    @Override
-    public long append(@NotNull Bytes buffer) {
-        long length = checkRemainingForAppend(buffer);
+    protected long append(@NotNull WriteMarshallable writer) throws IOException {
+        final LongValue writeByte = header.writeByte();
 
-        LongValue writeByte = header.writeByte();
+        for (long lastByte = writeByte.getVolatileValue(); ; ) {
+            if(this.mappedStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
+                Bytes wb = this.mappedStore.bytesForWrite().writePosition(lastByte);
 
-        for (; ; ) {
-            long lastByte = writeByte.getVolatileValue();
+                WireUtil.writeData(wireOut(wb), writer);
+                writeByte.setOrderedValue(wb.writePosition());
 
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
-                long lastByte2 = lastByte + 4 + buffer.remaining();
-                bytes.write(lastByte + 4, buffer);
-                long lastIndex = header.lastIndex().addAtomicValue(1);
-                writeByte.setOrderedValue(lastByte2);
-                bytes.writeOrderedInt(lastByte, (int) length);
-                return lastIndex;
+                return header.lastIndex().addAtomicValue(1);
+            } else {
+                int lastState = this.mappedStore.readInt(lastByte);
+                if(WireUtil.isKnownLength(lastState)) {
+                    lastByte += Wires.lengthOf(lastState);
+                } else {
+                    // todo need to wait
+                }
             }
-            int length2 = length30(bytes.readVolatileInt());
-            bytes.skip(length2);
+
+            /*
             try {
                 Jvm.checkInterrupted();
             } catch (InterruptedException e) {
                 throw new InterruptedRuntimeException(e);
             }
+            */
         }
     }
 
+    /*
     @Override
     public boolean read(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
         buffer.clear();

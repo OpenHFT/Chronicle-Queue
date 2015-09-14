@@ -31,6 +31,13 @@ import java.util.function.Function;
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
 
+    public static final int LENGTH_MASK    = Wires.LENGTH_MASK;
+    public static final int NOT_READY      = Wires.NOT_READY;
+    public static final int META_DATA      = Wires.META_DATA;
+    public static final int UNKNOWN_LENGTH = Wires.UNKNOWN_LENGTH;
+    public static final int FREE           = 0x0;
+    public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
+
     // *************************************************************************
     // MISC
     // *************************************************************************
@@ -57,6 +64,14 @@ public class WireUtil {
     // WIRE
     // *************************************************************************
 
+    public static boolean isNotReady(int len) {
+        return !Wires.isReady(len);
+    }
+
+    public static boolean isKnownLength(int len) {
+        return (len & (Wires.META_DATA | Wires.LENGTH_MASK)) != Wires.UNKNOWN_LENGTH;
+    }
+
     public static final Function<Bytes,Wire> wireSupplierFor(WireType type) {
         switch (type) {
             case BINARY:
@@ -70,15 +85,6 @@ public class WireUtil {
         throw new IllegalArgumentException("Unknown WireType (" + type + ")");
     }
 
-    public static <T extends WriteMarshallable> T writeMeta(
-        @NotNull WireOut wireOut,
-        @NotNull T writer) {
-
-        WireInternal.writeData(wireOut, true, false, writer);
-
-        return writer;
-    }
-
     public static <T extends ReadMarshallable> T readData(
             @NotNull WireIn wireIn,
             @NotNull T reader) {
@@ -86,6 +92,24 @@ public class WireUtil {
         WireInternal.readData(wireIn, null, reader);
 
         return reader;
+    }
+
+    public static <T extends WriteMarshallable> T writeData(
+        @NotNull WireOut wireOut,
+        @NotNull T writer) {
+
+        WireInternal.writeData(wireOut, false, false, writer);
+
+        return writer;
+    }
+
+    public static <T extends WriteMarshallable> T writeMeta(
+        @NotNull WireOut wireOut,
+        @NotNull T writer) {
+
+        WireInternal.writeData(wireOut, true, false, writer);
+
+        return writer;
     }
 
     public static <T extends ReadMarshallable> T readMeta(
