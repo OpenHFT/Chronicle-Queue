@@ -16,26 +16,40 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.WireIn;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Consumer;
 
-public abstract class AbstractExcerptAppender implements ExcerptAppender {
+
+public abstract class AbstractExcerptTailer implements ExcerptTailer {
     @Nullable
     @Override
-    public WireOut wire() {
+    public WireIn wire() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public void writeDocument(WriteMarshallable writer) {
+    public boolean readDocument(Consumer<WireIn> reader) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public long lastWrittenIndex() {
+    public boolean index(long l) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @NotNull
+    @Override
+    public ExcerptTailer toStart() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @NotNull
+    @Override
+    public ExcerptTailer toEnd() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

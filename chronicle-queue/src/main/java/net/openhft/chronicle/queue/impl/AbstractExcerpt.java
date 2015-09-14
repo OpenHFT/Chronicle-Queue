@@ -16,26 +16,50 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WriteMarshallable;
-import org.jetbrains.annotations.Nullable;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptComparator;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.function.Consumer;
 
 
-public abstract class AbstractExcerptAppender implements ExcerptAppender {
-    @Nullable
+public abstract class AbstractExcerpt implements Excerpt {
     @Override
-    public WireOut wire() {
+    public Wire wire() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public void writeDocument(WriteMarshallable writer) {
+    public boolean readDocument(Consumer<WireIn> reader) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public long lastWrittenIndex() {
+    public long findMatch(@NotNull ExcerptComparator comparator) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public boolean index(long l) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @NotNull
+    @Override
+    public Excerpt toStart() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @NotNull
+    @Override
+    public Excerpt toEnd() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
