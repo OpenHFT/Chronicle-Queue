@@ -34,6 +34,16 @@ import java.util.concurrent.Callable;
 import static org.junit.Assert.*;
 
 public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
+    private static Set<Long> createRangeSet(final long start, final long end) {
+        final Set<Long> values = new TreeSet<>();
+        long counter = start;
+        while (counter < end) {
+            values.add(counter);
+            counter++;
+        }
+        return values;
+    }
+
     @Test
     public void testIndexFor() throws IOException {
         final String baseDir = getTestPath();
@@ -134,6 +144,10 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         }
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     @Test
     public void testConcurrentAppend() throws IOException {
         final String baseDir = getTestPath();
@@ -150,11 +164,9 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 5,
                 FileLifecycleListener.FileLifecycleListeners.CONSOLE);
 
-
         final int cycle = (int) (System.currentTimeMillis() / 1000);
         final int numberOfTasks = 2;
         final int countPerTask = 1000;
-
 
         try {
             // Create tasks that append to the index
@@ -184,10 +196,6 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
         }
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     private Set<Long> readAllIndexValues(final VanillaIndexCache cache, final int cycle) throws IOException {
         final Set<Long> indexValues = new TreeSet<>();
         final int lastIndex = cache.lastIndexFile(cycle);
@@ -209,16 +217,6 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             }
         }
         return indexValues;
-    }
-
-    private static Set<Long> createRangeSet(final long start, final long end) {
-        final Set<Long> values = new TreeSet<>();
-        long counter = start;
-        while (counter < end) {
-            values.add(counter);
-            counter++;
-        }
-        return values;
     }
 
     private Callable<Void> createAppendTask(final VanillaIndexCache cache, final int cycle, final long startValue, final long endValue) {
