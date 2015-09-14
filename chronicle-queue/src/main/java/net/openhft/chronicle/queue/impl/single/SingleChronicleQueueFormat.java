@@ -20,21 +20,12 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
-import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.UUID;
-
-import static net.openhft.chronicle.wire.WireUtil.readMeta;
-import static net.openhft.chronicle.wire.WireUtil.wireIn;
-import static net.openhft.chronicle.wire.WireUtil.wireOut;
-import static net.openhft.chronicle.wire.WireUtil.writeMeta;
 
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     static {
@@ -57,55 +48,9 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     //
     // *************************************************************************
 
-    public SingleChronicleQueueFormat init() throws IOException {
-
-        final Bytes rb = this.mappedFile.acquireBytesForRead(WireUtil.SPB_HEADER_BYTE);
-        final Bytes wb = this.mappedFile.acquireBytesForWrite(WireUtil.SPB_HEADER_BYTE);
-
-        if(wb.compareAndSwapLong(WireUtil.SPB_HEADER_BYTE, WireUtil.SPB_HEADER_USET, WireUtil.SPB_HEADER_BUILDING)) {
-            wb.writePosition(WireUtil.SPB_HEADER_BYTE_SIZE);
-
-            writeMeta(
-                wireOut(wb, wireSupplier()),
-                w -> w.write(MetaDataKey.header).typedMarshallable(this.header)
-            );
-
-            if (!wb.compareAndSwapLong(WireUtil.SPB_HEADER_BYTE, WireUtil.SPB_HEADER_BUILDING, WireUtil.SPB_HEADER_BUILT)) {
-                throw new AssertionError("Concurrent writing of the header");
-            }
-        }
-
-
-        waitForTheHeaderToBeBuilt(rb);
-
-        rb.readPosition(WireUtil.SPB_HEADER_BYTE_SIZE);
-        readMeta(
-            wireIn(rb, wireSupplier()),
-            w -> w.read().marshallable(header)
-        );
-
+    private SingleChronicleQueueFormat buildHeader() throws IOException {
+        super.buildHeader(this.mappedFile, this.header);
         return this;
-    }
-
-    // TODO: configure timeout/speep
-    private void waitForTheHeaderToBeBuilt(@NotNull Bytes bytes) throws IOException {
-        for (int i = 0; i < 1000; i++) {
-            long magic = bytes.readVolatileLong(WireUtil.SPB_HEADER_BYTE);
-            if (magic == WireUtil.SPB_HEADER_BUILDING) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    throw new IOException("Interrupted waiting for the header to be built");
-                }
-            } else if (magic == WireUtil.SPB_HEADER_BUILT) {
-                return;
-            } else {
-                throw new AssertionError(
-                    "Invalid magic number " + Long.toHexString(magic) + " in file " + this.builder.path());
-            }
-        }
-
-        throw new AssertionError("Timeout waiting to build the file " + this.builder.path());
     }
 
     /*
@@ -173,9 +118,14 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     //
     // *************************************************************************
 
-    enum MetaDataKey implements WireKey {
-        header, index2index, index
+    public static SingleChronicleQueueFormat from(
+            final SingleChronicleQueueBuilder builder) throws IOException {
+        return new SingleChronicleQueueFormat(builder).buildHeader();
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     enum Field implements WireKey {
         type,

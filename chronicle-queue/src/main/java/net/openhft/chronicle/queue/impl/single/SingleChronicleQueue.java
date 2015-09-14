@@ -23,8 +23,6 @@ import java.io.IOException;
 class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
-        super(new SingleChronicleQueueFormat(builder));
-
-        format().init();
+        super(SingleChronicleQueueFormat.from(builder));
     }
 }
