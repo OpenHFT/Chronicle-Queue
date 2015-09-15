@@ -121,6 +121,10 @@ public class VanillaChronicle implements Chronicle {
         */
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     void checkNotClosed() {
         if (closed) {
             throw new IllegalStateException(builder.path() + " is closed");

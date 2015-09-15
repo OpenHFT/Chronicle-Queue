@@ -1066,4 +1066,8 @@ public class IndexedChronicle implements Chronicle {
             }
         }
     }
+
+    public boolean isClosed() {
+        return closed;
+    }
 }
