@@ -78,7 +78,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
             } else {
                 int lastState = mappedStore.readInt(lastByte);
                 if(WireUtil.isKnownLength(lastState)) {
-                    lastByte += Wires.lengthOf(lastState);
+                    lastByte += Wires.lengthOf(lastState) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: need to wait, waiting strategy ?
                 }
@@ -139,10 +139,12 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     }
 
     private class Header implements Marshallable {
+        public static final String QUEUE_TYPE = "SCV4";
         public static final String CLASS_ALIAS = "Header";
         public static final long PADDED_SIZE = 512;
 
         // fields which can be serialized/deserialized in the normal way.
+        private String type;
         private UUID uuid;
         private ZonedDateTime created;
         private String user;
@@ -158,6 +160,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         private Bytes bytes;
 
         Header() {
+            this.type = QUEUE_TYPE;
             this.uuid = UUID.randomUUID();
             this.created = ZonedDateTime.now();
             this.user = System.getProperty("user.name");
@@ -187,8 +190,9 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
         @Override
         public void writeMarshallable(@NotNull WireOut out) {
-            out.write(HeaderField.uuid).uuid(uuid)
-                .write(HeaderField.writeByte).int64forBinding(PADDED_SIZE)
+            out.write(HeaderField.type).text(type)
+                .write(HeaderField.uuid).uuid(uuid)
+                .write(HeaderField.writeByte).int64forBinding(8)
                 .write(HeaderField.created).zonedDateTime(created)
                 .write(HeaderField.user).text(user)
                 .write(HeaderField.host).text(host)
@@ -201,7 +205,8 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
         @Override
         public void readMarshallable(@NotNull WireIn in) {
-            in.read(HeaderField.uuid).uuid(this, (o, i) -> o.uuid = i)
+            in.read(HeaderField.type).text(this, (o, i) -> o.type = i)
+                .read(HeaderField.uuid).uuid(this, (o, i) -> o.uuid = i)
                 .read(HeaderField.writeByte).int64(this.writeByte, this, (o, i) -> o.writeByte = i)
                 .read(HeaderField.created).zonedDateTime(this, (o, i) -> o.created = i)
                 .read(HeaderField.user).text(this, (o, i) -> o.user = i)

@@ -32,9 +32,10 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
 
     public static final long SPB_HEADER_BYTE      = 0;
     public static final long SPB_HEADER_BYTE_SIZE = 8;
-    public static final long SPB_HEADER_USET      = 0x0;
+    public static final long SPB_HEADER_UNSET     = 0x0;
     public static final long SPB_HEADER_BUILDING  = 0x1;
     public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
+    public static final long SPB_DATA_HEADER_SIZE = 4;
 
     protected final Function<Bytes, Wire> wireSupplier;
 
@@ -50,14 +51,14 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
     //
     // *************************************************************************
 
-    protected void buildHeader(@NotNull BytesStore store, Marshallable header) throws IOException {
+    protected long buildHeader(@NotNull BytesStore store, Marshallable header) throws IOException {
         final Bytes rb = store.bytesForRead();
         rb.readPosition(SPB_HEADER_BYTE_SIZE);
 
         final Bytes wb = store.bytesForWrite();
         wb.writePosition(SPB_HEADER_BYTE_SIZE);
 
-        if(store.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_USET, SPB_HEADER_BUILDING)) {
+        if(store.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
             writeMeta(
                 wireOut(wb),
                 w -> w.write(MetaDataKey.header).typedMarshallable(header)
@@ -74,6 +75,8 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
             wireIn(rb),
             w -> w.read().marshallable(header)
         );
+
+        return wb.writePosition();
     }
 
     protected void waitForTheHeaderToBeBuilt(@NotNull BytesStore store) throws IOException {
