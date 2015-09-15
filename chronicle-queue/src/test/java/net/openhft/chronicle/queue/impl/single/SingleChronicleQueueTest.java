@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
+public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderCreation() throws IOException {
@@ -49,7 +49,7 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
             final int n = i;
-            appender.writeDocument(w -> w.write(TestKey.test).text("event " +  n));
+            appender.writeDocument(w -> w.write(TestKey.test).text("event " + n));
         }
     }
 
