@@ -107,7 +107,6 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
             }
         }
     }
-    */
 
     protected boolean checkRemainingForAppend(@NotNull Bytes buffer) {
         long remaining = buffer.writeRemaining();
@@ -117,6 +116,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
         return true;
     }
+    */
 
     // *************************************************************************
     //
@@ -138,6 +138,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         writeByte, index2Index, lastIndex
     }
 
+    // TODO: is padded needed ?
     private class Header implements Marshallable {
         public static final String QUEUE_TYPE = "SCV4";
         public static final String CLASS_ALIAS = "Header";
@@ -156,8 +157,6 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         private LongValue writeByte;
         private LongValue index2Index;
         private LongValue lastIndex;
-
-        private Bytes bytes;
 
         Header() {
             this.type = QUEUE_TYPE;
