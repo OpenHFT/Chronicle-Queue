@@ -86,9 +86,9 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
 
                 return header.incrementLastIndex();
             } else {
-                int lastState = mappedStore.readInt(lastByte);
-                if(WireUtil.isKnownLength(lastState)) {
-                    lastByte += Wires.lengthOf(lastState) + SPB_DATA_HEADER_SIZE;
+                int header = mappedStore.readInt(lastByte);
+                if(WireUtil.isKnownLength(header)) {
+                    lastByte += Wires.lengthOf(header) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: need to implement wait (strategy and timeout)
                 }
