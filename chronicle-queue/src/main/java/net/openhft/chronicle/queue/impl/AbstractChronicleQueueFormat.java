@@ -76,7 +76,7 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
             w -> w.read().marshallable(header)
         );
 
-        return wb.writePosition();
+        return rb.readPosition();
     }
 
     protected void waitForTheHeaderToBeBuilt(@NotNull BytesStore store) throws IOException {

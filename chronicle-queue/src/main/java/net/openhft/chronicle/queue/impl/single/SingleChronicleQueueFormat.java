@@ -41,6 +41,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     private final Header header;
     private final ThreadLocal<Wire> wireInCache;
     private final ThreadLocal<Wire> wireOutCache;
+    private long firstByte;
 
     SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
         super(builder.wireType());
@@ -51,19 +52,25 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         this.header = new Header();
         this.wireInCache = wireCache(mappedStore::bytesForRead, wireSupplier());
         this.wireOutCache = wireCache(mappedStore::bytesForWrite, wireSupplier());
+        this.firstByte = SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE;
     }
 
     // *************************************************************************
     //
     // *************************************************************************
 
-    private SingleChronicleQueueFormat buildHeader() throws IOException {
-        super.buildHeader(this.mappedStore, this.header);
+    SingleChronicleQueueFormat buildHeader() throws IOException {
+        this.firstByte = super.buildHeader(this.mappedStore, this.header);
         return this;
+    }
+
+    long firstByte() {
+        return this.firstByte;
     }
 
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
+        //TODO: get real last byte, here we point to the header
         for (long lastByte = header.getWriteByte(); ; ) {
             if(mappedStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
                 final WireOut wo = wireOutCache.get();
