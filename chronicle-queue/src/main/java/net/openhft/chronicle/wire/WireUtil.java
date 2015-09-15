@@ -13,7 +13,6 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -27,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
@@ -59,6 +59,18 @@ public class WireUtil {
         return ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1))
             .order(ByteOrder.nativeOrder())
             .getLong();
+    }
+
+    public static ThreadLocal<Wire> wireCache(
+            @NotNull final Supplier<Bytes> bytesSupplier,
+            @NotNull final Function<Bytes, Wire> wireSupplier) {
+        return ThreadLocal.withInitial(() -> {
+            try {
+                return wireSupplier.apply(bytesSupplier.get());
+            } catch(Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     // *************************************************************************

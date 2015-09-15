@@ -36,14 +36,10 @@ public abstract class AbstractChronicleQueueFormat implements ChronicleQueueForm
     public static final long SPB_HEADER_BUILDING  = 0x1;
     public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
 
-    private final Function<Bytes, Wire> wireSupplier;
+    protected final Function<Bytes, Wire> wireSupplier;
 
     protected AbstractChronicleQueueFormat(WireType wireType) {
         this.wireSupplier = WireUtil.wireSupplierFor(wireType);
-    }
-
-    protected Wire wireFor(Bytes bytes) {
-        return wireSupplier.apply(bytes);
     }
 
     protected Function<Bytes, Wire> wireSupplier() {
