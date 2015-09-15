@@ -27,7 +27,7 @@ import java.nio.file.Files;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
-    protected static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("chronicle.traceTestExecution");
+    protected static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
 
     // *************************************************************************
     // JUNIT Rules

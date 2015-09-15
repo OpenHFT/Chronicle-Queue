@@ -41,7 +41,7 @@ import java.io.IOException;
  * then put/fetch/update records using the {@link ChronicleQueue} interface.</p>
  *
  * <p>{@link Excerpt} is the main data container in a {@link ChronicleQueue},
- * each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into
+ * each Chronicle is composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into
  * it and finishing the Excerpt at the end.</p>
  *
  * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
@@ -52,7 +52,7 @@ import java.io.IOException;
  */
 public interface ChronicleQueue extends Closeable {
     /**
-     * @return A descriptive name for this chronicle which can be used for logging.
+     * @return A descriptive name for this queue which can be used for logging.
      */
     String name();
 
@@ -89,7 +89,7 @@ public interface ChronicleQueue extends Closeable {
     long size();
 
     /**
-     * Remove all the entries in the chronicle.
+     * Remove all the entries in the queue.
      */
     void clear();
 

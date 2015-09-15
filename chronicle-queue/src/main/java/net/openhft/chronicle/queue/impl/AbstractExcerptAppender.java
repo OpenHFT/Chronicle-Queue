@@ -19,10 +19,17 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 
 public abstract class AbstractExcerptAppender implements ExcerptAppender {
+    private final ChronicleQueue queue;
+
+    public AbstractExcerptAppender(@NotNull ChronicleQueue queue) {
+        this.queue = queue;
+    }
+
     @Nullable
     @Override
     public WireOut wire() {
@@ -40,7 +47,7 @@ public abstract class AbstractExcerptAppender implements ExcerptAppender {
     }
 
     @Override
-    public ChronicleQueue chronicle() {
-        throw new UnsupportedOperationException("Not implemented");
+    public ChronicleQueue queue() {
+        return this.queue;
     }
 }

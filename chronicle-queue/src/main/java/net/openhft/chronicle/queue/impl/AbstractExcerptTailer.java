@@ -17,14 +17,19 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
-
 
 public abstract class AbstractExcerptTailer implements ExcerptTailer {
+    private final ChronicleQueue queue;
+
+    public AbstractExcerptTailer(@NotNull ChronicleQueue queue) {
+        this.queue = queue;
+    }
+
     @Nullable
     @Override
     public WireIn wire() {
@@ -32,7 +37,7 @@ public abstract class AbstractExcerptTailer implements ExcerptTailer {
     }
 
     @Override
-    public boolean readDocument(Consumer<WireIn> reader) {
+    public boolean readDocument(@NotNull ReadMarshallable reader) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -54,7 +59,7 @@ public abstract class AbstractExcerptTailer implements ExcerptTailer {
     }
 
     @Override
-    public ChronicleQueue chronicle() {
-        throw new UnsupportedOperationException("Not implemented");
+    public ChronicleQueue queue() {
+        return this.queue;
     }
 }

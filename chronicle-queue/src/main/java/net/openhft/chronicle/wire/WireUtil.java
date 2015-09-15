@@ -16,6 +16,7 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.values.LongValue;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
@@ -38,6 +39,13 @@ public class WireUtil {
     public static final int MAX_LENGTH     = LENGTH_MASK;
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
+
+    public static final long SPB_HEADER_BYTE      = 0;
+    public static final long SPB_HEADER_BYTE_SIZE = 8;
+    public static final long SPB_HEADER_UNSET     = 0x0;
+    public static final long SPB_HEADER_BUILDING  = 0x1;
+    public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
+    public static final long SPB_DATA_HEADER_SIZE = 4;
 
     // *************************************************************************
     // MISC
@@ -67,7 +75,7 @@ public class WireUtil {
         return ThreadLocal.withInitial(() -> {
             try {
                 return wireSupplier.apply(bytesSupplier.get());
-            } catch(Exception e) {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
@@ -98,13 +106,24 @@ public class WireUtil {
         throw new IllegalArgumentException("Unknown WireType (" + type + ")");
     }
 
-    public static <T extends ReadMarshallable> T readData(
+    public static final Supplier<LongValue> longValueSupplierFor(WireType type) {
+        switch (type) {
+            case BINARY:
+                return BinaryLongReference::new;
+            case TEXT:
+                return TextLongReference::new;
+            case RAW:
+                return BinaryLongReference::new;
+        }
+
+        throw new IllegalArgumentException("Unknown WireType (" + type + ")");
+    }
+
+    public static <T extends ReadMarshallable> boolean readData(
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
-        WireInternal.readData(wireIn, null, reader);
-
-        return reader;
+        return WireInternal.readData(wireIn, null, reader);
     }
 
     public static <T extends WriteMarshallable> T writeData(
@@ -125,12 +144,10 @@ public class WireUtil {
         return writer;
     }
 
-    public static <T extends ReadMarshallable> T readMeta(
+    public static <T extends ReadMarshallable> boolean readMeta(
         @NotNull WireIn wireIn,
         @NotNull T reader) {
 
-        WireInternal.readData(wireIn, reader, null);
-
-        return reader;
+        return WireInternal.readData(wireIn, reader, null);
     }
 }

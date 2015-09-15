@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptComparator;
+import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +33,7 @@ public abstract class AbstractExcerpt implements Excerpt {
     }
 
     @Override
-    public boolean readDocument(Consumer<WireIn> reader) {
+    public boolean readDocument(@NotNull ReadMarshallable reader) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -64,7 +65,7 @@ public abstract class AbstractExcerpt implements Excerpt {
     }
 
     @Override
-    public ChronicleQueue chronicle() {
+    public ChronicleQueue queue() {
         throw new UnsupportedOperationException("Not implemented");
     }
 }

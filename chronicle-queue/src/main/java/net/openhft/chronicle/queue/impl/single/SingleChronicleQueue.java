@@ -18,11 +18,15 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.AbstractExcerptAppender;
+import net.openhft.chronicle.queue.impl.AbstractExcerptTailer;
+import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
 
@@ -35,11 +39,20 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
         return new Appender();
     }
 
+    @Override
+    public ExcerptTailer createTailer() {
+        return new Tailer();
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
 
     private class Appender extends AbstractExcerptAppender {
+        Appender() {
+            super( SingleChronicleQueue.this);
+        }
+
         @Override
         public void writeDocument(WriteMarshallable writer) {
             try {
@@ -50,8 +63,23 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
         }
 
         @Override
-        public ChronicleQueue chronicle() {
+        public ChronicleQueue queue() {
             return SingleChronicleQueue.this;
+        }
+    }
+
+    private class Tailer extends AbstractExcerptTailer {
+        final AtomicLong position;
+
+        Tailer() {
+            super(SingleChronicleQueue.this);
+
+            this.position = new AtomicLong(format().dataPosition());
+        }
+
+        @Override
+        public boolean readDocument(ReadMarshallable reader) {
+            return format().read(this.position, reader);
         }
     }
 }

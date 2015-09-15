@@ -18,30 +18,42 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.wire.WireUtil.wireCache;
+import static net.openhft.chronicle.wire.WireUtil.*;
 
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(Header.class, Header.CLASS_ALIAS);
+        ClassAliasPool.CLASS_ALIASES.addAlias(
+            SingleChronicleQueueHeader.class,
+            SingleChronicleQueueHeader.CLASS_ALIAS
+        );
+    }
+
+    enum MetaDataField implements WireKey {
+        header
     }
 
     private final SingleChronicleQueueBuilder builder;
     private final MappedFile mappedFile;
     private final BytesStore mappedStore;
-    private final Header header;
+    private final SingleChronicleQueueHeader header;
     private final ThreadLocal<Wire> wireInCache;
     private final ThreadLocal<Wire> wireOutCache;
-    private long firstByte;
 
     SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
         super(builder.wireType());
@@ -49,29 +61,20 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         this.builder = builder;
         this.mappedFile = MappedFile.mappedFile(this.builder.path(), this.builder.blockSize());
         this.mappedStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
-        this.header = new Header();
+        this.header = new SingleChronicleQueueHeader();
         this.wireInCache = wireCache(mappedStore::bytesForRead, wireSupplier());
         this.wireOutCache = wireCache(mappedStore::bytesForWrite, wireSupplier());
-        this.firstByte = SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE;
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    SingleChronicleQueueFormat buildHeader() throws IOException {
-        this.firstByte = super.buildHeader(this.mappedStore, this.header);
-        return this;
-    }
-
-    long firstByte() {
-        return this.firstByte;
+    long dataPosition() {
+        return this.header.getDataPosition();
     }
 
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
-        //TODO: get real last byte, here we point to the header
-        for (long lastByte = header.getWriteByte(); ; ) {
+        checkRemainingForAppend();
+
+        for (long lastByte = header.getWritePosition(); ; ) {
             if(mappedStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
                 final WireOut wo = wireOutCache.get();
                 final Bytes wb = wo.bytes();
@@ -79,7 +82,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
                 wb.writePosition(lastByte);
 
                 WireUtil.writeData(wo, writer);
-                header.setWriteByteLazy(wb.writePosition());
+                header.setWritePosition(wb.writePosition());
 
                 return header.incrementLastIndex();
             } else {
@@ -87,152 +90,92 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
                 if(WireUtil.isKnownLength(lastState)) {
                     lastByte += Wires.lengthOf(lastState) + SPB_DATA_HEADER_SIZE;
                 } else {
-                    // TODO: need to wait, waiting strategy ?
+                    // TODO: need to implement wait (strategy and timeout)
                 }
             }
         }
     }
 
-    /*
     @Override
-    public boolean read(@NotNull AtomicLong offset, @NotNull Bytes buffer) {
-        buffer.clear();
-        long lastByte = offset.get();
-        for (; ; ) {
-            int length = bytes.readVolatileInt(lastByte);
-            int length2 = length30(length);
-            if (Wires.isReady(length)) {
-                lastByte += 4;
-                buffer.write(bytes, lastByte, length2);
-                lastByte += length2;
-                offset.set(lastByte);
-                return isData(length);
-            }
+    public boolean read(@NotNull AtomicLong position, @NotNull ReadMarshallable reader) {
+        final WireIn wi = wireInCache.get();
+        final Bytes wb = wi.bytes();
 
-            if (Thread.currentThread().isInterrupted()) {
-                return false;
-            }
-        }
+        wb.readPosition(position.get());
+        boolean read =  WireUtil.readData(wi, reader);
+        position.set(wb.readPosition());
+
+        return read;
     }
 
-    protected boolean checkRemainingForAppend(@NotNull Bytes buffer) {
-        long remaining = buffer.writeRemaining();
+    protected void checkRemainingForAppend() {
+        long remaining = this.mappedStore.writeRemaining();
         if (remaining > WireUtil.LENGTH_MASK) {
             throw new IllegalStateException("Length too large: " + remaining);
         }
-
-        return true;
     }
-    */
 
-    // *************************************************************************
-    //
-    // *************************************************************************
+    protected void buildHeader() throws IOException {
+        final Bytes rb = this.mappedStore.bytesForRead();
+        rb.readPosition(SPB_HEADER_BYTE_SIZE);
 
+        final Bytes wb = this.mappedStore.bytesForWrite();
+        wb.writePosition(SPB_HEADER_BYTE_SIZE);
+
+        if(this.mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
+            writeMeta(
+                wireOut(wb),
+                w -> w.write(MetaDataField.header).typedMarshallable(this.header)
+            );
+
+            readMeta(
+                wireIn(rb),
+                w -> w.read().marshallable(this.header)
+            );
+
+            header.setDataPosition(wb.writePosition());
+            header.setWritePosition(wb.writePosition());
+
+            if (!this.mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
+                throw new AssertionError("Concurrent writing of the header");
+            }
+        } else {
+            waitForTheHeaderToBeBuilt();
+
+            readMeta(
+                wireIn(rb),
+                w -> w.read().marshallable(header)
+            );
+        }
+    }
+
+    protected void waitForTheHeaderToBeBuilt() throws IOException {
+        for (int i = 0; i < 1000; i++) {
+            long magic = this.mappedStore.readVolatileLong(SPB_HEADER_BYTE);
+            if (magic == SPB_HEADER_BUILDING) {
+                Jvm.pause(10);
+            } else if (magic == SPB_HEADER_BUILT) {
+                return;
+            } else {
+                throw new AssertionError(
+                    "Invalid magic number " + Long.toHexString(magic));
+            }
+        }
+
+        throw new AssertionError("Timeout waiting to build the file");
+    }
+
+    /**
+     *
+     * @param builder
+     * @return
+     * @throws IOException
+     */
     public static SingleChronicleQueueFormat from(
-            final SingleChronicleQueueBuilder builder) throws IOException {
-        return new SingleChronicleQueueFormat(builder).buildHeader();
-    }
+        final SingleChronicleQueueBuilder builder) throws IOException {
+        SingleChronicleQueueFormat format = new SingleChronicleQueueFormat(builder);
+        format.buildHeader();
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private enum HeaderField implements WireKey {
-        type,
-        uuid, created, user, host,
-        indexCount, indexSpacing,
-        writeByte, index2Index, lastIndex
-    }
-
-    // TODO: is padded needed ?
-    private class Header implements Marshallable {
-        public static final String QUEUE_TYPE = "SCV4";
-        public static final String CLASS_ALIAS = "Header";
-        public static final long PADDED_SIZE = 512;
-
-        // fields which can be serialized/deserialized in the normal way.
-        private String type;
-        private UUID uuid;
-        private ZonedDateTime created;
-        private String user;
-        private String host;
-        private int indexCount;
-        private int indexSpacing;
-
-        // support binding to off heap memory with thread safe operations.
-        private LongValue writeByte;
-        private LongValue index2Index;
-        private LongValue lastIndex;
-
-        Header() {
-            this.type = QUEUE_TYPE;
-            this.uuid = UUID.randomUUID();
-            this.created = ZonedDateTime.now();
-            this.user = System.getProperty("user.name");
-            this.host = WireUtil.hostName();
-
-            this.indexCount = 128 << 10;
-            this.indexSpacing = 64;
-
-            // This is set to null as that it can pick up the right time the
-            // first time it is used.
-            this.writeByte = null;
-            this.index2Index = null;
-            this.lastIndex = null;
-        }
-
-        LongValue writeByte() {
-            return writeByte;
-        }
-
-        LongValue index2Index() {
-            return index2Index;
-        }
-
-        LongValue lastIndex() {
-            return lastIndex;
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull WireOut out) {
-            out.write(HeaderField.type).text(type)
-                .write(HeaderField.uuid).uuid(uuid)
-                .write(HeaderField.writeByte).int64forBinding(8)
-                .write(HeaderField.created).zonedDateTime(created)
-                .write(HeaderField.user).text(user)
-                .write(HeaderField.host).text(host)
-                .write(HeaderField.indexCount).int32(indexCount)
-                .write(HeaderField.indexSpacing).int32(indexSpacing)
-                .write(HeaderField.index2Index).int64forBinding(0L)
-                .write(HeaderField.lastIndex).int64forBinding(-1L);
-            //out.addPadding((int) (PADDED_SIZE - out.bytes().writePosition()));
-        }
-
-        @Override
-        public void readMarshallable(@NotNull WireIn in) {
-            in.read(HeaderField.type).text(this, (o, i) -> o.type = i)
-                .read(HeaderField.uuid).uuid(this, (o, i) -> o.uuid = i)
-                .read(HeaderField.writeByte).int64(this.writeByte, this, (o, i) -> o.writeByte = i)
-                .read(HeaderField.created).zonedDateTime(this, (o, i) -> o.created = i)
-                .read(HeaderField.user).text(this, (o, i) -> o.user = i)
-                .read(HeaderField.host).text(this, (o, i) -> o.host = i)
-                .read(HeaderField.indexCount).int32(this, (o, i) -> o.indexCount = i)
-                .read(HeaderField.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
-                .read(HeaderField.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
-                .read(HeaderField.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
-        }
-
-        public long getWriteByte() {
-            return writeByte.getVolatileValue();
-        }
-
-        public void setWriteByteLazy(long writeByte) {
-            this.writeByte.setOrderedValue(writeByte);
-        }
-
-        public long incrementLastIndex() {
-            return lastIndex.addAtomicValue(1);
-        }
+        return format;
     }
 }

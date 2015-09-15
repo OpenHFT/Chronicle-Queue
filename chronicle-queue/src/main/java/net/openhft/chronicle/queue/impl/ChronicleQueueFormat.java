@@ -16,10 +16,12 @@
 package net.openhft.chronicle.queue.impl;
 
 
+import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 public interface ChronicleQueueFormat {
 
@@ -30,4 +32,12 @@ public interface ChronicleQueueFormat {
      * @throws IOException
      */
     long append(@NotNull WriteMarshallable writer) throws IOException;
+
+    /**
+     *
+     * @param position
+     * @param reader
+     * @return
+     */
+    boolean read(@NotNull AtomicLong position, @NotNull ReadMarshallable reader);
 }

@@ -18,11 +18,12 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.impl.ChronicleQueueFormat;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.WireKey;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
@@ -34,22 +35,54 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendViaFormat() throws IOException {
         final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.text(getTmpFile());
-        final ChronicleQueueFormat format = SingleChronicleQueueFormat.from(builder);
+        final SingleChronicleQueueFormat format = SingleChronicleQueueFormat.from(builder);
+
+        for(int i=0; i<10; i++) {
+            final int n = i;
+            format.append(w -> w.write(TestKey.test).text("event " + n));
+        }
+    }
+
+    @Test
+    public void testAppendAndReadViaFormat() throws IOException {
+        final SingleChronicleQueueBuilder builder = SingleChronicleQueueBuilder.text(getTmpFile());
+        final SingleChronicleQueueFormat format = SingleChronicleQueueFormat.from(builder);
 
         for(int i=0; i<10; i++) {
             final int n = i;
             format.append(w -> w.write(TestKey.test).text("event " +  n));
         }
+
+        final AtomicLong position = new AtomicLong(format.dataPosition());
+        for(int i=0; i<10; i++) {
+            format.read(position, r -> System.out.println(r.read(TestKey.test).text()));
+        }
     }
 
     @Test
-    public void testAppendViaAppender() throws IOException {
+    public void testAppendViaExcerpts() throws IOException {
         final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpFile()).build();
 
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
             final int n = i;
             appender.writeDocument(w -> w.write(TestKey.test).text("event " + n));
+        }
+    }
+
+    @Test
+    public void testAppendAndReadViaExcerpts() throws IOException {
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpFile()).build();
+
+        final ExcerptAppender appender = queue.createAppender();
+        for(int i=0; i<10; i++) {
+            final int n = i;
+            appender.writeDocument(w -> w.write(TestKey.test).text("event " + n));
+        }
+
+        final ExcerptTailer tailer =queue.createTailer();
+        for(int i=0; i<10; i++) {
+            tailer.readDocument(r -> System.out.println(r.read(TestKey.test).text()));
         }
     }
 

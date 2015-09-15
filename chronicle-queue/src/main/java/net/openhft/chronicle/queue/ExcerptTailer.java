@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +34,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     @Nullable
     WireIn wire();
 
-    boolean readDocument(Consumer<WireIn> reader);
+    boolean readDocument(@NotNull ReadMarshallable reader);
 
     /**
      * Randomly select an Excerpt.

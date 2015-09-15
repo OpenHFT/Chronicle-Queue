@@ -20,7 +20,7 @@ package net.openhft.chronicle.queue;
  */
 public interface ExcerptCommon {
     /**
-     * @return the chronicle associated with this Excerpt
+     * @return the queue associated with this Excerpt
      */
-    ChronicleQueue chronicle();
+    ChronicleQueue queue();
 }
