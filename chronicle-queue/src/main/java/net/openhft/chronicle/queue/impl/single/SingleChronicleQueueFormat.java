@@ -121,7 +121,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
      *
      * @throws IOException
      */
-    protected void buildHeader() throws IOException {
+    protected SingleChronicleQueueFormat buildHeader() throws IOException {
         final Bytes rb = mappedStore.bytesForRead();
         rb.readPosition(SPB_HEADER_BYTE_SIZE);
 
@@ -157,6 +157,8 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
                 w -> w.read().marshallable(header)
             );
         }
+
+        return this;
     }
 
     /**
@@ -191,9 +193,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
      */
     public static SingleChronicleQueueFormat from(
         final SingleChronicleQueueBuilder builder) throws IOException {
-        SingleChronicleQueueFormat format = new SingleChronicleQueueFormat(builder);
-        format.buildHeader();
 
-        return format;
+        return new SingleChronicleQueueFormat(builder).buildHeader();
     }
 }
