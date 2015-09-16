@@ -135,8 +135,8 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
             );
 
             // Needed because header.dataPosition, header.writePosition are initially
-            // initialized as null and initialized when needed. It may be better
-            // to initialize it upon header instantiation (?)
+            // null and initialized when needed. It may be better to initialize
+            // them upon header instantiation (?)
             readMeta(
                 wireIn(rb),
                 w -> w.read().marshallable(header)
