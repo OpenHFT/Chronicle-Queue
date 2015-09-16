@@ -69,6 +69,10 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         return this.header.getDataPosition();
     }
 
+    long writePosition() {
+        return this.header.getWritePosition();
+    }
+
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
         checkRemainingForAppend();

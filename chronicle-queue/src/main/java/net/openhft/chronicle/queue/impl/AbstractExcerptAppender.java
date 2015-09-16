@@ -37,7 +37,7 @@ public abstract class AbstractExcerptAppender implements ExcerptAppender {
     }
 
     @Override
-    public void writeDocument(WriteMarshallable writer) {
+    public long writeDocument(WriteMarshallable writer) {
         throw new UnsupportedOperationException("Not implemented");
     }
 

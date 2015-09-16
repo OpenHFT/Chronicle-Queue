@@ -33,11 +33,12 @@ public interface ExcerptAppender extends ExcerptCommon {
 
     /**
      * @param writer to write one excerpt.
+     * @return the index last written.
      */
-    void writeDocument(WriteMarshallable writer);
+    long writeDocument(WriteMarshallable writer);
 
     /**
-     * @return the index last written to including padded entries.
+     * @return the index last written.
      */
     long lastWrittenIndex();
 }

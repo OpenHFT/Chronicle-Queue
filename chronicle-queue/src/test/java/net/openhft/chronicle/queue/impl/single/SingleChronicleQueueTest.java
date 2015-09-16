@@ -21,10 +21,12 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
@@ -51,14 +53,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         for(int i=0; i<10; i++) {
             final int n = i;
-            Assert.assertEquals(n, format.append(w -> w.write(TestKey.test).int32(n)));
+            assertEquals(n, format.append(w -> w.write(TestKey.test).int32(n)));
         }
 
         long position = format.dataPosition();
         for(int i=0; i<10; i++) {
             final int n = i;
-            position = format.read(position, r -> Assert.assertEquals(n, r.read(TestKey.test).int32()));
-            Assert.assertTrue(WireUtil.NO_DATA != position);
+            position = format.read(position, r -> assertEquals(n, r.read(TestKey.test).int32()));
+            assertTrue(WireUtil.NO_DATA != position);
         }
     }
 
@@ -69,7 +71,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
             final int n = i;
-            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
+            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
         }
     }
 
@@ -80,13 +82,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
             final int n = i;
-            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
+            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
+            assertEquals(n, appender.lastWrittenIndex());
         }
 
         final ExcerptTailer tailer =queue.createTailer();
         for(int i=0; i<10; i++) {
             final int n = i;
-            Assert.assertTrue(tailer.readDocument(r -> Assert.assertEquals(n, r.read(TestKey.test).int32())));
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
         }
     }
 

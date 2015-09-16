@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
@@ -44,30 +43,40 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
         return new Tailer();
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
 
+    /**
+     * Appender
+     */
     private class Appender extends AbstractExcerptAppender {
+        long index;
+
         Appender() {
-            super( SingleChronicleQueue.this);
+            super(SingleChronicleQueue.this);
+
+            this.index = 0;
         }
 
         @Override
-        public void writeDocument(WriteMarshallable writer) {
+        public long writeDocument(WriteMarshallable writer) {
             try {
-                format().append(writer);
+                index = format().append(writer);
             } catch(IOException e) {
                 //TODO: should this method throw an exception ?
             }
+
+            return index;
         }
 
         @Override
-        public ChronicleQueue queue() {
-            return SingleChronicleQueue.this;
+        public long lastWrittenIndex() {
+            return this.index;
         }
     }
 
+
+    /**
+     * Tailer
+     */
     private class Tailer extends AbstractExcerptTailer {
         private long position;
 
@@ -86,6 +95,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
             }
 
             return false;
+        }
+
+        @Override
+        public ExcerptTailer toStart() {
+            this.position = format().dataPosition();
+            return this;
+        }
+
+        @Override
+        public ExcerptTailer toEnd() {
+            this.position = format().writePosition();
+            return this;
         }
     }
 }
