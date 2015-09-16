@@ -78,4 +78,6 @@ public interface Chronicle extends Closeable {
     long size();
 
     void clear();
+
+    boolean isClosed();
 }
