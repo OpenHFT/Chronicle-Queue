@@ -29,6 +29,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private long blockSize;
     private WireType wireType;
 
+    private int headerWaitLoops;
+    private int headerWaitDelay;
+
+
+    private int appendWaitLoops;
+    private int appendWaitDelay;
+
     public SingleChronicleQueueBuilder(String path) {
         this(new File(path));
     }
@@ -37,6 +44,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
+        this.headerWaitLoops = 1000;
+        this.headerWaitDelay = 10;
+        this.appendWaitLoops = 1000;
+        this.appendWaitDelay = 0;
     }
 
     public File path() {
@@ -59,6 +70,43 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     public WireType wireType() {
         return this.wireType;
+    }
+
+    public SingleChronicleQueueBuilder headerWaitLoops(int headerWaitLoops) {
+        this.headerWaitLoops = headerWaitLoops;
+        return this;
+    }
+
+    public int headerWaitLoops() {
+        return this.headerWaitLoops;
+    }
+
+    public SingleChronicleQueueBuilder headerWaitDelay(int headerWaitDelay) {
+        this.headerWaitDelay = headerWaitDelay;
+        return this;
+    }
+
+    public int headerWaitDelay() {
+        return this.headerWaitDelay;
+    }
+
+
+    public SingleChronicleQueueBuilder appendWaitLoops(int appendWaitLoops) {
+        this.appendWaitLoops = appendWaitLoops;
+        return this;
+    }
+
+    public int appendWaitLoops() {
+        return this.appendWaitLoops;
+    }
+
+    public SingleChronicleQueueBuilder appendWaitDelay(int appendWaitDelay) {
+        this.appendWaitDelay = appendWaitDelay;
+        return this;
+    }
+
+    public int appendWaitDelay() {
+        return this.appendWaitDelay;
     }
 
     @NotNull

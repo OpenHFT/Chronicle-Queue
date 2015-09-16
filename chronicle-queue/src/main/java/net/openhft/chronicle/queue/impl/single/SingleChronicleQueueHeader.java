@@ -120,16 +120,18 @@ class SingleChronicleQueueHeader implements Marshallable {
         return this.writePosition.getVolatileValue();
     }
 
-    public void setWritePosition(long writeByte) {
+    public SingleChronicleQueueHeader setWritePosition(long writeByte) {
         this.writePosition.setOrderedValue(writeByte);
+        return this;
     }
 
     public long getDataPosition() {
         return this.dataPosition.getVolatileValue();
     }
 
-    public void setDataPosition(long dataOffset) {
+    public SingleChronicleQueueHeader setDataPosition(long dataOffset) {
         this.dataPosition.setOrderedValue(dataOffset);
+        return this;
     }
 
     public long incrementLastIndex() {

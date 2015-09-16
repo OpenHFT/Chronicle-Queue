@@ -21,7 +21,6 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 public interface ChronicleQueueFormat {
 
@@ -39,5 +38,5 @@ public interface ChronicleQueueFormat {
      * @param reader
      * @return
      */
-    boolean read(@NotNull AtomicLong position, @NotNull ReadMarshallable reader);
+    long read(@NotNull long position, @NotNull ReadMarshallable reader);
 }

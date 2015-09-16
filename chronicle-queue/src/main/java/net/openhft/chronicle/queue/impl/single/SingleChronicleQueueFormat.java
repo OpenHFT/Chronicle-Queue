@@ -21,21 +21,20 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireUtil;
-import net.openhft.chronicle.wire.Wires;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.wire.WireUtil.*;
 
+/**
+ * Implementation of ChronicleQueueFormat based on a single file.
+ *
+ * TODO:
+ * - rolling
+ * - indexing
+ */
 class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(
@@ -74,15 +73,14 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     public long append(@NotNull WriteMarshallable writer) throws IOException {
         checkRemainingForAppend();
 
-        for (long lastByte = header.getWritePosition(); ; ) {
+        int delay = builder.appendWaitDelay();
+        long lastByte = header.getWritePosition();
+
+        for (int i = builder.appendWaitLoops(); i >= 0; i--) {
             if(mappedStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
-                final WireOut wo = wireOutCache.get();
-                final Bytes wb = wo.bytes();
-
-                wb.writePosition(lastByte);
-
-                WireUtil.writeData(wo, writer);
-                header.setWritePosition(wb.writePosition());
+                header.setWritePosition(
+                    WireUtil.writeDataAt(wireOutCache.get(), lastByte, writer)
+                );
 
                 return header.incrementLastIndex();
             } else {
@@ -90,53 +88,65 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
                 if(WireUtil.isKnownLength(header)) {
                     lastByte += Wires.lengthOf(header) + SPB_DATA_HEADER_SIZE;
                 } else {
-                    // TODO: need to implement wait (strategy and timeout)
+                    //
+                    if(delay > 0) {
+                        Jvm.pause(delay);
+                    }
                 }
             }
         }
+
+        throw new AssertionError("Timeout waiting to append");
     }
 
     @Override
-    public boolean read(@NotNull AtomicLong position, @NotNull ReadMarshallable reader) {
-        final WireIn wi = wireInCache.get();
-        final Bytes wb = wi.bytes();
-
-        wb.readPosition(position.get());
-        boolean read =  WireUtil.readData(wi, reader);
-        position.set(wb.readPosition());
-
-        return read;
+    public long read(long position, @NotNull ReadMarshallable reader) {
+        return WireUtil.readDataAt(wireInCache.get(), position, reader);
     }
 
+    /**
+     * Check if there is room for append.
+     *
+     * TODO: more accurate space checking
+     */
     protected void checkRemainingForAppend() {
-        long remaining = this.mappedStore.writeRemaining();
+        long remaining = mappedStore.writeRemaining();
         if (remaining > WireUtil.LENGTH_MASK) {
             throw new IllegalStateException("Length too large: " + remaining);
         }
     }
 
+    /**
+     * Build the header (@see SingleChronicleQueueHeader)
+     *
+     * @throws IOException
+     */
     protected void buildHeader() throws IOException {
-        final Bytes rb = this.mappedStore.bytesForRead();
+        final Bytes rb = mappedStore.bytesForRead();
         rb.readPosition(SPB_HEADER_BYTE_SIZE);
 
-        final Bytes wb = this.mappedStore.bytesForWrite();
+        final Bytes wb = mappedStore.bytesForWrite();
         wb.writePosition(SPB_HEADER_BYTE_SIZE);
 
-        if(this.mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
+        if(mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
             writeMeta(
                 wireOut(wb),
-                w -> w.write(MetaDataField.header).typedMarshallable(this.header)
+                w -> w.write(MetaDataField.header).typedMarshallable(header)
             );
 
+            // Needed because header.dataPosition, header.writePosition are initially
+            // initialized as null and initialized when needed. It may be better
+            // to initialize it upon header instantiation (?)
             readMeta(
                 wireIn(rb),
-                w -> w.read().marshallable(this.header)
+                w -> w.read().marshallable(header)
             );
 
+            // Set read/write pointer after the header
             header.setDataPosition(wb.writePosition());
             header.setWritePosition(wb.writePosition());
 
-            if (!this.mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
+            if (!mappedStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
                 throw new AssertionError("Concurrent writing of the header");
             }
         } else {
@@ -149,11 +159,19 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         }
     }
 
+    /**
+     * Wait for the header to build.
+     *
+     * If it exceed the number of attempts defined by builder.headerWaitLoops()
+     * each with a timeout of builder.headerWaitDelay() it will throw an AssertionError.
+     *
+     * @throws IOException
+     */
     protected void waitForTheHeaderToBeBuilt() throws IOException {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = builder.headerWaitLoops(); i >= 0; i--) {
             long magic = this.mappedStore.readVolatileLong(SPB_HEADER_BYTE);
             if (magic == SPB_HEADER_BUILDING) {
-                Jvm.pause(10);
+                Jvm.pause(builder.headerWaitDelay());
             } else if (magic == SPB_HEADER_BUILT) {
                 return;
             } else {

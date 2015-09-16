@@ -39,6 +39,7 @@ public class WireUtil {
     public static final int MAX_LENGTH     = LENGTH_MASK;
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
+    public static final int NO_DATA        = -1;
 
     public static final long SPB_HEADER_BYTE      = 0;
     public static final long SPB_HEADER_BYTE_SIZE = 8;
@@ -126,6 +127,20 @@ public class WireUtil {
         return WireInternal.readData(wireIn, null, reader);
     }
 
+    public static <T extends ReadMarshallable> long readDataAt(
+        @NotNull WireIn wireIn,
+        long position,
+        @NotNull T reader) {
+
+        final Bytes rb = wireIn.bytes().readPosition(position);
+        boolean result = WireInternal.readData(wireIn, null, reader);
+        if(result) {
+            return rb.readPosition();
+        }
+
+        return NO_DATA;
+    }
+
     public static <T extends WriteMarshallable> T writeData(
         @NotNull WireOut wireOut,
         @NotNull T writer) {
@@ -135,6 +150,17 @@ public class WireUtil {
         return writer;
     }
 
+    public static <T extends WriteMarshallable> long writeDataAt(
+        @NotNull WireOut wireOut,
+        long position,
+        @NotNull T writer) {
+
+        final Bytes wb = wireOut.bytes().writePosition(position);
+        WireInternal.writeData(wireOut, false, false, writer);
+
+        return wb.writePosition();
+    }
+
     public static <T extends WriteMarshallable> T writeMeta(
         @NotNull WireOut wireOut,
         @NotNull T writer) {
@@ -142,6 +168,17 @@ public class WireUtil {
         WireInternal.writeData(wireOut, true, false, writer);
 
         return writer;
+    }
+
+    public static <T extends WriteMarshallable> long writeMetaAt(
+        @NotNull WireOut wireOut,
+        long position,
+        @NotNull T writer) {
+
+        final Bytes wb = wireOut.bytes().writePosition(position);
+        WireInternal.writeData(wireOut, true, false, writer);
+
+        return wb.writePosition();
     }
 
     public static <T extends ReadMarshallable> boolean readMeta(

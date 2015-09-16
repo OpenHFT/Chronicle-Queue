@@ -23,10 +23,10 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.AbstractExcerptAppender;
 import net.openhft.chronicle.queue.impl.AbstractExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
 
@@ -69,17 +69,23 @@ class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFo
     }
 
     private class Tailer extends AbstractExcerptTailer {
-        final AtomicLong position;
+        private long position;
 
         Tailer() {
             super(SingleChronicleQueue.this);
 
-            this.position = new AtomicLong(format().dataPosition());
+            this.position = format().dataPosition();
         }
 
         @Override
         public boolean readDocument(ReadMarshallable reader) {
-            return format().read(this.position, reader);
+            long result = format().read(this.position, reader);
+            if(WireUtil.NO_DATA != result) {
+                this.position = result;
+                return true;
+            }
+
+            return false;
         }
     }
 }
