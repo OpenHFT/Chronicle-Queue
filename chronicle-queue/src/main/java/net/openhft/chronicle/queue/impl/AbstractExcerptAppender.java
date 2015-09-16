@@ -13,32 +13,41 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
- *
- * @author peter.lawrey
- */
-public interface ExcerptAppender extends ExcerptCommon {
-    /**
-     * @return the underlying Wire.
-     */
+
+public abstract class AbstractExcerptAppender implements ExcerptAppender {
+    private final ChronicleQueue queue;
+
+    public AbstractExcerptAppender(@NotNull ChronicleQueue queue) {
+        this.queue = queue;
+    }
+
     @Nullable
-    WireOut wire();
+    @Override
+    public WireOut wire() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
-    /**
-     * @param writer to write one excerpt.
-     * @return the index last written.
-     */
-    long writeDocument(WriteMarshallable writer);
+    @Override
+    public long writeDocument(WriteMarshallable writer) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
-    /**
-     * @return the index last written.
-     */
-    long lastWrittenIndex();
+    @Override
+    public long lastWrittenIndex() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public ChronicleQueue queue() {
+        return this.queue;
+    }
 }

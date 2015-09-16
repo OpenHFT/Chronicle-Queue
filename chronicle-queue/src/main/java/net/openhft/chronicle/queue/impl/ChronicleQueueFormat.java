@@ -13,14 +13,30 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl;
 
-/**
- * @author peter.lawrey
- */
-public interface ExcerptCommon {
+
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
+
+public interface ChronicleQueueFormat {
+
     /**
-     * @return the queue associated with this Excerpt
+     *
+     * @param writer
+     * @return the index just written     *
+     * @throws IOException
      */
-    ChronicleQueue queue();
+    long append(@NotNull WriteMarshallable writer) throws IOException;
+
+    /**
+     *
+     * @param position
+     * @param reader
+     * @return the next read position or -1 iof no  has been read
+     */
+    long read(@NotNull long position, @NotNull ReadMarshallable reader);
 }

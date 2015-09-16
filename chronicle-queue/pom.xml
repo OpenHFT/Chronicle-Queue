@@ -40,14 +40,14 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.22</version>
+                <version>3.4.23</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.7.11-SNAPSHOT</version>
+                <version>1.8.10</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -116,6 +116,20 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- for benchmarks -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.11</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -134,6 +148,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <compilerArgument>-Xlint:deprecation</compilerArgument>
+                    <compilerArgument>-XDignore.symbol.file</compilerArgument>
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
@@ -162,7 +177,7 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
                         </Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <Export-Package>net.openhft.chronicle.*</Export-Package>
+                        <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
                     </instructions>
                 </configuration>
                 <executions>
