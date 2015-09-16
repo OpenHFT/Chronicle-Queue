@@ -86,10 +86,6 @@ public class WireUtil {
     // WIRE
     // *************************************************************************
 
-    public static boolean isNotReady(int len) {
-        return !Wires.isReady(len);
-    }
-
     public static boolean isKnownLength(int len) {
         return (len & (Wires.META_DATA | Wires.LENGTH_MASK)) != Wires.UNKNOWN_LENGTH;
     }
@@ -186,5 +182,19 @@ public class WireUtil {
         @NotNull T reader) {
 
         return WireInternal.readData(wireIn, reader, null);
+    }
+
+    public static <T extends ReadMarshallable> long readMetaAt(
+        @NotNull WireIn wireIn,
+        long position,
+        @NotNull T reader) {
+
+        final Bytes rb = wireIn.bytes().readPosition(position);
+        boolean result = WireInternal.readData(wireIn, reader, null);
+        if(result) {
+            return rb.readPosition();
+        }
+
+        return NO_DATA;
     }
 }

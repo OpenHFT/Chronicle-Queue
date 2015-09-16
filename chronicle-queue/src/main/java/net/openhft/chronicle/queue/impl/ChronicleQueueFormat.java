@@ -27,7 +27,7 @@ public interface ChronicleQueueFormat {
     /**
      *
      * @param writer
-     * @return
+     * @return the index just written     *
      * @throws IOException
      */
     long append(@NotNull WriteMarshallable writer) throws IOException;
@@ -36,7 +36,7 @@ public interface ChronicleQueueFormat {
      *
      * @param position
      * @param reader
-     * @return
+     * @return the next read position or -1 iof no  has been read
      */
     long read(@NotNull long position, @NotNull ReadMarshallable reader);
 }
