@@ -19,6 +19,8 @@ import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
  *
@@ -26,16 +28,11 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface ExcerptAppender extends ExcerptCommon {
     /**
-     * @return the underlying Wire.
-     */
-    @Nullable
-    WireOut wire();
-
-    /**
      * @param writer to write one excerpt.
      * @return the index last written.
+     * @throws IOException
      */
-    long writeDocument(WriteMarshallable writer);
+    long writeDocument(WriteMarshallable writer) throws IOException;
 
     /**
      * @return the index last written.

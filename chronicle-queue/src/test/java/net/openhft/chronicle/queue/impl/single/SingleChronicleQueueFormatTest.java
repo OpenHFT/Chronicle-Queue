@@ -15,19 +15,22 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Ignore
-public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
+public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     enum TestKey implements WireKey {
         test
@@ -42,53 +45,48 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     // *************************************************************************
 
     @Test
-    public void testAppend() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+    public void testHeaderCreation() throws IOException {
+        new SingleChronicleQueueFormat(
+                SingleChronicleQueueBuilder.text(getTmpDir()),
+                cycle(),
+                DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
+            .buildHeader();
+    }
 
-        final ExcerptAppender appender = queue.createAppender();
+    @Test
+    public void testAppend() throws IOException {
+        final SingleChronicleQueueFormat format =
+            new SingleChronicleQueueFormat(
+                SingleChronicleQueueBuilder.text(getTmpDir()),
+                cycle(),
+                DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
+            .buildHeader();
+
         for(int i=0; i<10; i++) {
             final int n = i;
-            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
+            format.append(w -> w.write(TestKey.test).text("event " + n));
         }
     }
 
     @Test
     public void testAppendAndRead() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+        final SingleChronicleQueueFormat format =
+            new SingleChronicleQueueFormat(
+                SingleChronicleQueueBuilder.text(getTmpDir()),
+                cycle(),
+                DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
+            .buildHeader();
 
-        final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
             final int n = i;
-            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
-            assertEquals(n, appender.lastWrittenIndex());
+            assertEquals(n, format.append(w -> w.write(TestKey.test).int32(n)));
         }
 
-        final ExcerptTailer tailer =queue.createTailer();
+        long position = format.dataPosition();
         for(int i=0; i<10; i++) {
             final int n = i;
-            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            position = format.read(position, r -> assertEquals(n, r.read(TestKey.test).int32()));
+            assertTrue(WireUtil.NO_DATA != position);
         }
-    }
-
-    @Test
-    public void testAppendAndReadWithRolling() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
-            .rollCycle(RollCycle.SECONDS)
-            .build();
-
-        final ExcerptAppender appender = queue.createAppender();
-        for(int i=0; i<20; i++) {
-            final int n = i;
-            Jvm.pause(500);
-            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-        }
-
-        /*
-        final ExcerptTailer tailer =queue.createTailer();
-        for(int i=0; i<20; i++) {
-            final int n = i;
-            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-        }
-        */
     }
 }

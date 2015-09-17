@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.IOException;
 
 import static net.openhft.chronicle.wire.WireUtil.*;
@@ -46,20 +47,29 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         header
     }
 
+    private final int cycle;
     private final SingleChronicleQueueBuilder builder;
+    private final File file;
     private final MappedFile mappedFile;
     private final BytesStore bytesStore;
     private final SingleChronicleQueueHeader header;
     private final ThreadLocal<Wire> wireInCache;
     private final ThreadLocal<Wire> wireOutCache;
 
-    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder) throws IOException {
+    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
         super(builder.wireType());
 
         this.builder = builder;
-        this.mappedFile = MappedFile.mappedFile(this.builder.path(), this.builder.blockSize());
+        this.cycle = cycle;
+        this.file = new File(this.builder.path(), cycleFormat + ".chronicle");
+
+        if(!this.file.getParentFile().exists()) {
+            this.file.mkdirs();
+        }
+
+        this.mappedFile = MappedFile.mappedFile(this.file, this.builder.blockSize());
         this.bytesStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
-        this.header = new SingleChronicleQueueHeader();
+        this.header = new SingleChronicleQueueHeader(this.builder);
         this.wireInCache = wireCache(bytesStore::bytesForRead, wireSupplier());
         this.wireOutCache = wireCache(bytesStore::bytesForWrite, wireSupplier());
     }
@@ -148,6 +158,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
             // Set read/write pointer after the header
             header.setDataPosition(readPosition);
             header.setWritePosition(readPosition);
+            header.setRollCycle(this.cycle);
 
             if (!bytesStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
                 throw new AssertionError("Concurrent writing of the header");
@@ -187,17 +198,5 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         }
 
         throw new AssertionError("Timeout waiting to build the file");
-    }
-
-    /**
-     *
-     * @param builder
-     * @return
-     * @throws IOException
-     */
-    public static SingleChronicleQueueFormat from(
-        final SingleChronicleQueueBuilder builder) throws IOException {
-
-        return new SingleChronicleQueueFormat(builder).buildHeader();
     }
 }

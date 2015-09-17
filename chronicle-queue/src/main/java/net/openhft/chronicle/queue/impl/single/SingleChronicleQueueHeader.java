@@ -16,11 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.ZonedDateTime;
@@ -33,7 +29,12 @@ class SingleChronicleQueueHeader implements Marshallable {
         type,
         uuid, created, user, host,
         indexCount, indexSpacing,
-        writePosition, dataPosition, index2Index, lastIndex
+        writePosition, dataPosition, index2Index, lastIndex,
+        roll
+    }
+
+    private enum RollFields implements WireKey {
+        cycle, length, format, zoneId
     }
 
     public static final String QUEUE_TYPE = "SCV4";
@@ -55,7 +56,9 @@ class SingleChronicleQueueHeader implements Marshallable {
     private LongValue index2Index;
     private LongValue lastIndex;
 
-    SingleChronicleQueueHeader() {
+    private Roll roll;
+
+    SingleChronicleQueueHeader(SingleChronicleQueueBuilder builder) {
         this.type = QUEUE_TYPE;
         this.uuid = UUID.randomUUID();
         this.created = ZonedDateTime.now();
@@ -71,6 +74,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         this.dataPosition = null;
         this.index2Index = null;
         this.lastIndex = null;
+        this.roll = new Roll(builder);
     }
 
     LongValue writePosition() {
@@ -97,7 +101,9 @@ class SingleChronicleQueueHeader implements Marshallable {
             .write(Fields.indexCount).int32(indexCount)
             .write(Fields.indexSpacing).int32(indexSpacing)
             .write(Fields.index2Index).int64forBinding(0L)
-            .write(Fields.lastIndex).int64forBinding(-1L);
+            .write(Fields.lastIndex).int64forBinding(-1L)
+            .write(Fields.roll).marshallable(roll);
+
         //out.addPadding((int) (PADDED_SIZE - out.bytes().writePosition()));
     }
 
@@ -113,7 +119,8 @@ class SingleChronicleQueueHeader implements Marshallable {
             .read(Fields.indexCount).int32(this, (o, i) -> o.indexCount = i)
             .read(Fields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
             .read(Fields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
-            .read(Fields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
+            .read(Fields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i)
+            .read(Fields.roll).marshallable(roll);
     }
 
     public long getWritePosition() {
@@ -136,5 +143,45 @@ class SingleChronicleQueueHeader implements Marshallable {
 
     public long incrementLastIndex() {
         return lastIndex.addAtomicValue(1);
+    }
+
+    public int getRollCycle() {
+        return (int)this.roll.cycle.getVolatileValue();
+    }
+
+    public SingleChronicleQueueHeader setRollCycle(int rollCycle) {
+        this.roll.cycle.setOrderedValue(rollCycle);
+        return this;
+    }
+
+    private class Roll implements Marshallable {
+
+        private LongValue cycle;
+        private int length;
+        private String format;
+        private String zoneId;
+
+        Roll(SingleChronicleQueueBuilder builder) {
+            this.cycle = null;
+            this.length = builder.rollCycleLength();
+            this.format = builder.rollCycleFormat();
+            this.zoneId = builder.rollCycleZoneId().getId();
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut out) {
+            out.write(RollFields.cycle).int64forBinding(-1)
+                .write(RollFields.length).int32(length)
+                .write(RollFields.format).text(format)
+                .write(RollFields.zoneId).text(zoneId);
+        }
+
+        @Override
+        public void readMarshallable(@NotNull WireIn in) {
+            in.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
+                .read(RollFields.length).int32(this, (o, i) -> o.length = i)
+                .read(RollFields.format).text(this, (o, i) -> o.format = i)
+                .read(RollFields.zoneId).text(this, (o, i) -> o.zoneId = i);
+        }
     }
 }
