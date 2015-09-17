@@ -25,9 +25,6 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface Excerpt extends ExcerptTailer {
-    @Override
-    Wire wire();
-
     /**
      * Find any entry which return a match i.e. 0, or a negative value which is the boundary between -1 and +1
      *

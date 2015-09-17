@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
@@ -65,15 +66,25 @@ public class ChronicleQueueTestBase {
 
     protected File getTmpFile(String qualifier) {
         try {
-            File tmpFile = Files.createTempFile(
+            Path tmpFile = Files.createTempFile(
                 getClass().getSimpleName() + "-",
                 "-" + ((qualifier != null && !qualifier.isEmpty())
                     ? testName.getMethodName() + "-" + qualifier
-                    : testName.getMethodName()))
-                .toFile();
+                    : testName.getMethodName()));
 
             LOGGER.info("Tmp file: {}", tmpFile);
-            return tmpFile;
+            return tmpFile.toFile();
+        } catch(IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    protected File getTmpDir() {
+        try {
+            Path tmpDir = Files.createTempDirectory(getClass().getSimpleName() + "-");
+
+            LOGGER.info("Tmp dir: {}", tmpDir);
+            return tmpDir.toFile();
         } catch(IOException e) {
             throw new IllegalStateException(e);
         }

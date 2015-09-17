@@ -20,7 +20,7 @@ import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
+import java.io.IOException;
 
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
@@ -29,12 +29,12 @@ import java.util.function.Consumer;
  */
 public interface ExcerptTailer extends ExcerptCommon {
     /**
-     * @return the wire associated with this tailer.
+     *
+     * @param reader
+     * @return
+     * @throws IOException
      */
-    @Nullable
-    WireIn wire();
-
-    boolean readDocument(@NotNull ReadMarshallable reader);
+    boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
 
     /**
      * Randomly select an Excerpt.

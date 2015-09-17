@@ -18,95 +18,60 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
-import net.openhft.chronicle.queue.impl.AbstractExcerptAppender;
-import net.openhft.chronicle.queue.impl.AbstractExcerptTailer;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.WireUtil;
-import net.openhft.chronicle.wire.WriteMarshallable;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-class SingleChronicleQueue extends AbstractChronicleQueue<SingleChronicleQueueFormat> {
+class SingleChronicleQueue extends AbstractChronicleQueue {
+
+    private final SingleChronicleQueueBuilder builder;
+    private final RollDateCache dateCache;
+    private final Map<Integer, SingleChronicleQueueFormat> formatCache;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
-        super(SingleChronicleQueueFormat.from(builder));
+        this.dateCache = new RollDateCache(
+            builder.rollCycleLength(),
+            builder.rollCycleFormat(),
+            builder.rollCycleZoneId());
+
+        this.builder = builder;
+        this.formatCache = new HashMap<>();
     }
 
     @Override
     public ExcerptAppender createAppender() {
-        return new Appender();
+        return new SingleChronicleQueueExcerpts.Appender(this);
     }
 
     @Override
     public ExcerptTailer createTailer() {
-        return new Tailer();
+        return new SingleChronicleQueueExcerpts.Tailer(this);
     }
 
-
-    /**
-     * Appender
-     */
-    private class Appender extends AbstractExcerptAppender {
-        long index;
-
-        Appender() {
-            super(SingleChronicleQueue.this);
-
-            this.index = 0;
-        }
-
-        @Override
-        public long writeDocument(WriteMarshallable writer) {
-            try {
-                index = format().append(writer);
-            } catch(IOException e) {
-                //TODO: should this method throw an exception ?
-            }
-
-            return index;
-        }
-
-        @Override
-        public long lastWrittenIndex() {
-            return this.index;
-        }
+    SingleChronicleQueueBuilder builder() {
+        return this.builder;
     }
 
-
-    /**
-     * Tailer
-     */
-    private class Tailer extends AbstractExcerptTailer {
-        private long position;
-
-        Tailer() {
-            super(SingleChronicleQueue.this);
-
-            this.position = format().dataPosition();
+    //TODO: maybe use kolobroke ?
+    synchronized SingleChronicleQueueFormat formatForCycle(int cycle) throws IOException {
+        SingleChronicleQueueFormat format = formatCache.get(cycle);
+        if(null == format) {
+            formatCache.put(
+                cycle,
+                format = new SingleChronicleQueueFormat(
+                    builder,
+                    cycle,
+                    this.dateCache.formatFor(cycle)).buildHeader()
+            );
         }
 
-        @Override
-        public boolean readDocument(ReadMarshallable reader) {
-            long result = format().read(this.position, reader);
-            if(WireUtil.NO_DATA != result) {
-                this.position = result;
-                return true;
-            }
+        return format;
+    }
 
-            return false;
-        }
-
-        @Override
-        public ExcerptTailer toStart() {
-            this.position = format().dataPosition();
-            return this;
-        }
-
-        @Override
-        public ExcerptTailer toEnd() {
-            this.position = format().writePosition();
-            return this;
-        }
+    int cycle() {
+        return (int) (System.currentTimeMillis() / builder.rollCycleLength());
     }
 }

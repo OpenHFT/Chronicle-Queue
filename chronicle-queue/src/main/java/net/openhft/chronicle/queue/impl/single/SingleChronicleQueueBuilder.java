@@ -13,25 +13,29 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.ZoneId;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private File path;
     private long blockSize;
     private WireType wireType;
 
+    private int rollCycleLength;
+    private String rollCycleFormat;
+    private ZoneId rollCycleZoneId;
+
     private int headerWaitLoops;
     private int headerWaitDelay;
-
 
     private int appendWaitLoops;
     private int appendWaitDelay;
@@ -48,6 +52,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.headerWaitDelay = 10;
         this.appendWaitLoops = 1000;
         this.appendWaitDelay = 0;
+        this.rollCycleLength = RollCycle.DAYS.length();
+        this.rollCycleFormat = RollCycle.DAYS.format();
+        this.rollCycleZoneId = ZoneId.of("GMT");
+
     }
 
     public File path() {
@@ -107,6 +115,41 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     public int appendWaitDelay() {
         return this.appendWaitDelay;
+    }
+
+    public SingleChronicleQueueBuilder rollCycle(RollCycle rollCycle) {
+        this.rollCycleLength = rollCycle.length();
+        this.rollCycleFormat = rollCycle.format();
+        this.rollCycleZoneId = ZoneId.of("GMT");
+
+        return this;
+    }
+
+    public int rollCycleLength() {
+        return this.rollCycleLength;
+    }
+
+    public SingleChronicleQueueBuilder rollCycleFormat(String rollCycleFormat) {
+        this.rollCycleFormat = rollCycleFormat;
+        return this;
+    }
+
+    public String rollCycleFormat() {
+        return this.rollCycleFormat;
+    }
+
+    public SingleChronicleQueueBuilder rollCycleZoneId(String rollCycleZoneId) {
+        this.rollCycleZoneId = ZoneId.of(rollCycleZoneId);
+        return this;
+    }
+
+    public SingleChronicleQueueBuilder rollCycleZoneId(ZoneId rollCycleZoneId) {
+        this.rollCycleZoneId = rollCycleZoneId;
+        return this;
+    }
+
+    public ZoneId rollCycleZoneId() {
+        return this.rollCycleZoneId;
     }
 
     @NotNull
