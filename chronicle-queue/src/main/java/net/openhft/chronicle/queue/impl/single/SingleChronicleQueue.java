@@ -29,7 +29,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private final SingleChronicleQueueBuilder builder;
     private final RollDateCache dateCache;
-    private final Map<Integer, SingleChronicleQueueFormat> formatCache;
+    private final Map<Integer, SingleChronicleQueueStore> stores;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.dateCache = new RollDateCache(
@@ -38,7 +38,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             builder.rollCycleZoneId());
 
         this.builder = builder;
-        this.formatCache = new HashMap<>();
+        this.stores = new HashMap<>();
     }
 
     @Override
@@ -56,12 +56,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     //TODO: maybe use kolobroke ?
-    synchronized SingleChronicleQueueFormat formatForCycle(int cycle) throws IOException {
-        SingleChronicleQueueFormat format = formatCache.get(cycle);
+    synchronized SingleChronicleQueueStore storeForCycle(int cycle) throws IOException {
+        SingleChronicleQueueStore format = stores.get(cycle);
         if(null == format) {
-            formatCache.put(
+            stores.put(
                 cycle,
-                format = new SingleChronicleQueueFormat(
+                format = new SingleChronicleQueueStore(
                     builder,
                     cycle,
                     this.dateCache.formatFor(cycle)).buildHeader()
@@ -73,5 +73,15 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     int cycle() {
         return (int) (System.currentTimeMillis() / builder.rollCycleLength());
+    }
+
+    //TODO: scan data folder
+    int firstCyle() {
+        return cycle();
+    }
+
+    //TODO: scan data folder
+    int lastCycle() {
+        return cycle();
     }
 }

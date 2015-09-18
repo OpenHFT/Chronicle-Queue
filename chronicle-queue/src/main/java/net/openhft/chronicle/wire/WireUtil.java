@@ -39,7 +39,7 @@ public class WireUtil {
     public static final int MAX_LENGTH     = LENGTH_MASK;
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
-    public static final int NO_DATA        = -1;
+    public static final int NO_DATA        = 9;
 
     public static final long SPB_HEADER_BYTE      = 0;
     public static final long SPB_HEADER_BYTE_SIZE = 8;

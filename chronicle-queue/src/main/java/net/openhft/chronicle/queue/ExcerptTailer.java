@@ -16,9 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.WireIn;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -42,7 +40,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @param l index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(long l);
+    boolean index(long l) throws IOException;;
 
     /**
      * Replay from the start.
@@ -50,7 +48,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return this Excerpt
      */
     @NotNull
-    ExcerptTailer toStart();
+    ExcerptTailer toStart() throws IOException;;
 
     /**
      * Wind to the end.
@@ -58,5 +56,5 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return this Excerpt
      */
     @NotNull
-    ExcerptTailer toEnd();
+    ExcerptTailer toEnd() throws IOException;;
 }

@@ -35,24 +35,24 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long index;
-        private SingleChronicleQueueFormat format;
+        private SingleChronicleQueueStore store;
 
         Appender(SingleChronicleQueue queue) {
             this.queue = queue;
 
             this.cycle = 0;
             this.index = 0;
-            this.format = null;
+            this.store = null;
         }
 
         @Override
         public long writeDocument(WriteMarshallable writer) throws IOException {
             if(this.cycle != queue.cycle()) {
                 this.cycle = queue.cycle();
-                this.format = queue.formatForCycle(this.cycle);
+                this.store = queue.storeForCycle(this.cycle);
             }
 
-            index = format.append(writer);
+            index = store.append(writer);
 
             return index;
         }
@@ -77,25 +77,25 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long position;
-        private SingleChronicleQueueFormat format;
+        private SingleChronicleQueueStore store;
 
         Tailer(SingleChronicleQueue queue) {
             this.queue = queue;
 
             this.cycle = 0;
             this.position = 0;
-            this.format = null;
+            this.store = null;
         }
 
         @Override
         public boolean readDocument(ReadMarshallable reader) throws IOException {
             if(this.cycle != queue.cycle()) {
                 this.cycle = queue.cycle();
-                this.format = queue.formatForCycle(this.cycle);
-                this.position = format.dataPosition();
+                this.store = queue.storeForCycle(this.cycle);
+                this.position = store.dataPosition();
             }
 
-            long result = format.read(this.position, reader);
+            long result = store.read(this.position, reader);
             if(WireUtil.NO_DATA != result) {
                 this.position = result;
                 return true;
@@ -105,19 +105,25 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public boolean index(long l) {
+        public boolean index(long l) throws IOException {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ExcerptTailer toStart() {
-            this.position = format.dataPosition();
+        public ExcerptTailer toStart() throws IOException {
+            this.cycle = queue.firstCyle();
+            this.store = queue.storeForCycle(this.cycle);
+            this.position = store.dataPosition();
+
             return this;
         }
 
         @Override
-        public ExcerptTailer toEnd() {
-            this.position = format.writePosition();
+        public ExcerptTailer toEnd() throws IOException {
+            this.cycle = queue.lastCycle();
+            this.store = queue.storeForCycle(this.cycle);
+            this.position = store.dataPosition();
+
             return this;
         }
 

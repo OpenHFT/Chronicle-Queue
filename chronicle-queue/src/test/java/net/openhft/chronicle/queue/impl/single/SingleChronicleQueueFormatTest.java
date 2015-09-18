@@ -46,7 +46,7 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderCreation() throws IOException {
-        new SingleChronicleQueueFormat(
+        new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
@@ -55,8 +55,8 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() throws IOException {
-        final SingleChronicleQueueFormat format =
-            new SingleChronicleQueueFormat(
+        final SingleChronicleQueueStore format =
+            new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
@@ -70,8 +70,8 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws IOException {
-        final SingleChronicleQueueFormat format =
-            new SingleChronicleQueueFormat(
+        final SingleChronicleQueueStore format =
+            new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))

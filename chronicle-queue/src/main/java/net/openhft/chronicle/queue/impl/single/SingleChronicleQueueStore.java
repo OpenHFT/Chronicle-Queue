@@ -15,16 +15,17 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueueFormat;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Function;
 
 import static net.openhft.chronicle.wire.WireUtil.*;
 
@@ -35,7 +36,7 @@ import static net.openhft.chronicle.wire.WireUtil.*;
  * - rolling
  * - indexing
  */
-class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
+class SingleChronicleQueueStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(
             SingleChronicleQueueHeader.class,
@@ -48,6 +49,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     }
 
     private final int cycle;
+    protected final Function<Bytes, Wire> wireSupplier;
     private final SingleChronicleQueueBuilder builder;
     private final File file;
     private final MappedFile mappedFile;
@@ -56,11 +58,11 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
     private final ThreadLocal<Wire> wireInCache;
     private final ThreadLocal<Wire> wireOutCache;
 
-    SingleChronicleQueueFormat(final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
-        super(builder.wireType());
+    SingleChronicleQueueStore(final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
 
         this.builder = builder;
         this.cycle = cycle;
+        this.wireSupplier = WireUtil.wireSupplierFor(builder.wireType());
         this.file = new File(this.builder.path(), cycleFormat + ".chronicle");
 
         if(!this.file.getParentFile().exists()) {
@@ -70,8 +72,8 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         this.mappedFile = MappedFile.mappedFile(this.file, this.builder.blockSize());
         this.bytesStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
         this.header = new SingleChronicleQueueHeader(this.builder);
-        this.wireInCache = wireCache(bytesStore::bytesForRead, wireSupplier());
-        this.wireOutCache = wireCache(bytesStore::bytesForWrite, wireSupplier());
+        this.wireInCache = wireCache(bytesStore::bytesForRead, wireSupplier);
+        this.wireOutCache = wireCache(bytesStore::bytesForWrite, wireSupplier);
     }
 
     long dataPosition() {
@@ -82,8 +84,11 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         return this.header.getWritePosition();
     }
 
-    @Override
-    public long append(@NotNull WriteMarshallable writer) throws IOException {
+    int cycle() {
+        return this.header.getRollCycle();
+    }
+
+    long append(@NotNull WriteMarshallable writer) throws IOException {
         checkRemainingForAppend();
 
         int delay = builder.appendWaitDelay();
@@ -112,9 +117,17 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         throw new AssertionError("Timeout waiting to append");
     }
 
-    @Override
-    public long read(long position, @NotNull ReadMarshallable reader) {
-        return WireUtil.readDataAt(wireInCache.get(), position, reader);
+    long read(long position, @NotNull ReadMarshallable reader) {
+        int header = bytesStore.readVolatileInt(position);
+        if(Wires.isData(header)) {
+            return WireUtil.readDataAt(wireInCache.get(), position, reader);
+        } else if (WireUtil.isKnownLength(header)) {
+            // it it is meta-data and length is know, try a new read
+            position += Wires.lengthOf(header) + SPB_DATA_HEADER_SIZE;
+            return read(position, reader);
+        }
+
+        return WireUtil.NO_DATA;
     }
 
     /**
@@ -134,7 +147,7 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
      *
      * @throws IOException
      */
-    protected SingleChronicleQueueFormat buildHeader() throws IOException {
+    protected SingleChronicleQueueStore buildHeader() throws IOException {
         if(bytesStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
             writeMetaAt(
                 wireOut(bytesStore.bytesForWrite()),
@@ -198,5 +211,25 @@ class SingleChronicleQueueFormat extends AbstractChronicleQueueFormat {
         }
 
         throw new AssertionError("Timeout waiting to build the file");
+    }
+
+    // *************************************************************************
+    // Wire Helpers
+    // *************************************************************************
+
+    protected WireOut wireOut(@NotNull Bytes bytes) throws IOException {
+        return this.wireSupplier.apply(bytes);
+    }
+
+    protected WireOut wireOut(@NotNull MappedFile file, long offset) throws IOException {
+        return wireOut(file.acquireBytesForWrite(offset));
+    }
+
+    protected WireIn wireIn(@NotNull Bytes bytes) throws IOException {
+        return this.wireSupplier.apply(bytes);
+    }
+
+    protected WireIn wireIn(@NotNull MappedFile file, long offset) throws IOException {
+        return wireIn(file.acquireBytesForRead(offset));
     }
 }
