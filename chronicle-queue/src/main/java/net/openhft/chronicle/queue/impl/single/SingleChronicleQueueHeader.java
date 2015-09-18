@@ -34,7 +34,7 @@ class SingleChronicleQueueHeader implements Marshallable {
     }
 
     private enum RollFields implements WireKey {
-        cycle, length, format, zoneId
+        cycle, length, format, zoneId, nextCycle, nextCycleMetaPosition
     }
 
     public static final String QUEUE_TYPE = "SCV4";
@@ -160,12 +160,16 @@ class SingleChronicleQueueHeader implements Marshallable {
         private int length;
         private String format;
         private String zoneId;
+        private LongValue nextCycle;
+        private LongValue nextCycleMetaPosition;
 
         Roll(SingleChronicleQueueBuilder builder) {
             this.cycle = null;
             this.length = builder.rollCycleLength();
             this.format = builder.rollCycleFormat();
             this.zoneId = builder.rollCycleZoneId().getId();
+            this.nextCycle = null;
+            this.nextCycleMetaPosition = null;
         }
 
         @Override
@@ -173,7 +177,9 @@ class SingleChronicleQueueHeader implements Marshallable {
             out.write(RollFields.cycle).int64forBinding(-1)
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
-                .write(RollFields.zoneId).text(zoneId);
+                .write(RollFields.zoneId).text(zoneId)
+                .write(RollFields.nextCycle).int64forBinding(-1)
+                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
         }
 
         @Override
@@ -181,7 +187,9 @@ class SingleChronicleQueueHeader implements Marshallable {
             in.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                .read(RollFields.zoneId).text(this, (o, i) -> o.zoneId = i);
+                .read(RollFields.zoneId).text(this, (o, i) -> o.zoneId = i)
+                .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
     }
 }
