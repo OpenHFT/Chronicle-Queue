@@ -51,14 +51,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
 
         final ExcerptAppender appender = queue.createAppender();
-        for(int i=0; i<10; i++) {
+        for(int i=0; i<2; i++) {
             final int n = i;
             assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
             assertEquals(n, appender.lastWrittenIndex());
         }
 
-        final ExcerptTailer tailer =queue.createTailer().toStart();
-        for(int i=0; i<10; i++) {
+        final ExcerptTailer tailer =queue.createTailer();
+        for(int i=0; i<2; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
         }
