@@ -21,25 +21,26 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Maths;
 
+import java.text.DateFormat;
 import java.text.ParseException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoField;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class RollDateCache {
     private static final int SIZE = 32;
 
-    private final DateTimeFormatter formatter;
+    private final DateFormat formatter;
     private final DateValue[] values;
     private final int length;
-    private final ZoneId zoneId;
+    private final TimeZone timeZone;
 
-    public RollDateCache(final int length, String format, final ZoneId zoneId) {
+    public RollDateCache(final int length, String format, final TimeZone timeZone) {
         this.length = length;
-        this.zoneId = zoneId;
+        this.timeZone = timeZone;
         this.values = new DateValue[SIZE];
-        this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
+        this.formatter = new SimpleDateFormat(format);
+        this.formatter.setTimeZone(this.timeZone);
     }
 
     /**
@@ -55,7 +56,7 @@ public class RollDateCache {
         DateValue dv = values[hash];
         if (dv == null || dv.millis != millis) {
             synchronized (formatter) {
-                String text = formatter.format(Instant.ofEpochMilli(millis));
+                String text = formatter.format(new Date(millis));
                 values[hash] = new DateValue(millis, text);
                 return text;
             }
@@ -65,7 +66,7 @@ public class RollDateCache {
 
     public long parseCount(String name) throws ParseException {
         synchronized (formatter) {
-            return formatter.parse(name).get(ChronoField.INSTANT_SECONDS) / length;
+            return formatter.parse(name).getTime() / length;
         }
     }
 

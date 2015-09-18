@@ -20,12 +20,14 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class SingleChronicleQueueExcerpts {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
     /**
      * Appender
@@ -35,24 +37,30 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long index;
-        private SingleChronicleQueueFormat format;
+        private SingleChronicleQueueStore store;
 
-        Appender(SingleChronicleQueue queue) {
+        Appender(SingleChronicleQueue queue) throws IOException {
             this.queue = queue;
 
-            this.cycle = 0;
-            this.index = 0;
-            this.format = null;
+            this.cycle = queue.lastCycle();
+            this.store = this.cycle != 0 ? queue.storeForCycle(this.cycle) : null;
+            this.index = this.cycle != 0 ? this.store.lastIndex() : -1;
         }
 
         @Override
         public long writeDocument(WriteMarshallable writer) throws IOException {
             if(this.cycle != queue.cycle()) {
-                this.cycle = queue.cycle();
-                this.format = queue.formatForCycle(this.cycle);
+
+                int nextCycle = queue.cycle();
+                if(this.store != null) {
+                    this.store.appendRollMeta(nextCycle);
+                }
+
+                this.cycle = nextCycle;
+                this.store = queue.storeForCycle(this.cycle);
             }
 
-            index = format.append(writer);
+            index = store.append(writer);
 
             return index;
         }
@@ -77,53 +85,68 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long position;
-        private SingleChronicleQueueFormat format;
+        private SingleChronicleQueueStore store;
 
-        Tailer(SingleChronicleQueue queue) {
+        Tailer(SingleChronicleQueue queue) throws IOException {
             this.queue = queue;
-
             this.cycle = 0;
+            this.store = null;
             this.position = 0;
-            this.format = null;
         }
 
         @Override
         public boolean readDocument(ReadMarshallable reader) throws IOException {
-            if(this.cycle != queue.cycle()) {
-                this.cycle = queue.cycle();
-                this.format = queue.formatForCycle(this.cycle);
-                this.position = format.dataPosition();
+            if(this.store == null) {
+                //TODO: what should be done at the beginning ? toEnd/toStart
+                cycle(queue.lastCycle());
+                this.position = this.store.writePosition();
             }
 
-            long result = format.read(this.position, reader);
-            if(WireUtil.NO_DATA != result) {
-                this.position = result;
+            long position = store.read(this.position, reader);
+            if(position > 0) {
+                this.position = position;
                 return true;
+            } else if(position < 0) {
+                // roll detected, move to next cycle;
+                cycle((int) Math.abs(position));
+                this.position = this.store.dataPosition();
+
+                // try to read from new cycle
+                return readDocument(reader);
             }
 
             return false;
         }
 
         @Override
-        public boolean index(long l) {
+        public boolean index(long l) throws IOException {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ExcerptTailer toStart() {
-            this.position = format.dataPosition();
+        public ExcerptTailer toStart() throws IOException {
+            cycle(queue.firstCycle());
+            this.position = store.dataPosition();
+
             return this;
         }
 
         @Override
-        public ExcerptTailer toEnd() {
-            this.position = format.writePosition();
+        public ExcerptTailer toEnd() throws IOException {
+            cycle(queue.lastCycle());
+            this.position = store.writePosition();
+
             return this;
         }
 
         @Override
         public ChronicleQueue queue() {
             return this.queue;
+        }
+
+        private void cycle(int cycle) throws IOException {
+            this.cycle = cycle;
+            this.store = queue.storeForCycle(this.cycle);
         }
     }
 }

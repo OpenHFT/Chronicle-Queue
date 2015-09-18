@@ -29,7 +29,6 @@ import java.time.format.DateTimeFormatter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore
 public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     enum TestKey implements WireKey {
@@ -46,7 +45,7 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderCreation() throws IOException {
-        new SingleChronicleQueueFormat(
+        new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
@@ -55,8 +54,8 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() throws IOException {
-        final SingleChronicleQueueFormat format =
-            new SingleChronicleQueueFormat(
+        final SingleChronicleQueueStore format =
+            new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))
@@ -70,8 +69,8 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws IOException {
-        final SingleChronicleQueueFormat format =
-            new SingleChronicleQueueFormat(
+        final SingleChronicleQueueStore format =
+            new SingleChronicleQueueStore(
                 SingleChronicleQueueBuilder.text(getTmpDir()),
                 cycle(),
                 DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDate.now()))

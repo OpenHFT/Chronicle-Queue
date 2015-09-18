@@ -18,7 +18,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireKey;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -26,15 +25,10 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     enum TestKey implements WireKey {
         test
-    }
-
-    int cycle() {
-        return (int) (System.currentTimeMillis() / RollCycle.DAYS.length());
     }
 
     // *************************************************************************
@@ -63,7 +57,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(n, appender.lastWrittenIndex());
         }
 
-        final ExcerptTailer tailer =queue.createTailer();
+        final ExcerptTailer tailer =queue.createTailer().toStart();
         for(int i=0; i<10; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
@@ -83,12 +77,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.write(TestKey.test).int32(n));
         }
 
-        /*
-        final ExcerptTailer tailer =queue.createTailer();
+        final ExcerptTailer tailer =queue.createTailer().toStart();
         for(int i=0; i<20; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
         }
-        */
     }
 }

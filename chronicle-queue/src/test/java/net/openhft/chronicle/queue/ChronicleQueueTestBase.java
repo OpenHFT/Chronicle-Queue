@@ -24,7 +24,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
@@ -66,14 +67,18 @@ public class ChronicleQueueTestBase {
 
     protected File getTmpFile(String qualifier) {
         try {
-            Path tmpFile = Files.createTempFile(
+            final File tmpFile = Files.createTempFile(
                 getClass().getSimpleName() + "-",
                 "-" + ((qualifier != null && !qualifier.isEmpty())
                     ? testName.getMethodName() + "-" + qualifier
-                    : testName.getMethodName()));
+                    : testName.getMethodName()))
+                .toFile();
 
-            LOGGER.info("Tmp file: {}", tmpFile);
-            return tmpFile.toFile();
+            DeleteStatic.INSTANCE.add(tmpFile);
+
+            //LOGGER.info("Tmp file: {}", tmpFile);
+
+            return tmpFile;
         } catch(IOException e) {
             throw new IllegalStateException(e);
         }
@@ -81,12 +86,54 @@ public class ChronicleQueueTestBase {
 
     protected File getTmpDir() {
         try {
-            Path tmpDir = Files.createTempDirectory(getClass().getSimpleName() + "-");
+            final File tmpDir = Files.createTempDirectory(getClass().getSimpleName() + "-").toFile();
 
-            LOGGER.info("Tmp dir: {}", tmpDir);
-            return tmpDir.toFile();
+            DeleteStatic.INSTANCE.add(tmpDir);
+
+            //LOGGER.info("Tmp dir: {}", tmpDir);
+            return tmpDir;
         } catch(IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    enum DeleteStatic {
+        INSTANCE;
+        final Set<File> toDeleteList = new LinkedHashSet<>();
+
+        {
+            Runtime.getRuntime().addShutdownHook(new Thread(
+                () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
+            ));
+        }
+
+        synchronized void add(File path) {
+            toDeleteList.add(path);
+        }
+    }
+
+    private static void deleteDir(File dir) {
+        if(dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if(files != null) {
+                File[] arr$ = files;
+                int len$ = files.length;
+
+                for(int i$ = 0; i$ < len$; ++i$) {
+                    File file = arr$[i$];
+                    if(file.isDirectory()) {
+                        deleteDir(file);
+                    } else if(!file.delete()) {
+                        LOGGER.info("... unable to delete {}", file);
+                    }
+                }
+            }
+        }
+
+        dir.delete();
     }
 }

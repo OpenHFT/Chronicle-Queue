@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.ZoneId;
+import java.util.TimeZone;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private File path;
@@ -32,7 +32,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     private int rollCycleLength;
     private String rollCycleFormat;
-    private ZoneId rollCycleZoneId;
+    private TimeZone rollCycleTimeZone;
 
     private int headerWaitLoops;
     private int headerWaitDelay;
@@ -54,7 +54,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.appendWaitDelay = 0;
         this.rollCycleLength = RollCycle.DAYS.length();
         this.rollCycleFormat = RollCycle.DAYS.format();
-        this.rollCycleZoneId = ZoneId.of("GMT");
+        this.rollCycleTimeZone = TimeZone.getTimeZone("GMT");
 
     }
 
@@ -120,7 +120,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public SingleChronicleQueueBuilder rollCycle(RollCycle rollCycle) {
         this.rollCycleLength = rollCycle.length();
         this.rollCycleFormat = rollCycle.format();
-        this.rollCycleZoneId = ZoneId.of("GMT");
+        this.rollCycleTimeZone = TimeZone.getTimeZone("GMT");
 
         return this;
     }
@@ -138,18 +138,18 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.rollCycleFormat;
     }
 
-    public SingleChronicleQueueBuilder rollCycleZoneId(String rollCycleZoneId) {
-        this.rollCycleZoneId = ZoneId.of(rollCycleZoneId);
+    public SingleChronicleQueueBuilder rollCycleTimeZone(String rollCycleTimeZone) {
+        this.rollCycleTimeZone = TimeZone.getTimeZone(rollCycleTimeZone);
         return this;
     }
 
-    public SingleChronicleQueueBuilder rollCycleZoneId(ZoneId rollCycleZoneId) {
-        this.rollCycleZoneId = rollCycleZoneId;
+    public SingleChronicleQueueBuilder rollCycleTimeZone(TimeZone rollCycleTimeZone) {
+        this.rollCycleTimeZone = rollCycleTimeZone;
         return this;
     }
 
-    public ZoneId rollCycleZoneId() {
-        return this.rollCycleZoneId;
+    public TimeZone rollCycleTimeZone() {
+        return this.rollCycleTimeZone;
     }
 
     @NotNull

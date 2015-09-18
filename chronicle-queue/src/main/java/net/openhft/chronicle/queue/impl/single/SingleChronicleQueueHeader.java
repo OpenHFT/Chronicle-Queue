@@ -34,7 +34,7 @@ class SingleChronicleQueueHeader implements Marshallable {
     }
 
     private enum RollFields implements WireKey {
-        cycle, length, format, zoneId
+        cycle, length, format, timeZone, nextCycle, nextCycleMetaPosition
     }
 
     public static final String QUEUE_TYPE = "SCV4";
@@ -142,7 +142,11 @@ class SingleChronicleQueueHeader implements Marshallable {
     }
 
     public long incrementLastIndex() {
-        return lastIndex.addAtomicValue(1);
+        return this.lastIndex.addAtomicValue(1);
+    }
+
+    public long getLastIndex() {
+        return this.lastIndex.getVolatileValue();
     }
 
     public int getRollCycle() {
@@ -154,18 +158,44 @@ class SingleChronicleQueueHeader implements Marshallable {
         return this;
     }
 
+    public SingleChronicleQueueHeader setNextCycleMetaPosition(long position) {
+        this.roll.nextCycleMetaPosition.setOrderedValue(position);
+        return this;
+    }
+
+    public long getNextCycleMetaPosition() {
+        return this.roll.nextCycleMetaPosition.getVolatileValue();
+    }
+
+    public int getNextRollCycle() {
+        return (int)this.roll.nextCycle.getVolatileValue();
+    }
+
+    public boolean casNextRollCycle(int rollCycle) {
+        return this.roll.nextCycle.compareAndSwapValue(-1L, rollCycle);
+    }
+
     private class Roll implements Marshallable {
 
-        private LongValue cycle;
         private int length;
         private String format;
-        private String zoneId;
+        private String timeZone;
+
+        //TODO: it appears there is a problem with IntValue (LongValue as workaround)
+        private LongValue cycle;
+        private LongValue nextCycle;
+
+        // LongValue is right here
+        private LongValue nextCycleMetaPosition;
 
         Roll(SingleChronicleQueueBuilder builder) {
-            this.cycle = null;
             this.length = builder.rollCycleLength();
             this.format = builder.rollCycleFormat();
-            this.zoneId = builder.rollCycleZoneId().getId();
+            this.timeZone = builder.rollCycleTimeZone().getID();
+
+            this.cycle = null;
+            this.nextCycle = null;
+            this.nextCycleMetaPosition = null;
         }
 
         @Override
@@ -173,7 +203,9 @@ class SingleChronicleQueueHeader implements Marshallable {
             out.write(RollFields.cycle).int64forBinding(-1)
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
-                .write(RollFields.zoneId).text(zoneId);
+                .write(RollFields.timeZone).text(timeZone)
+                .write(RollFields.nextCycle).int64forBinding(-1)
+                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
         }
 
         @Override
@@ -181,7 +213,9 @@ class SingleChronicleQueueHeader implements Marshallable {
             in.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                .read(RollFields.zoneId).text(this, (o, i) -> o.zoneId = i);
+                .read(RollFields.timeZone).text(this, (o, i) -> o.timeZone = i)
+                .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
     }
 }
