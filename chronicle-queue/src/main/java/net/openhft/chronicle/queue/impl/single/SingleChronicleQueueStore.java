@@ -131,7 +131,7 @@ class SingleChronicleQueueStore {
      */
     long append(@NotNull WriteMarshallable writer) throws IOException {
         // TODO: avoid new long[] { 0, 0 }
-        final Long positions[] = append(positionsCache.get() , false, writer);
+        final Long positions[] = append(positionsCache.get(), false, writer);
 
         header.setWritePosition(positions[1]);
         return header.incrementLastIndex();
@@ -145,6 +145,10 @@ class SingleChronicleQueueStore {
      */
     long read(long position, @NotNull ReadMarshallable reader) throws IOException {
         final int spbHeader = bytesStore.readVolatileInt(position);
+        if(spbHeader == WireUtil.NO_DATA) {
+            return  WireUtil.NO_DATA;
+        }
+
         if(Wires.isData(spbHeader)) {
             return WireUtil.readDataAt(wireInCache.get(), position, reader);
         } else if (WireUtil.isKnownLength(spbHeader)) {
@@ -161,7 +165,6 @@ class SingleChronicleQueueStore {
                 return read(position, reader);
             }
         }
-
         return WireUtil.NO_DATA;
     }
 

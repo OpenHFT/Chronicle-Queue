@@ -99,7 +99,7 @@ public class SingleChronicleQueueExcerpts {
             if(this.store == null) {
                 //TODO: what should be done at the beginning ? toEnd/toStart
                 cycle(queue.lastCycle());
-                this.position = this.store.writePosition();
+                this.position = this.store.dataPosition();
             }
 
             long position = store.read(this.position, reader);
