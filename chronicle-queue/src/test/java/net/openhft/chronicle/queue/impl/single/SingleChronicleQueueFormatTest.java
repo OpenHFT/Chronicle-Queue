@@ -29,7 +29,6 @@ import java.time.format.DateTimeFormatter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore
 public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
 
     enum TestKey implements WireKey {

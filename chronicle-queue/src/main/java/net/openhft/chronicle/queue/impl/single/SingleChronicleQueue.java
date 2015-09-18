@@ -20,9 +20,11 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.text.ParseException;
 import java.util.Map;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
@@ -35,19 +37,19 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.dateCache = new RollDateCache(
             builder.rollCycleLength(),
             builder.rollCycleFormat(),
-            builder.rollCycleZoneId());
+            builder.rollCycleTimeZone());
 
         this.builder = builder;
-        this.stores = new HashMap<>();
+        this.stores = HashIntObjMaps.newMutableMap();
     }
 
     @Override
-    public ExcerptAppender createAppender() {
+    public ExcerptAppender createAppender() throws IOException {
         return new SingleChronicleQueueExcerpts.Appender(this);
     }
 
     @Override
-    public ExcerptTailer createTailer() {
+    public ExcerptTailer createTailer() throws IOException {
         return new SingleChronicleQueueExcerpts.Tailer(this);
     }
 
@@ -55,7 +57,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return this.builder;
     }
 
-    //TODO: maybe use kolobroke ?
     synchronized SingleChronicleQueueStore storeForCycle(int cycle) throws IOException {
         SingleChronicleQueueStore format = stores.get(cycle);
         if(null == format) {
@@ -75,13 +76,69 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return (int) (System.currentTimeMillis() / builder.rollCycleLength());
     }
 
-    //TODO: scan data folder
-    int firstCyle() {
-        return cycle();
+    //TODO: reduce garbage
+    int firstCycle() {
+        final String basePath = builder.path().getAbsolutePath();
+        final File[] files = builder.path().listFiles();
+
+        if(files != null) {
+            long firstDate = Long.MAX_VALUE;
+            long date = -1;
+            String name = null;
+
+            for (int i = files.length - 1; i >= 0; i--) {
+                try {
+                    name = files[i].getAbsolutePath();
+                    if(name.endsWith(".chronicle")) {
+                        name = name.substring(basePath.length() + 1);
+                        name = name.substring(0, name.indexOf('.'));
+
+                        date = dateCache.parseCount(name);
+                        if (firstDate > date) {
+                            firstDate = date;
+                        }
+                    }
+                } catch (ParseException ignored) {
+                    // ignored
+                }
+            }
+
+            return (int)firstDate;
+        }
+
+        return -1;
     }
 
-    //TODO: scan data folder
+    //TODO: reduce garbage
     int lastCycle() {
-        return cycle();
+        final String basePath = builder.path().getAbsolutePath();
+        final File[] files = builder.path().listFiles();
+
+        if(files != null) {
+            long lastDate = Long.MIN_VALUE;
+            long date = -1;
+            String name = null;
+
+            for (int i = files.length - 1; i >= 0; i--) {
+                try {
+                    name = files[i].getAbsolutePath();
+                    if(name.endsWith(".chronicle")) {
+                        name = name.substring(basePath.length() + 1);
+                        name = name.substring(0, name.indexOf('.'));
+
+                        date = dateCache.parseCount(name);
+                        if (lastDate < date) {
+                            lastDate = date;
+                        }
+                    }
+                } catch (ParseException ignored) {
+                    // ignored
+                }
+            }
+
+            return (int)lastDate;
+        }
+
+        return -1;
     }
 }

@@ -45,11 +45,12 @@ class SingleChronicleQueueStore {
     }
 
     enum MetaDataField implements WireKey {
-        header
+        header,
+        roll
     }
 
     private final int cycle;
-    protected final Function<Bytes, Wire> wireSupplier;
+    private final Function<Bytes, Wire> wireSupplier;
     private final SingleChronicleQueueBuilder builder;
     private final File file;
     private final MappedFile mappedFile;
@@ -57,8 +58,18 @@ class SingleChronicleQueueStore {
     private final SingleChronicleQueueHeader header;
     private final ThreadLocal<Wire> wireInCache;
     private final ThreadLocal<Wire> wireOutCache;
+    private final ThreadLocal<Long[]> positionsCache;
 
-    SingleChronicleQueueStore(final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
+    /**
+     *
+     * @param builder       the SingleChronicleQueueBuilder
+     * @param cycle         the cycle this store refers to
+     * @param cycleFormat   the cycle format for folder creation
+     *
+     * @throws IOException
+     */
+    SingleChronicleQueueStore(
+        final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
 
         this.builder = builder;
         this.cycle = cycle;
@@ -74,6 +85,7 @@ class SingleChronicleQueueStore {
         this.header = new SingleChronicleQueueHeader(this.builder);
         this.wireInCache = wireCache(bytesStore::bytesForRead, wireSupplier);
         this.wireOutCache = wireCache(bytesStore::bytesForWrite, wireSupplier);
+        this.positionsCache = ThreadLocal.withInitial(() -> new Long[] { 0L, 0L} );
     }
 
     long dataPosition() {
@@ -85,46 +97,69 @@ class SingleChronicleQueueStore {
     }
 
     int cycle() {
-        return this.header.getRollCycle();
+        return this.cycle;
     }
 
-    long append(@NotNull WriteMarshallable writer) throws IOException {
-        checkRemainingForAppend();
+    long lastIndex() {
+        return this.header.getLastIndex();
+    }
 
-        int delay = builder.appendWaitDelay();
-        long lastByte = header.getWritePosition();
 
-        for (int i = builder.appendWaitLoops(); i >= 0; i--) {
-            if(bytesStore.compareAndSwapInt(lastByte, WireUtil.FREE, WireUtil.BUILDING)) {
-                header.setWritePosition(
-                    WireUtil.writeDataAt(wireOutCache.get(), lastByte, writer)
-                );
+    boolean appendRollMeta(int cycle) throws IOException {
+        if(header.casNextRollCycle(cycle)) {
+            // TODO: avoid new long[] { 0, 0 }
+            final Long positions[] = append(
+                positionsCache.get(),
+                true,
+                w -> w.write(MetaDataField.roll).int32(cycle)
+            );
 
-                return header.incrementLastIndex();
-            } else {
-                int header = bytesStore.readInt(lastByte);
-                if(WireUtil.isKnownLength(header)) {
-                    lastByte += Wires.lengthOf(header) + SPB_DATA_HEADER_SIZE;
-                } else {
-                    //
-                    if(delay > 0) {
-                        Jvm.pause(delay);
-                    }
-                }
-            }
+
+            header.setNextCycleMetaPosition(positions[0]);
+
+            return true;
         }
 
-        throw new AssertionError("Timeout waiting to append");
+        return false;
     }
 
-    long read(long position, @NotNull ReadMarshallable reader) {
-        int header = bytesStore.readVolatileInt(position);
-        if(Wires.isData(header)) {
+    /**
+     *
+     * @param writer
+     * @return
+     * @throws IOException
+     */
+    long append(@NotNull WriteMarshallable writer) throws IOException {
+        // TODO: avoid new long[] { 0, 0 }
+        final Long positions[] = append(positionsCache.get() , false, writer);
+
+        header.setWritePosition(positions[1]);
+        return header.incrementLastIndex();
+    }
+
+    /**
+     *
+     * @param position
+     * @param reader
+     * @return the new position, 0 if no data -position if roll
+     */
+    long read(long position, @NotNull ReadMarshallable reader) throws IOException {
+        final int spbHeader = bytesStore.readVolatileInt(position);
+        if(Wires.isData(spbHeader)) {
             return WireUtil.readDataAt(wireInCache.get(), position, reader);
-        } else if (WireUtil.isKnownLength(header)) {
-            // it it is meta-data and length is know, try a new read
-            position += Wires.lengthOf(header) + SPB_DATA_HEADER_SIZE;
-            return read(position, reader);
+        } else if (WireUtil.isKnownLength(spbHeader)) {
+            // In case of meta data, if we are found the position at which we have
+            // the roll meta data, we returns the next cycle (negative)
+            final StringBuilder sb = WireUtil.SBP.acquireStringBuilder();
+            final ValueIn vi = wireInAt(position + 4).read(sb);
+
+            if("roll".contentEquals(sb)) {
+                return -vi.int32();
+            } else {
+                // it it is meta-data and length is know, try a new read
+                position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                return read(position, reader);
+            }
         }
 
         return WireUtil.NO_DATA;
@@ -213,11 +248,54 @@ class SingleChronicleQueueStore {
         throw new AssertionError("Timeout waiting to build the file");
     }
 
+    /**
+     *
+     * @param writer
+     * @return
+     * @throws IOException
+     */
+    protected Long[] append(Long[] positions, boolean meta, @NotNull WriteMarshallable writer) throws IOException {
+        checkRemainingForAppend();
+
+        final int delay = builder.appendWaitDelay();
+        long lastWritePosition = header.getWritePosition();
+
+        for (int i = builder.appendWaitLoops(); i >= 0; i--) {
+            if(bytesStore.compareAndSwapInt(lastWritePosition, WireUtil.FREE, WireUtil.BUILDING)) {
+                positions[0] = lastWritePosition;
+                positions[1] = !meta
+                    ? WireUtil.writeDataAt(wireOutCache.get(), lastWritePosition, writer)
+                    : WireUtil.writeMetaAt(wireOutCache.get(), lastWritePosition, writer);
+
+                return positions;
+            } else {
+                int spbHeader = bytesStore.readInt(lastWritePosition);
+                if(WireUtil.isKnownLength(spbHeader)) {
+                    lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                } else {
+                    // TODO: wait strategy
+                    if(delay > 0) {
+                        Jvm.pause(delay);
+                    }
+                }
+            }
+        }
+
+        throw new AssertionError("Timeout waiting to append");
+    }
+
     // *************************************************************************
     // Wire Helpers
+    //
+    // TODO: cleanup once interface has been stabilized
+    //
     // *************************************************************************
 
     protected WireOut wireOut(@NotNull Bytes bytes) throws IOException {
+        return this.wireSupplier.apply(bytes);
+    }
+    protected WireOut wireOutAt(@NotNull Bytes bytes, long position) throws IOException {
+        bytes.writePosition(position);
         return this.wireSupplier.apply(bytes);
     }
 
@@ -227,6 +305,18 @@ class SingleChronicleQueueStore {
 
     protected WireIn wireIn(@NotNull Bytes bytes) throws IOException {
         return this.wireSupplier.apply(bytes);
+    }
+
+    protected WireIn wireInAt(@NotNull Bytes bytes, long offset) throws IOException {
+        bytes.readPosition(offset);
+        return this.wireSupplier.apply(bytes);
+    }
+
+    protected WireIn wireInAt(long offset) throws IOException {
+        WireIn wi = wireInCache.get();
+        wi.bytes().readPosition(offset);
+
+        return wi;
     }
 
     protected WireIn wireIn(@NotNull MappedFile file, long offset) throws IOException {

@@ -16,8 +16,11 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.pool.StringBuilderPool;
 import net.openhft.chronicle.core.values.LongValue;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -31,6 +34,8 @@ import java.util.function.Supplier;
 
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
+    public static final Logger LOGGER = LoggerFactory.getLogger(WireUtil.class);
+    public static final StringBuilderPool SBP = new StringBuilderPool();
 
     public static final int LENGTH_MASK    = Wires.LENGTH_MASK;
     public static final int NOT_READY      = Wires.NOT_READY;
