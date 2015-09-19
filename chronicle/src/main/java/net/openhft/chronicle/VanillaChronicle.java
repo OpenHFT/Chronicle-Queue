@@ -90,7 +90,8 @@ public class VanillaChronicle implements Chronicle {
         this.appenderCache = new ThreadLocal<>();
         this.name = builder.path().getName();
 
-        this.dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
+        this.dateCache = new VanillaDateCache(
+            builder.cycleFormat(), builder.cycleLength(), builder.cycleTimeZone());
 
         this.indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
         this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
