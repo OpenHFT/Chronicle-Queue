@@ -75,4 +75,14 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
     public void write8bitText(CharSequence charSequence) {
         wrapped.write8bitText(charSequence);
     }
+
+    @Override
+    public <E> E readEnum(long l, int i, Class<E> aClass) {
+        return wrapped.readEnum(l, i, aClass);
+    }
+
+    @Override
+    public void writeEnum(long l, int i, Object o) {
+        wrapped.writeEnum(l, i, o);
+    }
 }
