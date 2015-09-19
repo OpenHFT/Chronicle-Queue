@@ -22,7 +22,7 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.5</version>
+        <version>1.1.8</version>
         <relativePath />
     </parent>
 
@@ -31,7 +31,7 @@
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
-    <description>Java library for persisted low latency messaging (Java 6+)</description>
+    <description>Java library for persisted low latency messaging (Java 7+)</description>
 
     <dependencyManagement>
         <dependencies>
@@ -39,13 +39,13 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.21</version>
+                <version>3.4.23</version>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>lang</artifactId>
-                <version>6.7.4-SNAPSHOT</version>
+                <version>6.7.3</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>

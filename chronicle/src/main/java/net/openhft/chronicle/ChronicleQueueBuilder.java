@@ -27,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
@@ -377,6 +378,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         private String cycleFormat;
         private int cycleLength;
+        private TimeZone cycleTimeZone;
+
         private int defaultMessageSize;
         private int dataCacheCapacity;
         private int indexCacheCapacity;
@@ -398,6 +401,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.cycleFormat = VanillaChronicle.Cycle.DAYS.format();
             this.cycleLength = VanillaChronicle.Cycle.DAYS.length();
             this.entriesPerCycle = VanillaChronicle.Cycle.DAYS.entries();
+            this.cycleTimeZone = TimeZone.getTimeZone("GMT");
             this.cleanupOnClose = false;
             this.useCompressedObjectSerializer = true;
         }
@@ -479,6 +483,20 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public int cycleLength() {
             return cycleLength;
+        }
+
+        public VanillaChronicleQueueBuilder cycleTimeZone(String timeZone) {
+            this.cycleTimeZone = TimeZone.getTimeZone(timeZone);
+            return this;
+        }
+
+        public VanillaChronicleQueueBuilder cycleTimeZone(TimeZone timeZone) {
+            this.cycleTimeZone = timeZone;
+            return this;
+        }
+
+        public TimeZone cycleTimeZone() {
+            return cycleTimeZone;
         }
 
         public VanillaChronicleQueueBuilder indexBlockSize(long indexBlockSize) {
