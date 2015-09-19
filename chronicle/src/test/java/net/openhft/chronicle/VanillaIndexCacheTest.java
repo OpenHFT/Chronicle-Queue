@@ -25,15 +25,14 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 import static org.junit.Assert.*;
 
 public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
+    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
+
     private static Set<Long> createRangeSet(final long start, final long end) {
         final Set<Long> values = new TreeSet<>();
         long counter = start;
@@ -54,7 +53,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
                         .indexCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
         final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3,
                 FileLifecycleListener.FileLifecycleListeners.CONSOLE);
 
@@ -110,7 +109,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
                         .indexCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
         final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 10 + 3,
                 FileLifecycleListener.FileLifecycleListeners.CONSOLE);
 
@@ -158,7 +157,7 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
                         .indexCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
 
         // Use a small index file size so that the test frequently generates new index files
         final VanillaIndexCache cache = new VanillaIndexCache(builder, dateCache, 5,

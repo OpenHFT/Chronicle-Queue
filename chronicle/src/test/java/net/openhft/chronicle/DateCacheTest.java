@@ -27,9 +27,11 @@ import java.util.TimeZone;
 import static org.junit.Assert.assertEquals;
 
 public class DateCacheTest {
+    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
+
     @Test
     public void testFormat() {
-        VanillaDateCache dc = new VanillaDateCache("yyyyMMdd", 86400000);
+        VanillaDateCache dc = new VanillaDateCache("yyyyMMdd", 86400000, GMT);
         String str = dc.formatFor(16067);
         assertEquals("20131228", str);
         String str1 = dc.formatFor(1);
@@ -42,7 +44,7 @@ public class DateCacheTest {
         SimpleDateFormat sdf = new SimpleDateFormat(format);
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-        VanillaDateCache dc = new VanillaDateCache(format, 1000);
+        VanillaDateCache dc = new VanillaDateCache(format, 1000, GMT);
 
         int now = (int) (System.currentTimeMillis() / 1000);
         for (int i = 0; i < 10000; i++) {

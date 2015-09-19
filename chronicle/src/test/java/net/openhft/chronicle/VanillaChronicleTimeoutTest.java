@@ -25,11 +25,14 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.TimeZone;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
+
+    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
 
     // *************************************************************************
     //
@@ -88,7 +91,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(10000)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {

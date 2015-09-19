@@ -25,11 +25,14 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.TimeZone;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
+    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
+
     @Test
     public void testDataFor() throws IOException {
         final String baseDir = getTestPath();
@@ -40,7 +43,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
         try {
@@ -96,7 +99,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {
@@ -146,7 +149,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                             .dataCacheCapacity(32)
                             .cleanupOnClose(false);
 
-            final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000);
+            final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
             final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
             int cycle = (int) (System.currentTimeMillis() / 1000);
