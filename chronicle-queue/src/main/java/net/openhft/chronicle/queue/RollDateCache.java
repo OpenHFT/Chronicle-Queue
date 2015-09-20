@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.Maths;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -33,14 +34,14 @@ public class RollDateCache {
     private final DateFormat formatter;
     private final DateValue[] values;
     private final int length;
-    private final TimeZone timeZone;
+    private final ZoneId zoneId;
 
-    public RollDateCache(final int length, String format, final TimeZone timeZone) {
+    public RollDateCache(final int length, String format, final ZoneId zoneId) {
         this.length = length;
-        this.timeZone = timeZone;
+        this.zoneId = zoneId;
         this.values = new DateValue[SIZE];
         this.formatter = new SimpleDateFormat(format);
-        this.formatter.setTimeZone(this.timeZone);
+        this.formatter.setTimeZone(TimeZone.getTimeZone(zoneId));
     }
 
     /**
@@ -52,7 +53,7 @@ public class RollDateCache {
      */
     public String formatFor(int cycle) {
         long millis = (long) cycle * length;
-        int hash = (int) Maths.longHash(millis) & (SIZE - 1);
+        int hash = Maths.hash32(millis) & (SIZE - 1);
         DateValue dv = values[hash];
         if (dv == null || dv.millis != millis) {
             synchronized (formatter) {

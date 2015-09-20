@@ -58,6 +58,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public SingleChronicleQueueTest(WireType wireType) {
         this.wireType = wireType;
     }
+        
+    int cycle() {
+        return (int) (System.currentTimeMillis() / RollCycles.DAYS.length());
+    }
 
     // *************************************************************************
     //
@@ -98,6 +102,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndReadWithRolling() throws IOException {
+        
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
             .wireType(this.wireType)
             .rollCycle(RollCycle.SECONDS)

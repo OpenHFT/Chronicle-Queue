@@ -69,7 +69,7 @@ class SingleChronicleQueueStore {
 
         this.builder = builder;
         this.cycle = cycle;
-        this.wireSupplier = WireUtil.wireSupplierFor(builder.wireType());
+        this.wireSupplier = builder.wireType();
         this.file = new File(this.builder.path(), cycleFormat + ".chronicle");
 
         if(!this.file.getParentFile().exists()) {
@@ -145,7 +145,7 @@ class SingleChronicleQueueStore {
 
         if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
             return WireUtil.readData(wirePool.acquireForReadAt(position), reader);
-        } else if (WireUtil.isKnownLength(spbHeader)) {
+        } else if (Wires.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
             // the next cycle (negative)
             final StringBuilder sb = WireUtil.SBP.acquireStringBuilder();
@@ -172,7 +172,7 @@ class SingleChronicleQueueStore {
         long position = dataPosition();
         for(long i = 0; i <= index; i++) {
             final int spbHeader = bytesStore.readVolatileInt(position);
-            if(WireUtil.isData(spbHeader) && WireUtil.isKnownLength(spbHeader)) {
+            if (Wires.isData(spbHeader) && Wires.isKnownLength(spbHeader)) {
                 if(index == i) {
                     return position;
                 } else {
@@ -286,7 +286,7 @@ class SingleChronicleQueueStore {
                 return bounds;
             } else {
                 int spbHeader = bytesStore.readInt(lastWritePosition);
-                if(WireUtil.isKnownLength(spbHeader)) {
+                if (Wires.isKnownLength(spbHeader)) {
                     lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: wait strategy

@@ -15,16 +15,29 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.jetbrains.annotations.NotNull;
+public enum RollCycles implements RollCycle {
+    SECONDS("yyyyMMddHHmmss", 1000),
+    MINUTES("yyyyMMddHHmm", 60 * 1000),
+    HOURS("yyyyMMddHH", 60 * 60 * 1000),
+    DAYS("yyyyMMdd", 24 * 60 * 60 * 1000);
 
-import java.io.IOException;
+    static final RollCycles[] VALUES = values();
 
-/**
- * Created by peter.lawrey on 30/01/15.
- */
-public interface ChronicleQueueBuilder extends Cloneable {
+    final String format;
+    final int length;
 
-    @NotNull
-    public ChronicleQueue build() throws IOException;
+    RollCycles(String format, int length) {
+        this.format = format;
+        this.length = length;
+    }
 
+    @Override
+    public String format() {
+        return this.format;
+    }
+
+    @Override
+    public int length() {
+        return this.length;
+    }
 }

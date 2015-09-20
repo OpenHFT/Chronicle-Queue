@@ -15,10 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -63,7 +65,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         this.uuid = UUID.randomUUID();
         this.created = ZonedDateTime.now();
         this.user = System.getProperty("user.name");
-        this.host = WireUtil.hostName();
+        this.host = OS.getHostName();
 
         this.indexCount = 128 << 10;
         this.indexSpacing = 64;
@@ -183,7 +185,7 @@ class SingleChronicleQueueHeader implements Marshallable {
 
         private int length;
         private String format;
-        private String timeZone;
+        private ZoneId zoneId;
 
         //TODO: it appears there is a problem with IntValue (LongValue as workaround)
         private LongValue cycle;
@@ -195,7 +197,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         Roll(SingleChronicleQueueBuilder builder) {
             this.length = builder.rollCycleLength();
             this.format = builder.rollCycleFormat();
-            this.timeZone = builder.rollCycleTimeZone().getID();
+            this.zoneId = builder.rollCycleZoneId();
 
             this.cycle = null;
             this.nextCycle = null;
@@ -207,7 +209,7 @@ class SingleChronicleQueueHeader implements Marshallable {
             out.write(RollFields.cycle).int64forBinding(-1)
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
-                .write(RollFields.timeZone).text(timeZone)
+                    .write(RollFields.timeZone).text(zoneId.getId())
                 .write(RollFields.nextCycle).int64forBinding(-1)
                 .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
         }
@@ -217,7 +219,7 @@ class SingleChronicleQueueHeader implements Marshallable {
             in.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                .read(RollFields.timeZone).text(this, (o, i) -> o.timeZone = i)
+                    .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
                 .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
