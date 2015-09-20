@@ -78,15 +78,19 @@ class SingleChronicleQueueHeader implements Marshallable {
     }
 
     LongValue writePosition() {
-        return writePosition;
+        return this.writePosition;
     }
 
     LongValue index2Index() {
-        return index2Index;
+        return this.index2Index;
     }
 
     LongValue lastIndex() {
-        return lastIndex;
+        return this.lastIndex;
+    }
+
+    int indexCount() {
+        return this.indexCount;
     }
 
     @Override

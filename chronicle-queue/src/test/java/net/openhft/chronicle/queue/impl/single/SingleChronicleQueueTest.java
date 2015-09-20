@@ -83,4 +83,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
         }
     }
+
+    @Test
+    public void testAppendAndReadAtIndex() throws IOException {
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+
+        final ExcerptAppender appender = queue.createAppender();
+        for(int i=0; i<5; i++) {
+            final int n = i;
+            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
+            assertEquals(n, appender.lastWrittenIndex());
+        }
+
+        final ExcerptTailer tailer = queue.createTailer();
+        for(int i=0; i<5; i++) {
+            assertTrue(tailer.index(i));
+
+            final int n = i;
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+        }
+    }
 }

@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,8 +120,20 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public boolean index(long l) throws IOException {
-            throw new UnsupportedOperationException();
+        public boolean index(long index) throws IOException {
+            if(this.store == null) {
+                cycle(queue.lastCycle());
+                this.position = this.store.dataPosition();
+            }
+
+            long idxpos = this.store.positionForIndex(index);
+            if(idxpos != WireUtil.NO_INDEX) {
+                this.position = idxpos;
+
+                return true;
+            }
+
+            return false;
         }
 
         @Override
