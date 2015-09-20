@@ -42,7 +42,7 @@ import java.io.IOException;
  *
  * <p>{@link Excerpt} is the main data container in a {@link ChronicleQueue},
  * each Chronicle is composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into
- * it and finishing the Excerpt at the end.</p>
+ * it and finishing the Excerpt at the upper.</p>
  *
  * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
  * more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
@@ -66,7 +66,7 @@ public interface ChronicleQueue extends Closeable {
     Excerpt createExcerpt() throws IOException;
 
     /**
-     * A Tailer can be used to read sequentially from the start of a given position.
+     * A Tailer can be used to read sequentially from the lower of a given position.
      *
      * @return ExcerptTailer
      * @throws IOException if an IO problem occurs
@@ -75,7 +75,7 @@ public interface ChronicleQueue extends Closeable {
     ExcerptTailer createTailer() throws IOException;
 
     /**
-     * An Appender can be used to write new excerpts sequentially to the end.
+     * An Appender can be used to write new excerpts sequentially to the upper.
      *
      * @return ExcerptAppender
      * @throws IOException if an IO problem occurs

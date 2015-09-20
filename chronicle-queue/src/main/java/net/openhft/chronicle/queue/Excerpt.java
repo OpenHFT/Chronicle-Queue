@@ -38,7 +38,7 @@ public interface Excerpt extends ExcerptTailer {
      * This doesn't access the same index two. The best case is one additional comparison and the worst case is the
      * same.
      *
-     * @param startEnd   start (inclusive) to end (enclusive). Will be equal if no exact match is found.
+     * @param startEnd   lower (inclusive) to upper (enclusive). Will be equal if no exact match is found.
      * @param comparator to use for comparison.
      */
     void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator);
@@ -52,7 +52,7 @@ public interface Excerpt extends ExcerptTailer {
     boolean index(long l);
 
     /**
-     * Replay from the start.
+     * Replay from the lower.
      *
      * @return this Excerpt
      */
@@ -60,7 +60,7 @@ public interface Excerpt extends ExcerptTailer {
     Excerpt toStart();
 
     /**
-     * Wind to the end.
+     * Wind to the upper.
      *
      * @return this Excerpt
      */

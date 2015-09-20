@@ -16,31 +16,33 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class WirePool {
-    private final ThreadLocal<Wire> pool;
-    private final Supplier<Bytes> bytesSupplier;
+    private final ThreadLocal<Wire> readPool;
+    private final ThreadLocal<Wire> writePool;
+    private final BytesStore bytesStore;
     private final Function<Bytes, Wire> wireSupplier;
 
     public WirePool(
-            @NotNull final Supplier<Bytes> bytesSupplier,
+            @NotNull final BytesStore bytesStore,
             @NotNull final Function<Bytes, Wire> wireSupplier) {
 
-        this.pool = new ThreadLocal();
-        this.bytesSupplier = bytesSupplier;
+        this.bytesStore = bytesStore;
         this.wireSupplier= wireSupplier;
+        this.readPool = new ThreadLocal();
+        this.writePool = new ThreadLocal();
     }
 
     @ForceInline
     public WireIn acquireForReadAt(long position) {
-        Wire wire = pool.get();
+        Wire wire = readPool.get();
         if (wire == null) {
-            pool.set(wire = wireSupplier.apply(bytesSupplier.get()));
+            readPool.set(wire = wireSupplier.apply(bytesStore.bytesForRead()));
         }
 
         wire.bytes().readPosition(position);
@@ -49,9 +51,9 @@ public class WirePool {
 
     @ForceInline
     public WireOut acquireForWriteAt(long position) {
-        Wire wire = pool.get();
+        Wire wire = writePool.get();
         if (wire == null) {
-            pool.set(wire = wireSupplier.apply(bytesSupplier.get()));
+            writePool.set(wire = wireSupplier.apply(bytesStore.bytesForWrite()));
         }
 
         wire.bytes().writePosition(position);

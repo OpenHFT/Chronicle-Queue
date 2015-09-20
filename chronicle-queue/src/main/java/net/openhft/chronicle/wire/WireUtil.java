@@ -53,9 +53,9 @@ public class WireUtil {
     public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
     public static final long SPB_DATA_HEADER_SIZE = 4;
 
-    public static class WirePosition {
-        public long start = 0;
-        public long end = 0;
+    public static class WireBounds {
+        public long lower = NO_DATA;
+        public long upper = NO_DATA;
     }
 
     // *************************************************************************
@@ -110,12 +110,11 @@ public class WireUtil {
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
-        boolean result = WireInternal.readData(wireIn, null, reader);
-        if(result) {
-            return wireIn.bytes().readPosition();
-        }
+        // We assume that check on data readiness and type has been done by the
+        // caller
+        WireInternal.rawReadData(wireIn, reader);
 
-        return NO_DATA;
+        return wireIn.bytes().readPosition();
     }
 
     @ForceInline

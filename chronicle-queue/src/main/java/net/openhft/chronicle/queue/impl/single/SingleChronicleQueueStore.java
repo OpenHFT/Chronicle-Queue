@@ -53,9 +53,8 @@ class SingleChronicleQueueStore {
     private final MappedFile mappedFile;
     private final BytesStore bytesStore;
     private final SingleChronicleQueueHeader header;
-    private final WirePool wireInPool;
-    private final WirePool wireOutPool;
-    private final ThreadLocal<WirePosition> positionPool;
+    private final WirePool wirePool;
+    private final ThreadLocal<WireBounds> positionPool;
 
     /**
      *
@@ -79,9 +78,8 @@ class SingleChronicleQueueStore {
 
         this.mappedFile = MappedFile.mappedFile(this.file, this.builder.blockSize());
         this.bytesStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
-        this.wireInPool = new WirePool(bytesStore::bytesForRead, wireSupplier);
-        this.wireOutPool = new WirePool(bytesStore::bytesForWrite, wireSupplier);
-        this.positionPool = ThreadLocal.withInitial(() -> new WirePosition());
+        this.wirePool = new WirePool(bytesStore, wireSupplier);
+        this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
 
         this.header = new SingleChronicleQueueHeader(this.builder);
     }
@@ -105,14 +103,14 @@ class SingleChronicleQueueStore {
 
     boolean appendRollMeta(int cycle) throws IOException {
         if(header.casNextRollCycle(cycle)) {
-            final WirePosition position = append(
+            final WireBounds position = append(
                 positionPool.get(),
                 true,
                 w -> w.write(MetaDataField.roll).int32(cycle)
             );
 
 
-            header.setNextCycleMetaPosition(position.start);
+            header.setNextCycleMetaPosition(position.lower);
 
             return true;
         }
@@ -127,9 +125,9 @@ class SingleChronicleQueueStore {
      * @throws IOException
      */
     long append(@NotNull WriteMarshallable writer) throws IOException {
-        final WirePosition position = append(positionPool.get(), false, writer);
+        final WireBounds bounds = append(positionPool.get(), false, writer);
 
-        header.setWritePosition(position.end);
+        header.setWritePosition(bounds.upper);
         return header.incrementLastIndex();
     }
 
@@ -142,16 +140,16 @@ class SingleChronicleQueueStore {
     long read(long position, @NotNull ReadMarshallable reader) throws IOException {
         final int spbHeader = bytesStore.readVolatileInt(position);
         if(spbHeader == WireUtil.NO_DATA) {
-            return  WireUtil.NO_DATA;
+            return WireUtil.NO_DATA;
         }
 
-        if(Wires.isData(spbHeader)) {
-            return WireUtil.readData(wireInPool.acquireForReadAt(position), reader);
+        if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
+            return WireUtil.readData(wirePool.acquireForReadAt(position), reader);
         } else if (WireUtil.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
             // the next cycle (negative)
             final StringBuilder sb = WireUtil.SBP.acquireStringBuilder();
-            final ValueIn vi = wireInPool.acquireForReadAt(position + 4).read(sb);
+            final ValueIn vi = wirePool.acquireForReadAt(position + 4).read(sb);
 
             if("roll".contentEquals(sb)) {
                 return -vi.int32();
@@ -161,6 +159,7 @@ class SingleChronicleQueueStore {
                 return read(position, reader);
             }
         }
+
         return WireUtil.NO_DATA;
     }
 
@@ -205,7 +204,7 @@ class SingleChronicleQueueStore {
     protected SingleChronicleQueueStore buildHeader() throws IOException {
         if(bytesStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
             writeMeta(
-                wireOutPool.acquireForWriteAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForWriteAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
                 w -> w.write(MetaDataField.header).typedMarshallable(header)
             );
 
@@ -213,7 +212,7 @@ class SingleChronicleQueueStore {
             // null and initialized when needed. It may be better to initialize
             // them upon header instantiation (?)
             long readPosition = readMeta(
-                wireInPool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
                 w -> w.read().marshallable(header)
             );
 
@@ -233,7 +232,7 @@ class SingleChronicleQueueStore {
             waitForTheHeaderToBeBuilt();
 
             readMeta(
-                wireInPool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
                 w -> w.read().marshallable(header)
             );
         }
@@ -271,7 +270,7 @@ class SingleChronicleQueueStore {
      * @return
      * @throws IOException
      */
-    protected WirePosition append(WirePosition position, boolean meta, @NotNull WriteMarshallable writer) throws IOException {
+    protected WireBounds append(WireBounds bounds, boolean meta, @NotNull WriteMarshallable writer) throws IOException {
         checkRemainingForAppend();
 
         final int delay = builder.appendWaitDelay();
@@ -279,12 +278,12 @@ class SingleChronicleQueueStore {
 
         for (int i = builder.appendWaitLoops(); i >= 0; i--) {
             if(bytesStore.compareAndSwapInt(lastWritePosition, WireUtil.FREE, WireUtil.BUILDING)) {
-                position.start = lastWritePosition;
-                position.end = !meta
-                    ? WireUtil.writeData(wireOutPool.acquireForWriteAt(lastWritePosition), writer)
-                    : WireUtil.writeMeta(wireOutPool.acquireForWriteAt(lastWritePosition), writer);
+                bounds.lower = lastWritePosition;
+                bounds.upper = !meta
+                    ? WireUtil.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
+                    : WireUtil.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer);
 
-                return position;
+                return bounds;
             } else {
                 int spbHeader = bytesStore.readInt(lastWritePosition);
                 if(WireUtil.isKnownLength(spbHeader)) {
