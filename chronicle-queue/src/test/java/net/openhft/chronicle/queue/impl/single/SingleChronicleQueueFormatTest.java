@@ -19,7 +19,6 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;

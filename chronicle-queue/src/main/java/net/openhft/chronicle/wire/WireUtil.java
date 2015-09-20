@@ -16,8 +16,8 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
-import net.openhft.chronicle.core.values.LongValue;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
@@ -45,6 +44,7 @@ public class WireUtil {
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
     public static final int NO_DATA        = 0;
+    public static final int NO_INDEX       = -1;
 
     public static final long SPB_HEADER_BYTE      = 0;
     public static final long SPB_HEADER_BYTE_SIZE = 8;
@@ -52,6 +52,11 @@ public class WireUtil {
     public static final long SPB_HEADER_BUILDING  = 0x1;
     public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
     public static final long SPB_DATA_HEADER_SIZE = 4;
+
+    public static class WirePosition {
+        public long start = 0;
+        public long end = 0;
+    }
 
     // *************************************************************************
     // MISC
@@ -75,24 +80,16 @@ public class WireUtil {
             .getLong();
     }
 
-    public static ThreadLocal<Wire> wireCache(
-            @NotNull final Supplier<Bytes> bytesSupplier,
-            @NotNull final Function<Bytes, Wire> wireSupplier) {
-        return ThreadLocal.withInitial(() -> {
-            try {
-                return wireSupplier.apply(bytesSupplier.get());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
     // *************************************************************************
     // WIRE
     // *************************************************************************
 
     public static boolean isKnownLength(int len) {
         return (len & (Wires.META_DATA | Wires.LENGTH_MASK)) != Wires.UNKNOWN_LENGTH;
+    }
+
+    public static boolean isData(int len) {
+        return len != 0 && Wires.isData(len);
     }
 
     public static final Function<Bytes,Wire> wireSupplierFor(WireType type) {
@@ -108,96 +105,47 @@ public class WireUtil {
         throw new IllegalArgumentException("Unknown WireType (" + type + ")");
     }
 
-    public static final Supplier<LongValue> longValueSupplierFor(WireType type) {
-        switch (type) {
-            case BINARY:
-                return BinaryLongReference::new;
-            case TEXT:
-                return TextLongReference::new;
-            case RAW:
-                return BinaryLongReference::new;
-        }
-
-        throw new IllegalArgumentException("Unknown WireType (" + type + ")");
-    }
-
-    public static <T extends ReadMarshallable> boolean readData(
+    @ForceInline
+    public static <T extends ReadMarshallable> long readData(
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
-        return WireInternal.readData(wireIn, null, reader);
-    }
-
-    public static <T extends ReadMarshallable> long readDataAt(
-        @NotNull WireIn wireIn,
-        long position,
-        @NotNull T reader) {
-
-        final Bytes rb = wireIn.bytes().readPosition(position);
         boolean result = WireInternal.readData(wireIn, null, reader);
         if(result) {
-            return rb.readPosition();
+            return wireIn.bytes().readPosition();
         }
 
         return NO_DATA;
     }
 
-    public static <T extends WriteMarshallable> T writeData(
-        @NotNull WireOut wireOut,
-        @NotNull T writer) {
+    @ForceInline
+    public static <T extends WriteMarshallable> long writeData(
+            @NotNull WireOut wireOut,
+            @NotNull T writer) {
 
         WireInternal.writeData(wireOut, false, false, writer);
 
-        return writer;
+        return wireOut.bytes().writePosition();
     }
 
-    public static <T extends WriteMarshallable> long writeDataAt(
-        @NotNull WireOut wireOut,
-        long position,
-        @NotNull T writer) {
-
-        final Bytes wb = wireOut.bytes().writePosition(position);
-        WireInternal.writeData(wireOut, false, false, writer);
-
-        return wb.writePosition();
-    }
-
-    public static <T extends WriteMarshallable> T writeMeta(
-        @NotNull WireOut wireOut,
-        @NotNull T writer) {
+    @ForceInline
+    public static <T extends WriteMarshallable> long writeMeta(
+            @NotNull WireOut wireOut,
+            @NotNull T writer) {
 
         WireInternal.writeData(wireOut, true, false, writer);
 
-        return writer;
+        return wireOut.bytes().writePosition();
     }
 
-    public static <T extends WriteMarshallable> long writeMetaAt(
-        @NotNull WireOut wireOut,
-        long position,
-        @NotNull T writer) {
+    @ForceInline
+    public static <T extends ReadMarshallable> long readMeta(
+            @NotNull WireIn wireIn,
+            @NotNull T reader) {
 
-        final Bytes wb = wireOut.bytes().writePosition(position);
-        WireInternal.writeData(wireOut, true, false, writer);
-
-        return wb.writePosition();
-    }
-
-    public static <T extends ReadMarshallable> boolean readMeta(
-        @NotNull WireIn wireIn,
-        @NotNull T reader) {
-
-        return WireInternal.readData(wireIn, reader, null);
-    }
-
-    public static <T extends ReadMarshallable> long readMetaAt(
-        @NotNull WireIn wireIn,
-        long position,
-        @NotNull T reader) {
-
-        final Bytes rb = wireIn.bytes().readPosition(position);
         boolean result = WireInternal.readData(wireIn, reader, null);
         if(result) {
-            return rb.readPosition();
+            return wireIn.bytes().readPosition();
         }
 
         return NO_DATA;
