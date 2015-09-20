@@ -24,8 +24,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 
 public abstract class AbstractChronicleQueue implements ChronicleQueue {
-
-
     @Override
     public String name() {
         throw new UnsupportedOperationException("Not implemented");

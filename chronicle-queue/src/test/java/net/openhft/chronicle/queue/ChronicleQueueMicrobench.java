@@ -15,9 +15,9 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.junit.Test;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
@@ -53,7 +53,7 @@ public class ChronicleQueueMicrobench {
     //
     // *************************************************************************
 
-    protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
+    protected ChainedOptionsBuilder newOptionsBuilder() {
         String className = getClass().getSimpleName();
 
         final ChainedOptionsBuilder runnerOptions = new OptionsBuilder()
@@ -77,7 +77,7 @@ public class ChronicleQueueMicrobench {
                 file.delete();
             } else {
                 file.getParentFile().mkdirs();
-                file.createNewFile();
+//                file.createNewFile();
             }
 
             runnerOptions.resultFormat(ResultFormatType.JSON);
@@ -111,8 +111,7 @@ public class ChronicleQueueMicrobench {
     //
     // *************************************************************************
 
-    @Test
-    public void run() throws Exception {
-        new Runner(newOptionsBuilder().build()).run();
+    public static void main(String[] args) throws RunnerException {
+        new Runner(new ChronicleQueueMicrobench().newOptionsBuilder().build()).run();
     }
 }

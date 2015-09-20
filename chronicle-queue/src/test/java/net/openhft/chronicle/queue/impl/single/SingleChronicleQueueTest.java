@@ -31,6 +31,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         test
     }
 
+    int cycle() {
+        return (int) (System.currentTimeMillis() / RollCycles.DAYS.length());
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -67,7 +71,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendAndReadWithRolling() throws IOException {
         final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
-            .rollCycle(RollCycle.SECONDS)
+                .rollCycle(RollCycles.SECONDS)
             .build();
 
         final ExcerptAppender appender = queue.createAppender();

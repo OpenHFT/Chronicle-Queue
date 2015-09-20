@@ -22,14 +22,9 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.function.Function;
 
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
@@ -38,9 +33,7 @@ public class WireUtil {
 
     public static final int LENGTH_MASK    = Wires.LENGTH_MASK;
     public static final int NOT_READY      = Wires.NOT_READY;
-    public static final int META_DATA      = Wires.META_DATA;
     public static final int UNKNOWN_LENGTH = Wires.UNKNOWN_LENGTH;
-    public static final int MAX_LENGTH     = LENGTH_MASK;
     public static final int FREE           = 0x0;
     public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
     public static final int NO_DATA        = 0;
@@ -62,18 +55,6 @@ public class WireUtil {
     // MISC
     // *************************************************************************
 
-    public static String hostName() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            try {
-                return Files.readAllLines(Paths.get("etc", "hostname")).get(0);
-            } catch (Exception e2) {
-                return "localhost";
-            }
-        }
-    }
-
     public static long asLong(@NotNull String str) {
         return ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1))
             .order(ByteOrder.nativeOrder())
@@ -83,27 +64,6 @@ public class WireUtil {
     // *************************************************************************
     // WIRE
     // *************************************************************************
-
-    public static boolean isKnownLength(int len) {
-        return (len & (Wires.META_DATA | Wires.LENGTH_MASK)) != Wires.UNKNOWN_LENGTH;
-    }
-
-    public static boolean isData(int len) {
-        return len != 0 && Wires.isData(len);
-    }
-
-    public static final Function<Bytes,Wire> wireSupplierFor(WireType type) {
-        switch (type) {
-            case BINARY:
-                return BinaryWire::new;
-            case TEXT:
-                return TextWire::new;
-            case RAW:
-                return RawWire::new;
-        }
-
-        throw new IllegalArgumentException("Unknown WireType (" + type + ")");
-    }
 
     @ForceInline
     public static <T extends ReadMarshallable> long readData(
@@ -117,6 +77,20 @@ public class WireUtil {
         return wireIn.bytes().readPosition();
     }
 
+    public static <T extends ReadMarshallable> long readDataAt(
+            @NotNull WireIn wireIn,
+            long position,
+            @NotNull T reader) {
+
+        final Bytes rb = wireIn.bytes().readPosition(position);
+        boolean result = WireInternal.readData(wireIn, null, reader);
+        if (result) {
+            return rb.readPosition();
+        }
+
+        return NO_DATA;
+    }
+
     @ForceInline
     public static <T extends WriteMarshallable> long writeData(
             @NotNull WireOut wireOut,
@@ -125,6 +99,18 @@ public class WireUtil {
         WireInternal.writeData(wireOut, false, false, writer);
 
         return wireOut.bytes().writePosition();
+    }
+
+
+    public static <T extends WriteMarshallable> long writeDataAt(
+            @NotNull WireOut wireOut,
+            long position,
+            @NotNull T writer) {
+
+        final Bytes wb = wireOut.bytes().writePosition(position);
+        WireInternal.writeData(wireOut, false, false, writer);
+
+        return wb.writePosition();
     }
 
     @ForceInline
@@ -137,11 +123,36 @@ public class WireUtil {
         return wireOut.bytes().writePosition();
     }
 
+    public static <T extends WriteMarshallable> long writeMetaAt(
+            @NotNull WireOut wireOut,
+            long position,
+            @NotNull T writer) {
+
+        final Bytes wb = wireOut.bytes().writePosition(position);
+        WireInternal.writeData(wireOut, true, false, writer);
+
+        return wb.writePosition();
+    }
+
     @ForceInline
     public static <T extends ReadMarshallable> long readMeta(
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
+        boolean result = WireInternal.readData(wireIn, reader, null);
+        if (result) {
+            return wireIn.bytes().readPosition();
+        }
+
+        return NO_DATA;
+    }
+
+    public static <T extends ReadMarshallable> long readMetaAt(
+            @NotNull WireIn wireIn,
+            long position,
+            @NotNull T reader) {
+
+        final Bytes rb = wireIn.bytes().readPosition(position);
         boolean result = WireInternal.readData(wireIn, reader, null);
         if(result) {
             return wireIn.bytes().readPosition();

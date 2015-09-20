@@ -16,7 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
-import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireUtil;
 import org.junit.Test;
@@ -35,7 +35,7 @@ public class SingleChronicleQueueFormatTest extends ChronicleQueueTestBase {
     }
 
     int cycle() {
-        return (int) (System.currentTimeMillis() / RollCycle.DAYS.length());
+        return (int) (System.currentTimeMillis() / RollCycles.DAYS.length());
     }
 
     // *************************************************************************

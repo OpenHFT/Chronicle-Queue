@@ -37,7 +37,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.dateCache = new RollDateCache(
             builder.rollCycleLength(),
             builder.rollCycleFormat(),
-            builder.rollCycleTimeZone());
+                builder.rollCycleZoneId());
 
         this.builder = builder;
         this.stores = HashIntObjMaps.newMutableMap();
