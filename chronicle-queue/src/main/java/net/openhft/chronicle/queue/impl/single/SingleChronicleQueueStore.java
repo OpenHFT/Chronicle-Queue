@@ -140,10 +140,10 @@ class SingleChronicleQueueStore {
     long read(long position, @NotNull ReadMarshallable reader) throws IOException {
         final int spbHeader = bytesStore.readVolatileInt(position);
         if(spbHeader == WireUtil.NO_DATA) {
-            return  WireUtil.NO_DATA;
+            return WireUtil.NO_DATA;
         }
 
-        if(Wires.isData(spbHeader)) {
+        if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
             return WireUtil.readData(wirePool.acquireForReadAt(position), reader);
         } else if (WireUtil.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
@@ -159,6 +159,7 @@ class SingleChronicleQueueStore {
                 return read(position, reader);
             }
         }
+
         return WireUtil.NO_DATA;
     }
 

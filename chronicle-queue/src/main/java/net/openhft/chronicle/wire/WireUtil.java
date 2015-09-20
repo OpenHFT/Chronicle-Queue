@@ -110,12 +110,11 @@ public class WireUtil {
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
-        boolean result = WireInternal.readData(wireIn, null, reader);
-        if(result) {
-            return wireIn.bytes().readPosition();
-        }
+        // We assume that check on data readiness and type has been done by the
+        // caller
+        WireInternal.rawReadData(wireIn, reader);
 
-        return NO_DATA;
+        return wireIn.bytes().readPosition();
     }
 
     @ForceInline
