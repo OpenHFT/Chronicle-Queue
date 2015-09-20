@@ -43,7 +43,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean index(long l) throws IOException;;
 
     /**
-     * Replay from the start.
+     * Replay from the lower.
      *
      * @return this Excerpt
      */
@@ -51,7 +51,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     ExcerptTailer toStart() throws IOException;;
 
     /**
-     * Wind to the end.
+     * Wind to the upper.
      *
      * @return this Excerpt
      */

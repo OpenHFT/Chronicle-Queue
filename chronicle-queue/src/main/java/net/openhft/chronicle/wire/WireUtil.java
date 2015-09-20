@@ -53,9 +53,9 @@ public class WireUtil {
     public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
     public static final long SPB_DATA_HEADER_SIZE = 4;
 
-    public static class WirePosition {
-        public long start = 0;
-        public long end = 0;
+    public static class WireBounds {
+        public long lower = NO_DATA;
+        public long upper = NO_DATA;
     }
 
     // *************************************************************************
