@@ -18,17 +18,45 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     enum TestKey implements WireKey {
         test
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+            { WireType.TEXT   },
+            { WireType.BINARY }
+        });
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private final WireType wireType;
+
+    /**
+     *
+     * @param wireType
+     */
+    public SingleChronicleQueueTest(WireType wireType) {
+        this.wireType = wireType;
     }
 
     // *************************************************************************
@@ -37,7 +65,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
 
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<10; i++) {
@@ -48,7 +78,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
 
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<2; i++) {
@@ -66,7 +98,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndReadWithRolling() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+            .wireType(this.wireType)
             .rollCycle(RollCycle.SECONDS)
             .build();
 
@@ -86,7 +119,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndReadAtIndex() throws IOException {
-        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir()).build();
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
 
         final ExcerptAppender appender = queue.createAppender();
         for(int i=0; i<5; i++) {
