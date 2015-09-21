@@ -19,6 +19,8 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +35,7 @@ import static net.openhft.chronicle.wire.WireUtil.*;
  * TODO:
  * - indexing
  */
-class SingleChronicleQueueStore {
+class SingleChronicleQueueStore implements ReferenceCounted {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(
             SingleChronicleQueueHeader.class,
@@ -55,6 +57,7 @@ class SingleChronicleQueueStore {
     private final SingleChronicleQueueHeader header;
     private final WirePool wirePool;
     private final ThreadLocal<WireBounds> positionPool;
+    private final ReferenceCounter refCount;
 
     /**
      *
@@ -80,6 +83,7 @@ class SingleChronicleQueueStore {
         this.bytesStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
         this.wirePool = new WirePool(bytesStore, wireSupplier);
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
+        this.refCount = ReferenceCounter.onReleased(this::performRelease);
 
         this.header = new SingleChronicleQueueHeader(this.builder);
     }
@@ -298,5 +302,24 @@ class SingleChronicleQueueStore {
         }
 
         throw new AssertionError("Timeout waiting to append");
+    }
+
+    private synchronized void performRelease() {
+        this.mappedFile.close();
+    }
+
+    @Override
+    public void reserve() throws IllegalStateException {
+        this.refCount.reserve();
+    }
+
+    @Override
+    public void release() throws IllegalStateException {
+        this.refCount.release();
+    }
+
+    @Override
+    public long refCount() {
+        return this.refCount.get();
     }
 }

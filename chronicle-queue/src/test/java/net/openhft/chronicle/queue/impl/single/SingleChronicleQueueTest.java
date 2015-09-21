@@ -23,6 +23,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -57,10 +58,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      */
     public SingleChronicleQueueTest(WireType wireType) {
         this.wireType = wireType;
-    }
-        
-    int cycle() {
-        return (int) (System.currentTimeMillis() / RollCycles.DAYS.length());
     }
 
     // *************************************************************************
@@ -117,6 +114,34 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         final ExcerptTailer tailer =queue.createTailer().toStart();
         for(int i=0; i<20; i++) {
+            final int n = i;
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+        }
+    }
+
+    @Test
+    public void testAppendAndReadWithRolling2() throws IOException {
+        final File dir = getTmpDir();
+
+        for(int i=0; i<10; i++) {
+            final int n = i;
+
+            new SingleChronicleQueueBuilder(dir)
+                .wireType(this.wireType)
+                .rollCycle(RollCycles.SECONDS)
+                .build()
+                .createAppender().writeDocument(w -> w.write(TestKey.test).int32(n));
+
+            Jvm.pause(500);
+        }
+
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(dir)
+            .wireType(this.wireType)
+            .rollCycle(RollCycles.SECONDS)
+            .build();
+
+        final ExcerptTailer tailer =queue.createTailer().toStart();
+        for(int i=0; i<10; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
         }

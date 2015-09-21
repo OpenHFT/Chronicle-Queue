@@ -15,8 +15,9 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 /**
  * The main data container of a {@link ChronicleQueue}, an extended version of {@link ExcerptTailer} which also facilitates
@@ -46,10 +47,19 @@ public interface Excerpt extends ExcerptTailer {
     /**
      * Randomly select an Excerpt.
      *
-     * @param l index to look up
+     * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(long l);
+    boolean index(long index) throws IOException;
+
+    /**
+     * Randomly select an Excerpt.
+     *
+     * @param cycle cycle
+     * @param index index to look up
+     * @return true if this is a valid entries and not padding.
+     */
+    boolean index(int cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.

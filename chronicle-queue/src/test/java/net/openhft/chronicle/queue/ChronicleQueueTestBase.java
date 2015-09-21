@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -30,6 +32,17 @@ import java.util.Set;
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
     protected static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
+
+    protected static int cycle(RollCycle rollCycle) {
+        return (int) (System.currentTimeMillis() / rollCycle.length());
+    }
+
+    protected static RollDateCache dateCache(SingleChronicleQueueBuilder builder) {
+        return new RollDateCache(
+            builder.rollCycleLength(),
+            builder.rollCycleFormat(),
+            builder.rollCycleZoneId());
+    }
 
     // *************************************************************************
     // JUNIT Rules
@@ -61,36 +74,17 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    protected File getTmpFile() {
-        return getTmpFile(null);
-    }
-
-    protected File getTmpFile(String qualifier) {
-        try {
-            final File tmpFile = Files.createTempFile(
-                getClass().getSimpleName() + "-",
-                "-" + ((qualifier != null && !qualifier.isEmpty())
-                    ? testName.getMethodName() + "-" + qualifier
-                    : testName.getMethodName()))
-                .toFile();
-
-            DeleteStatic.INSTANCE.add(tmpFile);
-
-            //LOGGER.info("Tmp file: {}", tmpFile);
-
-            return tmpFile;
-        } catch(IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     protected File getTmpDir() {
         try {
             final File tmpDir = Files.createTempDirectory(getClass().getSimpleName() + "-").toFile();
 
             DeleteStatic.INSTANCE.add(tmpDir);
 
-            //LOGGER.info("Tmp dir: {}", tmpDir);
+            // Log the temporary directory in OSX as it is quite obscure
+            if(OS.isMacOSX()) {
+                LOGGER.info("Tmp dir: {}", tmpDir);
+            }
+
             return tmpDir;
         } catch(IOException e) {
             throw new IllegalStateException(e);
