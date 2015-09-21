@@ -105,7 +105,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
             .wireType(this.wireType)
-            .rollCycle(RollCycle.SECONDS)
+            .rollCycle(RollCycles.SECONDS)
             .build();
 
         final ExcerptAppender appender = queue.createAppender();
