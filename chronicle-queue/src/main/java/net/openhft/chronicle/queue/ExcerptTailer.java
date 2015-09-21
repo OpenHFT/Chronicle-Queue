@@ -37,10 +37,19 @@ public interface ExcerptTailer extends ExcerptCommon {
     /**
      * Randomly select an Excerpt.
      *
-     * @param l index to look up
+     * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(long l) throws IOException;;
+    boolean index(long index) throws IOException;
+
+    /**
+     * Randomly select an Excerpt.
+     *
+     * @param cycle cycle
+     * @param index index to look up
+     * @return true if this is a valid entries and not padding.
+     */
+    boolean index(int cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.

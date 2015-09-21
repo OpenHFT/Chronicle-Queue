@@ -22,13 +22,10 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class SingleChronicleQueueExcerpts {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
     /**
      * Appender
@@ -55,6 +52,7 @@ public class SingleChronicleQueueExcerpts {
                 int nextCycle = queue.cycle();
                 if(this.store != null) {
                     this.store.appendRollMeta(nextCycle);
+                    this.queue.release(this.store);
                 }
 
                 this.cycle = nextCycle;
@@ -137,6 +135,14 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public boolean index(int cycle, long index) throws IOException {
+            cycle(cycle);
+            this.position = this.store.dataPosition();
+
+            return index(index);
+        }
+
+        @Override
         public ExcerptTailer toStart() throws IOException {
             cycle(queue.firstCycle());
             this.position = store.dataPosition();
@@ -158,8 +164,14 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void cycle(int cycle) throws IOException {
-            this.cycle = cycle;
-            this.store = queue.storeForCycle(this.cycle);
+            if(this.cycle != cycle) {
+                if(null != this.store) {
+                    this.queue.release(this.store);
+                }
+
+                this.cycle = cycle;
+                this.store = this.queue.storeForCycle(this.cycle);
+            }
         }
     }
 }

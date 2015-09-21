@@ -72,23 +72,7 @@ public class WireUtil {
 
         // We assume that check on data readiness and type has been done by the
         // caller
-        WireInternal.rawReadData(wireIn, reader);
-
-        return wireIn.bytes().readPosition();
-    }
-
-    public static <T extends ReadMarshallable> long readDataAt(
-            @NotNull WireIn wireIn,
-            long position,
-            @NotNull T reader) {
-
-        final Bytes rb = wireIn.bytes().readPosition(position);
-        boolean result = WireInternal.readData(wireIn, null, reader);
-        if (result) {
-            return rb.readPosition();
-        }
-
-        return NO_DATA;
+        return rawRead(wireIn, reader);
     }
 
     @ForceInline
@@ -101,18 +85,6 @@ public class WireUtil {
         return wireOut.bytes().writePosition();
     }
 
-
-    public static <T extends WriteMarshallable> long writeDataAt(
-            @NotNull WireOut wireOut,
-            long position,
-            @NotNull T writer) {
-
-        final Bytes wb = wireOut.bytes().writePosition(position);
-        WireInternal.writeData(wireOut, false, false, writer);
-
-        return wb.writePosition();
-    }
-
     @ForceInline
     public static <T extends WriteMarshallable> long writeMeta(
             @NotNull WireOut wireOut,
@@ -123,41 +95,35 @@ public class WireUtil {
         return wireOut.bytes().writePosition();
     }
 
-    public static <T extends WriteMarshallable> long writeMetaAt(
-            @NotNull WireOut wireOut,
-            long position,
-            @NotNull T writer) {
-
-        final Bytes wb = wireOut.bytes().writePosition(position);
-        WireInternal.writeData(wireOut, true, false, writer);
-
-        return wb.writePosition();
-    }
-
     @ForceInline
     public static <T extends ReadMarshallable> long readMeta(
             @NotNull WireIn wireIn,
             @NotNull T reader) {
 
-        boolean result = WireInternal.readData(wireIn, reader, null);
-        if (result) {
-            return wireIn.bytes().readPosition();
-        }
-
-        return NO_DATA;
+        // We assume that check on meta-data readiness and type has been done by
+        // the caller
+        return rawRead(wireIn, reader);
     }
 
-    public static <T extends ReadMarshallable> long readMetaAt(
-            @NotNull WireIn wireIn,
-            long position,
-            @NotNull T reader) {
+    @ForceInline
+    static long rawRead(@NotNull WireIn wireIn, @NotNull ReadMarshallable dataConsumer) {
 
-        final Bytes rb = wireIn.bytes().readPosition(position);
-        boolean result = WireInternal.readData(wireIn, reader, null);
-        if(result) {
-            return wireIn.bytes().readPosition();
+        final Bytes<?> bytes = wireIn.bytes();
+        final int header = bytes.readVolatileInt(bytes.readPosition());
+        final int len = Wires.lengthOf(header);
+
+        bytes.readSkip(4);
+
+        final long limit0 = bytes.readLimit();
+        final long limit = bytes.readPosition() + (long) len;
+        try {
+            bytes.readLimit(limit);
+            dataConsumer.readMarshallable(wireIn);
+        } finally {
+            bytes.readLimit(limit0);
+            bytes.readPosition(limit);
         }
 
-        return NO_DATA;
+        return bytes.readPosition();
     }
 }

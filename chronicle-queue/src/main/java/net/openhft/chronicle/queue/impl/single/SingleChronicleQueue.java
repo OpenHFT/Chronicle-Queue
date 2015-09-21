@@ -32,6 +32,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final SingleChronicleQueueBuilder builder;
     private final RollDateCache dateCache;
     private final Map<Integer, SingleChronicleQueueStore> stores;
+    private int firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.dateCache = new RollDateCache(
@@ -41,6 +42,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         this.builder = builder;
         this.stores = HashIntObjMaps.newMutableMap();
+        this.firstCycle = -1;
     }
 
     @Override
@@ -67,9 +69,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                     cycle,
                     this.dateCache.formatFor(cycle)).buildHeader()
             );
+        } else {
+            format.reserve();
         }
 
         return format;
+    }
+
+    synchronized void release(SingleChronicleQueueStore store) {
+        store.release();
+        if(store.refCount() <= 0) {
+            stores.remove(store.cycle());
+        }
     }
 
     int cycle() {
@@ -77,7 +88,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     //TODO: reduce garbage
-    int firstCycle() {
+    synchronized int firstCycle() {
+        if(-1 != firstCycle ) {
+            return firstCycle;
+        }
+
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
@@ -103,10 +118,10 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 }
             }
 
-            return (int)firstDate;
+            firstCycle = (int)firstDate;
         }
 
-        return -1;
+        return firstCycle;
     }
 
     //TODO: reduce garbage
