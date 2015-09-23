@@ -15,27 +15,38 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.queue.impl.WirePool;
+import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Function;
 
-import static net.openhft.chronicle.wire.WireUtil.*;
+import static net.openhft.chronicle.wire.WireUtil.BUILDING;
+import static net.openhft.chronicle.wire.WireUtil.HEADER_OFFSET;
+import static net.openhft.chronicle.wire.WireUtil.NOT_INITIALIZED;
+import static net.openhft.chronicle.wire.WireUtil.NOT_READY;
+import static net.openhft.chronicle.wire.WireUtil.SPB_DATA_HEADER_SIZE;
+import static net.openhft.chronicle.wire.WireUtil.WireBounds;
+import static net.openhft.chronicle.wire.WireUtil.readMeta;
+import static net.openhft.chronicle.wire.WireUtil.writeMeta;
 
 /**
  * TODO:
  * - indexing
  */
-class SingleChronicleQueueStore implements ReferenceCounted {
+class SingleChronicleQueueWireStore implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(
             SingleChronicleQueueHeader.class,
@@ -49,7 +60,6 @@ class SingleChronicleQueueStore implements ReferenceCounted {
     }
 
     private final int cycle;
-    private final Function<Bytes, Wire> wireSupplier;
     private final SingleChronicleQueueBuilder builder;
     private final File file;
     private final MappedFile mappedFile;
@@ -67,12 +77,11 @@ class SingleChronicleQueueStore implements ReferenceCounted {
      *
      * @throws IOException
      */
-    SingleChronicleQueueStore(
+    SingleChronicleQueueWireStore(
         final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
 
         this.builder = builder;
         this.cycle = cycle;
-        this.wireSupplier = builder.wireType();
         this.file = new File(this.builder.path(), cycleFormat + ".chronicle");
 
         if(!this.file.getParentFile().exists()) {
@@ -80,32 +89,37 @@ class SingleChronicleQueueStore implements ReferenceCounted {
         }
 
         this.mappedFile = MappedFile.mappedFile(this.file, this.builder.blockSize());
-        this.bytesStore = mappedFile.acquireByteStore(SPB_HEADER_BYTE);
-        this.wirePool = new WirePool(bytesStore, wireSupplier);
+        this.bytesStore = mappedFile.acquireByteStore(HEADER_OFFSET);
+        this.wirePool = new WirePool(bytesStore, builder.wireType());
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
 
         this.header = new SingleChronicleQueueHeader(this.builder);
     }
 
-    long dataPosition() {
+    @Override
+    public long dataPosition() {
         return this.header.getDataPosition();
     }
 
-    long writePosition() {
+    @Override
+    public long writePosition() {
         return this.header.getWritePosition();
     }
 
-    int cycle() {
+    @Override
+    public int cycle() {
         return this.cycle;
     }
 
-    long lastIndex() {
+    @Override
+    public long lastIndex() {
         return this.header.getLastIndex();
     }
 
 
-    boolean appendRollMeta(int cycle) throws IOException {
+    @Override
+    public boolean appendRollMeta(int cycle) throws IOException {
         if(header.casNextRollCycle(cycle)) {
             final WireBounds position = append(
                 positionPool.get(),
@@ -128,7 +142,8 @@ class SingleChronicleQueueStore implements ReferenceCounted {
      * @return
      * @throws IOException
      */
-    long append(@NotNull WriteMarshallable writer) throws IOException {
+    @Override
+    public long append(@NotNull WriteMarshallable writer) throws IOException {
         final WireBounds bounds = append(positionPool.get(), false, writer);
 
         header.setWritePosition(bounds.upper);
@@ -141,7 +156,8 @@ class SingleChronicleQueueStore implements ReferenceCounted {
      * @param reader
      * @return the new position, 0 if no data -position if roll
      */
-    long read(long position, @NotNull ReadMarshallable reader) throws IOException {
+    @Override
+    public long read(long position, @NotNull ReadMarshallable reader) throws IOException {
         final int spbHeader = bytesStore.readVolatileInt(position);
         if(spbHeader == WireUtil.NO_DATA) {
             return WireUtil.NO_DATA;
@@ -172,7 +188,8 @@ class SingleChronicleQueueStore implements ReferenceCounted {
      * @param index
      * @return
      */
-    long positionForIndex(long index) {
+    @Override
+    public long positionForIndex(long index) {
         long position = dataPosition();
         for(long i = 0; i <= index; i++) {
             final int spbHeader = bytesStore.readVolatileInt(position);
@@ -205,10 +222,10 @@ class SingleChronicleQueueStore implements ReferenceCounted {
      *
      * @throws IOException
      */
-    protected SingleChronicleQueueStore buildHeader() throws IOException {
-        if(bytesStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_UNSET, SPB_HEADER_BUILDING)) {
+    protected SingleChronicleQueueWireStore buildHeader() throws IOException {
+        if(bytesStore.compareAndSwapLong(HEADER_OFFSET, NOT_INITIALIZED, NOT_READY)) {
             writeMeta(
-                wirePool.acquireForWriteAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForWriteAt(HEADER_OFFSET),
                 w -> w.write(MetaDataField.header).typedMarshallable(header)
             );
 
@@ -216,7 +233,7 @@ class SingleChronicleQueueStore implements ReferenceCounted {
             // null and initialized when needed. It may be better to initialize
             // them upon header instantiation (?)
             long readPosition = readMeta(
-                wirePool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForReadAt(HEADER_OFFSET),
                 w -> w.read().marshallable(header)
             );
 
@@ -228,44 +245,20 @@ class SingleChronicleQueueStore implements ReferenceCounted {
             header.setDataPosition(readPosition);
             header.setWritePosition(readPosition);
             header.setRollCycle(this.cycle);
-
-            if (!bytesStore.compareAndSwapLong(SPB_HEADER_BYTE, SPB_HEADER_BUILDING, SPB_HEADER_BUILT)) {
-                throw new AssertionError("Concurrent writing of the header");
-            }
         } else {
-            waitForTheHeaderToBeBuilt();
+            WireUtil.waitForWireToBeReady(
+                this.bytesStore,
+                HEADER_OFFSET,
+                builder.headerWaitLoops(),
+                builder.headerWaitDelay());
 
             readMeta(
-                wirePool.acquireForReadAt(SPB_HEADER_BYTE + SPB_HEADER_BYTE_SIZE),
+                wirePool.acquireForReadAt(HEADER_OFFSET),
                 w -> w.read().marshallable(header)
             );
         }
 
         return this;
-    }
-
-    /**
-     * Wait for the header to build.
-     *
-     * If it exceed the number of attempts defined by builder.headerWaitLoops()
-     * each with a timeout of builder.headerWaitDelay() it will throw an AssertionError.
-     *
-     * @throws IOException
-     */
-    protected void waitForTheHeaderToBeBuilt() throws IOException {
-        for (int i = builder.headerWaitLoops(); i >= 0; i--) {
-            long magic = this.bytesStore.readVolatileLong(SPB_HEADER_BYTE);
-            if (magic == SPB_HEADER_BUILDING) {
-                Jvm.pause(builder.headerWaitDelay());
-            } else if (magic == SPB_HEADER_BUILT) {
-                return;
-            } else {
-                throw new AssertionError(
-                    "Invalid magic number " + Long.toHexString(magic));
-            }
-        }
-
-        throw new AssertionError("Timeout waiting to build the file");
     }
 
     /**
@@ -281,7 +274,7 @@ class SingleChronicleQueueStore implements ReferenceCounted {
         long lastWritePosition = header.getWritePosition();
 
         for (int i = builder.appendWaitLoops(); i >= 0; i--) {
-            if(bytesStore.compareAndSwapInt(lastWritePosition, WireUtil.FREE, WireUtil.BUILDING)) {
+            if(bytesStore.compareAndSwapInt(lastWritePosition, NOT_INITIALIZED, BUILDING)) {
                 bounds.lower = lastWritePosition;
                 bounds.upper = !meta
                     ? WireUtil.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)

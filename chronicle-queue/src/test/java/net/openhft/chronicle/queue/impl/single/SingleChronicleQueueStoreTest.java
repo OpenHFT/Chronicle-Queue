@@ -36,7 +36,7 @@ public class SingleChronicleQueueStoreTest extends ChronicleQueueTestBase {
 
             int cycle = cycle(RollCycles.SECONDS);
 
-            SingleChronicleQueueStore store = new SingleChronicleQueueStore(
+            SingleChronicleQueueWireStore store = new SingleChronicleQueueWireStore(
                 builder,
                 cycle,
                 dateCache(builder).formatFor(cycle)

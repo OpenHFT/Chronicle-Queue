@@ -13,11 +13,14 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.wire;
+package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.annotation.ForceInline;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;

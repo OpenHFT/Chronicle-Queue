@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +29,7 @@ import java.util.UUID;
 class SingleChronicleQueueHeader implements Marshallable {
 
     private enum Fields implements WireKey {
-        type,
+        type, version,
         uuid, created, user, host,
         indexCount, indexSpacing,
         writePosition, dataPosition, index2Index, lastIndex,
@@ -39,12 +40,14 @@ class SingleChronicleQueueHeader implements Marshallable {
         cycle, length, format, timeZone, nextCycle, nextCycleMetaPosition
     }
 
-    public static final String QUEUE_TYPE = "SCV4";
+    public static final String QUEUE_TYPE = "SingleChronicleQueue";
+    public static final String QUEUE_VERSION = "4.0";
     public static final String CLASS_ALIAS = "Header";
     public static final long PADDED_SIZE = 512;
 
     // fields which can be serialized/deserialized in the normal way.
     private String type;
+    private String version;
     private UUID uuid;
     private ZonedDateTime created;
     private String user;
@@ -62,6 +65,7 @@ class SingleChronicleQueueHeader implements Marshallable {
 
     SingleChronicleQueueHeader(SingleChronicleQueueBuilder builder) {
         this.type = QUEUE_TYPE;
+        this.version = QUEUE_VERSION;
         this.uuid = UUID.randomUUID();
         this.created = ZonedDateTime.now();
         this.user = System.getProperty("user.name");
@@ -98,9 +102,10 @@ class SingleChronicleQueueHeader implements Marshallable {
     @Override
     public void writeMarshallable(@NotNull WireOut out) {
         out.write(Fields.type).text(type)
+            .write(Fields.version).text(version)
             .write(Fields.uuid).uuid(uuid)
-            .write(Fields.writePosition).int64forBinding(WireUtil.SPB_HEADER_BYTE_SIZE)
-            .write(Fields.dataPosition).int64forBinding(WireUtil.SPB_HEADER_BYTE_SIZE)
+            .write(Fields.writePosition).int64forBinding(WireUtil.HEADER_OFFSET)
+            .write(Fields.dataPosition).int64forBinding(WireUtil.HEADER_OFFSET)
             .write(Fields.created).zonedDateTime(created)
             .write(Fields.user).text(user)
             .write(Fields.host).text(host)
@@ -109,13 +114,12 @@ class SingleChronicleQueueHeader implements Marshallable {
             .write(Fields.index2Index).int64forBinding(0L)
             .write(Fields.lastIndex).int64forBinding(-1L)
             .write(Fields.roll).marshallable(roll);
-
-        //out.addPadding((int) (PADDED_SIZE - out.bytes().writePosition()));
     }
 
     @Override
     public void readMarshallable(@NotNull WireIn in) {
         in.read(Fields.type).text(this, (o, i) -> o.type = i)
+            .read(Fields.version).text(this, (o, i) -> o.version = i)
             .read(Fields.uuid).uuid(this, (o, i) -> o.uuid = i)
             .read(Fields.writePosition).int64(this.writePosition, this, (o, i) -> o.writePosition = i)
             .read(Fields.dataPosition).int64(this.dataPosition, this, (o, i) -> o.dataPosition = i)
@@ -178,7 +182,7 @@ class SingleChronicleQueueHeader implements Marshallable {
     }
 
     public boolean casNextRollCycle(int rollCycle) {
-        return this.roll.nextCycle.compareAndSwapValue(-1L, rollCycle);
+        return this.roll.nextCycle.compareAndSwapValue(-1, rollCycle);
     }
 
     private class Roll implements Marshallable {
@@ -187,9 +191,8 @@ class SingleChronicleQueueHeader implements Marshallable {
         private String format;
         private ZoneId zoneId;
 
-        //TODO: it appears there is a problem with IntValue (LongValue as workaround)
-        private LongValue cycle;
-        private LongValue nextCycle;
+        private IntValue cycle;
+        private IntValue nextCycle;
 
         // LongValue is right here
         private LongValue nextCycleMetaPosition;
@@ -206,21 +209,21 @@ class SingleChronicleQueueHeader implements Marshallable {
 
         @Override
         public void writeMarshallable(@NotNull WireOut out) {
-            out.write(RollFields.cycle).int64forBinding(-1)
+            out.write(RollFields.cycle).int32forBinding(-1)
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
-                    .write(RollFields.timeZone).text(zoneId.getId())
-                .write(RollFields.nextCycle).int64forBinding(-1)
+                .write(RollFields.timeZone).text(zoneId.getId())
+                .write(RollFields.nextCycle).int32forBinding(-1)
                 .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
         }
 
         @Override
         public void readMarshallable(@NotNull WireIn in) {
-            in.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
+            in.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                    .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
-                .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
+                .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
     }

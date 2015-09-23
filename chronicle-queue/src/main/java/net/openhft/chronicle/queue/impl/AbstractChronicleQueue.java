@@ -29,21 +29,19 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        return new Excerpts.Appender(this);
+    }
+
+    @Override
+    public ExcerptTailer createTailer() throws IOException {
+        return new Excerpts.Tailer(this);
+    }
+
     @NotNull
     @Override
     public Excerpt createExcerpt() throws IOException {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @NotNull
-    @Override
-    public ExcerptTailer createTailer() throws IOException {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @NotNull
-    @Override
-    public ExcerptAppender createAppender() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -71,4 +69,37 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     public void close() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
     }
+
+
+    /**
+     *
+     * @param cycle
+     * @return
+     * @throws IOException
+     */
+    protected abstract WireStore storeForCycle(int cycle) throws IOException;
+
+    /**
+     *
+     * @param store
+     */
+    protected abstract void release(WireStore store);
+
+    /**
+     *
+     * @return
+     */
+    protected abstract int cycle();
+
+    /**
+     *
+     * @return
+     */
+    protected abstract int firstCycle();
+
+    /**
+     *
+     * @return
+     */
+    protected abstract int lastCycle();
 }

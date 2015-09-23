@@ -13,7 +13,8 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.openhft.chronicle.queue.impl.single;
+
+package net.openhft.chronicle.queue.impl;
 
 
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -22,22 +23,23 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public class SingleChronicleQueueExcerpts {
+public class Excerpts {
 
     /**
      * Appender
      */
     static class Appender implements ExcerptAppender {
-        private final SingleChronicleQueue queue;
+        private final AbstractChronicleQueue queue;
 
         private int cycle;
         private long index;
-        private SingleChronicleQueueStore store;
+        private WireStore store;
 
-        Appender(SingleChronicleQueue queue) throws IOException {
+        Appender(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
 
             this.cycle = queue.lastCycle();
@@ -80,13 +82,13 @@ public class SingleChronicleQueueExcerpts {
      * Tailer
      */
     static class Tailer implements ExcerptTailer {
-        private final SingleChronicleQueue queue;
+        private final AbstractChronicleQueue queue;
 
         private int cycle;
         private long position;
-        private SingleChronicleQueueStore store;
+        private WireStore store;
 
-        Tailer(SingleChronicleQueue queue) throws IOException {
+        Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = 0;
             this.store = null;
