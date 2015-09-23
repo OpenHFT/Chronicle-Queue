@@ -21,17 +21,11 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 
 //TODO: workaround for protected access to WireInternal
 public class WireUtil {
-    public static final Logger LOGGER = LoggerFactory.getLogger(WireUtil.class);
     public static final StringBuilderPool SBP = new StringBuilderPool();
 
     public static final int LENGTH_MASK     = Wires.LENGTH_MASK;

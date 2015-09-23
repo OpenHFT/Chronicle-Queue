@@ -24,7 +24,7 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WirePool;
+import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WriteMarshallable;

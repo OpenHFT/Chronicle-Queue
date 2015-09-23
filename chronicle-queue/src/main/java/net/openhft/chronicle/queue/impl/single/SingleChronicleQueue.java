@@ -46,21 +46,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.firstCycle = -1;
     }
 
-    @Override
-    public ExcerptAppender createAppender() throws IOException {
-        return new SingleChronicleQueueExcerpts.Appender(this);
-    }
-
-    @Override
-    public ExcerptTailer createTailer() throws IOException {
-        return new SingleChronicleQueueExcerpts.Tailer(this);
-    }
-
     SingleChronicleQueueBuilder builder() {
         return this.builder;
     }
 
-    synchronized WireStore storeForCycle(int cycle) throws IOException {
+    @Override
+    protected synchronized WireStore storeForCycle(int cycle) throws IOException {
         SingleChronicleQueueWireStore format = stores.get(cycle);
         if(null == format) {
             stores.put(
@@ -77,19 +68,22 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return format;
     }
 
-    synchronized void release(WireStore store) {
+    @Override
+    protected synchronized void release(WireStore store) {
         store.release();
         if(store.refCount() <= 0) {
             stores.remove(store.cycle());
         }
     }
 
-    int cycle() {
+    @Override
+    protected int cycle() {
         return (int) (System.currentTimeMillis() / builder.rollCycleLength());
     }
 
     //TODO: reduce garbage
-    synchronized int firstCycle() {
+    @Override
+    protected synchronized int firstCycle() {
         if(-1 != firstCycle ) {
             return firstCycle;
         }
@@ -126,7 +120,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     //TODO: reduce garbage
-    int lastCycle() {
+    @Override
+    protected int lastCycle() {
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
