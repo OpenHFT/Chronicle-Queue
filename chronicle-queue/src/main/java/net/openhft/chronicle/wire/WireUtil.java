@@ -16,12 +16,15 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -31,34 +34,20 @@ public class WireUtil {
     public static final Logger LOGGER = LoggerFactory.getLogger(WireUtil.class);
     public static final StringBuilderPool SBP = new StringBuilderPool();
 
-    public static final int LENGTH_MASK    = Wires.LENGTH_MASK;
-    public static final int NOT_READY      = Wires.NOT_READY;
-    public static final int UNKNOWN_LENGTH = Wires.UNKNOWN_LENGTH;
-    public static final int FREE           = 0x0;
-    public static final int BUILDING       = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
-    public static final int NO_DATA        = 0;
-    public static final int NO_INDEX       = -1;
+    public static final int LENGTH_MASK     = Wires.LENGTH_MASK;
+    public static final int NOT_READY       = Wires.NOT_READY;
+    public static final int UNKNOWN_LENGTH  = Wires.UNKNOWN_LENGTH;
+    public static final int NOT_INITIALIZED = Wires.NOT_INITIALIZED;
+    public static final int BUILDING        = WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH;
+    public static final int NO_DATA         = 0;
+    public static final int NO_INDEX        = -1;
 
-    public static final long SPB_HEADER_BYTE      = 0;
-    public static final long SPB_HEADER_BYTE_SIZE = 8;
-    public static final long SPB_HEADER_UNSET     = 0x0;
-    public static final long SPB_HEADER_BUILDING  = 0x1;
-    public static final long SPB_HEADER_BUILT     = WireUtil.asLong("QUEUE400");
+    public static final long HEADER_OFFSET = 0;
     public static final long SPB_DATA_HEADER_SIZE = 4;
 
     public static class WireBounds {
         public long lower = NO_DATA;
         public long upper = NO_DATA;
-    }
-
-    // *************************************************************************
-    // MISC
-    // *************************************************************************
-
-    public static long asLong(@NotNull String str) {
-        return ByteBuffer.wrap(str.getBytes(StandardCharsets.ISO_8859_1))
-            .order(ByteOrder.nativeOrder())
-            .getLong();
     }
 
     // *************************************************************************
@@ -125,5 +114,31 @@ public class WireUtil {
         }
 
         return bytes.readPosition();
+    }
+
+    /**
+     * Wait for a Wire to be ready.
+     *
+     * If it exceed the number of attempts defined by loops each with a timeout
+     * of sleep) it will throw an AssertionError.
+     *
+     * @param store
+     * @param position
+     * @param loops
+     * @param sleep
+     * @throws IOException
+     */
+    public static void waitForWireToBeReady(
+        @NotNull BytesStore store, long position, int loops, int sleep) throws IOException {
+
+        for (int i = loops; i >= 0; i--) {
+            if(!Wires.isReady(store.readVolatileInt(position))) {
+                Jvm.pause(sleep);
+            } else {
+                return;
+            }
+        }
+
+        throw new AssertionError("Timeout waiting for a wire to be ready");
     }
 }

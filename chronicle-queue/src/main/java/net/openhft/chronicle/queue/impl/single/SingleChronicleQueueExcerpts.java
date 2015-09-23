@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WireUtil;
 import net.openhft.chronicle.wire.WriteMarshallable;
@@ -35,7 +36,7 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long index;
-        private SingleChronicleQueueStore store;
+        private WireStore store;
 
         Appender(SingleChronicleQueue queue) throws IOException {
             this.queue = queue;
@@ -84,7 +85,7 @@ public class SingleChronicleQueueExcerpts {
 
         private int cycle;
         private long position;
-        private SingleChronicleQueueStore store;
+        private WireStore store;
 
         Tailer(SingleChronicleQueue queue) throws IOException {
             this.queue = queue;

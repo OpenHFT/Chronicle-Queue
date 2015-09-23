@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.io.File;
@@ -31,7 +32,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private final SingleChronicleQueueBuilder builder;
     private final RollDateCache dateCache;
-    private final Map<Integer, SingleChronicleQueueStore> stores;
+    private final Map<Integer, SingleChronicleQueueWireStore> stores;
     private int firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
@@ -59,12 +60,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return this.builder;
     }
 
-    synchronized SingleChronicleQueueStore storeForCycle(int cycle) throws IOException {
-        SingleChronicleQueueStore format = stores.get(cycle);
+    synchronized WireStore storeForCycle(int cycle) throws IOException {
+        SingleChronicleQueueWireStore format = stores.get(cycle);
         if(null == format) {
             stores.put(
                 cycle,
-                format = new SingleChronicleQueueStore(
+                format = new SingleChronicleQueueWireStore(
                     builder,
                     cycle,
                     this.dateCache.formatFor(cycle)).buildHeader()
@@ -76,7 +77,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return format;
     }
 
-    synchronized void release(SingleChronicleQueueStore store) {
+    synchronized void release(WireStore store) {
         store.release();
         if(store.refCount() <= 0) {
             stores.remove(store.cycle());
