@@ -98,8 +98,8 @@ class SingleChronicleQueueWireStore implements WireStore {
     }
 
     @Override
-    public long dataPosition() {
-        return this.header.getDataPosition();
+    public long readPosition() {
+        return this.header.getReadPosition();
     }
 
     @Override
@@ -190,7 +190,7 @@ class SingleChronicleQueueWireStore implements WireStore {
      */
     @Override
     public long positionForIndex(long index) {
-        long position = dataPosition();
+        long position = readPosition();
         for(long i = 0; i <= index; i++) {
             final int spbHeader = bytesStore.readVolatileInt(position);
             if (Wires.isData(spbHeader) && Wires.isKnownLength(spbHeader)) {
@@ -229,7 +229,7 @@ class SingleChronicleQueueWireStore implements WireStore {
                 w -> w.write(MetaDataField.header).typedMarshallable(header)
             );
 
-            // Needed because header.dataPosition, header.writePosition are initially
+            // Needed because header.readPosition, header.writePosition are initially
             // null and initialized when needed. It may be better to initialize
             // them upon header instantiation (?)
             long readPosition = readMeta(
@@ -242,7 +242,7 @@ class SingleChronicleQueueWireStore implements WireStore {
             }
 
             // Set read/write pointer after the header
-            header.setDataPosition(readPosition);
+            header.setReadPosition(readPosition);
             header.setWritePosition(readPosition);
             header.setRollCycle(this.cycle);
         } else {

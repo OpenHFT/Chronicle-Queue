@@ -100,7 +100,7 @@ public class Excerpts {
             if(this.store == null) {
                 //TODO: what should be done at the beginning ? toEnd/toStart
                 cycle(queue.lastCycle());
-                this.position = this.store.dataPosition();
+                this.position = this.store.readPosition();
             }
 
             long position = store.read(this.position, reader);
@@ -110,7 +110,7 @@ public class Excerpts {
             } else if(position < 0) {
                 // roll detected, move to next cycle;
                 cycle((int) Math.abs(position));
-                this.position = this.store.dataPosition();
+                this.position = this.store.readPosition();
 
                 // try to read from new cycle
                 return readDocument(reader);
@@ -123,7 +123,7 @@ public class Excerpts {
         public boolean index(long index) throws IOException {
             if(this.store == null) {
                 cycle(queue.lastCycle());
-                this.position = this.store.dataPosition();
+                this.position = this.store.readPosition();
             }
 
             long idxpos = this.store.positionForIndex(index);
@@ -139,7 +139,7 @@ public class Excerpts {
         @Override
         public boolean index(int cycle, long index) throws IOException {
             cycle(cycle);
-            this.position = this.store.dataPosition();
+            this.position = this.store.readPosition();
 
             return index(index);
         }
@@ -147,7 +147,7 @@ public class Excerpts {
         @Override
         public ExcerptTailer toStart() throws IOException {
             cycle(queue.firstCycle());
-            this.position = store.dataPosition();
+            this.position = store.readPosition();
 
             return this;
         }

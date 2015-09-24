@@ -32,7 +32,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         type, version,
         uuid, created, user, host,
         indexCount, indexSpacing,
-        writePosition, dataPosition, index2Index, lastIndex,
+        writePosition, readPosition, index2Index, lastIndex,
         roll
     }
 
@@ -57,7 +57,7 @@ class SingleChronicleQueueHeader implements Marshallable {
 
     // support binding to off heap memory with thread safe operations.
     private LongValue writePosition;
-    private LongValue dataPosition;
+    private LongValue readPosition;
     private LongValue index2Index;
     private LongValue lastIndex;
 
@@ -77,7 +77,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         // This is set to null as that it can pick up the right time the
         // first time it is used.
         this.writePosition = null;
-        this.dataPosition = null;
+        this.readPosition = null;
         this.index2Index = null;
         this.lastIndex = null;
         this.roll = new Roll(builder);
@@ -105,7 +105,7 @@ class SingleChronicleQueueHeader implements Marshallable {
             .write(Fields.version).text(version)
             .write(Fields.uuid).uuid(uuid)
             .write(Fields.writePosition).int64forBinding(WireUtil.HEADER_OFFSET)
-            .write(Fields.dataPosition).int64forBinding(WireUtil.HEADER_OFFSET)
+            .write(Fields.readPosition).int64forBinding(WireUtil.HEADER_OFFSET)
             .write(Fields.created).zonedDateTime(created)
             .write(Fields.user).text(user)
             .write(Fields.host).text(host)
@@ -122,7 +122,7 @@ class SingleChronicleQueueHeader implements Marshallable {
             .read(Fields.version).text(this, (o, i) -> o.version = i)
             .read(Fields.uuid).uuid(this, (o, i) -> o.uuid = i)
             .read(Fields.writePosition).int64(this.writePosition, this, (o, i) -> o.writePosition = i)
-            .read(Fields.dataPosition).int64(this.dataPosition, this, (o, i) -> o.dataPosition = i)
+            .read(Fields.readPosition).int64(this.readPosition, this, (o, i) -> o.readPosition = i)
             .read(Fields.created).zonedDateTime(this, (o, i) -> o.created = i)
             .read(Fields.user).text(this, (o, i) -> o.user = i)
             .read(Fields.host).text(this, (o, i) -> o.host = i)
@@ -142,12 +142,12 @@ class SingleChronicleQueueHeader implements Marshallable {
         return this;
     }
 
-    public long getDataPosition() {
-        return this.dataPosition.getVolatileValue();
+    public long getReadPosition() {
+        return this.readPosition.getVolatileValue();
     }
 
-    public SingleChronicleQueueHeader setDataPosition(long dataOffset) {
-        this.dataPosition.setOrderedValue(dataOffset);
+    public SingleChronicleQueueHeader setReadPosition(long readPosition) {
+        this.readPosition.setOrderedValue(readPosition);
         return this;
     }
 

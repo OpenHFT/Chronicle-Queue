@@ -34,7 +34,7 @@ public interface WireStore extends ReferenceCounted  {
      *
      * @return
      */
-    long dataPosition();
+    long readPosition();
 
     /**
      *
