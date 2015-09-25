@@ -237,26 +237,14 @@ class SingleWireStore implements WireStore {
      */
     protected SingleWireStore buildHeader() throws IOException {
         if(bytesStore.compareAndSwapLong(HEADER_OFFSET, NOT_INITIALIZED, NOT_READY)) {
-            writeMeta(
+            long writePosition = writeMeta(
                 wirePool.acquireForWriteAt(HEADER_OFFSET),
                 w -> w.write(MetaDataField.header).typedMarshallable(header)
             );
 
-            // Needed because header.readPosition, header.writePosition are initially
-            // null and initialized when needed. It may be better to initialize
-            // them upon header instantiation (?)
-            long readPosition = readMeta(
-                wirePool.acquireForReadAt(HEADER_OFFSET),
-                w -> w.read().marshallable(header)
-            );
-
-            if(WireUtil.NO_DATA == readPosition) {
-                throw new AssertionError("Unable to read Header");
-            }
-
             // Set read/write pointer after the header
-            header.setReadPosition(readPosition);
-            header.setWritePosition(readPosition);
+            header.setReadPosition(writePosition);
+            header.setWritePosition(writePosition);
             header.setRollCycle(this.cycle);
         } else {
             WireUtil.waitForWireToBeReady(
@@ -337,8 +325,8 @@ class SingleWireStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        wire.write(MetaDataField.writePosition).int64forBinding(WireUtil.HEADER_OFFSET)
-            .write(MetaDataField.readPosition).int64forBinding(WireUtil.HEADER_OFFSET)
+        wire.write(MetaDataField.writePosition).int64forBinding(WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
+            .write(MetaDataField.readPosition).int64forBinding(WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
             .write(MetaDataField.indexing).typedMarshallable(this.indexing)
             .write(MetaDataField.roll).typedMarshallable(this.roll);
     }
