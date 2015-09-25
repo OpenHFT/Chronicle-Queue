@@ -19,63 +19,54 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import net.openhft.chronicle.queue.impl.WireStorePool;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Map;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private final SingleChronicleQueueBuilder builder;
     private final RollDateCache dateCache;
-    private final Map<Integer, SingleWireStore> stores;
+    private final WireStorePool pool;
     private int firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.dateCache = new RollDateCache(
             builder.rollCycleLength(),
             builder.rollCycleFormat(),
-                builder.rollCycleZoneId());
+            builder.rollCycleZoneId());
 
         this.builder = builder;
-        this.stores = HashIntObjMaps.newMutableMap();
+        this.pool = WireStorePool.withSupplier(this::newStore);
         this.firstCycle = -1;
-    }
-
-    SingleChronicleQueueBuilder builder() {
-        return this.builder;
     }
 
     @Override
     protected synchronized WireStore storeForCycle(int cycle) throws IOException {
-        SingleWireStore format = stores.get(cycle);
-        if(null == format) {
-
-            String cycleFormat = this.dateCache.formatFor(cycle);
-            File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
-
-            if(!cycleFile.getParentFile().exists()) {
-                cycleFile.mkdirs();
-            }
-
-            stores.put(
-                cycle,
-                format = new SingleWireStore(builder,cycleFile,cycle).build()
-            );
-        } else {
-            format.reserve();
-        }
-
-        return format;
+        return this.pool.acquire(cycle);
     }
 
     @Override
-    protected synchronized void release(WireStore store) {
-        store.release();
-        if(store.refCount() <= 0) {
-            stores.remove(store.cycle());
+    protected synchronized void release(@NotNull WireStore store) {
+        this.pool.release(store);
+    }
+
+    protected WireStore newStore(int cycle) {
+        try {
+            String cycleFormat = this.dateCache.formatFor(cycle);
+            File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+
+            if (!cycleFile.getParentFile().exists()) {
+                cycleFile.mkdirs();
+            }
+
+            return new SingleWireStore(builder, cycleFile, cycle).build();
+        } catch (IOException e) {
+            //TODO: right way ?
+            throw new RuntimeException(e);
         }
     }
 
@@ -85,6 +76,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     //TODO: reduce garbage
+    //TODO: add a check on first file, in case it gets deleted
     @Override
     protected synchronized int firstCycle() {
         if(-1 != firstCycle ) {
