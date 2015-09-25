@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
@@ -81,4 +82,16 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return
      */
     long positionForIndex(long index);
+
+    /**
+     *
+     * @param store
+     */
+    void install(@NotNull BytesStore store, long length, int cycle) throws IOException;
+
+    /**
+     *
+     * @param store
+     */
+    void install(@NotNull BytesStore store) throws IOException;
 }

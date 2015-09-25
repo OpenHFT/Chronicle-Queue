@@ -28,6 +28,7 @@ import java.io.IOException;
 public class WireUtil {
     public static final StringBuilderPool SBP = new StringBuilderPool();
 
+    public static final int META_DATA       = Wires.META_DATA;
     public static final int LENGTH_MASK     = Wires.LENGTH_MASK;
     public static final int NOT_READY       = Wires.NOT_READY;
     public static final int UNKNOWN_LENGTH  = Wires.UNKNOWN_LENGTH;

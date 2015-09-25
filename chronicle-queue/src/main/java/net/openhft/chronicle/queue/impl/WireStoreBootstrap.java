@@ -15,26 +15,98 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-public class WireStoreBootstrap {
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedBytesStore;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.util.ThrowingFunction;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.Wires;
 
-    public void boot() {
-        /*
-        String masterFile = OS.TARGET + "/wired-file-" + System.nanoTime();
-        for (int i = 1; i <= 5; i++) {
-            WiredFile<MyHeader_1_0> wf = WiredFile.build(masterFile,
-                file -> MappedFile.mappedFile(file, 64 << 10, 0),
-                WireType.BINARY,
-                MyHeader_1_0::new,
-                wf0 -> wf0.delegate().install(wf0)
-            );
-            MyHeader_1_0 header = wf.delegate();
-            assertEquals(i, header.installCount.getValue());
-            Bytes<?> bytes = wf.acquireWiredChunk(0).bytes();
-            bytes.readPosition(0);
-            bytes.readLimit(wf.headerLength());
-            System.out.println(Wires.fromSizePrefixedBlobs(bytes));
-            wf.close();
+import java.io.File;
+import java.io.IOException;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+public class WireStoreBootstrap implements Closeable {
+
+    private static final long TIMEOUT_MS = 10_000; // 10 seconds.
+
+    private final File masterFile;
+    private final Function<Bytes, Wire> wireType;
+    private final MappedFile mappedFile;
+    private final WireStore delegate;
+    private final MappedBytesStore header;
+    private final long headerLength;
+
+    WireStoreBootstrap(
+        File masterFile,
+        Function<Bytes, Wire> wireType,
+        MappedFile mappedFile,
+        WireStore delegate,
+        MappedBytesStore header,
+        long length) {
+
+        this.masterFile = masterFile;
+        this.wireType = wireType;
+        this.mappedFile = mappedFile;
+        this.delegate = delegate;
+        this.header = header;
+        this.headerLength = length;
+    }
+
+    public static WireStore build(
+            File file,
+            ThrowingFunction<File, IOException, MappedFile> mappedFileFunction,
+            Function<Bytes, Wire> wireType,
+            Supplier<WireStore> delegateSupplier) throws IOException {
+
+        File parentFile = file.getParentFile();
+        if (parentFile != null) {
+            parentFile.mkdirs();
         }
-        */
+
+        final MappedFile mf = mappedFileFunction.apply(file);
+        final BytesStore bs = mf.acquireByteStore(0L);
+
+        WireStore delegate;
+
+        if (bs.compareAndSwapInt(0, WireUtil.NOT_INITIALIZED, WireUtil.META_DATA | WireUtil.NOT_READY | WireUtil.UNKNOWN_LENGTH)) {
+            Bytes<?> bytes = bs.bytesForWrite();
+            bytes.writePosition(4);
+
+            wireType.apply(bytes).getValueOut().typedMarshallable(delegate = delegateSupplier.get());
+            bs.writeOrderedInt(0L, WireUtil.META_DATA | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
+
+            delegate.install(bs, bytes.writePosition(), 0);
+        } else {
+            long end = System.currentTimeMillis() + TIMEOUT_MS;
+            while ((bs.readVolatileInt(0) & WireUtil.NOT_READY) == WireUtil.NOT_READY) {
+                if (System.currentTimeMillis() > end) {
+                    throw new IllegalStateException("Timed out waiting for the header record to be ready in " + file);
+                }
+
+                Jvm.pause(1);
+            }
+
+            Bytes<?> bytes = bs.bytesForRead();
+            bytes.readPosition(0);
+            bytes.writePosition(bytes.capacity());
+            bytes.readLimit(Wires.lengthOf(bytes.readVolatileInt(0)));
+
+            delegate = wireType.apply(bytes).getValueIn().typedMarshallable();
+            delegate.install(bs);
+        }
+
+
+        return delegate;
+    }
+
+    @Override
+    public void close() {
+        mappedFile.close();
     }
 }

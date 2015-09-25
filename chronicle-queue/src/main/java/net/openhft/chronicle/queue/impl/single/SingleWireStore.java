@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStoreBootstrap;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,11 +54,11 @@ class SingleWireStore implements WireStore {
         roll
     }
 
-    private final int cycle;
-    private final SingleChronicleQueueBuilder builder;
-    private final MappedFile mappedFile;
-    private final BytesStore bytesStore;
-    private final WirePool wirePool;
+    private int cycle;
+    private SingleChronicleQueueBuilder builder;
+    private MappedFile mappedFile;
+    private BytesStore bytesStore;
+    private WirePool wirePool;
     private final ThreadLocal<WireBounds> positionPool;
     private final ReferenceCounter refCount;
 
@@ -73,14 +74,17 @@ class SingleWireStore implements WireStore {
      *
      * @throws IOException
      */
-    SingleWireStore(
-        final SingleChronicleQueueBuilder builder, File file, int cycle) throws IOException {
+    SingleWireStore() {
+        //final SingleChronicleQueueBuilder builder, File file, int cycle) throws IOException {
 
+        /*
         this.builder = builder;
         this.cycle = cycle;
         this.mappedFile = MappedFile.mappedFile(file, this.builder.blockSize());
         this.bytesStore = mappedFile.acquireByteStore(HEADER_OFFSET);
         this.wirePool = new WirePool(bytesStore, builder.wireType());
+        */
+
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
         this.bounds = new Bounds();
@@ -208,6 +212,21 @@ class SingleWireStore implements WireStore {
         if (remaining > WireUtil.LENGTH_MASK) {
             throw new IllegalStateException("Length too large: " + remaining);
         }
+    }
+
+    @Override
+    public void install(@NotNull BytesStore store, long length, int cycle) throws IOException {
+        install(store);
+
+        this.bounds.setWritePosition(length);
+        this.bounds.setReadPosition(length);
+        this.roll.setCycle(this.cycle);
+    }
+
+    @Override
+    public void install(@NotNull BytesStore store) throws IOException {
+        this.bytesStore = store;
+        this.wirePool = new WirePool(bytesStore, builder.wireType());
     }
 
     /**

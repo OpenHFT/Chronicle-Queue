@@ -16,15 +16,18 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStoreBootstrap;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.function.Supplier;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
@@ -55,7 +58,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     protected WireStore newStore(int cycle) {
-        try {
+        //try {
+
             String cycleFormat = this.dateCache.formatFor(cycle);
             File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
@@ -63,11 +67,26 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 cycleFile.mkdirs();
             }
 
-            return new SingleWireStore(builder, cycleFile, cycle).build();
+            /*
+            return this.bootstrap(
+                cycleFile,
+                SingleWireStore::new,
+                (bs, l) -> {
+
+
+                }
+            );
+            */
+
+            return null;
+
+            //return new SingleWireStore(); //builder, cycleFile, cycle).build();
+        /*
         } catch (IOException e) {
             //TODO: right way ?
             throw new RuntimeException(e);
         }
+        */
     }
 
     @Override
@@ -147,4 +166,79 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         return -1;
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    WireStore bootstrap(
+            @NotNull File masterFile,
+            @NotNull Supplier<WireStore> supplier)
+                throws IOException {
+
+        return WireStoreBootstrap.build(
+            masterFile,
+            file -> MappedFile.mappedFile(file, builder.blockSize()),
+            builder.wireType(),
+            SingleWireStore::new
+        );
+    }
+
+    /*
+    if(bytesStore.compareAndSwapLong(HEADER_OFFSET, NOT_INITIALIZED, NOT_READY)) {
+            long writePosition = writeMeta(
+                wirePool.acquireForWriteAt(HEADER_OFFSET),
+                w -> w.write(MetaDataField.header).typedMarshallable(this)
+            );
+
+            this.bounds.setWritePosition(writePosition);
+            this.bounds.setReadPosition(writePosition);
+            this.roll.setCycle(this.cycle);
+        } else {
+            WireUtil.waitForWireToBeReady(
+                this.bytesStore,
+                HEADER_OFFSET,
+                builder.headerWaitLoops(),
+                builder.headerWaitDelay());
+
+            readMeta(
+                wirePool.acquireForReadAt(HEADER_OFFSET),
+                w -> w.read().marshallable(this)
+            );
+        }
+     */
+    /*
+    MappedFile mappedFile = mappedFileFunction.apply(file);
+    MappedBytesStoreFactory<WiredMappedBytesStore> mappedBytesStoreFactory = (owner, start, address, capacity, safeCapacity) ->
+        new WiredMappedBytesStore(owner, start, address, capacity, safeCapacity, wireType);
+
+    WiredMappedBytesStore header = mappedFile.acquireByteStore(0, mappedBytesStoreFactory);
+    assert header != null;
+    D delegate;
+    long length;
+    //noinspection PointlessBitwiseExpression
+    if (header.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
+        Bytes<?> bytes = header.bytesForWrite().writePosition(4);
+        wireType.apply(bytes).getValueOut().typedMarshallable(delegate = delegateSupplier.get());
+        header.writeOrderedInt(0L, Wires.META_DATA | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
+        length = bytes.writePosition();
+    } else {
+        long end = System.currentTimeMillis() + TIMEOUT_MS;
+        while ((header.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
+            if (System.currentTimeMillis() > end)
+                throw new IllegalStateException("Timed out waiting for the header record to be ready in " + masterFile);
+            Jvm.pause(1);
+        }
+        Bytes<?> bytes = header.wire.bytes();
+        bytes.readPosition(0);
+        bytes.writePosition(bytes.capacity());
+        int len = Wires.lengthOf(bytes.readVolatileInt());
+        bytes.readLimit(length = bytes.readPosition() + len);
+        //noinspection unchecked
+        delegate = (D) wireType.apply(bytes).getValueIn().typedMarshallable();
+    }
+    WiredFile<D> wiredFile = new WiredFile<>(masterFile, wireType, mappedFile, delegate, header, length, mappedBytesStoreFactory);
+    installer.accept(wiredFile);
+    return wiredFile;
+    */
 }
