@@ -132,6 +132,8 @@ class SingleWireStore implements WireStore {
      * @param writer
      * @return
      * @throws IOException
+     *
+     * //TODO: check meta-data for rolling
      */
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
@@ -324,7 +326,7 @@ class SingleWireStore implements WireStore {
         readPosition,
     }
 
-    private class Bounds implements Marshallable {
+    class Bounds implements Marshallable {
         private LongValue writePosition;
         private LongValue readPosition;
 
@@ -383,11 +385,11 @@ class SingleWireStore implements WireStore {
     //
     // *************************************************************************
 
-    private enum IndexingFields implements WireKey {
+    enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index, lastIndex
     }
 
-    private class Indexing implements Marshallable {
+    class Indexing implements Marshallable {
         private int indexCount;
         private int indexSpacing;
         private LongValue index2Index;
@@ -429,19 +431,16 @@ class SingleWireStore implements WireStore {
     //
     // *************************************************************************
 
-    private enum RollFields implements WireKey {
+    enum RollFields implements WireKey {
         cycle, length, format, timeZone, nextCycle, nextCycleMetaPosition
     }
 
-    private class Roll implements Marshallable {
+    class Roll implements Marshallable {
         private int length;
         private String format;
         private ZoneId zoneId;
-
         private IntValue cycle;
         private IntValue nextCycle;
-
-        // LongValue is right here
         private LongValue nextCycleMetaPosition;
 
         Roll() {
