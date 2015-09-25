@@ -52,12 +52,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     protected synchronized WireStore storeForCycle(int cycle) throws IOException {
         SingleWireStore format = stores.get(cycle);
         if(null == format) {
+
+            String cycleFormat = this.dateCache.formatFor(cycle);
+            File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+
+            if(!cycleFile.getParentFile().exists()) {
+                cycleFile.mkdirs();
+            }
+
             stores.put(
                 cycle,
-                format = new SingleWireStore(
-                    builder,
-                    cycle,
-                    this.dateCache.formatFor(cycle)).build()
+                format = new SingleWireStore(builder,cycleFile,cycle).build()
             );
         } else {
             format.reserve();

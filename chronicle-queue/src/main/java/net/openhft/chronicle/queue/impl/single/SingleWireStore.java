@@ -54,7 +54,6 @@ class SingleWireStore implements WireStore {
 
     private final int cycle;
     private final SingleChronicleQueueBuilder builder;
-    private final File file;
     private final MappedFile mappedFile;
     private final BytesStore bytesStore;
     private final WirePool wirePool;
@@ -68,28 +67,21 @@ class SingleWireStore implements WireStore {
     /**
      *
      * @param builder       the SingleChronicleQueueBuilder
+     * @param file          the cycle file
      * @param cycle         the cycle this store refers to
-     * @param cycleFormat   the cycle format for folder creation
      *
      * @throws IOException
      */
     SingleWireStore(
-        final SingleChronicleQueueBuilder builder, int cycle, String cycleFormat) throws IOException {
+        final SingleChronicleQueueBuilder builder, File file, int cycle) throws IOException {
 
         this.builder = builder;
         this.cycle = cycle;
-        this.file = new File(this.builder.path(), cycleFormat + ".chronicle");
-
-        if(!this.file.getParentFile().exists()) {
-            this.file.mkdirs();
-        }
-
-        this.mappedFile = MappedFile.mappedFile(this.file, this.builder.blockSize());
+        this.mappedFile = MappedFile.mappedFile(file, this.builder.blockSize());
         this.bytesStore = mappedFile.acquireByteStore(HEADER_OFFSET);
         this.wirePool = new WirePool(bytesStore, builder.wireType());
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
-
         this.bounds = new Bounds();
         this.roll = new Roll();
         this.indexing = new Indexing();
@@ -107,7 +99,7 @@ class SingleWireStore implements WireStore {
 
     @Override
     public int cycle() {
-        return this.cycle;
+        return this.roll.getCycle();
     }
 
     @Override
@@ -372,10 +364,6 @@ class SingleWireStore implements WireStore {
             this.writePosition.setOrderedValue(position);
         }
 
-        /**
-         *
-         * @param writePosition
-         */
         public void setWritePositionIfGreater(long writePosition) {
             for(; ;) {
                 long wp = writePosition();
@@ -484,8 +472,6 @@ class SingleWireStore implements WireStore {
                 .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
-
-
 
         public int getCycle() {
             return this.cycle.getVolatileValue();
