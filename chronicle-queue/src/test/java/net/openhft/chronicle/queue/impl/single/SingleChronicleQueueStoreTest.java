@@ -36,14 +36,14 @@ public class SingleChronicleQueueStoreTest extends ChronicleQueueTestBase {
 
             int cycle = cycle(RollCycles.SECONDS);
 
-            SingleWireStore store = new SingleWireStore(
+            new SingleWireStore(
                 builder,
                 cycle,
                 dateCache(builder).formatFor(cycle)
-            ).buildHeader();
+            ).build();
 
             System.gc();
-            Jvm.pause(10000);
+            Jvm.pause(250);
         }
     }
 }

@@ -57,7 +57,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 format = new SingleWireStore(
                     builder,
                     cycle,
-                    this.dateCache.formatFor(cycle)).buildHeader()
+                    this.dateCache.formatFor(cycle)).build()
             );
         } else {
             format.reserve();

@@ -40,20 +40,14 @@ import static net.openhft.chronicle.wire.WireUtil.*;
  */
 class SingleWireStore implements WireStore {
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(
-            SingleHeader.class,
-            SingleHeader.CLASS_ALIAS
-        );
-        ClassAliasPool.CLASS_ALIASES.addAlias(
-            SingleWireStore.class,
-            "WireStore"
-        );
+        ClassAliasPool.CLASS_ALIASES.addAlias(SingleWireStore.class,"WireStore");
+        ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class,"Indexing");
+        ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class,"Roll");
     }
 
     enum MetaDataField implements WireKey {
         header,
-        writePosition,
-        readPosition,
+        bounds,
         indexing,
         roll
     }
@@ -63,16 +57,13 @@ class SingleWireStore implements WireStore {
     private final File file;
     private final MappedFile mappedFile;
     private final BytesStore bytesStore;
-    private final SingleHeader header;
     private final WirePool wirePool;
     private final ThreadLocal<WireBounds> positionPool;
     private final ReferenceCounter refCount;
 
-    private LongValue writePosition;
-    private LongValue readPosition;
-
-    private final Roll roll;
+    private final Bounds bounds;
     private final Indexing indexing;
+    private final Roll roll;
 
     /**
      *
@@ -99,24 +90,19 @@ class SingleWireStore implements WireStore {
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
 
-        // This is set to null as that it can pick up the right time the
-        // first time it is used.
-        this.writePosition = null;
-        this.readPosition = null;
-
-        this.header = new SingleHeader(this.builder);
+        this.bounds = new Bounds();
         this.roll = new Roll();
         this.indexing = new Indexing();
     }
 
     @Override
     public long readPosition() {
-        return this.header.getReadPosition();
+        return this.bounds.getReadPosition();
     }
 
     @Override
     public long writePosition() {
-        return this.header.getWritePosition();
+        return this.bounds.getWritePosition();
     }
 
     @Override
@@ -126,13 +112,13 @@ class SingleWireStore implements WireStore {
 
     @Override
     public long lastIndex() {
-        return this.header.getLastIndex();
+        return this.indexing.getLastIndex();
     }
 
 
     @Override
     public boolean appendRollMeta(int cycle) throws IOException {
-        if(header.casNextRollCycle(cycle)) {
+        if(roll.casNextRollCycle(cycle)) {
             final WireBounds position = append(
                 positionPool.get(),
                 true,
@@ -140,7 +126,7 @@ class SingleWireStore implements WireStore {
             );
 
 
-            header.setNextCycleMetaPosition(position.lower);
+            roll.setNextCycleMetaPosition(position.lower);
 
             return true;
         }
@@ -156,10 +142,10 @@ class SingleWireStore implements WireStore {
      */
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
-        final WireBounds bounds = append(positionPool.get(), false, writer);
+        final WireBounds wb = append(positionPool.get(), false, writer);
 
-        header.setWritePositionIfGreater(bounds.upper);
-        return header.incrementLastIndex();
+        bounds.setWritePositionIfGreater(wb.upper);
+        return indexing.incrementLastIndex();
     }
 
     /**
@@ -235,17 +221,16 @@ class SingleWireStore implements WireStore {
      * TODO: move it to bootstrap
      * @throws IOException
      */
-    protected SingleWireStore buildHeader() throws IOException {
+    protected SingleWireStore build() throws IOException {
         if(bytesStore.compareAndSwapLong(HEADER_OFFSET, NOT_INITIALIZED, NOT_READY)) {
             long writePosition = writeMeta(
                 wirePool.acquireForWriteAt(HEADER_OFFSET),
-                w -> w.write(MetaDataField.header).typedMarshallable(header)
+                w -> w.write(MetaDataField.header).typedMarshallable(this)
             );
 
-            // Set read/write pointer after the header
-            header.setReadPosition(writePosition);
-            header.setWritePosition(writePosition);
-            header.setRollCycle(this.cycle);
+            this.bounds.setWritePosition(writePosition);
+            this.bounds.setReadPosition(writePosition);
+            this.roll.setCycle(this.cycle);
         } else {
             WireUtil.waitForWireToBeReady(
                 this.bytesStore,
@@ -255,7 +240,7 @@ class SingleWireStore implements WireStore {
 
             readMeta(
                 wirePool.acquireForReadAt(HEADER_OFFSET),
-                w -> w.read().marshallable(header)
+                w -> w.read().marshallable(this)
             );
         }
 
@@ -274,7 +259,7 @@ class SingleWireStore implements WireStore {
         checkRemainingForAppend();
 
         final int delay = builder.appendWaitDelay();
-        long lastWritePosition = header.getWritePosition();
+        long lastWritePosition = writePosition();
 
         for (int i = builder.appendWaitLoops(); i >= 0; i--) {
             if(bytesStore.compareAndSwapInt(lastWritePosition, NOT_INITIALIZED, BUILDING)) {
@@ -325,18 +310,84 @@ class SingleWireStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        wire.write(MetaDataField.writePosition).int64forBinding(WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
-            .write(MetaDataField.readPosition).int64forBinding(WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
+        wire.write(MetaDataField.bounds).typedMarshallable(this.bounds)
             .write(MetaDataField.indexing).typedMarshallable(this.indexing)
             .write(MetaDataField.roll).typedMarshallable(this.roll);
     }
 
     @Override
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-        wire.read(MetaDataField.writePosition).int64(this.writePosition, this, (o, i) -> o.writePosition = i)
-            .read(MetaDataField.readPosition).int64(this.readPosition, this, (o, i) -> o.readPosition = i)
+        wire.read(MetaDataField.bounds).marshallable(this.bounds)
             .read(MetaDataField.indexing).marshallable(this.indexing)
             .read(MetaDataField.roll).marshallable(this.roll);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    enum BoundsField implements WireKey {
+        writePosition,
+        readPosition,
+    }
+
+    private class Bounds implements Marshallable {
+        private LongValue writePosition;
+        private LongValue readPosition;
+
+        Bounds() {
+            this.writePosition = null;
+            this.readPosition = null;
+        }
+
+        @Override
+        public void writeMarshallable(@NotNull WireOut wire) {
+            wire.write(BoundsField.writePosition).int64forBinding(
+                    WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
+                .write(BoundsField.readPosition).int64forBinding(
+                    WireUtil.HEADER_OFFSET, readPosition = wire.newLongReference());
+        }
+
+        @Override
+        public void readMarshallable(@NotNull WireIn wire) {
+            wire.read(BoundsField.writePosition).int64(
+                    this.writePosition, this, (o, i) -> o.writePosition = i)
+                .read(BoundsField.readPosition).int64(
+                    this.readPosition, this, (o, i) -> o.readPosition = i);
+        }
+
+        public long getReadPosition() {
+            return this.readPosition.getVolatileValue();
+        }
+
+        public void setReadPosition(long position) {
+            this.readPosition.setOrderedValue(position);
+        }
+
+        public long getWritePosition() {
+            return this.writePosition.getVolatileValue();
+        }
+
+        public void setWritePosition(long position) {
+            this.writePosition.setOrderedValue(position);
+        }
+
+        /**
+         *
+         * @param writePosition
+         */
+        public void setWritePositionIfGreater(long writePosition) {
+            for(; ;) {
+                long wp = writePosition();
+                if(writePosition > wp) {
+                    if(this.writePosition.compareAndSwapValue(wp, writePosition)) {
+                        return;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
     }
 
     // *************************************************************************
@@ -361,21 +412,33 @@ class SingleWireStore implements WireStore {
         }
 
         @Override
-        public void writeMarshallable(@NotNull WireOut out) {
-            out.write(IndexingFields.indexCount).int32(indexCount)
+        public void writeMarshallable(@NotNull WireOut wire) {
+            wire.write(IndexingFields.indexCount).int32(indexCount)
                 .write(IndexingFields.indexSpacing).int32(indexSpacing)
-                .write(IndexingFields.index2Index).int64forBinding(0L)
-                .write(IndexingFields.lastIndex).int64forBinding(-1L);
+                .write(IndexingFields.index2Index).int64forBinding(0L, index2Index = wire.newLongReference())
+                .write(IndexingFields.lastIndex).int64forBinding(-1L, lastIndex = wire.newLongReference());
         }
 
         @Override
-        public void readMarshallable(@NotNull WireIn in) {
-            in.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
+        public void readMarshallable(@NotNull WireIn wire) {
+            wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
                 .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
                 .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
                 .read(IndexingFields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
         }
+
+        public long incrementLastIndex() {
+            return this.lastIndex.addAtomicValue(1);
+        }
+
+        public long getLastIndex() {
+            return this.lastIndex.getVolatileValue();
+        }
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     private enum RollFields implements WireKey {
         cycle, length, format, timeZone, nextCycle, nextCycleMetaPosition
@@ -403,23 +466,51 @@ class SingleWireStore implements WireStore {
         }
 
         @Override
-        public void writeMarshallable(@NotNull WireOut out) {
-            out.write(RollFields.cycle).int32forBinding(-1)
+        public void writeMarshallable(@NotNull WireOut wire) {
+            wire.write(RollFields.cycle).int32forBinding(-1, cycle = wire.newIntReference())
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
                 .write(RollFields.timeZone).text(zoneId.getId())
-                .write(RollFields.nextCycle).int32forBinding(-1)
-                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
+                .write(RollFields.nextCycle).int32forBinding(-1, nextCycle = wire.newIntReference())
+                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
 
         @Override
-        public void readMarshallable(@NotNull WireIn in) {
-            in.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
+        public void readMarshallable(@NotNull WireIn wire) {
+            wire.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
                 .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
                 .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
+        }
+
+
+
+        public int getCycle() {
+            return this.cycle.getVolatileValue();
+        }
+
+        public Roll setCycle(int rollCycle) {
+            this.cycle.setOrderedValue(rollCycle);
+            return this;
+        }
+
+        public Roll setNextCycleMetaPosition(long position) {
+            this.nextCycleMetaPosition.setOrderedValue(position);
+            return this;
+        }
+
+        public long getNextCycleMetaPosition() {
+            return this.nextCycleMetaPosition.getVolatileValue();
+        }
+
+        public int getNextRollCycle() {
+            return this.nextCycle.getVolatileValue();
+        }
+
+        public boolean casNextRollCycle(int rollCycle) {
+            return this.nextCycle.compareAndSwapValue(-1, rollCycle);
         }
     }
 }
