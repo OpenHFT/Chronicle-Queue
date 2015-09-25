@@ -111,8 +111,8 @@ class SingleHeader implements Marshallable {
             .write(Fields.host).text(host)
             .write(Fields.indexCount).int32(indexCount)
             .write(Fields.indexSpacing).int32(indexSpacing)
-            .write(Fields.index2Index).int64forBinding(0L)
-            .write(Fields.lastIndex).int64forBinding(-1L)
+            .write(Fields.index2Index).int64forBinding(0L, index2Index = out.newLongReference())
+            .write(Fields.lastIndex).int64forBinding(-1L, lastIndex = out.newLongReference())
             .write(Fields.roll).marshallable(roll);
     }
 
@@ -224,12 +224,12 @@ class SingleHeader implements Marshallable {
 
         @Override
         public void writeMarshallable(@NotNull WireOut out) {
-            out.write(RollFields.cycle).int32forBinding(-1)
+            out.write(RollFields.cycle).int32forBinding(-1, cycle = out.newIntReference())
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
                 .write(RollFields.timeZone).text(zoneId.getId())
-                .write(RollFields.nextCycle).int32forBinding(-1)
-                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1);
+                .write(RollFields.nextCycle).int32forBinding(-1, nextCycle = out.newIntReference())
+                .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = out.newLongReference());
         }
 
         @Override
