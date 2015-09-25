@@ -41,6 +41,7 @@ import static net.openhft.chronicle.wire.WireUtil.*;
 class SingleWireStore implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleWireStore.class,"WireStore");
+        ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class,"Bounds");
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class,"Indexing");
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class,"Roll");
     }
