@@ -16,8 +16,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -32,7 +30,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private final SingleChronicleQueueBuilder builder;
     private final RollDateCache dateCache;
-    private final Map<Integer, SingleChronicleQueueWireStore> stores;
+    private final Map<Integer, SingleWireStore> stores;
     private int firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
@@ -52,11 +50,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     protected synchronized WireStore storeForCycle(int cycle) throws IOException {
-        SingleChronicleQueueWireStore format = stores.get(cycle);
+        SingleWireStore format = stores.get(cycle);
         if(null == format) {
             stores.put(
                 cycle,
-                format = new SingleChronicleQueueWireStore(
+                format = new SingleWireStore(
                     builder,
                     cycle,
                     this.dateCache.formatFor(cycle)).buildHeader()

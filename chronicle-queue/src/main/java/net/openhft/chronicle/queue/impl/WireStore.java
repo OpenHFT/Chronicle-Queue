@@ -16,13 +16,14 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public interface WireStore extends ReferenceCounted  {
+public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *

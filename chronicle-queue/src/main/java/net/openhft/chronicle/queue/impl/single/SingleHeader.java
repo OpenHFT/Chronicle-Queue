@@ -26,7 +26,7 @@ import java.time.ZonedDateTime;
 import java.util.UUID;
 
 // TODO: is padded needed ?
-class SingleChronicleQueueHeader implements Marshallable {
+class SingleHeader implements Marshallable {
 
     private enum Fields implements WireKey {
         type, version,
@@ -63,7 +63,7 @@ class SingleChronicleQueueHeader implements Marshallable {
 
     private Roll roll;
 
-    SingleChronicleQueueHeader(SingleChronicleQueueBuilder builder) {
+    SingleHeader(SingleChronicleQueueBuilder builder) {
         this.type = QUEUE_TYPE;
         this.version = QUEUE_VERSION;
         this.uuid = UUID.randomUUID();
@@ -137,8 +137,23 @@ class SingleChronicleQueueHeader implements Marshallable {
         return this.writePosition.getVolatileValue();
     }
 
-    public SingleChronicleQueueHeader setWritePosition(long writeByte) {
+    public SingleHeader setWritePosition(long writeByte) {
         this.writePosition.setOrderedValue(writeByte);
+        return this;
+    }
+
+    public SingleHeader setWritePositionIfGreater(long writePosition) {
+        for(; ;) {
+            long wp = getWritePosition();
+            if(writePosition > wp) {
+                if(this.writePosition.compareAndSwapValue(wp, writePosition)) {
+                    return this;
+                }
+            } else {
+                break;
+            }
+        }
+
         return this;
     }
 
@@ -146,7 +161,7 @@ class SingleChronicleQueueHeader implements Marshallable {
         return this.readPosition.getVolatileValue();
     }
 
-    public SingleChronicleQueueHeader setReadPosition(long readPosition) {
+    public SingleHeader setReadPosition(long readPosition) {
         this.readPosition.setOrderedValue(readPosition);
         return this;
     }
@@ -163,12 +178,12 @@ class SingleChronicleQueueHeader implements Marshallable {
         return (int)this.roll.cycle.getVolatileValue();
     }
 
-    public SingleChronicleQueueHeader setRollCycle(int rollCycle) {
+    public SingleHeader setRollCycle(int rollCycle) {
         this.roll.cycle.setOrderedValue(rollCycle);
         return this;
     }
 
-    public SingleChronicleQueueHeader setNextCycleMetaPosition(long position) {
+    public SingleHeader setNextCycleMetaPosition(long position) {
         this.roll.nextCycleMetaPosition.setOrderedValue(position);
         return this;
     }
