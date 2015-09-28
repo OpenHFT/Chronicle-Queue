@@ -18,8 +18,12 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.tcp.network.*;
-import net.openhft.chronicle.tcp.*;
+import net.openhft.chronicle.tcp.ChronicleTcp;
+import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.tcp.TcpConnectionHandler;
+import net.openhft.chronicle.tcp.TcpHandlingException;
+import net.openhft.chronicle.tcp.network.SessionDetailsProvider;
+import net.openhft.chronicle.tcp.network.TcpHandler;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.lang.io.Bytes;
@@ -391,6 +395,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
             clear();
         }
 
+        @Override
+        public void writeEnum(long offset, int maxSize, Object o) {
+            wrapped.writeEnum(offset, maxSize, o);
+        }
+
+        @Override
+        public <E> E readEnum(long offset, int maxSize, Class<E> aClass) {
+            return wrapped.readEnum(offset, maxSize, aClass);
+        }
     }
 
     private final class StatelessExcerpt
