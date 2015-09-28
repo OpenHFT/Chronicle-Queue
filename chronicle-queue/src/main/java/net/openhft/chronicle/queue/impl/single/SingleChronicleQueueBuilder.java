@@ -17,22 +17,20 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.ZoneId;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private File path;
     private long blockSize;
     private WireType wireType;
-    private int rollCycleLength;
 
-    private String rollCycleFormat;
-    private ZoneId rollCycleZoneId;
+    private RollCycle rollCycle;
 
     private int headerWaitLoops;
     private int headerWaitDelay;
@@ -52,9 +50,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.headerWaitDelay = 10;
         this.appendWaitLoops = 1000;
         this.appendWaitDelay = 0;
-        this.rollCycleLength = RollCycles.DAYS.length();
-        this.rollCycleFormat = RollCycles.DAYS.format();
-        this.rollCycleZoneId = ZoneId.of("UTC");
+        this.rollCycle = RollCycles.DAYS;
 
     }
 
@@ -117,25 +113,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.appendWaitDelay;
     }
 
-    public SingleChronicleQueueBuilder rollCycle(RollCycles rollCycle) {
-        this.rollCycleLength = rollCycle.length();
-        this.rollCycleFormat = rollCycle.format();
-        this.rollCycleZoneId = ZoneId.of("UTC");
-
+    public SingleChronicleQueueBuilder rollCycle(RollCycle rollCycle) {
+        this.rollCycle = rollCycle;
         return this;
     }
 
-    public int rollCycleLength() {
-        return this.rollCycleLength;
-    }
-
-    public SingleChronicleQueueBuilder rollCycleFormat(String rollCycleFormat) {
-        this.rollCycleFormat = rollCycleFormat;
-        return this;
-    }
-
-    public String rollCycleFormat() {
-        return this.rollCycleFormat;
+    public RollCycle rollCycle() {
+        return this.rollCycle;
     }
 
     @NotNull
@@ -185,9 +169,5 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public static SingleChronicleQueueBuilder raw(String name) {
         return new SingleChronicleQueueBuilder(name)
             .wireType(WireType.RAW);
-    }
-
-    public ZoneId rollCycleZoneId() {
-        return rollCycleZoneId;
     }
 }

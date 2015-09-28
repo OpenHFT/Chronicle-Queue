@@ -15,9 +15,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
-import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -25,13 +25,11 @@ import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.WireStoreBootstrap;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.io.IOException;
-import java.time.ZoneId;
+import java.util.function.Function;
 
 import static net.openhft.chronicle.wire.WireUtil.*;
 
@@ -39,9 +37,9 @@ import static net.openhft.chronicle.wire.WireUtil.*;
  * TODO:
  * - indexing
  */
-class SingleWireStore implements WireStore {
+class SingleChronicleQueueStore implements WireStore {
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(SingleWireStore.class,"WireStore");
+        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class,"WireStore");
         ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class,"Bounds");
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class,"Indexing");
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class,"Roll");
@@ -54,9 +52,6 @@ class SingleWireStore implements WireStore {
         roll
     }
 
-    private int cycle;
-    private SingleChronicleQueueBuilder builder;
-    private MappedFile mappedFile;
     private BytesStore bytesStore;
     private WirePool wirePool;
     private final ThreadLocal<WireBounds> positionPool;
@@ -66,25 +61,7 @@ class SingleWireStore implements WireStore {
     private final Indexing indexing;
     private final Roll roll;
 
-    /**
-     *
-     * @param builder       the SingleChronicleQueueBuilder
-     * @param file          the cycle file
-     * @param cycle         the cycle this store refers to
-     *
-     * @throws IOException
-     */
-    SingleWireStore() {
-        //final SingleChronicleQueueBuilder builder, File file, int cycle) throws IOException {
-
-        /*
-        this.builder = builder;
-        this.cycle = cycle;
-        this.mappedFile = MappedFile.mappedFile(file, this.builder.blockSize());
-        this.bytesStore = mappedFile.acquireByteStore(HEADER_OFFSET);
-        this.wirePool = new WirePool(bytesStore, builder.wireType());
-        */
-
+    SingleChronicleQueueStore() {
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
         this.bounds = new Bounds();
@@ -215,50 +192,21 @@ class SingleWireStore implements WireStore {
     }
 
     @Override
-    public void install(@NotNull BytesStore store, long length, int cycle) throws IOException {
-        install(store);
+    public void install(
+            @NotNull BytesStore store,
+            long length,
+            boolean created,
+            int cycle,
+            @NotNull Function<Bytes, Wire> wireSupplier) throws IOException {
 
-        this.bounds.setWritePosition(length);
-        this.bounds.setReadPosition(length);
-        this.roll.setCycle(this.cycle);
-    }
-
-    @Override
-    public void install(@NotNull BytesStore store) throws IOException {
         this.bytesStore = store;
-        this.wirePool = new WirePool(bytesStore, builder.wireType());
-    }
+        this.wirePool = new WirePool(bytesStore, wireSupplier);
 
-    /**
-     * Build the header (@see SingleChronicleQueueHeader)
-     *
-     * TODO: move it to bootstrap
-     * @throws IOException
-     */
-    protected SingleWireStore build() throws IOException {
-        if(bytesStore.compareAndSwapLong(HEADER_OFFSET, NOT_INITIALIZED, NOT_READY)) {
-            long writePosition = writeMeta(
-                wirePool.acquireForWriteAt(HEADER_OFFSET),
-                w -> w.write(MetaDataField.header).typedMarshallable(this)
-            );
-
-            this.bounds.setWritePosition(writePosition);
-            this.bounds.setReadPosition(writePosition);
-            this.roll.setCycle(this.cycle);
-        } else {
-            WireUtil.waitForWireToBeReady(
-                this.bytesStore,
-                HEADER_OFFSET,
-                builder.headerWaitLoops(),
-                builder.headerWaitDelay());
-
-            readMeta(
-                wirePool.acquireForReadAt(HEADER_OFFSET),
-                w -> w.read().marshallable(this)
-            );
+        if(created) {
+            this.bounds.setWritePosition(length);
+            this.bounds.setReadPosition(length);
+            this.roll.setCycle(cycle);
         }
-
-        return this;
     }
 
     /**
@@ -272,10 +220,11 @@ class SingleWireStore implements WireStore {
 
         checkRemainingForAppend();
 
-        final int delay = builder.appendWaitDelay();
+        long TIMEOUT_MS = 10_000; // 10 seconds.
+        long end = System.currentTimeMillis() + TIMEOUT_MS;
         long lastWritePosition = writePosition();
 
-        for (int i = builder.appendWaitLoops(); i >= 0; i--) {
+        for (; ;) {
             if(bytesStore.compareAndSwapInt(lastWritePosition, NOT_INITIALIZED, BUILDING)) {
                 bounds.lower = lastWritePosition;
                 bounds.upper = !meta
@@ -289,18 +238,21 @@ class SingleWireStore implements WireStore {
                     lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: wait strategy
-                    if(delay > 0) {
-                        Jvm.pause(delay);
+                    if(System.currentTimeMillis() > end) {
+                        throw new AssertionError("Timeout waiting to append");
                     }
+
+                    Jvm.pause(1);
                 }
             }
         }
 
-        throw new AssertionError("Timeout waiting to append");
+
     }
 
     private synchronized void performRelease() {
-        this.mappedFile.close();
+        //TODO: implement
+        //this.mappedFile.close();
     }
 
     @Override
@@ -455,17 +407,17 @@ class SingleWireStore implements WireStore {
     }
 
     class Roll implements Marshallable {
-        private int length;
-        private String format;
-        private ZoneId zoneId;
+        //private int length;
+        //private String format;
+        //private ZoneId zoneId;
         private IntValue cycle;
         private IntValue nextCycle;
         private LongValue nextCycleMetaPosition;
 
         Roll() {
-            this.length = builder.rollCycleLength();
-            this.format = builder.rollCycleFormat();
-            this.zoneId = builder.rollCycleZoneId();
+            //this.length = builder.rollCycle().length();
+            //this.format = builder.rollCycle().format();
+            //this.zoneId = builder.rollCycle().zone();
 
             this.cycle = null;
             this.nextCycle = null;
@@ -475,9 +427,9 @@ class SingleWireStore implements WireStore {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(RollFields.cycle).int32forBinding(-1, cycle = wire.newIntReference())
-                .write(RollFields.length).int32(length)
-                .write(RollFields.format).text(format)
-                .write(RollFields.timeZone).text(zoneId.getId())
+                //.write(RollFields.length).int32(length)
+                //.write(RollFields.format).text(format)
+                //.write(RollFields.timeZone).text(zoneId.getId())
                 .write(RollFields.nextCycle).int32forBinding(-1, nextCycle = wire.newIntReference())
                 .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
@@ -485,9 +437,9 @@ class SingleWireStore implements WireStore {
         @Override
         public void readMarshallable(@NotNull WireIn wire) {
             wire.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
-                .read(RollFields.length).int32(this, (o, i) -> o.length = i)
-                .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
+                //.read(RollFields.length).int32(this, (o, i) -> o.length = i)
+                //.read(RollFields.format).text(this, (o, i) -> o.format = i)
+                //.read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
                 .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }

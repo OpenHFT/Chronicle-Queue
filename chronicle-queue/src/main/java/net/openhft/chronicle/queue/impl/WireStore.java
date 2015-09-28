@@ -15,14 +15,14 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.ReferenceCounted;
-import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 public interface WireStore extends ReferenceCounted, Marshallable {
 
@@ -86,12 +86,17 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     /**
      *
      * @param store
+     * @param length
+     * @param created
+     * @param cycle
+     * @param wireSupplier
+     * @throws IOException
      */
-    void install(@NotNull BytesStore store, long length, int cycle) throws IOException;
-
-    /**
-     *
-     * @param store
-     */
-    void install(@NotNull BytesStore store) throws IOException;
+    void install(
+        @NotNull BytesStore store,
+        long length,
+        boolean created,
+        int cycle,
+        @NotNull Function<Bytes, Wire> wireSupplier)
+            throws IOException;
 }
