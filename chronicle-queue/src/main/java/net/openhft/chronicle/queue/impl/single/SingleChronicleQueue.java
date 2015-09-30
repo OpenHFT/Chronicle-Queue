@@ -137,7 +137,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-
     protected WireStore newStore(final int cycle) {
         try {
 
@@ -152,7 +151,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 cycleFile,
                 file -> MappedFile.mappedFile(file, builder.blockSize()),
                 builder.wireType(),
-                SingleChronicleQueueStore::new,
+                () -> new SingleChronicleQueueStore(builder.rollCycle()),
                 ws -> ws.delegate().install(
                     ws.store(),
                     ws.headerLength(),

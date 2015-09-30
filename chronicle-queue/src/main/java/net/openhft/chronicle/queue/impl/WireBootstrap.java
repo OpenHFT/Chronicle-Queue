@@ -22,7 +22,10 @@ import net.openhft.chronicle.core.annotation.NotNull;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.core.util.ThrowingFunction;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireUtil;
+import net.openhft.chronicle.wire.Wires;
 
 import java.io.File;
 import java.io.IOException;
@@ -123,6 +126,7 @@ public class WireBootstrap<D extends Marshallable> implements Closeable {
         Function<Bytes, Wire> wireType,
         Supplier<D> delegateSupplier,
         ThrowingAcceptor<WireBootstrap<D>, IOException> installer) throws IOException {
+
 
         File parentFile = file.getParentFile();
         if (parentFile != null) {

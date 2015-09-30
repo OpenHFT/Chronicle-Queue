@@ -23,12 +23,14 @@ import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.function.Function;
 
 import static net.openhft.chronicle.wire.WireUtil.*;
@@ -62,10 +64,14 @@ class SingleChronicleQueueStore implements WireStore {
     private final Roll roll;
 
     SingleChronicleQueueStore() {
+        this(null);
+    }
+
+    SingleChronicleQueueStore(RollCycle rollCycle) {
         this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
         this.bounds = new Bounds();
-        this.roll = new Roll();
+        this.roll = new Roll(rollCycle);
         this.indexing = new Indexing();
     }
 
@@ -407,17 +413,17 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     class Roll implements Marshallable {
-        //private int length;
-        //private String format;
-        //private ZoneId zoneId;
+        private int length;
+        private String format;
+        private ZoneId zoneId;
         private IntValue cycle;
         private IntValue nextCycle;
         private LongValue nextCycleMetaPosition;
 
-        Roll() {
-            //this.length = builder.rollCycle().length();
-            //this.format = builder.rollCycle().format();
-            //this.zoneId = builder.rollCycle().zone();
+        Roll(RollCycle rollCycle) {
+            this.length = rollCycle != null ? rollCycle.length() : -1;
+            this.format = rollCycle != null ? rollCycle.format() : null;
+            this.zoneId = rollCycle != null ? rollCycle.zone() : null;
 
             this.cycle = null;
             this.nextCycle = null;
@@ -427,9 +433,9 @@ class SingleChronicleQueueStore implements WireStore {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(RollFields.cycle).int32forBinding(-1, cycle = wire.newIntReference())
-                //.write(RollFields.length).int32(length)
-                //.write(RollFields.format).text(format)
-                //.write(RollFields.timeZone).text(zoneId.getId())
+                .write(RollFields.length).int32(length)
+                .write(RollFields.format).text(format)
+                .write(RollFields.timeZone).text(zoneId.getId())
                 .write(RollFields.nextCycle).int32forBinding(-1, nextCycle = wire.newIntReference())
                 .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
@@ -437,9 +443,9 @@ class SingleChronicleQueueStore implements WireStore {
         @Override
         public void readMarshallable(@NotNull WireIn wire) {
             wire.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
-                //.read(RollFields.length).int32(this, (o, i) -> o.length = i)
-                //.read(RollFields.format).text(this, (o, i) -> o.format = i)
-                //.read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
+                .read(RollFields.length).int32(this, (o, i) -> o.length = i)
+                .read(RollFields.format).text(this, (o, i) -> o.format = i)
+                .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
                 .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
