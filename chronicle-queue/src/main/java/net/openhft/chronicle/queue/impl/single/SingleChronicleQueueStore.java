@@ -30,7 +30,9 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireConstants;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.time.ZoneId;
 import java.util.function.Function;
@@ -50,7 +52,6 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     enum MetaDataField implements WireKey {
-        header,
         bounds,
         indexing,
         roll
@@ -58,6 +59,7 @@ class SingleChronicleQueueStore implements WireStore {
 
     private BytesStore bytesStore;
     private WirePool wirePool;
+    private Closeable resourceCleaner;
     private final ThreadLocal<WireBounds> positionPool;
     private final ReferenceCounter refCount;
 
@@ -65,6 +67,9 @@ class SingleChronicleQueueStore implements WireStore {
     private final Indexing indexing;
     private final Roll roll;
 
+    /**
+     * Default constructor needed for self boot-strapping
+     */
     SingleChronicleQueueStore() {
         this(null);
     }
@@ -75,6 +80,7 @@ class SingleChronicleQueueStore implements WireStore {
         this.bounds = new Bounds();
         this.roll = new Roll(rollCycle);
         this.indexing = new Indexing();
+        this.resourceCleaner = null;
     }
 
     @Override
@@ -205,7 +211,8 @@ class SingleChronicleQueueStore implements WireStore {
             long length,
             boolean created,
             int cycle,
-            @NotNull Function<Bytes, Wire> wireSupplier) throws IOException {
+            @NotNull Function<Bytes, Wire> wireSupplier,
+            @Nullable Closeable closeable) throws IOException {
 
         this.bytesStore = store;
         this.wirePool = new WirePool(bytesStore, wireSupplier);
@@ -260,7 +267,13 @@ class SingleChronicleQueueStore implements WireStore {
 
     private synchronized void performRelease() {
         //TODO: implement
-        //this.mappedFile.close();
+        try {
+            if(this.resourceCleaner != null) {
+                this.resourceCleaner.close();
+            }
+        } catch(IOException e) {
+            //TODO
+        }
     }
 
     @Override

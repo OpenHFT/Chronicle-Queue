@@ -157,7 +157,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                     ws.headerLength(),
                     ws.headerCreated(),
                     cycle,
-                    ws.wireSupplier()
+                    ws.wireSupplier(),
+                    ws.mappedFile()
                 )
             ).delegate();
 

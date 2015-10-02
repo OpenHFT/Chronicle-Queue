@@ -20,7 +20,9 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.Function;
 
@@ -90,6 +92,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @param created
      * @param cycle
      * @param wireSupplier
+     * @param closeable
      * @throws IOException
      */
     void install(
@@ -97,6 +100,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
         long length,
         boolean created,
         int cycle,
-        @NotNull Function<Bytes, Wire> wireSupplier)
+        @NotNull Function<Bytes, Wire> wireSupplier,
+        @Nullable Closeable closeable)
             throws IOException;
 }
