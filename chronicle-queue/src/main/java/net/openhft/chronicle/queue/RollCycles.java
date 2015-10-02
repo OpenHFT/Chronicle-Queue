@@ -15,20 +15,24 @@
  */
 package net.openhft.chronicle.queue;
 
+import java.time.ZoneId;
+
 public enum RollCycles implements RollCycle {
-    SECONDS("yyyyMMddHHmmss", 1000),
-    MINUTES("yyyyMMddHHmm", 60 * 1000),
-    HOURS("yyyyMMddHH", 60 * 60 * 1000),
-    DAYS("yyyyMMdd", 24 * 60 * 60 * 1000);
+    SECONDS("yyyyMMddHHmmss", 1000, ZoneId.of("UTC")),
+    MINUTES("yyyyMMddHHmm", 60 * 1000, ZoneId.of("UTC")),
+    HOURS("yyyyMMddHH", 60 * 60 * 1000, ZoneId.of("UTC")),
+    DAYS("yyyyMMdd", 24 * 60 * 60 * 1000, ZoneId.of("UTC"));
 
     static final RollCycles[] VALUES = values();
 
     final String format;
     final int length;
+    final ZoneId zone;
 
-    RollCycles(String format, int length) {
+    RollCycles(String format, int length, ZoneId zone) {
         this.format = format;
         this.length = length;
+        this.zone = zone;
     }
 
     @Override
@@ -39,5 +43,10 @@ public enum RollCycles implements RollCycle {
     @Override
     public int length() {
         return this.length;
+    }
+
+    @Override
+    public ZoneId zone() {
+        return this.zone;
     }
 }

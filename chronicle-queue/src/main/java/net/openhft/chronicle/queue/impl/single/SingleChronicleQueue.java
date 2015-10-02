@@ -16,72 +16,52 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.WiredFile;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Map;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private final SingleChronicleQueueBuilder builder;
+    private final RollCycle cycle;
     private final RollDateCache dateCache;
-    private final Map<Integer, SingleChronicleQueueWireStore> stores;
+    private final WireStorePool pool;
     private int firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
-        this.dateCache = new RollDateCache(
-            builder.rollCycleLength(),
-            builder.rollCycleFormat(),
-                builder.rollCycleZoneId());
-
+        this.cycle = builder.rollCycle();
+        this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
-        this.stores = HashIntObjMaps.newMutableMap();
+        this.pool = WireStorePool.withSupplier(this::newStore);
         this.firstCycle = -1;
-    }
-
-    SingleChronicleQueueBuilder builder() {
-        return this.builder;
     }
 
     @Override
     protected synchronized WireStore storeForCycle(int cycle) throws IOException {
-        SingleChronicleQueueWireStore format = stores.get(cycle);
-        if(null == format) {
-            stores.put(
-                cycle,
-                format = new SingleChronicleQueueWireStore(
-                    builder,
-                    cycle,
-                    this.dateCache.formatFor(cycle)).buildHeader()
-            );
-        } else {
-            format.reserve();
-        }
-
-        return format;
+        return this.pool.acquire(cycle);
     }
 
     @Override
-    protected synchronized void release(WireStore store) {
-        store.release();
-        if(store.refCount() <= 0) {
-            stores.remove(store.cycle());
-        }
+    protected synchronized void release(@NotNull WireStore store) {
+        this.pool.release(store);
     }
 
     @Override
     protected int cycle() {
-        return (int) (System.currentTimeMillis() / builder.rollCycleLength());
+        return this.cycle.current();
     }
 
     //TODO: reduce garbage
+    //TODO: add a check on first file, in case it gets deleted
     @Override
     protected synchronized int firstCycle() {
         if(-1 != firstCycle ) {
@@ -151,5 +131,39 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         }
 
         return -1;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected WireStore newStore(final int cycle) {
+        try {
+
+            String cycleFormat = this.dateCache.formatFor(cycle);
+            File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+
+            if (!cycleFile.getParentFile().exists()) {
+                cycleFile.mkdirs();
+            }
+
+            return WiredFile.<WireStore>build(
+                cycleFile,
+                file -> MappedFile.mappedFile(file, builder.blockSize()),
+                builder.wireType(),
+                () -> new SingleChronicleQueueStore(builder.rollCycle()),
+                ws -> ws.delegate().install(
+                    ws.headerStore(),
+                    ws.headerLength(),
+                    ws.headerCreated(),
+                    cycle,
+                    ws.wireSupplier()
+                )
+            ).delegate();
+
+        } catch (IOException e) {
+            //TODO: right way ?
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -36,6 +36,10 @@ public class RollDateCache {
     private final int length;
     private final ZoneId zoneId;
 
+    public RollDateCache(final RollCycle cycle) {
+        this(cycle.length(), cycle.format(), cycle.zone());
+    }
+
     public RollDateCache(final int length, String format, final ZoneId zoneId) {
         this.length = length;
         this.zoneId = zoneId;
