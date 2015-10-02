@@ -24,8 +24,10 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.impl.WireBounds;
 import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireConstants;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,7 +35,7 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.util.function.Function;
 
-import static net.openhft.chronicle.wire.WireUtil.*;
+import static net.openhft.chronicle.queue.impl.WireConstants.*;
 
 /**
  * TODO:
@@ -139,16 +141,16 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public long read(long position, @NotNull ReadMarshallable reader) throws IOException {
         final int spbHeader = bytesStore.readVolatileInt(position);
-        if(spbHeader == WireUtil.NO_DATA) {
-            return WireUtil.NO_DATA;
+        if(Wires.isNotInitialized(spbHeader)) {
+            return WireConstants.NO_DATA;
         }
 
         if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
-            return WireUtil.readData(wirePool.acquireForReadAt(position), reader);
+            return Wires.readData(wirePool.acquireForReadAt(position), reader);
         } else if (Wires.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
             // the next cycle (negative)
-            final StringBuilder sb = WireUtil.SBP.acquireStringBuilder();
+            final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
             final ValueIn vi = wirePool.acquireForReadAt(position + 4).read(sb);
 
             if("roll".contentEquals(sb)) {
@@ -160,7 +162,7 @@ class SingleChronicleQueueStore implements WireStore {
             }
         }
 
-        return WireUtil.NO_DATA;
+        return WireConstants.NO_DATA;
     }
 
     /**
@@ -192,7 +194,7 @@ class SingleChronicleQueueStore implements WireStore {
      */
     protected void checkRemainingForAppend() {
         long remaining = bytesStore.writeRemaining();
-        if (remaining > WireUtil.LENGTH_MASK) {
+        if (Wires.exceedsMaxLength(remaining)) {
             throw new IllegalStateException("Length too large: " + remaining);
         }
     }
@@ -231,11 +233,11 @@ class SingleChronicleQueueStore implements WireStore {
         long lastWritePosition = writePosition();
 
         for (; ;) {
-            if(bytesStore.compareAndSwapInt(lastWritePosition, NOT_INITIALIZED, BUILDING)) {
+            if(Wires.acquireLock(bytesStore, lastWritePosition)) {
                 bounds.lower = lastWritePosition;
                 bounds.upper = !meta
-                    ? WireUtil.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
-                    : WireUtil.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer);
+                    ? Wires.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
+                    : Wires.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer);
 
                 return bounds;
             } else {
@@ -315,9 +317,9 @@ class SingleChronicleQueueStore implements WireStore {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(BoundsField.writePosition).int64forBinding(
-                    WireUtil.HEADER_OFFSET, writePosition = wire.newLongReference())
+                    WireConstants.HEADER_OFFSET, writePosition = wire.newLongReference())
                 .write(BoundsField.readPosition).int64forBinding(
-                    WireUtil.HEADER_OFFSET, readPosition = wire.newLongReference());
+                    WireConstants.HEADER_OFFSET, readPosition = wire.newLongReference());
         }
 
         @Override
