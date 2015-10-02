@@ -20,9 +20,9 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
-import net.openhft.chronicle.queue.impl.WireBootstrap;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.WiredFile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -147,13 +147,13 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 cycleFile.mkdirs();
             }
 
-            return WireBootstrap.build(
+            return WiredFile.<WireStore>build(
                 cycleFile,
                 file -> MappedFile.mappedFile(file, builder.blockSize()),
                 builder.wireType(),
                 () -> new SingleChronicleQueueStore(builder.rollCycle()),
                 ws -> ws.delegate().install(
-                    ws.store(),
+                    ws.headerStore(),
                     ws.headerLength(),
                     ws.headerCreated(),
                     cycle,
