@@ -69,6 +69,7 @@ public class PEMain {
             if (readOne) {
                 // did something
                 count = 0;
+
             } else if (count++ > 1000000) {
                 // do something else like pause.
                 long processed = excerpt.index() + 1;

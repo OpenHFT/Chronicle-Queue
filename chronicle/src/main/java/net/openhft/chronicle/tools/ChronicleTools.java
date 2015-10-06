@@ -25,8 +25,11 @@ import net.openhft.lang.io.ByteBufferBytes;
 import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.model.constraints.NotNull;
+import org.slf4j.Logger;
 
+import java.io.EOFException;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -57,6 +60,14 @@ public enum ChronicleTools {
         DeleteStatic.INSTANCE.add(dirPath);
     }
 
+    public static void logIOException(Logger logger, String message, IOException e) {
+        if (e instanceof EOFException) {
+            logger.trace(message, e);
+
+        } else {
+            logger.warn(message, e);
+        }
+    }
 
     public static String asString(ByteBuffer bb) {
         IByteBufferBytes wrap = ByteBufferBytes.wrap(bb);
@@ -123,6 +134,7 @@ public enum ChronicleTools {
     public static ClassLoader getSystemClassLoader() {
         if (System.getSecurityManager() == null) {
             return ClassLoader.getSystemClassLoader();
+
         } else {
             return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
                 @Override

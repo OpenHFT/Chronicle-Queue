@@ -1,27 +1,23 @@
 /*
- * Copyright 2014 Higher Frequency Trading
+ *     Copyright (C) 2015  higherfrequencytrading.com
  *
- * http://www.higherfrequencytrading.com
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Lesser General Public License for more details.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *     You should have received a copy of the GNU Lesser General Public License
+ *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package net.openhft.chronicle.queue;
 
-
-
-import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 /**
  * The main data container of a {@link ChronicleQueue}, an extended version of {@link ExcerptTailer} which also facilitates
@@ -30,9 +26,6 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface Excerpt extends ExcerptTailer {
-    @Override
-    Wire wire();
-
     /**
      * Find any entry which return a match i.e. 0, or a negative value which is the boundary between -1 and +1
      *
@@ -46,7 +39,7 @@ public interface Excerpt extends ExcerptTailer {
      * This doesn't access the same index two. The best case is one additional comparison and the worst case is the
      * same.
      *
-     * @param startEnd   start (inclusive) to end (enclusive). Will be equal if no exact match is found.
+     * @param startEnd   lower (inclusive) to upper (enclusive). Will be equal if no exact match is found.
      * @param comparator to use for comparison.
      */
     void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator);
@@ -54,13 +47,22 @@ public interface Excerpt extends ExcerptTailer {
     /**
      * Randomly select an Excerpt.
      *
-     * @param l index to look up
+     * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(long l);
+    boolean index(long index) throws IOException;
 
     /**
-     * Replay from the start.
+     * Randomly select an Excerpt.
+     *
+     * @param cycle cycle
+     * @param index index to look up
+     * @return true if this is a valid entries and not padding.
+     */
+    boolean index(int cycle, long index) throws IOException;
+
+    /**
+     * Replay from the lower.
      *
      * @return this Excerpt
      */
@@ -68,7 +70,7 @@ public interface Excerpt extends ExcerptTailer {
     Excerpt toStart();
 
     /**
-     * Wind to the end.
+     * Wind to the upper.
      *
      * @return this Excerpt
      */

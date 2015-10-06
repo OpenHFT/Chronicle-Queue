@@ -37,6 +37,7 @@ public class C2SReader {
                 server.command(request);
                 break;
             }
+
             default:
                 System.err.println("Unknown command " + ch);
                 break;

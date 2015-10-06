@@ -70,6 +70,7 @@ public class SinkTcpAcceptor extends SinkTcp {
                 }
 
                 selectionKeys.clear();
+
             } else {
                 final Set<SelectionKey> keys = selector.selectionKeys();
 

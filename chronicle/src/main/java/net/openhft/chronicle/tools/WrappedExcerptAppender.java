@@ -22,6 +22,8 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.StreamCorruptedException;
+
 public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBytes<T> implements ExcerptAppender {
 
     public WrappedExcerptAppender(final @NotNull T appender) {
@@ -39,7 +41,6 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
     public Chronicle chronicle() {
         return wrapped.chronicle();
     }
-
 
     public boolean wasPadding() {
         return wrapped.wasPadding();
@@ -65,4 +66,23 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
         return wrapped.nextSynchronous();
     }
 
+    @Override
+    public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+        return wrapped.read8bitText(stringBuilder);
+    }
+
+    @Override
+    public void write8bitText(CharSequence charSequence) {
+        wrapped.write8bitText(charSequence);
+    }
+
+    @Override
+    public <E> E readEnum(long l, int i, Class<E> aClass) {
+        return wrapped.readEnum(l, i, aClass);
+    }
+
+    @Override
+    public void writeEnum(long l, int i, Object o) {
+        wrapped.writeEnum(l, i, o);
+    }
 }

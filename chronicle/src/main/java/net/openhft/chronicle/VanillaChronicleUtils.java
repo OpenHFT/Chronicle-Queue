@@ -18,44 +18,67 @@
 
 package net.openhft.chronicle;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VanillaChronicleUtils {
 
-    private static Logger getLogger() {
-        return LoggerFactory.getLogger(VanillaChronicleUtils.class.getName());
-    }
+    public static final FileFilter IS_DIR = new FileFilter() {
+        @Override
+        public boolean accept(File pathname) {
+            return pathname.isDirectory();
+        }
+    };
 
-    public static File mkFiles(String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
-        File dir = new File(basePath, cycleStr);
+    public static File mkFiles(
+            String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
+
+        final File dir = new File(basePath, cycleStr);
+        final File file = new File(dir, name);
 
         if (!forAppend) {
             //This test needs to be done before any directories are created.
-            File f = new File(dir, name);
-            if (!f.exists()) {
-                throw new FileNotFoundException(f.getAbsolutePath());
+            if (!file.exists()) {
+                throw new FileNotFoundException(file.getAbsolutePath());
             }
         }
 
-        if (!dir.isDirectory()) {
-            boolean created = dir.mkdirs();
-            getLogger().trace("Created {} is {}", dir, created);
-        }
-
-        File file = new File(dir, name);
-        if (file.exists()) {
-             getLogger().trace("Opening {}", file);
-        } else if (forAppend) {
-             getLogger().trace("Creating {}", file);
-        } else {
+        dir.mkdirs();
+        if(!file.exists() && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 
         return file;
+    }
+
+    public static File fileFor(
+            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) {
+        return new File(
+            new File(basePath, dateCache.formatFor(cycle)),
+            VanillaIndexCache.FILE_NAME_PREFIX + indexCount);
+    }
+
+    public static List<File> findLeafDirectories(File root) {
+        final List<File> files =  findLeafDirectories(new ArrayList<File>(), root);
+        files.remove(root);
+
+        return files;
+    }
+
+    public static List<File> findLeafDirectories(List<File> leafs, File root) {
+        final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
+        if(files != null && files.length != 0) {
+            for(int i=files.length - 1; i >= 0; i--) {
+                findLeafDirectories(leafs, files[i]);
+            }
+        } else {
+            leafs.add(root);
+        }
+
+        return leafs;
     }
 }

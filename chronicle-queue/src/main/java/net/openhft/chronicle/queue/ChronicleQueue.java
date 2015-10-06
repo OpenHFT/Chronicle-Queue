@@ -1,11 +1,24 @@
+/*
+ *     Copyright (C) 2015  higherfrequencytrading.com
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Lesser General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Lesser General Public License
+ *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package net.openhft.chronicle.queue;
-
 
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low latency messaging
@@ -28,8 +41,8 @@ import java.io.IOException;
  * then put/fetch/update records using the {@link ChronicleQueue} interface.</p>
  *
  * <p>{@link Excerpt} is the main data container in a {@link ChronicleQueue},
- * each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into
- * it and finishing the Excerpt at the end.</p>
+ * each Chronicle is composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into
+ * it and finishing the Excerpt at the upper.</p>
  *
  * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
  * more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
@@ -39,24 +52,33 @@ import java.io.IOException;
  */
 public interface ChronicleQueue extends Closeable {
     /**
-     * @return A descriptive name for this chronicle which can be used for logging.
+     * @return A descriptive name for this queue which can be used for logging.
      */
     String name();
 
     /**
      * An Excerpt can be used access entries randomly and optionally change them.
+     *
+     * @return Excerpt
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     Excerpt createExcerpt() throws IOException;
 
     /**
-     * A Tailer can be used to read sequentially from the start of a given position.
+     * A Tailer can be used to read sequentially from the lower of a given position.
+     *
+     * @return ExcerptTailer
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     ExcerptTailer createTailer() throws IOException;
 
     /**
-     * An Appender can be used to write new excerpts sequentially to the end.
+     * An Appender can be used to write new excerpts sequentially to the upper.
+     *
+     * @return ExcerptAppender
+     * @throws IOException if an IO problem occurs
      */
     @NotNull
     ExcerptAppender createAppender() throws IOException;
@@ -67,7 +89,7 @@ public interface ChronicleQueue extends Closeable {
     long size();
 
     /**
-     * Remove all the entries in the chronicle.
+     * Remove all the entries in the queue.
      */
     void clear();
 

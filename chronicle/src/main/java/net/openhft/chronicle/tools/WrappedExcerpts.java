@@ -107,7 +107,6 @@ public class WrappedExcerpts {
             return ((ByteBufferBytesExcerpt)wrappedExcerpt);
         }
 
-
         protected void resize(long capacity) {
             if(capacity > Integer.MAX_VALUE) {
                 throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");

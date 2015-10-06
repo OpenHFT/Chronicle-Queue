@@ -180,6 +180,7 @@ public class CachePerfMain {
             randomAccessor.index(keyIndex.get(key));
             // Override existing
             person.writeMarshallable(randomAccessor);
+
         } else {
 
             // Start an excerpt with given chunksize

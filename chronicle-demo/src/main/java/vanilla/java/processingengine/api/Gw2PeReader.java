@@ -62,6 +62,7 @@ public class Gw2PeReader {
                 peEvents.small(metaData, smallCommand);
                 break;
             }
+
             default:
                 System.err.println("Unknown message type " + mt);
                 break;

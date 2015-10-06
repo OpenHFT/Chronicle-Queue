@@ -71,6 +71,7 @@ class MicroJitterSampler {
         while (!Thread.currentThread().isInterrupted()) {
             if (UTIL >= 100) {
                 microJitterSampler.sample(30L * 1000 * 1000 * 1000);
+
             } else {
                 long sampleLength = (long) ((1 / (1 - UTIL / 100) - 1) * 1000 * 1000);
                 for (int i = 0; i < 30 * 1000; i += 2) {

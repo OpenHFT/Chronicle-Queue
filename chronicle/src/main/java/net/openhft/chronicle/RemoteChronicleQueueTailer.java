@@ -18,7 +18,6 @@
  */
 package net.openhft.chronicle;
 
-
 import net.openhft.chronicle.tcp.SinkTcp;
 
 import java.io.IOException;

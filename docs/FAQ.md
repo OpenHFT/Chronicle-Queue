@@ -1,5 +1,18 @@
 # Frequently Asked Questions about Chronicle
 
+## VanillaChronicle vs IndexedChronicle latency
+
+####  Question
+VanillaChronicle vs IndexedChronicle latency : I've been comparison testing these two and I'm seeing some long pauses in VanillaChronicle that I don't see in IndexedChronicle. The pauses are around 2 or 3 seconds at times and these are intraday so I don't believe they're related to the rolling. IndexedChronicle doesn't seem to experience these pauses at all. Is there something I can try in my testing here, or is there another recommended method of getting an IndexedChronicle + daily file rolling?
+
+#### Answer
+
+The main thing to watch is the number of files you are writing to. The more files the more work you put onto your disk sub system.
+In Queue v4 we are moving to supporting concurrent writing to just one file partly for this reason.
+- Have you tried increasing the dirty ration in the sysctl configuration ?
+- In atop you want to look at the write queue length and queue latency ?
+
+
 ## With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
 ####  Question

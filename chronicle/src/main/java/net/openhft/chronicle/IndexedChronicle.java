@@ -43,7 +43,7 @@ import java.util.ConcurrentModificationException;
  * name "Indexed". But this index is just sequential index, first object has index 0, second object
  * has index 1, and so on. If you want to access objects with other logical keys you have to manage
  * your own mapping from logical key to index.</p>
- * <p/>
+ * <p>
  * Indexing and data storage are achieved using two backing (memory-mapped) files: <ul> <li>a data
  * file called &#60;base file name&#62;.data</li> <li>an index file called &#60;base file
  * name&#62;.index</li> </ul> , <tt>base file name</tt> (or <tt>basePath</tt>) is provided on
@@ -86,8 +86,10 @@ public class IndexedChronicle implements Chronicle {
             parentFile.mkdirs();
         }
 
-        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"), builder.indexBlockSize());
-        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"), builder.dataBlockSize());
+        this.indexFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".index"),
+                builder.indexBlockSize(), builder.fileLifecycleListener());
+        this.dataFileCache = VanillaMappedBlocks.readWrite(new File(basePath + ".data"),
+                builder.dataBlockSize(), builder.fileLifecycleListener());
 
         findTheLastIndex();
     }
@@ -323,7 +325,6 @@ public class IndexedChronicle implements Chronicle {
         // which index does this refer to?
         private long indexStartOffset;
 
-
         // the start of this entry
         // inherited - long startAddr;
         // inherited - long positionAddr;
@@ -356,14 +357,14 @@ public class IndexedChronicle implements Chronicle {
         protected AbstractIndexedExcerpt() throws IOException {
             //super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
             super(
-                BytesMarshallableSerializer.create(
-                    new VanillaBytesMarshallerFactory(),
-                    builder.useCompressedObjectSerializer()
-                            ? JDKZObjectSerializer.INSTANCE
-                            : JDKObjectSerializer.INSTANCE),
-                NO_PAGE,
-                NO_PAGE,
-                null
+                    BytesMarshallableSerializer.create(
+                            new VanillaBytesMarshallerFactory(),
+                            builder.useCompressedObjectSerializer()
+                                    ? JDKZObjectSerializer.INSTANCE
+                                    : JDKObjectSerializer.INSTANCE),
+                    NO_PAGE,
+                    NO_PAGE,
+                    null
             );
 
             cacheLineSize = IndexedChronicle.this.builder.cacheLineSize();
@@ -442,10 +443,12 @@ public class IndexedChronicle implements Chronicle {
                     indexPositionAddr += 4;
                     padding = false;
                     return true;
+
                 } else if (dataOffsetEnd == 0) {
                     limitAddr = startAddr;
                     padding = false;
                     return false;
+
                 } else /* if (dataOffsetEnd < 0) */ {
                     padding = true;
                     return false;
@@ -468,6 +471,7 @@ public class IndexedChronicle implements Chronicle {
         void indexForAppender(long l) throws IOException {
             if (l < 0) {
                 throw new IndexOutOfBoundsException("index: " + l);
+
             } else if (l == 0) {
                 indexStartOffset = 0;
                 loadIndexBuffer();
@@ -497,6 +501,7 @@ public class IndexedChronicle implements Chronicle {
             startAddr = positionAddr = dataStartAddr + dataLookupMod;
             index = l + 1;
             indexPositionAddr = indexStartAddr + indexLineStart + inLine + 4;
+            capacityAddr = startAddr + dataBuffer.capacity();
         }
 
         private void setDataBuffer(long dataLookup) throws IOException {
@@ -624,6 +629,7 @@ public class IndexedChronicle implements Chronicle {
                 case 0:
                     newIndexLine();
                     break;
+
                 case 4:
                     throw new AssertionError();
             }
@@ -672,6 +678,7 @@ public class IndexedChronicle implements Chronicle {
                 long index2 = index;
                 if (indexForRead(index() + 1)) {
                     return true;
+
                 } else {
                     // rewind on a failure
                     index = index2;
@@ -732,10 +739,12 @@ public class IndexedChronicle implements Chronicle {
                     lo1 = mid + 1;
                     if (both)
                         lo2 = lo1;
+
                 } else if (cmp > 0) {
                     hi1 = mid - 1;
                     if (both)
                         hi2 = hi1;
+
                 } else {
                     hi1 = mid - 1;
                     if (both)
@@ -757,6 +766,7 @@ public class IndexedChronicle implements Chronicle {
 
                 if (cmp <= 0) {
                     lo2 = mid + 1;
+
                 } else {
                     hi2 = mid - 1;
                 }
@@ -910,6 +920,7 @@ public class IndexedChronicle implements Chronicle {
                 case 0:
                     newIndexLine();
                     break;
+
                 case 4:
                     throw new AssertionError();
             }
@@ -1001,6 +1012,7 @@ public class IndexedChronicle implements Chronicle {
                     // skip the base until we have the offset.
                     indexPositionAddr += 8;
                     break;
+
                 case 4:
                     throw new AssertionError();
             }
@@ -1053,5 +1065,9 @@ public class IndexedChronicle implements Chronicle {
                 setLimitAddr(0);
             }
         }
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 }

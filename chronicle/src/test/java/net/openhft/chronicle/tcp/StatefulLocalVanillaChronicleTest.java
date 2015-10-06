@@ -21,6 +21,7 @@ package net.openhft.chronicle.tcp;
 import net.openhft.chronicle.*;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
@@ -30,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
-    public void testPersistedLocalVanillaSink() throws Exception {
+    public void testPersistedLocalVanillaSink() throws IOException, InterruptedException{
         final String basePath = getVanillaTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
 

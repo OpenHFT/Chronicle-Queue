@@ -21,6 +21,8 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Assert;
 
+import java.io.IOException;
+
 /**
  * Created by Slawomir on 02/08/2014.
  */
@@ -58,7 +60,7 @@ public class Jira57 {
         return new TickDataTest(timeStamp, price, volume, type);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws IOException {
         String dir = System.getProperty("java.io.tmpdir");
         String basePath = dir + "/test123";
         ChronicleTools.deleteOnExit(basePath);

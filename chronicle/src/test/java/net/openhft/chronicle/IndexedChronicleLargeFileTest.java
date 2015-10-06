@@ -1,22 +1,34 @@
+/*
+ * Copyright 2015 Higher Frequency Trading
+ *
+ * http://www.higherfrequencytrading.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.openhft.chronicle;
 
 import net.openhft.lang.Jvm;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.TimeZone;
 
 public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
-	private static SimpleDateFormat getSimpleDateFormat() {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
-		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-		return sdf;
-	}
 
 	private static byte[] generateByteArray(int dataSize) throws UnsupportedEncodingException {
 		byte[] result = new byte[dataSize];
@@ -43,10 +55,8 @@ public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
     }
 
 	@Test
-	public void testLargeFile() throws Exception {
-        if(!Jvm.is64Bit()) {
-            return;
-        }
+	public void testLargeFile() throws IOException {
+		Assume.assumeTrue(Jvm.is64Bit());
 
         String basePath = getTestPath();
 

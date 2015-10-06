@@ -27,17 +27,16 @@ import java.util.TimeZone;
 
 class VanillaDateCache {
     private static final int SIZE = 32;
-    private static final TimeZone GMT = TimeZone.getTimeZone("GMT");
 
     private final SimpleDateFormat format;
     private final DateValue[] values = new DateValue[SIZE];
     private final int cycleLength;
 
-    public VanillaDateCache(final String formatStr, int cycleLength) {
+    public VanillaDateCache(final String formatStr, int cycleLength, TimeZone timeZone) {
         this.cycleLength = cycleLength;
 
         this.format = new SimpleDateFormat(formatStr);
-        this.format.setTimeZone(GMT);
+        this.format.setTimeZone(timeZone);
     }
 
     /**

@@ -42,29 +42,27 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by peter
  */
 public class VanillaChronicle implements Chronicle {
-    public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
 
+    public static final long MIN_CYCLE_LENGTH = TimeUnit.HOURS.toMillis(1);
     /**
      * Number of most-significant bits used to hold the thread id in index entries. The remaining
      * least-significant bits of the index entry are used for the data offset info.
      */
     public static final int THREAD_ID_BITS = Integer.getInteger("os.max.pid.bits", Jvm.PID_BITS);
-
     /**
      * Mask used to validate that the thread id does not exceed the allocated number of bits.
      */
     public static final long THREAD_ID_MASK = -1L >>> -THREAD_ID_BITS;
-
     /**
      * Number of least-significant bits used to hold the data offset info in index entries.
      */
     public static final int INDEX_DATA_OFFSET_BITS = 64 - THREAD_ID_BITS;
-
     /**
      * Mask used to extract the data offset info from an index entry.
      */
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
-
+    @NotNull
+    final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
     private final String name;
     private final ThreadLocal<WeakReference<ObjectSerializer>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
@@ -85,9 +83,6 @@ public class VanillaChronicle implements Chronicle {
     private final AtomicLong lastWrittenIndex = new AtomicLong(-1L);
     private volatile boolean closed = false;
 
-    @NotNull
-    final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
-
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
         this.marshallersCache = new ThreadLocal<>();
@@ -95,13 +90,14 @@ public class VanillaChronicle implements Chronicle {
         this.appenderCache = new ThreadLocal<>();
         this.name = builder.path().getName();
 
-        this.dateCache = new VanillaDateCache(builder.cycleFormat(), builder.cycleLength());
+        this.dateCache = new VanillaDateCache(
+            builder.cycleFormat(), builder.cycleLength(), builder.cycleTimeZone());
 
         this.indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
         this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
         this.indexBlockLongsBits = indexBlockSizeBits - 3;
         this.indexBlockLongsMask = indexBlockSizeMask >>> 3;
-        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits);
+        this.indexCache = new VanillaIndexCache(this.builder, dateCache, indexBlockSizeBits, builder.fileLifecycleListener());
 
         this.dataBlockSizeBits = Maths.intLog2(builder.dataBlockSize());
         this.dataBlockSizeMask = -1 >>> -dataBlockSizeBits;
@@ -109,6 +105,25 @@ public class VanillaChronicle implements Chronicle {
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
+
+        /*
+        System.out.println("Cycle:");
+        System.out.println("> cycleFormat         : " + this.builder.cycleFormat());
+        System.out.println("> cycleLength         : " + this.builder.cycleLength());
+        System.out.println("> entriesPerCycle     : " + this.builder.entriesPerCycle());
+        System.out.println("Bits:");
+        System.out.println("> indexBlockSizeBits  : " + indexBlockSizeBits );
+        System.out.println("> dataBlockSizeBits   : " + dataBlockSizeBits  );
+        System.out.println("* indexBlockLongsBits : " + indexBlockLongsBits);
+        System.out.println("* entriesForCycleBits : " + entriesForCycleBits);
+
+        // bitsToRepresent(cycle) + bitsRepresent(entriesPerCycle) < 64
+        // return (cycle << entriesForCycleBits) + (indexCount << indexBlockLongsBits) + (indexPosition >> 3);
+        */
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 
     void checkNotClosed() {
@@ -268,16 +283,68 @@ public class VanillaChronicle implements Chronicle {
         dataCache.checkCounts(min, max);
     }
 
+    public enum Cycle {
+            SECONDS ("yyyyMMddHHmmss", 1000, 1L << 28),
+            MINUTES ("yyyyMMddHHmm"  , 60 * 1000, 1L << 34),
+            HOURS   ("yyyyMMddHH"    , 60 * 60 * 1000, 1L << 40),
+            DAYS    ("yyyyMMdd"      , 24 * 60 * 60 * 1000, 1L << 40),
+        ;
+
+        private static Cycle[] VALUES = values();
+
+        private final String format;
+        private final int length;
+        private final long entries;
+
+        Cycle(String format, int length, long entries) {
+            this.format = format;
+            this.length = length;
+            this.entries = entries;
+        }
+
+        public static Cycle forLength(int length) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].length == length) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
+        }
+
+        public static Cycle forFormat(String format) {
+            for(int i=VALUES.length - 1; i >= 0; i--) {
+                if(VALUES[i].format == format || VALUES[i].format.equals(format)) {
+                    return VALUES[i];
+                }
+            }
+
+            throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
+        }
+
+        public String format() {
+            return this.format;
+        }
+
+        public int length() {
+            return this.length;
+        }
+
+        public long entries() {
+            return this.entries;
+        }
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
 
     public interface VanillaExcerptCommon extends ExcerptCommon {
-        public boolean unmapped();
+        boolean unmapped();
     }
 
     public interface VanillaAppender extends VanillaExcerptCommon, ExcerptAppender {
-        public void startExcerpt(long capacity, int cycle);
+        void startExcerpt(long capacity, int cycle);
     }
 
     public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
@@ -289,20 +356,17 @@ public class VanillaChronicle implements Chronicle {
     // *************************************************************************
 
     private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
+        protected VanillaMappedBytes indexBytes;
+        protected VanillaMappedBytes dataBytes;
         private long index = -1;
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
         private int lastThreadId = Integer.MIN_VALUE;
         private int lastDataCount = Integer.MIN_VALUE;
 
-        protected VanillaMappedBytes indexBytes;
-        protected VanillaMappedBytes dataBytes;
-
-
         public AbstractVanillaExcerpt() {
             super(acquireSerializer(), NO_PAGE, NO_PAGE, null);
         }
-
 
         @Override
         public boolean unmapped() {
@@ -454,6 +518,7 @@ public class VanillaChronicle implements Chronicle {
             long lastIndex = lastIndex();
             if (lastIndex >= 0) {
                 index(lastIndex);
+
             } else {
                 return toStart();
             }
@@ -513,20 +578,20 @@ public class VanillaChronicle implements Chronicle {
         private int lastCycle;
         private int lastThreadId;
         private int appenderCycle;
-        private int appenderThreadId;
         private boolean nextSynchronous;
         private long lastWrittenIndex;
         private long[] positionArr = {0L};
-        private int dataCount;
+        private int lastDataIndex;
+        private int lastIndexIndex;
 
         public VanillaAppenderImpl() {
             this.lastCycle = Integer.MIN_VALUE;
             this.lastThreadId = Integer.MIN_VALUE;
             this.lastWrittenIndex = -1;
             this.appenderCycle = -1;
-            this.appenderThreadId = -1;
             this.nextSynchronous = builder.synchronous();
-            this.dataCount = 0;
+            this.lastDataIndex = 0;
+            this.lastIndexIndex = 0;
         }
 
         @Override
@@ -544,33 +609,40 @@ public class VanillaChronicle implements Chronicle {
             checkNotClosed();
             try {
                 appenderCycle = cycle;
-                appenderThreadId = AffinitySupport.getThreadId();
+                int appenderThreadId = AffinitySupport.getThreadId();
                 assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
 
-                if (appenderCycle != lastCycle || appenderThreadId != lastThreadId) {
-                    if (dataBytes != null) {
-                        dataBytes.release();
-                        dataBytes = null;
-                    }
+                if (appenderCycle != lastCycle) {
                     if (indexBytes != null) {
                         indexBytes.release();
                         indexBytes = null;
                     }
+                    if (dataBytes != null) {
+                        dataBytes.release();
+                        dataBytes = null;
+                    }
 
                     lastCycle = appenderCycle;
+                    lastIndexIndex = indexCache.lastIndexFile(lastCycle);
+                    lastThreadId = appenderThreadId;
+
+                } else if (appenderThreadId != lastThreadId) {
+                    if (dataBytes != null) {
+                        dataBytes.release();
+                        dataBytes = null;
+                    }
+
                     lastThreadId = appenderThreadId;
                 }
 
-                if (dataBytes == null || indexBytes == null) {
-                    dataCount = dataCache.findNextDataCount(appenderCycle, appenderThreadId);
-                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, dataCount, true);
+                if (dataBytes == null) {
+                    lastDataIndex = dataCache.findNextDataCount(appenderCycle, appenderThreadId);
+                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, lastDataIndex, true);
                 }
 
                 if (dataBytes.remaining() < capacity + 4) {
                     dataBytes.release();
-                    dataBytes = null;
-                    dataCount++;
-                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, dataCount, true);
+                    dataBytes = dataCache.dataFor(appenderCycle, appenderThreadId, ++lastDataIndex, true);
                 }
 
                 startAddr = positionAddr = dataBytes.positionAddr() + 4;
@@ -599,8 +671,10 @@ public class VanillaChronicle implements Chronicle {
         }
         @Override
         public void finish() {
-            if (finished)
+            if (finished) {
                 throw new IllegalStateException("Not started");
+            }
+
             super.finish();
             if (dataBytes == null) {
                 return;
@@ -612,24 +686,24 @@ public class VanillaChronicle implements Chronicle {
             // position of the start not the end.
             int offset = (int) (startAddr - dataBytes.address());
             long dataOffset = dataBytes.index() * builder.dataBlockSize() + offset;
-            long indexValue = ((long) appenderThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
+            long indexValue = ((long) lastThreadId << INDEX_DATA_OFFSET_BITS) + dataOffset;
 
             try {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
-                long lvindex = -1;
                 if (position < 0) {
                     if (indexBytes != null) {
+                        lastIndexIndex = (int)indexBytes.index() + 1;
                         indexBytes.release();
                         indexBytes = null;
                     }
 
-                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, positionArr);
-                    lvindex = indexFrom(appenderCycle, indexBytes.index(), positionArr[0]);
-                } else {
-                    lvindex = indexFrom(appenderCycle, indexBytes.index(), position);
-                }
+                    indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, lastIndexIndex, positionArr);
+                    lastIndexIndex = (int)indexBytes.index();
+                    setLastWrittenIndex(appenderCycle, indexBytes.index(), positionArr[0]);
 
-                setLastWrittenIndex(lvindex);
+                } else {
+                    setLastWrittenIndex(appenderCycle, indexBytes.index(), position);
+                }
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
@@ -660,6 +734,9 @@ public class VanillaChronicle implements Chronicle {
             return lastWrittenIndex;
         }
 
+        protected void setLastWrittenIndex(long cycle, long indexCount, long indexPosition) {
+            setLastWrittenIndex(indexFrom(cycle, indexCount, indexPosition));
+        }
 
         protected void setLastWrittenIndex(long lastWrittenIndex) {
             this.lastWrittenIndex = lastWrittenIndex;

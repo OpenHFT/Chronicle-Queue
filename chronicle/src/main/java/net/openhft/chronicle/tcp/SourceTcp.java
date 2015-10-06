@@ -18,9 +18,9 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.*;
+import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.lang.io.Bytes;
 import net.openhft.lang.io.DirectByteBufferBytes;
-import net.openhft.lang.io.IByteBufferBytes;
 import net.openhft.lang.model.constraints.NotNull;
 import net.openhft.lang.thread.LightPauser;
 import org.jetbrains.annotations.Nullable;
@@ -88,7 +88,6 @@ public abstract class SourceTcp {
 
     protected abstract Runnable createHandler();
 
-
     /**
      * Creates a session handler according to the Chronicle the sources is connected to.
      *
@@ -99,9 +98,13 @@ public abstract class SourceTcp {
         final Chronicle chronicle = builder.chronicle();
         if (chronicle != null) {
             if (chronicle instanceof IndexedChronicle) {
+                builder.connectionListener().onConnect(socketChannel);
                 return new IndexedSessionHandler(socketChannel);
+
             } else if (chronicle instanceof VanillaChronicle) {
+                builder.connectionListener().onConnect(socketChannel);
                 return new VanillaSessionHandler(socketChannel);
+
             } else {
                 throw new IllegalStateException("Chronicle must be Indexed or Vanilla");
             }
@@ -115,23 +118,18 @@ public abstract class SourceTcp {
     // *************************************************************************
 
     /**
-     * Abstract class for Indexed and Vanilla chronicle replicaton
+     * Abstract class for Indexed and Vanilla chronicle replication
      */
     private abstract class SessionHandler implements Runnable, Closeable {
-        private final SocketChannel socketChannel;
-
-        private long lastUnpausedNS;
-
         protected final TcpConnection connection;
+        protected final ByteBuffer writeBuffer;
+        protected final ResizableDirectByteBufferBytes readBuffer;
+        private final SocketChannel socketChannel;
         protected ExcerptTailer tailer;
         protected ExcerptAppender appender;
         protected long lastHeartbeat;
-
-        protected final ByteBuffer writeBuffer;
-
-        // this could be re-sized so cannot be final
-        protected IByteBufferBytes readBuffer;
-        private Bytes withMappedBuffer;
+        private long lastUnPausedNS;
+        private ResizableDirectByteBufferBytes withMappedBuffer;
 
         private SessionHandler(final @NotNull SocketChannel socketChannel) {
             this.socketChannel = socketChannel;
@@ -139,17 +137,15 @@ public abstract class SourceTcp {
             this.tailer = null;
             this.appender = null;
             this.lastHeartbeat = 0;
-            this.lastUnpausedNS = 0;
+            this.lastUnPausedNS = 0;
 
-            this.readBuffer = new DirectByteBufferBytes(16);
+            this.readBuffer = new ResizableDirectByteBufferBytes(16);
             this.readBuffer.clearThreadAssociation();
-
             this.writeBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.writeBuffer.limit(0);
 
-            this.withMappedBuffer = new DirectByteBufferBytes(1024);
+            this.withMappedBuffer = new ResizableDirectByteBufferBytes(1024);
         }
-
 
         @Override
         public void close() throws IOException {
@@ -196,6 +192,7 @@ public abstract class SourceTcp {
 
                 if (selectionKeys != null) {
                     vanillaNioLoop(selector, selectionKeys);
+
                 } else {
                     nioLoop(selector);
                 }
@@ -211,6 +208,7 @@ public abstract class SourceTcp {
                                     || msg.contains("Broken pipe")
                                     || msg.contains("was aborted by"))) {
                         logger.info("Connection {} closed from the other end: ", socketChannel, e.getMessage());
+
                     } else {
                         logger.info("Connection {} died", socketChannel, e);
                     }
@@ -282,12 +280,12 @@ public abstract class SourceTcp {
         }
 
         protected void pauseReset() {
-            lastUnpausedNS = System.nanoTime();
+            lastUnPausedNS = System.nanoTime();
             pauser.reset();
         }
 
         protected void pause() {
-            if (lastUnpausedNS + ChronicleTcp.BUSY_WAIT_TIME_NS > System.nanoTime()) {
+            if (lastUnPausedNS + ChronicleTcp.BUSY_WAIT_TIME_NS > System.nanoTime()) {
                 return;
             }
 
@@ -307,18 +305,8 @@ public abstract class SourceTcp {
             setLastHeartbeat();
         }
 
-        protected IByteBufferBytes readUpTo(int size) throws IOException {
-            if (readBuffer.capacity() < size) {
-                // resize the buffer
-                this.readBuffer = new DirectByteBufferBytes(size);
-            }
-
-            readBuffer.clear();
-            readBuffer.buffer().clear();
-
-            readBuffer.limit(size);
-            readBuffer.buffer().limit(size);
-
+        protected DirectByteBufferBytes readUpTo(int size) throws IOException {
+            readBuffer.resetToSize(size);
             connection.readFullyOrEOF(readBuffer.buffer());
             readBuffer.buffer().flip();
             readBuffer.position(0);
@@ -390,7 +378,6 @@ public abstract class SourceTcp {
             return true;
         }
 
-
         protected boolean onQuery(final SelectionKey key, long data) throws IOException {
             if (tailer.index(data)) {
                 final long now = System.currentTimeMillis();
@@ -401,6 +388,7 @@ public abstract class SourceTcp {
                         sendSizeAndIndex(ChronicleTcp.SYNC_IDX_LEN, tailer.index());
                         tailer.finish();
                         break;
+
                     } else {
                         if (lastHeartbeat <= now) {
                             sendSizeAndIndex(ChronicleTcp.IN_SYNC_LEN, ChronicleTcp.IDX_NONE);
@@ -415,7 +403,7 @@ public abstract class SourceTcp {
             return true;
         }
 
-        protected boolean onUnsubscribe(final SelectionKey key, long data) throws IOException {
+        protected boolean onUnsubscribe(final SelectionKey key, long data) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             return true;
         }
@@ -434,7 +422,6 @@ public abstract class SourceTcp {
          */
         protected Bytes applyMapping(@NotNull final ExcerptTailer source,
                                      @Nullable Object attached) {
-
             if (attached == null) {
                 return source;
             }
@@ -447,7 +434,7 @@ public abstract class SourceTcp {
 
             withMappedBuffer.clear();
             if (withMappedBuffer.capacity() < source.limit()) {
-                withMappedBuffer = new DirectByteBufferBytes((int)source.capacity());
+                withMappedBuffer.resetToSize((int)source.capacity());
             }
 
             try {
@@ -459,8 +446,12 @@ public abstract class SourceTcp {
                         throw e;
                     }
 
-                    int newSize = Math.min(Integer.MAX_VALUE, (int) (withMappedBuffer.capacity() * 1.5));
-                    withMappedBuffer = new DirectByteBufferBytes(newSize);
+                    withMappedBuffer.resetToSize(
+                        Math.min(
+                            Integer.MAX_VALUE,
+                            (int) (withMappedBuffer.capacity() * 1.5))
+                    );
+
                 } else {
                     throw e;
                 }
@@ -490,6 +481,7 @@ public abstract class SourceTcp {
             this.index = data;
             if (this.index == ChronicleTcp.IDX_TO_START) {
                 this.index = -1;
+
             } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.index = tailer.toEnd().index();
             }
@@ -565,6 +557,7 @@ public abstract class SourceTcp {
                             count--;
 
                             tailer.finish();
+
                         } else {
                             break;
                         }
@@ -572,6 +565,7 @@ public abstract class SourceTcp {
                         if(hasRoomFor(writeBuffer, ChronicleTcp.HEADER_SIZE)) {
                             writeBuffer.putInt(ChronicleTcp.PADDED_LEN);
                             writeBuffer.putLong(index);
+
                         } else {
                             break;
                         }
@@ -614,6 +608,7 @@ public abstract class SourceTcp {
                 this.nextIndex = true;
                 this.tailer = tailer.toStart();
                 this.index = -1;
+
             } else if (this.index == ChronicleTcp.IDX_TO_END) {
                 this.nextIndex = false;
                 this.tailer = tailer.toEnd();
@@ -663,6 +658,7 @@ public abstract class SourceTcp {
             } else {
                 if (!tailer.index(this.index)) {
                     return false;
+
                 } else {
                     this.nextIndex = true;
                 }
@@ -711,6 +707,7 @@ public abstract class SourceTcp {
                         count--;
 
                         tailer.finish();
+
                     } else {
                         tailer.finish();
                         // if there is no space, go back to the previous index

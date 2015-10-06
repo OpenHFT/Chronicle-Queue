@@ -1,38 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014 Higher Frequency Trading
+  ~     Copyright (C) 2015  higherfrequencytrading.com
   ~
-  ~ http://www.higherfrequencytrading.com
+  ~     This program is free software: you can redistribute it and/or modify
+  ~     it under the terms of the GNU Lesser General Public License as published by
+  ~     the Free Software Foundation, either version 3 of the License.
   ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
+  ~     This program is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU Lesser General Public License for more details.
   ~
-  ~ http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~     You should have received a copy of the GNU Lesser General Public License
+  ~     along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.4</version>
+        <version>1.1.8</version>
         <relativePath/>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
     <version>4.0.0-alpha-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>OpenHFT/Chronicle-Queue</name>
+    <name>OpenHFT/Chronicle-Queue/chronicle-queue</name>
 
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
@@ -42,31 +40,42 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.18</version>
+                <version>3.4.23</version>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>chronicle-wire</artifactId>
-                <version>1.0.1-alpha-SNAPSHOT</version>
+                <artifactId>chronicle-bom</artifactId>
+                <version>1.8.11-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>chronicle-network</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>2.2</version>
-            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-network</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-values</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -77,7 +86,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-threads</artifactId>
-            <version>1.0.0-alpha-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -88,6 +96,18 @@
         <dependency>
             <groupId>com.intellij</groupId>
             <artifactId>annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>koloboke-api-jdk8</artifactId>
+            <version>0.6.7</version>
+        </dependency>
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>koloboke-impl-jdk8</artifactId>
+            <version>0.6.7</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- for testing -->
@@ -108,6 +128,21 @@
             <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- for benchmarks -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.11</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -116,7 +151,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
-                    <version>2.3</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -125,9 +159,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
                 <configuration>
                     <compilerArgument>-Xlint:deprecation</compilerArgument>
+                    <compilerArgument>-XDignore.symbol.file</compilerArgument>
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
@@ -136,7 +170,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-scm-publish-plugin</artifactId>
-                <version>1.0-beta-2</version>
                 <configuration>
                     <checkoutDirectory>${project.build.directory}/scmpublish/javadoc
                     </checkoutDirectory>
@@ -151,14 +184,13 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>2.5.3</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
                         </Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <Export-Package>net.openhft.chronicle.*</Export-Package>
+                        <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
                     </instructions>
                 </configuration>
                 <executions>

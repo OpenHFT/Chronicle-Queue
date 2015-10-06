@@ -35,12 +35,10 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static final int N_THREADS = 4;
 
     private static void appendValues(final ExcerptAppender appender, final long startValue, final long endValue) {
-        long counter = startValue;
-        while (counter < endValue) {
+        for (long counter = startValue; counter < endValue; counter++) {
             appender.startExcerpt(20);
             appender.writeUTF("data-" + counter);
             appender.finish();
-            counter++;
         }
     }
 
@@ -65,12 +63,16 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static Callable<Void> createAppendTask(final VanillaChronicle chronicle, final long startValue, final long endValue) {
         return new Callable<Void>() {
             @Override
-            public Void call() throws Exception {
-                final ExcerptAppender appender = chronicle.createAppender();
+            public Void call()   {
+                ExcerptAppender appender = null;
                 try {
+                    appender = chronicle.createAppender();
                     appendValues(appender, startValue, endValue);
+                } catch(IOException e) {
                 } finally {
-                    appender.close();
+                    if(appender != null) {
+                        appender.close();
+                    }
                 }
                 return null;
             }
@@ -86,6 +88,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         int ehi = Collections.binarySearch(ints, mec.hi);
         if (ehi < 0) {
             ehi = ~ehi;
+
         } else {
             ehi++;
         }
@@ -769,7 +772,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         Actual   :1396197287
      */
     @Test
-    public void testReplicationWithRollingFilesEverySecond() throws Exception {
+    public void testReplicationWithRollingFilesEverySecond() throws IOException, InterruptedException {
 //        TODO int RUNS = 100000;
         final int RUNS = 5 * 1000;
 
@@ -805,6 +808,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                     // ok.
                 } else if (lastMajor + 1 == major) {
                     System.out.println("Major: " + major);
+
                 } else {
                     assertEquals("major jumped", lastMajor + 1, major);
                 }
@@ -828,7 +832,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testReplicationWithRollingFilesEverySecond2() throws Exception {
+    public void testReplicationWithRollingFilesEverySecond2() throws IOException, InterruptedException {
         final int RUNS = 10;
 
         final String baseDir = getTestPath();
@@ -877,7 +881,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testConcurrentAppend() throws Exception {
+    public void testConcurrentAppend() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -924,7 +928,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles() throws Exception {
+    public void testMultipleCycles() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -978,7 +982,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testMultipleCycles2() throws Exception {
+    public void testMultipleCycles2() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -1021,7 +1025,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testLastIndex() throws Exception {
+    public void testLastIndex() throws IOException, InterruptedException {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
@@ -1058,49 +1062,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
 
             chronicle.checkCounts(1, 1);
-        } finally {
-            chronicle.close();
-            chronicle.clear();
-
-            assertFalse(new File(baseDir).exists());
-        }
-    }
-
-    @Ignore
-    @Test
-    public void testAppendX() throws Exception {
-        final long RUNS = 1000000;
-        final int THREADS = 5;
-
-        final String baseDir = getTestPath();
-        assertNotNull(baseDir);
-
-        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir).build();
-        chronicle.clear();
-
-        try{
-            ExecutorService es = Executors.newFixedThreadPool(THREADS);
-            for(int i=0; i<THREADS; i++) {
-                es.submit(new Runnable() {
-                    public void run() {
-                        try {
-                            final ExcerptAppender appender = chronicle.createAppender();
-                            for (long i = 0; i < RUNS; i++) {
-                                appender.startExcerpt(16);
-                                appender.append(i);
-                                appender.append(i + 1);
-                                appender.finish();
-                            }
-
-                            appender.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-
-            es.awaitTermination(10, TimeUnit.MINUTES);
         } finally {
             chronicle.close();
             chronicle.clear();

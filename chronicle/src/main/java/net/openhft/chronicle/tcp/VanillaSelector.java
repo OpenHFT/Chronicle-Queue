@@ -67,8 +67,6 @@ public class VanillaSelector implements Closeable {
         return this;
     }
 
-
-
     public VanillaSelector register(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
         channel.register(this.selector, ops);
         return this;
@@ -79,7 +77,7 @@ public class VanillaSelector implements Closeable {
         return this;
     }
 
-    public VanillaSelector deregister(@NotNull AbstractSelectableChannel channel, int ops) throws IOException {
+    public VanillaSelector deregister(@NotNull AbstractSelectableChannel channel, int ops) {
         SelectionKey selectionKey = channel.keyFor(this.selector);
         if (selectionKey != null) {
             selectionKey.interestOps(selectionKey.interestOps() & ~ops);

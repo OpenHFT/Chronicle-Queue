@@ -53,7 +53,7 @@ public class ChronicleTcpTestBase {
     @Rule
     public final TestName testName = new TestName();
     @Rule
-    public final TemporaryFolder folder= new TemporaryFolder(new File(Jvm.TMP));
+    public final TemporaryFolder folder= new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
@@ -141,7 +141,7 @@ public class ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    protected final class PortSupplier implements TcpConnectionListener {
+    protected final class PortSupplier extends TcpConnectionHandler {
         private final AtomicInteger port;
         private final CountDownLatch latch;
 
@@ -157,7 +157,7 @@ public class ChronicleTcpTestBase {
         }
 
         @Override
-        public void onError(SelectableChannel channel, IOException exception) {
+        public void onError(SelectableChannel channel, Exception exception) {
             errorCollector.addError(exception);
 
             this.port.set(-1);
@@ -204,7 +204,7 @@ public class ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws Exception {
+    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws IOException, InterruptedException  {
         final int messages = 1000;
 
         final Thread t1 = new Thread(new Runnable() {
@@ -227,7 +227,6 @@ public class ChronicleTcpTestBase {
 
                     appender.close();
                     LOGGER.info("Finished writing messages");
-
                 } catch (AssertionError e) {
                     errorCollector.addError(e);
                 } catch (Exception e) {
@@ -263,6 +262,7 @@ public class ChronicleTcpTestBase {
                             i++;
 
                             tailer.finish();
+
                         } else {
                             noNextIndex++;
                         }

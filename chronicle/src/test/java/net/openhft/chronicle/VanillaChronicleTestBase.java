@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.Jvm;
 import net.openhft.lang.io.IOTools;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
@@ -28,15 +29,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleTestBase {
-    protected static final Logger LOGGER  = LoggerFactory.getLogger("VanillaChronicleTest");
-    protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+    protected static final Logger LOGGER = LoggerFactory.getLogger("VanillaChronicleTest");
 
     @Rule
     public final TestName testName = new TestName();
@@ -45,14 +44,14 @@ public class VanillaChronicleTestBase {
     public final ErrorCollector errorCollector = new ErrorCollector();
 
     protected synchronized String getTestPath() {
-        final String path = TMP_DIR + "/vc-" + testName.getMethodName();
+        final String path = System.getProperty("java.io.tmpdir") + "/vc-" + testName.getMethodName();
         IOTools.deleteDir(path);
 
         return path;
     }
 
     protected synchronized String getTestPath(String suffix) {
-        final String path = TMP_DIR + "/vc-" + testName.getMethodName() + suffix;
+        final String path = System.getProperty("java.io.tmpdir") + "/vc-" + testName.getMethodName() + suffix;
         IOTools.deleteDir(path);
 
         return path;
@@ -78,14 +77,15 @@ public class VanillaChronicleTestBase {
         }
     }
 
-    public void lsof(final String pid) throws Exception {
+    public void lsof(final String pid) throws IOException {
         lsof(pid, null);
     }
 
-    public void lsof(final String pid, final String pattern) throws Exception {
+    public void lsof(final String pid, final String pattern) throws IOException {
         String cmd = null;
         if(new File("/usr/sbin/lsof").exists()) {
             cmd = "/usr/sbin/lsof";
+
         } else if(new File("/usr/bin/lsof").exists()) {
             cmd = "/usr/bin/lsof";
         }

@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
@@ -34,30 +35,67 @@ public class VanillaDataCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<DataKey> cache;
+    private final FileLifecycleListener fileLifecycleListener;
 
     VanillaDataCache(
             @NotNull ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder,
             @NotNull VanillaDateCache dateCache,
             int blockBits) {
 
+        this.fileLifecycleListener = builder.fileLifecycleListener();
         this.basePath = builder.path().getAbsolutePath();
         this.blockBits = blockBits;
         this.dateCache = dateCache;
 
         this.cache = new VanillaMappedCache<>(
-            builder.dataCacheCapacity(),
-            true,
-            builder.cleanupOnClose()
+                builder.dataCacheCapacity(),
+                true,
+                builder.cleanupOnClose()
         );
     }
 
-    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
-        return new File(
-            new File(basePath, dateCache.formatFor(cycle)),
-            FILE_NAME_PREFIX + threadId + "-" + dataCount);
+    @Override
+    public synchronized void close() {
+        this.cache.close();
     }
 
-    public File fileFor(int cycle, int threadId) throws IOException {
+    int nextWordAlignment(int len) {
+        return (len + 3) & ~3;
+    }
+
+    public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+        key.cycle = cycle;
+        key.threadId = threadId;
+        key.dataCount = dataCount;
+
+        VanillaMappedBytes vmb = this.cache.get(key);
+        if (vmb == null || vmb.refCount() < 1) {
+            long start = System.nanoTime();
+            String name = FILE_NAME_PREFIX + threadId + "-" + dataCount;
+            vmb = this.cache.put(
+                    key.clone(),
+                    VanillaChronicleUtils.mkFiles(
+                            basePath,
+                            dateCache.formatFor(cycle),
+                            name,
+                            forWrite),
+                    1L << blockBits,
+                    dataCount);
+            fileLifecycleListener.onFileGrowth(new File(name), System.nanoTime() - start);
+        }
+
+        vmb.reserve();
+
+        return vmb;
+    }
+
+    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) {
+        return new File(
+                new File(basePath, dateCache.formatFor(cycle)),
+                FILE_NAME_PREFIX + threadId + "-" + dataCount);
+    }
+
+    public File fileFor(int cycle, int threadId) {
         String cycleStr = dateCache.formatFor(cycle);
         String cyclePath = basePath + "/" + cycleStr;
         String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
@@ -76,29 +114,6 @@ public class VanillaDataCache implements Closeable {
         return fileFor(cycle, threadId, maxCount, true);
     }
 
-    public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
-        key.cycle = cycle;
-        key.threadId = threadId;
-        key.dataCount = dataCount;
-
-        VanillaMappedBytes vmb = this.cache.get(key);
-        if(vmb == null || vmb.refCount() < 1) {
-            vmb = this.cache.put(
-                key.clone(),
-                VanillaChronicleUtils.mkFiles(
-                    basePath,
-                    dateCache.formatFor(cycle),
-                    FILE_NAME_PREFIX + threadId + "-" + dataCount,
-                    forWrite),
-                1L << blockBits,
-                dataCount);
-        }
-
-        vmb.reserve();
-
-        return vmb;
-    }
-
     private void findEndOfData(final VanillaMappedBytes buffer) {
         for (int i = 0, max = 1 << blockBits; i < max; i += 4) {
             int len = buffer.readInt(buffer.position());
@@ -115,19 +130,10 @@ public class VanillaDataCache implements Closeable {
         throw new AssertionError();
     }
 
-    int nextWordAlignment(int len) {
-        return (len + 3) & ~3;
-    }
-
-    @Override
-    public synchronized void close() {
-        this.cache.close();
-    }
-
     /**
      * Find the count for the next data file to be written for a specific thread.
      */
-    public int findNextDataCount(int cycle, int threadId) throws IOException {
+    public int findNextDataCount(int cycle, int threadId) {
         final String cycleStr = dateCache.formatFor(cycle);
         final String cyclePath = basePath + "/" + cycleStr;
         final String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
@@ -138,8 +144,9 @@ public class VanillaDataCache implements Closeable {
             for (File file : files) {
                 if (file.getName().startsWith(dataPrefix)) {
                     final int count = Integer.parseInt(file.getName().substring(dataPrefix.length()));
-                    if (maxCount < count)
+                    if (maxCount < count) {
                         maxCount = count;
+                    }
                 }
             }
         }
@@ -148,7 +155,7 @@ public class VanillaDataCache implements Closeable {
     }
 
     public void checkCounts(int min, int max) {
-        this.cache.checkCounts(min,max);
+        this.cache.checkCounts(min, max);
     }
 
     static class DataKey implements Cloneable {
@@ -167,6 +174,10 @@ public class VanillaDataCache implements Closeable {
                 return false;
             }
 
+            if (obj == this) {
+                return true;
+            }
+
             DataKey key = (DataKey) obj;
             return dataCount == key.dataCount && threadId == key.threadId && cycle == key.cycle;
         }
@@ -183,9 +194,9 @@ public class VanillaDataCache implements Closeable {
         @Override
         public String toString() {
             return "DataKey ["
-                + "cycle="     + cycle     + ","
-                + "threadId="  + threadId  + ","
-                + "dataCount=" + dataCount + "]";
+                    + "cycle=" + cycle + ","
+                    + "threadId=" + threadId + ","
+                    + "dataCount=" + dataCount + "]";
         }
     }
 }

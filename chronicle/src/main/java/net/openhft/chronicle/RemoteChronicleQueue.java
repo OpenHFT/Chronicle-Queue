@@ -80,7 +80,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         throw new UnsupportedOperationException();
     }
 
-    protected synchronized ExcerptCommon createAppender0() throws IOException {
+    protected synchronized ExcerptCommon createAppender0() {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
@@ -88,7 +88,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return this.excerpt = new StatelessExcerptAppender();
     }
 
-    protected synchronized ExcerptCommon createExcerpt0() throws IOException {
+    protected synchronized ExcerptCommon createExcerpt0() {
         if( this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
@@ -136,15 +136,12 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     protected boolean shouldConnect() {
-        if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
-            long now = System.currentTimeMillis();
-            if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-                return false;
-            }
-
-            lastReconnectionAttemptMS = now;
+        long now = System.currentTimeMillis();
+        if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
+            return false;
         }
 
+        lastReconnectionAttemptMS = now;
         return true;
     }
 
@@ -169,7 +166,6 @@ class RemoteChronicleQueue extends WrappedChronicle {
             this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
             this.lastIndex = -1;
             this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
-
         }
 
         @Override
@@ -222,6 +218,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                             case ChronicleTcp.ACK_LEN:
                                 this.lastIndex = recIndex;
                                 break;
+
                             case ChronicleTcp.NACK_LEN:
                                 throw new IllegalStateException(
                                     "Message discarded by server, reason: " + (
@@ -261,10 +258,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         private boolean waitForConnection() {
-            for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i++) {
+            for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i--) {
                 openConnection();
 
-                if(!connection.isOpen()) {
+                if(!openConnection()) {
                     try {
                         Thread.sleep(builder.reconnectionIntervalMillis());
                     } catch(InterruptedException ignored) {
@@ -339,6 +336,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         }
 
                         cleanup();
+
                     } else {
                         return false;
                     }
@@ -356,11 +354,14 @@ class RemoteChronicleQueue extends WrappedChronicle {
                         case ChronicleTcp.SYNC_IDX_LEN:
                             if (index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
+
                             } else if (index == ChronicleTcp.IDX_TO_END) {
                                 return advanceIndex();
+
                             } else if (index == receivedIndex) {
                                 return advanceIndex();
                             }
+
                         case ChronicleTcp.IN_SYNC_LEN:
                         case ChronicleTcp.PADDED_LEN:
                             return false;
@@ -374,6 +375,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             } catch (IOException e) {
                 if (e instanceof EOFException) {
                     logger.trace("", e);
+
                 } else {
                     logger.warn("", e);
                 }
@@ -390,6 +392,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 if(!connection.isOpen()) {
                     if (index(this.index)) {
                         return nextIndex();
+
                     } else {
                         return false;
                     }
@@ -421,6 +424,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             } catch (IOException e1) {
                 if (e1 instanceof EOFException) {
                     logger.trace("Exception reading from socket", e1);
+
                 } else {
                     logger.warn("Exception reading from socket", e1);
                 }
@@ -437,10 +441,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
             return true;
         }
 
-        protected boolean advanceIndex() throws IOException {
+        protected boolean advanceIndex() {
             if(nextIndex()) {
                 finish();
                 return true;
+
             } else {
                 return false;
             }

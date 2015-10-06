@@ -187,7 +187,7 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-92
      */
     @Test
-    public void testJira92() throws Exception {
+    public void testJira92() throws IOException {
         final int RUNS = 10;
         final int indicesPerFile = 2;
 

@@ -76,7 +76,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testResourcesCleanup2() throws Exception {
+    public void testResourcesCleanup2() throws IOException {
         final String baseDir = getTestPath();
 
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
@@ -109,7 +109,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testResourcesCleanup3() throws Exception {
+    public void testResourcesCleanup3() throws IOException {
         final int nbThreads = 5;
         final int nbAppend = 10;
         final String baseDir = getTestPath();
@@ -178,7 +178,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
     // https://higherfrequencytrading.atlassian.net/browse/CHRON-47
     @Ignore
     @Test
-    public void testResourcesCleanup4() throws Exception {
+    public void testResourcesCleanup4() throws IOException, InterruptedException {
         final String pid = getPIDAsString();
         final String baseDir = getTestPath();
 
@@ -253,7 +253,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
     @Ignore
     @Test
-    public void testResourcesCleanup5() throws Exception {
+    public void testResourcesCleanup5() throws IOException, InterruptedException  {
         final String pid = getPIDAsString();
         final String baseDir = getTestPath();
         final int runs = 60 * 10; // 10 mins
@@ -321,7 +321,7 @@ public class VanillaChronicleResourcesTest extends VanillaChronicleTestBase {
 
     @Ignore
     @Test
-    public void testResourcesCleanup6() throws Exception {
+    public void testResourcesCleanup6() throws IOException {
         final String baseDir = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
 

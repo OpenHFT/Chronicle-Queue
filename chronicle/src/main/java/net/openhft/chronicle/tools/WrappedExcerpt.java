@@ -22,6 +22,8 @@ import net.openhft.chronicle.*;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.StreamCorruptedException;
+
 /**
  * @author peter.lawrey
  */
@@ -108,6 +110,7 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     public Excerpt toStart() {
         if (wrappedTailer == null) {
             wrappedExcerpt.toStart();
+
         } else {
             wrappedTailer.toStart();
         }
@@ -137,4 +140,23 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
         wrappedExcerpt.findRange(startEnd, comparator);
     }
 
+    @Override
+    public boolean read8bitText(@NotNull StringBuilder builder) throws StreamCorruptedException {
+        return wrappedExcerpt.read8bitText(builder);
+    }
+
+    @Override
+    public <E> E readEnum(long l, int i, Class<E> aClass) {
+        return wrappedExcerpt.readEnum(l, i, aClass);
+    }
+
+    @Override
+    public void write8bitText(CharSequence sequence) {
+        wrappedExcerpt.write8bitText(sequence);
+    }
+
+    @Override
+    public void writeEnum(long l, int i, Object o) {
+        wrappedExcerpt.writeEnum(l, i, o);
+    }
 }

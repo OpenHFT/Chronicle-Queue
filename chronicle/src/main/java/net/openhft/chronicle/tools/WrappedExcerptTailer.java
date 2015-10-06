@@ -22,6 +22,8 @@ import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.io.WrappedBytes;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.StreamCorruptedException;
+
 public class WrappedExcerptTailer extends WrappedBytes<ExcerptTailer> implements ExcerptTailer {
     protected ExcerptTailer wrappedTailer;
 
@@ -66,5 +68,25 @@ public class WrappedExcerptTailer extends WrappedBytes<ExcerptTailer> implements
     @Override
     public boolean wasPadding() {
         return wrappedTailer.wasPadding();
+    }
+
+    @Override
+    public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+        return wrappedTailer.read8bitText(stringBuilder);
+    }
+
+    @Override
+    public void write8bitText(CharSequence charSequence) {
+        wrappedTailer.write8bitText(charSequence);
+    }
+
+    @Override
+    public <E> E readEnum(long l, int i, Class<E> aClass) {
+        return wrappedTailer.readEnum(l, i, aClass);
+    }
+
+    @Override
+    public void writeEnum(long l, int i, Object o) {
+        wrappedTailer.writeEnum(l, i, o);
     }
 }

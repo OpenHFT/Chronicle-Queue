@@ -24,6 +24,7 @@ import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
@@ -32,7 +33,7 @@ import static org.junit.Assert.assertTrue;
 
 public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
-    public void testPersistedLocalIndexedSink() throws Exception {
+    public void testPersistedLocalIndexedSink() throws IOException, InterruptedException {
         final String basePath = getIndexedTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 

@@ -46,7 +46,6 @@ public final class SourceTcpAcceptor extends SourceTcp {
         );
     }
 
-
     protected Runnable createHandler() {
         return new Runnable() {
             @Override
@@ -95,6 +94,7 @@ public final class SourceTcpAcceptor extends SourceTcp {
                                 }
 
                                 selectionKeys.clear();
+
                             } else {
                                 final Set<SelectionKey> keys = selector.selectionKeys();
 

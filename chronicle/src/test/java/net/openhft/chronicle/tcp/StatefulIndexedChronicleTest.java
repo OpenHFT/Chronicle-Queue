@@ -363,6 +363,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                     listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
                     break;
                 }
+
                 default:
                     throw new AssertionError("Unexpected code " + ch);
             }
@@ -451,7 +452,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
      */
     @Test
-    public void testIndexedClientReconnection() throws Exception {
+    public void testIndexedClientReconnection() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
         final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
@@ -480,6 +481,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
+
                         } else {
                             Thread.sleep(100);
                         }
@@ -636,7 +638,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     }
 
     @Test
-    public void testIndexedNonBlockingClient() throws Exception {
+    public void testIndexedNonBlockingClient() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
         final String basePathSink = getIndexedTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
@@ -653,11 +655,11 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .connectAddress("localhost", portSupplier.getAndAssertOnError())
                 .readSpinCount(5);
 
-        final Chronicle sinnk = sinkBuilder.build();
+        final Chronicle sink = sinkBuilder.build();
 
         testNonBlockingClient(
                 source,
-                sinnk,
+                sink,
                 sinkBuilder.heartbeatIntervalMillis()
         );
     }

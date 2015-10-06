@@ -20,25 +20,25 @@ package net.openhft.chronicle;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.model.constraints.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
 
-    public abstract Chronicle build() throws IOException;
+    public static IndexedChronicleQueueBuilder indexed(File path) {
+        return new IndexedChronicleQueueBuilder(path);
+    }
 
     // *************************************************************************
     //
     // *************************************************************************
-
-    public static IndexedChronicleQueueBuilder indexed(File path) {
-        return new IndexedChronicleQueueBuilder(path);
-    }
 
     public static IndexedChronicleQueueBuilder indexed(String path) {
         return indexed(new File(path));
@@ -84,9 +84,23 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         return new RemoteChronicleQueueTailerBuilder();
     }
 
+    public abstract Chronicle build() throws IOException;
+
     // *************************************************************************
     //
     // *************************************************************************
+
+    /**
+     * Makes ChronicleQueueBuilder cloneable.
+     *
+     * @return a cloned copy of this ChronicleQueueBuilder instance
+     */
+    @NotNull
+    @SuppressWarnings("SourceChronicleQueueBuilder")
+    @Override
+    public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
+        return (ChronicleQueueBuilder) super.clone();
+    }
 
     public static class IndexedChronicleQueueBuilder extends ChronicleQueueBuilder implements Cloneable {
 
@@ -100,6 +114,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int dataBlockSize;
         private int messageCapacity;
         private int indexBlockSize;
+
+        private FileLifecycleListener fileLifecycleListener = FileLifecycleListener.FileLifecycleListeners.IGNORE;
 
         /**
          * On 64 bit JVMs it has the following params: <ul> <li>data block size <b>128M</b></li>
@@ -319,6 +335,14 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return new SourceChronicleQueueBuilder(this);
         }
 
+        public IndexedChronicleQueueBuilder fileGrowthListener(FileLifecycleListener fileLifecycleListener) {
+            this.fileLifecycleListener = fileLifecycleListener;
+            return this;
+        }
+
+        public FileLifecycleListener fileLifecycleListener() {
+            return fileLifecycleListener;
+        }
         @Override
         public Chronicle build() throws IOException {
             return new IndexedChronicle(this);
@@ -341,6 +365,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     public static class VanillaChronicleQueueBuilder extends ChronicleQueueBuilder {
         private final File path;
 
@@ -350,6 +378,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         private String cycleFormat;
         private int cycleLength;
+        private TimeZone cycleTimeZone;
+
         private int defaultMessageSize;
         private int dataCacheCapacity;
         private int indexCacheCapacity;
@@ -357,19 +387,21 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private long dataBlockSize;
         private long entriesPerCycle;
         private boolean cleanupOnClose;
+        private FileLifecycleListener fileLifecycleListener = FileLifecycleListener.FileLifecycleListeners.IGNORE;
 
         private VanillaChronicleQueueBuilder(File path) {
             this.path = path;
             this.synchronous = false;
             this.useCheckedExcerpt = false;
-            this.cycleFormat = "yyyyMMdd";
-            this.cycleLength = 24 * 60 * 60 * 1000; // MILLIS_PER_DAY
             this.defaultMessageSize = 128 << 10; // 128 KB.
             this.dataCacheCapacity = 32;
             this.indexCacheCapacity = 32;
             this.indexBlockSize = 16L << 20; // 16 MB
             this.dataBlockSize = 64L << 20; // 64 MB
-            this.entriesPerCycle = 1L << 40; // one trillion per day or per hour.
+            this.cycleFormat = VanillaChronicle.Cycle.DAYS.format();
+            this.cycleLength = VanillaChronicle.Cycle.DAYS.length();
+            this.entriesPerCycle = VanillaChronicle.Cycle.DAYS.entries();
+            this.cycleTimeZone = TimeZone.getTimeZone("GMT");
             this.cleanupOnClose = false;
             this.useCompressedObjectSerializer = true;
         }
@@ -444,11 +476,27 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             }
 
             this.cycleLength = cycleLength;
+            entriesPerCycle(VanillaChronicle.Cycle.forLength(this.cycleLength).entries());
+
             return this;
         }
 
         public int cycleLength() {
             return cycleLength;
+        }
+
+        public VanillaChronicleQueueBuilder cycleTimeZone(String timeZone) {
+            this.cycleTimeZone = TimeZone.getTimeZone(timeZone);
+            return this;
+        }
+
+        public VanillaChronicleQueueBuilder cycleTimeZone(TimeZone timeZone) {
+            this.cycleTimeZone = timeZone;
+            return this;
+        }
+
+        public TimeZone cycleTimeZone() {
+            return cycleTimeZone;
         }
 
         public VanillaChronicleQueueBuilder indexBlockSize(long indexBlockSize) {
@@ -466,6 +514,13 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public VanillaChronicleQueueBuilder dataBlockSize(long dataBlockSize) {
             this.dataBlockSize = dataBlockSize;
+            return this;
+        }
+
+        public VanillaChronicleQueueBuilder cycle(VanillaChronicle.Cycle cycle) {
+            cycleFormat(cycle.format());
+            cycleLength(cycle.length(), false);
+            entriesPerCycle(cycle.entries());
             return this;
         }
 
@@ -534,6 +589,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return new SourceChronicleQueueBuilder(this);
         }
 
+        public VanillaChronicleQueueBuilder fileLifecycleListener(FileLifecycleListener fileLifecycleListener) {
+            this.fileLifecycleListener = fileLifecycleListener;
+            return this;
+        }
+
+        public FileLifecycleListener fileLifecycleListener() {
+            return fileLifecycleListener;
+        }
+
         @Override
         public Chronicle build() throws IOException {
             return new VanillaChronicle(this);
@@ -556,13 +620,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     public static abstract class ReplicaChronicleQueueBuilder extends ChronicleQueueBuilder
             implements MappingProvider<ReplicaChronicleQueueBuilder> {
 
+        public static final int DEFAULT_SOCKET_BUFFER_SIZE = 256 * 1024;
         public static final TcpConnectionListener CONNECTION_LISTENER = new TcpConnectionHandler();
 
         private final ChronicleQueueBuilder builder;
@@ -616,9 +677,9 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.selectTimeoutUnit = TimeUnit.MILLISECONDS;
             this.heartbeatInterval = 2500;
             this.heartbeatIntervalUnit = TimeUnit.MILLISECONDS;
-            this.receiveBufferSize = 256 * 1024;
-            this.sendBufferSize = -1;
-            this.minBufferSize = this.receiveBufferSize;
+            this.receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
+            this.sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
+            this.minBufferSize = DEFAULT_SOCKET_BUFFER_SIZE;
             this.sharedChronicle = false;
             this.acceptorMaxBacklog = 50;
             this.acceptorDefaultThreads = 0;
@@ -779,6 +840,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.heartbeatIntervalUnit;
         }
 
+        public int defaultSocketBufferSize() {
+            return DEFAULT_SOCKET_BUFFER_SIZE;
+        }
+
         public int receiveBufferSize() {
             return receiveBufferSize;
         }
@@ -855,7 +920,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.acceptorMaxThreads;
         }
 
-
         public ReplicaChronicleQueueBuilder acceptorThreadPoolkeepAlive(long acceptorThreadPoolKeepAliveTime, TimeUnit acceptorThreadPoolKeepAliveTimeUnit) {
             this.acceptorThreadPoolKeepAliveTime = acceptorThreadPoolKeepAliveTime;
             this.acceptorThreadPoolKeepAliveTimeUnit = acceptorThreadPoolKeepAliveTimeUnit;
@@ -883,8 +947,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public long acceptorThreadPoolkeepAliveTimeMillis() {
             return this.acceptorThreadPoolKeepAliveTimeUnit.toMillis(this.acceptorThreadPoolKeepAliveTime);
         }
-
-
 
         public ReplicaChronicleQueueBuilder busyPeriod(long busyPeriod, TimeUnit busyPeriodTimeUnit) {
             this.busyPeriod = busyPeriod;
@@ -914,8 +976,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.busyPeriodTimeUnit.toNanos(this.busyPeriod);
         }
 
-
-
         public ReplicaChronicleQueueBuilder parkPeriod(long parkPeriod, TimeUnit parkPeriodTimeUnit) {
             this.parkPeriod = parkPeriod;
             this.parkPeriodTimeUnit = parkPeriodTimeUnit;
@@ -943,8 +1003,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public long parkPeriodTimeNanos() {
             return this.parkPeriodTimeUnit.toNanos(this.parkPeriod);
         }
-
-
 
         public int selectorSpinLoopCount() {
             return this.selectorSpinLoopCount;
@@ -1024,7 +1082,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.mapping;
         }
 
-        protected abstract Chronicle doBuild() throws IOException;
+        protected abstract Chronicle doBuild();
 
         /**
          * Makes ReplicaChronicleQueueBuilder cloneable.
@@ -1058,13 +1116,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if (connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1096,13 +1156,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SourceTcp cnx;
 
             if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SourceTcpAcceptor(this);
+
             } else if (connectAddress() != null) {
                 cnx = new SourceTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1130,13 +1192,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if(connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1157,6 +1221,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     private static final class RemoteChronicleQueueTailerBuilder extends ReplicaChronicleQueueBuilder {
 
         private RemoteChronicleQueueTailerBuilder() {
@@ -1164,13 +1232,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         @Override
-        public Chronicle doBuild() throws IOException {
+        public Chronicle doBuild() {
             SinkTcp cnx;
 
             if(bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
+
             } else if(connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
+
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1189,21 +1259,5 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public RemoteChronicleQueueTailerBuilder clone() {
             return (RemoteChronicleQueueTailerBuilder) super.clone();
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    /**
-     * Makes ChronicleQueueBuilder cloneable.
-     *
-     * @return a cloned copy of this ChronicleQueueBuilder instance
-     */
-    @NotNull
-    @SuppressWarnings("SourceChronicleQueueBuilder")
-    @Override
-    public ChronicleQueueBuilder clone() throws CloneNotSupportedException {
-        return (ChronicleQueueBuilder) super.clone();
     }
 }

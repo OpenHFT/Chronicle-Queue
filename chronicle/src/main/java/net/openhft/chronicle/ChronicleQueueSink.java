@@ -17,24 +17,26 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tcp.AppenderAdapter;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.io.DirectByteBufferBytes;
+import net.openhft.lang.io.IByteBufferBytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.ByteBuffer;
 
-class ChronicleQueueSink extends WrappedChronicle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueSink.class);
+import static net.openhft.chronicle.tcp.AppenderAdapters.createAdapter;
+import static net.openhft.chronicle.tools.ChronicleTools.logIOException;
 
+class ChronicleQueueSink extends WrappedChronicle {
     private final SinkTcp connection;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
     private final boolean isLocal;
@@ -92,13 +94,12 @@ class ChronicleQueueSink extends WrappedChronicle {
     }
 
     // *************************************************************************
-    // STATEFUL
+    //
     // *************************************************************************
 
     private abstract class AbstractStatefulExcerpt extends WrappedExcerpt {
         protected final Logger logger;
-        protected final ByteBuffer writeBuffer;
-        protected final ByteBufferBytes writeBufferBytes;
+        protected final ResizableDirectByteBufferBytes writeBuffer;
         protected final ByteBuffer readBuffer;
         private long lastReconnectionAttemptMS;
         private long reconnectionIntervalMS;
@@ -108,8 +109,7 @@ class ChronicleQueueSink extends WrappedChronicle {
             super(excerpt);
 
             this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.writeBuffer = ChronicleTcp.createBuffer(16);
-            this.writeBufferBytes = new ByteBufferBytes(writeBuffer);
+            this.writeBuffer = new ResizableDirectByteBufferBytes(builder.minBufferSize());
             this.readBuffer = ChronicleTcp.createBuffer(builder.minBufferSize());
             this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
             this.lastReconnectionAttemptMS = 0;
@@ -148,14 +148,16 @@ class ChronicleQueueSink extends WrappedChronicle {
 
             boolean connected = connection.isOpen();
             if(connected) {
+                builder.connectionListener().onConnect(connection.socketChannel());
                 this.lastReconnectionAttempt = 0;
                 this.lastReconnectionAttemptMS = 0;
+
             } else {
                 lastReconnectionAttempt++;
                 if(builder.reconnectionWarningThreshold() > 0) {
                     if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
                         logger.warn("Failed to establish a connection {}",
-                            ChronicleTcp.connectionName("", builder)
+                                ChronicleTcp.connectionName("", builder)
                         );
                     }
                 }
@@ -178,45 +180,81 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected void subscribe(long index) throws IOException {
-            writeBuffer.clear();
-            writeBufferBytes.clear();
-
-            writeBufferBytes.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
-            writeBufferBytes.writeLong(index);
+            writeBuffer.clearAll();
+            writeBuffer.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+            writeBuffer.writeLong(index);
 
             MappingFunction mapping = withMapping();
             if (mapping != null) {
                 // write with mapping and len
-                writeBufferBytes.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
-                long pos = writeBufferBytes.position();
+                writeBuffer.writeLong(ChronicleTcp.ACTION_WITH_MAPPING);
+                long pos = writeBuffer.position();
 
-                writeBufferBytes.skip(4);
-                long start = writeBufferBytes.position();
+                writeBuffer.skip(4);
+                long start = writeBuffer.position();
 
-                writeBufferBytes.writeObject(mapping);
-                int len = (int) (writeBufferBytes.position() - start);
-
-                writeBufferBytes.writeInt(pos, len);
-
+                writeBuffer.writeObject(mapping);
+                writeBuffer.writeInt(pos, (int) (writeBuffer.position() - start));
             }
 
-            writeBuffer.position(0);
-            writeBuffer.limit((int) writeBufferBytes.position());
+            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
             connection.writeAllOrEOF(writeBuffer);
         }
 
         protected void query(long index) throws IOException {
-            writeBuffer.clear();
-            writeBuffer.putLong(ChronicleTcp.ACTION_QUERY);
-            writeBuffer.putLong(index);
-            writeBuffer.flip();
+            writeBuffer.clearAll();
+            writeBuffer.writeLong(ChronicleTcp.ACTION_QUERY);
+            writeBuffer.writeLong(index);
+            writeBuffer.setBufferPositionAndLimit(0, writeBuffer.position());
 
             connection.writeAllOrEOF(writeBuffer);
         }
 
-        protected abstract boolean readNext();
+        protected boolean readNext() {
+            if (!closed && !connection.isOpen() && shouldConnect()) {
+                try {
+                    doReadNext();
+                } catch(IOException e) {
+                    logIOException(logger, "Exception reading from socket", e);
+                    if(!closed) {
+                        builder.connectionListener().onError(connection.socketChannel(), e);
+                    }
+                }
+            }
+
+            return !closed && connection.isOpen() && readNextExcerpt();
+        }
+
+        protected boolean readNextExcerpt() {
+            try {
+                if (!closed) {
+                    return doReadNextExcerpt();
+                }
+            } catch (IOException e) {
+                logIOException(logger, "Exception reading from socket", e);
+                if(!closed) {
+                    builder.connectionListener().onError(connection.socketChannel(), e);
+                }
+
+                try {
+                    connection.close();
+                    builder.connectionListener().onDisconnect(connection.socketChannel());
+                } catch (IOException e2) {
+                    logger.warn("Error closing socketChannel", e2);
+                }
+            }
+
+            return false;
+        }
+
+        protected abstract boolean doReadNext()  throws IOException;
+        protected abstract boolean doReadNextExcerpt() throws IOException;
     }
+
+    // *************************************************************************
+    // STATEFUL
+    // *************************************************************************
 
     private class StatefulLocalExcerpt extends AbstractStatefulExcerpt {
         public StatefulLocalExcerpt(final ExcerptCommon common) {
@@ -224,49 +262,32 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         @Override
-        protected boolean readNext() {
-            if (!closed && !connection.isOpen() && shouldConnect()) {
-                if(openConnection()) {
-                    readBuffer.clear();
-                    readBuffer.limit(0);
-                }
+        protected boolean doReadNext() throws IOException {
+            if(openConnection()) {
+                readBuffer.clear();
+                readBuffer.limit(0);
+
+                return true;
             }
 
-            return !closed && connection.isOpen() && readNextExcerpt();
+            return false;
         }
 
-        private boolean readNextExcerpt() {
-            try {
-                if (!closed) {
-                    query(wrappedChronicle.lastIndex());
+        @Override
+        protected boolean doReadNextExcerpt()  throws IOException {
+            query(wrappedChronicle.lastIndex());
 
-                    if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
-                        final int size = readBuffer.getInt();
-                        // consume data
-                        readBuffer.getLong();
+            if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
+                final int size = readBuffer.getInt();
+                readBuffer.getLong(); // consume data
 
-                        switch (size) {
-                            case ChronicleTcp.IN_SYNC_LEN:
-                                return false;
-                            case ChronicleTcp.PADDED_LEN:
-                                //TODO: Indexed Vs Vanilla
-                                return false;
-                            case ChronicleTcp.SYNC_IDX_LEN:
-                                return true;
-                        }
-                    }
-                }
-            } catch (IOException e1) {
-                if (e1 instanceof EOFException) {
-                    logger.debug("Error reading from socket", e1);
-                } else {
-                    logger.warn("Error reading from socket", e1);
-                }
-
-                try {
-                    connection.close();
-                } catch (IOException e2) {
-                    logger.warn("Error closing socketChannel", e2);
+                switch (size) {
+                    case ChronicleTcp.IN_SYNC_LEN:
+                        return false;
+                    case ChronicleTcp.PADDED_LEN:
+                        return false;
+                    case ChronicleTcp.SYNC_IDX_LEN:
+                        return true;
                 }
             }
 
@@ -287,100 +308,77 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         @Override
-        protected boolean readNext() {
-            if (!closed && !connection.isOpen() && shouldConnect()) {
-                if(openConnection()) {
-                    readBuffer.clear();
-                    readBuffer.limit(0);
+        protected boolean doReadNext() throws IOException {
+            if(openConnection()) {
+                readBuffer.clear();
+                readBuffer.limit(0);
 
-                    try {
-                        if (this.adapter == null) {
-                            this.adapter = createAppenderAdapter();
-                        }
-
-                        subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
-                    } catch (IOException e) {
-                        if (e instanceof EOFException) {
-                            logger.debug("Error reading from socket", e);
-                        } else {
-                            logger.warn("Error reading from socket", e);
-                        }
-
-                        return false;
-                    }
+                if (this.adapter == null) {
+                    this.adapter = createAdapter(wrappedChronicle);
                 }
+
+                subscribe(lastLocalIndex = wrappedChronicle.lastIndex());
+                return true;
             }
 
-            return connection.isOpen() && readNextExcerpt();
+            return false;
         }
 
-        private boolean readNextExcerpt() {
-            try {
-                if (!closed && !connection.read(
-                        readBuffer,
-                        ChronicleTcp.HEADER_SIZE,
-                        ChronicleTcp.HEADER_SIZE + 8,
-                        readSpinCount)) {
+        @Override
+        protected boolean doReadNextExcerpt() throws IOException {
+            if (!connection.read(
+                    readBuffer,
+                    ChronicleTcp.HEADER_SIZE,
+                    ChronicleTcp.HEADER_SIZE + 8,
+                    readSpinCount)) {
+                return false;
+            }
+
+            final int size = readBuffer.getInt();
+            final long scIndex = readBuffer.getLong();
+
+            switch (size) {
+                case ChronicleTcp.IN_SYNC_LEN:
+                    //Heartbeat message ignore and return false
                     return false;
-                }
-
-                final int size = readBuffer.getInt();
-                final long scIndex = readBuffer.getLong();
-
-                switch (size) {
-                    case ChronicleTcp.IN_SYNC_LEN:
-                        //Heartbeat message ignore and return false
-                        return false;
-                    case ChronicleTcp.PADDED_LEN:
-                        this.adapter.writePaddedEntry();
-                        return readNextExcerpt();
-                    case ChronicleTcp.SYNC_IDX_LEN:
-                        //Sync IDX message, re-try
-                        return readNextExcerpt();
-                }
-
-                if (size > 128 << 20 || size < 0) {
-                    throw new StreamCorruptedException("size was " + size);
-                }
-
-                if (lastLocalIndex != scIndex) {
-                    this.adapter.startExcerpt(size, scIndex);
-
-                    long remaining = size;
-                    int limit = readBuffer.limit();
-                    int size2 = (int) Math.min(readBuffer.remaining(), remaining);
-
-                    remaining -= size2;
-                    readBuffer.limit(readBuffer.position() + size2);
-                    adapter.write(readBuffer);
-                    // reset the limit;
-                    readBuffer.limit(limit);
-
-                    // needs more than one read.
-                    while (remaining > 0) {
-                        int size3 = (int) Math.min(readBuffer.capacity(), remaining);
-                        connection.readUpTo(readBuffer, size3, -1);
-                        remaining -= readBuffer.remaining();
-                        adapter.write(readBuffer);
-                    }
-
-                    adapter.finish();
-                } else {
-                    readBuffer.position(readBuffer.position() + size);
+                case ChronicleTcp.PADDED_LEN:
+                    this.adapter.writePaddedEntry();
                     return readNextExcerpt();
-                }
-            } catch (IOException e1) {
-                if (e1 instanceof EOFException) {
-                    logger.trace("Exception reading from socket", e1);
-                } else {
-                    logger.warn("Exception reading from socket", e1);
+                case ChronicleTcp.SYNC_IDX_LEN:
+                    //Sync IDX message, re-try
+                    return readNextExcerpt();
+            }
+
+            if (size > 128 << 20 || size < 0) {
+                throw new StreamCorruptedException("size was " + size);
+            }
+
+            if (lastLocalIndex != scIndex) {
+                this.adapter.startExcerpt(size, scIndex);
+
+                long remaining = size;
+                int limit = readBuffer.limit();
+                int size2 = (int) Math.min(readBuffer.remaining(), remaining);
+
+                remaining -= size2;
+                readBuffer.limit(readBuffer.position() + size2);
+                adapter.write(readBuffer);
+                // reset the limit;
+                readBuffer.limit(limit);
+
+                // needs more than one read.
+                while (remaining > 0) {
+                    int size3 = (int) Math.min(readBuffer.capacity(), remaining);
+                    connection.readUpTo(readBuffer, size3, -1);
+                    remaining -= readBuffer.remaining();
+                    adapter.write(readBuffer);
                 }
 
-                try {
-                    connection.close();
-                } catch (IOException e2) {
-                    logger.warn("Error closing socketChannel", e2);
-                }
+                adapter.finish();
+
+            } else {
+                readBuffer.position(readBuffer.position() + size);
+                return readNextExcerpt();
             }
 
             return true;
@@ -394,88 +392,6 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             super.close();
-        }
-    }
-
-    // *************************************************************************
-    // Appender adapters
-    // *************************************************************************
-
-    /**
-     * Creates a SinkAppenderAdapter.
-     *
-     * @return the SinkAppenderAdapter
-     * @throws java.io.IOException
-     */
-    private AppenderAdapter createAppenderAdapter() throws IOException {
-        if (wrappedChronicle instanceof IndexedChronicle) {
-            return new IndexedAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
-        }
-
-        if (wrappedChronicle instanceof VanillaChronicle) {
-            return new VanillaAppenderAdapter(wrappedChronicle, wrappedChronicle.createAppender());
-        }
-
-        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
-    }
-
-    private abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppender> {
-
-        public AppenderAdapter(@NotNull ExcerptAppender appender) {
-            super(appender);
-        }
-
-        public abstract void writePaddedEntry();
-
-        public abstract void startExcerpt(long capacity, long index);
-    }
-
-    /**
-     * IndexedChronicle AppenderAdapter
-     */
-    private final class IndexedAppenderAdapter extends AppenderAdapter {
-        private final IndexedChronicle chronicle;
-
-        public IndexedAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
-            super(appender);
-
-            this.chronicle = (IndexedChronicle) chronicle;
-        }
-
-        @Override
-        public void writePaddedEntry() {
-            super.wrapped.addPaddedEntry();
-        }
-
-        @Override
-        public void startExcerpt(long capacity, long index) {
-            super.wrapped.startExcerpt(capacity);
-        }
-    }
-
-    /**
-     * VanillaChronicle AppenderAdapter
-     */
-    private final class VanillaAppenderAdapter extends AppenderAdapter {
-        private final VanillaChronicle chronicle;
-        private final VanillaChronicle.VanillaAppender appender;
-
-        public VanillaAppenderAdapter(@NotNull final Chronicle chronicle, @NotNull final ExcerptAppender appender) {
-            super(appender);
-
-            this.chronicle = (VanillaChronicle) chronicle;
-            this.appender = (VanillaChronicle.VanillaAppender) appender;
-        }
-
-        @Override
-        public void writePaddedEntry() {
-            LOGGER.warn("VanillaChronicle should not receive padded entries");
-        }
-
-        @Override
-        public void startExcerpt(long capacity, long index) {
-            int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
-            this.appender.startExcerpt(capacity, cycle);
         }
     }
 }
