@@ -1069,4 +1069,36 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertFalse(new File(baseDir).exists());
         }
     }
+
+    @Test
+    public void testGetActiveWorkingDirectory() throws Exception {
+
+        final String baseDir = getTestPath();
+        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+                .cycleLength(1000 * 60 * 60)
+                .cycleFormat("yyyyMMddHH")
+                .build();
+
+        chronicle.clear();
+
+        try {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptTailer tailer = chronicle.createTailer().toStart();
+
+            // Append a small number of events in this cycle
+            appendValues(appender, 1, 500);
+            readAvailableValues(tailer);
+
+            //Get current file from tailer and check it exists under base directory
+            String file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
+            assertTrue(new File(baseDir + "/" + file).exists());
+
+        } finally {
+
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
+
 }
