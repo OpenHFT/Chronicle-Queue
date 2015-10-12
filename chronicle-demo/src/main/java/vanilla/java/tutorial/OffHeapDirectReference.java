@@ -21,11 +21,13 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 
+import java.io.IOException;
+
 import static net.openhft.lang.model.DataValueClasses.newDirectReference;
 
 public class OffHeapDirectReference extends OffHeapHelper {
 
-    public static void main(String[] ignored)   {
+    public static void main(String[] ignored) throws IOException, InterruptedException {
         final int items = 100;
         final String path = System.getProperty("java.io.tmpdir") + "/direct-instance";
         final Event event = newDirectReference(Event.class);

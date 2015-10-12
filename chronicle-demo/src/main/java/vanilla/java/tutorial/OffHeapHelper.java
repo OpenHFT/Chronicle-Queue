@@ -21,6 +21,7 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.lang.model.Byteable;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,7 +31,7 @@ import static net.openhft.lang.model.DataValueClasses.newDirectReference;
 
 public class OffHeapHelper {
 
-    protected static void process(Chronicle chronicle, int items)   {
+    protected static void process(Chronicle chronicle, int items) throws InterruptedException, IOException {
         final int readers = items / 10;
         ExecutorService ex = Executors.newFixedThreadPool(readers * 2);
         for (int i = 0; i < readers * 2; i++) {
