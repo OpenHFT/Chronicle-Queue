@@ -614,10 +614,18 @@ public class VanillaChronicle implements Chronicle {
 
                 if (appenderCycle != lastCycle) {
                     if (indexBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            indexBytes.force();
+                        }
+
                         indexBytes.release();
                         indexBytes = null;
                     }
                     if (dataBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            dataBytes.force();
+                        }
+
                         dataBytes.release();
                         dataBytes = null;
                     }
@@ -628,6 +636,10 @@ public class VanillaChronicle implements Chronicle {
 
                 } else if (appenderThreadId != lastThreadId) {
                     if (dataBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            dataBytes.force();
+                        }
+
                         dataBytes.release();
                         dataBytes = null;
                     }
