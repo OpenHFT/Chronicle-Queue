@@ -15,7 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
+import net.openhft.koloboke.collect.map.hash.HashLongObjMaps;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -23,14 +23,14 @@ import java.util.Map;
 
 public class WireStorePool {
     private final WireStoreSupplier supplier;
-    private final Map<Integer, WireStore> stores;
+    private final Map<Long, WireStore> stores;
 
     public WireStorePool(@NotNull WireStoreSupplier supplier) {
         this.supplier = supplier;
-        this.stores = HashIntObjMaps.newMutableMap();
+        this.stores = HashLongObjMaps.newMutableMap();
     }
 
-    public synchronized WireStore acquire(int cycle) throws IOException {
+    public synchronized WireStore acquire(long cycle) throws IOException {
         WireStore store = stores.get(cycle);
         if(store == null) {
             stores.put(cycle, store = this.supplier.get(cycle));

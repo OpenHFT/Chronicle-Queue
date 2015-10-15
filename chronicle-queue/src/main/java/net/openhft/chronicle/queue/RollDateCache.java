@@ -52,11 +52,10 @@ public class RollDateCache {
      * Formats a rollCycle number into a date/time String based on a fixed date/time format.
      *
      * @param cycle the rollCycle number to format
-     *
      * @return the formatted date/time string
      */
-    public String formatFor(int cycle) {
-        long millis = (long) cycle * length;
+    public String formatFor(long cycle) {
+        long millis = cycle * length;
         int hash = Maths.hash32(millis) & (SIZE - 1);
         DateValue dv = values[hash];
         if (dv == null || dv.millis != millis) {

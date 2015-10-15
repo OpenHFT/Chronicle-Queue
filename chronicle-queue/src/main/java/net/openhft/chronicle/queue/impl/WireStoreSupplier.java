@@ -17,5 +17,5 @@ package net.openhft.chronicle.queue.impl;
 
 @FunctionalInterface
 public interface WireStoreSupplier {
-    WireStore get(int cycle);
+    WireStore get(long cycle);
 }

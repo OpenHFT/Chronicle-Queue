@@ -32,7 +32,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      *
      * @return
      */
-    int cycle();
+    long cycle();
 
     /**
      *
@@ -59,7 +59,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return
      * @throws IOException
      */
-    boolean appendRollMeta(int cycle) throws IOException;
+    boolean appendRollMeta(long cycle) throws IOException;
 
     /**
      *
@@ -99,7 +99,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
         @NotNull BytesStore store,
         long length,
         boolean created,
-        int cycle,
+        long cycle,
         @NotNull Function<Bytes, Wire> wireSupplier,
         @Nullable Closeable closeable)
             throws IOException;

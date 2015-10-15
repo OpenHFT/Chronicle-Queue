@@ -94,7 +94,7 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public int cycle() {
+    public long cycle() {
         return this.roll.getCycle();
     }
 
@@ -105,7 +105,7 @@ class SingleChronicleQueueStore implements WireStore {
 
 
     @Override
-    public boolean appendRollMeta(int cycle) throws IOException {
+    public boolean appendRollMeta(long cycle) throws IOException {
         if(roll.casNextRollCycle(cycle)) {
             final WireBounds position = append(
                 positionPool.get(),
@@ -210,7 +210,7 @@ class SingleChronicleQueueStore implements WireStore {
             @NotNull BytesStore store,
             long length,
             boolean created,
-            int cycle,
+            long cycle,
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable) throws IOException {
 
@@ -431,8 +431,8 @@ class SingleChronicleQueueStore implements WireStore {
         private int length;
         private String format;
         private ZoneId zoneId;
-        private IntValue cycle;
-        private IntValue nextCycle;
+        private LongValue cycle;
+        private LongValue nextCycle;
         private LongValue nextCycleMetaPosition;
 
         Roll(RollCycle rollCycle) {
@@ -447,29 +447,29 @@ class SingleChronicleQueueStore implements WireStore {
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(RollFields.cycle).int32forBinding(-1, cycle = wire.newIntReference())
+            wire.write(RollFields.cycle).int64forBinding(-1, cycle = wire.newLongReference())
                 .write(RollFields.length).int32(length)
                 .write(RollFields.format).text(format)
                 .write(RollFields.timeZone).text(zoneId.getId())
-                .write(RollFields.nextCycle).int32forBinding(-1, nextCycle = wire.newIntReference())
+                .write(RollFields.nextCycle).int64forBinding(-1, nextCycle = wire.newLongReference())
                 .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
 
         @Override
         public void readMarshallable(@NotNull WireIn wire) {
-            wire.read(RollFields.cycle).int32(this.cycle, this, (o, i) -> o.cycle = i)
+            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
                 .read(RollFields.length).int32(this, (o, i) -> o.length = i)
                 .read(RollFields.format).text(this, (o, i) -> o.format = i)
                 .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
-                .read(RollFields.nextCycle).int32(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
                 .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
 
-        public int getCycle() {
+        public long getCycle() {
             return this.cycle.getVolatileValue();
         }
 
-        public Roll setCycle(int rollCycle) {
+        public Roll setCycle(long rollCycle) {
             this.cycle.setOrderedValue(rollCycle);
             return this;
         }
@@ -483,11 +483,11 @@ class SingleChronicleQueueStore implements WireStore {
             return this.nextCycleMetaPosition.getVolatileValue();
         }
 
-        public int getNextRollCycle() {
+        public long getNextRollCycle() {
             return this.nextCycle.getVolatileValue();
         }
 
-        public boolean casNextRollCycle(int rollCycle) {
+        public boolean casNextRollCycle(long rollCycle) {
             return this.nextCycle.compareAndSwapValue(-1, rollCycle);
         }
     }

@@ -46,7 +46,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected synchronized WireStore storeForCycle(int cycle) throws IOException {
+    protected synchronized WireStore storeForCycle(long cycle) throws IOException {
         return this.pool.acquire(cycle);
     }
 
@@ -56,22 +56,22 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected int cycle() {
+    protected long cycle() {
         return this.cycle.current();
     }
 
     //TODO: reduce garbage
     //TODO: add a check on first file, in case it gets deleted
     @Override
-    protected synchronized int firstCycle() {
-        if(-1 != firstCycle ) {
+    protected synchronized long firstCycle() {
+        if (-1 != firstCycle) {
             return firstCycle;
         }
 
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
-        if(files != null) {
+        if (files != null) {
             long firstDate = Long.MAX_VALUE;
             long date = -1;
             String name = null;
@@ -79,7 +79,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             for (int i = files.length - 1; i >= 0; i--) {
                 try {
                     name = files[i].getAbsolutePath();
-                    if(name.endsWith(".chronicle")) {
+                    if (name.endsWith(".chronicle")) {
                         name = name.substring(basePath.length() + 1);
                         name = name.substring(0, name.indexOf('.'));
 
@@ -93,7 +93,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 }
             }
 
-            firstCycle = (int)firstDate;
+            firstCycle = (int) firstDate;
         }
 
         return firstCycle;
@@ -101,11 +101,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     //TODO: reduce garbage
     @Override
-    protected int lastCycle() {
+    protected long lastCycle() {
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
-        if(files != null) {
+        if (files != null) {
             long lastDate = Long.MIN_VALUE;
             long date = -1;
             String name = null;
@@ -113,7 +113,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             for (int i = files.length - 1; i >= 0; i--) {
                 try {
                     name = files[i].getAbsolutePath();
-                    if(name.endsWith(".chronicle")) {
+                    if (name.endsWith(".chronicle")) {
                         name = name.substring(basePath.length() + 1);
                         name = name.substring(0, name.indexOf('.'));
 
@@ -127,7 +127,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 }
             }
 
-            return (int)lastDate;
+            return lastDate;
         }
 
         return -1;
@@ -137,7 +137,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    protected WireStore newStore(final int cycle) {
+    protected WireStore newStore(final long cycle) {
         try {
 
             String cycleFormat = this.dateCache.formatFor(cycle);
@@ -148,18 +148,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             }
 
             return WiredFile.<WireStore>build(
-                cycleFile,
-                file -> MappedFile.mappedFile(file, builder.blockSize()),
-                builder.wireType(),
-                () -> new SingleChronicleQueueStore(builder.rollCycle()),
-                ws -> ws.delegate().install(
-                    ws.headerStore(),
-                    ws.headerLength(),
-                    ws.headerCreated(),
-                    cycle,
-                    ws.wireSupplier(),
-                    ws.mappedFile()
-                )
+                    cycleFile,
+                    file -> MappedFile.mappedFile(file, builder.blockSize()),
+                    builder.wireType(),
+                    () -> new SingleChronicleQueueStore(builder.rollCycle()),
+                    ws -> ws.delegate().install(
+                            ws.headerStore(),
+                            ws.headerLength(),
+                            ws.headerCreated(),
+                            cycle,
+                            ws.wireSupplier(),
+                            ws.mappedFile()
+                    )
             ).delegate();
 
         } catch (IOException e) {
