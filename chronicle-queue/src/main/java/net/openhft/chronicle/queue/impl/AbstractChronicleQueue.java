@@ -77,7 +77,7 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      * @return
      * @throws IOException
      */
-    protected abstract WireStore storeForCycle(int cycle) throws IOException;
+    protected abstract WireStore storeForCycle(long cycle) throws IOException;
 
     /**
      *
@@ -89,17 +89,17 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      *
      * @return
      */
-    protected abstract int cycle();
+    protected abstract long cycle();
 
     /**
      *
      * @return
      */
-    protected abstract int firstCycle();
+    protected abstract long firstCycle();
 
     /**
      *
      * @return
      */
-    protected abstract int lastCycle();
+    protected abstract long lastCycle();
 }

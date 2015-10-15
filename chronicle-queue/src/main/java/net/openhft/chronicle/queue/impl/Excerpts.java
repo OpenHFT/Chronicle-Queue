@@ -34,7 +34,7 @@ public class Excerpts {
     static class Appender implements ExcerptAppender {
         private final AbstractChronicleQueue queue;
 
-        private int cycle;
+        private long cycle;
         private long index;
         private WireStore store;
 
@@ -50,7 +50,7 @@ public class Excerpts {
         public long writeDocument(WriteMarshallable writer) throws IOException {
             if(this.cycle != queue.cycle()) {
 
-                int nextCycle = queue.cycle();
+                long nextCycle = queue.cycle();
                 if(this.store != null) {
                     this.store.appendRollMeta(nextCycle);
                     this.queue.release(this.store);
@@ -83,13 +83,13 @@ public class Excerpts {
     static class Tailer implements ExcerptTailer {
         private final AbstractChronicleQueue queue;
 
-        private int cycle;
+        private long cycle;
         private long position;
         private WireStore store;
 
         Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
-            this.cycle = 0;
+            this.cycle = -1;
             this.store = null;
             this.position = 0;
         }
@@ -108,7 +108,7 @@ public class Excerpts {
                 return true;
             } else if(position < 0) {
                 // roll detected, move to next cycle;
-                cycle((int) Math.abs(position));
+                cycle(Math.abs(position));
                 this.position = this.store.readPosition();
 
                 // try to read from new cycle
@@ -164,7 +164,7 @@ public class Excerpts {
             return this.queue;
         }
 
-        private void cycle(int cycle) throws IOException {
+        private void cycle(long cycle) throws IOException {
             if(this.cycle != cycle) {
                 if(null != this.store) {
                     this.queue.release(this.store);
