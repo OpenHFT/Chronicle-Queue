@@ -45,7 +45,6 @@ import static net.openhft.chronicle.queue.impl.WireConstants.*;
  */
 class SingleChronicleQueueStore implements WireStore {
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class,"WireStore");
         ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class,"Bounds");
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class,"Indexing");
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class,"Roll");
