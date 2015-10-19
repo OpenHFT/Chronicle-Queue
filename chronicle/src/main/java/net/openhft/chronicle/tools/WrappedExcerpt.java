@@ -146,11 +146,6 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     }
 
     @Override
-    public <E> E readEnum(long l, int i, Class<E> aClass) {
-        return wrappedExcerpt.readEnum(l, i, aClass);
-    }
-
-    @Override
     public void write8bitText(CharSequence sequence) {
         wrappedExcerpt.write8bitText(sequence);
     }
