@@ -22,6 +22,7 @@ import net.openhft.affinity.AffinitySupport;
 import net.openhft.chronicle.tools.CheckedExcerpt;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
+import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.io.IOTools;
 import net.openhft.lang.io.NativeBytes;
 import net.openhft.lang.io.VanillaMappedBytes;
@@ -61,8 +62,13 @@ public class VanillaChronicle implements Chronicle {
      * Mask used to extract the data offset info from an index entry.
      */
     public static final long INDEX_DATA_OFFSET_MASK = -1L >>> -INDEX_DATA_OFFSET_BITS;
+
     @NotNull
     final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder;
+
+    @NotNull
+    final FileLifecycleListener lifecycleListener;
+
     private final String name;
     private final ThreadLocal<WeakReference<ObjectSerializer>> marshallersCache;
     private final ThreadLocal<WeakReference<VanillaTailer>> tailerCache;
@@ -85,6 +91,7 @@ public class VanillaChronicle implements Chronicle {
 
     VanillaChronicle(ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder) {
         this.builder = builder.clone();
+        this.lifecycleListener = this.builder.fileLifecycleListener();
         this.marshallersCache = new ThreadLocal<>();
         this.tailerCache = new ThreadLocal<>();
         this.appenderCache = new ThreadLocal<>();
@@ -105,21 +112,6 @@ public class VanillaChronicle implements Chronicle {
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
-
-        /*
-        System.out.println("Cycle:");
-        System.out.println("> cycleFormat         : " + this.builder.cycleFormat());
-        System.out.println("> cycleLength         : " + this.builder.cycleLength());
-        System.out.println("> entriesPerCycle     : " + this.builder.entriesPerCycle());
-        System.out.println("Bits:");
-        System.out.println("> indexBlockSizeBits  : " + indexBlockSizeBits );
-        System.out.println("> dataBlockSizeBits   : " + dataBlockSizeBits  );
-        System.out.println("* indexBlockLongsBits : " + indexBlockLongsBits);
-        System.out.println("* entriesForCycleBits : " + entriesForCycleBits);
-
-        // bitsToRepresent(cycle) + bitsRepresent(entriesPerCycle) < 64
-        // return (cycle << entriesForCycleBits) + (indexCount << indexBlockLongsBits) + (indexPosition >> 3);
-        */
     }
 
     public boolean isClosed() {
@@ -614,10 +606,18 @@ public class VanillaChronicle implements Chronicle {
 
                 if (appenderCycle != lastCycle) {
                     if (indexBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            indexBytes.force();
+                        }
+
                         indexBytes.release();
                         indexBytes = null;
                     }
                     if (dataBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            dataBytes.force();
+                        }
+
                         dataBytes.release();
                         dataBytes = null;
                     }
@@ -628,6 +628,10 @@ public class VanillaChronicle implements Chronicle {
 
                 } else if (appenderThreadId != lastThreadId) {
                     if (dataBytes != null) {
+                        if(builder.syncOnRoll()) {
+                            dataBytes.force();
+                        }
+
                         dataBytes.release();
                         dataBytes = null;
                     }
