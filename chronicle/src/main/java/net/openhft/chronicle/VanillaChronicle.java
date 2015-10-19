@@ -607,13 +607,7 @@ public class VanillaChronicle implements Chronicle {
                 if (appenderCycle != lastCycle) {
                     if (indexBytes != null) {
                         if(builder.syncOnRoll()) {
-                            long start = System.nanoTime();
                             indexBytes.force();
-
-                            lifecycleListener.onEvent(
-                                FileLifecycleListener.EventType.SYNC,
-                                indexBytes.file(),
-                                System.nanoTime() - start);
                         }
 
                         indexBytes.release();
@@ -621,13 +615,7 @@ public class VanillaChronicle implements Chronicle {
                     }
                     if (dataBytes != null) {
                         if(builder.syncOnRoll()) {
-                            long start = System.nanoTime();
                             dataBytes.force();
-
-                            lifecycleListener.onEvent(
-                                FileLifecycleListener.EventType.SYNC,
-                                indexBytes.file(),
-                                System.nanoTime() - start);
                         }
 
                         dataBytes.release();
@@ -641,13 +629,7 @@ public class VanillaChronicle implements Chronicle {
                 } else if (appenderThreadId != lastThreadId) {
                     if (dataBytes != null) {
                         if(builder.syncOnRoll()) {
-                            long start = System.nanoTime();
                             dataBytes.force();
-
-                            lifecycleListener.onEvent(
-                                FileLifecycleListener.EventType.SYNC,
-                                indexBytes.file(),
-                                System.nanoTime() - start);
                         }
 
                         dataBytes.release();
@@ -736,13 +718,7 @@ public class VanillaChronicle implements Chronicle {
             dataBytes.alignPositionAddr(4);
 
             if (nextSynchronous) {
-                //long start = System.nanoTime();
                 dataBytes.force();
-
-                //TODO: is that a good idea ?
-                //builder.fileLifecycleListener().onEvent(
-                //    FileLifecycleListener.EventType.SYNC, indexBytes.file(),
-                //    System.nanoTime() - start);
             }
         }
 

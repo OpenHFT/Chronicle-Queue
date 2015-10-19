@@ -19,6 +19,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.FileLifecycleListener;
+import net.openhft.lang.io.FileLifecycleListener.EventType;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
@@ -81,7 +82,8 @@ public class VanillaDataCache implements Closeable {
                             forWrite),
                     1L << blockBits,
                     dataCount);
-            fileLifecycleListener.onFileGrowth(new File(name), System.nanoTime() - start);
+
+            fileLifecycleListener.onEvent(EventType.NEW, new File(name), System.nanoTime() - start);
         }
 
         vmb.reserve();
@@ -123,7 +125,6 @@ public class VanillaDataCache implements Closeable {
             int len2 = nextWordAlignment(~len);
             if (len2 < 0) {
                 throw new IllegalStateException("Corrupted length " + Integer.toHexString(len));
-                //throw new IllegalStateException("Corrupted length in " + vanillaFile.file() + " " + Integer.toHexString(len));
             }
             buffer.position(buffer.position() + len2 + 4);
         }

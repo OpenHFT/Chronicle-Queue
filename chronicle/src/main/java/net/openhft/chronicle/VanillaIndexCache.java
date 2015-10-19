@@ -19,6 +19,7 @@
 package net.openhft.chronicle;
 
 import net.openhft.lang.io.FileLifecycleListener;
+import net.openhft.lang.io.FileLifecycleListener.EventType;
 import net.openhft.lang.io.VanillaMappedBytes;
 import net.openhft.lang.io.VanillaMappedCache;
 import net.openhft.lang.model.constraints.NotNull;
@@ -138,7 +139,8 @@ public class VanillaIndexCache implements Closeable {
                     forAppend),
                 1L << blockBits,
                 indexCount);
-            fileLifecycleListener.onFileGrowth(new File(name), System.nanoTime() - start);
+
+            fileLifecycleListener.onEvent(EventType.NEW, new File(name), System.nanoTime() - start);
         }
 
         vmb.reserve();
