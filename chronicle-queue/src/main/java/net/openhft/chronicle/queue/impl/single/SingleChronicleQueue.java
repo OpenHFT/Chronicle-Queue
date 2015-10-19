@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
@@ -30,6 +31,9 @@ import java.io.IOException;
 import java.text.ParseException;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
+    static {
+        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class,"WireStore");
+    }
 
     private final SingleChronicleQueueBuilder builder;
     private final RollCycle cycle;
