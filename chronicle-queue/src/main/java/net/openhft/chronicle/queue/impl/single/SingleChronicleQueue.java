@@ -23,6 +23,8 @@ import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredFile;
 import org.jetbrains.annotations.NotNull;
 
@@ -137,6 +139,26 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return -1;
     }
 
+    @Override
+    public WireType wireType() {
+       throw new UnsupportedOperationException("todo");
+    }
+
+    @Override
+    public long indexToIndex() {
+        throw new UnsupportedOperationException("todo");
+    }
+
+    @Override
+    public Wire wire() {
+        throw new UnsupportedOperationException("todo");
+    }
+
+    @Override
+    public long newIndex() {
+        throw new UnsupportedOperationException("todo");
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -171,4 +193,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             throw new RuntimeException(e);
         }
     }
+
+
 }

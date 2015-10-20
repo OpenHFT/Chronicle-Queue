@@ -25,6 +25,6 @@ import java.io.IOException;
 public interface ChronicleQueueBuilder extends Cloneable {
 
     @NotNull
-    public ChronicleQueue build() throws IOException;
+    ChronicleQueue build() throws IOException;
 
 }
