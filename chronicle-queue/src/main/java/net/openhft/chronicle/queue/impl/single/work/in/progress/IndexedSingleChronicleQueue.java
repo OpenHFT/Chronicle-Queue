@@ -266,8 +266,6 @@ public class IndexedSingleChronicleQueue extends AbstractChronicle {
     public long newIndex() {
 
         final LongArrayValues array = longArray.get();
-
-
         final long size = array.sizeInBytes(Indexer.NUMBER_OF_ENTRIES_IN_EACH_INDEX);
         final Bytes buffer = NativeBytes.nativeBytes(size);
         buffer.zeroOut(0, size);
