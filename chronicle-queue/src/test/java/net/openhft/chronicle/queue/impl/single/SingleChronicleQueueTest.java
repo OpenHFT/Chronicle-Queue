@@ -22,7 +22,6 @@ import net.openhft.chronicle.queue.impl.single.work.in.progress.IndexedSingleChr
 import net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +31,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
