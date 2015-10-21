@@ -41,14 +41,14 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollCycle cycle;
     private final RollDateCache dateCache;
     private final WireStorePool pool;
-    private int firstCycle;
+    private long firstCycle;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
         this.pool = WireStorePool.withSupplier(this::newStore);
-        this.firstCycle = -1;
+        this.firstCycle = -1L;
     }
 
     @Override
@@ -70,14 +70,14 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //TODO: add a check on first file, in case it gets deleted
     @Override
     protected synchronized long firstCycle() {
-        if (-1 != firstCycle) {
+        if (firstCycle != -1) {
             return firstCycle;
         }
 
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
-        if (files != null) {
+        if (files != null && files.length > 0) {
             long firstDate = Long.MAX_VALUE;
             long date = -1;
             String name = null;
@@ -99,7 +99,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 }
             }
 
-            firstCycle = (int) firstDate;
+            firstCycle = firstDate;
         }
 
         return firstCycle;
@@ -111,7 +111,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
-        if (files != null) {
+        if (files != null && files.length > 0) {
             long lastDate = Long.MIN_VALUE;
             long date = -1;
             String name = null;

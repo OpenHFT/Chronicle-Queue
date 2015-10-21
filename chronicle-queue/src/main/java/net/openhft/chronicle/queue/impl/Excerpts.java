@@ -42,8 +42,8 @@ public class Excerpts {
             this.queue = queue;
 
             this.cycle = queue.lastCycle();
-            this.store = this.cycle != 0 ? queue.storeForCycle(this.cycle) : null;
-            this.index = this.cycle != 0 ? this.store.lastIndex() : -1;
+            this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
+            this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
         }
 
         @Override
@@ -89,18 +89,27 @@ public class Excerpts {
         private long position;
         private WireStore store;
 
+        //TODO: refactor
+        private boolean toStart;
+
         Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = -1;
             this.store = null;
             this.position = 0;
+            this.toStart = false;
         }
 
         @Override
         public boolean readDocument(ReadMarshallable reader) throws IOException {
             if(this.store == null) {
+                long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
+                if(lastCycle == -1) {
+                    return false;
+                }
+
                 //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(queue.lastCycle());
+                cycle(lastCycle);
                 this.position = this.store.readPosition();
             }
 
@@ -147,16 +156,27 @@ public class Excerpts {
 
         @Override
         public ExcerptTailer toStart() throws IOException {
-            cycle(queue.firstCycle());
-            this.position = store.readPosition();
+            long cycle = queue.firstCycle();
+            if(cycle > 0) {
+                cycle(cycle);
+                this.position = store.readPosition();
+                this.toStart = false;
+            } else {
+                this.toStart = true;
+            }
 
             return this;
         }
 
         @Override
         public ExcerptTailer toEnd() throws IOException {
-            cycle(queue.lastCycle());
-            this.position = store.writePosition();
+            long cycle = queue.firstCycle();
+            if(cycle > 0) {
+                cycle(cycle);
+                this.position = store.writePosition();
+            }
+
+            this.toStart = false;
 
             return this;
         }

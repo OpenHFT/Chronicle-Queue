@@ -15,13 +15,17 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import junit.framework.Assert;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueTestBase;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.IndexedSingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,6 +38,7 @@ import java.util.Collection;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
@@ -101,23 +106,53 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore
+    /*
+     * Tailer doesn't work if created before the appender
+     *
+     * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
+     */
     @Test
-    public void testReadAndAppend() throws IOException {
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder("/tmp/test")
+    public void testQUEUE28() throws IOException {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build();
+
+        final ExcerptTailer tailer = queue.createTailer();
+        assertFalse(tailer.readDocument(r ->
+            r.read(TestKey.test).int32()
+        ));
+
+        final ExcerptAppender appender = queue.createAppender();
+        appender.writeDocument(w -> w.write(TestKey.test).int32(1));
+
+        assertTrue(tailer.readDocument(r ->
+            r.read(TestKey.test).int32()
+        ));
+    }
+
+    @Test
+    public void testReadAndAppend() throws IOException {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
+
         int[] results = new int[2];
 
         Thread t = new Thread(() -> {
             try {
                 final ExcerptTailer tailer = queue.createTailer();
-                for (int i = 0; i < 2; i++) {
-                    final int n = i;
-                    tailer.readDocument(r -> {
+                for (int i = 0; i < 2; ) {
+                    boolean read = tailer.readDocument(r -> {
                         int result = r.read(TestKey.test).int32();
                         results[result] = result;
                     });
+
+                    if(read) {
+                        i++;
+                    } else {
+                        // Pause for a little
+                        Jvm.pause(10);
+                    }
                 }
             } catch (Exception e) {
                 assertTrue(false);
