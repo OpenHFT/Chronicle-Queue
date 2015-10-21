@@ -27,10 +27,9 @@ import java.io.IOException;
  */
 public interface ExcerptTailer extends ExcerptCommon {
     /**
-     *
-     * @param reader
-     * @return
-     * @throws IOException
+     * @param reader user to read the document
+     * @return {@code true} if successful
+     * @throws IOException if not able to read the chronicle file
      */
     boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
 
@@ -39,6 +38,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      *
      * @param index index to look up
      * @return true if this is a valid entries and not padding.
+     * @throws IOException if not able to read the chronicle file
      */
     boolean index(long index) throws IOException;
 
@@ -48,6 +48,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @param cycle cycle
      * @param index index to look up
      * @return true if this is a valid entries and not padding.
+     * @throws IOException if not able to read the chronicle file
      */
     boolean index(int cycle, long index) throws IOException;
 
@@ -55,15 +56,20 @@ public interface ExcerptTailer extends ExcerptCommon {
      * Replay from the lower.
      *
      * @return this Excerpt
+     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toStart() throws IOException;;
+    ExcerptTailer toStart() throws IOException;
+
+    ;
 
     /**
      * Wind to the upper.
      *
      * @return this Excerpt
+     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toEnd() throws IOException;;
+    ExcerptTailer toEnd() throws IOException;
+
 }

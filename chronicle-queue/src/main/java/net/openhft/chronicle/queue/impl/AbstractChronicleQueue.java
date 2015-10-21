@@ -19,6 +19,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -59,6 +61,8 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     public long firstAvailableIndex() {
         throw new UnsupportedOperationException("Not implemented");
     }
+
+
 
     @Override
     public long lastWrittenIndex() {
@@ -102,4 +106,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      * @return
      */
     protected abstract long lastCycle();
+
+    public abstract WireType wireType();
+
+    public abstract long indexToIndex();
+
+    public abstract Wire wire();
+
+    public abstract long newIndex();
 }

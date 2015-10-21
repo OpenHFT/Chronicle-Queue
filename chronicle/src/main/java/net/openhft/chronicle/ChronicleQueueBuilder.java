@@ -373,6 +373,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private final File path;
 
         private boolean synchronous;
+        private boolean syncOnRoll;
         private boolean useCheckedExcerpt;
         private boolean useCompressedObjectSerializer;
 
@@ -392,6 +393,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private VanillaChronicleQueueBuilder(File path) {
             this.path = path;
             this.synchronous = false;
+            this.syncOnRoll = true;
             this.useCheckedExcerpt = false;
             this.defaultMessageSize = 128 << 10; // 128 KB.
             this.dataCacheCapacity = 32;
@@ -419,6 +421,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          */
         public VanillaChronicleQueueBuilder synchronous(boolean synchronous) {
             this.synchronous = synchronous;
+            return this;
+        }
+
+        public boolean syncOnRoll() {
+            return this.syncOnRoll;
+        }
+
+        public VanillaChronicleQueueBuilder syncOnRoll(boolean syncOnRoll) {
+            this.syncOnRoll = syncOnRoll;
             return this;
         }
 

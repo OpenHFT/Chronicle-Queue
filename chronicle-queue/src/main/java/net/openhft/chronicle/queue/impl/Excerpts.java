@@ -67,6 +67,8 @@ public class Excerpts {
 
         @Override
         public long lastWrittenIndex() {
+            if (this.index ==-1)
+                throw new IllegalStateException();
             return this.index;
         }
 

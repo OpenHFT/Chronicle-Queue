@@ -15,9 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -36,6 +34,7 @@ public interface ExcerptAppender extends ExcerptCommon {
 
     /**
      * @return the index last written.
+     * @throws IllegalStateException if no index is available
      */
     long lastWrittenIndex();
 }
