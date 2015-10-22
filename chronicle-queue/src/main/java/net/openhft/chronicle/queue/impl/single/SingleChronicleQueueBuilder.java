@@ -32,11 +32,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     private RollCycle rollCycle;
 
-    private int headerWaitLoops;
-    private int headerWaitDelay;
-
-    private int appendWaitLoops;
-    private int appendWaitDelay;
+    private int appendTimeout;
 
     public SingleChronicleQueueBuilder(String path) {
         this(new File(path));
@@ -46,12 +42,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
-        this.headerWaitLoops = 1000;
-        this.headerWaitDelay = 10;
-        this.appendWaitLoops = 1000;
-        this.appendWaitDelay = 0;
+        this.appendTimeout = 10_000; // 10 seconds;
         this.rollCycle = RollCycles.DAYS;
-
     }
 
     public File path() {
@@ -76,41 +68,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.wireType;
     }
 
-    public SingleChronicleQueueBuilder headerWaitLoops(int headerWaitLoops) {
-        this.headerWaitLoops = headerWaitLoops;
+    public SingleChronicleQueueBuilder appendTimeout(int appendTimeout) {
+        this.appendTimeout = appendTimeout;
         return this;
     }
 
-    public int headerWaitLoops() {
-        return this.headerWaitLoops;
-    }
-
-    public SingleChronicleQueueBuilder headerWaitDelay(int headerWaitDelay) {
-        this.headerWaitDelay = headerWaitDelay;
-        return this;
-    }
-
-    public int headerWaitDelay() {
-        return this.headerWaitDelay;
-    }
-
-
-    public SingleChronicleQueueBuilder appendWaitLoops(int appendWaitLoops) {
-        this.appendWaitLoops = appendWaitLoops;
-        return this;
-    }
-
-    public int appendWaitLoops() {
-        return this.appendWaitLoops;
-    }
-
-    public SingleChronicleQueueBuilder appendWaitDelay(int appendWaitDelay) {
-        this.appendWaitDelay = appendWaitDelay;
-        return this;
-    }
-
-    public int appendWaitDelay() {
-        return this.appendWaitDelay;
+    public int appendTimeout() {
+        return this.appendTimeout;
     }
 
     public SingleChronicleQueueBuilder rollCycle(RollCycle rollCycle) {

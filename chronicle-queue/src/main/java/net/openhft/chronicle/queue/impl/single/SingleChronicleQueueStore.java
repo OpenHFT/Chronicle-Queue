@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
@@ -63,6 +64,8 @@ class SingleChronicleQueueStore implements WireStore {
         roll
     }
 
+    private long blockSize;
+
     private MappedFile mappedFile;
     private WirePool wirePool;
     private Closeable resourceCleaner;
@@ -85,6 +88,7 @@ class SingleChronicleQueueStore implements WireStore {
         this.roll = new Roll(rollCycle);
         this.indexing = new Indexing();
         this.resourceCleaner = null;
+        this.blockSize = 0L;
     }
 
     @Override
@@ -149,18 +153,19 @@ class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long read(long position, @NotNull ReadMarshallable reader) throws IOException {
-        final int spbHeader = mappedFile.acquireByteStore(position).readVolatileInt(position);
+        final BytesStore store = mappedFile.acquireByteStore(position);
+        final int spbHeader = store.readVolatileInt(position);
         if(Wires.isNotInitialized(spbHeader)) {
             return WireConstants.NO_DATA;
         }
 
         if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
-            return Wires.readData(wirePool.acquireForReadAt(position), reader);
+            return Wires.readData(wirePool.acquireForRead(store, position), reader);
         } else if (Wires.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
             // the next cycle (negative)
             final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
-            final ValueIn vi = wirePool.acquireForReadAt(position + 4).read(sb);
+            final ValueIn vi = wirePool.acquireForRead(store, position + 4).read(sb);
 
             if("roll".contentEquals(sb)) {
                 return -vi.int32();
@@ -201,17 +206,13 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * Check if there is room for append.
-     *
-     * TODO: more accurate space checking
+     * Check if there is room for append assuming blockSize is the maximum size
      */
     protected void checkRemainingForAppend() {
-        /*
         long remaining = mappedFile.capacity() - writePosition();
-        if (Wires.exceedsMaxLength(remaining)) {
-            throw new IllegalStateException("Length too large: " + remaining);
+        if (remaining < this.blockSize) {
+            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
         }
-        */
     }
 
     @Override
@@ -220,11 +221,13 @@ class SingleChronicleQueueStore implements WireStore {
             long length,
             boolean created,
             long cycle,
+            long blockSize,
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable) throws IOException {
 
         this.mappedFile = mappedFile;
-        this.wirePool = new WirePool(mappedFile, wireSupplier);
+        this.wirePool = new WirePool(blockSize, wireSupplier);
+        this.blockSize = blockSize;
 
         if(created) {
             this.bounds.setWritePosition(length);
@@ -250,18 +253,22 @@ class SingleChronicleQueueStore implements WireStore {
         long end = System.currentTimeMillis() + TIMEOUT_MS;
         long lastWritePosition = writePosition();
 
+        BytesStore store;
+
         for (; ;) {
-            if(Wires.acquireLock(mappedFile.acquireByteStore(lastWritePosition), lastWritePosition)) {
+            store = mappedFile.acquireByteStore(lastWritePosition);
+
+            if(Wires.acquireLock(store, lastWritePosition)) {
                 consumer.accept(
                     lastWritePosition,
                     !meta
-                        ? Wires.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
-                        : Wires.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer)
+                        ? Wires.writeData(wirePool.acquireForWrite(store, lastWritePosition), writer)
+                        : Wires.writeMeta(wirePool.acquireForWrite(store, lastWritePosition), writer)
                 );
 
                 return;
             } else {
-                int spbHeader = mappedFile.acquireByteStore(lastWritePosition).readInt(lastWritePosition);
+                int spbHeader = store.readInt(lastWritePosition);
                 if (Wires.isKnownLength(spbHeader)) {
                     lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
                 } else {

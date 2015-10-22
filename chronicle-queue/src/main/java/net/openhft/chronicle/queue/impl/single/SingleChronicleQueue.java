@@ -174,16 +174,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
             return WiredFile.<WireStore>build(
                     cycleFile,
-                    file -> MappedFile.mappedFile(file, builder.blockSize()),
+                    file -> MappedFile.mappedFile(file, builder.blockSize(), builder.blockSize()),
                     builder.wireType(),
                     () -> new SingleChronicleQueueStore(builder.rollCycle()),
                     ws -> ws.delegate().install(
-                            ws.mappedFile(),
-                            ws.headerLength(),
-                            ws.headerCreated(),
-                            cycle,
-                            ws.wireSupplier(),
-                            ws.mappedFile()
+                        ws.mappedFile(),
+                        ws.headerLength(),
+                        ws.headerCreated(),
+                        cycle,
+                        builder.blockSize(),
+                        ws.wireSupplier(),
+                        ws.mappedFile()
                     )
             ).delegate();
 

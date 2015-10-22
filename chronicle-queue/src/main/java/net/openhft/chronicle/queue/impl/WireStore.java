@@ -94,6 +94,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @param length
      * @param created
      * @param cycle
+     * @param blockSize
      * @param wireSupplier
      * @param closeable
      * @throws IOException
@@ -103,6 +104,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
         long length,
         boolean created,
         long cycle,
+        long blockSize,
         @NotNull Function<Bytes, Wire> wireSupplier,
         @Nullable Closeable closeable)
             throws IOException;
