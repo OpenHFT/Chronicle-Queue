@@ -20,12 +20,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.LongFunction;
 
 public class WireStorePool {
-    private final WireStoreSupplier supplier;
+    private final LongFunction<WireStore> supplier;
     private final Map<Long, WireStore> stores;
 
-    public WireStorePool(@NotNull WireStoreSupplier supplier) {
+    public WireStorePool(@NotNull LongFunction<WireStore> supplier) {
         this.supplier = supplier;
         this.stores = HashLongObjMaps.newMutableMap();
     }
@@ -33,7 +34,7 @@ public class WireStorePool {
     public synchronized WireStore acquire(long cycle) throws IOException {
         WireStore store = stores.get(cycle);
         if(store == null) {
-            stores.put(cycle, store = this.supplier.get(cycle));
+            stores.put(cycle, store = this.supplier.apply(cycle));
         } else {
             store.reserve();
         }
@@ -48,7 +49,7 @@ public class WireStorePool {
         }
     }
 
-    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
+    public static WireStorePool withSupplier(@NotNull LongFunction<WireStore> supplier) {
         return new WireStorePool(supplier);
     }
 }
