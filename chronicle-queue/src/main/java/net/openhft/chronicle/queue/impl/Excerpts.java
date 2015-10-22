@@ -176,7 +176,7 @@ public class Excerpts {
         }
 
         @Override
-        public boolean index(int cycle, long index) throws IOException {
+        public boolean index(long cycle, long index) throws IOException {
             cycle(cycle, WireStore::readPosition);
             return index(index);
         }

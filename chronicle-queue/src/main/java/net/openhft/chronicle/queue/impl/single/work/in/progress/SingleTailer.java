@@ -192,7 +192,7 @@ public class SingleTailer implements ExcerptTailer {
     }
 
     @Override
-    public boolean index(int cycle, long index) throws IOException {
+    public boolean index(long cycle, long index) throws IOException {
         return false;
     }
 

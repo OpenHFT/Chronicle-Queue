@@ -62,7 +62,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
-    boolean index(int cycle, long index) throws IOException;
+    boolean index(long cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.
