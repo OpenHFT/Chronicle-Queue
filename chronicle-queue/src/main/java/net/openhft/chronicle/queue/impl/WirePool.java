@@ -47,6 +47,7 @@ public class WirePool {
         bytes.bytesStore(store, position, this.blockSize);
         bytes.readPosition(position);
         bytes.readLimit(position + this.blockSize);
+        bytes.writePosition(position + this.blockSize);
 
         return wire;
     }
