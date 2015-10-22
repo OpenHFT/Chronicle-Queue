@@ -15,7 +15,8 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import java.util.function.LongFunction;
+
 @FunctionalInterface
-public interface WireStoreSupplier {
-    WireStore get(long cycle);
+public interface WireStoreSupplier extends LongFunction<WireStore>{
 }
