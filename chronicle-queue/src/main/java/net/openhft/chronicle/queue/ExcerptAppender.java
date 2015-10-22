@@ -36,5 +36,11 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @return the index last written.
      * @throws IllegalStateException if no index is available
      */
-    long lastWrittenIndex();
+    long index();
+
+    /**
+     *
+     * @return the cycle this appender is on
+     */
+    long cycle();
 }

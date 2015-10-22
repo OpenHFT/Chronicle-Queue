@@ -93,16 +93,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build();
 
         final ExcerptAppender appender = queue.createAppender();
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 10; i++) {
             final int n = i;
             assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
-            assertEquals(n, appender.lastWrittenIndex());
+            assertEquals(n, appender.index());
         }
 
         final ExcerptTailer tailer = queue.createTailer();
-        for (int i = 0; i < 2; i++) {
+
+        // Sequential read
+        for (int i = 0; i < 10; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            assertEquals(n, tailer.index());
+        }
+
+        // Random read
+        for (int i = 0; i < 10; i++) {
+            final int n = i;
+            assertTrue(tailer.index(n));
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            assertEquals(n, tailer.index());
         }
     }
 
@@ -236,7 +247,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) {
             final int n = i;
             assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
-            assertEquals(n, appender.lastWrittenIndex());
+            assertEquals(n, appender.index());
         }
 
         final ExcerptTailer tailer = queue.createTailer();
@@ -245,6 +256,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            assertEquals(n, tailer.index());
         }
     }
 
@@ -331,7 +343,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptAppender appender = chronicle.createAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
-            Assert.assertEquals(0, appender.lastWrittenIndex());
+            Assert.assertEquals(0, appender.index());
 
         } finally {
             file.delete();
@@ -349,7 +361,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .wireType(this.wireType)
                     .build();
             final ExcerptAppender appender = chronicle.createAppender();
-            appender.lastWrittenIndex();
+            appender.index();
             Assert.fail();
         } finally {
             file.delete();
