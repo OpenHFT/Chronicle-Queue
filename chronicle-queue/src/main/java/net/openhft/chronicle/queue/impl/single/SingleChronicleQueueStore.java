@@ -21,14 +21,21 @@ import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.impl.WireBounds;
+import net.openhft.chronicle.queue.impl.WireBoundsConsumer;
+import net.openhft.chronicle.queue.impl.WireConstants;
 import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.WireConstants;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +44,7 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.util.function.Function;
 
-import static net.openhft.chronicle.queue.impl.WireConstants.*;
+import static net.openhft.chronicle.queue.impl.WireConstants.SPB_DATA_HEADER_SIZE;
 
 /**
  * TODO:
@@ -59,7 +66,6 @@ class SingleChronicleQueueStore implements WireStore {
     private BytesStore bytesStore;
     private WirePool wirePool;
     private Closeable resourceCleaner;
-    private final ThreadLocal<WireBounds> positionPool;
     private final ReferenceCounter refCount;
 
     private final Bounds bounds;
@@ -73,8 +79,7 @@ class SingleChronicleQueueStore implements WireStore {
         this(null);
     }
 
-    SingleChronicleQueueStore(RollCycle rollCycle) {
-        this.positionPool = ThreadLocal.withInitial(() -> new WireBounds());
+    SingleChronicleQueueStore(@Nullable RollCycle rollCycle) {
         this.refCount = ReferenceCounter.onReleased(this::performRelease);
         this.bounds = new Bounds();
         this.roll = new Roll(rollCycle);
@@ -102,18 +107,14 @@ class SingleChronicleQueueStore implements WireStore {
         return this.indexing.getLastIndex();
     }
 
-
     @Override
     public boolean appendRollMeta(long cycle) throws IOException {
         if(roll.casNextRollCycle(cycle)) {
-            final WireBounds position = append(
-                positionPool.get(),
+            append(
+                (lower, upper ) -> roll.setNextCycleMetaPosition(lower),
                 true,
                 w -> w.write(MetaDataField.roll).int32(cycle)
             );
-
-
-            roll.setNextCycleMetaPosition(position.lower);
 
             return true;
         }
@@ -131,9 +132,12 @@ class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long append(@NotNull WriteMarshallable writer) throws IOException {
-        final WireBounds wb = append(positionPool.get(), false, writer);
+        append(
+            (lower, upper) -> bounds.setWritePositionIfGreater(upper),
+            false,
+            writer
+        );
 
-        bounds.setWritePositionIfGreater(wb.upper);
         return indexing.incrementLastIndex();
     }
 
@@ -225,11 +229,13 @@ class SingleChronicleQueueStore implements WireStore {
 
     /**
      *
+     * @param consumer
+     * @param meta
      * @param writer
      * @return
      * @throws IOException
      */
-    protected WireBounds append(WireBounds bounds, boolean meta, @NotNull WriteMarshallable writer)
+    protected void append(@NotNull WireBoundsConsumer consumer, boolean meta, @NotNull WriteMarshallable writer)
             throws IOException {
 
         checkRemainingForAppend();
@@ -240,12 +246,14 @@ class SingleChronicleQueueStore implements WireStore {
 
         for (; ;) {
             if(Wires.acquireLock(bytesStore, lastWritePosition)) {
-                bounds.lower = lastWritePosition;
-                bounds.upper = !meta
-                    ? Wires.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
-                    : Wires.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer);
+                consumer.accept(
+                    lastWritePosition,
+                    !meta
+                        ? Wires.writeData(wirePool.acquireForWriteAt(lastWritePosition), writer)
+                        : Wires.writeMeta(wirePool.acquireForWriteAt(lastWritePosition), writer)
+                );
 
-                return bounds;
+                return;
             } else {
                 int spbHeader = bytesStore.readInt(lastWritePosition);
                 if (Wires.isKnownLength(spbHeader)) {
@@ -260,8 +268,6 @@ class SingleChronicleQueueStore implements WireStore {
                 }
             }
         }
-
-
     }
 
     private synchronized void performRelease() {

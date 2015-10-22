@@ -33,7 +33,7 @@ public class WireStorePool {
     public synchronized WireStore acquire(long cycle) throws IOException {
         WireStore store = stores.get(cycle);
         if(store == null) {
-            stores.put(cycle, store = this.supplier.get(cycle));
+            stores.put(cycle, store = this.supplier.apply(cycle));
         } else {
             store.reserve();
         }

@@ -13,7 +13,6 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedFile;
@@ -166,8 +165,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     protected WireStore newStore(final long cycle) {
         try {
 
-            String cycleFormat = this.dateCache.formatFor(cycle);
-            File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+            final String cycleFormat = this.dateCache.formatFor(cycle);
+            final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
             if (!cycleFile.getParentFile().exists()) {
                 cycleFile.mkdirs();
