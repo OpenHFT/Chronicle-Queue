@@ -30,28 +30,27 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
-     * @return
+     * @return the cycle this store refers to
      */
     long cycle();
 
     /**
      *
-     * @return
+     * @return the first readable position
      */
     long readPosition();
 
     /**
      *
-     * @return
+     * @return the first writable position
      */
     long writePosition();
 
     /**
      *
-     * @return
+     * @return the last index
      */
     long lastIndex();
-
 
     /**
      *
