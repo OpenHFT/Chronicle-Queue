@@ -49,6 +49,9 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(() -> {
             try {
+
+                //LongFunction<BytesRingBuffer.BytesProvider> bp;
+                //Function<Bytes, BytesRingBuffer.BytesProvider>
                 Bytes b = this.buffer.poll(null);
             } catch(InterruptedException e) {
                 //TODO: what to do
