@@ -70,6 +70,16 @@ public class SingleTailer implements ExcerptTailer {
         throw new UnsupportedOperationException("todo");
     }
 
+    @Override
+    public long index() {
+        return 0;
+    }
+
+    @Override
+    public long cycle() {
+        return 0;
+    }
+
     /**
      * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in other
      * words the address of where ) the root first level index is stored. The indexing works like a

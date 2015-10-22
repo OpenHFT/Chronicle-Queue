@@ -25,6 +25,7 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.function.ToLongFunction;
 
 public class Excerpts {
 
@@ -66,10 +67,17 @@ public class Excerpts {
         }
 
         @Override
-        public long lastWrittenIndex() {
-            if (this.index ==-1)
+        public long index() {
+            if (this.index == -1) {
                 throw new IllegalStateException();
+            }
+
             return this.index;
+        }
+
+        @Override
+        public long cycle() {
+            return this.store.cycle();
         }
 
         @Override
@@ -86,6 +94,7 @@ public class Excerpts {
         private final AbstractChronicleQueue queue;
 
         private long cycle;
+        private long index;
         private long position;
         private WireStore store;
 
@@ -95,6 +104,7 @@ public class Excerpts {
         Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = -1;
+            this.index = -1;
             this.store = null;
             this.position = 0;
             this.toStart = false;
@@ -109,18 +119,18 @@ public class Excerpts {
                 }
 
                 //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(lastCycle);
-                this.position = this.store.readPosition();
+                cycle(lastCycle, WireStore::readPosition);
             }
 
             long position = store.read(this.position, reader);
             if(position > 0) {
                 this.position = position;
+                this.index++;
+
                 return true;
             } else if(position < 0) {
                 // roll detected, move to next cycle;
-                cycle(Math.abs(position));
-                this.position = this.store.readPosition();
+                cycle(Math.abs(position), WireStore::readPosition);
 
                 // try to read from new cycle
                 return readDocument(reader);
@@ -130,15 +140,34 @@ public class Excerpts {
         }
 
         @Override
+        public long index() {
+            //TODO: should we raise an exception ?
+            //if(this.store == null) {
+            //    throw new IllegalArgumentException("This tailer is not bound to any cycle");
+            //}
+
+            return this.index;
+        }
+
+        @Override
+        public long cycle() {
+            if(this.store == null) {
+                throw new IllegalArgumentException("This tailer is not bound to any cycle");
+            }
+
+            return this.store.cycle();
+        }
+
+        @Override
         public boolean index(long index) throws IOException {
             if(this.store == null) {
-                cycle(queue.lastCycle());
-                this.position = this.store.readPosition();
+                cycle(queue.lastCycle(), WireStore::readPosition);
             }
 
             long idxpos = this.store.positionForIndex(index);
             if(idxpos != WireConstants.NO_INDEX) {
                 this.position = idxpos;
+                this.index = index -1;
 
                 return true;
             }
@@ -148,9 +177,7 @@ public class Excerpts {
 
         @Override
         public boolean index(int cycle, long index) throws IOException {
-            cycle(cycle);
-            this.position = this.store.readPosition();
-
+            cycle(cycle, WireStore::readPosition);
             return index(index);
         }
 
@@ -158,8 +185,7 @@ public class Excerpts {
         public ExcerptTailer toStart() throws IOException {
             long cycle = queue.firstCycle();
             if(cycle > 0) {
-                cycle(cycle);
-                this.position = store.readPosition();
+                cycle(cycle, WireStore::readPosition);
                 this.toStart = false;
             } else {
                 this.toStart = true;
@@ -172,8 +198,7 @@ public class Excerpts {
         public ExcerptTailer toEnd() throws IOException {
             long cycle = queue.firstCycle();
             if(cycle > 0) {
-                cycle(cycle);
-                this.position = store.writePosition();
+                cycle(cycle, WireStore::writePosition);
             }
 
             this.toStart = false;
@@ -186,14 +211,16 @@ public class Excerpts {
             return this.queue;
         }
 
-        private void cycle(long cycle) throws IOException {
+        private void cycle(long cycle, @NotNull ToLongFunction<WireStore> positionSupplier) throws IOException {
             if(this.cycle != cycle) {
                 if(null != this.store) {
                     this.queue.release(this.store);
                 }
 
                 this.cycle = cycle;
+                this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
+                this.position = positionSupplier.applyAsLong(this.store);
             }
         }
     }

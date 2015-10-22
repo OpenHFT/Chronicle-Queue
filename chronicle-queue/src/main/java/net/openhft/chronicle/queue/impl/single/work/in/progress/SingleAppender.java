@@ -73,7 +73,7 @@ public class SingleAppender implements ExcerptAppender {
      * @throws IllegalStateException if the last index has not been set
      */
     @Override
-    public long lastWrittenIndex() {
+    public long index() {
         if (lastWrittenIndex == -1) {
             String message = "No document has been written using this appender, so the " +
                     "lastWrittenIndex() is not available.";
@@ -82,8 +82,12 @@ public class SingleAppender implements ExcerptAppender {
         return lastWrittenIndex;
     }
 
-    @NotNull
+    @Override
+    public long cycle() {
+        return -1;
+    }
 
+    @NotNull
     public ChronicleQueue chronicle() {
         return chronicle;
     }

@@ -34,10 +34,22 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
 
     /**
+     *
+     * @return the index just read
+     */
+    long index();
+
+    /**
+     *
+     * @return the cycle this tailer is on
+     */
+    long cycle();
+
+    /**
      * Randomly select an Excerpt.
      *
      * @param index index to look up
-     * @return true if this is a valid entries and not padding.
+     * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
     boolean index(long index) throws IOException;
@@ -47,7 +59,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      *
      * @param cycle cycle
      * @param index index to look up
-     * @return true if this is a valid entries and not padding.
+     * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
     boolean index(int cycle, long index) throws IOException;
@@ -61,8 +73,6 @@ public interface ExcerptTailer extends ExcerptCommon {
     @NotNull
     ExcerptTailer toStart() throws IOException;
 
-    ;
-
     /**
      * Wind to the upper.
      *
@@ -71,5 +81,4 @@ public interface ExcerptTailer extends ExcerptCommon {
      */
     @NotNull
     ExcerptTailer toEnd() throws IOException;
-
 }
