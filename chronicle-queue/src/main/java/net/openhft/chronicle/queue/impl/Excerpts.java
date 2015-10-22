@@ -41,7 +41,6 @@ public class Excerpts {
 
         Appender(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
-
             this.cycle = queue.lastCycle();
             this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
             this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
@@ -167,7 +166,7 @@ public class Excerpts {
             long idxpos = this.store.positionForIndex(index);
             if(idxpos != WireConstants.NO_INDEX) {
                 this.position = idxpos;
-                this.index = index -1;
+                this.index = index - 1;
 
                 return true;
             }
@@ -183,9 +182,9 @@ public class Excerpts {
 
         @Override
         public ExcerptTailer toStart() throws IOException {
-            long cycle = queue.firstCycle();
-            if(cycle > 0) {
-                cycle(cycle, WireStore::readPosition);
+            long firstCycle = queue.firstCycle();
+            if(firstCycle > 0) {
+                cycle(firstCycle, WireStore::readPosition);
                 this.toStart = false;
             } else {
                 this.toStart = true;
@@ -196,9 +195,9 @@ public class Excerpts {
 
         @Override
         public ExcerptTailer toEnd() throws IOException {
-            long cycle = queue.firstCycle();
-            if(cycle > 0) {
-                cycle(cycle, WireStore::writePosition);
+            long firstCycle = queue.firstCycle();
+            if(firstCycle > 0) {
+                cycle(firstCycle, WireStore::writePosition);
             }
 
             this.toStart = false;
