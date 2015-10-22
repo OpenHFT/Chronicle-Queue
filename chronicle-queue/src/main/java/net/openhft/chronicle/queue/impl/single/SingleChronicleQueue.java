@@ -178,7 +178,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                     builder.wireType(),
                     () -> new SingleChronicleQueueStore(builder.rollCycle()),
                     ws -> ws.delegate().install(
-                            ws.headerStore(),
+                            ws.mappedFile(),
                             ws.headerLength(),
                             ws.headerCreated(),
                             cycle,

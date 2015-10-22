@@ -16,50 +16,68 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.function.Function;
 
 public class WirePool {
     private final ThreadLocal<Wire> readPool;
     private final ThreadLocal<Wire> writePool;
-    private final BytesStore bytesStore;
+    private final MappedFile mappedFile;
     private final Function<Bytes, Wire> wireSupplier;
 
     public WirePool(
-            @NotNull final BytesStore bytesStore,
+            @NotNull final MappedFile mappedFile,
             @NotNull final Function<Bytes, Wire> wireSupplier) {
 
-        this.bytesStore = bytesStore;
+        this.mappedFile = mappedFile;
         this.wireSupplier= wireSupplier;
-        this.readPool = new ThreadLocal();
-        this.writePool = new ThreadLocal();
+
+        this.readPool = ThreadLocal.withInitial(() -> {
+            try {
+                return wireSupplier.apply(new VanillaBytes(mappedFile.acquireByteStore(0)));
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+
+        this.writePool = ThreadLocal.withInitial(() -> {
+            try {
+                return wireSupplier.apply(new VanillaBytes(mappedFile.acquireByteStore(0)));
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        });
     }
 
     @ForceInline
     public WireIn acquireForReadAt(long position) {
-        Wire wire = readPool.get();
-        if (wire == null) {
-            readPool.set(wire = wireSupplier.apply(bytesStore.bytesForRead()));
-        }
+        try {
+            final Wire wire = readPool.get();
+            mappedFile.acquireBytesForRead(position, (VanillaBytes) wire.bytes());
 
-        wire.bytes().readPosition(position);
-        return wire;
+            return wire;
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @ForceInline
     public WireOut acquireForWriteAt(long position) {
-        Wire wire = writePool.get();
-        if (wire == null) {
-            writePool.set(wire = wireSupplier.apply(bytesStore.bytesForWrite()));
-        }
+        try {
+            final Wire wire = writePool.get();
+            mappedFile.acquireBytesForWrite(position, (VanillaBytes) wire.bytes());
 
-        wire.bytes().writePosition(position);
-        return wire;
+            return wire;
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

@@ -16,9 +16,12 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.ReferenceCounted;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -87,7 +90,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
-     * @param store
+     * @param mappedFile
      * @param length
      * @param created
      * @param cycle
@@ -96,7 +99,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @throws IOException
      */
     void install(
-        @NotNull BytesStore store,
+        @NotNull MappedFile mappedFile,
         long length,
         boolean created,
         long cycle,
