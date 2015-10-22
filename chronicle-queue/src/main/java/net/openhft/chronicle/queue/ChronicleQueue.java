@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
@@ -102,4 +103,6 @@ public interface ChronicleQueue extends Closeable {
      * @return the highest valid index immediately available.
      */
     long lastWrittenIndex();
+
+    WireType wireType();
 }

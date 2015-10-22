@@ -20,7 +20,6 @@ import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -33,12 +32,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.Appender(this);
+        return new Excerpts.StoreAppender(this);
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new Excerpts.Tailer(this);
+        return new Excerpts.StoreTailer(this);
     }
 
     @NotNull
@@ -103,12 +102,6 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      * @return
      */
     protected abstract long lastCycle();
-
-    /**
-     *
-     * @return
-     */
-    public abstract WireType wireType();
 
     /**
      *

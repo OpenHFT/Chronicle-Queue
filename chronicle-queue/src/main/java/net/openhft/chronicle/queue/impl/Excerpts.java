@@ -17,31 +17,96 @@
 package net.openhft.chronicle.queue.impl;
 
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
 public class Excerpts {
 
-    /**
-     * Appender
-     */
-    static class Appender implements ExcerptAppender {
-        private final AbstractChronicleQueue queue;
+    // *************************************************************************
+    //
+    // APPENDERS
+    //
+    // *************************************************************************
 
+    static class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
+        protected final T queue;
+
+        public DefaultAppender(@NotNull T queue) {
+            this.queue = queue;
+        }
+
+        @Override
+        public long writeDocument(WriteMarshallable writer) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long index() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long cycle() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChronicleQueue queue() {
+            return this.queue;
+        }
+    }
+
+    public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
+        private final Bytes buffer;
+        private final Wire wire;
+        private final Consumer<Bytes> consumer;
+
+        public DelegatedAppender(
+                @NotNull ChronicleQueue queue,
+                @NotNull Consumer<Bytes> consumer) throws IOException {
+
+            super(queue);
+
+            this.buffer = NativeBytes.nativeBytes();
+            this.wire = queue.wireType().apply(this.buffer);
+            this.consumer = consumer;
+        }
+
+        @Override
+        public long writeDocument(WriteMarshallable writer) throws IOException {
+            buffer.clear();
+            writer.writeMarshallable(wire);
+            consumer.accept(buffer);
+
+            return WireConstants.NO_INDEX;
+        }
+    }
+
+    /**
+     * StoreAppender
+     */
+    public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
         private long cycle;
         private long index;
         private WireStore store;
 
-        Appender(@NotNull AbstractChronicleQueue queue) throws IOException {
-            this.queue = queue;
-            this.cycle = queue.lastCycle();
+        StoreAppender(
+                @NotNull AbstractChronicleQueue queue) throws IOException {
+
+            super(queue);
+
+            this.cycle = super.queue.lastCycle();
             this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
             this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
         }
@@ -85,11 +150,16 @@ public class Excerpts {
         }
     }
 
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer
      */
-    static class Tailer implements ExcerptTailer {
+    public static class StoreTailer implements ExcerptTailer {
         private final AbstractChronicleQueue queue;
 
         private long cycle;
@@ -100,7 +170,7 @@ public class Excerpts {
         //TODO: refactor
         private boolean toStart;
 
-        Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
+        StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = -1;
             this.index = -1;
