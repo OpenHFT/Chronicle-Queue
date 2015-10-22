@@ -62,8 +62,6 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-
-
     @Override
     public long lastWrittenIndex() {
         throw new UnsupportedOperationException("Not implemented");
@@ -73,7 +71,6 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     public void close() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
     }
-
 
     /**
      *
@@ -107,11 +104,27 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      */
     protected abstract long lastCycle();
 
+    /**
+     *
+     * @return
+     */
     public abstract WireType wireType();
 
+    /**
+     *
+     * @return
+     */
     public abstract long indexToIndex();
 
+    /**
+     *
+     * @return
+     */
     public abstract Wire wire();
 
+    /**
+     *
+     * @return
+     */
     public abstract long newIndex();
 }
