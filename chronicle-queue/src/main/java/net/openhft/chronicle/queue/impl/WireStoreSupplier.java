@@ -15,7 +15,8 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-public class WireBounds {
-    public long lower = WireConstants.NO_DATA;
-    public long upper = WireConstants.NO_DATA;
+import java.util.function.LongFunction;
+
+@FunctionalInterface
+public interface WireStoreSupplier extends LongFunction<WireStore>{
 }
