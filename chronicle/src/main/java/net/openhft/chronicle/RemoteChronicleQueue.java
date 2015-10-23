@@ -195,13 +195,13 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     // be caused by a TcpHandler higher up in the pipeline.
                     do {
                         sinkTcp.write();
-                        pauser.pause();
                     } while (!sinkTcpHandler.isSent());
 
                     while (sinkTcpHandler.waitingForAck()) {
                         pauser.pause();
                         sinkTcp.read();
                     }
+                    pauser.reset();
                 } catch (IOException e) {
                     LOGGER.trace("", e);
                     throw new IllegalStateException(e);
@@ -346,7 +346,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     // only write anything if there is anything to write
                     out.writeLong(appendRequireAck ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK);
                     out.writeLong(appender.limit());
-                    out.write(appender);
+                    out.write(((StatelessExcerptAppender)appender).wrapped);
 
                     if (appender.remaining() > 0) {
                         throw new TcpHandlingException("Failed to write content for index " + appender.index());

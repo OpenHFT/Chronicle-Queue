@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.ChronicleQueueBuilder.vanilla;
 import static net.openhft.chronicle.ChronicleQueueBuilder.remoteAppender;
@@ -69,7 +70,8 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             .appendRequireAck(false)
             .build();
 
-        final int items = 1000000;
+        long end, start = System.nanoTime();
+        final int items =   10000000;
         final ExcerptAppender appender = remoteAppender.createAppender();
         final ExcerptTailer tailer = source.createTailer();
 
@@ -96,6 +98,7 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
             }
 
             tailer.close();
+            end = System.nanoTime();
 
             assertEquals(items, count);
         } finally {
@@ -104,6 +107,8 @@ public class StatelessVanillaChronicleAppenderTest extends StatelessChronicleTes
 
 //            assertFalse(new File(basePathSource).exists());
         }
+        long elapsedMicros = TimeUnit.NANOSECONDS.toMicros(end - start);
+        System.out.printf("Appended %d items in %dus, with an avg of %.3fus%n", items, elapsedMicros, (double)elapsedMicros / (double)items);
     }
 
     @Test
