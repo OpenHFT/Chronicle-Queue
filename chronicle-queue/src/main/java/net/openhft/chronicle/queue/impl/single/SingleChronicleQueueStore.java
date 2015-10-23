@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.WireBoundsConsumer;
 import net.openhft.chronicle.queue.impl.WireConstants;
@@ -64,11 +65,11 @@ class SingleChronicleQueueStore implements WireStore {
         roll
     }
 
-    private long blockSize;
-
     private MappedFile mappedFile;
     private WirePool wirePool;
     private Closeable resourceCleaner;
+    private SingleChronicleQueueBuilder builder;
+
     private final ReferenceCounter refCount;
 
     private final Bounds bounds;
@@ -88,7 +89,7 @@ class SingleChronicleQueueStore implements WireStore {
         this.roll = new Roll(rollCycle);
         this.indexing = new Indexing();
         this.resourceCleaner = null;
-        this.blockSize = 0L;
+        this.builder = null;
     }
 
     @Override
@@ -208,9 +209,9 @@ class SingleChronicleQueueStore implements WireStore {
     /**
      * Check if there is room for append assuming blockSize is the maximum size
      */
-    protected void checkRemainingForAppend() {
-        long remaining = mappedFile.capacity() - writePosition();
-        if (remaining < this.blockSize) {
+    protected void checkRemainingForAppend(long position) {
+        long remaining = mappedFile.capacity() - position;
+        if (remaining < builder.blockSize()) {
             throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
         }
     }
@@ -221,13 +222,13 @@ class SingleChronicleQueueStore implements WireStore {
             long length,
             boolean created,
             long cycle,
-            long blockSize,
+            ChronicleQueueBuilder builder,
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable) throws IOException {
 
+        this.builder = (SingleChronicleQueueBuilder)builder;
         this.mappedFile = mappedFile;
-        this.wirePool = new WirePool(blockSize, wireSupplier);
-        this.blockSize = blockSize;
+        this.wirePool = new WirePool(this.builder.blockSize(), wireSupplier);
 
         if(created) {
             this.bounds.setWritePosition(length);
@@ -247,14 +248,14 @@ class SingleChronicleQueueStore implements WireStore {
     protected void append(@NotNull WireBoundsConsumer consumer, boolean meta, @NotNull WriteMarshallable writer)
             throws IOException {
 
-        checkRemainingForAppend();
-
         long TIMEOUT_MS = 10_000; // 10 seconds.
         long end = System.currentTimeMillis() + TIMEOUT_MS;
         long lastWritePosition = writePosition();
         BytesStore store;
 
         for (; ;) {
+            checkRemainingForAppend(lastWritePosition);
+
             //TODO: a byte store should be acquired only if lastWrittenPosition is out its limits
             store = mappedFile.acquireByteStore(lastWritePosition);
 

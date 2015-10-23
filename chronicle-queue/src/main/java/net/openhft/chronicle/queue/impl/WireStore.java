@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
@@ -94,7 +95,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @param length
      * @param created
      * @param cycle
-     * @param blockSize
+     * @param builder
      * @param wireSupplier
      * @param closeable
      * @throws IOException
@@ -104,7 +105,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
         long length,
         boolean created,
         long cycle,
-        long blockSize,
+        @NotNull ChronicleQueueBuilder builder,
         @NotNull Function<Bytes, Wire> wireSupplier,
         @Nullable Closeable closeable)
             throws IOException;
