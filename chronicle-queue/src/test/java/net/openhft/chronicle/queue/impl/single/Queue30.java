@@ -26,14 +26,14 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+/**
+ * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
+ */
 public class Queue30 extends ChronicleQueueTestBase  {
 
-    /*
-     * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
-     */
     @Ignore
     @Test
-    public void test() throws Exception {
+    public void testMT() throws Exception {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
             .wireType(WireType.TEXT)
             .blockSize(640_000)
@@ -51,7 +51,7 @@ public class Queue30 extends ChronicleQueueTestBase  {
                     );
 
                     if (count % 10_000 == 0) {
-                        //System.out.println(Thread.currentThread().getName() + "> " + count);
+                        LOGGER.info(name + "> " + count);
                     }
                 }
             } catch (IOException e) {
@@ -67,5 +67,28 @@ public class Queue30 extends ChronicleQueueTestBase  {
 
         t1.join();
         t2.join();
+    }
+
+    @Ignore
+    @Test
+    public void testST() throws Exception {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+            .wireType(WireType.TEXT)
+            .blockSize(640_000)
+            .build();
+
+        final String name = Thread.currentThread().getName();
+        final ExcerptAppender appender = queue.createAppender();
+        for (int count = 0; ; count++) {
+            final int c = count;
+            appender.writeDocument(w ->
+                w.write(() -> "thread").text(name)
+                 .write(() -> "count").int32(c)
+            );
+
+            if (count % 10_000 == 0) {
+                LOGGER.info(name + "> " + count);
+            }
+        }
     }
 }
