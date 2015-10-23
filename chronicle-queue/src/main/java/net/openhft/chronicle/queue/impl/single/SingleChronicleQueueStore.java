@@ -252,12 +252,11 @@ class SingleChronicleQueueStore implements WireStore {
         long TIMEOUT_MS = 10_000; // 10 seconds.
         long end = System.currentTimeMillis() + TIMEOUT_MS;
         long lastWritePosition = writePosition();
-        BytesStore store = mappedFile.acquireByteStore(lastWritePosition);
+        BytesStore store;
 
         for (; ;) {
-            if(lastWritePosition > store.readLimit()) {
-                store = mappedFile.acquireByteStore(lastWritePosition);
-            }
+            //TODO: a byte store should be acquired only if lastWrittenPosition is out its limits
+            store = mappedFile.acquireByteStore(lastWritePosition);
 
             if(Wires.acquireLock(store, lastWritePosition)) {
                 consumer.accept(

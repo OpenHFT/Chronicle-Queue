@@ -36,15 +36,18 @@ public class SingleChronicleCrash extends ChronicleQueueTestBase  {
 
         Runnable r = () -> {
             try {
+                final String name = Thread.currentThread().getName();
                 final ExcerptAppender appender = queue.createAppender();
-                int count = 0;
-                while (true) {
-                    appender.writeDocument(w -> w.write(() -> "message").text("hello"));
-                    if (count % 10_000 == 0) {
-                        System.out.println(Thread.currentThread().getName() + "> " + count);
-                    }
+                for (int count = 0; ; count++) {
+                    final int c = count;
+                    appender.writeDocument(w ->
+                        w.write(() -> "thread").text(name)
+                         .write(() -> "count").int32(c)
+                    );
 
-                    count++;
+                    if (count % 10_000 == 0) {
+                        //System.out.println(Thread.currentThread().getName() + "> " + count);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
