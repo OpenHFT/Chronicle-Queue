@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireIn;
@@ -28,38 +29,38 @@ import java.util.function.Function;
 public class WirePool {
     private final ThreadLocal<Wire> readPool;
     private final ThreadLocal<Wire> writePool;
-    private final BytesStore bytesStore;
-    private final Function<Bytes, Wire> wireSupplier;
+    private final long blockSize;
 
-    public WirePool(
-            @NotNull final BytesStore bytesStore,
-            @NotNull final Function<Bytes, Wire> wireSupplier) {
 
-        this.bytesStore = bytesStore;
-        this.wireSupplier= wireSupplier;
-        this.readPool = new ThreadLocal();
-        this.writePool = new ThreadLocal();
+    public WirePool(long blockSize, @NotNull final Function<Bytes, Wire> wireSupplier) {
+
+        this.blockSize = blockSize;
+        this.readPool  = ThreadLocal.withInitial(() -> wireSupplier.apply(VanillaBytes.vanillaBytes()));
+        this.writePool = ThreadLocal.withInitial(() -> wireSupplier.apply(VanillaBytes.vanillaBytes()));
     }
 
     @ForceInline
-    public WireIn acquireForReadAt(long position) {
-        Wire wire = readPool.get();
-        if (wire == null) {
-            readPool.set(wire = wireSupplier.apply(bytesStore.bytesForRead()));
-        }
+    public WireIn acquireForRead(@NotNull BytesStore store, long position) {
+        final Wire wire = readPool.get();
+        final VanillaBytes bytes = (VanillaBytes) wire.bytes();
 
-        wire.bytes().readPosition(position);
+        bytes.bytesStore(store, position, this.blockSize);
+        bytes.readPosition(position);
+        bytes.readLimit(position + this.blockSize);
+        bytes.writePosition(position + this.blockSize);
+
         return wire;
     }
 
     @ForceInline
-    public WireOut acquireForWriteAt(long position) {
-        Wire wire = writePool.get();
-        if (wire == null) {
-            writePool.set(wire = wireSupplier.apply(bytesStore.bytesForWrite()));
-        }
+    public WireOut acquireForWrite(@NotNull BytesStore store, long position) {
+        final Wire wire = writePool.get();
+        final VanillaBytes bytes = (VanillaBytes) wire.bytes();
 
-        wire.bytes().writePosition(position);
+        bytes.bytesStore(store, position, this.blockSize);
+        bytes.writePosition(position);
+        bytes.writeLimit(position + this.blockSize);
+
         return wire;
     }
 }
