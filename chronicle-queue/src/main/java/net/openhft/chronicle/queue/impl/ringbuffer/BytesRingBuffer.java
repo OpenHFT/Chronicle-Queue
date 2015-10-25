@@ -20,9 +20,11 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.queue.impl.BytesProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -150,7 +152,7 @@ public class BytesRingBuffer {
      */
     @Nullable
     public Bytes poll(@NotNull BytesProvider bytesProvider) throws
-            InterruptedException,
+            //InterruptedException,
             IllegalStateException {
 
         long writeLoc = writeLocation();
@@ -181,18 +183,23 @@ public class BytesRingBuffer {
 
         final long next = offset + elementSize;
 
-        final Bytes using = bytesProvider.provide(elementSize);
+        final Bytes using;
+        try {
+            using = bytesProvider.provide(elementSize);
 
-        // checks that the 'using' bytes is large enough
-        checkSize(using, elementSize);
+            // checks that the 'using' bytes is large enough
+            checkSize(using, elementSize);
 
-        //   using.readLimit(using.readPosition() + elementSize);
+            //   using.readLimit(using.readPosition() + elementSize);
 
-        bytes.read(using, offset, elementSize);
-        bytes.write(flag, States.USED.ordinal());
+            bytes.read(using, offset, elementSize);
+            bytes.write(flag, States.USED.ordinal());
 
-        header.setWriteUpTo(next + bytes.capacity());
-        header.setReadLocation(next);
+            header.setWriteUpTo(next + bytes.capacity());
+            header.setReadLocation(next);
+        } catch(IOException e) {
+            throw new IllegalStateException(e);
+        }
 
         return using;
     }
@@ -206,19 +213,6 @@ public class BytesRingBuffer {
 
 
     private enum States {BUSY, READY, USED}
-
-    public interface BytesProvider {
-
-        /**
-         * sets up a buffer to back the ring buffer, the data wil be read into this buffer the size of the buffer must
-         * be as big as {@code maxSize}
-         *
-         * @param maxSize the number of bytes required
-         * @return a buffer of at least {@code maxSize} bytes remaining
-         */
-        @NotNull
-        Bytes provide(long maxSize);
-    }
 
     /**
      * used to store the locations around the ring buffer or reading and writing

@@ -19,11 +19,13 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.core.util.ThrowingFunction;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -112,9 +114,8 @@ public class Excerpts {
         }
 
         @Override
-        public long writeDocument(WriteMarshallable writer) throws IOException {
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             if(this.cycle != queue.cycle()) {
-
                 long nextCycle = queue.cycle();
                 if(this.store != null) {
                     this.store.appendRollMeta(nextCycle);
@@ -128,6 +129,34 @@ public class Excerpts {
             index = store.append(writer);
 
             return index;
+        }
+
+        //TODO: refactor
+        public boolean write(
+                @NotNull ThrowingFunction<BytesProvider, IllegalStateException, Bytes> bytesFunction)
+                throws IOException {
+
+            if(this.cycle != queue.cycle()) {
+                long nextCycle = queue.cycle();
+                if(this.store != null) {
+                    this.store.appendRollMeta(nextCycle);
+                    this.queue.release(this.store);
+                }
+
+                this.cycle = nextCycle;
+                this.store = queue.storeForCycle(this.cycle);
+            }
+
+            final Bytes bytes = bytesFunction.apply(store::acquire);
+            if(!bytes.isClear()) {
+                bytes.writeVolatileInt(
+                    bytes.start(),
+                    Wires.toIntU30(bytes.writePosition() - bytes.start() + 4, "TODO"));
+
+                return true;
+            }
+
+            return false;
         }
 
         @Override

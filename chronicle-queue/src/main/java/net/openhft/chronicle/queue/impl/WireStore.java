@@ -66,11 +66,18 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
-     * @param writer
+     * @param marshallable
      * @return
      * @throws IOException
      */
-    long append(@NotNull WriteMarshallable writer) throws IOException;
+    long append(@NotNull WriteMarshallable marshallable) throws IOException;
+
+    /**
+     *
+     * @param size
+     * @return
+     */
+    Bytes<?> acquire(long size) throws IOException;
 
     /**
      *

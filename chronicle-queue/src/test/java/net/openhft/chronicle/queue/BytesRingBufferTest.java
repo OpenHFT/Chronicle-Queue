@@ -241,11 +241,7 @@ public class BytesRingBufferTest {
                             Bytes bytes = nativeStore.bytesForWrite();
                             Bytes result = null;
                             do {
-                                try {
-                                    result = bytesRingBuffer.poll(maxSize -> bytes);
-                                } catch (InterruptedException e) {
-                                    return;
-                                }
+                                result = bytesRingBuffer.poll(maxSize -> bytes);
                             } while (result == null);
 
                             result.clear();
@@ -322,11 +318,7 @@ public class BytesRingBufferTest {
                                 final Bytes bytes = allocate3.bytesForWrite();
                                 Bytes result = null;
                                 do {
-                                    try {
-                                        result = bytesRingBuffer.poll(maxsize -> bytes);
-                                    } catch (InterruptedException e) {
-                                        return;
-                                    }
+                                    result = bytesRingBuffer.poll(maxsize -> bytes);
                                 } while (result == null);
 
 

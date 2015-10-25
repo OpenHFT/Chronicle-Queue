@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.async;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -36,7 +35,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     private final NativeBytesStore store;
     private final BytesRingBuffer buffer;
-    private final ExcerptAppender appender;
+    private final Excerpts.StoreAppender appender;
     private final EventGroup eventGroup;
 
     public AsyncChronicleQueue(@NotNull ChronicleQueue queue, long capacity) throws IOException {
@@ -44,21 +43,20 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
         this.store  = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
         this.buffer = new BytesRingBuffer(this.store.bytesForWrite());
-        this.appender = super.createAppender();
+
+        //HACK, need to be refactored
+        this.appender = (Excerpts.StoreAppender)super.createAppender();
 
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(() -> {
             try {
-
-                //LongFunction<BytesRingBuffer.BytesProvider> bp;
-                //Function<Bytes, BytesRingBuffer.BytesProvider>
-                Bytes b = this.buffer.poll(null);
-            } catch(InterruptedException e) {
+                return this.appender.write(this.buffer::poll);
+            } catch(IOException e) {
                 //TODO: what to do
                 LOGGER.warn("", e);
             }
 
-            return true;
+            return false;
         });
     }
 
