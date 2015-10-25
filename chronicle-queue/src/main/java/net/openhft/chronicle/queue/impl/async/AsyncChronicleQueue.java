@@ -35,22 +35,24 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     private final NativeBytesStore store;
     private final BytesRingBuffer buffer;
-    private final Excerpts.StoreAppender appender;
+    private final Excerpts.StoreAppender storeAppender;
     private final EventGroup eventGroup;
+    private ExcerptAppender appender;
 
     public AsyncChronicleQueue(@NotNull ChronicleQueue queue, long capacity) throws IOException {
         super(queue);
 
         this.store  = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
         this.buffer = new BytesRingBuffer(this.store.bytesForWrite());
+        this.appender = null;
 
         //HACK, need to be refactored
-        this.appender = (Excerpts.StoreAppender)super.createAppender();
+        this.storeAppender = (Excerpts.StoreAppender)super.createAppender();
 
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(() -> {
             try {
-                return this.appender.write(this.buffer::poll);
+                return this.storeAppender.write(this.buffer::poll);
             } catch(IOException e) {
                 //TODO: what to do
                 LOGGER.warn("", e);
@@ -62,12 +64,17 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.DelegatedAppender(this, bytes -> {
+    public synchronized  ExcerptAppender createAppender() throws IOException {
+        if(appender != null) {
+            //TODO: better error management
+            throw new IllegalStateException("Max 1 appender per queue");
+        }
+
+        return this.appender = new Excerpts.DelegatedAppender(this, bytes -> {
             try {
                 this.buffer.offer(bytes);
             } catch(InterruptedException e) {
-                //TODO: what to do
+                //TODO: what to do ?
                 LOGGER.warn("", e);
             }
         });

@@ -18,7 +18,9 @@ package net.openhft.chronicle.queue.impl;
 
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingFunction;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -69,6 +71,9 @@ public class Excerpts {
         }
     }
 
+    /**
+     * Delegates the appender
+     */
     public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
         private final Bytes buffer;
         private final Wire wire;
@@ -115,20 +120,11 @@ public class Excerpts {
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            if(this.cycle != queue.cycle()) {
-                long nextCycle = queue.cycle();
-                if(this.store != null) {
-                    this.store.appendRollMeta(nextCycle);
-                    this.queue.release(this.store);
-                }
+            return index = store().append(writer);
+        }
 
-                this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle);
-            }
-
-            index = store.append(writer);
-
-            return index;
+        public long write(@NotNull BytesStore bytesStore) throws IOException {
+            return index = store().append(bytesStore);
         }
 
         //TODO: refactor
@@ -136,19 +132,10 @@ public class Excerpts {
                 @NotNull ThrowingFunction<BytesProvider, IllegalStateException, Bytes> bytesFunction)
                 throws IOException {
 
-            if(this.cycle != queue.cycle()) {
-                long nextCycle = queue.cycle();
-                if(this.store != null) {
-                    this.store.appendRollMeta(nextCycle);
-                    this.queue.release(this.store);
-                }
-
-                this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle);
-            }
+            store();
 
             final Bytes bytes = bytesFunction.apply(store::acquire);
-            if(!bytes.isClear()) {
+            if(bytes != null && !bytes.isClear()) {
                 bytes.writeVolatileInt(
                     bytes.start(),
                     Wires.toIntU30(bytes.writePosition() - bytes.start() + 4, "TODO"));
@@ -176,6 +163,22 @@ public class Excerpts {
         @Override
         public ChronicleQueue queue() {
             return this.queue;
+        }
+
+        @ForceInline
+        private WireStore store() throws IOException {
+            if (this.cycle != queue.cycle()) {
+                long nextCycle = queue.cycle();
+                if (this.store != null) {
+                    this.store.appendRollMeta(nextCycle);
+                    this.queue.release(this.store);
+                }
+
+                this.cycle = nextCycle;
+                this.store = queue.storeForCycle(this.cycle);
+            }
+
+            return this.store();
         }
     }
 

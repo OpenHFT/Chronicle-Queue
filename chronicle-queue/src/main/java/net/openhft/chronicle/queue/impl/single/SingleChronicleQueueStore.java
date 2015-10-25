@@ -138,12 +138,27 @@ class SingleChronicleQueueStore implements WireStore {
      * //TODO: check meta-data for rolling
      */
     @Override
-    public long append(@NotNull WriteMarshallable marshallable) throws IOException {
+    public long append(@NotNull final WriteMarshallable marshallable) throws IOException {
         withLock((store, position) ->
             bounds.setWritePositionIfGreater(
                 Wires.writeData(
                     wirePool.acquireForWrite(store, position),
                     marshallable))
+        );
+
+        return indexing.incrementLastIndex();
+    }
+
+    @Override
+    public long append(@NotNull final BytesStore bytesStore) throws IOException {
+        withLock((store, position) ->
+            bounds.setWritePositionIfGreater(
+                Wires.writeData(
+                    wirePool.acquireForWrite(store, position),
+                    w -> w.getValueOut().bytes(bytesStore))),
+                Wires.toIntU30(
+                    bytesStore.length(),
+                    "Document length %,d out of 30-bit int range.")
         );
 
         return indexing.incrementLastIndex();
@@ -155,7 +170,7 @@ class SingleChronicleQueueStore implements WireStore {
         long TIMEOUT_MS = 10_000; // 10 seconds.
         long end = System.currentTimeMillis() + TIMEOUT_MS;
         long lastWritePosition = writePosition();
-        int size30 = Wires.toIntU30(size, "TODO");
+        int size30 = Wires.toIntU30(size, "Document length %,d out of 30-bit int range.");
         BytesStore store;
 
         for (; ;) {

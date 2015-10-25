@@ -26,14 +26,25 @@ import java.io.IOException;
 
 public class AsyncChronicleQueueBuilder implements ChronicleQueueBuilder {
     private final ChronicleQueue queue;
+    private long bufferSize;
 
     public AsyncChronicleQueueBuilder(@NotNull ChronicleQueue queue) {
         this.queue = queue;
+        this.bufferSize = 1024;
+    }
+
+    public long bufferSize() {
+        return this.bufferSize;
+    }
+
+    public AsyncChronicleQueueBuilder bufferSize(long bufferSize) {
+        this.bufferSize = bufferSize;
+        return this;
     }
 
     @NotNull
     public ChronicleQueue build() throws IOException {
-        return new AsyncChronicleQueue(queue, 1024);
+        return new AsyncChronicleQueue(queue, this.bufferSize);
     }
 
     @NotNull
