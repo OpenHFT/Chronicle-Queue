@@ -61,6 +61,26 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
             return false;
         });
 
+        /*
+        this.eventGroup.addHandler(() -> {
+            try {
+                return this.buffer.apply(b -> {
+                    try {
+                        this.storeAppender.write(b);
+                    } catch(IOException e) {
+                        //TODO: what to do
+                        LOGGER.warn("", e);
+                    }
+                }) > 0;
+            } catch(InterruptedException e) {
+                //TODO: what to do
+                LOGGER.warn("", e);
+            }
+
+            return false;
+        });
+        */
+
         this.eventGroup.start();
     }
 
