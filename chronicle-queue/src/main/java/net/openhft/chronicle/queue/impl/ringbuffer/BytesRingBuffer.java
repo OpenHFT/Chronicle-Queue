@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.queue.impl.BytesProvider;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +45,9 @@ public class BytesRingBuffer {
     @NotNull
     private final Header header;
 
+
+    ThreadLocal<Bytes> threadLocalBuffer = ThreadLocal.withInitial(() -> Bytes.elasticByteBuffer());
+
     /**
      * @param buffer the bytes that you wish to use for the ring buffer
      */
@@ -63,8 +67,6 @@ public class BytesRingBuffer {
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
     public boolean offer(@NotNull Bytes bytes0) throws InterruptedException {
-        //bytes0.readLimit(bytes0.writeLimit());
-
         try {
 
             for (; ; ) {
@@ -132,6 +134,14 @@ public class BytesRingBuffer {
         return (header.getWriteUpTo() - 1) - offset;
     }
 
+
+    /**
+     * @param bytesProvider provides a bytes to read into
+     * @return the Bytes written to
+     * @throws InterruptedException
+     * @throws IllegalStateException if the Bytes provided by the BytesProvider are not large
+     *                               enough
+     */
     @NotNull
     public Bytes take(@NotNull BytesProvider bytesProvider) throws
             InterruptedException,
@@ -141,6 +151,72 @@ public class BytesRingBuffer {
             poll = poll(bytesProvider);
         } while (poll == null);
         return poll;
+    }
+
+
+    /**
+     * they similar to net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer#take(net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer.BytesProvider)
+     *
+     * @param readBytesMarshallable used to read the bytes
+     * @return the number of bytes read, if ZERO its likely the read was blocked so you should call
+     * this method again
+     * @throws InterruptedException
+     * @throws IllegalStateException
+     */
+    public long apply(@NotNull ReadBytesMarshallable readBytesMarshallable) throws
+            InterruptedException {
+
+        long writeLoc = writeLocation();
+
+        long offset = header.getReadLocation();
+        long readLocation = offset;//= this.readLocation.get();
+
+        if (readLocation >= writeLoc)
+            return 0;
+
+        assert readLocation <= writeLoc : "reader has go ahead of the writer";
+
+        long flag = offset;
+
+        final byte state = bytes.readByte(flag);
+        offset += 1;
+
+        // the element is currently being written to, so let wait for the write to finish
+        if (state == States.BUSY.ordinal()) return 0;
+
+        assert state == States.READY.ordinal() : " we are reading a message that we " +
+                "shouldn't,  state=" + state;
+
+        final long elementSize = bytes.readLong(offset);
+        offset += 8;
+
+        final long next = offset + elementSize;
+        if (bytes.isContinous(offset, elementSize)) {
+
+            final long r = bytes.buffer.readPosition();
+            final long l = bytes.buffer.readLimit();
+            try {
+                bytes.buffer.readLimit(offset + elementSize);
+                bytes.buffer.readPosition(offset);
+                readBytesMarshallable.readMarshallable(bytes.buffer);
+            } finally {
+                bytes.buffer.readPosition(r);
+                bytes.buffer.readLimit(l);
+            }
+
+        } else {
+            final Bytes using = threadLocalBuffer.get();
+
+            //   using.readLimit(using.readPosition() + elementSize);
+            bytes.read(using, offset, elementSize);
+        }
+
+        bytes.write(flag, States.USED.ordinal());
+
+        header.setWriteUpTo(next + bytes.capacity());
+        header.setReadLocation(next);
+
+        return elementSize;
     }
 
     /**
@@ -325,10 +401,10 @@ public class BytesRingBuffer {
 
         private long write(long offset, @NotNull Bytes bytes0) {
 
-            long result = offset + bytes0.writeRemaining();
+            long result = offset + bytes0.readRemaining();
             offset %= capacity();
 
-            long len = bytes0.writeRemaining();
+            long len = bytes0.readRemaining();
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
@@ -338,11 +414,11 @@ public class BytesRingBuffer {
 
             long limit = bytes0.writeLimit();
 
-            bytes0.writeLimit(capacity() - offset);
+            bytes0.readLimit(capacity() - offset);
             this.buffer.write(offset, bytes0);
 
-            bytes0.writePosition(bytes0.writeLimit());
-            bytes0.writeLimit(limit);
+            bytes0.readPosition(bytes0.writeLimit());
+            bytes0.readLimit(limit);
 
             this.buffer.write(0, bytes0);
             return result;
@@ -383,6 +459,18 @@ public class BytesRingBuffer {
         }
 
 
+        /**
+         * can the data be read straight out of the buffer or is it split around the ring, in
+         * otherwords is that start of the data at the end of the ring and the remaining data at the
+         * start of the ring.
+         */
+        private boolean isContinous(long offset, long len) {
+            offset %= capacity();
+            long endOffSet = nextOffset(offset, len);
+
+            return endOffSet >= offset;
+        }
+
         private long read(@NotNull Bytes bytes, long offset, long len) {
 
             offset %= capacity();
@@ -390,13 +478,12 @@ public class BytesRingBuffer {
 
             if (endOffSet >= offset) {
                 bytes.write(buffer, offset, len);
-                //     bytes.flip();
                 return endOffSet;
             }
 
-            bytes.write(buffer, offset, len);
-            bytes.write(buffer, 0, len);
-            //  bytes.flip();
+            final long firstChunkLen = capacity() - offset;
+            bytes.write(buffer, offset, firstChunkLen);
+            bytes.write(buffer, 0, len - firstChunkLen);
 
             return endOffSet;
         }
