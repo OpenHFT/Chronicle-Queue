@@ -55,7 +55,8 @@ public class BytesRingBufferTest {
             outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);
             out = outBuffer.bytesForWrite();
             out.writeUTFΔ(EXPECTED);
-            output = outBuffer.bytesForWrite();
+            output = outBuffer.bytesForRead();
+            output.readLimit(out.writeLimit());
         } catch (Throwable e) {
             e.printStackTrace();
             fail();
@@ -91,7 +92,8 @@ public class BytesRingBufferTest {
     }
 
     private Bytes<ByteBuffer> data() {
-        output.clear();
+        output.readPosition(0);
+        output.readLimit(output.capacity());
         return output;
     }
 
