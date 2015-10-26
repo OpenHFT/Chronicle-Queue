@@ -19,7 +19,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -151,36 +150,18 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long append(@NotNull final BytesStore bytesStore) throws IOException {
-        withLock((store, position) ->
-            bounds.setWritePositionIfGreater(
-                Wires.writeData(
-                    wirePool.acquireForWrite(store, position),
-                    w -> w.getValueOut().bytes(bytesStore))),
-            Wires.toIntU30(
-                bytesStore.length(),
-                "Document length %,d out of 30-bit int range.")
-        );
-
-        return indexing.incrementLastIndex();
-    }
-
-    // TODO: refactor
-    @Override
-    public Bytes<?> acquire(long size) throws IOException {
-        final int size30 = Wires.toIntU30(size, "Document length %,d out of 30-bit int range.");
-        final NativeBytes bytes = WireConstants.NBP.get();
+    public long append(@NotNull final Bytes bytes) throws IOException {
+        final int size = toIntU30(bytes.length());
 
         withLock(
             (store, position) -> {
-                bytes.bytesStore(store, position, 4 + size);
-                bytes.writePosition(position + 4);
-                bytes.writeLimit(position + 4 + size);
+                store.write(position + 4, bytes);
+                store.compareAndSwapInt(position, size | Wires.NOT_READY, size);
             },
-            size30
+            size
         );
 
-        return bytes;
+        return indexing.incrementLastIndex();
     }
 
     /**
@@ -319,6 +300,10 @@ class SingleChronicleQueueStore implements WireStore {
         return store.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size);
     }
 
+    protected int toIntU30(long len) {
+        return Wires.toIntU30(len,"Document length %,d out of 30-bit int range.");
+    }
+
     protected void withLock(@NotNull BytesStoreFunction function)
             throws IOException {
         withLock(function, 0x0);
@@ -335,7 +320,7 @@ class SingleChronicleQueueStore implements WireStore {
         for (; ;) {
             checkRemainingForAppend(writePosition);
 
-            //TODO: a byte store should be acquired only if lastWrittenPosition is out its limits
+            //TODO: a byte store should be provided by the appender
             store = mappedFile.acquireByteStore(writePosition);
 
             if(acquireLock(store, writePosition, size)) {

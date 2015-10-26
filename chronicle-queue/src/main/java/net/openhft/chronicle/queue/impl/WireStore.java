@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
@@ -75,18 +74,11 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
-     * @param bytesStore
+     * @param bytes
      * @return
      * @throws IOException
      */
-    long append(@NotNull BytesStore bytesStore) throws IOException;
-
-    /**
-     *
-     * @param size
-     * @return
-     */
-    Bytes<?> acquire(long size) throws IOException;
+    long append(@NotNull Bytes bytes) throws IOException;
 
     /**
      *

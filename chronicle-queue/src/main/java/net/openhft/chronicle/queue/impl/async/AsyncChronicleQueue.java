@@ -52,18 +52,6 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(() -> {
             try {
-                return this.storeAppender.write(this.buffer::poll);
-            } catch(IOException e) {
-                //TODO: what to do
-                LOGGER.warn("", e);
-            }
-
-            return false;
-        });
-
-        /*
-        this.eventGroup.addHandler(() -> {
-            try {
                 return this.buffer.apply(b -> {
                     try {
                         this.storeAppender.write(b);
@@ -79,7 +67,6 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
             return false;
         });
-        */
 
         this.eventGroup.start();
     }

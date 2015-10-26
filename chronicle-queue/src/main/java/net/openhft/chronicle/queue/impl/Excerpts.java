@@ -20,15 +20,12 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
-import net.openhft.chronicle.core.util.ThrowingFunction;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -124,37 +121,8 @@ public class Excerpts {
             return index = store().append(writer);
         }
 
-        public long write(@NotNull BytesStore bytesStore) throws IOException {
-            return index = store().append(bytesStore);
-        }
-
-        //TODO: refactor
-        public boolean write(
-                @NotNull ThrowingFunction<BytesProvider, IllegalStateException, Bytes> bytesFunction)
-                throws IOException {
-
-            store();
-
-            final Bytes bytes = bytesFunction.apply(store::acquire);
-            if(bytes != null && !bytes.isClear()) {
-                bytes.writeVolatileInt(
-                    bytes.readPosition(),
-                    Wires.toIntU30(
-                        bytes.length() - 4,
-                        "Document length %,d out of 30-bit int range.")
-                );
-
-                return true;
-            }
-
-            return false;
-        }
-
-        //TODO: refactor
-        public long write(
-                @NotNull ReadBytesMarshallable marshallable)
-                throws IOException {
-            return index; // = store().append();
+        public long write(@NotNull Bytes bytes) throws IOException {
+            return index = store().append(bytes);
         }
 
         @Override

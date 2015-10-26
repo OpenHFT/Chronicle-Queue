@@ -15,12 +15,10 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.pool.StringBuilderPool;
 
 public class WireConstants {
     public static final StringBuilderPool SBP = new StringBuilderPool();
-    public static final ThreadLocal<NativeBytes> NBP = ThreadLocal.withInitial(NativeBytes::nativeBytes);
 
     public static final long NO_DATA = 0L;
     public static final long NO_INDEX = -1L;
