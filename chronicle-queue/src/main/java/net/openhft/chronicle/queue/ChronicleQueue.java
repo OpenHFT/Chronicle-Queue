@@ -104,5 +104,9 @@ public interface ChronicleQueue extends Closeable {
      */
     long lastWrittenIndex();
 
+    /**
+     *
+     * @return
+     */
     WireType wireType();
 }

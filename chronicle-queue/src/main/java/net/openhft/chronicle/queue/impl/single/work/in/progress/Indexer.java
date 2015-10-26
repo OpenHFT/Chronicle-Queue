@@ -18,17 +18,16 @@
 
 package net.openhft.chronicle.queue.impl.single.work.in.progress;
 
-import net.openhft.chronicle.bytes.IORuntimeException;
-import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.BinaryLongArrayReference;
+import net.openhft.chronicle.wire.ByteableLongArrayValues;
+import net.openhft.chronicle.wire.TextLongArrayReference;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.ThreadLocal.withInitial;
-import static net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer.IndexOffset.toAddress0;
-import static net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer.IndexOffset.toAddress1;
 
 
 /**
@@ -96,6 +95,7 @@ public class Indexer {
      */
     private void recordAddress(long index, long address) {
 
+        /*
         if (index % 64 != 0)
             return;
 
@@ -124,6 +124,7 @@ public class Indexer {
 
 
         }, null);
+        */
 
 
     }

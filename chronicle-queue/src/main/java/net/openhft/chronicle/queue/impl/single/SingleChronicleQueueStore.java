@@ -172,7 +172,11 @@ class SingleChronicleQueueStore implements WireStore {
         final NativeBytes bytes = WireConstants.NBP.get();
 
         withLock(
-            (store, position) -> bytes.bytesStore(store, position + 4, position + 4 + size),
+            (store, position) -> {
+                bytes.bytesStore(store, position, 4 + size);
+                bytes.writePosition(position + 4);
+                bytes.writeLimit(position + 4 + size);
+            },
             size30
         );
 
@@ -310,37 +314,37 @@ class SingleChronicleQueueStore implements WireStore {
     // Utilities
     // *************************************************************************
 
-    //TODO move top wire
+    //TODO move to wire
     protected boolean acquireLock(BytesStore store, long position, int size) {
         return store.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size);
     }
 
-    protected void withLock(BytesStoreFunction function)
+    protected void withLock(@NotNull BytesStoreFunction function)
             throws IOException {
         withLock(function, 0x0);
     }
 
-    protected void withLock(BytesStoreFunction function, int size)
+    protected void withLock(@NotNull BytesStoreFunction function, int size)
             throws IOException {
 
         long TIMEOUT_MS = 10_000; // 10 seconds.
         long end = System.currentTimeMillis() + TIMEOUT_MS;
-        long lastWritePosition = writePosition();
+        long writePosition = writePosition();
         BytesStore store;
 
         for (; ;) {
-            checkRemainingForAppend(lastWritePosition);
+            checkRemainingForAppend(writePosition);
 
             //TODO: a byte store should be acquired only if lastWrittenPosition is out its limits
-            store = mappedFile.acquireByteStore(lastWritePosition);
+            store = mappedFile.acquireByteStore(writePosition);
 
-            if(acquireLock(store, lastWritePosition, size)) {
-                function.apply(store, lastWritePosition);
+            if(acquireLock(store, writePosition, size)) {
+                function.apply(store, writePosition);
                 return;
             } else {
-                int spbHeader = store.readInt(lastWritePosition);
+                int spbHeader = store.readInt(writePosition);
                 if (Wires.isKnownLength(spbHeader)) {
-                    lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                    writePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: wait strategy
                     if(System.currentTimeMillis() > end) {

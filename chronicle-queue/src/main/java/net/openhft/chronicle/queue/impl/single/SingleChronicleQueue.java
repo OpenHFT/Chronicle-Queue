@@ -22,7 +22,6 @@ import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredFile;
 import org.jetbrains.annotations.NotNull;
@@ -140,16 +139,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     public WireType wireType() {
-       throw new UnsupportedOperationException("todo");
+       return builder.wireType();
     }
 
     @Override
     public long indexToIndex() {
-        throw new UnsupportedOperationException("todo");
-    }
-
-    @Override
-    public Wire wire() {
         throw new UnsupportedOperationException("todo");
     }
 

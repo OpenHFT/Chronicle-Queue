@@ -63,7 +63,7 @@ public class BytesRingBuffer {
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
     public boolean offer(@NotNull Bytes bytes0) throws InterruptedException {
-        bytes0.readLimit(bytes0.writeLimit());
+        //bytes0.readLimit(bytes0.writeLimit());
 
         try {
 
@@ -81,7 +81,7 @@ public class BytesRingBuffer {
                     return false;
 
                 // write the size
-                long len = bytes0.readLimit();
+                long len = bytes0.length();
 
                 long messageLen = SIZE + FLAG + len;
 

@@ -42,7 +42,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     public AsyncChronicleQueue(@NotNull ChronicleQueue queue, long capacity) throws IOException {
         super(queue);
 
-        this.store  = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
+        this.store = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
         this.buffer = new BytesRingBuffer(this.store.bytesForWrite());
         this.appender = null;
 
@@ -60,6 +60,8 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
             return false;
         });
+
+        this.eventGroup.start();
     }
 
     @NotNull

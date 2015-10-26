@@ -44,10 +44,6 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
-    enum TestKey implements WireKey {
-        test
-    }
-
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{

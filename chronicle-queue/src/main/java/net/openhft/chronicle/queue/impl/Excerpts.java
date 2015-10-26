@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingFunction;
@@ -76,7 +76,7 @@ public class Excerpts {
      * Delegates the appender
      */
     public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
-        private final Bytes buffer;
+        private final BytesStore store;
         private final Wire wire;
         private final Consumer<Bytes> consumer;
 
@@ -86,16 +86,16 @@ public class Excerpts {
 
             super(queue);
 
-            this.buffer = NativeBytes.nativeBytes();
-            this.wire = queue.wireType().apply(this.buffer);
+            this.store = NativeBytesStore.nativeStoreWithFixedCapacity(1024);
+            this.wire = queue.wireType().apply(this.store.bytesForWrite());
             this.consumer = consumer;
         }
 
         @Override
         public long writeDocument(WriteMarshallable writer) throws IOException {
-            buffer.clear();
+            wire.bytes().clear();
             writer.writeMarshallable(wire);
-            consumer.accept(buffer);
+            consumer.accept(wire.bytes());
 
             return WireConstants.NO_INDEX;
         }
@@ -138,8 +138,11 @@ public class Excerpts {
             final Bytes bytes = bytesFunction.apply(store::acquire);
             if(bytes != null && !bytes.isClear()) {
                 bytes.writeVolatileInt(
-                    bytes.start(),
-                    Wires.toIntU30(bytes.writePosition() - bytes.start() + 4, "TODO"));
+                    bytes.readPosition(),
+                    Wires.toIntU30(
+                        bytes.length() - 4,
+                        "Document length %,d out of 30-bit int range.")
+                );
 
                 return true;
             }
@@ -186,7 +189,7 @@ public class Excerpts {
                 this.store = queue.storeForCycle(this.cycle);
             }
 
-            return this.store();
+            return this.store;
         }
     }
 
