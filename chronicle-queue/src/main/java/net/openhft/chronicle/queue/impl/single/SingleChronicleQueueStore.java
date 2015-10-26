@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -156,9 +157,9 @@ class SingleChronicleQueueStore implements WireStore {
                 Wires.writeData(
                     wirePool.acquireForWrite(store, position),
                     w -> w.getValueOut().bytes(bytesStore))),
-                Wires.toIntU30(
-                    bytesStore.length(),
-                    "Document length %,d out of 30-bit int range.")
+            Wires.toIntU30(
+                bytesStore.length(),
+                "Document length %,d out of 30-bit int range.")
         );
 
         return indexing.incrementLastIndex();
@@ -167,38 +168,15 @@ class SingleChronicleQueueStore implements WireStore {
     // TODO: refactor
     @Override
     public Bytes<?> acquire(long size) throws IOException {
-        long TIMEOUT_MS = 10_000; // 10 seconds.
-        long end = System.currentTimeMillis() + TIMEOUT_MS;
-        long lastWritePosition = writePosition();
-        int size30 = Wires.toIntU30(size, "Document length %,d out of 30-bit int range.");
-        BytesStore store;
+        final int size30 = Wires.toIntU30(size, "Document length %,d out of 30-bit int range.");
+        final NativeBytes bytes = WireConstants.NBP.get();
 
-        for (; ;) {
-            checkRemainingForAppend(lastWritePosition, size + 4);
+        withLock(
+            (store, position) -> bytes.bytesStore(store, position + 4, position + 4 + size),
+            size30
+        );
 
-            //TODO: a byte store should be acquired only if lastWrittenPosition is out its limits
-            store = mappedFile.acquireByteStore(lastWritePosition);
-
-            if(store.compareAndSwapInt(lastWritePosition, Wires.NOT_INITIALIZED, Wires.NOT_READY | size30)) {
-                Bytes<?> bytes = store.bytesForWrite();
-                bytes.writePosition(lastWritePosition + 4);
-                bytes.writeLimit(lastWritePosition + 4 + size);
-
-                return bytes;
-            } else {
-                int spbHeader = store.readInt(lastWritePosition);
-                if (Wires.isKnownLength(spbHeader)) {
-                    lastWritePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
-                } else {
-                    // TODO: wait strategy
-                    if(System.currentTimeMillis() > end) {
-                        throw new AssertionError("Timeout waiting to append");
-                    }
-
-                    Jvm.pause(1);
-                }
-            }
-        }
+        return bytes;
     }
 
     /**

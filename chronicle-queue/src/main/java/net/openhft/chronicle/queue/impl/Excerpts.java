@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingFunction;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -144,6 +145,13 @@ public class Excerpts {
             }
 
             return false;
+        }
+
+        //TODO: refactor
+        public long write(
+                @NotNull ReadBytesMarshallable marshallable)
+                throws IOException {
+            return index; // = store().append();
         }
 
         @Override
