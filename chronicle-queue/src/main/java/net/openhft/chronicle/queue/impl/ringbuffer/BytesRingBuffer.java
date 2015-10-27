@@ -482,11 +482,12 @@ public class BytesRingBuffer {
                           long offset,
                           long len) {
 
+            bytes.clear();
+
             offset %= capacity();
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
-                bytes.clear();
                 bytes.write(byteStore, offset, len);
                 bytes.writeLimit(offset + len);
                 readBytesMarshallable.readMarshallable(bytes);
@@ -494,7 +495,6 @@ public class BytesRingBuffer {
             }
 
             final long firstChunkLen = capacity() - offset;
-
             final long l = bytes.writeLimit();
 
             bytes.writeLimit(bytes.writePosition() + firstChunkLen);
