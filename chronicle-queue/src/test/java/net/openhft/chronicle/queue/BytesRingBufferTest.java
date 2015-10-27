@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.junit.*;
 
@@ -32,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.BytesStore.wrap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -42,7 +42,7 @@ import static org.junit.Assert.fail;
 //@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class BytesRingBufferTest {
 
-    private final String EXPECTED = "hello world";
+    private final String EXPECTED = "123456789";
     private final String EXPECTED_VALUE = "value=";
     Bytes<ByteBuffer> input = wrap(ByteBuffer.allocate(12)).bytesForRead();
     Bytes<ByteBuffer> output;
@@ -70,20 +70,21 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(24)) {
-            nativeStore.zeroOut(0, nativeStore.capacity());
-            VanillaBytes<Void> buffer = nativeStore.bytesForWrite();
-            Bytes<Void> clearedBytes = buffer.zeroOut(0, buffer.capacity());
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                (150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
 
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(clearedBytes);
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
 
             for (int i = 0; i < 100; i++) {
 
                 bytesRingBuffer.offer(data());
+
                 Bytes bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
                     return clear;
                 });
+
 
                 assertEquals(EXPECTED, bytes.readUTFΔ());
 
@@ -91,17 +92,24 @@ public class BytesRingBufferTest {
         }
     }
 
+
     private Bytes<ByteBuffer> data() {
-        output.readPosition(0);
-        output.readLimit(output.capacity());
-        return output;
+        final Bytes<ByteBuffer> b = elasticByteBuffer();
+        b.writeUtf8(EXPECTED);
+        final long l = b.writePosition();
+        b.readLimit(l);
+        b.readPosition(0);
+        return b;
     }
 
     @Test
     public void testSimpledSingleThreadedWriteRead() throws Exception {
 
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytesForWrite());
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                (150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
+
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.offer(data());
             Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
             assertEquals(EXPECTED, actual.readUTFΔ());
@@ -110,8 +118,11 @@ public class BytesRingBufferTest {
 
     @Test
     public void testPollWithNoData() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytesForWrite());
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                (150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
+
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             Bytes actual = bytesRingBuffer.poll(maxSize -> input.clear());
             assertEquals(null, actual);
         }
@@ -120,83 +131,41 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                (150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
 
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytesForWrite());
-            data();
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+
             bytesRingBuffer.offer(data());
             Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
             assertEquals(EXPECTED, actual.readUTFΔ());
         }
     }
 
-    @Test
-    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-
-            System.out.println(nativeStore.realCapacity());
-            System.out.println(nativeStore.capacity());
-            System.out.println(nativeStore.readLimit());
-
-
-            Bytes<Void> bytes = nativeStore.bytesForRead();
-            System.out.println(bytes);
-
-            for (int j = 23 + 34; j < 100; j++) {
-                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytesForWrite());
-
-                for (int i = 0; i < 50; i++) {
-                    bytesRingBuffer.offer(data());
-                    String actual = bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ();
-                    assertEquals(EXPECTED, actual);
-                }
-            }
-        }
-    }
 
     @Test
-    public void testWrite3read3SingleThreadedWrite() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore.bytesForWrite());
+    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers2() throws Exception {
+        for (int j = 23 + 34; j < 100; j++) {
+            try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                    (j)) {
+                nativeStore.zeroOut(0, nativeStore.writeLimit());
 
-            assert nativeStore.bytesForRead().capacity() < (1 << 12);
-            for (int i = 0; i < 100; i++) {
-
-
+                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
                 bytesRingBuffer.offer(data());
-                //      bytesRingBuffer.offer(data());
-                //        bytesRingBuffer.offer(data());
-                //   assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
-                if (i == 29)
-                    System.out.println("");
-                Bytes bytes = bytesRingBuffer.take(maxSize -> {
-                    Bytes<ByteBuffer> clear = input.clear();
-                    return clear;
-                });
-
-                try {
-
-
-                    String s = bytes.readUTFΔ();
-
-                } catch (AssertionError e) {
-                    System.out.println(bytes.toHexString());
-
-                }
-
-                //   System.out.println("hex="+Bytes.toHex(bytes));
-                //   assertEquals(EXPECTED, bytes.readUTFΔ());
-
+                Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
+                assertEquals(EXPECTED, actual.readUTFΔ());
             }
         }
     }
+
 
     @Ignore("works in lang-bytes")
     @Test
     public void testMultiThreadedCheckAllEntriesReturnedAreValidText() throws InterruptedException {
         System.out.println("Hello World");
         try (NativeBytesStore allocate = NativeBytesStore.nativeStoreWithFixedCapacity(1000)) {
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate.bytesForWrite());
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(allocate);
 
 
             //writer

@@ -25,7 +25,6 @@ import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
-
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -45,7 +44,8 @@ import java.util.function.Function;
 import static net.openhft.chronicle.wire.Wires.isData;
 
 /**
- * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on 30/01/15.
+ * SingleChronicle implements Chronicle over a single streaming file <p> Created by peter.lawrey on
+ * 30/01/15.
  */
 public class IndexedSingleChronicleQueue extends AbstractChronicle {
 
@@ -256,10 +256,11 @@ public class IndexedSingleChronicleQueue extends AbstractChronicle {
     }
 
     /**
-     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is used for creating
-     * both the primary and secondary indexes. Chronicle Queue uses a root primary index ( each entry in the primary
-     * index points to a unique a secondary index. The secondary index only records the address of every 64th except,
-     * the except are linearly scanned from there on.
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
+     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
+     * index ( each entry in the primary index points to a unique a secondary index. The secondary
+     * index only records the address of every 64th except, the except are linearly scanned from
+     * there on.
      *
      * @return the address of the Excerpt containing the usable index, just after the header
      */
