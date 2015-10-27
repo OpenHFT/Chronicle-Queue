@@ -53,7 +53,5 @@ public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
                 i++;
             }
         }
-
-        int x=0;
     }
 }
