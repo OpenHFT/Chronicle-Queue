@@ -25,10 +25,12 @@ import org.jetbrains.annotations.NotNull;
 
 //TODO: re-engine
 public class WriteContext {
-    private final WireOut wire;
+    public final VanillaBytes bytes;
+    public final WireOut wire;
 
     public WriteContext(@NotNull WireType wireType) {
-        this.wire = wireType.apply(VanillaBytes.vanillaBytes());
+        this.bytes = VanillaBytes.vanillaBytes();
+        this.wire = wireType.apply(this.bytes);
     }
 
     public WireOut wire() {
@@ -36,15 +38,15 @@ public class WriteContext {
     }
 
     public BytesStore store() {
-        return this.wire.bytes().bytesStore();
+        return this.bytes.bytesStore();
     }
 
     public long position() {
-        return this.wire.bytes().writePosition();
+        return this.bytes.writePosition();
     }
 
     public WriteContext position(long position) {
-        this.wire.bytes().writePosition(position);
+        this.bytes.writePosition(position);
         return this;
     }
 
@@ -53,11 +55,10 @@ public class WriteContext {
     }
 
     public WriteContext store(@NotNull BytesStore store, long position, long size) {
-        if(store != store()) {
-            VanillaBytes bytes = (VanillaBytes) this.wire.bytes();
-            bytes.bytesStore(store, position, size);
-            bytes.writePosition(position);
-            bytes.writeLimit(position + size);
+        if(store != bytes.bytesStore()) {
+            this.bytes.bytesStore(store, position, size);
+            this.bytes.writePosition(position);
+            this.bytes.writeLimit(position + size);
         } else {
             position(position);
         }
