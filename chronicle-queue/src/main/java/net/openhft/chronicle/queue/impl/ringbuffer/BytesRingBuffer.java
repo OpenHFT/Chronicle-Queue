@@ -486,8 +486,9 @@ public class BytesRingBuffer {
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
+                bytes.clear();
                 bytes.write(byteStore, offset, len);
-
+                bytes.writeLimit(offset + len);
                 readBytesMarshallable.readMarshallable(bytes);
                 return endOffSet;
             }

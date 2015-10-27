@@ -300,10 +300,13 @@ public class LucasTest {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+            bytesRingBuffer.clear();
 
             for (int i = 0; i < 2; i++) {
                 bytesRingBuffer.offer(data());
-                bytesRingBuffer.apply(b -> System.out.println("Got: " + b));
+                bytesRingBuffer.apply(buffer -> {
+                    System.out.println("Got: " + buffer.readUtf8());
+                });
 
             }
         }
