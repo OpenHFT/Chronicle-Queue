@@ -21,13 +21,15 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 
 /**
  * @author Rob Austin.
@@ -43,23 +45,21 @@ public class ReadMarshableRingBufferTest {
         Bytes data = Bytes.elasticByteBuffer();
         data.writeUtf8(EXPECTED);
         final long len = data.writePosition();
-        for (int j = 30; j < 100; j++) {
+        for (int j = 50; j < 100; j++) {
 
             try (NativeBytesStore<Void> nativeStore = NativeBytesStore
                     .nativeStoreWithFixedCapacity(j)) {
                 nativeStore.zeroOut(0, nativeStore.capacity());
-                VanillaBytes<Void> buffer = nativeStore.bytesForWrite();
-                Bytes<Void> clearedBytes = buffer.zeroOut(0, buffer.capacity());
 
-                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(clearedBytes);
+                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+                bytesRingBuffer.clear();
 
                 for (int i = 0; i < 100; i++) {
                     data.readPosition(0);
                     data.readLimit(len);
                     bytesRingBuffer.offer(data);
-
-                    ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
-
+                    System.out.println(i);
+                    final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
                     bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
 
                     Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
@@ -68,5 +68,37 @@ public class ReadMarshableRingBufferTest {
             }
         }
     }
+
+
+    @Test
+    public void testWriteAndRead3SingleThreadedWrite() throws Exception {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
+                (150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
+
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+
+            for (int i = 0; i < 100; i++) {
+
+                bytesRingBuffer.offer(data());
+
+                final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
+                bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
+
+                Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
+            }
+        }
+    }
+
+
+    private Bytes<ByteBuffer> data() {
+        final Bytes<ByteBuffer> b = elasticByteBuffer();
+        b.writeUtf8(EXPECTED);
+        final long l = b.writePosition();
+        b.readLimit(l);
+        b.readPosition(0);
+        return b;
+    }
+
 
 }
