@@ -1,9 +1,26 @@
-package net.openhft.chronicle.queue;
+/*
+ * Copyright 2015 Higher Frequency Trading
+ *
+ * http://www.higherfrequencytrading.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package net.openhft.chronicle.queue.impl.ringbuffer;
 
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -26,7 +43,7 @@ import static org.junit.Assert.fail;
  * @author Rob Austin.
  */
 //@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
-public class LucasTest {
+public class BytesRingBufferTest {
 
     private final String EXPECTED = "123456789";
     private final String EXPECTED_VALUE = "value=";
@@ -294,22 +311,5 @@ public class LucasTest {
         }
     }
 
-    @Test
-    public void testWriteAndReadX() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            nativeStore.zeroOut(0, nativeStore.writeLimit());
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-            bytesRingBuffer.clear();
-
-            for (int i = 0; i < 2; i++) {
-                bytesRingBuffer.offer(data());
-                bytesRingBuffer.apply(buffer -> {
-                    System.out.println("Got: " + buffer.readUtf8());
-                });
-
-            }
-        }
-    }
 
 }
