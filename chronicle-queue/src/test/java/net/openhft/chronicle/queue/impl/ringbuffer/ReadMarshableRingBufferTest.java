@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl.ringbuffer;
 
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,7 +62,6 @@ public class ReadMarshableRingBufferTest {
                     bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
 
                     Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
-
                 }
             }
         }

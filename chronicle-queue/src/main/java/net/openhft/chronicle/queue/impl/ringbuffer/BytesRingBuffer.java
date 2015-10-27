@@ -21,11 +21,11 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.wire.BinaryLongReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Multi writer single Reader, zero GC, ring buffer, which takes bytes
@@ -37,14 +37,12 @@ public class BytesRingBuffer {
     private static final int SIZE = 8;
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
+    private final long capacity;
 
     @NotNull
     private final RingBuffer bytes;
     @NotNull
     private final Header header;
-
-    private final long capacity;
-
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.writeLimit() - 24;
@@ -54,7 +52,7 @@ public class BytesRingBuffer {
                     "size = (max-size-of-element x number-of-elements) + 24");
         }
 
-        this.header = new Header(byteStore, byteStore.writeLimit());
+        this.header = new Header(byteStore, capacity);
         this.bytes = new RingBuffer(byteStore, 0, capacity);
         this.header.setWriteUpTo(capacity);
         byteStore.writeLong(0, 0);
@@ -290,9 +288,9 @@ public class BytesRingBuffer {
     private static class Header {
 
         // these fields are written using put ordered long ( so don't have to be volatile )
-        private final long writeLocationOffset;
-        private final long writeUpToOffset;
-        private final long readLocationOffset;
+        private BinaryLongReference readLocationOffsetRef;
+        private BinaryLongReference writeUpToRef;
+        private BinaryLongReference writeLocation;
 
         private final BytesStore bytesStore;
 
@@ -301,58 +299,47 @@ public class BytesRingBuffer {
          * @param start      the location where the header is to be written
          */
         private Header(@NotNull BytesStore bytesStore, long start) {
-            readLocationOffset = start;
-            writeLocationOffset = (start += 8);
-            writeUpToOffset = start + 8;
             this.bytesStore = bytesStore;
 
+            readLocationOffsetRef = new BinaryLongReference();
+            readLocationOffsetRef.bytesStore(this.bytesStore, start + 0, 8);
 
+            writeUpToRef = new BinaryLongReference();
+            writeUpToRef.bytesStore(this.bytesStore, start + 8, 8);
+
+            writeLocation = new BinaryLongReference();
+            writeLocation.bytesStore(this.bytesStore, start + 16, 8);
         }
 
 
-        AtomicLong writeLocationOffsetAtomic = new AtomicLong();
-
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            /// return bytesStore.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
-            boolean success = writeLocationOffsetAtomic.compareAndSet(expectedValue, newValue);
-            //   if (success)
-            //     bytesStore.writeOrderedLong(writeLocationOffset, newValue);
-            return success;
+            return writeLocation.compareAndSwapValue(expectedValue, newValue);
         }
 
         private long getWriteLocation() {
-            // return bytesStore.readVolatileLong(writeLocationOffset);
-            return writeLocationOffsetAtomic.get();
+            return writeLocation.getValue();
         }
-
-        AtomicLong writeUpToOffsetAtomic = new AtomicLong();
 
         /**
          * @return the point at which you should not write any additional bits
          */
         private long getWriteUpTo() {
-            // return bytesStore.readVolatileLong(writeUpToOffset);
-            return writeUpToOffsetAtomic.get();
+            return writeUpToRef.getValue();
         }
 
         /**
          * sets the point at which you should not write any additional bits
          */
         private void setWriteUpTo(long value) {
-            writeUpToOffsetAtomic.set(value);
-            //    bytesStore.writeOrderedLong(writeUpToOffset, value);
+            writeUpToRef.setOrderedValue(value);
         }
 
-        AtomicLong readLocationOffsetAtomic = new AtomicLong();
-
         private long getReadLocation() {
-            //   return bytesStore.readVolatileLong(readLocationOffset);
-            return readLocationOffsetAtomic.get();
+            return readLocationOffsetRef.getValue();
         }
 
         private void setReadLocation(long value) {
-            //     bytesStore.writeOrderedLong(readLocationOffset, value);
-            readLocationOffsetAtomic.set(value);
+            readLocationOffsetRef.setOrderedValue(value);
         }
 
         @Override
@@ -365,12 +352,9 @@ public class BytesRingBuffer {
 
         public synchronized void clear(long size) {
 
-            writeLocationOffsetAtomic.set(0);
-            readLocationOffsetAtomic.set(0);
-            writeUpToOffsetAtomic.set(size);
-            //   setWriteUpTo(size);
-            //   setReadLocation(0);
-            //   bytesStore.writeOrderedLong(writeLocationOffset, 0);
+            writeLocation.setOrderedValue(0);
+            setReadLocation(0);
+            setWriteUpTo(size);
         }
     }
 
@@ -482,18 +466,19 @@ public class BytesRingBuffer {
                           long offset,
                           long len) {
 
+            bytes.clear();
+
             offset %= capacity();
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
                 bytes.write(byteStore, offset, len);
-
+                bytes.writeLimit(offset + len);
                 readBytesMarshallable.readMarshallable(bytes);
                 return endOffSet;
             }
 
             final long firstChunkLen = capacity() - offset;
-
             final long l = bytes.writeLimit();
 
             bytes.writeLimit(bytes.writePosition() + firstChunkLen);
