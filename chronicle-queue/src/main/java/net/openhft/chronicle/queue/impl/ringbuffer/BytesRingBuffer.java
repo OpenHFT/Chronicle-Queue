@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.wire.BinaryLongReference;
 import org.jetbrains.annotations.NotNull;
@@ -38,14 +37,12 @@ public class BytesRingBuffer {
     private static final int SIZE = 8;
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
+    private final long capacity;
 
     @NotNull
     private final RingBuffer bytes;
     @NotNull
     private final Header header;
-
-    private final long capacity;
-
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.writeLimit() - 24;
@@ -55,7 +52,7 @@ public class BytesRingBuffer {
                     "size = (max-size-of-element x number-of-elements) + 24");
         }
 
-        this.header = new Header(byteStore, byteStore.writeLimit());
+        this.header = new Header(byteStore, capacity);
         this.bytes = new RingBuffer(byteStore, 0, capacity);
         this.header.setWriteUpTo(capacity);
         byteStore.writeLong(0, 0);
@@ -302,16 +299,16 @@ public class BytesRingBuffer {
          * @param start      the location where the header is to be written
          */
         private Header(@NotNull BytesStore bytesStore, long start) {
+            this.bytesStore = bytesStore;
 
-            this.bytesStore = NativeBytes.nativeBytes(24);
             readLocationOffsetRef = new BinaryLongReference();
-            readLocationOffsetRef.bytesStore(this.bytesStore, 0, 8);
+            readLocationOffsetRef.bytesStore(this.bytesStore, start + 0, 8);
 
             writeUpToRef = new BinaryLongReference();
-            writeUpToRef.bytesStore(this.bytesStore, 8, 8);
+            writeUpToRef.bytesStore(this.bytesStore, start + 8, 8);
 
             writeLocation = new BinaryLongReference();
-            writeLocation.bytesStore(this.bytesStore, 16, 8);
+            writeLocation.bytesStore(this.bytesStore, start + 16, 8);
         }
 
 
