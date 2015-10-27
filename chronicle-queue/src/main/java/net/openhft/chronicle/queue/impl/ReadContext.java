@@ -25,25 +25,23 @@ import org.jetbrains.annotations.NotNull;
 
 //TODO: re-engine
 public class ReadContext {
+    public final VanillaBytes bytes;
+    public final WireIn wire;
+
     private long position;
-    private final WireIn wire;
 
     public ReadContext(@NotNull WireType wireType) {
-        this.wire = wireType.apply(VanillaBytes.vanillaBytes());
+        this.bytes = VanillaBytes.vanillaBytes();
+        this.wire = wireType.apply(this.bytes);
         this.position = 0;
     }
 
     public WireIn wire(long position, long size) {
-        VanillaBytes bytes = (VanillaBytes) this.wire.bytes();
-        bytes.readPosition(position);
-        bytes.readLimit(position + size);
-        bytes.writePosition(position + size);
+        this.bytes.readPosition(position);
+        this.bytes.readLimit(position + size);
+        this.bytes.writePosition(position + size);
 
         return this.wire;
-    }
-
-    public BytesStore store() {
-        return this.wire.bytes().bytesStore();
     }
 
     public long position() {
@@ -60,7 +58,7 @@ public class ReadContext {
     }
 
     public ReadContext store(@NotNull BytesStore store, long position, long size) {
-        if(store != store()) {
+        if(store != this.bytes.bytesStore()) {
             ((VanillaBytes) this.wire.bytes()).bytesStore(store, position, size);
         }
 

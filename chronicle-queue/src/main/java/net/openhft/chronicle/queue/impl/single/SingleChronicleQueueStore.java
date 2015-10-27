@@ -135,7 +135,7 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
         bounds.setWritePositionIfGreater(
-            Wires.writeData(acquireLock(context).wire(), marshallable)
+                Wires.writeData(acquireLock(context).wire(), marshallable)
         );
 
         return indexing.incrementLastIndex();
@@ -162,32 +162,33 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException {
         long position = context.position();
-        if (position > context.store().safeLimit()) {
+        if (position > context.bytes.safeLimit()) {
             context.store(mappedFile.acquireByteStore(position), position);
-        } else if(context.store().readLimit() == 0) {
+        } else if(context.bytes.readLimit() == 0) {
             context.store(mappedFile.acquireByteStore(position), position);
         }
 
-        final int spbHeader = context.store().readVolatileInt(position);
+        final int spbHeader = context.bytes.readVolatileInt(position);
         if(Wires.isNotInitialized(spbHeader)) {
             return WireConstants.NO_DATA;
         }
 
-        if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
-            return Wires.readData(context.wire(position, builder.blockSize()), reader);
-        } else if (Wires.isKnownLength(spbHeader)) {
-            // In case of meta data, if we are found the "roll" meta, we returns
-            // the next cycle (negative)
-            final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
-            final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
-
-            if("roll".contentEquals(sb)) {
-                return -vi.int32();
+        if(Wires.isReady(spbHeader)) {
+            if(Wires.isData(spbHeader)) {
+                return Wires.readData(context.wire(position, builder.blockSize()), reader);
             } else {
-                // it it is meta-data and length is know, try a new read
-                //position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
-                context.position(position + Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE);
-                return read(context, reader);
+                // In case of meta data, if we are found the "roll" meta, we returns
+                // the next cycle (negative)
+                final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
+                final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
+
+                if("roll".contentEquals(sb)) {
+                    return -vi.int32();
+                } else {
+                    // it it is meta-data and length is know, try a new read
+                    context.position(position + Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE);
+                    return read(context, reader);
+                }
             }
         }
 
