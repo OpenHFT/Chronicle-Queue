@@ -312,5 +312,19 @@ public class BytesRingBufferTest {
         }
     }
 
+    @Test
+    public void testWriteAndReadX() throws Exception {
+        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
+            nativeStore.zeroOut(0, nativeStore.writeLimit());
+
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+
+            for (int i = 0; i < 2; i++) {
+                bytesRingBuffer.offer(data());
+                bytesRingBuffer.apply(b -> System.out.println("Got: " + b));
+
+            }
+        }
+    }
 
 }
