@@ -10,17 +10,20 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.*;
+
 /**
  * Results 27/10/2015 running on a MBP
  * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistribution {
-    public static void main(String[] args) throws Exception{
+    @Test
+    public void test() throws Exception{
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder("/tmp/test")
                 .wireType(WireType.BINARY)
-                .blockSize(128_000_000)
+                .blockSize(1_000_000_000)
                 .build();
 
         ExcerptAppender appender = queue.createAppender();
