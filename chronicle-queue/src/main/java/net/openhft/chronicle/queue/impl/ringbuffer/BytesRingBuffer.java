@@ -27,7 +27,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Multi writer single Reader, zero GC, ring buffer, which takes bytes
@@ -45,18 +44,24 @@ public class BytesRingBuffer {
     @NotNull
     private final Header header;
 
+    private final long capacity;
 
-    ThreadLocal<Bytes> threadLocalBuffer = ThreadLocal.withInitial(() -> Bytes.elasticByteBuffer());
 
-    /**
-     * @param buffer the bytes that you wish to use for the ring buffer
-     */
-    public BytesRingBuffer(@NotNull final Bytes buffer) {
-        this.header = new Header(buffer);
+    public BytesRingBuffer(@NotNull final BytesStore byteStore) {
+        capacity = byteStore.writeLimit();
 
-        BytesStore bytesStore = buffer.bytesStore().subBytes(buffer.writePosition() + 1, buffer.capacity());
-        this.bytes = new RingBuffer(bytesStore.bytesForWrite());
-        header.setWriteUpTo(bytes.capacity());
+        if (byteStore.writeRemaining() <= 24) {
+            throw new IllegalStateException("The byteStore is too small, the minimum recommended " +
+                    "size = (max-size-of-element x number-of-elements) + 24");
+        }
+
+        this.header = new Header(byteStore, capacity - 24);
+        this.bytes = new RingBuffer(byteStore, 0, capacity - 24);
+        this.header.setWriteUpTo(capacity);
+    }
+
+    public void clear() {
+        header.clear(capacity);
     }
 
     /**
@@ -72,14 +77,15 @@ public class BytesRingBuffer {
             for (; ; ) {
 
                 long writeLocation = this.writeLocation();
-
+                //System.out.println("writeLocation=" + writeLocation);
                 assert writeLocation >= 0;
 
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
-                if (remainingForWrite(writeLocation) < bytes0.readRemaining() + SIZE + FLAG)
+                final long remainingForWrite = remainingForWrite(writeLocation);
+                if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
                     return false;
 
                 // write the size
@@ -96,15 +102,14 @@ public class BytesRingBuffer {
                 // we have to set the busy fag before the write location for the reader
                 // this is why we have the compareAndSet above to ensure that only one thread
                 // gets in here
-                long flagLoc = offset;
+                final long flagLoc = offset;
                 offset = this.bytes.writeByte(offset, States.BUSY.ordinal());
 
                 if (!header.compareAndSetWriteLocation(-1, writeLocation + messageLen))
                     continue;
 
                 // write a size
-                offset = this.bytes.write(offset, len);
-
+                offset += this.bytes.write(offset, len);
 
                 // write the data
                 this.bytes.write(offset, bytes0);
@@ -131,7 +136,8 @@ public class BytesRingBuffer {
     }
 
     private long remainingForWrite(long offset) {
-        return (header.getWriteUpTo() - 1) - offset;
+        final long writeUpTo = header.getWriteUpTo();
+        return (writeUpTo - 1) - offset;
     }
 
 
@@ -167,9 +173,8 @@ public class BytesRingBuffer {
             InterruptedException {
 
         long writeLoc = writeLocation();
-
         long offset = header.getReadLocation();
-        long readLocation = offset;//= this.readLocation.get();
+        long readLocation = offset;
 
         if (readLocation >= writeLoc)
             return 0;
@@ -191,32 +196,14 @@ public class BytesRingBuffer {
         offset += 8;
 
         final long next = offset + elementSize;
-        if (bytes.isContinous(offset, elementSize)) {
 
-            final long r = bytes.buffer.readPosition();
-            final long l = bytes.buffer.readLimit();
-            try {
-                bytes.buffer.readLimit(offset + elementSize);
-                bytes.buffer.readPosition(offset);
-                readBytesMarshallable.readMarshallable(bytes.buffer);
-            } finally {
-                bytes.buffer.readPosition(r);
-                bytes.buffer.readLimit(l);
-            }
-
-        } else {
-            final Bytes using = threadLocalBuffer.get();
-
-            //   using.readLimit(using.readPosition() + elementSize);
-            bytes.read(using, offset, elementSize);
-        }
-
+        bytes.read(readBytesMarshallable, offset, elementSize);
         bytes.write(flag, States.USED.ordinal());
 
         header.setWriteUpTo(next + bytes.capacity());
         header.setReadLocation(next);
 
-        return elementSize;
+        return 8;
     }
 
     /**
@@ -232,7 +219,6 @@ public class BytesRingBuffer {
             IllegalStateException {
 
         long writeLoc = writeLocation();
-
         long offset = header.getReadLocation();
         long readLocation = offset;//= this.readLocation.get();
 
@@ -243,7 +229,6 @@ public class BytesRingBuffer {
         assert readLocation <= writeLoc : "reader has go ahead of the writer";
 
         long flag = offset;
-
 
         final byte state = bytes.readByte(flag);
         offset += 1;
@@ -266,8 +251,6 @@ public class BytesRingBuffer {
             // checks that the 'using' bytes is large enough
             checkSize(using, elementSize);
 
-            //   using.readLimit(using.readPosition() + elementSize);
-
             bytes.read(using, offset, elementSize);
             bytes.write(flag, States.USED.ordinal());
 
@@ -287,99 +270,73 @@ public class BytesRingBuffer {
                     " bytes, but only " + using.readRemaining() + " remaining.");
     }
 
-
     private enum States {BUSY, READY, USED}
 
     /**
      * used to store the locations around the ring buffer or reading and writing
      */
-    private class Header {
+    private static class Header {
 
+        // these fields are written using put ordered long ( so don't have to be volatile )
         private final long writeLocationOffset;
         private final long writeUpToOffset;
         private final long readLocationOffset;
-        private final Bytes buffer;
 
+        private final BytesStore bytesStore;
 
         /**
-         * @param buffer the bytes for the header
+         * @param bytesStore the bytes for the header
+         * @param start      the location where the header is to be written
          */
-        private Header(@NotNull Bytes buffer) {
-
-            if (buffer.writeRemaining() < 24) {
-                final String message = "buffer too small, buffer size=" + buffer.writeRemaining();
-                throw new IllegalStateException(message);
-            }
-
-            readLocationOffset = buffer.writePosition();
-            buffer.writeLong(8);
-
-            writeLocationOffset = buffer.writePosition();
-            buffer.writeSkip(8);
-
-            writeUpToOffset = buffer.writePosition();
-            buffer.writeSkip(8);
-
-            this.buffer = buffer;
-
+        private Header(@NotNull BytesStore bytesStore, long start) {
+            readLocationOffset = start;
+            writeLocationOffset = (start += 8);
+            writeUpToOffset = start + 8;
+            this.bytesStore = bytesStore;
         }
 
-        final AtomicLong writeLocationAtomic = new AtomicLong();
-        final AtomicLong readLocationAtomic = new AtomicLong();
-        final AtomicLong writeUpToOffsetAtomic = new AtomicLong();
-
-        boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
-            return writeLocationAtomic.compareAndSet(expectedValue, newValue);
-            // todo replace the above with this :   
-//            return buffer.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
+        private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
+            return bytesStore.compareAndSwapLong(writeLocationOffset, expectedValue, newValue);
         }
 
-        long getWriteLocation() {
-            return writeLocationAtomic.get();
-            // todo replace the above with this :   
-            //return buffer.readVolatileLong(writeLocationOffset);
+        private long getWriteLocation() {
+            return bytesStore.readVolatileLong(writeLocationOffset);
         }
 
         /**
          * @return the point at which you should not write any additional bits
          */
-        long getWriteUpTo() {
-            return writeUpToOffsetAtomic.get();
-            // todo replace the above with this :  
-            // return buffer.readVolatileLong(writeUpToOffset);
-
+        private long getWriteUpTo() {
+            return bytesStore.readVolatileLong(writeUpToOffset);
         }
 
         /**
          * sets the point at which you should not write any additional bits
          */
-        void setWriteUpTo(long value) {
-
-            writeUpToOffsetAtomic.set(value);
-            // todo replace the above with this : 
-            // buffer.writeOrderedLong(writeUpToOffset, value);
+        private void setWriteUpTo(long value) {
+            bytesStore.writeOrderedLong(writeUpToOffset, value);
         }
 
-        long getReadLocation() {
-            return readLocationAtomic.get();
-            // todo replace the above with this :    
-            //  return buffer.readVolatileLong(readLocationOffset);
+        private long getReadLocation() {
+            return bytesStore.readVolatileLong(readLocationOffset);
         }
 
-        void setReadLocation(long value) {
-            readLocationAtomic.set(value);
-            // todo replace the above with this : 
-            //  buffer.writeOrderedLong(readLocationOffset, value);
+        private void setReadLocation(long value) {
+            bytesStore.writeOrderedLong(readLocationOffset, value);
         }
-
 
         @Override
         public String toString() {
             return "Header{" +
-                    "writeLocation=" + buffer.readVolatileLong(writeLocationOffset) +
-                    ", writeUpTo=" + buffer.readVolatileLong(writeUpToOffset) +
-                    ", readLocation=" + buffer.readVolatileLong(readLocationOffset) + "}";
+                    "writeLocation=" + getWriteLocation() +
+                    ", writeUpTo=" + getWriteUpTo() +
+                    ", readLocation=" + getReadLocation() + "}";
+        }
 
+        public void clear(long size) {
+            setWriteUpTo(size);
+            setReadLocation(0);
+            bytesStore.writeOrderedLong(writeLocationOffset, 0);
         }
     }
 
@@ -389,18 +346,19 @@ public class BytesRingBuffer {
      */
     private class RingBuffer {
 
-        @NotNull
-        final Bytes buffer;
-        final boolean isBytesBigEndian;
+        private final boolean isBytesBigEndian;
+        private final long capacity;
+        private final BytesStore byteStore;
 
-        public RingBuffer(@NotNull Bytes buffer) {
-            this.buffer = buffer;
-            isBytesBigEndian = buffer.byteOrder() == ByteOrder.BIG_ENDIAN;
+        public RingBuffer(BytesStore byteStore, int start, long end) {
+            this.byteStore = byteStore;
+            this.capacity = end - start;
+            isBytesBigEndian = byteStore.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
-
 
         private long write(long offset, @NotNull Bytes bytes0) {
 
+            //  System.out.println("offset=" + offset + ",bytes=" + bytes0);
             long result = offset + bytes0.readRemaining();
             offset %= capacity();
 
@@ -408,24 +366,17 @@ public class BytesRingBuffer {
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
-                this.buffer.write(offset, bytes0);
+                this.byteStore.write(offset, bytes0, 0, len);
                 return result;
             }
 
-            long limit = bytes0.writeLimit();
-
-            bytes0.readLimit(capacity() - offset);
-            this.buffer.write(offset, bytes0);
-
-            bytes0.readPosition(bytes0.writeLimit());
-            bytes0.readLimit(limit);
-
-            this.buffer.write(0, bytes0);
+            this.byteStore.write(offset, bytes0, 0, len - endOffSet);
+            this.byteStore.write(0, bytes0, len - endOffSet, endOffSet);
             return result;
         }
 
         long capacity() {
-            return buffer.capacity();
+            return capacity;
         }
 
         long nextOffset(long offset, long increment) {
@@ -439,36 +390,21 @@ public class BytesRingBuffer {
 
         private long write(long offset, long value) {
 
-            long result = offset + 8;
             offset %= capacity();
 
             if (nextOffset(offset, 8) > offset)
-                buffer.writeLong(offset, value);
+                byteStore.writeLong(offset, value);
             else if (isBytesBigEndian)
                 putLongB(offset, value);
             else
                 putLongL(offset, value);
 
-            return result;
+            return 8;
         }
 
         public long writeByte(long l, int i) {
-
-            buffer.writeByte(l % capacity(), i);
+            byteStore.writeByte(l % capacity(), i);
             return l + 1;
-        }
-
-
-        /**
-         * can the data be read straight out of the buffer or is it split around the ring, in
-         * otherwords is that start of the data at the end of the ring and the remaining data at the
-         * start of the ring.
-         */
-        private boolean isContinous(long offset, long len) {
-            offset %= capacity();
-            long endOffSet = nextOffset(offset, len);
-
-            return endOffSet >= offset;
         }
 
         private long read(@NotNull Bytes bytes, long offset, long len) {
@@ -476,41 +412,67 @@ public class BytesRingBuffer {
             offset %= capacity();
             long endOffSet = nextOffset(offset, len);
 
+            // can the data be read straight out of the buffer or is it split around the ring, in
+            //other words is that start of the data at the end of the ring and the remaining
+            //data at the start of the ring.
             if (endOffSet >= offset) {
-                bytes.write(buffer, offset, len);
+                bytes.write(byteStore, offset, len);
                 return endOffSet;
             }
 
             final long firstChunkLen = capacity() - offset;
-            bytes.write(buffer, offset, firstChunkLen);
-            bytes.write(buffer, 0, len - firstChunkLen);
-
+            bytes.write(byteStore, offset, firstChunkLen);
+            bytes.write(byteStore, 0, len - firstChunkLen);
             return endOffSet;
         }
+
+        // if we want multi readers then we could later replace this with a thread-local
+        final Bytes bytes = Bytes.elasticByteBuffer();
+
+        private long read(@NotNull ReadBytesMarshallable readBytesMarshallable,
+                          long offset,
+                          long len) {
+
+            offset %= capacity();
+            long endOffSet = nextOffset(offset, len);
+
+            if (endOffSet >= offset) {
+                bytes.write(byteStore, offset, len);
+                readBytesMarshallable.readMarshallable(bytes);
+                return endOffSet;
+            }
+
+            final long firstChunkLen = capacity() - offset;
+            bytes.write(byteStore, offset, firstChunkLen);
+            bytes.write(byteStore, 0, len - firstChunkLen);
+            readBytesMarshallable.readMarshallable(bytes);
+            return endOffSet;
+        }
+
 
         long readLong(long offset) {
 
             offset %= capacity();
             if (nextOffset(offset, 8) > offset)
-                return buffer.readLong(offset);
+                return byteStore.readLong(offset);
 
-            return isBytesBigEndian ? makeLong(buffer.readByte(offset),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(offset = nextOffset(offset)),
-                    buffer.readByte(nextOffset(offset)))
+            return isBytesBigEndian ? makeLong(byteStore.readByte(offset),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(offset = nextOffset(offset)),
+                    byteStore.readByte(nextOffset(offset)))
 
-                    : makeLong(buffer.readByte(nextOffset(offset, 7L)),
-                    buffer.readByte(nextOffset(offset, 6L)),
-                    buffer.readByte(nextOffset(offset, 5L)),
-                    buffer.readByte(nextOffset(offset, 4L)),
-                    buffer.readByte(nextOffset(offset, 3L)),
-                    buffer.readByte(nextOffset(offset, 2L)),
-                    buffer.readByte(nextOffset(offset)),
-                    buffer.readByte(offset));
+                    : makeLong(byteStore.readByte(nextOffset(offset, 7L)),
+                    byteStore.readByte(nextOffset(offset, 6L)),
+                    byteStore.readByte(nextOffset(offset, 5L)),
+                    byteStore.readByte(nextOffset(offset, 4L)),
+                    byteStore.readByte(nextOffset(offset, 3L)),
+                    byteStore.readByte(nextOffset(offset, 2L)),
+                    byteStore.readByte(nextOffset(offset)),
+                    byteStore.readByte(offset));
         }
 
         private long makeLong(byte b7, byte b6, byte b5, byte b4,
@@ -530,30 +492,29 @@ public class BytesRingBuffer {
         }
 
         public byte readByte(long l) {
-            buffer.readLimit(buffer.capacity());
-            return buffer.readByte(l % capacity());
+            return byteStore.readByte(l % capacity);
         }
 
         void putLongB(long offset, long value) {
-            buffer.writeByte(offset, (byte) (value >> 56));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 48));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 40));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 32));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 24));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 16));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 8));
-            buffer.writeByte(nextOffset(offset), (byte) (value));
+            byteStore.writeByte(offset, (byte) (value >> 56));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 48));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 40));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 32));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 24));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 16));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 8));
+            byteStore.writeByte(nextOffset(offset), (byte) (value));
         }
 
         void putLongL(long offset, long value) {
-            buffer.writeByte(offset, (byte) (value));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 8));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 16));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 24));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 32));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 40));
-            buffer.writeByte(offset = nextOffset(offset), (byte) (value >> 48));
-            buffer.writeByte(nextOffset(offset), (byte) (value >> 56));
+            byteStore.writeByte(offset, (byte) (value));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 8));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 16));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 24));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 32));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 40));
+            byteStore.writeByte(offset = nextOffset(offset), (byte) (value >> 48));
+            byteStore.writeByte(nextOffset(offset), (byte) (value >> 56));
         }
     }
 
