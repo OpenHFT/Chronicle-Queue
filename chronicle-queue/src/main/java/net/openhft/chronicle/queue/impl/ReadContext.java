@@ -59,7 +59,7 @@ public class ReadContext {
 
     public ReadContext store(@NotNull BytesStore store, long position, long size) {
         if(store != this.bytes.bytesStore()) {
-            ((VanillaBytes) this.wire.bytes()).bytesStore(store, position, size);
+            this.bytes.bytesStore(store, position, size);
         }
 
         this.position = position;

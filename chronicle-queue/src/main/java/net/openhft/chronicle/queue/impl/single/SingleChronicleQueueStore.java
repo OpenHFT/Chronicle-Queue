@@ -146,9 +146,8 @@ class SingleChronicleQueueStore implements WireStore {
         final int size = toIntU30(bytes.length());
         final long position = acquireLock(context, size).position();
 
-        context.store()
-            .write(position + 4, bytes)
-            .compareAndSwapInt(position, size | Wires.NOT_READY, size);
+        context.bytes.write(position + 4, bytes);
+        context.bytes.compareAndSwapInt(position, size | Wires.NOT_READY, size);
 
         return indexing.incrementLastIndex();
     }
@@ -169,17 +168,13 @@ class SingleChronicleQueueStore implements WireStore {
         }
 
         final int spbHeader = context.bytes.readVolatileInt(position);
-        if(Wires.isNotInitialized(spbHeader)) {
-            return WireConstants.NO_DATA;
-        }
-
-        if(Wires.isReady(spbHeader)) {
+        if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
             if(Wires.isData(spbHeader)) {
                 return Wires.readData(context.wire(position, builder.blockSize()), reader);
             } else {
                 // In case of meta data, if we are found the "roll" meta, we returns
                 // the next cycle (negative)
-                final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
+                final StringBuilder sb = Wires.acquireStringBuilder();
                 final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
 
                 if("roll".contentEquals(sb)) {

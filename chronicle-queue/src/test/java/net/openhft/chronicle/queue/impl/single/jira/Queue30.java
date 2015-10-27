@@ -15,11 +15,12 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-package net.openhft.chronicle.queue.impl.single;
+package net.openhft.chronicle.queue.impl.single.jira;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Ignore;
 import org.junit.Test;
