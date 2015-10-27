@@ -30,7 +30,7 @@ public class AsyncChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     public AsyncChronicleQueueBuilder(@NotNull ChronicleQueue queue) {
         this.queue = queue;
-        this.bufferSize = 1024;
+        this.bufferSize = 640_000;
     }
 
     public long bufferSize() {

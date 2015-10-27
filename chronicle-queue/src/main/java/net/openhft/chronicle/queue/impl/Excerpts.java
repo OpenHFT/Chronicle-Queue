@@ -18,8 +18,6 @@ package net.openhft.chronicle.queue.impl;
 
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -28,11 +26,14 @@ import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
+import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 public class Excerpts {
@@ -75,7 +76,7 @@ public class Excerpts {
      * Delegates the appender
      */
     public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
-        private final BytesStore store;
+        private final Bytes<ByteBuffer> buffer;
         private final Wire wire;
         private final Consumer<Bytes> consumer;
 
@@ -85,16 +86,21 @@ public class Excerpts {
 
             super(queue);
 
-            this.store = NativeBytesStore.nativeStoreWithFixedCapacity(1024);
-            this.wire = queue.wireType().apply(this.store.bytesForWrite());
+            this.buffer = elasticByteBuffer();
+            this.wire = queue.wireType().apply(this.buffer);
             this.consumer = consumer;
         }
 
         @Override
-        public long writeDocument(WriteMarshallable writer) throws IOException {
-            wire.bytes().clear();
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+            this.buffer.clear();
             writer.writeMarshallable(wire);
-            consumer.accept(wire.bytes());
+            this.buffer.readLimit(buffer.writePosition());
+            this.buffer.readPosition(0);
+            this.buffer.writePosition(this.buffer.readLimit());
+            this.buffer.writeLimit(this.buffer.readLimit());
+
+            consumer.accept(this.buffer);
 
             return WireConstants.NO_INDEX;
         }
@@ -126,6 +132,7 @@ public class Excerpts {
         }
 
         public long write(@NotNull Bytes bytes) throws IOException {
+            LoggerFactory.getLogger("Write").info(">> {}", bytes);
             return index = store().append(this.context, bytes);
         }
 

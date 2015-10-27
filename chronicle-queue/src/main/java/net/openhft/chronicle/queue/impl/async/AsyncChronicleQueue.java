@@ -17,6 +17,7 @@
  */
 package net.openhft.chronicle.queue.impl.async;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -24,6 +25,7 @@ import net.openhft.chronicle.queue.impl.DelegatedChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.threads.EventGroup;
+import net.openhft.chronicle.threads.api.InvalidEventHandlerException;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,31 +45,16 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         super(queue);
 
         this.store = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
-        this.buffer = new BytesRingBuffer(this.store.bytesForWrite());
+        this.store.zeroOut(0, this.store.writeLimit());
+
+        this.buffer = new BytesRingBuffer(this.store);
         this.appender = null;
 
         //HACK, need to be refactored
         this.storeAppender = (Excerpts.StoreAppender)super.createAppender();
 
         this.eventGroup = new EventGroup(true);
-        this.eventGroup.addHandler(() -> {
-            try {
-                return this.buffer.apply(b -> {
-                    try {
-                        this.storeAppender.write(b);
-                    } catch(IOException e) {
-                        //TODO: what to do
-                        LOGGER.warn("", e);
-                    }
-                }) > 0;
-            } catch(InterruptedException e) {
-                //TODO: what to do
-                LOGGER.warn("", e);
-            }
-
-            return false;
-        });
-
+        this.eventGroup.addHandler(this::handleEvent);
         this.eventGroup.start();
     }
 
@@ -93,5 +80,29 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     public void close() throws IOException {
         this.eventGroup.close();
         super.close();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private boolean handleEvent() throws InvalidEventHandlerException {
+        try {
+            return buffer.apply(this::appendBytes) > 0;
+        } catch(InterruptedException e) {
+            //TODO: what to do
+            LOGGER.warn("", e);
+        }
+
+        return false;
+    }
+
+    private void appendBytes(Bytes<?> bytes) {
+        try {
+            storeAppender.write(bytes);
+        } catch(IOException e) {
+            //TODO: what to do
+            LOGGER.warn("", e);
+        }
     }
 }
