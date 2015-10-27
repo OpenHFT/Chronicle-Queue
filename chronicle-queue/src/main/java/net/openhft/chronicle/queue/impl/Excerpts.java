@@ -26,7 +26,6 @@ import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -132,7 +131,6 @@ public class Excerpts {
         }
 
         public long write(@NotNull Bytes bytes) throws IOException {
-            LoggerFactory.getLogger("Write").info(">> {}", bytes);
             return index = store().append(this.context, bytes);
         }
 

@@ -135,7 +135,7 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
         bounds.setWritePositionIfGreater(
-                Wires.writeData(acquireLock(context).wire(), marshallable)
+            Wires.writeData(acquireLock(context).wire(), marshallable)
         );
 
         return indexing.incrementLastIndex();

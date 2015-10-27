@@ -27,6 +27,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertEquals;
+
 
 public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
 
@@ -45,11 +47,7 @@ public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = queue.createTailer();
         for (int i = 0; i < 20;) {
             final int n = i;
-            //if(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32()))) {
-            //    i++;
-            //}
-
-            if(tailer.readDocument(r -> LOGGER.info(">>> {}", r.read(TestKey.test).int32()))) {
+            if(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32()))) {
                 i++;
             }
         }
