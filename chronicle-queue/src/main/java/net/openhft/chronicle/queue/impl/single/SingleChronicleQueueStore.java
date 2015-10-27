@@ -134,8 +134,9 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
-        context = acquireLock(context);
-        bounds.setWritePositionIfGreater(Wires.writeData(context.wire(), marshallable));
+        bounds.setWritePositionIfGreater(
+            Wires.writeData(acquireLock(context).wire(), marshallable)
+        );
 
         return indexing.incrementLastIndex();
     }
@@ -145,8 +146,9 @@ class SingleChronicleQueueStore implements WireStore {
         final int size = toIntU30(bytes.length());
         final long position = acquireLock(context, size).position();
 
-        context.store().write(position + 4, bytes);
-        context.store().compareAndSwapInt(position, size | Wires.NOT_READY, size);
+        context.store()
+            .write(position + 4, bytes)
+            .compareAndSwapInt(position, size | Wires.NOT_READY, size);
 
         return indexing.incrementLastIndex();
     }
@@ -218,26 +220,6 @@ class SingleChronicleQueueStore implements WireStore {
         return -1;
     }
 
-    /**
-     * Check if there is room for append assuming blockSize is the maximum size
-     */
-    protected void checkRemainingForAppend(long position) {
-        long remaining = mappedFile.capacity() - position;
-        if (remaining < builder.blockSize()) {
-            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
-        }
-    }
-
-    /**
-     * Check if there is room for append assuming blockSize is the maximum size
-     */
-    protected void checkRemainingForAppend(long position, long size) {
-        long remaining = mappedFile.capacity() - position;
-        if (remaining < size) {
-            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
-        }
-    }
-
     @Override
     public void install(
             @NotNull MappedFile mappedFile,
@@ -287,6 +269,26 @@ class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
     // Utilities
     // *************************************************************************
+
+    /**
+     * Check if there is room for append assuming blockSize is the maximum size
+     */
+    protected void checkRemainingForAppend(long position) {
+        long remaining = mappedFile.capacity() - position;
+        if (remaining < builder.blockSize()) {
+            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
+        }
+    }
+
+    /**
+     * Check if there is room for append assuming blockSize is the maximum size
+     */
+    protected void checkRemainingForAppend(long position, long size) {
+        long remaining = mappedFile.capacity() - position;
+        if (remaining < size) {
+            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
+        }
+    }
 
     //TODO move to wire
     protected boolean acquireLock(BytesStore store, long position, int size) {

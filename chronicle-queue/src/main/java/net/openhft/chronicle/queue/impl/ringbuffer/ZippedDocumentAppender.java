@@ -21,7 +21,6 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.impl.BytesProvider;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -95,7 +94,7 @@ public class ZippedDocumentAppender implements Closeable {
      * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser}
      * and write these zipped bytes to {@code chronicleQueue}
      */
-    private class Consumer implements BytesProvider, Runnable {
+    private class Consumer implements BytesRingBuffer.BytesProvider, Runnable {
 
         @NotNull
         private Deflater compresser = new Deflater();

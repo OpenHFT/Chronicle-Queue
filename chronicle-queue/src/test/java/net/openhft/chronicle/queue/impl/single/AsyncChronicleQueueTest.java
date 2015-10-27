@@ -56,7 +56,7 @@ public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-
+    @Ignore
     @Test
     public void testAppendAndReadX() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())

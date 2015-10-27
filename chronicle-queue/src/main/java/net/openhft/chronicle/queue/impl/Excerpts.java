@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
+import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
+
 public class Excerpts {
 
     // *************************************************************************
@@ -157,6 +159,7 @@ public class Excerpts {
 
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(this.cycle);
+                this.context.store(noBytesStore(), 0, 0);
             }
 
             return this.store;
@@ -303,6 +306,7 @@ public class Excerpts {
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
                 this.context.position(positionSupplier.applyAsLong(this.store));
+                this.context.store(noBytesStore(), 0, 0);
             }
         }
     }

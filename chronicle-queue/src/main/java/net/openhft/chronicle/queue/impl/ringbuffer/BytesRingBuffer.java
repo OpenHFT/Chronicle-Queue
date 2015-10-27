@@ -20,12 +20,10 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
-import net.openhft.chronicle.queue.impl.BytesProvider;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.nio.ByteOrder;
 
 /**
@@ -72,6 +70,7 @@ public class BytesRingBuffer {
      * @return returning {@code true} upon success and {@code false} if this queue is full.
      */
     public boolean offer(@NotNull Bytes bytes0) throws InterruptedException {
+
         try {
 
             for (; ; ) {
@@ -89,7 +88,7 @@ public class BytesRingBuffer {
                     return false;
 
                 // write the size
-                long len = bytes0.length();
+                long len = bytes0.readLimit();
 
                 long messageLen = SIZE + FLAG + len;
 
@@ -215,7 +214,7 @@ public class BytesRingBuffer {
      */
     @Nullable
     public Bytes poll(@NotNull BytesProvider bytesProvider) throws
-            //InterruptedException,
+            InterruptedException,
             IllegalStateException {
 
         long writeLoc = writeLocation();
@@ -244,21 +243,16 @@ public class BytesRingBuffer {
 
         final long next = offset + elementSize;
 
-        final Bytes using;
-        try {
-            using = bytesProvider.provide(elementSize);
+        final Bytes using = bytesProvider.provide(elementSize);
 
-            // checks that the 'using' bytes is large enough
-            checkSize(using, elementSize);
+        // checks that the 'using' bytes is large enough
+        checkSize(using, elementSize);
 
-            bytes.read(using, offset, elementSize);
-            bytes.write(flag, States.USED.ordinal());
+        bytes.read(using, offset, elementSize);
+        bytes.write(flag, States.USED.ordinal());
 
-            header.setWriteUpTo(next + bytes.capacity());
-            header.setReadLocation(next);
-        } catch(IOException e) {
-            throw new IllegalStateException(e);
-        }
+        header.setWriteUpTo(next + bytes.capacity());
+        header.setReadLocation(next);
 
         return using;
     }
@@ -271,6 +265,19 @@ public class BytesRingBuffer {
     }
 
     private enum States {BUSY, READY, USED}
+
+    public interface BytesProvider {
+
+        /**
+         * sets up a buffer to back the ring buffer, the data wil be read into this buffer the size
+         * of the buffer must be as big as {@code maxSize}
+         *
+         * @param maxSize the number of bytes required
+         * @return a buffer of at least {@code maxSize} bytes remaining
+         */
+        @NotNull
+        Bytes provide(long maxSize);
+    }
 
     /**
      * used to store the locations around the ring buffer or reading and writing
