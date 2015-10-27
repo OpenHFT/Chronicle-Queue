@@ -25,10 +25,10 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.impl.BytesStoreFunction;
+import net.openhft.chronicle.queue.impl.ReadContext;
 import net.openhft.chronicle.queue.impl.WireConstants;
-import net.openhft.chronicle.queue.impl.WirePool;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WriteContext;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.ValueIn;
@@ -40,6 +40,8 @@ import net.openhft.chronicle.wire.Wires;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -53,6 +55,8 @@ import static net.openhft.chronicle.queue.impl.WireConstants.SPB_DATA_HEADER_SIZ
  * - indexing
  */
 class SingleChronicleQueueStore implements WireStore {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SingleChronicleQueueStore.class);
+
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class,"Bounds");
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class,"Indexing");
@@ -66,7 +70,6 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     private MappedFile mappedFile;
-    private WirePool wirePool;
     private Closeable resourceCleaner;
     private SingleChronicleQueueBuilder builder;
 
@@ -113,15 +116,15 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public boolean appendRollMeta(long cycle) throws IOException {
+    public boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException {
         if(roll.casNextRollCycle(cycle)) {
-            withLock((store, position) -> {
-                Wires.writeMeta(
-                    wirePool.acquireForWrite(store, position),
-                     w -> w.write(MetaDataField.roll).int32(cycle));
+            long position = acquireLock(context).position();
 
-                roll.setNextCycleMetaPosition(position);
-            });
+            Wires.writeMeta(
+                 context.wire(),
+                 w -> w.write(MetaDataField.roll).int32(cycle));
+
+            roll.setNextCycleMetaPosition(position);
 
             return true;
         }
@@ -129,69 +132,60 @@ class SingleChronicleQueueStore implements WireStore {
         return false;
     }
 
-    /**
-     *
-     * @param marshallable
-     * @return
-     * @throws IOException
-     *
-     * //TODO: check meta-data for rolling
-     */
     @Override
-    public long append(@NotNull final WriteMarshallable marshallable) throws IOException {
-        withLock((store, position) ->
-            bounds.setWritePositionIfGreater(
-                Wires.writeData(
-                    wirePool.acquireForWrite(store, position),
-                    marshallable))
-        );
+    public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
+        context = acquireLock(context);
+        bounds.setWritePositionIfGreater(Wires.writeData(context.wire(), marshallable));
 
         return indexing.incrementLastIndex();
     }
 
     @Override
-    public long append(@NotNull final Bytes bytes) throws IOException {
+    public long append(@NotNull WriteContext context, @NotNull final Bytes bytes) throws IOException {
         final int size = toIntU30(bytes.length());
+        final long position = acquireLock(context, size).position();
 
-        withLock(
-            (store, position) -> {
-                store.write(position + 4, bytes);
-                store.compareAndSwapInt(position, size | Wires.NOT_READY, size);
-            },
-            size
-        );
+        context.store().write(position + 4, bytes);
+        context.store().compareAndSwapInt(position, size | Wires.NOT_READY, size);
 
         return indexing.incrementLastIndex();
     }
 
     /**
      *
-     * @param position
+     * @param context
      * @param reader
      * @return the new position, 0 if no data -position if roll
      */
     @Override
-    public long read(long position, @NotNull ReadMarshallable reader) throws IOException {
-        final BytesStore store = mappedFile.acquireByteStore(position);
-        final int spbHeader = store.readVolatileInt(position);
+    public long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException {
+        long position = context.position();
+        if (position > context.store().safeLimit()) {
+            context.store(mappedFile.acquireByteStore(position), position);
+        } else if(context.store().readLimit() == 0) {
+            context.store(mappedFile.acquireByteStore(position), position);
+        }
+
+        final int spbHeader = context.store().readVolatileInt(position);
         if(Wires.isNotInitialized(spbHeader)) {
             return WireConstants.NO_DATA;
         }
 
         if(Wires.isData(spbHeader) && Wires.isReady(spbHeader)) {
-            return Wires.readData(wirePool.acquireForRead(store, position), reader);
+            return Wires.readData(context.wire(position, builder.blockSize()), reader);
         } else if (Wires.isKnownLength(spbHeader)) {
             // In case of meta data, if we are found the "roll" meta, we returns
             // the next cycle (negative)
             final StringBuilder sb = WireConstants.SBP.acquireStringBuilder();
-            final ValueIn vi = wirePool.acquireForRead(store, position + 4).read(sb);
+            final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
 
             if("roll".contentEquals(sb)) {
                 return -vi.int32();
             } else {
                 // it it is meta-data and length is know, try a new read
-                position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
-                return read(position, reader);
+                //position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                context.position(position + Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE);
+                return read(context, reader);
             }
         }
 
@@ -256,7 +250,6 @@ class SingleChronicleQueueStore implements WireStore {
 
         this.builder = (SingleChronicleQueueBuilder)builder;
         this.mappedFile = mappedFile;
-        this.wirePool = new WirePool(this.builder.blockSize(), wireSupplier);
 
         if(created) {
             this.bounds.setWritePosition(length);
@@ -304,28 +297,27 @@ class SingleChronicleQueueStore implements WireStore {
         return Wires.toIntU30(len,"Document length %,d out of 30-bit int range.");
     }
 
-    protected void withLock(@NotNull BytesStoreFunction function)
+    protected WriteContext acquireLock(@NotNull WriteContext context)
             throws IOException {
-        withLock(function, 0x0);
+        return acquireLock(context, 0x0);
     }
 
-    protected void withLock(@NotNull BytesStoreFunction function, int size)
+    protected WriteContext acquireLock(@NotNull WriteContext context, int size)
             throws IOException {
 
-        long TIMEOUT_MS = 10_000; // 10 seconds.
-        long end = System.currentTimeMillis() + TIMEOUT_MS;
+        final long end = System.currentTimeMillis() + builder.appendTimeout();
+
         long writePosition = writePosition();
-        BytesStore store;
+        BytesStore store = context.store();
 
         for (; ;) {
-            checkRemainingForAppend(writePosition);
-
-            //TODO: a byte store should be provided by the appender
-            store = mappedFile.acquireByteStore(writePosition);
+            if (writePosition > store.safeLimit()) {
+                store = mappedFile.acquireByteStore(writePosition);
+            }
 
             if(acquireLock(store, writePosition, size)) {
-                function.apply(store, writePosition);
-                return;
+                context.store(store, writePosition);
+                return context;
             } else {
                 int spbHeader = store.readInt(writePosition);
                 if (Wires.isKnownLength(spbHeader)) {

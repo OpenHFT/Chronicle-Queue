@@ -105,6 +105,7 @@ public class Excerpts {
         private long cycle;
         private long index;
         private WireStore store;
+        private final WriteContext context;
 
         StoreAppender(
                 @NotNull AbstractChronicleQueue queue) throws IOException {
@@ -114,15 +115,16 @@ public class Excerpts {
             this.cycle = super.queue.lastCycle();
             this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
             this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
+            this.context = new WriteContext(queue.wireType());
         }
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            return index = store().append(writer);
+            return index = store().append(this.context, writer);
         }
 
         public long write(@NotNull Bytes bytes) throws IOException {
-            return index = store().append(bytes);
+            return index = store().append(this.context, bytes);
         }
 
         @Override
@@ -149,7 +151,7 @@ public class Excerpts {
             if (this.cycle != queue.cycle()) {
                 long nextCycle = queue.cycle();
                 if (this.store != null) {
-                    this.store.appendRollMeta(nextCycle);
+                    this.store.appendRollMeta(this.context, nextCycle);
                     this.queue.release(this.store);
                 }
 
@@ -175,8 +177,8 @@ public class Excerpts {
 
         private long cycle;
         private long index;
-        private long position;
         private WireStore store;
+        private final ReadContext context;
 
         //TODO: refactor
         private boolean toStart;
@@ -186,8 +188,8 @@ public class Excerpts {
             this.cycle = -1;
             this.index = -1;
             this.store = null;
-            this.position = 0;
             this.toStart = false;
+            this.context = new ReadContext(queue.wireType());
         }
 
         @Override
@@ -202,9 +204,9 @@ public class Excerpts {
                 cycle(lastCycle, WireStore::readPosition);
             }
 
-            long position = store.read(this.position, reader);
+            long position = store.read(this.context, reader);
             if(position > 0) {
-                this.position = position;
+                this.context.position(position);
                 this.index++;
 
                 return true;
@@ -246,7 +248,7 @@ public class Excerpts {
 
             long idxpos = this.store.positionForIndex(index);
             if(idxpos != WireConstants.NO_INDEX) {
-                this.position = idxpos;
+                this.context.position(idxpos);
                 this.index = index - 1;
 
                 return true;
@@ -300,7 +302,7 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
-                this.position = positionSupplier.applyAsLong(this.store);
+                this.context.position(positionSupplier.applyAsLong(this.store));
             }
         }
     }
