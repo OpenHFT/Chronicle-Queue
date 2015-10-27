@@ -58,7 +58,7 @@ public class ReadMarshableRingBufferTest {
                     data.readPosition(0);
                     data.readLimit(len);
                     bytesRingBuffer.offer(data);
-                    System.out.println(i);
+
                     final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
                     bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
 
