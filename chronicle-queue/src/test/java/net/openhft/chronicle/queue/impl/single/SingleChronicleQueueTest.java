@@ -23,7 +23,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.IndexedSingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer;
-import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -556,10 +555,4 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
     }
-
-
-    enum Field implements WireKey {
-        TEXT
-    }
-
 }
