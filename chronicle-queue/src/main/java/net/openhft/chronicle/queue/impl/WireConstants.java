@@ -15,13 +15,9 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.pool.StringBuilderPool;
-
 public class WireConstants {
-    public static final StringBuilderPool SBP = new StringBuilderPool();
-
-    public static final int NO_DATA               = 0;
-    public static final int NO_INDEX              = -1;
-    public static final long HEADER_OFFSET        = 0;
-    public static final long SPB_DATA_HEADER_SIZE = 4;
+    public static final long NO_DATA = 0L;
+    public static final long NO_INDEX = -1L;
+    public static final long HEADER_OFFSET = 0L;
+    public static final long SPB_DATA_HEADER_SIZE = 4L;
 }

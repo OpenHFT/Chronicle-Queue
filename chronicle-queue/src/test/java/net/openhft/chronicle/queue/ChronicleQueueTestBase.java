@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.wire.WireKey;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -57,6 +58,14 @@ public class ChronicleQueueTestBase {
             }
         }
     };
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    public static enum TestKey implements WireKey {
+        test
+    }
 
     // *************************************************************************
     //

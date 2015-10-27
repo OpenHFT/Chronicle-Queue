@@ -17,53 +17,121 @@
 package net.openhft.chronicle.queue.impl;
 
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
+
+import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
+import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 public class Excerpts {
 
-    /**
-     * Appender
-     */
-    static class Appender implements ExcerptAppender {
-        private final AbstractChronicleQueue queue;
+    // *************************************************************************
+    //
+    // APPENDERS
+    //
+    // *************************************************************************
 
-        private long cycle;
-        private long index;
-        private WireStore store;
+    static class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
+        protected final T queue;
 
-        Appender(@NotNull AbstractChronicleQueue queue) throws IOException {
+        public DefaultAppender(@NotNull T queue) {
             this.queue = queue;
-
-            this.cycle = queue.lastCycle();
-            this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
-            this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
         }
 
         @Override
         public long writeDocument(WriteMarshallable writer) throws IOException {
-            if(this.cycle != queue.cycle()) {
+            throw new UnsupportedOperationException();
+        }
 
-                long nextCycle = queue.cycle();
-                if(this.store != null) {
-                    this.store.appendRollMeta(nextCycle);
-                    this.queue.release(this.store);
-                }
+        @Override
+        public long index() {
+            throw new UnsupportedOperationException();
+        }
 
-                this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle);
-            }
+        @Override
+        public long cycle() {
+            throw new UnsupportedOperationException();
+        }
 
-            index = store.append(writer);
+        @Override
+        public ChronicleQueue queue() {
+            return this.queue;
+        }
+    }
 
-            return index;
+    /**
+     * Delegates the appender
+     */
+    public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
+        private final Bytes<ByteBuffer> buffer;
+        private final Wire wire;
+        private final Consumer<Bytes> consumer;
+
+        public DelegatedAppender(
+                @NotNull ChronicleQueue queue,
+                @NotNull Consumer<Bytes> consumer) throws IOException {
+
+            super(queue);
+
+            this.buffer = elasticByteBuffer();
+            this.wire = queue.wireType().apply(this.buffer);
+            this.consumer = consumer;
+        }
+
+        @Override
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+            this.buffer.clear();
+            writer.writeMarshallable(wire);
+            this.buffer.readLimit(buffer.writePosition());
+            this.buffer.readPosition(0);
+            this.buffer.writePosition(this.buffer.readLimit());
+            this.buffer.writeLimit(this.buffer.readLimit());
+
+            consumer.accept(this.buffer);
+
+            return WireConstants.NO_INDEX;
+        }
+    }
+
+    /**
+     * StoreAppender
+     */
+    public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
+        private long cycle;
+        private long index;
+        private WireStore store;
+        private final WriteContext context;
+
+        StoreAppender(
+                @NotNull AbstractChronicleQueue queue) throws IOException {
+
+            super(queue);
+
+            this.cycle = super.queue.lastCycle();
+            this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
+            this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
+            this.context = new WriteContext(queue.wireType());
+        }
+
+        @Override
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+            return index = store().append(this.context, writer);
+        }
+
+        public long write(@NotNull Bytes bytes) throws IOException {
+            return index = store().append(this.context, bytes);
         }
 
         @Override
@@ -84,30 +152,52 @@ public class Excerpts {
         public ChronicleQueue queue() {
             return this.queue;
         }
+
+        @ForceInline
+        private WireStore store() throws IOException {
+            if (this.cycle != queue.cycle()) {
+                long nextCycle = queue.cycle();
+                if (this.store != null) {
+                    this.store.appendRollMeta(this.context, nextCycle);
+                    this.queue.release(this.store);
+                }
+
+                this.cycle = nextCycle;
+                this.store = queue.storeForCycle(this.cycle);
+                this.context.store(noBytesStore(), 0, 0);
+            }
+
+            return this.store;
+        }
     }
 
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer
      */
-    static class Tailer implements ExcerptTailer {
+    public static class StoreTailer implements ExcerptTailer {
         private final AbstractChronicleQueue queue;
 
         private long cycle;
         private long index;
-        private long position;
         private WireStore store;
+        private final ReadContext context;
 
         //TODO: refactor
         private boolean toStart;
 
-        Tailer(@NotNull AbstractChronicleQueue queue) throws IOException {
+        StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = -1;
             this.index = -1;
             this.store = null;
-            this.position = 0;
             this.toStart = false;
+            this.context = new ReadContext(queue.wireType());
         }
 
         @Override
@@ -122,9 +212,9 @@ public class Excerpts {
                 cycle(lastCycle, WireStore::readPosition);
             }
 
-            long position = store.read(this.position, reader);
+            long position = store.read(this.context, reader);
             if(position > 0) {
-                this.position = position;
+                this.context.position(position);
                 this.index++;
 
                 return true;
@@ -166,8 +256,8 @@ public class Excerpts {
 
             long idxpos = this.store.positionForIndex(index);
             if(idxpos != WireConstants.NO_INDEX) {
-                this.position = idxpos;
-                this.index = index -1;
+                this.context.position(idxpos);
+                this.index = index - 1;
 
                 return true;
             }
@@ -183,9 +273,9 @@ public class Excerpts {
 
         @Override
         public ExcerptTailer toStart() throws IOException {
-            long cycle = queue.firstCycle();
-            if(cycle > 0) {
-                cycle(cycle, WireStore::readPosition);
+            long firstCycle = queue.firstCycle();
+            if(firstCycle > 0) {
+                cycle(firstCycle, WireStore::readPosition);
                 this.toStart = false;
             } else {
                 this.toStart = true;
@@ -196,9 +286,9 @@ public class Excerpts {
 
         @Override
         public ExcerptTailer toEnd() throws IOException {
-            long cycle = queue.firstCycle();
-            if(cycle > 0) {
-                cycle(cycle, WireStore::writePosition);
+            long firstCycle = queue.firstCycle();
+            if(firstCycle > 0) {
+                cycle(firstCycle, WireStore::writePosition);
             }
 
             this.toStart = false;
@@ -220,7 +310,8 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
-                this.position = positionSupplier.applyAsLong(this.store);
+                this.context.position(positionSupplier.applyAsLong(this.store));
+                this.context.store(noBytesStore(), 0, 0);
             }
         }
     }

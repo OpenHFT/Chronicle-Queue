@@ -23,7 +23,6 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.IndexedSingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer;
-import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -38,15 +37,10 @@ import java.util.Collection;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
-
-    enum TestKey implements WireKey {
-        test
-    }
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -55,10 +49,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             {WireType.BINARY}
         });
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     private final WireType wireType;
 
@@ -70,6 +60,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     // *************************************************************************
+    //
+    // TESTS
     //
     // *************************************************************************
 
@@ -115,30 +107,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
             assertEquals(n, tailer.index());
         }
-    }
-
-    /*
-     * Tailer doesn't work if created before the appender
-     *
-     * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
-     */
-    @Test
-    public void testQUEUE28() throws IOException {
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(this.wireType)
-                .build();
-
-        final ExcerptTailer tailer = queue.createTailer();
-        assertFalse(tailer.readDocument(r ->
-            r.read(TestKey.test).int32()
-        ));
-
-        final ExcerptAppender appender = queue.createAppender();
-        appender.writeDocument(w -> w.write(TestKey.test).int32(1));
-
-        assertTrue(tailer.readDocument(r ->
-            r.read(TestKey.test).int32()
-        ));
     }
 
     @Test
@@ -587,10 +555,4 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
     }
-
-
-    enum Field implements WireKey {
-        TEXT
-    }
-
 }

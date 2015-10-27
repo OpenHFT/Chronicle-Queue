@@ -34,53 +34,63 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
-     * @return
+     * @return the cycle this store refers to
      */
     long cycle();
 
     /**
      *
-     * @return
+     * @return the first readable position
      */
     long readPosition();
 
     /**
      *
-     * @return
+     * @return the first writable position
      */
     long writePosition();
 
     /**
      *
-     * @return
+     * @return the last index
      */
     long lastIndex();
 
-
     /**
      *
+     * @param context
      * @param cycle
      * @return
      * @throws IOException
      */
-    boolean appendRollMeta(long cycle) throws IOException;
+    boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException;
 
     /**
      *
-     * @param writer
+     * @param context
+     * @param marshallable
      * @return
      * @throws IOException
      */
-    long append(@NotNull WriteMarshallable writer) throws IOException;
+    long append(@NotNull WriteContext context, @NotNull WriteMarshallable marshallable) throws IOException;
 
     /**
      *
-     * @param position
+     * @param context
+     * @param bytes
+     * @return
+     * @throws IOException
+     */
+    long append(@NotNull WriteContext context, @NotNull Bytes bytes) throws IOException;
+
+    /**
+     *
+     * @param context
      * @param reader
      * @return
      * @throws IOException
      */
-    long read(long position, @NotNull ReadMarshallable reader) throws IOException;
+    long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException;
 
     /**
      *

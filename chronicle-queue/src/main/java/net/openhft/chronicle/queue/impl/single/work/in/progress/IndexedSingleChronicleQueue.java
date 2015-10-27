@@ -228,7 +228,7 @@ public class IndexedSingleChronicleQueue extends AbstractChronicle {
     }
 
     @Override
-    public Class<? extends Wire> wireType() {
+    public WireType wireType() {
         throw new UnsupportedOperationException();
     }
 

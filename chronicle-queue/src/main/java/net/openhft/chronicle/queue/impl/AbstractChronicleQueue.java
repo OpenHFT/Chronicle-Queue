@@ -19,7 +19,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,12 +32,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.Appender(this);
+        return new Excerpts.StoreAppender(this);
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new Excerpts.Tailer(this);
+        return new Excerpts.StoreTailer(this);
     }
 
     @NotNull
@@ -62,8 +61,6 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-
-
     @Override
     public long lastWrittenIndex() {
         throw new UnsupportedOperationException("Not implemented");
@@ -74,6 +71,10 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @Override
+    public WireType wireType() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
     /**
      *
@@ -107,11 +108,15 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      */
     protected abstract long lastCycle();
 
-    public abstract WireType wireType();
-
+    /**
+     *
+     * @return
+     */
     public abstract long indexToIndex();
 
-    public abstract Wire wire();
-
+    /**
+     *
+     * @return
+     */
     public abstract long newIndex();
 }
