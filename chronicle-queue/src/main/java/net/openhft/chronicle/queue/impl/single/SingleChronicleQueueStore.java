@@ -121,7 +121,7 @@ class SingleChronicleQueueStore implements WireStore {
             long position = acquireLock(context).position();
 
             Wires.writeMeta(
-                 context.wire(),
+                 context.wire,
                  w -> w.write(MetaDataField.roll).int32(cycle));
 
             roll.setNextCycleMetaPosition(position);
