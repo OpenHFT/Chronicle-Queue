@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Test
     public void test() throws Exception{
-        warmup(WireType.BINARY, Integer.getInteger("warmupIterations", 1_000_000));
-
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
