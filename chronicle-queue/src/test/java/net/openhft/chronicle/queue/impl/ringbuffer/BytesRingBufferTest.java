@@ -21,23 +21,17 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.BytesStore.wrap;
 import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 /**
  * @author Rob Austin.
@@ -45,40 +39,42 @@ import static org.junit.Assert.fail;
 //@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
 public class BytesRingBufferTest {
 
-    private final String EXPECTED = "123456789";
-    private final String EXPECTED_VALUE = "value=";
-    Bytes<ByteBuffer> input = wrap(ByteBuffer.allocate(12)).bytesForRead();
-    Bytes<ByteBuffer> output;
-    Bytes<ByteBuffer> out;
-    NativeBytesStore outBuffer;
+    private final String EXPECTED = "hello world";
 
-    @Before
-    public void setup() {
-        try {
-            outBuffer = nativeStoreWithFixedCapacity(12);
-            out = outBuffer.bytesForWrite();
-            out.writeUTFΔ(EXPECTED);
-            output = outBuffer.bytesForRead();
-            output.readLimit(out.writeLimit());
-        } catch (Throwable e) {
-            e.printStackTrace();
-            fail();
-        }
-    }
+    private Bytes<ByteBuffer> input = wrap(ByteBuffer.allocate(12)).bytesForRead();
 
-    @After
-    public void after() {
-        outBuffer.release();
+    /**
+     * @return sample data
+     */
+    private Bytes<ByteBuffer> data() {
+        final Bytes<ByteBuffer> b = elasticByteBuffer();
+        b.writeUtf8(EXPECTED);
+        final long l = b.writePosition();
+        b.readLimit(l);
+        b.readPosition(0);
+        return b;
     }
 
     @Test
-    public void testWriteAndRead3SingleThreadedWrite() throws Exception {
+    public void testWriteAndRead() throws Exception {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+            bytesRingBuffer.clear();
+            bytesRingBuffer.offer(data());
+            Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
+            assertEquals(EXPECTED, actual.readUTFΔ());
+        }
+    }
+
+
+    @Test
+    public void testWriteAndReadSingleThreadedWriteManyTimes() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
                 (150)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-            bytesRingBuffer.clear();
 
+            bytesRingBuffer.clear();
             for (int i = 0; i < 10000; i++) {
 
                 bytesRingBuffer.offer(data());
@@ -92,30 +88,6 @@ public class BytesRingBufferTest {
         }
     }
 
-
-    private Bytes<ByteBuffer> data() {
-        final Bytes<ByteBuffer> b = elasticByteBuffer();
-        b.writeUtf8(EXPECTED);
-        final long l = b.writePosition();
-        b.readLimit(l);
-        b.readPosition(0);
-        return b;
-    }
-
-    @Test
-    public void testSimpledSingleThreadedWriteRead() throws Exception {
-
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (150)) {
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-            bytesRingBuffer.clear();
-
-            bytesRingBuffer.offer(data());
-            Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
-            assertEquals(EXPECTED, actual.readUTFΔ());
-        }
-    }
 
     @Test
     public void testPollWithNoData() throws Exception {
@@ -131,119 +103,85 @@ public class BytesRingBufferTest {
 
     }
 
-    @Test
-    public void testWriteAndRead() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (150)) {
-            nativeStore.zeroOut(0, nativeStore.writeLimit());
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-            bytesRingBuffer.clear();
-            bytesRingBuffer.offer(data());
-            Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
-            assertEquals(EXPECTED, actual.readUTFΔ());
-        }
-    }
-
 
     @Test
-    public void testFlowAroundSingleThreadedWriteDifferentSizeBuffers2() throws Exception {
-        for (int j = 123 + 34; j < 200; j++) {
+    public void testWithDifferentBufferSizes() throws Exception {
+        for (int j = 50; j < 200; j++) {
             try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(j)) {
 
                 final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
                 bytesRingBuffer.clear();
-                bytesRingBuffer.offer(data());
-                Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
-                assertEquals(EXPECTED, actual.readUTFΔ());
-            }
-        }
-    }
-
-
-    @Test
-    public void testWriteAndRead3SingleThreadedWrite3() throws Exception {
-
-        // ExecutorService executorService = Executors.newFixedThreadPool(2);
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (1000)) {
-
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-            bytesRingBuffer.clear();
-
-            for (int i = 0; i < 100; i++) {
-
-                bytesRingBuffer.offer(data());
-
-                Bytes bytes = bytesRingBuffer.take(maxSize -> {
-                    Bytes<ByteBuffer> clear = input.clear();
-                    return clear;
-                });
-
-
-                assertEquals(EXPECTED, bytes.readUTFΔ());
+                for (int i = 0; i < 1000; i++) {
+                    bytesRingBuffer.offer(data());
+                    Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
+                    assertEquals(EXPECTED, actual.readUTFΔ());
+                }
 
             }
         }
     }
 
 
+    /**
+     * one writer thread one reader thread, writer if faster than reader
+     *
+     * @throws Exception if something bad happens
+     */
     @Test
-    public void testMultiThreadedFasterWriterThanReader() throws Exception {
-        AtomicBoolean shutdown = new AtomicBoolean();
+    public void testMultiThreadedFasterWriterThanReader() throws Throwable {
+        final AtomicBoolean shutdown = new AtomicBoolean();
 
-        Bytes data = Bytes.elasticByteBuffer();
-        data.writeUtf8(EXPECTED);
-        final int max = 100;
-        final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(max);
+        final int numberOfIterations = 100;
+        final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
 
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
-            ExecutorService executorService = Executors.newFixedThreadPool(2);
-            executorService.submit(() -> {
+            final ExecutorService executorService = Executors.newFixedThreadPool(2);
+            final Future<Throwable> f1 = executorService.submit(() -> {
+
                 for (; !shutdown.get(); ) {
                     try {
-                        if (bytesRingBuffer.apply(b -> {
-
-                            final String e = b.readUTFΔ();
-
-                            if (e != null)
-                                q.offer(e);
-
-                        }) == 0)
+                        if (bytesRingBuffer.apply(b -> q.offer(b.readUTFΔ())) == 0)
                             Thread.sleep(1);
 
-
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        return e;
                     }
 
                 }
+                return null;
             });
 
-            executorService.submit(() -> {
+
+            final Future<Throwable> f2 = executorService.submit(() -> {
                 for (; !shutdown.get(); ) {
                     try {
                         if (!bytesRingBuffer.offer(data()))
                             Thread.sleep(2);
-                        else
-                            Thread.sleep(2);
-                        // System.out.println("written");
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        return e;
                     }
+
                 }
+                return null;
             });
 
-
-            for (int i = 0; i < max; i++) {
-                Assert.assertEquals(EXPECTED, q.poll(10000000, TimeUnit.SECONDS));
+            for (int i = 0; i < numberOfIterations; i++) {
+                Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
             }
+
             shutdown.set(true);
-            Thread.sleep(3);
+
+            final Throwable t = f1.get();
+            if (t != null)
+                throw t;
+
+            final Throwable t2 = f2.get();
+            if (t2 != null)
+                throw t2;
+
             executorService.shutdownNow();
             executorService.awaitTermination(1, TimeUnit.SECONDS);
 
@@ -252,77 +190,64 @@ public class BytesRingBufferTest {
 
 
     @Test
-    public void testMultiThreadedFasterReaderThanWriter() throws Exception {
-        AtomicBoolean shutdown = new AtomicBoolean();
+    public void testMultiThreadedFasterReaderThanWriter() throws Throwable {
+        final AtomicBoolean shutdown = new AtomicBoolean();
 
-        Bytes data = Bytes.elasticByteBuffer();
-        data.writeUtf8(EXPECTED);
-        final int max = 100;
-        final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(max);
+        final int numberOfIterations = 100;
+        final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
+
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
-            ExecutorService executorService = Executors.newFixedThreadPool(2);
-            executorService.submit(() -> {
+            final ExecutorService executorService = Executors.newFixedThreadPool(2);
+            final Future<Throwable> f1 = executorService.submit(() -> {
+
                 for (; !shutdown.get(); ) {
                     try {
-                        if (bytesRingBuffer.apply(b -> {
+                        if (bytesRingBuffer.apply(b -> q.offer(b.readUTFΔ())) == 0)
+                            Thread.sleep(2);
 
-                            final String e = b.readUTFΔ();
-
-                            if (e != null)
-                                q.offer(e);
-
-                        }) == 0)
-                            Thread.sleep(3);
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        return e;
                     }
+
                 }
+                return null;
             });
 
-            executorService.submit(() -> {
+
+            final Future<Throwable> f2 = executorService.submit(() -> {
                 for (; !shutdown.get(); ) {
                     try {
                         if (!bytesRingBuffer.offer(data()))
                             Thread.sleep(1);
 
-                        // System.out.println("written");
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        return e;
                     }
+
                 }
-                ;
+                return null;
             });
 
-            for (int i = 0; i < max; i++) {
-                Assert.assertEquals(EXPECTED, q.poll(10000000, TimeUnit.SECONDS));
-
+            for (int i = 0; i < numberOfIterations; i++) {
+                Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
             }
 
-
             shutdown.set(true);
-            Thread.sleep(3);
+
+            final Throwable t = f1.get();
+            if (t != null)
+                throw t;
+
+            final Throwable t2 = f2.get();
+            if (t2 != null)
+                throw t2;
+
             executorService.shutdownNow();
             executorService.awaitTermination(1, TimeUnit.SECONDS);
 
-
-        }
-    }
-
-    @Test
-    public void testWriteAndReadX() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity(150)) {
-            nativeStore.zeroOut(0, nativeStore.writeLimit());
-
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
-
-            for (int i = 0; i < 2; i++) {
-                bytesRingBuffer.offer(data());
-                bytesRingBuffer.apply(b -> System.out.println("Got: " + b));
-
-            }
         }
     }
 
