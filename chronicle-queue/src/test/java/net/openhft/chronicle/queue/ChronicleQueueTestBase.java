@@ -110,8 +110,6 @@ public class ChronicleQueueTestBase {
         for (int i = 0; i < iterations; i++) {
             tailer.readDocument(r -> r.read(TestKey.test).text());
         }
-
-        queue.close();
     }
 
     // *************************************************************************
