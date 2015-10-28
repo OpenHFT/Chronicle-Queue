@@ -1,51 +1,93 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.affinity.Affinity;
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.*;
 
 /**
  * Results 27/10/2015 running on a MBP
  * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
  */
-public class ChronicleQueueLatencyDistribution {
+public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Test
     public void test() throws Exception{
+        warmup(WireType.BINARY, 1_000_000);
+
         Histogram histogram = new Histogram();
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder("/tmp/test")
+        ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(WireType.BINARY)
                 .blockSize(1_000_000_000)
                 .build();
 
         ExcerptAppender appender = queue.createAppender();
         ExcerptTailer tailer = queue.createTailer();
-        MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
-        new Thread(() -> {
-            while(true) {
-                try {
-                    tailer.readDocument(myReadMarshallable);
-                } catch (IOException e) {
-                    e.printStackTrace();
+
+        Thread tailerThread = new Thread(() -> {
+            MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
+            AffinityLock lock = null;
+            try {
+                if(Boolean.getBoolean("enableTailerAffinity")) {
+                    lock = Affinity.acquireLock();
+                }
+
+                while (true) {
+                    try {
+                        tailer.readDocument(myReadMarshallable);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+            } finally {
+                if(lock != null) {
+                    lock.release();
                 }
             }
-        }).start();
+        });
 
-        TestTrade bt = new TestTrade();
-        MyWriteMarshallable myWriteMarshallable = new MyWriteMarshallable(bt);
-        for (int i = 0; i < 10_000_000; i++) {
-            Jvm.busyWaitMicros(5);
-            bt.setTime(System.nanoTime());
-            appender.writeDocument(myWriteMarshallable);
-        }
+        Thread appenderThread = new Thread(() -> {
+            AffinityLock lock = null;
+            try {
+                if(Boolean.getBoolean("enableAppenderAffinity")) {
+                    lock = Affinity.acquireLock();
+                }
+
+                TestTrade bt = new TestTrade();
+                MyWriteMarshallable myWriteMarshallable = new MyWriteMarshallable(bt);
+                for (int i = 0; i < 10_000_000; i++) {
+                    Jvm.busyWaitMicros(5);
+                    bt.setTime(System.nanoTime());
+                    appender.writeDocument(myWriteMarshallable);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if(lock != null) {
+                    lock.release();
+                }
+            }
+        });
+
+        tailerThread.start();
+
+        appenderThread.start();
+        appenderThread.join();
 
         //Pause to allow tailer to catch up (if needed)
         Jvm.pause(500);

@@ -16,9 +16,15 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Rule;
-import org.junit.rules.*;
+import org.junit.rules.ErrorCollector;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +92,26 @@ public class ChronicleQueueTestBase {
         } catch(IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    protected void warmup(WireType type, int iterations) throws IOException {
+        ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+            .wireType(type)
+            .blockSize(640_000)
+            .build();
+
+        ExcerptAppender appender = queue.createAppender();
+        ExcerptTailer tailer = queue.createTailer();
+
+        for (int i = 0; i < iterations; i++) {
+            appender.writeDocument(w -> w.write(TestKey.test).text("warmup"));
+        }
+
+        for (int i = 0; i < iterations; i++) {
+            tailer.readDocument(r -> r.read(TestKey.test).text());
+        }
+
+        queue.close();
     }
 
     // *************************************************************************
