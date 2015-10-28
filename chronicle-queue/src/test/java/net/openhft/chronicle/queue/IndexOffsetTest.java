@@ -22,21 +22,18 @@ package net.openhft.chronicle.queue;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer.IndexOffset.*;
+import static net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer.IndexOffset.toAddress0;
+import static net.openhft.chronicle.queue.impl.single.work.in.progress.Indexer.IndexOffset.toAddress1;
 
 public class IndexOffsetTest {
 
-
     @Test
     public void testFindExcerpt2() throws Exception {
-
         Assert.assertEquals(1 * 8, toAddress0(1L << (17L + 6L)));
-
     }
 
     @Test
     public void testFindExcerpt() throws Exception {
-
         Assert.assertEquals(1 * 8, toAddress1(64));
         Assert.assertEquals(1 * 8, toAddress1(65));
         Assert.assertEquals(2 * 8, toAddress1(128));
