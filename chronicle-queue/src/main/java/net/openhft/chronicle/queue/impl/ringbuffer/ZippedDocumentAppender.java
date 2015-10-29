@@ -92,7 +92,7 @@ public class ZippedDocumentAppender implements Closeable {
 
     /**
      * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser}
-     * and write these zipped bytes to {@code chronicleQueue}
+     * and writeBytes these zipped bytes to {@code chronicleQueue}
      */
     private class Consumer implements BytesRingBuffer.BytesProvider, Runnable {
 

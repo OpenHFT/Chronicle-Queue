@@ -105,7 +105,7 @@ public class Header implements Marshallable {
                 .write(Field.writeByte).int64forBinding(PADDED_SIZE)
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
-                // .write(Field.host).text(host)
+                // .writeBytes(Field.host).text(host)
                 .write(Field.compression).text(compression)
                 .write(Field.indexCount).int32(indexCount)
                 .write(Field.indexSpacing).int32(indexSpacing)

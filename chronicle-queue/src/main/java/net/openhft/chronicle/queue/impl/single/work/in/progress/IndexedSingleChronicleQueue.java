@@ -57,7 +57,7 @@ public class IndexedSingleChronicleQueue extends AbstractChronicle {
     static final int META_DATA = Wires.META_DATA;
     static final int LENGTH_MASK = Wires.LENGTH_MASK;
     static final int MAX_LENGTH = LENGTH_MASK;
-    // don't write to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
+    // don't writeBytes to this without reviewing net.openhft.chronicle.queue.impl.SingleChronicleQueue.casMagicOffset
     private static final long MAGIC_OFFSET = 0L;
     private static final Logger LOG = LoggerFactory.getLogger(IndexedSingleChronicleQueue.class.getName());
     final Header header = new Header();

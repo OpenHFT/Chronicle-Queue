@@ -18,7 +18,9 @@ package net.openhft.chronicle.queue.impl;
 
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.VanillaBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -31,7 +33,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 
@@ -43,7 +44,7 @@ public class Excerpts {
     //
     // *************************************************************************
 
-    static class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
+    public static class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
         protected final T queue;
 
         public DefaultAppender(@NotNull T queue) {
@@ -52,6 +53,16 @@ public class Excerpts {
 
         @Override
         public long writeDocument(WriteMarshallable writer) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long writeBytes(WriteBytesMarshallable marshallable) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long writeBytes(Bytes<?> bytes) throws IOException {
             throw new UnsupportedOperationException();
         }
 
@@ -77,11 +88,11 @@ public class Excerpts {
     public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
         private final Bytes<ByteBuffer> buffer;
         private final Wire wire;
-        private final Consumer<Bytes> consumer;
+        private final ThrowingAcceptor<Bytes, IOException> consumer;
 
         public DelegatedAppender(
                 @NotNull ChronicleQueue queue,
-                @NotNull Consumer<Bytes> consumer) throws IOException {
+                @NotNull ThrowingAcceptor<Bytes, IOException> consumer) throws IOException {
 
             super(queue);
 
@@ -90,16 +101,41 @@ public class Excerpts {
             this.consumer = consumer;
         }
 
+        public DelegatedAppender(
+                @NotNull ChronicleQueue queue,
+                @NotNull ExcerptAppender appender) throws IOException {
+
+            super(queue);
+
+            this.buffer = elasticByteBuffer();
+            this.wire = queue.wireType().apply(this.buffer);
+            this.consumer = appender::writeBytes;
+        }
+
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             this.buffer.clear();
-            writer.writeMarshallable(wire);
-            this.buffer.readLimit(buffer.writePosition());
-            this.buffer.readPosition(0);
-            this.buffer.writePosition(this.buffer.readLimit());
-            this.buffer.writeLimit(this.buffer.readLimit());
+            writer.writeMarshallable(this.wire);
 
-            consumer.accept(this.buffer);
+            return writeBytes(this.buffer);
+        }
+
+        @Override
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+            this.buffer.clear();
+            marshallable.writeMarshallable(this.buffer);
+
+            return writeBytes(this.buffer);
+        }
+
+        @Override
+        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
+            bytes.readLimit(bytes.writePosition());
+            bytes.readPosition(0);
+            bytes.writePosition(bytes.readLimit());
+            bytes.writeLimit(bytes.readLimit());
+
+            consumer.accept(bytes);
 
             return WireConstants.NO_INDEX;
         }
@@ -114,7 +150,7 @@ public class Excerpts {
         private WireStore store;
         private final WriteContext context;
 
-        StoreAppender(
+        public StoreAppender(
                 @NotNull AbstractChronicleQueue queue) throws IOException {
 
             super(queue);
@@ -130,7 +166,13 @@ public class Excerpts {
             return index = store().append(this.context, writer);
         }
 
-        public long write(@NotNull Bytes bytes) throws IOException {
+        @Override
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+            return index = store().append(this.context, marshallable);
+        }
+
+        @Override
+        public long writeBytes(@NotNull Bytes bytes) throws IOException {
             return index = store().append(this.context, bytes);
         }
 
@@ -191,7 +233,7 @@ public class Excerpts {
         //TODO: refactor
         private boolean toStart;
 
-        StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
+        public StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
             this.cycle = -1;
             this.index = -1;
@@ -201,7 +243,7 @@ public class Excerpts {
         }
 
         @Override
-        public boolean readDocument(ReadMarshallable reader) throws IOException {
+        public boolean readDocument(@NotNull ReadMarshallable reader) throws IOException {
             if(this.store == null) {
                 long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
                 if(lastCycle == -1) {
@@ -225,6 +267,36 @@ public class Excerpts {
 
                 // try to read from new cycle
                 return readDocument(reader);
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
+            if(this.store == null) {
+                long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
+                if(lastCycle == -1) {
+                    return false;
+                }
+
+                //TODO: what should be done at the beginning ? toEnd/toStart
+                cycle(lastCycle);
+                context(store::acquireBytesAtReadPositionForRead);
+            }
+
+            long position = store.read(this.context, marshallable);
+            if(position > 0) {
+                this.index++;
+
+                return true;
+            } else if(position < 0) {
+                // roll detected, move to next cycle;
+                cycle(Math.abs(position));
+                context(store::acquireBytesAtReadPositionForRead);
+
+                // try to read from new cycle
+                return readBytes(marshallable);
             }
 
             return false;

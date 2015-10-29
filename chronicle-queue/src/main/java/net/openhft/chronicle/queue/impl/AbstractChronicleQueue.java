@@ -32,12 +32,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.StoreAppender(this);
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new Excerpts.StoreTailer(this);
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @NotNull

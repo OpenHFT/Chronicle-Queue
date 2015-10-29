@@ -17,7 +17,9 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.VanillaBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
@@ -110,6 +112,15 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     /**
      *
      * @param context
+     * @param marshallable
+     * @return
+     * @throws IOException
+     */
+    long append(@NotNull WriteContext context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
+
+    /**
+     *
+     * @param context
      * @param bytes
      * @return
      * @throws IOException
@@ -124,6 +135,15 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @throws IOException
      */
     long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException;
+
+    /**
+     *
+     * @param context
+     * @param reader
+     * @return
+     * @throws IOException
+     */
+    long read(@NotNull ReadContext context, @NotNull ReadBytesMarshallable reader) throws IOException;
 
     /**
      *

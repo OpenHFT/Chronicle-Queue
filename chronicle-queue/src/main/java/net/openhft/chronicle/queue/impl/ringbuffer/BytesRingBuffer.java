@@ -87,7 +87,7 @@ public class BytesRingBuffer {
                 if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
                     return false;
 
-                // write the size
+                // writeBytes the size
                 long len = bytes0.readLimit();
 
                 long messageLen = SIZE + FLAG + len;
@@ -98,7 +98,7 @@ public class BytesRingBuffer {
                 if (!header.compareAndSetWriteLocation(writeLocation, LOCKED))
                     continue;
 
-                // we have to set the busy fag before the write location for the reader
+                // we have to set the busy fag before the writeBytes location for the reader
                 // this is why we have the compareAndSet above to ensure that only one thread
                 // gets in here
                 final long flagLoc = offset;
@@ -107,10 +107,10 @@ public class BytesRingBuffer {
                 if (!header.compareAndSetWriteLocation(-1, writeLocation + messageLen))
                     continue;
 
-                // write a size
+                // writeBytes a size
                 offset += this.bytes.writeLong(offset, len);
 
-                // write the data
+                // writeBytes the data
                 this.bytes.writeLong(offset, bytes0);
                 this.bytes.writeByte(flagLoc, States.READY.ordinal());
 
@@ -124,7 +124,7 @@ public class BytesRingBuffer {
     }
 
     /**
-     * @return spin loops to get a valid write location
+     * @return spin loops to get a valid writeBytes location
      */
     private long writeLocation() {
         long writeLocation;
@@ -186,7 +186,7 @@ public class BytesRingBuffer {
         final byte state = bytes.readByte(flag);
         offset += 1;
 
-        // the element is currently being written to, so let wait for the write to finish
+        // the element is currently being written to, so let wait for the writeBytes to finish
         if (state == States.BUSY.ordinal()) return 0;
 
         assert state == States.READY.ordinal() : " we are reading a message that we " +
@@ -235,7 +235,7 @@ public class BytesRingBuffer {
         final byte state = bytes.readVolatileByte(flag);
         offset += 1;
 
-        // the element is currently being written to, so let wait for the write to finish
+        // the element is currently being written to, so let wait for the writeBytes to finish
         if (state == States.BUSY.ordinal()) return null;
 
         assert state == States.READY.ordinal() : " we are reading a message that we " +
@@ -321,14 +321,14 @@ public class BytesRingBuffer {
         }
 
         /**
-         * @return the point at which you should not write any additional bits
+         * @return the point at which you should not writeBytes any additional bits
          */
         private long getWriteUpTo() {
             return writeUpToRef.getValue();
         }
 
         /**
-         * sets the point at which you should not write any additional bits
+         * sets the point at which you should not writeBytes any additional bits
          */
         private void setWriteUpTo(long value) {
             writeUpToRef.setOrderedValue(value);

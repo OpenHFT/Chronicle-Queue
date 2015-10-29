@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,6 +33,13 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @throws IOException if not able to read the chronicle file
      */
     boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
+
+    /**
+     * @param marshallable user to read the document
+     * @return {@code true} if successful
+     * @throws IOException if not able to read the chronicle file
+     */
+    boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException;
 
     /**
      *
