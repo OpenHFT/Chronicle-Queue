@@ -37,7 +37,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     private final NativeBytesStore store;
     private final BytesRingBuffer buffer;
-    private final Excerpts.StoreAppender storeAppender;
+    private final ExcerptAppender storeAppender;
     private final EventGroup eventGroup;
     private ExcerptAppender appender;
 
@@ -46,13 +46,9 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
         this.store = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
         this.store.zeroOut(0, this.store.writeLimit());
-
         this.buffer = new BytesRingBuffer(this.store);
         this.appender = null;
-
-        //HACK, need to be refactored
-        this.storeAppender = (Excerpts.StoreAppender)super.createAppender();
-
+        this.storeAppender = super.createAppender();
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(this::handleEvent);
         this.eventGroup.start();

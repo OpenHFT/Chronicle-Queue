@@ -196,71 +196,12 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException {
-        long position = context.bytes.readPosition();
-        if(context.bytes.readRemaining() == 0) {
-            mappedFile.acquireBytesForRead(position, context.bytes);
-        }
-
-        final int spbHeader = context.bytes.readVolatileInt(position);
-        if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
-            int len = Wires.lengthOf(spbHeader);
-            if(Wires.isData(spbHeader)) {
-                context.bytes.readSkip(SPB_DATA_HEADER_SIZE);
-                return readWire(context.wire, len, reader);
-            } else {
-                // In case of meta data, if we are found the "roll" meta, we returns
-                // the next cycle (negative)
-                final StringBuilder sb = Wires.acquireStringBuilder();
-                final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
-
-                if("roll".contentEquals(sb)) {
-                    return -vi.int32();
-                } else {
-                    context.bytes.readPosition(position + len + SPB_DATA_HEADER_SIZE);
-                    return read(context, reader);
-                }
-            }
-        }
-
-        return WireConstants.NO_DATA;
+        return read(context, this::readWireMarshallable, reader);
     }
 
     @Override
     public long read(@NotNull ReadContext context, @NotNull ReadBytesMarshallable reader) throws IOException {
-        long position = context.bytes.readPosition();
-        if(context.bytes.readRemaining() == 0) {
-            mappedFile.acquireBytesForRead(position, context.bytes);
-        }
-
-        final int spbHeader = context.bytes.readVolatileInt(position);
-        if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
-            int len = Wires.lengthOf(spbHeader);
-            if(Wires.isData(spbHeader)) {
-                context.bytes.readSkip(SPB_DATA_HEADER_SIZE);
-                final long readp = context.bytes.readPosition();
-                final long readl = context.bytes.readLimit();
-
-                reader.readMarshallable(context.bytes);
-                context.bytes.readPosition(readp + len);
-                context.bytes.readLimit(readl);
-
-                return readp + len;
-            } else {
-                // In case of meta data, if we are found the "roll" meta, we returns
-                // the next cycle (negative)
-                final StringBuilder sb = Wires.acquireStringBuilder();
-                final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
-
-                if("roll".contentEquals(sb)) {
-                    return -vi.int32();
-                } else {
-                    context.bytes.readPosition(position + len + SPB_DATA_HEADER_SIZE);
-                    return read(context, reader);
-                }
-            }
-        }
-
-        return WireConstants.NO_DATA;
+        return read(context, this::readBytesMarshallable, reader);
     }
 
     @Override
@@ -337,9 +278,6 @@ class SingleChronicleQueueStore implements WireStore {
     // Utilities
     // *************************************************************************
 
-    /**
-     *
-     */
     private synchronized void performRelease() {
         //TODO: implement
         try {
@@ -349,6 +287,60 @@ class SingleChronicleQueueStore implements WireStore {
         } catch(IOException e) {
             //TODO
         }
+    }
+
+    protected long readWireMarshallable(
+            @NotNull ReadContext context,
+            int len,
+            @NotNull ReadMarshallable marshaller) {
+
+        context.bytes.readSkip(SPB_DATA_HEADER_SIZE);
+        return readWire(context.wire, len, marshaller);
+    }
+
+    protected long readBytesMarshallable(
+            @NotNull ReadContext context,
+            int len,
+            @NotNull ReadBytesMarshallable marshaller) {
+
+        context.bytes.readSkip(SPB_DATA_HEADER_SIZE);
+        final long readp = context.bytes.readPosition();
+        final long readl = context.bytes.readLimit();
+
+        marshaller.readMarshallable(context.bytes);
+        context.bytes.readPosition(readp + len);
+        context.bytes.readLimit(readl);
+
+        return readp + len;
+    }
+
+    protected <T> long read(@NotNull ReadContext context, @NotNull Reader<T> reader, T marshaller) throws IOException {
+        long position = context.bytes.readPosition();
+        if(context.bytes.readRemaining() == 0) {
+            mappedFile.acquireBytesForRead(position, context.bytes);
+        }
+
+        final int spbHeader = context.bytes.readVolatileInt(position);
+        if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
+            int len = Wires.lengthOf(spbHeader);
+            if(Wires.isData(spbHeader)) {
+                return reader.read(context, len, marshaller);
+            } else {
+                // In case of meta data, if we are found the "roll" meta, we returns
+                // the next cycle (negative)
+                final StringBuilder sb = Wires.acquireStringBuilder();
+                final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
+
+                if("roll".contentEquals(sb)) {
+                    return -vi.int32();
+                } else {
+                    context.bytes.readPosition(position + len + SPB_DATA_HEADER_SIZE);
+                    return read(context, reader, marshaller);
+                }
+            }
+        }
+
+        return WireConstants.NO_DATA;
     }
 
     /**
@@ -425,6 +417,12 @@ class SingleChronicleQueueStore implements WireStore {
                 }
             }
         }
+    }
+
+
+    @FunctionalInterface
+    interface Reader<T> {
+        long read(@NotNull ReadContext context, int len, @NotNull T reader) throws IOException;
     }
 
     // *************************************************************************

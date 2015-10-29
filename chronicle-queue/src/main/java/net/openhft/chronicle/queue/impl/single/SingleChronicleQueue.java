@@ -17,9 +17,12 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollDateCache;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.WireType;
@@ -47,6 +50,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.builder = builder;
         this.pool = WireStorePool.withSupplier(this::newStore);
         this.firstCycle = -1L;
+    }
+
+    @Override
+    public ExcerptAppender createAppender() throws IOException {
+        //return new Excerpts.StoreAppender(this);
+        return new Excerpts.DelegatedAppender(this, new Excerpts.StoreAppender(this));
+    }
+
+    @Override
+    public ExcerptTailer createTailer() throws IOException {
+        return new Excerpts.StoreTailer(this);
     }
 
     @Override
