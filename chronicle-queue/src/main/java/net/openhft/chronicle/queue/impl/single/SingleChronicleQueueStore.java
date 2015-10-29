@@ -187,17 +187,6 @@ class SingleChronicleQueueStore implements WireStore {
             mappedFile.acquireBytesForRead(position, context.bytes);
         }
 
-        /*
-        long position = context.position();
-        if (position > context.bytes.safeLimit()) {
-            mappedFile.acquireBytesForRead(position, context.bytes);
-            context.position(position);
-        } else if(context.bytes.readLimit() == 0) {
-            mappedFile.acquireBytesForRead(position, context.bytes);
-            context.position(position);
-        }
-        */
-
         final int spbHeader = context.bytes.readVolatileInt(position);
         if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
             int len = Wires.lengthOf(spbHeader);
@@ -331,10 +320,10 @@ class SingleChronicleQueueStore implements WireStore {
 
     //TODO move to wire
     @ForceInline
-    static long readWire(@NotNull WireIn wireIn, int len, @NotNull ReadMarshallable dataConsumer) {
+    static long readWire(@NotNull WireIn wireIn, long len, @NotNull ReadMarshallable dataConsumer) {
         final Bytes<?> bytes = wireIn.bytes();
         final long limit0 = bytes.readLimit();
-        final long limit = bytes.readPosition() + (long) len;
+        final long limit = bytes.readPosition() + len;
         try {
             bytes.readLimit(limit);
             dataConsumer.readMarshallable(wireIn);
