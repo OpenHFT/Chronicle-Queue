@@ -15,7 +15,10 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
@@ -26,11 +29,25 @@ import java.io.IOException;
  */
 public interface ExcerptAppender extends ExcerptCommon {
     /**
-     * @param writer to write one excerpt.
+     * @param writer to write to excerpt.
      * @return the index last written.
      * @throws IOException
      */
-    long writeDocument(WriteMarshallable writer) throws IOException;
+    long writeDocument(@NotNull WriteMarshallable writer) throws IOException;
+
+    /**
+     * @param marshallable to write to excerpt.
+     * @return the index last written.
+     * @throws IOException
+     */
+    long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException;
+
+    /**
+     * @param bytes to write to excerpt.
+     * @return the index last written.
+     * @throws IOException
+     */
+    long writeBytes(@NotNull Bytes<?> bytes) throws IOException;
 
     /**
      * @return the index last written.

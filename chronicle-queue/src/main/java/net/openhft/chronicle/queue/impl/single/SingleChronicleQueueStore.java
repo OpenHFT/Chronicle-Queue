@@ -19,7 +19,9 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.VanillaBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.ForceInline;
@@ -164,6 +166,24 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public long append(@NotNull WriteContext context, @NotNull final WriteBytesMarshallable marshallable) throws IOException {
+
+        acquireLock(context, Wires.UNKNOWN_LENGTH);
+        final long position = context.bytes.writePosition();
+        context.bytes.writeSkip(SPB_DATA_HEADER_SIZE);
+
+        marshallable.writeMarshallable(context.bytes);
+        context.bytes.compareAndSwapInt(
+            position,
+            Wires.NOT_READY,
+            toIntU30(context.bytes.writePosition() - position - SPB_DATA_HEADER_SIZE)
+        );
+
+        bounds.setWritePositionIfGreater(position);
+        return indexing.incrementLastIndex();
+    }
+
+    @Override
     public long append(@NotNull WriteContext context, @NotNull final Bytes bytes) throws IOException {
         final int size = toIntU30(bytes.length());
         final long position = acquireLock(context, size).bytes.writePosition();
@@ -174,12 +194,6 @@ class SingleChronicleQueueStore implements WireStore {
         return indexing.incrementLastIndex();
     }
 
-    /**
-     *
-     * @param context
-     * @param reader
-     * @return the new position, 0 if no data -position if roll
-     */
     @Override
     public long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException {
         long position = context.bytes.readPosition();
@@ -211,11 +225,44 @@ class SingleChronicleQueueStore implements WireStore {
         return WireConstants.NO_DATA;
     }
 
-    /**
-     *
-     * @param index
-     * @return
-     */
+    @Override
+    public long read(@NotNull ReadContext context, @NotNull ReadBytesMarshallable reader) throws IOException {
+        long position = context.bytes.readPosition();
+        if(context.bytes.readRemaining() == 0) {
+            mappedFile.acquireBytesForRead(position, context.bytes);
+        }
+
+        final int spbHeader = context.bytes.readVolatileInt(position);
+        if(!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
+            int len = Wires.lengthOf(spbHeader);
+            if(Wires.isData(spbHeader)) {
+                context.bytes.readSkip(SPB_DATA_HEADER_SIZE);
+                final long readp = context.bytes.readPosition();
+                final long readl = context.bytes.readLimit();
+
+                reader.readMarshallable(context.bytes);
+                context.bytes.readPosition(readp + len);
+                context.bytes.readLimit(readl);
+
+                return readp + len;
+            } else {
+                // In case of meta data, if we are found the "roll" meta, we returns
+                // the next cycle (negative)
+                final StringBuilder sb = Wires.acquireStringBuilder();
+                final ValueIn vi = context.wire(position + SPB_DATA_HEADER_SIZE, builder.blockSize()).read(sb);
+
+                if("roll".contentEquals(sb)) {
+                    return -vi.int32();
+                } else {
+                    context.bytes.readPosition(position + len + SPB_DATA_HEADER_SIZE);
+                    return read(context, reader);
+                }
+            }
+        }
+
+        return WireConstants.NO_DATA;
+    }
+
     @Override
     public boolean moveToIndex(@NotNull ReadContext context, long index){
         long position = readPosition();

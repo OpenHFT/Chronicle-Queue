@@ -99,7 +99,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     private void appendBytes(Bytes<?> bytes) {
         try {
-            storeAppender.write(bytes);
+            storeAppender.writeBytes(bytes);
         } catch(IOException e) {
             //TODO: what to do
             LOGGER.warn("", e);

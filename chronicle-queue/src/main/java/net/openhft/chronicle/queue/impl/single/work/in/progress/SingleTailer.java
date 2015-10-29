@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue.impl.single.work.in.progress;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.values.LongArrayValues;
@@ -67,6 +68,11 @@ public class SingleTailer implements ExcerptTailer {
 
     @Override
     public boolean readDocument(@NotNull ReadMarshallable reader) throws IOException {
+        throw new UnsupportedOperationException("todo");
+    }
+
+    @Override
+    public boolean readBytes(@NotNull ReadBytesMarshallable bytes) throws IOException {
         throw new UnsupportedOperationException("todo");
     }
 

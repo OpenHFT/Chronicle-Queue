@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.single.work.in.progress;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.Wire;
@@ -66,6 +67,16 @@ public class SingleAppender implements ExcerptAppender {
         //   lastWrittenIndex = chronicle.appendDocument(writer);
 
         return lastWrittenIndex;
+    }
+
+    @Override
+    public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+        return 0;
+    }
+
+    @Override
+    public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
+        return 0;
     }
 
     /**
