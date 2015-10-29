@@ -33,7 +33,6 @@ import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
-import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 public class Excerpts {
 
@@ -310,8 +309,8 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
+                this.context.clear();
                 this.context.position(positionSupplier.applyAsLong(this.store));
-                this.context.store(noBytesStore(), 0, 0);
             }
         }
     }

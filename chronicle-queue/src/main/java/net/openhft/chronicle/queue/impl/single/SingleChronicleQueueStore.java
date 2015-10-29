@@ -118,7 +118,7 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException {
         if(roll.casNextRollCycle(cycle)) {
-            long position = acquireLock(context).bytes.writePosition();
+            long position = acquireLock(context, Wires.UNKNOWN_LENGTH).bytes.writePosition();
 
             Wires.writeMeta(
                  context.wire,
@@ -135,7 +135,7 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
         bounds.setWritePositionIfGreater(
-            Wires.writeData(acquireLock(context).wire, marshallable)
+            Wires.writeData(acquireLock(context, Wires.UNKNOWN_LENGTH).wire, marshallable)
         );
 
         return indexing.incrementLastIndex();
@@ -162,9 +162,11 @@ class SingleChronicleQueueStore implements WireStore {
     public long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException {
         long position = context.position();
         if (position > context.bytes.safeLimit()) {
-            context.store(mappedFile.acquireByteStore(position), position);
+            mappedFile.acquireBytesForRead(position, context.bytes);
+            context.position(position);
         } else if(context.bytes.readLimit() == 0) {
-            context.store(mappedFile.acquireByteStore(position), position);
+            mappedFile.acquireBytesForRead(position, context.bytes);
+            context.position(position);
         }
 
         final int spbHeader = context.bytes.readVolatileInt(position);
@@ -293,11 +295,6 @@ class SingleChronicleQueueStore implements WireStore {
 
     protected int toIntU30(long len) {
         return Wires.toIntU30(len,"Document length %,d out of 30-bit int range.");
-    }
-
-    protected WriteContext acquireLock(@NotNull WriteContext context)
-            throws IOException {
-        return acquireLock(context, 0x0);
     }
 
     protected WriteContext acquireLock(@NotNull WriteContext context, int size)

@@ -17,11 +17,12 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+
+import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 //TODO: re-engine
 public class ReadContext {
@@ -53,6 +54,11 @@ public class ReadContext {
         return this;
     }
 
+    public void clear() {
+        this.bytes.bytesStore(noBytesStore(), 0, 0);
+    }
+
+    /*
     public ReadContext store(@NotNull BytesStore store, long position) {
         return store(store, position, store.writeLimit() - position);
     }
@@ -66,4 +72,5 @@ public class ReadContext {
 
         return this;
     }
+    */
 }
