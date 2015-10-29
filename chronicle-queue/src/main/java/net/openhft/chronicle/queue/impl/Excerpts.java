@@ -18,7 +18,9 @@ package net.openhft.chronicle.queue.impl;
 
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.annotation.ForceInline;
+import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -30,10 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
-import java.util.function.ToLongFunction;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
-import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 public class Excerpts {
 
@@ -164,7 +164,7 @@ public class Excerpts {
 
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(this.cycle);
-                this.context.store(noBytesStore(), 0, 0);
+                this.store.acquireBytesAtWritePositionForWrite(this.context.bytes);
             }
 
             return this.store;
@@ -209,18 +209,19 @@ public class Excerpts {
                 }
 
                 //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(lastCycle, WireStore::readPosition);
+                cycle(lastCycle);
+                context(store::acquireBytesAtReadPositionForRead);
             }
 
             long position = store.read(this.context, reader);
             if(position > 0) {
-                this.context.position(position);
                 this.index++;
 
                 return true;
             } else if(position < 0) {
                 // roll detected, move to next cycle;
-                cycle(Math.abs(position), WireStore::readPosition);
+                cycle(Math.abs(position));
+                context(store::acquireBytesAtReadPositionForRead);
 
                 // try to read from new cycle
                 return readDocument(reader);
@@ -251,14 +252,13 @@ public class Excerpts {
         @Override
         public boolean index(long index) throws IOException {
             if(this.store == null) {
-                cycle(queue.lastCycle(), WireStore::readPosition);
+                cycle(queue.lastCycle());
+                context(store::acquireBytesAtReadPositionForRead);
             }
 
-            long idxpos = this.store.positionForIndex(index);
-            if(idxpos != WireConstants.NO_INDEX) {
-                this.context.position(idxpos);
+            this.context.clear();
+            if(this.store.moveToIndex(this.context, index)) {
                 this.index = index - 1;
-
                 return true;
             }
 
@@ -267,7 +267,9 @@ public class Excerpts {
 
         @Override
         public boolean index(long cycle, long index) throws IOException {
-            cycle(cycle, WireStore::readPosition);
+            cycle(cycle);
+            context(store::acquireBytesAtReadPositionForRead);
+
             return index(index);
         }
 
@@ -275,7 +277,8 @@ public class Excerpts {
         public ExcerptTailer toStart() throws IOException {
             long firstCycle = queue.firstCycle();
             if(firstCycle > 0) {
-                cycle(firstCycle, WireStore::readPosition);
+                cycle(firstCycle);
+                context(store::acquireBytesAtReadPositionForRead);
                 this.toStart = false;
             } else {
                 this.toStart = true;
@@ -288,7 +291,8 @@ public class Excerpts {
         public ExcerptTailer toEnd() throws IOException {
             long firstCycle = queue.firstCycle();
             if(firstCycle > 0) {
-                cycle(firstCycle, WireStore::writePosition);
+                cycle(firstCycle);
+                context(store::acquireBytesAtWritePositionForRead);
             }
 
             this.toStart = false;
@@ -301,7 +305,7 @@ public class Excerpts {
             return this.queue;
         }
 
-        private void cycle(long cycle, @NotNull ToLongFunction<WireStore> positionSupplier) throws IOException {
+        private StoreTailer cycle(long cycle) throws IOException {
             if(this.cycle != cycle) {
                 if(null != this.store) {
                     this.queue.release(this.store);
@@ -310,9 +314,15 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle);
-                this.context.position(positionSupplier.applyAsLong(this.store));
-                this.context.store(noBytesStore(), 0, 0);
+                this.context.clear();
             }
+
+            return this;
+        }
+
+        private StoreTailer context(@NotNull ThrowingAcceptor<VanillaBytes, IOException> acceptor) throws IOException{
+            acceptor.accept(this.context.bytes);
+            return this;
         }
     }
 }

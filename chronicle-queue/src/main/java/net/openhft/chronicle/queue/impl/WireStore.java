@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
@@ -46,9 +47,41 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
+     * @param bytes
+     * @return
+     * @throws IOException
+     */
+    void acquireBytesAtReadPositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
+
+    /**
+     *
+     * @param bytes
+     * @return
+     * @throws IOException
+     */
+    void acquireBytesAtReadPositionForWrite(@NotNull VanillaBytes<?> bytes) throws IOException;
+
+    /**
+     *
      * @return the first writable position
      */
     long writePosition();
+
+    /**
+     *
+     * @param bytes
+     * @return
+     * @throws IOException
+     */
+    void acquireBytesAtWritePositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
+
+    /**
+     *
+     * @param bytes
+     * @return
+     * @throws IOException
+     */
+    void acquireBytesAtWritePositionForWrite(@NotNull VanillaBytes<?> bytes) throws IOException;
 
     /**
      *
@@ -94,10 +127,11 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      *
+     * @param context
      * @param index
      * @return
      */
-    long positionForIndex(long index);
+    boolean moveToIndex(@NotNull ReadContext context, long index);
 
     /**
      *
