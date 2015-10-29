@@ -54,8 +54,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        //return new Excerpts.StoreAppender(this);
-        return new Excerpts.DelegatedAppender(this, new Excerpts.StoreAppender(this));
+        return new Excerpts.StoreAppender(this);
+        //return new Excerpts.DelegatedAppender(this, new Excerpts.StoreAppender(this));
     }
 
     @Override
