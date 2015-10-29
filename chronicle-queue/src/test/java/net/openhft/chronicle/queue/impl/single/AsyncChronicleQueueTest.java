@@ -51,4 +51,64 @@ public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
+
+    /*
+    @Test
+    public void testAppendAndReadX() throws IOException {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(WireType.TEXT)
+                .build();
+
+        final ExcerptAppender appender = queue.createAppender();
+        for (int i = 0; i < 10; i++) {
+            final int n = i;
+            assertEquals(n, appender.writeDocument(w -> w.write(TestKey.test).int32(n)));
+            assertEquals(n, appender.index());
+        }
+
+        final ExcerptTailer tailer = queue.createTailer();
+
+        // Sequential read
+        for (int i = 0; i < 10; i++) {
+            final int n = i;
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            assertEquals(n, tailer.index());
+        }
+
+        // Random read
+        for (int i = 0; i < 10; i++) {
+            final int n = i;
+            assertTrue(tailer.index(n));
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            assertEquals(n, tailer.index());
+        }
+    }
+
+    @Test
+    public void testAppendAndReadWithRolling() throws IOException {
+
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(WireType.TEXT)
+                .rollCycle(RollCycles.SECONDS)
+                .build();
+
+        final ExcerptAppender appender = queue.createAppender();
+        for (int i = 0; i < 2; i++) {
+            final int n = i;
+            Jvm.pause(1000);
+
+            if(i == 1) {
+                int x =0;
+            }
+
+            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
+        }
+
+        final ExcerptTailer tailer = queue.createTailer().toStart();
+        for (int i = 0; i < 20; i++) {
+            final int n = i;
+            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+        }
+    }
+    */
 }

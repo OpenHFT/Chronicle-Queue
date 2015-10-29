@@ -164,7 +164,7 @@ public class Excerpts {
 
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(this.cycle);
-                this.context.store(noBytesStore(), 0, 0);
+                this.context.clear();
             }
 
             return this.store;

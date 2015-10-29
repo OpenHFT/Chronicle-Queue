@@ -17,11 +17,12 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.VanillaBytes;
 import net.openhft.chronicle.wire.WireOut;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+
+import static net.openhft.chronicle.bytes.NoBytesStore.noBytesStore;
 
 //TODO: re-engine
 public class WriteContext {
@@ -33,36 +34,7 @@ public class WriteContext {
         this.wire = wireType.apply(this.bytes);
     }
 
-    public WireOut wire() {
-        return this.wire;
-    }
-
-    public BytesStore store() {
-        return this.bytes.bytesStore();
-    }
-
-    public long position() {
-        return this.bytes.writePosition();
-    }
-
-    public WriteContext position(long position) {
-        this.bytes.writePosition(position);
-        return this;
-    }
-
-    public WriteContext store(@NotNull BytesStore store, long position) {
-        return store(store, position, store.writeLimit() - position);
-    }
-
-    public WriteContext store(@NotNull BytesStore store, long position, long size) {
-        if(store != bytes.bytesStore()) {
-            this.bytes.bytesStore(store, position, size);
-            this.bytes.writePosition(position);
-            this.bytes.writeLimit(position + size);
-        } else {
-            position(position);
-        }
-
-        return this;
+    public void clear() {
+        this.bytes.bytesStore(noBytesStore(), 0, 0);
     }
 }
