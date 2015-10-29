@@ -188,7 +188,8 @@ class SingleChronicleQueueStore implements WireStore {
         final int size = toIntU30(bytes.length());
         final long position = acquireLock(context, size).bytes.writePosition();
 
-        context.bytes.write(position + 4, bytes);
+        context.bytes.writeSkip(4);
+        context.bytes.write(bytes);
         context.bytes.compareAndSwapInt(position, size | Wires.NOT_READY, size);
 
         return indexing.incrementLastIndex();

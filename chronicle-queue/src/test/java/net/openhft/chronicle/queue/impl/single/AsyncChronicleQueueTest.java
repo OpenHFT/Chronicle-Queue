@@ -65,20 +65,17 @@ public class AsyncChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptAppender appender = queue.createAppender();
         for (int i = 0; i < 10; i++) {
             final int n = i;
-            assertEquals(n, appender.writeBytes(wb -> wb.writeInt(n)));
-            assertEquals(n, appender.index());
+            appender.writeBytes(wb -> wb.writeInt(n));
         }
 
         final ExcerptTailer tailer = queue.createTailer();
 
-        // Sequential read
         for (int i = 0; i < 10; i++) {
             final int n = i;
             assertTrue(tailer.readBytes(b -> assertEquals(n, b.readInt())));
             assertEquals(n, tailer.index());
         }
 
-        // Random read
         for (int i = 0; i < 10; i++) {
             final int n = i;
             assertTrue(tailer.index(n));
