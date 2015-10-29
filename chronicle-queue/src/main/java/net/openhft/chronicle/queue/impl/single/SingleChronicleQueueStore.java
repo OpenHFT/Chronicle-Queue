@@ -248,6 +248,25 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public void reserve() throws IllegalStateException {
+        this.refCount.reserve();
+    }
+
+    @Override
+    public void release() throws IllegalStateException {
+        this.refCount.release();
+    }
+
+    @Override
+    public long refCount() {
+        return this.refCount.get();
+    }
+
+    // *************************************************************************
+    // BOOTSTRAP
+    // *************************************************************************
+
+    @Override
     public void install(
             @NotNull MappedFile mappedFile,
             long length,
@@ -267,6 +286,13 @@ class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    // *************************************************************************
+    // Utilities
+    // *************************************************************************
+
+    /**
+     *
+     */
     private synchronized void performRelease() {
         //TODO: implement
         try {
@@ -277,25 +303,6 @@ class SingleChronicleQueueStore implements WireStore {
             //TODO
         }
     }
-
-    @Override
-    public void reserve() throws IllegalStateException {
-        this.refCount.reserve();
-    }
-
-    @Override
-    public void release() throws IllegalStateException {
-        this.refCount.release();
-    }
-
-    @Override
-    public long refCount() {
-        return this.refCount.get();
-    }
-
-    // *************************************************************************
-    // Utilities
-    // *************************************************************************
 
     /**
      * Check if there is room for append assuming blockSize is the maximum size
