@@ -88,17 +88,17 @@ public class Excerpts {
     public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
         private final Bytes<ByteBuffer> buffer;
         private final Wire wire;
-        private final ThrowingAcceptor<Bytes, IOException> consumer;
+        private final BytesWriter writer;
 
         public DelegatedAppender(
                 @NotNull ChronicleQueue queue,
-                @NotNull ThrowingAcceptor<Bytes, IOException> consumer) throws IOException {
+                @NotNull BytesWriter writer) throws IOException {
 
             super(queue);
 
             this.buffer = elasticByteBuffer();
             this.wire = queue.wireType().apply(this.buffer);
-            this.consumer = consumer;
+            this.writer = writer;
         }
 
         public DelegatedAppender(
@@ -109,13 +109,16 @@ public class Excerpts {
 
             this.buffer = elasticByteBuffer();
             this.wire = queue.wireType().apply(this.buffer);
-            this.consumer = appender::writeBytes;
+            this.writer = appender::writeBytes;
         }
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             this.buffer.clear();
-            writer.writeMarshallable(this.wire);
+            writer.writeMarshallable(this.wire);this.buffer.readLimit(this.buffer.writePosition());
+            this.buffer.readPosition(0);
+            this.buffer.writePosition(this.buffer.readLimit());
+            this.buffer.writeLimit(this.buffer.readLimit());
 
             return writeBytes(this.buffer);
         }
@@ -124,20 +127,17 @@ public class Excerpts {
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
             this.buffer.clear();
             marshallable.writeMarshallable(this.buffer);
+            this.buffer.readLimit(this.buffer.writePosition());
+            this.buffer.readPosition(0);
+            this.buffer.writePosition(this.buffer.readLimit());
+            this.buffer.writeLimit(this.buffer.readLimit());
 
             return writeBytes(this.buffer);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
-            bytes.readLimit(bytes.writePosition());
-            bytes.readPosition(0);
-            bytes.writePosition(bytes.readLimit());
-            bytes.writeLimit(bytes.readLimit());
-
-            consumer.accept(bytes);
-
-            return WireConstants.NO_INDEX;
+            return writer.write(bytes);
         }
     }
 

@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
@@ -142,13 +141,18 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException {
         if(roll.casNextRollCycle(cycle)) {
-            long position = acquireLock(context, Wires.UNKNOWN_LENGTH).bytes.writePosition();
+            final WriteMarshallable marshallable = x -> x.write(MetaDataField.roll).int32(cycle);
 
-            Wires.writeMeta(
-                 context.wire,
-                 w -> w.write(MetaDataField.roll).int32(cycle));
-
-            roll.setNextCycleMetaPosition(position);
+            writeWithLock(
+                context,
+                Wires.UNKNOWN_LENGTH,
+                (WriteContext ctx, long position, int size, WriteMarshallable w) -> {
+                    Wires.writeMeta(context.wire, w);
+                    roll.setNextCycleMetaPosition(position);
+                    return WireConstants.NO_INDEX;
+                },
+                marshallable
+            );
 
             return true;
         }
@@ -158,41 +162,17 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteMarshallable marshallable) throws IOException {
-        bounds.setWritePositionIfGreater(
-            Wires.writeData(acquireLock(context, Wires.UNKNOWN_LENGTH).wire, marshallable)
-        );
-
-        return indexing.incrementLastIndex();
+        return writeWithLock(context, Wires.UNKNOWN_LENGTH, this::writeWireMarshallable, marshallable);
     }
 
     @Override
     public long append(@NotNull WriteContext context, @NotNull final WriteBytesMarshallable marshallable) throws IOException {
-
-        acquireLock(context, Wires.UNKNOWN_LENGTH);
-        final long position = context.bytes.writePosition();
-        context.bytes.writeSkip(SPB_DATA_HEADER_SIZE);
-
-        marshallable.writeMarshallable(context.bytes);
-        context.bytes.compareAndSwapInt(
-            position,
-            Wires.NOT_READY,
-            toIntU30(context.bytes.writePosition() - position - SPB_DATA_HEADER_SIZE)
-        );
-
-        bounds.setWritePositionIfGreater(position);
-        return indexing.incrementLastIndex();
+        return writeWithLock(context, Wires.UNKNOWN_LENGTH, this::writeBytesMarshallable, marshallable);
     }
 
     @Override
     public long append(@NotNull WriteContext context, @NotNull final Bytes bytes) throws IOException {
-        final int size = toIntU30(bytes.length());
-        final long position = acquireLock(context, size).bytes.writePosition();
-
-        context.bytes.writeSkip(4);
-        context.bytes.write(bytes);
-        context.bytes.compareAndSwapInt(position, size | Wires.NOT_READY, size);
-
-        return indexing.incrementLastIndex();
+        return writeWithLock(context, toIntU30(bytes.length()), this::writeBytes, bytes);
     }
 
     @Override
@@ -290,6 +270,19 @@ class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    protected int toIntU30(long len) {
+        return Wires.toIntU30(len,"Document length %,d out of 30-bit int range.");
+    }
+
+    // *************************************************************************
+    // Utilities :: Read
+    // *************************************************************************
+
+    @FunctionalInterface
+    interface Reader<T> {
+        long read(@NotNull ReadContext context, int len, @NotNull T reader) throws IOException;
+    }
+
     protected long readWireMarshallable(
             @NotNull ReadContext context,
             int len,
@@ -344,30 +337,9 @@ class SingleChronicleQueueStore implements WireStore {
         return WireConstants.NO_DATA;
     }
 
-    /**
-     * Check if there is room for append assuming blockSize is the maximum size
-     */
-    protected void checkRemainingForAppend(long position) {
-        long remaining = mappedFile.capacity() - position;
-        if (remaining < builder.blockSize()) {
-            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
-        }
-    }
-
-    /**
-     * Check if there is room for append assuming blockSize is the maximum size
-     */
-    protected void checkRemainingForAppend(long position, long size) {
-        long remaining = mappedFile.capacity() - position;
-        if (remaining < size) {
-            throw new IllegalStateException("Not enough space for append, remaining: " + remaining);
-        }
-    }
-
-
     //TODO move to wire
     @ForceInline
-    static long readWire(@NotNull WireIn wireIn, long len, @NotNull ReadMarshallable dataConsumer) {
+    protected long readWire(@NotNull WireIn wireIn, long len, @NotNull ReadMarshallable dataConsumer) {
         final Bytes<?> bytes = wireIn.bytes();
         final long limit0 = bytes.readLimit();
         final long limit = bytes.readPosition() + len;
@@ -382,32 +354,74 @@ class SingleChronicleQueueStore implements WireStore {
         return bytes.readPosition();
     }
 
-    //TODO move to wire
-    protected boolean acquireLock(BytesStore store, long position, int size) {
-        return store.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size);
+    // *************************************************************************
+    // Utilities :: Write
+    // *************************************************************************
+
+    @FunctionalInterface
+    interface Writer<T> {
+        long write(@NotNull WriteContext context, long position, int size, @NotNull T writer) throws IOException;
     }
 
-    protected int toIntU30(long len) {
-        return Wires.toIntU30(len,"Document length %,d out of 30-bit int range.");
+    public long writeWireMarshallable(
+            @NotNull WriteContext context,
+            long position,
+            int size,
+            @NotNull final WriteMarshallable marshallable) throws IOException {
+
+        bounds.setWritePositionIfGreater(Wires.writeData(context.wire, marshallable));
+        return indexing.incrementLastIndex();
     }
 
-    protected WriteContext acquireLock(@NotNull WriteContext context, int size)
+    public long writeBytesMarshallable(
+            @NotNull WriteContext context,
+            long position,
+            int size,
+            @NotNull final WriteBytesMarshallable marshallable) throws IOException {
+
+        context.bytes.writeSkip(SPB_DATA_HEADER_SIZE);
+
+        marshallable.writeMarshallable(context.bytes);
+        context.bytes.compareAndSwapInt(
+                position,
+                Wires.NOT_READY,
+                toIntU30(context.bytes.writePosition() - position - SPB_DATA_HEADER_SIZE)
+        );
+
+        bounds.setWritePositionIfGreater(position);
+        return indexing.incrementLastIndex();
+    }
+
+    public long writeBytes(
+            @NotNull WriteContext context,
+            long position,
+            int size,
+            @NotNull final Bytes bytes) throws IOException {
+
+        context.bytes.writeSkip(4);
+        context.bytes.write(bytes);
+        context.bytes.compareAndSwapInt(position, size | Wires.NOT_READY, size);
+
+        return indexing.incrementLastIndex();
+    }
+
+    protected <T> long writeWithLock(@NotNull WriteContext context, int size, @NotNull Writer<T> writer, T marshaller)
             throws IOException {
 
         final long end = System.currentTimeMillis() + builder.appendTimeout();
-        long writePosition = writePosition();
+        long position = writePosition();
 
         for (; ;) {
-            if (writePosition > context.bytes.safeLimit()) {
-                mappedFile.acquireBytesForWrite(writePosition, context.bytes);
+            if (position > context.bytes.safeLimit()) {
+                mappedFile.acquireBytesForWrite(position, context.bytes);
             }
 
-            if(acquireLock(context.bytes, writePosition, size)) {
-                return context;
+            if(context.bytes.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
+                return writer.write(context, position, size, marshaller);
             } else {
-                int spbHeader = context.bytes.readInt(writePosition);
+                int spbHeader = context.bytes.readInt(position);
                 if (Wires.isKnownLength(spbHeader)) {
-                    writePosition += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                    position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
                 } else {
                     // TODO: wait strategy
                     if(System.currentTimeMillis() > end) {
@@ -420,10 +434,33 @@ class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    protected WriteContext acquireLock(@NotNull WriteContext context, int size)
+            throws IOException {
 
-    @FunctionalInterface
-    interface Reader<T> {
-        long read(@NotNull ReadContext context, int len, @NotNull T reader) throws IOException;
+        final long end = System.currentTimeMillis() + builder.appendTimeout();
+        long position = writePosition();
+
+        for (; ;) {
+            if (position > context.bytes.safeLimit()) {
+                mappedFile.acquireBytesForWrite(position, context.bytes);
+            }
+
+            if(context.bytes.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
+                return context;
+            } else {
+                int spbHeader = context.bytes.readInt(position);
+                if (Wires.isKnownLength(spbHeader)) {
+                    position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                } else {
+                    // TODO: wait strategy
+                    if(System.currentTimeMillis() > end) {
+                        throw new AssertionError("Timeout waiting to append");
+                    }
+
+                    Jvm.pause(1);
+                }
+            }
+        }
     }
 
     // *************************************************************************
