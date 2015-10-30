@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.DelegatedChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
+import net.openhft.chronicle.queue.impl.WireConstants;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.InvalidEventHandlerException;
@@ -47,29 +48,22 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         this.store = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
         this.store.zeroOut(0, this.store.writeLimit());
         this.buffer = new BytesRingBuffer(this.store);
-        this.appender = null;
-        this.storeAppender = super.createAppender();
+        this.storeAppender = queue.createAppender();
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(this::handleEvent);
         this.eventGroup.start();
+
+        this.appender = null;
     }
 
     @NotNull
     @Override
     public synchronized  ExcerptAppender createAppender() throws IOException {
         if(appender != null) {
-            //TODO: better error management
             throw new IllegalStateException("Max 1 appender per queue");
         }
 
-        return this.appender = new Excerpts.DelegatedAppender(this, bytes -> {
-            try {
-                this.buffer.offer(bytes);
-            } catch(InterruptedException e) {
-                //TODO: what to do ?
-                LOGGER.warn("", e);
-            }
-        });
+        return this.appender = new Excerpts.DelegatedAppender(this, this::offer);
     }
 
     @Override
@@ -82,9 +76,20 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     //
     // *************************************************************************
 
+    private long offer(Bytes<?> bytes) throws IOException {
+        try {
+            this.buffer.offer(bytes);
+        } catch(InterruptedException e) {
+            //TODO: what to do ?
+            LOGGER.warn("", e);
+        }
+
+        return WireConstants.NO_INDEX;
+    }
+
     private boolean handleEvent() throws InvalidEventHandlerException {
         try {
-            return buffer.apply(this::appendBytes) > 0;
+            return buffer.apply(this::append) > 0;
         } catch(InterruptedException e) {
             //TODO: what to do
             LOGGER.warn("", e);
@@ -93,7 +98,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         return false;
     }
 
-    private void appendBytes(Bytes<?> bytes) {
+    private void append(Bytes<?> bytes) {
         try {
             storeAppender.writeBytes(bytes);
         } catch(IOException e) {
