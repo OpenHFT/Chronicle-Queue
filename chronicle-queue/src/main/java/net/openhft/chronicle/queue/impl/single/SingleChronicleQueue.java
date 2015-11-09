@@ -176,8 +176,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             final String cycleFormat = this.dateCache.formatFor(cycle);
             final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
-            if (!cycleFile.getParentFile().exists()) {
-                cycleFile.mkdirs();
+            File parentFile = cycleFile.getParentFile();
+            if (parentFile != null & !parentFile.exists()) {
+                parentFile.mkdirs();
             }
 
             return WiredFile.<WireStore>build(
