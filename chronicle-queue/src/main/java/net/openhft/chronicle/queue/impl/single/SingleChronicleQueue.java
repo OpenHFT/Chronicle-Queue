@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -35,7 +36,7 @@ import java.text.ParseException;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class,"WireStore");
+        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
     }
 
     private final SingleChronicleQueueBuilder builder;
@@ -153,7 +154,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     public WireType wireType() {
-       return builder.wireType();
+        return builder.wireType();
     }
 
     @Override
@@ -185,21 +186,30 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                     cycleFile,
                     file -> MappedFile.mappedFile(file, builder.blockSize(), builder.blockSize()),
                     builder.wireType(),
-                    () -> new SingleChronicleQueueStore(builder.rollCycle()),
+                    () -> new SingleChronicleQueueStore(builder.rollCycle(), this.builder.wireType()),
                     ws -> ws.delegate().install(
-                        ws.mappedFile(),
-                        ws.headerLength(),
-                        ws.headerCreated(),
-                        cycle,
-                        builder,
-                        ws.wireSupplier(),
-                        ws.mappedFile()
+                            ws.mappedFile(),
+                            ws.headerLength(),
+                            ws.headerCreated(),
+                            cycle,
+                            builder,
+                            ws.wireSupplier(),
+                            ws.mappedFile()
                     )
             ).delegate();
 
         } catch (IOException e) {
             //TODO: right way ?
             throw new RuntimeException(e);
+        }
+    }
+
+    @NotNull
+    private Excerpts.StoreTailer excerptTailer() {
+        try {
+            return new Excerpts.StoreTailer(this);
+        } catch (IOException e) {
+            throw Jvm.rethrow(e);
         }
     }
 

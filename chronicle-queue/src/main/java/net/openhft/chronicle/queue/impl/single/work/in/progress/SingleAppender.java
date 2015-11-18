@@ -57,7 +57,7 @@ public class SingleAppender implements ExcerptAppender {
     }*/
 
     @Override
-    public long writeDocument(WriteMarshallable writer) throws IOException {
+    public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
         buffer.clear();
 
         writer.writeMarshallable(wire);

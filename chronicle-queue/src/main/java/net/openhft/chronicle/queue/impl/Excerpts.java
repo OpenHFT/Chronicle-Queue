@@ -52,17 +52,17 @@ public class Excerpts {
         }
 
         @Override
-        public long writeDocument(WriteMarshallable writer) throws IOException {
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public long writeBytes(WriteBytesMarshallable marshallable) throws IOException {
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public long writeBytes(Bytes<?> bytes) throws IOException {
+        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
             throw new UnsupportedOperationException();
         }
 
@@ -115,7 +115,8 @@ public class Excerpts {
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             this.buffer.clear();
-            writer.writeMarshallable(this.wire);this.buffer.readLimit(this.buffer.writePosition());
+            writer.writeMarshallable(this.wire);
+            this.buffer.readLimit(this.buffer.writePosition());
             this.buffer.readPosition(0);
             this.buffer.writePosition(this.buffer.readLimit());
             this.buffer.writeLimit(this.buffer.readLimit());
@@ -228,7 +229,7 @@ public class Excerpts {
         private long cycle;
         private long index;
         private WireStore store;
-        private final ReadContext context;
+        public final ReadContext context;
 
         //TODO: refactor
         private boolean toStart;
@@ -244,9 +245,9 @@ public class Excerpts {
 
         @Override
         public boolean readDocument(@NotNull ReadMarshallable reader) throws IOException {
-            if(this.store == null) {
+            if (this.store == null) {
                 long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
-                if(lastCycle == -1) {
+                if (lastCycle == -1) {
                     return false;
                 }
 
@@ -256,11 +257,11 @@ public class Excerpts {
             }
 
             long position = store.read(this.context, reader);
-            if(position > 0) {
+            if (position > 0) {
                 this.index++;
 
                 return true;
-            } else if(position < 0) {
+            } else if (position < 0) {
                 // roll detected, move to next cycle;
                 cycle(Math.abs(position));
                 context(store::acquireBytesAtReadPositionForRead);
@@ -274,9 +275,9 @@ public class Excerpts {
 
         @Override
         public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
-            if(this.store == null) {
+            if (this.store == null) {
                 long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
-                if(lastCycle == -1) {
+                if (lastCycle == -1) {
                     return false;
                 }
 
@@ -286,11 +287,11 @@ public class Excerpts {
             }
 
             long position = store.read(this.context, marshallable);
-            if(position > 0) {
+            if (position > 0) {
                 this.index++;
 
                 return true;
-            } else if(position < 0) {
+            } else if (position < 0) {
                 // roll detected, move to next cycle;
                 cycle(Math.abs(position));
                 context(store::acquireBytesAtReadPositionForRead);
@@ -314,7 +315,7 @@ public class Excerpts {
 
         @Override
         public long cycle() {
-            if(this.store == null) {
+            if (this.store == null) {
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
             }
 
@@ -323,13 +324,13 @@ public class Excerpts {
 
         @Override
         public boolean index(long index) throws IOException {
-            if(this.store == null) {
+            if (this.store == null) {
                 cycle(queue.lastCycle());
                 context(store::acquireBytesAtReadPositionForRead);
             }
 
             this.context.clear();
-            if(this.store.moveToIndex(this.context, index)) {
+            if (this.store.moveToIndex(this.context, index)) {
                 this.index = index - 1;
                 return true;
             }
@@ -348,7 +349,7 @@ public class Excerpts {
         @Override
         public ExcerptTailer toStart() throws IOException {
             long firstCycle = queue.firstCycle();
-            if(firstCycle > 0) {
+            if (firstCycle > 0) {
                 cycle(firstCycle);
                 context(store::acquireBytesAtReadPositionForRead);
                 this.toStart = false;
@@ -362,7 +363,7 @@ public class Excerpts {
         @Override
         public ExcerptTailer toEnd() throws IOException {
             long firstCycle = queue.firstCycle();
-            if(firstCycle > 0) {
+            if (firstCycle > 0) {
                 cycle(firstCycle);
                 context(store::acquireBytesAtWritePositionForRead);
             }
@@ -378,8 +379,8 @@ public class Excerpts {
         }
 
         private StoreTailer cycle(long cycle) throws IOException {
-            if(this.cycle != cycle) {
-                if(null != this.store) {
+            if (this.cycle != cycle) {
+                if (null != this.store) {
                     this.queue.release(this.store);
                 }
 
@@ -392,7 +393,7 @@ public class Excerpts {
             return this;
         }
 
-        private StoreTailer context(@NotNull ThrowingAcceptor<VanillaBytes, IOException> acceptor) throws IOException{
+        private StoreTailer context(@NotNull ThrowingAcceptor<VanillaBytes, IOException> acceptor) throws IOException {
             acceptor.accept(this.context.bytes);
             return this;
         }

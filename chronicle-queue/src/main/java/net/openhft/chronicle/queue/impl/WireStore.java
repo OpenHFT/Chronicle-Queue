@@ -15,11 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedFile;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.VanillaBytes;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
@@ -36,19 +32,16 @@ import java.util.function.Function;
 public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
-     *
      * @return the cycle this store refers to
      */
     long cycle();
 
     /**
-     *
      * @return the first readable position
      */
     long readPosition();
 
     /**
-     *
      * @param bytes
      * @return
      * @throws IOException
@@ -56,21 +49,11 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     void acquireBytesAtReadPositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
 
     /**
-     *
-     * @param bytes
-     * @return
-     * @throws IOException
-     */
-    void acquireBytesAtReadPositionForWrite(@NotNull VanillaBytes<?> bytes) throws IOException;
-
-    /**
-     *
      * @return the first writable position
      */
     long writePosition();
 
     /**
-     *
      * @param bytes
      * @return
      * @throws IOException
@@ -78,7 +61,6 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     void acquireBytesAtWritePositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
 
     /**
-     *
      * @param bytes
      * @return
      * @throws IOException
@@ -86,13 +68,11 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     void acquireBytesAtWritePositionForWrite(@NotNull VanillaBytes<?> bytes) throws IOException;
 
     /**
-     *
      * @return the last index
      */
     long lastIndex();
 
     /**
-     *
      * @param context
      * @param cycle
      * @return
@@ -101,60 +81,54 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException;
 
     /**
-     *
      * @param context
      * @param marshallable
-     * @return
+     * @return the index
      * @throws IOException
      */
     long append(@NotNull WriteContext context, @NotNull WriteMarshallable marshallable) throws IOException;
 
     /**
-     *
      * @param context
      * @param marshallable
-     * @return
+     * @return the index
      * @throws IOException
      */
     long append(@NotNull WriteContext context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
 
     /**
-     *
      * @param context
      * @param bytes
-     * @return
+     * @return the index
      * @throws IOException
      */
     long append(@NotNull WriteContext context, @NotNull Bytes bytes) throws IOException;
 
+
     /**
-     *
      * @param context
      * @param reader
-     * @return
+     * @return the index
      * @throws IOException
      */
     long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException;
 
     /**
-     *
      * @param context
      * @param reader
-     * @return
+     * @return the index
      * @throws IOException
      */
     long read(@NotNull ReadContext context, @NotNull ReadBytesMarshallable reader) throws IOException;
 
     /**
-     *
      * @param context
      * @param index
-     * @return
+     * @return {@code true} if successful
      */
     boolean moveToIndex(@NotNull ReadContext context, long index);
 
     /**
-     *
      * @param mappedFile
      * @param length
      * @param created
@@ -165,12 +139,12 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @throws IOException
      */
     void install(
-        @NotNull MappedFile mappedFile,
-        long length,
-        boolean created,
-        long cycle,
-        @NotNull ChronicleQueueBuilder builder,
-        @NotNull Function<Bytes, Wire> wireSupplier,
-        @Nullable Closeable closeable)
+            @NotNull MappedFile mappedFile,
+            long length,
+            boolean created,
+            long cycle,
+            @NotNull ChronicleQueueBuilder builder,
+            @NotNull Function<Bytes, Wire> wireSupplier,
+            @Nullable Closeable closeable)
             throws IOException;
 }
