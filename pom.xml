@@ -38,7 +38,7 @@
         <module>chronicle</module>
         <module>chronicle-demo</module>
         <module>chronicle-test</module>
-        <!--<module>chronicle-queue</module>-->
+        <module>chronicle-queue</module>
     </modules>
 
 </project>
