@@ -111,7 +111,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         long time = System.nanoTime() - start;
 
         System.out.println("There were " + count + " InSynk messages");
-        System.out.printf("Messages per second %,d%n", (int) (messages * 1e9 / time));
+        System.out.printf("Time: %.3fs.  Messages per second %,d, avg. %.2f%n", time / 1e9, (int) (messages * 1e9 / time), time / messages / 1e3);
 
         sink.close();
         source.close();
@@ -430,8 +430,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            chronicleSrc,
-            chronicleTarget
+                chronicleSrc,
+                chronicleTarget
         );
     }
 
@@ -443,8 +443,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
     public void testIndexedJira80() throws IOException {
         testJira80(
-            indexed(getIndexedTestPath("master")),
-            indexed(getIndexedTestPath("slave"))
+                indexed(getIndexedTestPath("master")),
+                indexed(getIndexedTestPath("slave"))
         );
     }
 
@@ -476,9 +476,10 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
+                            long actual = tailer.readLong();
+                            assertEquals(items - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
 
@@ -507,7 +508,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
+        for (long i = 0; i < items / 2; i++) {
             appender1.startExcerpt(8);
             appender1.writeLong(i);
             appender1.finish();
@@ -515,7 +516,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         appender1.close();
 
-        while(latch.getCount() > 10) {
+        while (latch.getCount() > 10) {
             Thread.sleep(250);
         }
 
@@ -531,7 +532,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
+        for (long i = items / 2; i < items; i++) {
             appender2.startExcerpt(8);
             appender2.writeLong(i);
             appender2.finish();
@@ -542,10 +543,12 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         latch.await(5, TimeUnit.SECONDS);
         assertEquals(0, latch.getCount());
 
+/*
         source2.close();
         source2.clear();
+*/
     }
-    
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -660,6 +663,37 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         testNonBlockingClient(
                 source,
                 sink,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
+    }
+
+    @Test
+    public void testIndexedLargeExcerpt() throws Exception {
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = indexed(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .readSpinCount(5)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle sinnk = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sinnk,
                 sinkBuilder.heartbeatIntervalMillis()
         );
     }

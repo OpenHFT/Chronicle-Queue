@@ -20,44 +20,48 @@ package net.openhft.chronicle;
 
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
+import net.openhft.chronicle.tcp.TcpConnectionHandler;
+import net.openhft.chronicle.tcp.TcpHandlingException;
+import net.openhft.chronicle.tcp.network.SessionDetailsProvider;
+import net.openhft.chronicle.tcp.network.TcpHandler;
+import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
-import net.openhft.chronicle.tools.WrappedExcerptAppenders;
-import net.openhft.chronicle.tools.WrappedExcerpts;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.WrappedBytes;
+import net.openhft.lang.model.constraints.NotNull;
+import net.openhft.lang.thread.LightPauser;
+import net.openhft.lang.thread.Pauser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
+
+import static net.openhft.chronicle.tcp.ChronicleTcp.createBufferOfSize;
+import static net.openhft.lang.io.ByteBufferBytes.wrap;
 
 class RemoteChronicleQueue extends WrappedChronicle {
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteChronicleQueue.class);
 
-    private final SinkTcp connection;
+    private final SinkTcp sinkTcp;
     private final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder;
-    private final boolean blocking;
     private volatile boolean closed;
-    private long lastReconnectionAttemptMS;
-    private long reconnectionIntervalMS;
-    private long lastReconnectionAttempt;
     private ExcerptCommon excerpt;
 
-    protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp connection, boolean blocking) {
+    protected RemoteChronicleQueue(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, final SinkTcp sinkTcp) {
         super(builder.chronicle());
-        this.connection = connection;
+        this.sinkTcp = sinkTcp;
         this.builder = builder.clone();
         this.closed = false;
-        this.blocking = blocking;
         this.excerpt = null;
-        this.reconnectionIntervalMS = builder.reconnectionIntervalMillis();
-        this.lastReconnectionAttemptMS = 0;
-        this.lastReconnectionAttempt = 0;
     }
 
     @Override
     public void close() throws IOException {
-        if(!closed) {
+        if (!closed) {
             closed = true;
             closeConnection();
         }
@@ -96,35 +100,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return this.excerpt = new StatelessExcerpt();
     }
 
-    private boolean openConnection() {
-        if(!connection.isOpen()) {
-            try {
-                connection.open(this.blocking);
-            } catch (IOException e) {
-            }
-        }
-
-        boolean connected = connection.isOpen();
-        if(connected) {
-            this.lastReconnectionAttempt = 0;
-            this.lastReconnectionAttemptMS = 0;
-        } else {
-            lastReconnectionAttempt++;
-            if(builder.reconnectionWarningThreshold() > 0) {
-                if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
-                    LOGGER.warn("Failed to establish a connection {}",
-                        ChronicleTcp.connectionName("", builder)
-                    );
-                }
-            }
-        }
-
-        return connected;
-    }
-
     private void closeConnection() {
         try {
-            connection.close();
+            sinkTcp.close();
         } catch (IOException e) {
             LOGGER.warn("Error closing socketChannel", e);
         }
@@ -135,42 +113,27 @@ class RemoteChronicleQueue extends WrappedChronicle {
         return null;
     }
 
-    protected boolean shouldConnect() {
-        long now = System.currentTimeMillis();
-        if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
-            return false;
-        }
-
-        lastReconnectionAttemptMS = now;
-        return true;
-    }
-
     // *************************************************************************
     // STATELESS
     // *************************************************************************
 
     private final class StatelessExcerptAppender
-            extends WrappedExcerptAppenders.ByteBufferBytesExcerptAppenderWrapper {
+            extends AbstractStatelessExcerpt implements ExcerptAppender {
 
         private final Logger logger;
-        private final ByteBuffer readBuffer;
-        private final ByteBuffer commandBuffer;
         private long lastIndex;
-        private long actionType;
+        private StatelessExcerptAppenderTcpHandler sinkTcpHandler;
+
+        private final Pauser pauser = new LightPauser(TimeUnit.MILLISECONDS.toNanos(1L), TimeUnit.MILLISECONDS.toNanos(10L));
 
         public StatelessExcerptAppender() {
-            super(builder.minBufferSize());
+            super(wrap(createBufferOfSize(builder.minBufferSize())));
 
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
-            this.readBuffer = ChronicleTcp.createBufferOfSize(12);
-            this.commandBuffer = ChronicleTcp.createBufferOfSize(16);
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + sinkTcp.toString());
             this.lastIndex = -1;
-            this.actionType = builder.appendRequireAck() ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK;
-        }
-
-        @Override
-        public long capacity() {
-            return super.limit();
+            this.sinkTcpHandler = new StatelessExcerptAppenderTcpHandler(this);
+            this.sinkTcpHandler.setAppendRequireAck(builder.appendRequireAck());
+            RemoteChronicleQueue.this.sinkTcp.setSinkTcpHandler(sinkTcpHandler);
         }
 
         @Override
@@ -179,12 +142,33 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
-        public void startExcerpt(long excerptSize) {
-            if(!isFinished()) {
+        public void startExcerpt(long size) {
+            if (!isFinished()) {
                 finish();
             }
 
-            super.startExcerpt(excerptSize);
+            if (size <= capacity()) {
+                clear();
+                limit(size);
+            } else {
+                wrapped = wrap(createBufferOfSize((int) size));
+            }
+
+        }
+
+        @Override
+        public void addPaddedEntry() {
+
+        }
+
+        @Override
+        public boolean nextSynchronous() {
+            return false;
+        }
+
+        @Override
+        public void nextSynchronous(boolean nextSynchronous) {
+
         }
 
         @Override
@@ -194,43 +178,31 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void finish() {
-            if(!isFinished()) {
-                if(!connection.isOpen()) {
-                    if(!waitForConnection()) {
+            if (!isFinished()) {
+                if (!sinkTcp.isOpen()) {
+                    if (!waitForConnection()) {
                         super.finish();
                         throw new IllegalStateException("Unable to connect to the Source");
                     }
                 }
 
                 try {
-                    connection.writeAction(commandBuffer, actionType, position());
-                    ByteBuffer buffer = wrapped.buffer();
-                    buffer.limit((int) wrapped.position());
-                    connection.writeAllOrEOF(buffer);
+                    flip();
 
-                    if(builder.appendRequireAck()) {
-                        connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);
+                    sinkTcpHandler.markUnsent();
+                    // A pipeline attached to a sinkTcp may need to be called multiple
+                    // times in order for the excerpt to actually be isSent.  This could
+                    // be caused by a TcpHandler higher up in the pipeline.
+                    do {
+                        sinkTcp.write();
+                    } while (!sinkTcpHandler.isSent());
 
-                        int  recType  = readBuffer.getInt();
-                        long recIndex = readBuffer.getLong();
-
-                        switch(recType) {
-                            case ChronicleTcp.ACK_LEN:
-                                this.lastIndex = recIndex;
-                                break;
-
-                            case ChronicleTcp.NACK_LEN:
-                                throw new IllegalStateException(
-                                    "Message discarded by server, reason: " + (
-                                        recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
-                                            ? "unsupported"
-                                            : "unknown")
-                                );
-                            default:
-                                logger.warn("Unknown message received {}, {}", recType, recIndex);
-                        }
+                    while (sinkTcpHandler.waitingForAck()) {
+                        pauser.pause();
+                        sinkTcp.read();
                     }
-                } catch(IOException e) {
+                    pauser.reset();
+                } catch (IOException e) {
                     LOGGER.trace("", e);
                     throw new IllegalStateException(e);
                 }
@@ -240,11 +212,26 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
+        public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+            return false;
+        }
+
+        @Override
+        public void write8bitText(CharSequence charSequence) {
+
+        }
+
+        @Override
         public synchronized void close() {
             closeConnection();
 
             super.close();
             RemoteChronicleQueue.this.excerpt = null;
+        }
+
+        @Override
+        public boolean wasPadding() {
+            return false;
         }
 
         @Override
@@ -258,36 +245,194 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         private boolean waitForConnection() {
-            for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i--) {
-                openConnection();
+            for (int i = builder.reconnectionAttempts(); !sinkTcp.isOpen() && i > 0; i--) {
+                sinkTcp.connect();
 
-                if(!openConnection()) {
+                if (!sinkTcp.isOpen()) {
                     try {
                         Thread.sleep(builder.reconnectionIntervalMillis());
-                    } catch(InterruptedException ignored) {
+                    } catch (InterruptedException ignored) {
                     }
                 }
             }
 
-            return connection.isOpen();
+            return sinkTcp.isOpen();
+        }
+
+        @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+
+        }
+
+        @Override
+        public boolean index(long l) {
+            return false;
+        }
+
+        @Override
+        public boolean nextIndex() {
+            return false;
+        }
+
+        @Override
+        public Excerpt toStart() {
+            return null;
+        }
+
+        @Override
+        public Excerpt toEnd() {
+            return null;
+        }
+
+        private class StatelessExcerptAppenderTcpHandler implements TcpHandler {
+
+            private final Logger logger = LoggerFactory.getLogger(StatelessExcerptAppenderTcpHandler.class);
+
+            private final BusyChecker busyChecker = new BusyChecker();
+
+            private ExcerptAppender appender;
+
+            private boolean appendRequireAck;
+
+            private boolean waitingForAck;
+
+            private boolean sent = false;
+
+            public StatelessExcerptAppenderTcpHandler(ExcerptAppender appender) {
+                this.appender = appender;
+            }
+
+            @Override
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
+                processIncoming(in);
+                processOutgoing(out);
+                return busyChecker.busy(in, out);
+            }
+
+            private void processIncoming(Bytes in) {
+                if (waitingForAck && in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+
+                    int recType = in.readInt();
+                    long recIndex = in.readLong();
+
+                    switch (recType) {
+                        case ChronicleTcp.ACK_LEN:
+                            StatelessExcerptAppender.this.lastIndex = recIndex;
+                            waitingForAck = false;
+                            break;
+
+                        case ChronicleTcp.NACK_LEN:
+                            waitingForAck = false;
+                            throw new IllegalStateException(
+                                    "Message discarded by server, reason: " + (
+                                            recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
+                                                    ? "unsupported"
+                                                    : "unknown")
+                            );
+                        default:
+                            logger.warn("Unknown message received {}, {}", recType, recIndex);
+                    }
+                }
+            }
+
+            private void processOutgoing(Bytes out) {
+                if (appender.remaining() > 0) {
+                    // only write anything if there is anything to write
+                    out.writeLong(appendRequireAck ? ChronicleTcp.ACTION_SUBMIT : ChronicleTcp.ACTION_SUBMIT_NOACK);
+                    out.writeLong(appender.limit());
+                    out.write(((StatelessExcerptAppender)appender).wrapped);
+
+                    if (appender.remaining() > 0) {
+                        throw new TcpHandlingException("Failed to write content for index " + appender.index());
+                    }
+
+                    waitingForAck = appendRequireAck;
+                }
+                sent = true;
+            }
+
+            @Override
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
+
+            }
+
+            public void setAppendRequireAck(boolean appendRequireAck) {
+                this.appendRequireAck = appendRequireAck;
+            }
+
+            public boolean waitingForAck() {
+                return waitingForAck;
+            }
+
+            public long getLastIndex() {
+                return lastIndex;
+            }
+
+            public void markUnsent() {
+                sent = false;
+            }
+
+            public boolean isSent() {
+                return sent;
+            }
+        }
+
+    }
+
+    private abstract class AbstractStatelessExcerpt extends WrappedBytes<Bytes> implements Excerpt {
+
+        protected AbstractStatelessExcerpt(Bytes wrapped) {
+            super(wrapped);
+        }
+
+        protected void cleanup() {
+            clear();
+        }
+
+        @Override
+        public void writeEnum(long offset, int maxSize, Object o) {
+            wrapped.writeEnum(offset, maxSize, o);
+        }
+
+        @Override
+        public <E> E readEnum(long offset, int maxSize, Class<E> aClass) {
+            return wrapped.readEnum(offset, maxSize, aClass);
         }
     }
 
     private final class StatelessExcerpt
-            extends WrappedExcerpts.ByteBufferBytesExcerptWrapper {
-
+            extends AbstractStatelessExcerpt {
         private final Logger logger;
-        private final ByteBuffer writeBuffer;
         private long index;
-        private int readCount;
+        private int readSpinCount;
+        private RemoteExcerptTcpHandler tcpHandler = new RemoteExcerptTcpHandler();
+        private final Pauser pauser;
 
         public StatelessExcerpt() {
-            super(builder.minBufferSize());
-
-            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + connection.toString());
+            super(new ResizableDirectByteBufferBytes(builder.minBufferSize()));
+            this.pauser = new LightPauser(builder.busyPeriodTimeNanos(), builder.parkPeriodTimeNanos());
+            this.logger = LoggerFactory.getLogger(getClass().getName() + "@" + sinkTcp.toString());
             this.index = -1;
-            this.writeBuffer = ChronicleTcp.createBufferOfSize(16);
-            this.readCount = builder.readSpinCount();
+            this.readSpinCount = builder.readSpinCount();
+            sinkTcp.addConnectionListener(new TcpConnectionHandler(){
+                @Override
+                public void onConnect(SocketChannel channel) {
+                    cleanup();
+                }
+            });
+            sinkTcp.setSinkTcpHandler(tcpHandler);
+            tcpHandler.setContent((ResizableDirectByteBufferBytes) super.wrapped);
+        }
+
+        @Override
+        public boolean wasPadding() {
+            return false;
         }
 
         @Override
@@ -313,10 +458,20 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
+        public boolean read8bitText(@NotNull StringBuilder stringBuilder) throws StreamCorruptedException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void write8bitText(CharSequence charSequence) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public synchronized void close() {
             try {
-                connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_UNSUBSCRIBE, ChronicleTcp.IDX_NONE);
-
+                tcpHandler.unsubscribe();
+                sinkTcp.write();
                 closeConnection();
             } catch (IOException e) {
                 logger.warn("", e);
@@ -327,50 +482,35 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         @Override
+        public long findMatch(@NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void findRange(@NotNull long[] startEnd, @NotNull ExcerptComparator comparator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean index(long index) {
             try {
-                if(!connection.isOpen()) {
-                    if(shouldConnect()) {
-                        if(!openConnection()) {
-                            return false;
-                        }
-
-                        cleanup();
-
-                    } else {
-                        return false;
-                    }
+                if (!sinkTcp.connect()) {
+                    return false;
                 }
 
-                connection.writeAction(this.writeBuffer, ChronicleTcp.ACTION_SUBSCRIBE, index);
+                tcpHandler.subscribeTo(index);
+                sinkTcp.write();
 
                 while (true) {
-                    connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, -1);
-
-                    int  receivedSize  = buffer().getInt();
-                    long receivedIndex = buffer().getLong();
-
-                    switch(receivedSize) {
-                        case ChronicleTcp.SYNC_IDX_LEN:
-                            if (index == ChronicleTcp.IDX_TO_START) {
-                                return receivedIndex == -1;
-
-                            } else if (index == ChronicleTcp.IDX_TO_END) {
-                                return advanceIndex();
-
-                            } else if (index == receivedIndex) {
-                                return advanceIndex();
-                            }
-
-                        case ChronicleTcp.IN_SYNC_LEN:
-                        case ChronicleTcp.PADDED_LEN:
+                    switch (tcpHandler.getState()) {
+                        case EXCERPT_COMPLETE:
+                            this.index = tcpHandler.index();
+                            return true;
+                        case EXCERPT_NOT_FOUND:
                             return false;
                     }
-
-                    // skip excerpt
-                    if (receivedSize > 0) {
-                        connection.readUpTo(buffer(), receivedSize, -1);
-                    }
+                    pauser.pause();
+                    sinkTcp.read();
                 }
             } catch (IOException e) {
                 if (e instanceof EOFException) {
@@ -384,43 +524,36 @@ class RemoteChronicleQueue extends WrappedChronicle {
             return false;
         }
 
+        private boolean excerptNotRead(boolean busy, int attempts) {
+            return (!busy && (attempts < readSpinCount || readSpinCount == -1));
+        }
+
         @Override
         public boolean nextIndex() {
             finish();
 
             try {
-                if(!connection.isOpen()) {
-                    if (index(this.index)) {
-                        return nextIndex();
+                if (!sinkTcp.isOpen()) {
+                    return index(this.index) && nextIndex();
+                }
 
-                    } else {
-                        return false;
+                pauser.reset();
+                int attempts = 0;
+                boolean busy;
+                //noinspection LoopStatementThatDoesntLoop
+                do {
+                    busy = sinkTcp.read();
+                    switch (tcpHandler.getState()) {
+                        case EXCERPT_NOT_FOUND:
+                            return false;
+                        case EXCERPT_COMPLETE:
+                            index = tcpHandler.index();
+                            return true;
                     }
-                }
+                    pauser.pause();
+                } while (excerptNotRead(busy, attempts++) || tcpHandler.state == TcpHandlerState.EXCERPT_INCOMPLETE);
 
-                if(!connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, this.readCount)) {
-                    return false;
-                }
-
-                int  receivedSize  = buffer().getInt();
-                long receivedIndex = buffer().getLong();
-
-                switch (receivedSize) {
-                    case ChronicleTcp.IN_SYNC_LEN:
-                        return false;
-                    case ChronicleTcp.SYNC_IDX_LEN:
-                    case ChronicleTcp.PADDED_LEN:
-                        return nextIndex();
-                }
-
-                if (receivedSize > 128 << 20 || receivedSize < 0) {
-                    throw new StreamCorruptedException("Size was " + receivedSize);
-                }
-
-                resize(receivedSize);
-                connection.readUpTo(buffer(), receivedSize, -1);
-
-                index = receivedIndex;
+                return false;
             } catch (IOException e1) {
                 if (e1 instanceof EOFException) {
                     logger.trace("Exception reading from socket", e1);
@@ -430,25 +563,190 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 }
 
                 try {
-                    connection.close();
+                    sinkTcp.close();
                 } catch (IOException e2) {
-                    logger.warn("Error closing soocket", e2);
+                    logger.warn("Error closing socket", e2);
                 }
 
                 return false;
             }
 
-            return true;
         }
 
-        protected boolean advanceIndex() {
-            if(nextIndex()) {
-                finish();
-                return true;
+        public class RemoteExcerptTcpHandler implements TcpHandler {
 
-            } else {
-                return false;
+            private boolean subscribed;
+
+            private boolean subscriptionRequired;
+
+            private boolean unsubscribeRequired;
+
+            private long subscribedIndex;
+
+            private ResizableDirectByteBufferBytes content;
+
+            private long index = -1;
+
+            private TcpHandlerState state = TcpHandlerState.EXCERPT_INCOMPLETE;
+
+            private final BusyChecker busyChecker = new BusyChecker();
+
+            @Override
+            public boolean process(Bytes in, Bytes out, SessionDetailsProvider sessionDetailsProvider) {
+                busyChecker.mark(in, out);
+                processIncoming(in);
+                processOutgoing(out);
+                return busyChecker.busy(in, out);
+            }
+
+            private void processOutgoing(Bytes out) {
+                if (subscriptionRequired) {
+                    out.writeLong(ChronicleTcp.ACTION_SUBSCRIBE);
+                    out.writeLong(subscribedIndex);
+                    subscriptionRequired = false;
+                } else if (unsubscribeRequired) {
+                    out.writeLong(ChronicleTcp.ACTION_UNSUBSCRIBE);
+                    out.writeLong(ChronicleTcp.IDX_NONE);
+                    subscribed = false;
+                    unsubscribeRequired = false;
+                }
+            }
+
+            private void processIncoming(Bytes in) {
+                if (!subscribed) {
+                    processSubscription(in);
+                } else {
+                    nextExcerpt(in);
+                }
+            }
+
+            private void processSubscription(Bytes in) {
+                if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                    long startPos = in.position();
+                    int receivedSize = in.readInt();
+                    long receivedIndex = in.readLong();
+
+                    switch (receivedSize) {
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                            if (subscribedIndex == ChronicleTcp.IDX_TO_START) {
+                                state = receivedIndex == -1 ? TcpHandlerState.EXCERPT_COMPLETE : TcpHandlerState.EXCERPT_NOT_FOUND;
+                                subscribed = true;
+                                return;
+
+                            } else if (subscribedIndex == ChronicleTcp.IDX_TO_END) {
+                                nextExcerpt(in);
+                                subscribed = true;
+                                return;
+
+                            } else if (subscribedIndex == receivedIndex) {
+                                nextExcerpt(in);
+                                subscribed = true;
+                                return;
+                            }
+
+                        case ChronicleTcp.IN_SYNC_LEN:
+                        case ChronicleTcp.PADDED_LEN:
+                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                            subscribed = true;
+                            return;
+                    }
+
+                    // skip excerpt
+                    if (in.remaining() >= receivedSize) {
+                        long inLimit = in.limit();
+                        try {
+                            in.limit(in.position() + receivedSize);
+                            content.resetToSize(receivedSize).write(in);
+                            content.flip();
+                        } finally {
+                            in.limit(inLimit);
+                        }
+                        state = TcpHandlerState.SEARCHING;
+                    } else {
+                        in.position(startPos);
+                        state = TcpHandlerState.EXCERPT_INCOMPLETE;
+                    }
+                } else {
+                    state = TcpHandlerState.EXCERPT_INCOMPLETE;
+                }
+                subscribed = false;
+            }
+
+            private void nextExcerpt(Bytes in) {
+                if (in.remaining() >= ChronicleTcp.HEADER_SIZE) {
+                    long startPos = in.position();
+                    int receivedSize = in.readInt();
+                    long receivedIndex = in.readLong();
+
+                    switch (receivedSize) {
+                        case ChronicleTcp.IN_SYNC_LEN:
+                            // heartbeat
+                            state = TcpHandlerState.EXCERPT_NOT_FOUND;
+                            return;
+                        case ChronicleTcp.SYNC_IDX_LEN:
+                        case ChronicleTcp.PADDED_LEN:
+                            nextExcerpt(in);
+                            return;
+                    }
+
+                    if (receivedSize > 128 << 20 || receivedSize < 0) {
+                        throw new TcpHandlingException("Size was " + receivedSize);
+                    }
+
+                    if (in.remaining() >= receivedSize) {
+                        long inLimit = in.limit();
+                        try {
+                            in.limit(in.position() + receivedSize);
+                            content.resetToSize(receivedSize).write(in);
+                            content.flip();
+                        } finally {
+                            in.limit(inLimit);
+                        }
+
+                        index = receivedIndex;
+                        state = TcpHandlerState.EXCERPT_COMPLETE;
+                    } else {
+                        in.position(startPos);
+                        state = TcpHandlerState.EXCERPT_INCOMPLETE;
+                    }
+                } else {
+                    state = TcpHandlerState.EXCERPT_INCOMPLETE;
+                }
+            }
+
+            @Override
+            public void onEndOfConnection(SessionDetailsProvider sessionDetailsProvider) {
+
+            }
+
+            public void subscribeTo(long index) {
+                this.subscribedIndex = index;
+                this.subscriptionRequired = true;
+                this.subscribed = false;
+            }
+
+            public void setContent(ResizableDirectByteBufferBytes content) {
+                this.content = content;
+            }
+
+            public TcpHandlerState getState() {
+                return state;
+            }
+
+            public long index() {
+                return index;
+            }
+
+            public void unsubscribe() {
+                this.unsubscribeRequired = true;
             }
         }
+    }
+
+    public enum TcpHandlerState {
+        EXCERPT_NOT_FOUND,
+        EXCERPT_COMPLETE,
+        SEARCHING,
+        EXCERPT_INCOMPLETE
     }
 }

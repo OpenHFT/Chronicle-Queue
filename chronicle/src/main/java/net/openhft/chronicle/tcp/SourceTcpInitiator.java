@@ -76,7 +76,11 @@ public final class SourceTcpInitiator extends SourceTcp {
                     }
 
                     if (socketChannel != null) {
-                        createSessionHandler(socketChannel).run();
+                        try {
+                            createSessionHandler(socketChannel).run();
+                        } catch (IOException e) {
+                            logger.error("Failed to create session handler.", e);
+                        }
                     }
                 }
             }

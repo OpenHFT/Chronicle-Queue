@@ -257,8 +257,10 @@ public class ChronicleTcpTestBase {
                         assertTrue("Timeout exceeded " + (end - start), (end - start) < timeout);
 
                         if(hasNext) {
-                            assertEquals(i, tailer.readLong());
-                            assertEquals(i + 1, tailer.readLong());
+                            long first = tailer.readLong();
+                            long second = tailer.readLong();
+                            assertEquals(i, first);
+                            assertEquals(i + 1, second);
                             i++;
 
                             tailer.finish();

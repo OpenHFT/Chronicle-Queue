@@ -17,18 +17,26 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.tcp.network.TcpHandler;
+import net.openhft.chronicle.tcp.TcpPipeline;
 import net.openhft.chronicle.tcp.*;
 import net.openhft.lang.Jvm;
 import net.openhft.lang.Maths;
 import net.openhft.lang.io.FileLifecycleListener;
 import net.openhft.lang.model.constraints.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Collections.addAll;
 
 public abstract class ChronicleQueueBuilder implements Cloneable {
 
@@ -658,6 +666,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private int selectorSpinLoopCount;
         private int readSpinCount;
         private boolean appendRequireAck;
+        protected boolean blocking;
 
         private int acceptorMaxBacklog;
         private int acceptorDefaultThreads;
@@ -673,6 +682,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         @Nullable
         private MappingFunction mapping;
+
+        private List<TcpHandler> tcpHandlers = new ArrayList<>();
 
         private ReplicaChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
             this.builder = builder;
@@ -1068,6 +1079,32 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.chronicle;
         }
 
+        public ReplicaChronicleQueueBuilder tcpHandlers(TcpHandler ... tcpHandlers) {
+            if (tcpHandlers != null) {
+                addAll(this.tcpHandlers, tcpHandlers);
+            }
+            return this;
+        }
+
+        public TcpHandler tcpPipeline(TcpHandler tcpHandler) {
+            if (tcpHandlers.isEmpty()) {
+                return tcpHandler;
+            } else {
+                TcpHandler[] handlers = tcpHandlers.toArray(new TcpHandler[tcpHandlers.size() + 1]);
+                handlers[handlers.length - 1] = tcpHandler;
+                return TcpPipeline.pipeline(handlers);
+            }
+        }
+
+        public boolean blocking() {
+            return blocking;
+        }
+
+        public ReplicaChronicleQueueBuilder blocking(boolean blocking) {
+            this.blocking = blocking;
+            return this;
+        }
+
         @Override
         public Chronicle build() throws IOException {
             if (this.builder != null) {
@@ -1114,27 +1151,34 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
     private static class SinkChronicleQueueBuilder extends ReplicaChronicleQueueBuilder {
 
-        private SinkChronicleQueueBuilder() {
-            super(null, null);
-        }
+        private static final Logger log = LoggerFactory.getLogger(SinkChronicleQueueBuilder.class);
 
         private SinkChronicleQueueBuilder(@NotNull ChronicleQueueBuilder builder) {
-            super(null, builder);
+            this(null, builder);
         }
 
         private SinkChronicleQueueBuilder(@NotNull Chronicle chronicle) {
-            super(chronicle, null);
+            this(chronicle, null);
+        }
+
+        private SinkChronicleQueueBuilder(Chronicle chronicle, ChronicleQueueBuilder builder) {
+            super(chronicle, builder);
+            super.blocking = true;
         }
 
         @Override
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            if (blocking && readSpinCount() > 0) {
+                log.warn("Sink set to blocking and has a read spin count > 0.");
+            }
+
             if (bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
+                cnx = new SinkTcpAcceptor(this, blocking);
 
             } else if (connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
+                cnx = new SinkTcpInitiator(this, blocking);
 
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
@@ -1198,20 +1242,25 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
     private static final class RemoteChronicleQueueAppenderBuilder extends ReplicaChronicleQueueBuilder {
 
+        private static final Logger log = LoggerFactory.getLogger(RemoteChronicleQueueAppenderBuilder.class);
+
         private RemoteChronicleQueueAppenderBuilder() {
             super(null, null);
+            super.blocking = true;
         }
 
         @Override
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            if (blocking && readSpinCount() > 0) {
+                log.warn("Appender set to blocking and has a read spin count > 0.");
+            }
+
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
-
+                cnx = new SinkTcpAcceptor(this, blocking);
             } else if(connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
-
+                cnx = new SinkTcpInitiator(this, blocking);
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }
@@ -1238,20 +1287,25 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
     private static final class RemoteChronicleQueueTailerBuilder extends ReplicaChronicleQueueBuilder {
 
+        private static final Logger log = LoggerFactory.getLogger(RemoteChronicleQueueTailerBuilder.class);
+
         private RemoteChronicleQueueTailerBuilder() {
             super(null, null);
+            super.blocking = true;
         }
 
         @Override
         public Chronicle doBuild() {
             SinkTcp cnx;
 
+            if (blocking && readSpinCount() > 0) {
+                log.warn("Tailer set to blocking and has a read spin count > 0.");
+            }
+
             if(bindAddress() != null && connectAddress() == null) {
-                cnx = new SinkTcpAcceptor(this);
-
+                cnx = new SinkTcpAcceptor(this, blocking);
             } else if(connectAddress() != null) {
-                cnx = new SinkTcpInitiator(this);
-
+                cnx = new SinkTcpInitiator(this, blocking);
             } else {
                 throw new IllegalArgumentException("BindAddress and ConnectAddress are not set");
             }

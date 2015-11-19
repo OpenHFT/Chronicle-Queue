@@ -22,6 +22,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 public class TcpConnectionHandler implements TcpConnectionListener {
+
     @Override
     public void onError(SelectableChannel channel, Exception exception) {
     }
@@ -35,6 +36,6 @@ public class TcpConnectionHandler implements TcpConnectionListener {
     }
 
     @Override
-    public void onDisconnect(SocketChannel channel) {
+    public void onDisconnect(SocketChannel channel, String message) {
     }
 }

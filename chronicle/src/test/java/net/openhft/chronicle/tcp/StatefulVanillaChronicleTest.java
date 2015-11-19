@@ -24,6 +24,7 @@ import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
+import net.openhft.lang.Jvm;
 import org.junit.Test;
 
 import java.io.File;
@@ -126,12 +127,13 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
     public void testReplicationWithRolling1() throws IOException, InterruptedException {
-        final int RUNS = 500;
+        final int RUNS = 5;
 
         final String sourceBasePath = getVanillaTestPath("source");
         final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -139,6 +141,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         final Chronicle sinkChronicle = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -231,6 +234,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String sinkBasePath = getVanillaTestPath("sink");
 
         final Chronicle sourceChronicle = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -238,6 +242,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         final Chronicle sinkChronicle = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -341,6 +346,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = vanilla(sourceBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -360,7 +366,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
             Thread.sleep(100);
 
-            if(i % 10 ==0) {
+            if (i % 10 == 0) {
                 LOGGER.info(".");
             }
         }
@@ -371,19 +377,21 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         //create a tailer to get the first 50 items then exit the tailer
         final Chronicle sink1 = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
                 .indexBlockSize(16L << 10)
                 .sink()
                 .connectAddress("localhost", port)
+                .maxExcerptsPerMessage(1)
                 .build();
 
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
         LOGGER.info("Sink1 reading first 50 items then stopping");
-        for( int count=0; count < 50 ;) {
-            if(tailer1.nextIndex()) {
+        for (int count = 0; count < 50; ) {
+            if (tailer1.nextIndex()) {
                 assertEquals(1000000000 + count, tailer1.parseLong());
                 tailer1.finish();
 
@@ -397,6 +405,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         //now resume the tailer to get the first 50 items
         final Chronicle sink2 = vanilla(sinkBasePath)
+                .dataBlockSize(1L << 20)
                 .entriesPerCycle(1L << 20)
                 .cycleLength(1000, false)
                 .cycleFormat("yyyyMMddHHmmss")
@@ -409,10 +418,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
         assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
-        
+
         LOGGER.info("Sink2 restarting to continue to read the next 50 items");
-        for(int count=50 ; count < 100 ; ) {
-            if(tailer2.nextIndex()) {
+        for (int count = 50; count < 100; ) {
+            if (tailer2.nextIndex()) {
                 assertEquals(1000000000 + count, tailer2.parseLong());
                 tailer2.finish();
 
@@ -481,8 +490,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final String basePathSource = getVanillaTestPath("source");
         final String basePathSink = getVanillaTestPath("sink");
         final PortSupplier portSupplier = new PortSupplier();
-        final int items = 20;
-        final CountDownLatch latch = new CountDownLatch(items);
+        final int runs = 50;
+        final int itemsPerRun = 15;
+        final int totalItems = runs * itemsPerRun;
+        final CountDownLatch latch = new CountDownLatch(totalItems);
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -501,9 +512,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
+                            final long actual = tailer.readLong();
+                            assertEquals(totalItems - latch.getCount(), actual);
                             tailer.finish();
                             latch.countDown();
 
@@ -524,51 +536,59 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         t.start();
 
-        // Source 1
-        Chronicle source1 = vanilla(basePathSource)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier)
-                .build();
 
-        ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
-            appender1.startExcerpt(8);
-            appender1.writeLong(i);
-            appender1.finish();
+        for (int i = 0; i < runs; i++) {
+            final int expectedLatchCount = totalItems - ((i + 1) * itemsPerRun);
+            appendToSource(portSupplier, basePathSource, itemsPerRun, i, new Runnable() {
+                @Override
+                public void run() {
+                    if (expectedLatchCount > 0) {
+                        while (latch.getCount() > expectedLatchCount) {
+                            try {
+                                Thread.sleep(250);
+                            } catch (InterruptedException e) {
+                                // do nothing
+                            }
+                        }
+                    } else {
+                        try {
+                            latch.await(5, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            // do nothing
+                        }
+                    }
+                }
+            });
         }
 
-        appender1.close();
+        assertEquals(0, latch.getCount());
+    }
 
-        while(latch.getCount() > 10) {
-            Thread.sleep(250);
-        }
-
-        source1.close();
-
+    private void appendToSource(PortSupplier portSupplier, String basePathSource, int items, int run, Runnable waiter) throws IOException {
         portSupplier.reset();
 
-        // Source 2
-        Chronicle source2 = vanilla(basePathSource)
+        // Source 1
+        Chronicle source = vanilla(basePathSource)
+                .dataBlockSize(1L << 20)
                 .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
                 .build();
 
-        ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
-            appender2.startExcerpt(8);
-            appender2.writeLong(i);
-            appender2.finish();
+        ExcerptAppender appender = source.createAppender();
+        for (long i = 0; i < items; i++) {
+            final long l = (run * items) + i;
+            appender.startExcerpt(8);
+            appender.writeLong(l);
+            appender.finish();
         }
 
-        appender2.close();
+        appender.close();
 
-        latch.await(5, TimeUnit.SECONDS);
-        assertEquals(0, latch.getCount());
+        waiter.run();
 
-        source2.close();
-        source2.clear();
+        source.close();
+//        source.clear();
     }
 
     // *************************************************************************
@@ -599,6 +619,39 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 source,
                 sink,
                 sinkBuilder.heartbeatIntervalMillis()
+        );
+    }
+
+    // Tests that a large (size greater than a single write) excerpt can be fully sourced
+    @Test
+    public void testLargeExcerpt() throws Exception {
+        final String basePathSource = getVanillaTestPath("source");
+        final String basePathSink = getVanillaTestPath("sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = vanilla(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = vanilla(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .readSpinCount(5)
+                .sendBufferSize(16)
+                .receiveBufferSize(16);
+
+        final Chronicle sink = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sink,
+//                sinkBuilder.heartbeatIntervalMillis()
+                500000
         );
     }
 }

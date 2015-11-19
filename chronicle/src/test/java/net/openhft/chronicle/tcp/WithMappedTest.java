@@ -230,6 +230,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             }
                         } finally {
                             lock.release();
+                            highLowSink.close();
                             highLowSink.clear();
                         }
                     } catch(Exception e) {
@@ -276,6 +277,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             }
                         }finally {
                                 lock.release();
+                            closeSink.close();
                                 closeSink.clear();
                             }
                     } catch(Exception e) {
