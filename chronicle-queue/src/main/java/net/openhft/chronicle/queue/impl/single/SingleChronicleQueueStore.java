@@ -78,7 +78,6 @@ class SingleChronicleQueueStore implements WireStore {
     private final ReferenceCounter refCount;
 
     private final Bounds bounds;
-
     private final Indexing indexing;
     private final Roll roll;
 
@@ -217,7 +216,10 @@ class SingleChronicleQueueStore implements WireStore {
 
         this.builder = (SingleChronicleQueueBuilder) builder;
         this.mappedFile = mappedFile;
-        this.indexing.setMappedFile(mappedFile);
+
+        final MappedBytes mappedBytes = new MappedBytes(mappedFile);
+        this.indexing.setMappedBytes(mappedBytes);
+
         if (created) {
             this.bounds.setWritePosition(length);
             this.bounds.setReadPosition(length);
@@ -531,9 +533,8 @@ class SingleChronicleQueueStore implements WireStore {
         private LongValue index2Index;
         private LongValue lastIndex;
         private final Wire templateIndex;
-
         private ThreadLocal<LongArrayValues> longArray;
-        private MappedFile mappedFile;
+        private Bytes<Bytes> mappedBytes;
 
         /**
          * @param wireType
@@ -628,42 +629,29 @@ class SingleChronicleQueueStore implements WireStore {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(context);
 
-            try {
+            this.mappedBytes.readLimit(this.mappedBytes.capacity());
+            final Bytes bytes0 = this.mappedBytes.readPosition(indexToIndex0);
+            final Wire w = wireType.apply(bytes0);
 
-                final Bytes bytes0 = this.mappedFile.acquireBytesForRead(indexToIndex0);
-                final Wire w = wireType.apply(bytes0);
+            w.readDocument(d -> {
 
+                final LongArrayValues primaryIndex = array(w, array);
+                final long primaryOffset = toAddress0(index);
+                long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
 
-                w.readDocument(d -> {
+                if (secondaryAddress == Wires.NOT_INITIALIZED) {
+                    secondaryAddress = newIndex(context);
+                    primaryIndex.setValueAt(primaryOffset, secondaryAddress);
+                }
 
-                    final LongArrayValues primaryIndex = array(w, array);
-
-                    try {
-
-                        final long primaryOffset = toAddress0(index);
-                        long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
-                        if (secondaryAddress == Wires.NOT_INITIALIZED) {
-                            secondaryAddress = newIndex(context);
-                            primaryIndex.setValueAt(primaryOffset, secondaryAddress);
-                        }
-
-                        final Bytes bytes = mappedFile.acquireBytesForRead(secondaryAddress);
-                        wireType.apply(bytes).readDocument(document -> {
-                            final LongArrayValues array1 = array(document, array);
-                            array1.setValueAt(toAddress1(index), address);
-                        }, null);
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        throw Jvm.rethrow(e);
-                    }
+                this.mappedBytes.readLimit(this.mappedBytes.capacity());
+                final Bytes bytes = mappedBytes.readPosition(secondaryAddress);
+                wireType.apply(bytes).readDocument(document -> {
+                    final LongArrayValues array1 = array(document, array);
+                    array1.setValueAt(toAddress1(index), address);
                 }, null);
 
-
-            } catch (Throwable e) {
-                e.printStackTrace();
-                throw Jvm.rethrow(e);
-            }
+            }, null);
 
         }
 
@@ -716,8 +704,8 @@ class SingleChronicleQueueStore implements WireStore {
         }
 
 
-        void setMappedFile(MappedFile mappedFile) {
-            this.mappedFile = mappedFile;
+        void setMappedBytes(Bytes mappedBytes) {
+            this.mappedBytes = mappedBytes;
         }
 
 
@@ -725,7 +713,7 @@ class SingleChronicleQueueStore implements WireStore {
 
         private long readIndexAt(long index2Index, long offset) throws IOException {
 
-            final Bytes bytes0 = this.mappedFile.acquireBytesForRead(index2Index);
+            final Bytes bytes0 = this.mappedBytes.readPosition(index2Index);
             final Wire w = this.wireType.apply(bytes0);
 
             final long[] result = new long[1];
@@ -797,7 +785,7 @@ class SingleChronicleQueueStore implements WireStore {
                     }
 
                 } else {
-                    throw new UnsupportedOperationException("todo");
+                    return linearScan(context, targetIndex, 0, 0);
                 }
 
 

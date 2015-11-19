@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -44,6 +45,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollDateCache dateCache;
     private final WireStorePool pool;
     private long firstCycle;
+    private MappedBytes mappedBytes;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
@@ -196,6 +198,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                             ws.wireSupplier(),
                             ws.mappedFile()
                     )
+
             ).delegate();
 
         } catch (IOException e) {
