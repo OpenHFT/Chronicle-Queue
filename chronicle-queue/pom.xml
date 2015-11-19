@@ -60,7 +60,7 @@
     <dependencies>
 
 
-    <dependency>
+        <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-network</artifactId>
         </dependency>
