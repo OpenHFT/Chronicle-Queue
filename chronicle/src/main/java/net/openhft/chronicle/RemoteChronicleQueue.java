@@ -265,6 +265,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     try {
                         Thread.sleep(builder.reconnectionIntervalMillis());
                     } catch(InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
                     }
                 }
             }
