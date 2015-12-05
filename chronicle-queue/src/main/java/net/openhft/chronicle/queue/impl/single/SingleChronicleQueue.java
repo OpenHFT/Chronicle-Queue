@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -32,8 +31,11 @@ import net.openhft.chronicle.wire.WiredFile;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
     static {
@@ -45,20 +47,20 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollDateCache dateCache;
     private final WireStorePool pool;
     private long firstCycle;
-    private MappedBytes mappedBytes;
+
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
         this.pool = WireStorePool.withSupplier(this::newStore);
-        this.firstCycle = -1L;
+        this.firstCycle = -1;
+        this.pool.acquire(cycle());
     }
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
         return new Excerpts.StoreAppender(this);
-        //return new Excerpts.DelegatedAppender(this, new Excerpts.StoreAppender(this));
     }
 
     @Override
@@ -67,12 +69,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected synchronized WireStore storeForCycle(long cycle) throws IOException {
+    protected WireStore storeForCycle(long cycle) throws IOException {
         return this.pool.acquire(cycle);
     }
 
     @Override
-    protected synchronized void release(@NotNull WireStore store) {
+    protected void release(@NotNull WireStore store) {
         this.pool.release(store);
     }
 
@@ -84,7 +86,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //TODO: reduce garbage
     //TODO: add a check on first file, in case it gets deleted
     @Override
-    protected synchronized long firstCycle() {
+    protected long firstCycle() {
         if (firstCycle != -1) {
             return firstCycle;
         }
@@ -159,52 +161,62 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return builder.wireType();
     }
 
-    @Override
-    public long indexToIndex() {
-        throw new UnsupportedOperationException("todo");
-    }
-
-    @Override
-    public long newIndex() {
-        throw new UnsupportedOperationException("todo");
-    }
 
     // *************************************************************************
     //
     // *************************************************************************
 
     protected WireStore newStore(final long cycle) {
-        try {
 
-            final String cycleFormat = this.dateCache.formatFor(cycle);
-            final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+        final String cycleFormat = this.dateCache.formatFor(cycle);
+        final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
-            File parentFile = cycleFile.getParentFile();
-            if (parentFile != null & !parentFile.exists()) {
-                parentFile.mkdirs();
-            }
-
-            return WiredFile.<WireStore>build(
-                    cycleFile,
-                    file -> MappedFile.mappedFile(file, builder.blockSize(), builder.blockSize()),
-                    builder.wireType(),
-                    () -> new SingleChronicleQueueStore(builder.rollCycle(), this.builder.wireType()),
-                    ws -> ws.delegate().install(
-                            ws.mappedFile(),
-                            ws.headerLength(),
-                            ws.headerCreated(),
-                            cycle,
-                            builder,
-                            ws.wireSupplier(),
-                            ws.mappedFile()
-                    )
-
-            ).delegate();
-
-        } catch (IOException e) {
-            //TODO: right way ?
-            throw new RuntimeException(e);
+        File parentFile = cycleFile.getParentFile();
+        if (parentFile != null & !parentFile.exists()) {
+            parentFile.mkdirs();
         }
+
+
+        final Function<File, MappedFile> toMappedFile = file -> {
+            try {
+                return MappedFile.mappedFile(file,
+                        SingleChronicleQueue.this.builder.blockSize(),
+                        SingleChronicleQueue.this.builder.blockSize());
+            } catch (FileNotFoundException e) {
+                throw Jvm.rethrow(e);
+            }
+        };
+
+        Function<MappedFile, WireStore> supplyStore = mappedFile -> new SingleChronicleQueueStore
+                (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
+                        .builder.wireType(), mappedFile);
+
+
+        Consumer<WiredFile<WireStore>> consumer = ws -> {
+            try {
+                ws.delegate().install(
+                        ws.mappedFile(),
+                        ws.headerLength(),
+                        ws.headerCreated(),
+                        cycle,
+                        builder,
+                        ws.wireSupplier(),
+                        ws.mappedFile()
+                );
+            } catch (IOException e) {
+                throw Jvm.rethrow(e);
+            }
+        };
+
+        return WiredFile.build(
+                cycleFile,
+                toMappedFile,
+                builder.wireType(),
+                supplyStore,
+                consumer
+        ).delegate();
+
+
     }
 
     @NotNull

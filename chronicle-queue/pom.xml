@@ -49,16 +49,20 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.10.5-SNAPSHOT</version>
+                <version>1.10.17-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
 
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-wire</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>

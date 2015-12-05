@@ -16,8 +16,12 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -165,7 +169,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = queue.createTailer().toStart();
         for (int i = 0; i < 20; i++) {
             final int n = i;
-            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            final boolean condition = tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32()));
+            assertTrue(condition);
         }
     }
 
@@ -193,7 +198,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = queue.createTailer().toStart();
         for (int i = 0; i < 10; i++) {
             final int n = i;
-            assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
+            final boolean condition = tailer.readDocument(new ReadMarshallable() {
+                @Override
+                public void readMarshallable(@NotNull WireIn r) throws IORuntimeException {
+                    assertEquals(n, r.read(TestKey.test).int32());
+                }
+            });
+            assertTrue(condition);
         }
     }
 

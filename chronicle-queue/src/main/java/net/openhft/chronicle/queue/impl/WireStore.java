@@ -46,7 +46,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return
      * @throws IOException
      */
-    void acquireBytesAtReadPositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
+    //void acquireBytesAtReadPositionForRead(@NotNull Bytes bytes) throws IOException;
 
     /**
      * @return the first writable position
@@ -58,14 +58,14 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return
      * @throws IOException
      */
-    void acquireBytesAtWritePositionForRead(@NotNull VanillaBytes<?> bytes) throws IOException;
+    ///   void acquireBytesAtWritePositionForRead(@NotNull  Bytes bytes) throws IOException;
 
     /**
      * @param bytes
      * @return
      * @throws IOException
      */
-    void acquireBytesAtWritePositionForWrite(@NotNull VanillaBytes<?> bytes) throws IOException;
+    //   void acquireBytesAtWritePositionForWrite(@NotNull  Bytes bytes) throws IOException;
 
     /**
      * @return the last index
@@ -78,7 +78,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return
      * @throws IOException
      */
-    boolean appendRollMeta(@NotNull WriteContext context, long cycle) throws IOException;
+    boolean appendRollMeta(@NotNull MappedBytes context, long cycle) throws IOException;
 
     /**
      * @param context
@@ -86,7 +86,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return the index
      * @throws IOException
      */
-    long append(@NotNull WriteContext context, @NotNull WriteMarshallable marshallable) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull WriteMarshallable marshallable) throws IOException;
 
     /**
      * @param context
@@ -94,7 +94,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return the index
      * @throws IOException
      */
-    long append(@NotNull WriteContext context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
 
     /**
      * @param context
@@ -102,7 +102,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return the index
      * @throws IOException
      */
-    long append(@NotNull WriteContext context, @NotNull Bytes bytes) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull Bytes bytes) throws IOException;
 
 
     /**
@@ -111,7 +111,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return the index
      * @throws IOException
      */
-    long read(@NotNull ReadContext context, @NotNull ReadMarshallable reader) throws IOException;
+    long read(@NotNull MappedBytes context, @NotNull ReadMarshallable reader) throws IOException;
 
     /**
      * @param context
@@ -119,14 +119,14 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return the index
      * @throws IOException
      */
-    long read(@NotNull ReadContext context, @NotNull ReadBytesMarshallable reader) throws IOException;
+    long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException;
 
     /**
      * @param context
      * @param index
      * @return {@code true} if successful
      */
-    boolean moveToIndex(@NotNull ReadContext context, long index);
+    boolean moveToIndex(@NotNull MappedBytes context, long index);
 
     /**
      * @param mappedFile
@@ -147,4 +147,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable)
             throws IOException;
+
+
+    MappedFile mappedFile();
 }
