@@ -70,6 +70,7 @@ public abstract class SourceTcp {
                     builder.selectTimeout() * 2,
                     builder.selectTimeoutUnit());
         } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
         }
 
         return !running.get();

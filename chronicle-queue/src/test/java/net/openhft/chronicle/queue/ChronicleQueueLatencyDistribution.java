@@ -2,7 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
-import net.openhft.chronicle.bytes.IORuntimeException;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;

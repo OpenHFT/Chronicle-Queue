@@ -22,7 +22,7 @@ import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesMarshallable;
-import net.openhft.chronicle.bytes.IORuntimeException;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.Histogram;

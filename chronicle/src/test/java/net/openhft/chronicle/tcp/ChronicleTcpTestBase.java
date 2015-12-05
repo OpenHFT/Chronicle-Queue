@@ -22,7 +22,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
-import net.openhft.lang.Jvm;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.*;
@@ -41,9 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class ChronicleTcpTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleTcpTestBase.class);
@@ -74,6 +71,19 @@ public class ChronicleTcpTestBase {
     // *************************************************************************
     //
     // *************************************************************************
+
+    protected static void assertIndexedClean(String path) {
+        assertNotNull(path);
+        File index = new File(path + ".index");
+        File data = new File(path + ".data");
+
+        if (index.exists()) {
+            Assert.assertTrue(index.delete());
+        }
+        if (data.exists()) {
+            Assert.assertTrue(data.delete());
+        }
+    }
 
     protected String getTmpDir(String name) {
         try {
@@ -130,79 +140,16 @@ public class ChronicleTcpTestBase {
         return path;
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     protected synchronized String getIndexedTestPath(String prefix, String suffix) {
         final String path = getTmpDir(prefix, suffix);
         ChronicleTools.deleteOnExit(path);
 
         return path;
     }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    protected final class PortSupplier extends TcpConnectionHandler {
-        private final AtomicInteger port;
-        private final CountDownLatch latch;
-
-        public PortSupplier() {
-            this.port = new AtomicInteger(-1);
-            this.latch = new CountDownLatch(1);
-        }
-
-        @Override
-        public void onListen(final ServerSocketChannel channel) {
-            this.port.set(channel.socket().getLocalPort());
-            this.latch.countDown();
-        }
-
-        @Override
-        public void onError(SelectableChannel channel, Exception exception) {
-            errorCollector.addError(exception);
-
-            this.port.set(-1);
-            this.latch.countDown();
-        }
-
-        public void reset() {
-            this.port.set(-1);
-        }
-
-        public int port() {
-            if (port.get() == -1) {
-                try {
-                    this.latch.await(5, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                }
-            }
-
-            return this.port.get();
-        }
-
-        public int getAndAssertOnError() {
-            final int port = port();
-            assertNotEquals(-1, port);
-
-            return port;
-        }
-    }
-
-    protected static void assertIndexedClean(String path) {
-        assertNotNull(path);
-        File index = new File(path + ".index");
-        File data = new File(path + ".data");
-
-        if(index.exists()) {
-            Assert.assertTrue(index.delete());
-        }
-        if(data.exists()) {
-            Assert.assertTrue(data.delete());
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws IOException, InterruptedException  {
         final int messages = 1000;
@@ -291,5 +238,56 @@ public class ChronicleTcpTestBase {
 
         sink.close();
         sink.clear();
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    protected final class PortSupplier extends TcpConnectionHandler {
+        private final AtomicInteger port;
+        private final CountDownLatch latch;
+
+        public PortSupplier() {
+            this.port = new AtomicInteger(-1);
+            this.latch = new CountDownLatch(1);
+        }
+
+        @Override
+        public void onListen(final ServerSocketChannel channel) {
+            this.port.set(channel.socket().getLocalPort());
+            this.latch.countDown();
+        }
+
+        @Override
+        public void onError(SelectableChannel channel, Exception exception) {
+            errorCollector.addError(exception);
+
+            this.port.set(-1);
+            this.latch.countDown();
+        }
+
+        public void reset() {
+            this.port.set(-1);
+        }
+
+        public int port() {
+            if (port.get() == -1) {
+                try {
+                    this.latch.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            return this.port.get();
+        }
+
+        public int getAndAssertOnError() {
+            final int port = port();
+            assertNotEquals(-1, port);
+
+            return port;
+        }
     }
 }
