@@ -22,9 +22,6 @@ import java.util.Objects;
  * Created by peter.lawrey on 19/09/2015.
  */
 public interface RollCycle {
-
-    Integer TIME_ZONE_OFFSET = Integer.getInteger("time.zone.offset", 0);
-
     static RollCycle forLength(int length) {
         for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {
             if (RollCycles.VALUES[i].length == length) {
@@ -59,12 +56,10 @@ public interface RollCycle {
             public String format() {
                 return format;
             }
-
             @Override
             public int length() {
                 return length;
             }
-
             @Override
             public ZoneId zone() {
                 return zone;
@@ -80,6 +75,6 @@ public interface RollCycle {
 
 
     default int current() {
-        return (int) (System.currentTimeMillis() + TIME_ZONE_OFFSET / length());
+        return (int) (System.currentTimeMillis() / length());
     }
 }
