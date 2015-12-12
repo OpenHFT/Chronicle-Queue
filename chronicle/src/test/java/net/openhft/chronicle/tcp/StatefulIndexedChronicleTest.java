@@ -99,7 +99,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             }
 
             long n = excerpt.readLong();
-            String text = excerpt.parseUTF(StopCharTesters.CONTROL_STOP);
+            String text = excerpt.parseUtf8(StopCharTesters.CONTROL_STOP);
             if (i != n) {
                 assertEquals('\'' + text + '\'', i, n);
             }
