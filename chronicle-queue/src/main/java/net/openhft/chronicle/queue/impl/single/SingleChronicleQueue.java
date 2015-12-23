@@ -130,8 +130,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         if (files != null && files.length > 0) {
             long lastDate = Long.MIN_VALUE;
-            long date = -1;
-            String name = null;
+            long date;
+            String name;
 
             for (int i = files.length - 1; i >= 0; i--) {
                 try {

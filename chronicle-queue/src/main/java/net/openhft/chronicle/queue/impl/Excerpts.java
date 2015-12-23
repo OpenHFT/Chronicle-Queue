@@ -167,7 +167,7 @@ public class Excerpts {
 
 
             final MappedFile mappedFile = store.mappedFile();
-            System.out.println("appender file=" + mappedFile.file().getAbsolutePath().toString());
+            System.out.println("appender file=" + mappedFile.file().getAbsolutePath());
             this.writeContext = new MappedBytes(mappedFile);
         }
 

@@ -60,7 +60,9 @@ class SingleChronicleQueueStore implements WireStore {
         bounds,
         indexing,
         roll,
-        mappedFile
+        mappedFile,
+        chunkSize,
+        overlapSize
     }
 
 
@@ -90,17 +92,12 @@ class SingleChronicleQueueStore implements WireStore {
         this.builder = null;
         this.wireType = wireType;
         this.mappedFile = mappedFile;
-        init();
+        indexing = new Indexing(wireType, new MappedBytes(mappedFile));
     }
 
     void mappedFile(@NotNull MappedFile mappedFile) {
         this.mappedFile = mappedFile;
     }
-
-    private void init() {
-        indexing = new Indexing(wireType, mappedFile);
-    }
-
 
     @Override
     public long readPosition() {
@@ -438,27 +435,24 @@ class SingleChronicleQueueStore implements WireStore {
     public void writeMarshallable(@NotNull WireOut wire) {
         ;
         wire.write(MetaDataField.bounds).marshallable(this.bounds)
-                .write(MetaDataField.indexing).object(this.indexing)
                 .write(MetaDataField.roll).object(this.roll)
-                .write(MetaDataField.mappedFile).object(new MarshallableMappedFile(this
-                .mappedFile));
+                .write(MetaDataField.chunkSize).int64(this.mappedFile.chunkSize())
+                .write(MetaDataField.overlapSize).int64(this.mappedFile.overlapSize())
+                .write(MetaDataField.indexing).object(this.indexing);
     }
 
 
     @Override
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
         wire.read(MetaDataField.bounds).marshallable(this.bounds)
-                .read(MetaDataField.indexing).object(Indexing.class, this, (t, v) -> t.indexing = v)
-                .read(MetaDataField.roll).marshallable(this.roll)
-                .read(MetaDataField.mappedFile).object(MarshallableMappedFile.class,
-                this, (t, v) -> {
-                    t.mappedFile = v.mf();
-                    t.init();
-                });
+                .read(MetaDataField.roll).marshallable(this.roll);
+        long chunkSize = wire.read(MetaDataField.chunkSize).int64();
+        long overlapSize = wire.read(MetaDataField.overlapSize).int64();
 
-        init();
-
-
+        MappedBytes mappedBytes = ((MappedBytes) wire.bytes()).withSizes(chunkSize, overlapSize);
+        this.mappedFile = mappedBytes.mappedFile();
+        indexing = new Indexing(wireType, mappedBytes);
+        wire.read(MetaDataField.indexing).marshallable(indexing);
     }
 
 
@@ -539,18 +533,16 @@ class SingleChronicleQueueStore implements WireStore {
     class Indexing implements Marshallable {
         private final WireType wireType;
         private final MappedBytes indexContext;
-        private int indexCount;
-        private int indexSpacing;
+        private int indexCount = 128 << 10;
+        private int indexSpacing = 64;
         private LongValue index2Index;
         private LongValue lastIndex;
         private final Wire templateIndex;
         private ThreadLocal<LongArrayValues> longArray;
 
-        Indexing(@NotNull WireType wireType, final MappedFile mappedFile) {
-            this.indexCount = 128 << 10;
-            this.indexSpacing = 64;
-            this.index2Index = null;
-            this.lastIndex = null;
+        Indexing(@NotNull WireType wireType, final MappedBytes mappedBytes) {
+            this.index2Index = wireType.newLongReference().get();
+            this.lastIndex = wireType.newLongReference().get();
 
             final Bytes b = Bytes.elasticByteBuffer();
 
@@ -560,15 +552,15 @@ class SingleChronicleQueueStore implements WireStore {
 
             this.wireType = wireType;
             this.longArray = withInitial(wireType.newLongArrayReference());
-            this.indexContext = new MappedBytes(mappedFile);
+            this.indexContext = mappedBytes;
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(IndexingFields.indexCount).int32(indexCount)
                     .write(IndexingFields.indexSpacing).int32(indexSpacing)
-                    .write(IndexingFields.index2Index).int64forBinding(0L, index2Index = wire.newLongReference())
-                    .write(IndexingFields.lastIndex).int64forBinding(-1L, lastIndex = wire.newLongReference());
+                    .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
+                    .write(IndexingFields.lastIndex).int64forBinding(-1L, lastIndex);
         }
 
         @Override
@@ -819,7 +811,7 @@ class SingleChronicleQueueStore implements WireStore {
         /**
          * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
          * fromKnownIndex} at  {@code knownAddress}
-         *
+         * <p/>
          * note meta data is skipped and does not count to the indexes
          *
          * @param context        if successful, moves the context to an address relating to the
