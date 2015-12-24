@@ -42,102 +42,29 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     long readPosition();
 
     /**
-     * @param bytes
-     * @return
-     * @throws IOException
-     */
-    //void acquireBytesAtReadPositionForRead(@NotNull Bytes bytes) throws IOException;
-
-    /**
      * @return the first writable position
      */
     long writePosition();
-
-    /**
-     * @param bytes
-     * @return
-     * @throws IOException
-     */
-    ///   void acquireBytesAtWritePositionForRead(@NotNull  Bytes bytes) throws IOException;
-
-    /**
-     * @param bytes
-     * @return
-     * @throws IOException
-     */
-    //   void acquireBytesAtWritePositionForWrite(@NotNull  Bytes bytes) throws IOException;
 
     /**
      * @return the last index
      */
     long lastIndex();
 
-    /**
-     * @param context
-     * @param cycle
-     * @return
-     * @throws IOException
-     */
     boolean appendRollMeta(@NotNull MappedBytes context, long cycle) throws IOException;
 
-    /**
-     * @param context
-     * @param marshallable
-     * @return the index
-     * @throws IOException
-     */
     long append(@NotNull MappedBytes context, @NotNull WriteMarshallable marshallable) throws IOException;
 
-    /**
-     * @param context
-     * @param marshallable
-     * @return the index
-     * @throws IOException
-     */
     long append(@NotNull MappedBytes context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
 
-    /**
-     * @param context
-     * @param bytes
-     * @return the index
-     * @throws IOException
-     */
     long append(@NotNull MappedBytes context, @NotNull Bytes bytes) throws IOException;
 
-
-    /**
-     * @param context
-     * @param reader
-     * @return the index
-     * @throws IOException
-     */
     long read(@NotNull MappedBytes context, @NotNull ReadMarshallable reader) throws IOException;
 
-    /**
-     * @param context
-     * @param reader
-     * @return the index
-     * @throws IOException
-     */
     long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException;
 
-    /**
-     * @param context
-     * @param index
-     * @return {@code true} if successful
-     */
     boolean moveToIndex(@NotNull MappedBytes context, long index);
 
-    /**
-     * @param mappedFile
-     * @param length
-     * @param created
-     * @param cycle
-     * @param builder
-     * @param wireSupplier
-     * @param closeable
-     * @throws IOException
-     */
     void install(
             @NotNull MappedFile mappedFile,
             long length,
