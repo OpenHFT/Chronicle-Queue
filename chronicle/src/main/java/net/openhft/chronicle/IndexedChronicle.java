@@ -390,7 +390,7 @@ public class IndexedChronicle implements Chronicle {
         }
 
         protected ExcerptCommon toEndForRead0() {
-            index = IndexedChronicle.this.size() - 1;
+            index = lastIndex();
             indexForRead(index);
             return this;
         }
@@ -471,7 +471,6 @@ public class IndexedChronicle implements Chronicle {
         void indexForAppender(long l) throws IOException {
             if (l < 0) {
                 throw new IndexOutOfBoundsException("index: " + l);
-
             } else if (l == 0) {
                 indexStartOffset = 0;
                 loadIndexBuffer();
