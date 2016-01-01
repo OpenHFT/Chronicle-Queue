@@ -75,6 +75,5 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             @Nullable Closeable closeable)
             throws IOException;
 
-
     MappedFile mappedFile();
 }

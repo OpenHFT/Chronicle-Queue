@@ -258,13 +258,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             Assert.assertEquals("Steve Jobs", first + " " + surname);
 
-
         } finally {
             file.delete();
         }
-
     }
-
 
     @Test
     public void testReadAtIndex() throws Exception {
@@ -287,7 +284,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptTailer tailer = chronicle.createTailer();
 
-
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));
 
             StringBuilder sb = new StringBuilder();
@@ -301,7 +297,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             file.delete();
         }
-
     }
 
     @Test
@@ -322,7 +317,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             file.delete();
         }
-
     }
 
     @Test(expected = IllegalStateException.class)
@@ -340,9 +334,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             file.delete();
         }
-
     }
-
 
     @Ignore
     @Test
@@ -364,9 +356,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             file.delete();
         }
-
     }
-
 
     @Test
     public void testHeaderIndexReadAtIndex() throws Exception {
@@ -398,8 +388,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         } finally {
             file.delete();
         }
-
     }
-
 
 }

@@ -624,7 +624,6 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                     ", adjClose=" + adjClose +
                     '}';
         }
-
     }
 
     private static class MarketData implements BytesMarshallable {

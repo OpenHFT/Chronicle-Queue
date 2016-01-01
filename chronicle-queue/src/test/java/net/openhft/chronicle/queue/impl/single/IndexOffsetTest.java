@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-
 import org.junit.Assert;
 import org.junit.Test;
 

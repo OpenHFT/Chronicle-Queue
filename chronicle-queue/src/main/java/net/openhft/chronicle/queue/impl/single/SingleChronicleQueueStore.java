@@ -42,7 +42,6 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 import static net.openhft.chronicle.wire.Wires.NOT_READY;
 
-
 class SingleChronicleQueueStore implements WireStore {
 
     static {
@@ -55,7 +54,6 @@ class SingleChronicleQueueStore implements WireStore {
 
     private MappedFile mappedFile;
 
-
     enum MetaDataField implements WireKey {
         bounds,
         indexing,
@@ -65,12 +63,10 @@ class SingleChronicleQueueStore implements WireStore {
         overlapSize
     }
 
-
     private Closeable resourceCleaner;
     private SingleChronicleQueueBuilder builder;
 
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
-
 
     Bounds bounds = new Bounds();
     private Indexing indexing;
@@ -108,7 +104,6 @@ class SingleChronicleQueueStore implements WireStore {
     public long writePosition() {
         return this.bounds.getWritePosition();
     }
-
 
     @Override
     public long cycle() {
@@ -215,7 +210,6 @@ class SingleChronicleQueueStore implements WireStore {
     public MappedFile mappedFile() {
         return mappedFile;
     }
-
 
     // *************************************************************************
     // Utilities
@@ -381,7 +375,6 @@ class SingleChronicleQueueStore implements WireStore {
         return index;
     }
 
-
     private long writeIndexBytes(
             @NotNull MappedBytes context,
             long position,
@@ -430,7 +423,6 @@ class SingleChronicleQueueStore implements WireStore {
     // Marshallable
     // *************************************************************************
 
-
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         ;
@@ -440,7 +432,6 @@ class SingleChronicleQueueStore implements WireStore {
                 .write(MetaDataField.overlapSize).int64(this.mappedFile.overlapSize())
                 .write(MetaDataField.indexing).object(this.indexing);
     }
-
 
     @Override
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
@@ -454,7 +445,6 @@ class SingleChronicleQueueStore implements WireStore {
         indexing = new Indexing(wireType, mappedBytes);
         wire.read(MetaDataField.indexing).marshallable(indexing);
     }
-
 
 // *************************************************************************
 //
@@ -583,7 +573,6 @@ class SingleChronicleQueueStore implements WireStore {
             return this.lastIndex.getVolatileValue();
         }
 
-
         /**
          * atomically gets or creates the address of the first index the index is create and another
          * except into the queue, however this except is treated as meta data and does not increment
@@ -614,7 +603,6 @@ class SingleChronicleQueueStore implements WireStore {
                 return index;
             }
         }
-
 
         /**
          * records the the location of the index, only every 64th address is written to the index
@@ -669,7 +657,6 @@ class SingleChronicleQueueStore implements WireStore {
             return using;
         }
 
-
         /**
          * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This
          * method is used for creating both the primary and secondary indexes. Chronicle Queue uses
@@ -690,7 +677,6 @@ class SingleChronicleQueueStore implements WireStore {
             } catch (Throwable e) {
                 throw Jvm.rethrow(e);
             }
-
         }
 
         private long writeIndexBytes(
@@ -708,7 +694,6 @@ class SingleChronicleQueueStore implements WireStore {
 
             return index;
         }
-
 
         private LongArrayValues values;
 
@@ -737,7 +722,6 @@ class SingleChronicleQueueStore implements WireStore {
             return result[0];
         }
 
-
         /**
          * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in
          * other words the address of where ) the root first level targetIndex is stored. The
@@ -751,9 +735,7 @@ class SingleChronicleQueueStore implements WireStore {
          */
         public boolean moveToIndex(MappedBytes context, final long targetIndex) {
 
-
             long index2index = this.index2Index.getVolatileValue();
-
 
             try {
 
@@ -793,7 +775,6 @@ class SingleChronicleQueueStore implements WireStore {
                 } else {
                     return linearScan(context, targetIndex, 0, 0);
                 }
-
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -857,8 +838,6 @@ class SingleChronicleQueueStore implements WireStore {
 
             return false;
         }
-
-
     }
 
     public enum IndexOffset {
@@ -883,7 +862,6 @@ class SingleChronicleQueueStore implements WireStore {
             // convert to an offset
             return maskedShiftedIndex;// * 8L;
         }
-
 
         @NotNull
         public static String toBinaryString(long i) {
@@ -910,8 +888,6 @@ class SingleChronicleQueueStore implements WireStore {
 
             return units.toString() + "\n" + tens.toString();
         }
-
-
     }
 
 // *************************************************************************

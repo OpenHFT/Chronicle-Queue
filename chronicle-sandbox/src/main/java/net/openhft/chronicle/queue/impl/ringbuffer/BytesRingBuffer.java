@@ -287,7 +287,6 @@ public class BytesRingBuffer {
             // todo replace the above with this : 
             buffer.writeOrderedLong(readLocationOffset, value);
         }
-
     }
 
     /**

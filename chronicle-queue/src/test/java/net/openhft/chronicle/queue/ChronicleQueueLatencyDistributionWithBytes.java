@@ -166,7 +166,6 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
             this.time = in.readLong();
         }
 
-
         @Override
         public void writeMarshallable(@NotNull Bytes out) {
             out.writeInt(this.price);

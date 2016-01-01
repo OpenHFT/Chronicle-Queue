@@ -50,8 +50,6 @@ public class IndexTest extends ChronicleQueueTestBase {
             assertEquals(n, appender.writeDocument(w -> w.write(ChronicleQueueTestBase.TestKey.test).int32(n)));
             assertEquals(n, appender.index());
         }
-
     }
-
 
 }

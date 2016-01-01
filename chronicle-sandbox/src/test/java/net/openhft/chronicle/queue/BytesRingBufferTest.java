@@ -108,7 +108,6 @@ public class BytesRingBufferTest {
             Bytes actual = bytesRingBuffer.poll(maxSize -> input.clear());
             assertEquals(null, actual);
         }
-
     }
 
     @Test

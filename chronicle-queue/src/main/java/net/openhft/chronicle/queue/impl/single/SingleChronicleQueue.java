@@ -48,7 +48,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final WireStorePool pool;
     private long firstCycle;
 
-
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
@@ -161,7 +160,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return builder.wireType();
     }
 
-
     // *************************************************************************
     //
     // *************************************************************************
@@ -176,7 +174,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             parentFile.mkdirs();
         }
 
-
         final Function<File, MappedFile> toMappedFile = file -> {
             try {
                 return MappedFile.mappedFile(file,
@@ -190,7 +187,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         Function<MappedFile, WireStore> supplyStore = mappedFile -> new SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
                         .builder.wireType(), mappedFile);
-
 
         Consumer<WiredFile<WireStore>> consumer = ws -> {
             try {
@@ -216,7 +212,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 consumer
         ).delegate();
 
-
     }
 
     @NotNull
@@ -227,6 +222,5 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             throw Jvm.rethrow(e);
         }
     }
-
 
 }

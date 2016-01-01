@@ -44,7 +44,6 @@ public class ChronicleTestMain {
         String basePath = System.getProperty("java.io.tmpdir") + "/test";
         ChronicleTools.deleteDirOnExit(basePath);
 
-
         long start = System.currentTimeMillis();
         long lastUpdate = System.currentTimeMillis();
 

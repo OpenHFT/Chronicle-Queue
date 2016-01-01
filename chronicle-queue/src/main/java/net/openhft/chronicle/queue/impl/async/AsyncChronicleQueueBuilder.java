@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle.queue.impl.async;
 
-
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import org.jetbrains.annotations.NotNull;

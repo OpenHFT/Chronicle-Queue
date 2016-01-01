@@ -16,7 +16,6 @@
 
 package net.openhft.chronicle.queue.impl;
 
-
 import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingAcceptor;
@@ -149,7 +148,6 @@ public class Excerpts {
         private long index = -1;
         private WireStore store;
 
-
         public StoreAppender(@NotNull AbstractChronicleQueue queue) throws IOException {
 
             super(queue);
@@ -165,12 +163,10 @@ public class Excerpts {
             this.store = queue.storeForCycle(this.cycle);
             this.index = this.store.lastIndex();
 
-
             final MappedFile mappedFile = store.mappedFile();
             System.out.println("appender file=" + mappedFile.file().getAbsolutePath());
             this.writeContext = new MappedBytes(mappedFile);
         }
-
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
@@ -244,7 +240,6 @@ public class Excerpts {
         private long cycle;
         private long index;
         private WireStore store;
-
 
         //TODO: refactor
         private boolean toStart;
@@ -348,7 +343,6 @@ public class Excerpts {
                 //   context(store::acquireBytesAtReadPositionForRead);
             }
 
-
             //this.context.clear();
 
             if (this.store.moveToIndex(readContext, index)) {
@@ -411,11 +405,9 @@ public class Excerpts {
                 final MappedFile mappedFile = store.mappedFile();
                 this.readContext = new MappedBytes(mappedFile);
 
-
                 System.out.println("tailer=" + mappedFile.file().getAbsolutePath().toString());
 
             }
-
 
             return this;
         }

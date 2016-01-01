@@ -103,5 +103,4 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      */
     protected abstract long lastCycle();
 
-
 }

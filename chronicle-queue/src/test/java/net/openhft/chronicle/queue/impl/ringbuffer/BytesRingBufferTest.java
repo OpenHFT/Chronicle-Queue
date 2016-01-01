@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
-
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import org.junit.Assert;
@@ -66,7 +65,6 @@ public class BytesRingBufferTest {
         }
     }
 
-
     @Test
     public void testWriteAndReadSingleThreadedWriteManyTimes() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
@@ -88,7 +86,6 @@ public class BytesRingBufferTest {
         }
     }
 
-
     @Test
     public void testPollWithNoData() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
@@ -100,9 +97,7 @@ public class BytesRingBufferTest {
             Bytes actual = bytesRingBuffer.poll(maxSize -> input.clear());
             assertEquals(null, actual);
         }
-
     }
-
 
     @Test
     public void testWithDifferentBufferSizes() throws Exception {
@@ -116,11 +111,9 @@ public class BytesRingBufferTest {
                     Bytes actual = bytesRingBuffer.take(maxSize -> input.clear());
                     assertEquals(EXPECTED, actual.readUTFΔ());
                 }
-
             }
         }
     }
-
 
     /**
      * one writer thread one reader thread, writer if faster than reader
@@ -135,7 +128,6 @@ public class BytesRingBufferTest {
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
 
-
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
             final ExecutorService executorService = Executors.newFixedThreadPool(2);
@@ -149,11 +141,9 @@ public class BytesRingBufferTest {
                     } catch (Throwable e) {
                         return e;
                     }
-
                 }
                 return null;
             });
-
 
             final Future<Throwable> f2 = executorService.submit(() -> {
                 for (; !shutdown.get(); ) {
@@ -163,7 +153,6 @@ public class BytesRingBufferTest {
                     } catch (Throwable e) {
                         return e;
                     }
-
                 }
                 return null;
             });
@@ -188,7 +177,6 @@ public class BytesRingBufferTest {
         }
     }
 
-
     @Test
     public void testMultiThreadedFasterReaderThanWriter() throws Throwable {
         final AtomicBoolean shutdown = new AtomicBoolean();
@@ -196,7 +184,6 @@ public class BytesRingBufferTest {
         final int numberOfIterations = 100;
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
-
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
@@ -211,11 +198,9 @@ public class BytesRingBufferTest {
                     } catch (Throwable e) {
                         return e;
                     }
-
                 }
                 return null;
             });
-
 
             final Future<Throwable> f2 = executorService.submit(() -> {
                 for (; !shutdown.get(); ) {
@@ -226,7 +211,6 @@ public class BytesRingBufferTest {
                     } catch (Throwable e) {
                         return e;
                     }
-
                 }
                 return null;
             });

@@ -115,7 +115,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
                 .wireType(WireType.BINARY);
     }
 
-
     public static SingleChronicleQueueBuilder text(File name) {
         return text(name.getAbsolutePath());
     }
@@ -124,7 +123,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.TEXT);
     }
-
 
     public static SingleChronicleQueueBuilder raw(File name) {
         return raw(name.getAbsolutePath());

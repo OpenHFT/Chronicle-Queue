@@ -140,7 +140,6 @@ public class BytesRingBuffer {
         return (writeUpTo - 1) - offset;
     }
 
-
     /**
      * @param bytesProvider provides a bytes to read into
      * @return the Bytes written to
@@ -158,7 +157,6 @@ public class BytesRingBuffer {
         } while (poll == null);
         return poll;
     }
-
 
     /**
      * they similar to net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer#take(net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer.BytesProvider)
@@ -192,7 +190,6 @@ public class BytesRingBuffer {
         assert state == States.READY.ordinal() : " we are reading a message that we " +
                 "shouldn't,  state=" + state + ", flag-location=" + flag + ", remainingForWrite=" +
                 remainingForWrite(header.getWriteLocation());
-
 
         final long elementSize = bytes.readLong(offset);
         offset += 8;
@@ -260,7 +257,6 @@ public class BytesRingBuffer {
         return using;
     }
 
-
     private static void checkSize(@NotNull Bytes using, long elementSize) {
         if (using.writeRemaining() < elementSize)
             throw new IllegalStateException("requires size=" + elementSize +
@@ -310,7 +306,6 @@ public class BytesRingBuffer {
             writeLocation = new BinaryLongReference();
             writeLocation.bytesStore(this.bytesStore, start + 16, 8);
         }
-
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             return writeLocation.compareAndSwapValue(expectedValue, newValue);
@@ -420,7 +415,6 @@ public class BytesRingBuffer {
             return 8;
         }
 
-
         private long writeOrderedLong(long offset, long value) {
 
             offset %= capacity();
@@ -489,7 +483,6 @@ public class BytesRingBuffer {
             readBytesMarshallable.readMarshallable(bytes);
             return endOffSet;
         }
-
 
         long readLong(long offset) {
 

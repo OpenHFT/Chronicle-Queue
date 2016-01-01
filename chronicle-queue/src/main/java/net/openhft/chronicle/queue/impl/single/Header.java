@@ -91,7 +91,6 @@ public class Header implements Marshallable {
         return value;
     }
 
-
     enum Field implements WireKey {
         type,
         uuid, created, user, host, compression,
@@ -131,7 +130,6 @@ public class Header implements Marshallable {
     public long getWriteByte() {
         return writeByte().getVolatileValue();
     }
-
 
     public static void main(String... args) {
         Header h = new Header();

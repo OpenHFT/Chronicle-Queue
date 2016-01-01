@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-
 import net.openhft.chronicle.core.Maths;
 
 import java.text.DateFormat;
