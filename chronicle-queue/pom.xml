@@ -76,11 +76,6 @@
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-wire</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
             <artifactId>affinity</artifactId>
         </dependency>
 
