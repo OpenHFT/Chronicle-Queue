@@ -19,7 +19,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,12 +32,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.Appender(this);
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new Excerpts.Tailer(this);
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @NotNull
@@ -62,8 +61,6 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-
-
     @Override
     public long lastWrittenIndex() {
         throw new UnsupportedOperationException("Not implemented");
@@ -74,9 +71,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @Override
+    public WireType wireType() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
     /**
-     *
      * @param cycle
      * @return
      * @throws IOException
@@ -84,34 +84,23 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     protected abstract WireStore storeForCycle(long cycle) throws IOException;
 
     /**
-     *
      * @param store
      */
     protected abstract void release(WireStore store);
 
     /**
-     *
      * @return
      */
     protected abstract long cycle();
 
     /**
-     *
      * @return
      */
     protected abstract long firstCycle();
 
     /**
-     *
      * @return
      */
     protected abstract long lastCycle();
 
-    public abstract WireType wireType();
-
-    public abstract long indexToIndex();
-
-    public abstract Wire wire();
-
-    public abstract long newIndex();
 }

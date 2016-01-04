@@ -15,20 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.queue.impl.single.work.in.progress;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.wire.Wire;
+package net.openhft.chronicle.queue.impl.single;
 
 /**
- * Created by Rob Austin
+ * Created by peter.lawrey on 06/02/15.
  */
-public abstract class AbstractChronicle implements ChronicleQueue {
-    protected abstract Wire wire();
-
-    public abstract Class<? extends Wire> wireType();
-
-    public abstract long indexToIndex();
-
-    public abstract long newIndex();
+public enum Compression {
+    NONE, SNAPPY, DEFLATOR
 }

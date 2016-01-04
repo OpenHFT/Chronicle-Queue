@@ -28,7 +28,6 @@ public class WrappedChronicle implements Chronicle {
 
     protected final Chronicle wrappedChronicle;
 
-
     public boolean isClosed() {
         return wrappedChronicle.isClosed();
     }

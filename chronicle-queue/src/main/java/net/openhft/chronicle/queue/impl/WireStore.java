@@ -15,10 +15,13 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.ReferenceCounted;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,78 +32,48 @@ import java.util.function.Function;
 public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
-     *
-     * @return
+     * @return the cycle this store refers to
      */
     long cycle();
 
     /**
-     *
-     * @return
+     * @return the first readable position
      */
     long readPosition();
 
     /**
-     *
-     * @return
+     * @return the first writable position
      */
     long writePosition();
 
     /**
-     *
-     * @return
+     * @return the last index
      */
     long lastIndex();
 
+    boolean appendRollMeta(@NotNull MappedBytes context, long cycle) throws IOException;
 
-    /**
-     *
-     * @param cycle
-     * @return
-     * @throws IOException
-     */
-    boolean appendRollMeta(long cycle) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull WriteMarshallable marshallable) throws IOException;
 
-    /**
-     *
-     * @param writer
-     * @return
-     * @throws IOException
-     */
-    long append(@NotNull WriteMarshallable writer) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
 
-    /**
-     *
-     * @param position
-     * @param reader
-     * @return
-     * @throws IOException
-     */
-    long read(long position, @NotNull ReadMarshallable reader) throws IOException;
+    long append(@NotNull MappedBytes context, @NotNull Bytes bytes) throws IOException;
 
-    /**
-     *
-     * @param index
-     * @return
-     */
-    long positionForIndex(long index);
+    long read(@NotNull MappedBytes context, @NotNull ReadMarshallable reader) throws IOException;
 
-    /**
-     *
-     * @param store
-     * @param length
-     * @param created
-     * @param cycle
-     * @param wireSupplier
-     * @param closeable
-     * @throws IOException
-     */
+    long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException;
+
+    boolean moveToIndex(@NotNull MappedBytes context, long index);
+
     void install(
-        @NotNull BytesStore store,
-        long length,
-        boolean created,
-        long cycle,
-        @NotNull Function<Bytes, Wire> wireSupplier,
-        @Nullable Closeable closeable)
+            @NotNull MappedFile mappedFile,
+            long length,
+            boolean created,
+            long cycle,
+            @NotNull ChronicleQueueBuilder builder,
+            @NotNull Function<Bytes, Wire> wireSupplier,
+            @Nullable Closeable closeable)
             throws IOException;
+
+    MappedFile mappedFile();
 }

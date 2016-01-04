@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,10 +35,29 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
 
     /**
+     * @param marshallable user to read the document
+     * @return {@code true} if successful
+     * @throws IOException if not able to read the chronicle file
+     */
+    boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException;
+
+    /**
+     *
+     * @return the index just read
+     */
+    long index();
+
+    /**
+     *
+     * @return the cycle this tailer is on
+     */
+    long cycle();
+
+    /**
      * Randomly select an Excerpt.
      *
      * @param index index to look up
-     * @return true if this is a valid entries and not padding.
+     * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
     boolean index(long index) throws IOException;
@@ -47,10 +67,10 @@ public interface ExcerptTailer extends ExcerptCommon {
      *
      * @param cycle cycle
      * @param index index to look up
-     * @return true if this is a valid entries and not padding.
+     * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
-    boolean index(int cycle, long index) throws IOException;
+    boolean index(long cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.
@@ -61,8 +81,6 @@ public interface ExcerptTailer extends ExcerptCommon {
     @NotNull
     ExcerptTailer toStart() throws IOException;
 
-    ;
-
     /**
      * Wind to the upper.
      *
@@ -71,5 +89,4 @@ public interface ExcerptTailer extends ExcerptCommon {
      */
     @NotNull
     ExcerptTailer toEnd() throws IOException;
-
 }

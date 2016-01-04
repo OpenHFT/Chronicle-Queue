@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
@@ -32,7 +33,7 @@ import java.io.IOException;
  *
  * <p><em>Chronicle</em> uses RandomAccessFiles while managing memory and this choice brings lots of possibility. Random
  * access files permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the
- * file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large"
+ * file, seek a particular location, and read from or writeBytes to that file. RandomAccessFiles can be seen as "large"
  * C-type byte arrays that you can access any random index "directly" using pointers. File portions can be used as
  * ByteBuffers if the portion is mapped into memory.
  *
@@ -75,7 +76,7 @@ public interface ChronicleQueue extends Closeable {
     ExcerptTailer createTailer() throws IOException;
 
     /**
-     * An Appender can be used to write new excerpts sequentially to the upper.
+     * An Appender can be used to writeBytes new excerpts sequentially to the upper.
      *
      * @return ExcerptAppender
      * @throws IOException if an IO problem occurs
@@ -102,4 +103,10 @@ public interface ChronicleQueue extends Closeable {
      * @return the highest valid index immediately available.
      */
     long lastWrittenIndex();
+
+    /**
+     *
+     * @return
+     */
+    WireType wireType();
 }

@@ -67,7 +67,6 @@ public class ZippedDocumentAppender implements Closeable {
         qReader.submit(new Consumer());
     }
 
-
     /**
      * the bytes that you wish to append, this bytes will become zipped and appended to the
      * chronicle using a background thread
@@ -91,8 +90,8 @@ public class ZippedDocumentAppender implements Closeable {
     }
 
     /**
-     * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser} and write these
-     * zipped bytes to {@code chronicleQueue}
+     * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser}
+     * and writeBytes these zipped bytes to {@code chronicleQueue}
      */
     private class Consumer implements BytesRingBuffer.BytesProvider, Runnable {
 
@@ -109,15 +108,16 @@ public class ZippedDocumentAppender implements Closeable {
         private Bytes<ByteBuffer> inputBuffer;
 
         {
-            inputBuffer = wrap(ByteBuffer.wrap(input));
+            inputBuffer = wrap(ByteBuffer.wrap(input)).bytesForRead();
         }
 
         @NotNull
-        private Bytes<ByteBuffer> outputBuffer = wrap(ByteBuffer.wrap(input));
+        private Bytes<ByteBuffer> outputBuffer = wrap(ByteBuffer.wrap(input)).bytesForWrite();
 
         private Consumer() {
             this.input = new byte[]{};
-            this.inputBuffer = wrap(ByteBuffer.wrap(input));
+
+            this.inputBuffer = wrap(ByteBuffer.wrap(input)).bytesForRead();
         }
 
         @Override
@@ -137,7 +137,6 @@ public class ZippedDocumentAppender implements Closeable {
                     compresser.setInput(input, (int) value.readPosition(), (int) value.readRemaining());
                     compresser.finish();
 
-
                     int limit = compresser.deflate(output);
                     compresser.end();
 
@@ -147,16 +146,12 @@ public class ZippedDocumentAppender implements Closeable {
                     appender.writeDocument(w -> {
                         w.write(() -> "zipped").bytes(outputBuffer);
 
-
                     });
                 }
             } catch (Exception e) {
                 LOG.error("", e);
             }
-
         }
-
-
 
         @NotNull
         @Override
@@ -171,15 +166,13 @@ public class ZippedDocumentAppender implements Closeable {
 
             // resize the buffers
             this.input = new byte[(int) maxSize];
-            this.inputBuffer = wrap(ByteBuffer.wrap(input));
+            this.inputBuffer = wrap(ByteBuffer.wrap(input)).bytesForRead();
 
             this.output = new byte[(int) maxSize];
-            this.outputBuffer = wrap(ByteBuffer.wrap(output));
+            this.outputBuffer = wrap(ByteBuffer.wrap(output)).bytesForWrite();
 
             return inputBuffer;
         }
-
     }
 }
-
 

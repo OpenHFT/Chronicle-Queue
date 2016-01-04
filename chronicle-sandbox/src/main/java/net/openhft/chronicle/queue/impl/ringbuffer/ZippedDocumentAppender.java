@@ -141,7 +141,6 @@ public class ZippedDocumentAppender implements Closeable {
             } catch (Exception e) {
                 LOG.error("", e);
             }
-
         }
 
         @NotNull
@@ -163,6 +162,5 @@ public class ZippedDocumentAppender implements Closeable {
 
             return inputBuffer;
         }
-
     }
 }

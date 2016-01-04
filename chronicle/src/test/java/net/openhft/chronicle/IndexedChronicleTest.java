@@ -636,7 +636,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             ExcerptTailer tailer = chronicle.createTailer();
             for (int i = 0; i < runs; i++) {
                 assertTrue(tailer.nextIndex());
-                String s = tailer.parseUTF(StopCharTesters.CONTROL_STOP);
+                String s = tailer.parseUtf8(StopCharTesters.CONTROL_STOP);
                 assertEquals("Hello world " + i, s);
                 tailer.finish();
             }

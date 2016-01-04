@@ -119,7 +119,6 @@ public class SingleTailer implements ExcerptTailer {
                         break;
                     }
                 }
-
             }
 
         } else {
@@ -137,7 +136,6 @@ public class SingleTailer implements ExcerptTailer {
                     break;
                 }
             }
-
         }
 
         assert bytes.capacity() > 0;
@@ -203,7 +201,6 @@ public class SingleTailer implements ExcerptTailer {
         } finally {
             chronicle.bytes().position(pos);
         }
-
     }
 
     @NotNull

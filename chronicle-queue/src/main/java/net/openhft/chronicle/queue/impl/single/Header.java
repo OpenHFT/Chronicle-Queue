@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.openhft.chronicle.queue.impl.single.work.in.progress;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.values.LongValue;
@@ -91,7 +91,6 @@ public class Header implements Marshallable {
         return value;
     }
 
-
     enum Field implements WireKey {
         type,
         uuid, created, user, host, compression,
@@ -105,7 +104,7 @@ public class Header implements Marshallable {
                 .write(Field.writeByte).int64forBinding(PADDED_SIZE)
                 .write(Field.created).zonedDateTime(created)
                 .write(Field.user).text(user)
-                // .write(Field.host).text(host)
+                // .writeBytes(Field.host).text(host)
                 .write(Field.compression).text(compression)
                 .write(Field.indexCount).int32(indexCount)
                 .write(Field.indexSpacing).int32(indexSpacing)
@@ -131,7 +130,6 @@ public class Header implements Marshallable {
     public long getWriteByte() {
         return writeByte().getVolatileValue();
     }
-
 
     public static void main(String... args) {
         Header h = new Header();

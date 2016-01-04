@@ -21,8 +21,8 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.Header;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.queue.impl.single.work.in.progress.Header;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -46,12 +46,10 @@ public class ZipBytesRingBufferTest {
             net.openhft.chronicle.bytes.Bytes message = msgBytes.bytesForWrite();
             message.writeUTFΔ("Hello World");
 
-
             file = File.createTempFile("chronicle", "q");
             ChronicleQueue chronicle = new SingleChronicleQueueBuilder(File.createTempFile("chron", "queue")).build();
 
             final long writeAddress = getHeader(chronicle).getWriteByte();
-
 
             final BytesRingBuffer ring = new BytesRingBuffer(allocate.bytesForWrite());
 
@@ -71,7 +69,6 @@ public class ZipBytesRingBufferTest {
 
             ExcerptTailer tailer = chronicle.createTailer();
 
-
             // read the data from chronicle into actual
             tailer.readDocument(wire -> Assert.assertEquals("Hello World", wire.read().text()));
 
@@ -79,7 +76,6 @@ public class ZipBytesRingBufferTest {
             if (file != null)
                 file.delete();
         }
-
     }
 
     public static Header getHeader(ChronicleQueue singleChronicleQueue) throws Exception {

@@ -73,7 +73,6 @@ public interface RollCycle {
 
     ZoneId zone();
 
-
     default int current() {
         return (int) (System.currentTimeMillis() / length());
     }

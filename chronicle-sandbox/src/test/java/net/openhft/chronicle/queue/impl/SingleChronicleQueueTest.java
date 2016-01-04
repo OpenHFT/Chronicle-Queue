@@ -176,7 +176,6 @@ public class SingleChronicleQueueTest {
         } finally {
             file.delete();
         }
-
     }
 
     @Test

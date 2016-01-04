@@ -12,7 +12,7 @@
   ~     GNU Lesser General Public License for more details.
   ~
   ~     You should have received a copy of the GNU Lesser General Public License
-  ~     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  ~     along with this program.  If not, see <http://www.gnu.org/licenses />.
   -->
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -25,12 +25,12 @@
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.8</version>
+        <version>1.1.10</version>
         <relativePath/>
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.0.0-alpha-SNAPSHOT</version>
+    <version>4.0.2-alpha-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue/chronicle-queue</name>
 
@@ -49,15 +49,20 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.8.17-SNAPSHOT</version>
+                <version>1.10.35</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+
+
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-wire</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>net.openhft</groupId>
@@ -67,11 +72,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-wire</artifactId>
         </dependency>
 
         <dependency>
@@ -204,7 +204,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.5</version>
+                <version>2.6</version>
                 <configuration>
                     <archive>
                         <manifest>

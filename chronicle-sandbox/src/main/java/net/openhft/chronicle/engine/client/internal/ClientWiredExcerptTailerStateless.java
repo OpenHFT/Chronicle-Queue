@@ -46,7 +46,7 @@ public class ClientWiredExcerptTailerStateless extends AbstactStatelessClient im
     @Override
     public boolean readDocument(Consumer<WireIn> reader) {
         proxyReturnWireConsumerInOut(EventId.hasNext,
-                CoreFields.reply, (Consumer<ValueOut>)valueOut -> {
+                CoreFields.reply, (WriteValue)valueOut -> {
                     WriteMarshallable writeMarshallable = w -> w.write(EventId.index).int64(index + 1);
                     valueOut.marshallable(writeMarshallable);
                 },

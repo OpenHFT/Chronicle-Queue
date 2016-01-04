@@ -79,7 +79,6 @@ public class ZipBytesRingBufferTest {
             if (file != null)
                 file.delete();
         }
-
     }
 
     public static Header getHeader(SingleChronicleQueue singleChronicleQueue)   {

@@ -111,7 +111,6 @@ public class MappedMemoryTest {
             }
             System.out.println("");
         }
-
     }
 
     @Test
@@ -134,7 +133,6 @@ public class MappedMemoryTest {
         } finally {
             tempFile.delete();
         }
-
     }
 
     /**
