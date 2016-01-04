@@ -82,6 +82,12 @@ public class WrappedExcerptAppender<T extends ExcerptAppender> extends WrappedBy
     }
 
     @Override
+    public long nextSetBit(long l) {
+        return wrapped.nextSetBit(l);
+
+    }
+
+    @Override
     public void writeEnum(long l, int i, Object o) {
         wrapped.writeEnum(l, i, o);
     }

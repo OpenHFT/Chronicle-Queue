@@ -49,10 +49,10 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     }
 
     protected void setExcerpt(ExcerptCommon excerptCommon) {
-        wrappedTailer   = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
+        wrappedTailer = excerptCommon instanceof ExcerptTailer ? (ExcerptTailer) excerptCommon : null;
         wrappedAppender = excerptCommon instanceof ExcerptAppender ? (ExcerptAppender) excerptCommon : null;
-        wrappedExcerpt  = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
-        wrappedCommon   = excerptCommon;
+        wrappedExcerpt = excerptCommon instanceof Excerpt ? (Excerpt) excerptCommon : null;
+        wrappedCommon = excerptCommon;
     }
 
     @Override
@@ -143,6 +143,12 @@ public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, Excer
     @Override
     public boolean read8bitText(@NotNull StringBuilder builder) throws StreamCorruptedException {
         return wrappedExcerpt.read8bitText(builder);
+    }
+
+    @Override
+    public long nextSetBit(long l) {
+        return wrappedExcerpt.nextSetBit(l);
+
     }
 
     @Override

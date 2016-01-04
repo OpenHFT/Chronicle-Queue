@@ -86,6 +86,12 @@ public class WrappedExcerptTailer extends WrappedBytes<ExcerptTailer> implements
     }
 
     @Override
+    public long nextSetBit(long l) {
+        return wrappedTailer.nextSetBit(l);
+
+    }
+
+    @Override
     public void writeEnum(long l, int i, Object o) {
         wrappedTailer.writeEnum(l, i, o);
     }
