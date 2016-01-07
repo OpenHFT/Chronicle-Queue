@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
@@ -40,7 +41,7 @@ public class Excerpts {
     //
     // *************************************************************************
 
-    public static class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
+    public static abstract class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
         protected final T queue;
 
         public DefaultAppender(@NotNull T queue) {
@@ -67,10 +68,8 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public long cycle() {
-            throw new UnsupportedOperationException();
-        }
+
+        public abstract long cycle();
 
         @Override
         public ChronicleQueue queue() {
@@ -136,6 +135,11 @@ public class Excerpts {
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
             return writer.write(bytes);
         }
+
+        @Override
+        public long cycle() {
+            throw new UnsupportedOperationException("todo");
+        }
     }
 
     /**
@@ -170,17 +174,20 @@ public class Excerpts {
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            return index = store().append(this.writeContext, writer);
+            final long subindex = index = store().append(this.writeContext, writer);
+            return ChronicleQueue.index(cycle(), subindex);
         }
 
         @Override
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            return index = store().append(this.writeContext, marshallable);
+            index = store().append(this.writeContext, marshallable);
+            return ChronicleQueue.index(cycle, index);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) throws IOException {
-            return index = store().append(this.writeContext, bytes);
+            index = store().append(this.writeContext, bytes);
+            return ChronicleQueue.index(cycle(), index);
         }
 
         @Override
@@ -189,7 +196,7 @@ public class Excerpts {
                 throw new IllegalStateException();
             }
 
-            return this.index;
+            return ChronicleQueue.index(cycle(), index);
         }
 
         public static void main(String[] args) {
@@ -222,6 +229,7 @@ public class Excerpts {
 
             return this.store;
         }
+
     }
 
     // *************************************************************************
@@ -317,33 +325,33 @@ public class Excerpts {
             return false;
         }
 
+        /**
+         * @return provides an index that includes the cycle number
+         */
         @Override
         public long index() {
             //TODO: should we raise an exception ?
-            //if(this.store == null) {
-            //    throw new IllegalArgumentException("This tailer is not bound to any cycle");
-            //}
-
-            return this.index;
-        }
-
-        @Override
-        public long cycle() {
             if (this.store == null) {
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
             }
 
-            return this.store.cycle();
+            return ChronicleQueue.index(this.cycle, this.index);
         }
 
-        @Override
-        public boolean index(long index) throws IOException {
-            if (this.store == null) {
-                cycle(queue.lastCycle());
-                //   context(store::acquireBytesAtReadPositionForRead);
-            }
 
-            //this.context.clear();
+        @Override
+        public boolean index(long fullIndex) throws IOException {
+
+            System.out.println(SingleChronicleQueueStore.IndexOffset.toBinaryString
+                    (fullIndex));
+            System.out.println(SingleChronicleQueueStore.IndexOffset.toScale());
+
+
+            final long nextCycle = ChronicleQueue.cycle(fullIndex);
+            if (nextCycle != queue.lastCycle())
+                cycle(nextCycle);
+
+            long index = ChronicleQueue.subIndex(fullIndex);
 
             if (this.store.moveToIndex(readContext, index)) {
                 this.index = index - 1;
@@ -353,23 +361,16 @@ public class Excerpts {
             return false;
         }
 
-        @Override
-        public boolean index(long cycle, long index) throws IOException {
-            cycle(cycle);
-            //   context(store::acquireBytesAtReadPositionForRead);
 
-            return index(index);
-        }
-
+        @NotNull
         @Override
         public ExcerptTailer toStart() throws IOException {
             long firstCycle = queue.firstCycle();
             if (firstCycle > 0) {
                 cycle(firstCycle);
-                this.toStart = false;
-            } else {
-                cycle(cycle());
                 this.toStart = true;
+            } else {
+                this.toStart = false;
             }
 
             this.index = -1;
@@ -377,6 +378,7 @@ public class Excerpts {
             return this;
         }
 
+        @NotNull
         @Override
         public ExcerptTailer toEnd() throws IOException {
             long cycle = queue.lastCycle();

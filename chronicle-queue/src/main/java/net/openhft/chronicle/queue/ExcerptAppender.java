@@ -50,13 +50,12 @@ public interface ExcerptAppender extends ExcerptCommon {
     long writeBytes(@NotNull Bytes<?> bytes) throws IOException;
 
     /**
-     * @return the index last written.
+     * @return the index last written, this index includes the cycle
      * @throws IllegalStateException if no index is available
      */
     long index();
 
     /**
-     *
      * @return the cycle this appender is on
      */
     long cycle();

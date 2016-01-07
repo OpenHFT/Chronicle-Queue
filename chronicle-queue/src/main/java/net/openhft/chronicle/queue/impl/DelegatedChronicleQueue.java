@@ -72,8 +72,8 @@ public class DelegatedChronicleQueue implements ChronicleQueue {
     }
 
     @Override
-    public long lastWrittenIndex() {
-        return queue.lastWrittenIndex();
+    public long index() {
+        return queue.index();
     }
 
     @Override

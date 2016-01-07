@@ -42,35 +42,21 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException;
 
     /**
-     *
      * @return the index just read
      */
     long index();
 
-    /**
-     *
-     * @return the cycle this tailer is on
-     */
-    long cycle();
 
     /**
      * Randomly select an Excerpt.
      *
-     * @param index index to look up
+     * @param index index to look up, the index includes the cycle number and a sequence number from
+     *              with this cycle
      * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
     boolean index(long index) throws IOException;
 
-    /**
-     * Randomly select an Excerpt.
-     *
-     * @param cycle cycle
-     * @param index index to look up
-     * @return true if this is a valid entries.
-     * @throws IOException if not able to read the chronicle file
-     */
-    boolean index(long cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.

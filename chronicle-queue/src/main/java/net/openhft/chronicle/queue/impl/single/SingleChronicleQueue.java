@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredFile;
 import org.jetbrains.annotations.NotNull;
@@ -57,11 +59,13 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.pool.acquire(cycle());
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         return new Excerpts.StoreAppender(this);
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         return new Excerpts.StoreTailer(this);
@@ -169,6 +173,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final String cycleFormat = this.dateCache.formatFor(cycle);
         final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
+
         File parentFile = cycleFile.getParentFile();
         if (parentFile != null & !parentFile.exists()) {
             parentFile.mkdirs();
@@ -187,6 +192,22 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         Function<MappedFile, WireStore> supplyStore = mappedFile -> new SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
                         .builder.wireType(), mappedFile);
+
+
+        if (cycleFile.exists()) {
+            final MappedFile apply = toMappedFile.apply(cycleFile);
+            try {
+                final Bytes bytes = apply.acquireBytesForRead(0);
+                final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
+
+                final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
+                store.readMarshallable(wire);
+                return store;
+
+            } catch (IOException e) {
+                Jvm.rethrow(e);
+            }
+        }
 
         Consumer<WiredFile<WireStore>> consumer = ws -> {
             try {

@@ -30,11 +30,13 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
@@ -62,7 +64,7 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     }
 
     @Override
-    public long lastWrittenIndex() {
+    public long index() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

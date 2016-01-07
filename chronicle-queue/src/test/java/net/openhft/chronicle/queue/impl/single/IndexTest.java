@@ -45,10 +45,13 @@ public class IndexTest extends ChronicleQueueTestBase {
                 .build();
 
         final ExcerptAppender appender = queue.createAppender();
+        final long cycle = appender.cycle();
         for (int i = 0; i < 5; i++) {
             final int n = i;
-            assertEquals(n, appender.writeDocument(w -> w.write(ChronicleQueueTestBase.TestKey.test).int32(n)));
-            assertEquals(n, appender.index());
+            assertEquals(ChronicleQueue.index(cycle, n), appender.writeDocument(w -> w.write
+                    (ChronicleQueueTestBase.TestKey
+                            .test).int32(n)));
+            assertEquals(ChronicleQueue.index(cycle, n), appender.index());
         }
     }
 
