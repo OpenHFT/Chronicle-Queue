@@ -27,6 +27,8 @@ import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,6 +36,10 @@ import java.nio.ByteBuffer;
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 
 public class Excerpts {
+
+
+    private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+
 
     // *************************************************************************
     //
@@ -168,7 +174,8 @@ public class Excerpts {
             this.index = this.store.lastIndex();
 
             final MappedFile mappedFile = store.mappedFile();
-            System.out.println("appender file=" + mappedFile.file().getAbsolutePath());
+            if (LOG.isDebugEnabled())
+                LOG.debug("appender file=" + mappedFile.file().getAbsolutePath());
             this.writeContext = new MappedBytes(mappedFile);
         }
 
@@ -342,10 +349,11 @@ public class Excerpts {
         @Override
         public boolean index(long fullIndex) throws IOException {
 
-            System.out.println(SingleChronicleQueueStore.IndexOffset.toBinaryString
-                    (fullIndex));
-            System.out.println(SingleChronicleQueueStore.IndexOffset.toScale());
-
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString
+                        (fullIndex));
+                LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
+            }
 
             final long nextCycle = ChronicleQueue.cycle(fullIndex);
             if (nextCycle != queue.lastCycle())
@@ -407,7 +415,8 @@ public class Excerpts {
                 final MappedFile mappedFile = store.mappedFile();
                 this.readContext = new MappedBytes(mappedFile);
 
-                System.out.println("tailer=" + mappedFile.file().getAbsolutePath().toString());
+                if (LOG.isDebugEnabled())
+                    LOG.debug("tailer=" + mappedFile.file().getAbsolutePath().toString());
 
             }
 

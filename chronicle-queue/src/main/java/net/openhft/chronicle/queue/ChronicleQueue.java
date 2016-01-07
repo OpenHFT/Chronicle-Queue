@@ -105,8 +105,15 @@ public interface ChronicleQueue extends Closeable {
 
     /**
      * @return the highest valid index immediately available.
+     *
+     * The lowest 40bits of the index refer to the sequence number with the cycle, giving a maximum
+     * of 1099511627776 excerpt per cycle. Each cycle has its own file. Each file holds its own
+     * index. You can discard the old files ( if they are no longer used ). The other highest 24
+     * bits  of the index are used for the cycle number (this equates to the filename), giving a
+     * maximum  of 16777216 cycles ( aka files )
      */
     long index();
+
 
     /**
      * @return the type of wire used, for example TEXT_WIRE or BINARY WIRE
@@ -131,7 +138,4 @@ public interface ChronicleQueue extends Closeable {
     }
 
 
-    public static void main(String[] args) {
-        System.out.println("XXXCX=" + (1 << 24));
-    }
 }

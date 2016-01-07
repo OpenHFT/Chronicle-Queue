@@ -549,7 +549,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            System.out.println("writeMarshallable");
+            //      System.out.println("writeMarshallable");
             wire.write(IndexingFields.indexCount).int32(indexCount)
                     .write(IndexingFields.indexSpacing).int32(indexSpacing)
                     .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
@@ -559,7 +559,7 @@ public class SingleChronicleQueueStore implements WireStore {
         @Override
         public void readMarshallable(@NotNull WireIn wire) {
 
-            System.out.println("readMarshallable");
+            //  System.out.println("readMarshallable");
             wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
                     .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
                     .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
@@ -642,7 +642,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 if (secondaryAddress == Wires.NOT_INITIALIZED) {
                     secondaryAddress = newIndex(context);
                     primaryIndex.setValueAt(primaryOffset, secondaryAddress);
-                    assert primaryIndex.getValueAt(0) == secondaryAddress;
                 }
 
                 indexBytes.readLimit(indexBytes.capacity());
@@ -651,7 +650,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 wire1.readDocument(document -> {
                     final LongArrayValues array1 = array(document, array);
                     array1.setValueAt(toAddress1(index), address);
-                    assert array1.getValueAt(toAddress1(index)) == address;
                 }, null);
 
             }, null);
@@ -737,6 +735,10 @@ public class SingleChronicleQueueStore implements WireStore {
             return result[0];
         }
 
+
+        private boolean indexSuccess;
+        private long startIndex;
+
         /**
          * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in
          * other words the address of where ) the root first level targetIndex is stored. The
@@ -748,68 +750,14 @@ public class SingleChronicleQueueStore implements WireStore {
          * occurs. The indexes are only built when the indexer is run, this could be on a background
          * thread. Each targetIndex is created into chronicle as an excerpt.
          */
-        public boolean moveToIndex_(MappedBytes context, final long targetIndex) {
-
-            long index2index = this.index2Index.getVolatileValue();
-
-            try {
-
-                final long offset1 = toAddress0(targetIndex);
-                long address1 = readIndexAt(index2index, offset1);
-                long fromAddress;
-
-                if (address1 != 0) {
-
-                    final long offset = toAddress1(targetIndex);
-                    fromAddress = readIndexAt(address1, offset);
-
-                    if (fromAddress != 0) {
-                        ///    context.readPosition(address2);
-                        long startIndex = ((targetIndex / 64L)) * 64L;
-
-                        if (targetIndex == startIndex) {
-                            readPosition(context, fromAddress);
-                            return true;
-                        }
-
-                        return linearScan(context, targetIndex, startIndex, fromAddress);
-
-                    } else {
-
-                        // scan back in secondary index till we find any result then we will
-                        // linear scan from their
-                        for (long startIndex = offset; startIndex >= 0; startIndex--) {
-                            fromAddress = readIndexAt(address1, toAddress1(targetIndex));
-                            if (fromAddress != 0) {
-                                return linearScan(context, targetIndex, startIndex, fromAddress);
-                            }
-                        }
-
-                        return linearScan(context, targetIndex, 0, fromAddress);
-                    }
-
-                } else {
-                    return linearScan(context, targetIndex, 0, 0);
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return false;
-        }
-
-        private boolean indexSuccess;
-        private long startIndex;
-
         public boolean moveToIndex(MappedBytes context, final long targetIndex) {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(context);
 
             final MappedBytes indexBytes = indexContext;
-            indexBytes.readLimit(indexBytes.capacity());
-            final Bytes bytes0 = indexBytes.readPosition(indexToIndex0);
-            final Wire w = wireType.apply(bytes0);
+            indexBytes.readLimit(indexBytes.capacity()).readPosition(indexToIndex0);
+
+            final Wire w = wireType.apply(indexBytes);
             indexSuccess = false;
             this.startIndex = ((targetIndex / 64L)) * 64L;
 
