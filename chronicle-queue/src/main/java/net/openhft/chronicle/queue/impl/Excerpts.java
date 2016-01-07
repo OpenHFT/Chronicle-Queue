@@ -154,6 +154,7 @@ public class Excerpts {
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
 
         private final MappedBytes writeContext;
+        private long epoc;
         private long cycle;
         private long index = -1;
         private WireStore store;
@@ -170,7 +171,7 @@ public class Excerpts {
             if (this.cycle <= 0)
                 throw new IllegalArgumentException();
 
-            this.store = queue.storeForCycle(this.cycle);
+            this.store = queue.storeForCycle(this.cycle, this.epoc);
             this.index = this.store.lastIndex();
 
             final MappedFile mappedFile = store.mappedFile();
@@ -230,7 +231,7 @@ public class Excerpts {
                 }
 
                 this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle);
+                this.store = queue.storeForCycle(this.cycle, epoc);
                 //this.store.acquireBytesAtWritePositionForWrite(this.writeContext.bytes);
             }
 
@@ -253,6 +254,7 @@ public class Excerpts {
         private MappedBytes readContext;
 
         private long cycle;
+        private long epoc;
         private long index;
         private WireStore store;
 
@@ -411,7 +413,7 @@ public class Excerpts {
                 }
                 this.cycle = cycle;
                 this.index = -1;
-                this.store = this.queue.storeForCycle(this.cycle);
+                this.store = this.queue.storeForCycle(this.cycle, this.epoc);
                 final MappedFile mappedFile = store.mappedFile();
                 this.readContext = new MappedBytes(mappedFile);
 

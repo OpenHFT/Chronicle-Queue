@@ -80,10 +80,12 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     /**
      * @param cycle
+     * @param epoc   an epoc offset as the number of number of milliseconds since January
+     *                 1, 1970,  00:00:00 GMT
      * @return
      * @throws IOException
      */
-    protected abstract WireStore storeForCycle(long cycle) throws IOException;
+    protected abstract WireStore storeForCycle(long cycle, final long epoc) throws IOException;
 
     /**
      * @param store

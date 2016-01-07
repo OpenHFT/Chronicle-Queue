@@ -15,25 +15,57 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.koloboke.collect.map.hash.HashLongObjMaps;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
     private final WireStoreSupplier supplier;
-    private final Map<Long, WireStore> stores;
+
+    private class RollDetails {
+
+        private long cycle;
+        private long epoc;
+
+        public RollDetails(long cycle, long epoc) {
+            this.cycle = cycle;
+            this.epoc = epoc;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof RollDetails)) return false;
+
+            RollDetails rollDetails = (RollDetails) o;
+
+            if (cycle != rollDetails.cycle) return false;
+            return epoc == rollDetails.epoc;
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (int) (cycle ^ (cycle >>> 32));
+            result = 31 * result + (int) (epoc ^ (epoc >>> 32));
+            return result;
+        }
+    }
+
+    private final Map<RollDetails, WireStore> stores;
 
     public WireStorePool(@NotNull WireStoreSupplier supplier) {
         this.supplier = supplier;
-        this.stores = HashLongObjMaps.newMutableMap();
+        this.stores = new ConcurrentHashMap<>();
     }
 
-    public synchronized WireStore acquire(long cycle) throws IOException {
-        WireStore store = stores.get(cycle);
-        if(store == null) {
-            stores.put(cycle, store = this.supplier.apply(cycle));
+    public synchronized WireStore acquire(long cycle, final long epoc) throws IOException {
+        final RollDetails rollDetails = new RollDetails(cycle, epoc);
+        WireStore store = stores.get(rollDetails);
+        if (store == null) {
+            stores.put(rollDetails, store = this.supplier.apply(cycle, epoc));
         } else {
             store.reserve();
         }
@@ -43,8 +75,8 @@ public class WireStorePool {
 
     public synchronized void release(WireStore store) {
         store.release();
-        if(store.refCount() <= 0) {
-            stores.remove(store.cycle());
+        if (store.refCount() <= 0) {
+            stores.remove(new RollDetails(store.cycle(), store.epoc()));
         }
     }
 

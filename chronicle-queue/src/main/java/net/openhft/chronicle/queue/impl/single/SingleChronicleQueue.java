@@ -54,9 +54,10 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
+
         this.pool = WireStorePool.withSupplier(this::newStore);
         this.firstCycle = -1;
-        this.pool.acquire(cycle());
+        storeForCycle(cycle(), builder.epoc());
     }
 
     @NotNull
@@ -72,8 +73,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected WireStore storeForCycle(long cycle) throws IOException {
-        return this.pool.acquire(cycle);
+    protected WireStore storeForCycle(long cycle, final long epoc) throws IOException {
+        return this.pool.acquire(cycle, epoc);
     }
 
     @Override
@@ -168,13 +169,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    protected WireStore newStore(final long cycle) {
+    protected WireStore newStore(final long cycle, final long epoc) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
         final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
-
-        File parentFile = cycleFile.getParentFile();
+        final File parentFile = cycleFile.getParentFile();
         if (parentFile != null & !parentFile.exists()) {
             parentFile.mkdirs();
         }
@@ -191,7 +191,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         Function<MappedFile, WireStore> supplyStore = mappedFile -> new SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
-                        .builder.wireType(), mappedFile);
+                        .builder.wireType(), mappedFile, epoc);
 
 
         if (cycleFile.exists()) {

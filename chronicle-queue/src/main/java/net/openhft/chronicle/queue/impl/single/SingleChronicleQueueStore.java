@@ -77,14 +77,23 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     SingleChronicleQueueStore() {
         this.wireType = WireType.BINARY;
-        this.roll = new Roll(null);
+        this.roll = new Roll(null, 0);
     }
 
+    /**
+     * @param rollCycle
+     * @param wireType
+     * @param mappedFile
+     * @param rollEpoc   sets an epoc offset as the number of number of milliseconds since January
+     *                   1, 1970,  00:00:00 GMT
+     */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               final WireType wireType,
-                              @NotNull MappedFile mappedFile) {
+                              @NotNull MappedFile mappedFile,
+                              long rollEpoc) {
 
-        this.roll = new Roll(rollCycle);
+        this.roll = new Roll(rollCycle, rollEpoc);
+
         this.resourceCleaner = null;
         this.builder = null;
         this.wireType = wireType;
@@ -108,7 +117,16 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long cycle() {
-        return this.roll.getCycle();
+        return this.roll.cycle();
+    }
+
+    /**
+     * @return an epoc offset as the number of number of milliseconds since January 1, 1970,
+     * 00:00:00 GMT
+     */
+    @Override
+    public long epoc() {
+        return this.roll.epoc();
     }
 
     @Override
@@ -152,7 +170,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     (MappedBytes ctx, long position, int size, WriteMarshallable w) -> {
                         // todo improve this line
                         Wires.writeMeta(wireType.apply(context), w);
-                        roll.setNextCycleMetaPosition(position);
+                        roll.nextCycleMetaPosition(position);
                         return WireConstants.NO_INDEX;
                     },
                     marshallable
@@ -203,7 +221,7 @@ public class SingleChronicleQueueStore implements WireStore {
         if (created) {
             this.bounds.setWritePosition(length);
             this.bounds.setReadPosition(length);
-            this.roll.setCycle(cycle);
+            this.roll.cycle(cycle);
         }
     }
 
@@ -929,10 +947,11 @@ public class SingleChronicleQueueStore implements WireStore {
 // *************************************************************************
 
     enum RollFields implements WireKey {
-        cycle, length, format, timeZone, nextCycle, nextCycleMetaPosition
+        cycle, length, format, timeZone, nextCycle, epoc, nextCycleMetaPosition
     }
 
     class Roll implements Marshallable {
+        private LongValue epoc;
         private int length;
         private String format;
         private ZoneId zoneId;
@@ -940,11 +959,11 @@ public class SingleChronicleQueueStore implements WireStore {
         private LongValue nextCycle;
         private LongValue nextCycleMetaPosition;
 
-        Roll(RollCycle rollCycle) {
+        Roll(RollCycle rollCycle, long rollEpoc) {
             this.length = rollCycle != null ? rollCycle.length() : -1;
             this.format = rollCycle != null ? rollCycle.format() : null;
             this.zoneId = rollCycle != null ? rollCycle.zone() : null;
-
+            this.epoc = null;
             this.cycle = null;
             this.nextCycle = null;
             this.nextCycleMetaPosition = null;
@@ -957,6 +976,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     .write(RollFields.format).text(format)
                     .write(RollFields.timeZone).text(zoneId.getId())
                     .write(RollFields.nextCycle).int64forBinding(-1, nextCycle = wire.newLongReference())
+                    .write(RollFields.epoc).int64forBinding(-1, epoc = wire.newLongReference())
                     .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
 
@@ -967,28 +987,49 @@ public class SingleChronicleQueueStore implements WireStore {
                     .read(RollFields.format).text(this, (o, i) -> o.format = i)
                     .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
                     .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                    .read(RollFields.epoc).int64(this.epoc, this, (o, i) -> o.epoc = i)
                     .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
         }
 
-        public long getCycle() {
+        /**
+         *
+         * @return an epoc offset as the number of number of milliseconds since January
+         *                 1, 1970,  00:00:00 GMT
+         */
+        public long epoc() {
+            return this.epoc.getVolatileValue();
+        }
+
+
+        /**
+         * @param epoc sets an epoc offset as the number of number of milliseconds since January 1,
+         *             1970,  00:00:00 GMT
+         * @return {@code this}
+         */
+        public Roll epoc(long epoc) {
+            this.epoc.setOrderedValue(epoc);
+            return this;
+        }
+
+        public long cycle() {
             return this.cycle.getVolatileValue();
         }
 
-        public Roll setCycle(long rollCycle) {
+        public Roll cycle(long rollCycle) {
             this.cycle.setOrderedValue(rollCycle);
             return this;
         }
 
-        public Roll setNextCycleMetaPosition(long position) {
+        public Roll nextCycleMetaPosition(long position) {
             this.nextCycleMetaPosition.setOrderedValue(position);
             return this;
         }
 
-        public long getNextCycleMetaPosition() {
+        public long nextCycleMetaPosition() {
             return this.nextCycleMetaPosition.getVolatileValue();
         }
 
-        public long getNextRollCycle() {
+        public long nextRollCycle() {
             return this.nextCycle.getVolatileValue();
         }
 
