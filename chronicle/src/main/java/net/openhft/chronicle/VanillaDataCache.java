@@ -72,18 +72,15 @@ public class VanillaDataCache implements Closeable {
         VanillaMappedBytes vmb = this.cache.get(key);
         if (vmb == null || vmb.refCount() < 1) {
             long start = System.nanoTime();
-            String name = FILE_NAME_PREFIX + threadId + "-" + dataCount;
-            vmb = this.cache.put(
-                    key.clone(),
-                    VanillaChronicleUtils.mkFiles(
-                            basePath,
-                            dateCache.formatFor(cycle),
-                            name,
-                            forWrite),
-                    1L << blockBits,
-                    dataCount);
 
-            fileLifecycleListener.onEvent(EventType.NEW, new File(name), System.nanoTime() - start);
+            File file = VanillaChronicleUtils.mkFiles(
+                basePath,
+                dateCache.formatFor(cycle),
+                FILE_NAME_PREFIX + threadId + "-" + dataCount,
+                forWrite);
+
+            vmb = this.cache.put(key.clone(), file, 1L << blockBits, dataCount);
+            fileLifecycleListener.onEvent(EventType.NEW, file, System.nanoTime() - start);
         }
 
         vmb.reserve();

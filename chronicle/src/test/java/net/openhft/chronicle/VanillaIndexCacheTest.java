@@ -61,19 +61,19 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             int cycle = (int) (System.currentTimeMillis() / 1000);
             VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
             vanillaBuffer0.writeLong(0, 0x12345678);
-            File file0 = VanillaChronicleUtils.fileFor(baseDir, cycle, 0, dateCache);
+            File file0 = VanillaChronicleUtils.indexFileFor(baseDir, cycle, 0, dateCache);
             assertEquals(8 << 10, file0.length());
             assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
             vanillaBuffer0.release();
 
             VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
-            File file1 = VanillaChronicleUtils.fileFor(baseDir, cycle, 1, dateCache);
+            File file1 = VanillaChronicleUtils.indexFileFor(baseDir, cycle, 1, dateCache);
             assertEquals(8 << 10, file1.length());
             vanillaBuffer1.release();
             assertNotEquals(file1, file0);
 
             VanillaMappedBytes vanillaBuffer2 = cache.indexFor(cycle, 2, true);
-            File file2 = VanillaChronicleUtils.fileFor(baseDir, cycle, 2, dateCache);
+            File file2 = VanillaChronicleUtils.indexFileFor(baseDir, cycle, 2, dateCache);
             assertEquals(8 << 10, file2.length());
             vanillaBuffer2.release();
 
@@ -120,17 +120,17 @@ public class VanillaIndexCacheTest extends VanillaChronicleTestBase {
             assertEquals(0, cache.lastIndexFile(cycle));
 
             final VanillaMappedBytes vanillaBuffer0 = cache.indexFor(cycle, 0, true);
-            assertEquals("index-0", VanillaChronicleUtils.fileFor(baseDir, cycle, 0, dateCache).getName());
+            assertEquals("index-0", VanillaChronicleUtils.indexFileFor(baseDir, cycle, 0, dateCache).getName());
             vanillaBuffer0.release();
             assertEquals(0, cache.lastIndexFile(cycle));
 
             final VanillaMappedBytes vanillaBuffer1 = cache.indexFor(cycle, 1, true);
-            assertEquals("index-1", VanillaChronicleUtils.fileFor(baseDir, cycle, 1, dateCache).getName());
+            assertEquals("index-1", VanillaChronicleUtils.indexFileFor(baseDir, cycle, 1, dateCache).getName());
             vanillaBuffer1.release();
             assertEquals(1, cache.lastIndexFile(cycle));
 
             final VanillaMappedBytes vanillaBuffer3 = cache.indexFor(cycle, 3, true);
-            assertEquals("index-3", VanillaChronicleUtils.fileFor(baseDir, cycle, 3, dateCache).getName());
+            assertEquals("index-3", VanillaChronicleUtils.indexFileFor(baseDir, cycle, 3, dateCache).getName());
             vanillaBuffer3.release();
             assertEquals(3, cache.lastIndexFile(cycle));
 
