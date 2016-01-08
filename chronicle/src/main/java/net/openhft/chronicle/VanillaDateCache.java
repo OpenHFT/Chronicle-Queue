@@ -29,11 +29,12 @@ class VanillaDateCache {
     private static final int SIZE = 32;
 
     private final SimpleDateFormat format;
-    private final DateValue[] values = new DateValue[SIZE];
+    private final DateValue[] values;
     private final int cycleLength;
 
     public VanillaDateCache(final String formatStr, int cycleLength, TimeZone timeZone) {
         this.cycleLength = cycleLength;
+        this.values = new DateValue[SIZE];
 
         this.format = new SimpleDateFormat(formatStr);
         this.format.setTimeZone(timeZone);

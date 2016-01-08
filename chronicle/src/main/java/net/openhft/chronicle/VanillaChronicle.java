@@ -238,11 +238,15 @@ public class VanillaChronicle implements Chronicle {
         if (lastIndexCount >= 0) {
             try {
                 final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexCount, false);
-                final long indices = VanillaIndexCache.countIndices(buffer);
-                buffer.release();
+                if(buffer != null) {
+                    final long indices = VanillaIndexCache.countIndices(buffer);
+                    buffer.release();
 
-                final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
-                return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
+                    final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
+                    return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
+                } else {
+                    return -1;
+                }
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
@@ -415,6 +419,10 @@ public class VanillaChronicle implements Chronicle {
                         }
 
                         indexBytes = indexCache.indexFor(cycle, indexCount, false);
+                        if(indexBytes == null) {
+                            return false;
+                        }
+
                         indexFileChange = true;
                         assert indexBytes.refCount() > 1;
                         lastCycle = cycle;
