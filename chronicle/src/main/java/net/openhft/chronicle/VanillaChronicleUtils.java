@@ -18,6 +18,8 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
@@ -50,13 +52,13 @@ public class VanillaChronicleUtils {
 
         if (!forAppend) {
             //This test needs to be done before any directories are created.
-            if (!file.exists()) {
+            if (!exists(file)) {
                 return null;
             }
         }
 
         cycleDir.mkdirs();
-        if(!file.exists() && !forAppend) {
+        if(!exists(file) && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 
@@ -78,14 +80,16 @@ public class VanillaChronicleUtils {
     }
 
     public static List<File> findLeafDirectories(File root) {
-        final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
-        if(files != null && files.length != 0) {
-            List<File> leafs = new ArrayList<>();
-            for(int i=files.length - 1; i >= 0; i--) {
-                findLeafDirectories(leafs, files[i]);
-            }
+        if(exists(root)) {
+            final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
+            if (files != null && files.length != 0) {
+                List<File> leafs = new ArrayList<>();
+                for (int i = files.length - 1; i >= 0; i--) {
+                    findLeafDirectories(leafs, files[i]);
+                }
 
-            return leafs;
+                return leafs;
+            }
         }
 
         return Collections.emptyList();
@@ -102,5 +106,9 @@ public class VanillaChronicleUtils {
         }
 
         return leafs;
+    }
+
+    public static boolean exists(@NotNull File path) {
+        return path != null && path.exists();
     }
 }

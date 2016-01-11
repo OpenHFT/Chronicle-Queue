@@ -130,11 +130,11 @@ public class VanillaIndexCache implements Closeable {
 
             long start = System.nanoTime();
             File parent = file.getParentFile();
-            if(forAppend && !parent.exists()) {
+            if(forAppend && !VanillaChronicleUtils.exists(parent)) {
                 parent.mkdirs();
             }
 
-            if(!forAppend && !file.exists()) {
+            if(!forAppend && !VanillaChronicleUtils.exists(file)) {
                 return null;
             }
 

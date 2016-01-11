@@ -37,6 +37,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -86,7 +93,6 @@ public class VanillaChronicle implements Chronicle {
     private final int entriesForCycleBits;
     private final long entriesForCycleMask;
 
-    //    private volatile int cycle;
     private final AtomicLong lastWrittenIndex = new AtomicLong(-1L);
     private volatile boolean closed = false;
 
@@ -113,6 +119,10 @@ public class VanillaChronicle implements Chronicle {
 
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
+
+        if(!VanillaChronicleUtils.exists(builder.path())) {
+            builder.path().mkdirs();
+        }
     }
 
     public boolean isClosed() {
@@ -177,7 +187,7 @@ public class VanillaChronicle implements Chronicle {
         return tailer;
     }
 
-    private VanillaTailer createTailer0() {
+    private VanillaTailer createTailer0() throws IOException {
         return new VanillaTailerImpl();
     }
 
@@ -202,7 +212,7 @@ public class VanillaChronicle implements Chronicle {
         return appender;
     }
 
-    private VanillaAppender createAppender0() {
+    private VanillaAppender createAppender0() throws IOException {
         final VanillaAppender appender = new VanillaAppenderImpl();
 
         return !builder.useCheckedExcerpt()
@@ -345,7 +355,7 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
-        public File getActiveWorkingDirectory();
+        File getActiveWorkingDirectory();
     }
 
     // *************************************************************************
@@ -355,7 +365,8 @@ public class VanillaChronicle implements Chronicle {
     private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
-        private long index = -1;
+        protected long index ;
+
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
         private int lastThreadId = Integer.MIN_VALUE;
@@ -363,6 +374,10 @@ public class VanillaChronicle implements Chronicle {
 
         public AbstractVanillaExcerpt() {
             super(acquireSerializer(), NO_PAGE, NO_PAGE, null);
+
+            this.index = -1;
+            this.indexBytes = null;
+            this.dataBytes = null;
         }
 
         @Override
@@ -410,14 +425,8 @@ public class VanillaChronicle implements Chronicle {
 
                 try {
                     if (lastCycle != cycle || lastIndexCount != indexCount || indexBytes == null) {
-                        if (indexBytes != null) {
-                            indexBytes.release();
-                            indexBytes = null;
-                        }
-                        if (dataBytes != null) {
-                            dataBytes.release();
-                            dataBytes = null;
-                        }
+                        releaseIndexBytes();
+                        releaseDataBytes();
 
                         indexBytes = indexCache.indexFor(cycle, indexCount, false);
                         if(indexBytes == null) {
@@ -444,10 +453,7 @@ public class VanillaChronicle implements Chronicle {
                 int dataOffset = (int) (dataOffset0 & dataBlockSizeMask);
 
                 if (lastThreadId != threadId || lastDataCount != dataCount || indexFileChange) {
-                    if (dataBytes != null) {
-                        dataBytes.release();
-                        dataBytes = null;
-                    }
+                    releaseDataBytes();
                 }
 
                 if (dataBytes == null) {
@@ -531,15 +537,8 @@ public class VanillaChronicle implements Chronicle {
         public void close() {
             finished = true;
 
-            if (indexBytes != null) {
-                indexBytes.release();
-                indexBytes = null;
-            }
-
-            if (dataBytes != null) {
-                dataBytes.release();
-                dataBytes = null;
-            }
+            releaseIndexBytes();
+            releaseDataBytes();
 
             super.close();
         }
@@ -548,6 +547,28 @@ public class VanillaChronicle implements Chronicle {
         protected void finalize() throws Throwable {
             close();
             super.finalize();
+        }
+
+        protected void releaseIndexBytes() {
+            if (indexBytes != null) {
+                if (builder.syncOnRoll()) {
+                    indexBytes.force();
+                }
+
+                indexBytes.release();
+                indexBytes = null;
+            }
+        }
+
+        protected void releaseDataBytes() {
+            if (dataBytes != null) {
+                if (builder.syncOnRoll()) {
+                    dataBytes.force();
+                }
+
+                dataBytes.release();
+                dataBytes = null;
+            }
         }
     }
 
@@ -614,36 +635,15 @@ public class VanillaChronicle implements Chronicle {
                 assert (appenderThreadId & THREAD_ID_MASK) == appenderThreadId : "appenderThreadId: " + appenderThreadId;
 
                 if (appenderCycle != lastCycle) {
-                    if (indexBytes != null) {
-                        if(builder.syncOnRoll()) {
-                            indexBytes.force();
-                        }
-
-                        indexBytes.release();
-                        indexBytes = null;
-                    }
-                    if (dataBytes != null) {
-                        if(builder.syncOnRoll()) {
-                            dataBytes.force();
-                        }
-
-                        dataBytes.release();
-                        dataBytes = null;
-                    }
+                    releaseIndexBytes();
+                    releaseDataBytes();
 
                     lastCycle = appenderCycle;
                     lastIndexIndex = indexCache.lastIndexFile(lastCycle);
                     lastThreadId = appenderThreadId;
 
                 } else if (appenderThreadId != lastThreadId) {
-                    if (dataBytes != null) {
-                        if(builder.syncOnRoll()) {
-                            dataBytes.force();
-                        }
-
-                        dataBytes.release();
-                        dataBytes = null;
-                    }
+                    releaseDataBytes();
 
                     lastThreadId = appenderThreadId;
                 }
@@ -763,13 +763,79 @@ public class VanillaChronicle implements Chronicle {
     }
 
     private class VanillaTailerImpl extends AbstractVanillaExcerpt implements VanillaTailer {
+        private boolean fsWatchEnabled;
+        private Path fsWatchPath;
+        private WatchService fsWatch;
+        private WatchKey fsWatchKey;
+
+        public VanillaTailerImpl() throws IOException {
+            this.fsWatchEnabled = builder.enableFsWatcher();
+            this.fsWatch = fsWatchEnabled ? FileSystems.getDefault().newWatchService() : null;
+            this.fsWatchPath = fsWatchEnabled ? builder.path().toPath() : null;
+            this.fsWatchKey = null;
+        }
 
         @NotNull
         @Override
         public ExcerptTailer toStart() {
+            if(!this.fsWatchEnabled) {
+                super.toStart();
+            } else {
+                toStartWithFsWatch();
+            }
+
+            return this;
+        }
+
+        private ExcerptTailer toStartWithFsWatch() {
+            if(this.index == -1 && this.fsWatchKey == null) {
+                super.toStart();
+            }
+
+            if(this.index == -1 && fsWatchEnabled) {
+                try {
+                    if(this.fsWatchKey == null) {
+                        this.fsWatchKey = this.fsWatchPath.register(this.fsWatch, StandardWatchEventKinds.ENTRY_CREATE);
+                    }
+
+                    WatchKey key = fsWatch.poll();
+                    if(key != null && key.isValid()) {
+                        List<WatchEvent<?>> events = key.pollEvents();
+                        for(int i=events.size() - 1; i >= 0; i--) {
+                            if(events.get(i).kind() != StandardWatchEventKinds.OVERFLOW) {
+                                super.toStart();
+                                if(this.index != -1) {
+                                    events.clear();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch(IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            if(this.index != -1 && this.fsWatchKey != null) {
+                this.fsWatchKey.cancel();
+                this.fsWatchKey = null;
+            }
+
+            return this;
+        }
+
+        /*
+        @NotNull
+        @Override
+        public ExcerptTailer toStart() {
+            if(!VanillaChronicleUtils.exists(builder.path())) {
+                return this;
+            }
+
             super.toStart();
             return this;
         }
+        */
 
         @NotNull
         @Override
