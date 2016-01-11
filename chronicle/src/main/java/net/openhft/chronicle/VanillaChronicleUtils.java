@@ -34,6 +34,16 @@ public class VanillaChronicleUtils {
         }
     };
 
+
+    /**
+     *
+     * @param basePath
+     * @param cycleStr
+     * @param name
+     * @param forAppend
+     * @return null if !forAppend and file does not exist
+     * @throws IOException
+     */
     public static File mkFiles(
             String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
 
@@ -43,7 +53,7 @@ public class VanillaChronicleUtils {
         if (!forAppend) {
             //This test needs to be done before any directories are created.
             if (!file.exists()) {
-                throw new FileNotFoundException(file.getAbsolutePath());
+                return null;
             }
         }
 
@@ -55,11 +65,12 @@ public class VanillaChronicleUtils {
         return file;
     }
 
-    public static File fileFor(
+    public static File indexFileFor(
             String basePath, int cycle, int indexCount, VanillaDateCache dateCache) {
         return new File(
             new File(basePath, dateCache.formatFor(cycle)),
-            VanillaIndexCache.FILE_NAME_PREFIX + indexCount);
+            VanillaIndexCache.FILE_NAME_PREFIX + indexCount
+        );
     }
 
     public static List<File> findLeafDirectories(File root) {

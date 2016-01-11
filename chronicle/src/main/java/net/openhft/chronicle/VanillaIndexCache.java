@@ -29,8 +29,11 @@ import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static net.openhft.chronicle.VanillaChronicleUtils.indexFileFor;
 
 public class VanillaIndexCache implements Closeable {
     public static final String FILE_NAME_PREFIX = "index-";
@@ -42,6 +45,7 @@ public class VanillaIndexCache implements Closeable {
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
     private final Map<IndexKey, File> cyclePathMap;
+    private final Map<IndexKey, File> indexFileMap;
     private final FileLifecycleListener fileLifecycleListener;
 
     VanillaIndexCache(
@@ -62,6 +66,12 @@ public class VanillaIndexCache implements Closeable {
         );
 
         this.cyclePathMap = new HashMap<>();
+        this.indexFileMap = new LinkedHashMap<IndexKey, File>(32,1.0f,true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<IndexKey, File> eldest) {
+                return size() >= 32;
+            }
+        };
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -128,19 +138,26 @@ public class VanillaIndexCache implements Closeable {
 
         VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
-            long start = System.nanoTime();
-            String name = FILE_NAME_PREFIX + indexCount;
-            vmb = this.cache.put(
-                key.clone(),
-                VanillaChronicleUtils.mkFiles(
-                    basePath,
-                    dateCache.formatFor(cycle),
-                        name,
-                    forAppend),
-                1L << blockBits,
-                indexCount);
+            File file = this.indexFileMap.get(key);
+            if(file == null) {
+                this.indexFileMap.put(
+                    key.clone(),
+                    file = indexFileFor(basePath, cycle, indexCount, dateCache)
+                );
+            }
 
-            fileLifecycleListener.onEvent(EventType.NEW, new File(name), System.nanoTime() - start);
+            long start = System.nanoTime();
+            File parent = file.getParentFile();
+            if(forAppend && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            if(!forAppend && !file.exists()) {
+                return null;
+            }
+
+            vmb = this.cache.put(key.clone(), file, 1L << blockBits, indexCount);
+            fileLifecycleListener.onEvent(EventType.NEW, file, System.nanoTime() - start);
         }
 
         vmb.reserve();
