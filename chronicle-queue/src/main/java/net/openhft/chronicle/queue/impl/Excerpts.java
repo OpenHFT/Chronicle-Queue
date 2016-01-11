@@ -178,6 +178,8 @@ public class Excerpts {
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedFile.file().getAbsolutePath());
             this.writeContext = new MappedBytes(mappedFile);
+
+
         }
 
         @Override

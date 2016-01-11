@@ -8,18 +8,20 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Results 27/10/2015 running on a MBP
- * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
+ * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740
+ * 8,000 / 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
+    @Ignore("long running")
     @Test
-    public void test() throws Exception{
+    public void test() throws Exception {
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -34,7 +36,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
             AffinityLock lock = null;
             try {
-                if(Boolean.getBoolean("enableTailerAffinity")) {
+                if (Boolean.getBoolean("enableTailerAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 
@@ -47,7 +49,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                     }
                 }
             } finally {
-                if(lock != null) {
+                if (lock != null) {
                     lock.release();
                 }
             }
@@ -56,7 +58,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if(Boolean.getBoolean("enableAppenderAffinity")) {
+                if (Boolean.getBoolean("enableAppenderAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 
@@ -70,7 +72,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                if(lock != null) {
+                if (lock != null) {
                     lock.release();
                 }
             }
@@ -90,10 +92,11 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static class MyWriteMarshallable implements WriteMarshallable {
         private TestTrade bt;
 
-        public MyWriteMarshallable(TestTrade bt){
+        public MyWriteMarshallable(TestTrade bt) {
 
             this.bt = bt;
         }
+
         @Override
         public void writeMarshallable(WireOut w) {
             w.write(() -> "TestTrade")

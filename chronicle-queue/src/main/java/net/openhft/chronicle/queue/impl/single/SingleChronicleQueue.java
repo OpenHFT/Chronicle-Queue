@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -200,9 +201,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 final Bytes bytes = apply.acquireBytesForRead(0);
                 final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
 
-                final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
-                store.readMarshallable(wire);
-                return store;
+
+                // final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
+                final AtomicReference<SingleChronicleQueueStore> result = new AtomicReference<>();
+
+                wire.readDocument(d -> {
+
+                    result.set(d.getValueIn().typedMarshallable());
+
+                }, null);
+
+                return result.get();
 
             } catch (IOException e) {
                 Jvm.rethrow(e);
