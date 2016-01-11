@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.TimeZone;
 
+import static net.openhft.chronicle.VanillaChronicleUtils.dataFileFor;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
@@ -43,26 +44,26 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
+        final VanillaDateCache dateCache = new VanillaDateCache(baseDir, "yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
         try {
             int cycle = (int) (System.currentTimeMillis() / 1000);
             VanillaMappedBytes vanillaBuffer0 = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), 0, true);
             vanillaBuffer0.writeLong(0, 0x12345678);
-            File file0 = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), 0, true);
+            File file0 = dataFileFor(cycle, AffinitySupport.getThreadId(), 0, dateCache);
             assertEquals(64 << 10, file0.length());
             assertEquals(0x12345678L, vanillaBuffer0.readLong(0));
             vanillaBuffer0.release();
 
             VanillaMappedBytes vanillaBuffer1 = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), 1, true);
-            File file1 = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), 1, true);
+            File file1 = dataFileFor(cycle, AffinitySupport.getThreadId(), 1, dateCache);
             assertEquals(64 << 10, file1.length());
             vanillaBuffer1.release();
             assertNotEquals(file1, file0);
 
             VanillaMappedBytes vanillaBuffer2 = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), 2, true);
-            File file2 = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), 2, true);
+            File file2 = dataFileFor(cycle, AffinitySupport.getThreadId(), 2, dateCache);
             assertEquals(64 << 10, file2.length());
             vanillaBuffer2.release();
 
@@ -99,7 +100,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(32)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
+        final VanillaDateCache dateCache = new VanillaDateCache(baseDir, "yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {
@@ -113,13 +114,13 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                 for (int i = 0; i < runs; i++) {
                     buffer = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
                     buffer.writeLong(0, 0x12345678);
-                    file = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
+                    file = dataFileFor(cycle, AffinitySupport.getThreadId(), i, dateCache);
 
                     assertEquals(128 << 10, file.length());
                     assertEquals(0x12345678L, buffer.readLong(0));
 
                     buffer.release(); // held by VanillaMappedCache
-                    buffer.release(); // VanillaDataCache always call ackquire()
+                    buffer.release(); // VanillaDataCache always call acquire()
                     buffer.close();
 
                     assertTrue(file.delete());
@@ -149,7 +150,7 @@ public class VanillaDataCacheTest extends VanillaChronicleTestBase {
                             .dataCacheCapacity(32)
                             .cleanupOnClose(false);
 
-            final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
+            final VanillaDateCache dateCache = new VanillaDateCache(baseDir, "yyyyMMddHHmmss", 1000, GMT);
             final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 6);
 
             int cycle = (int) (System.currentTimeMillis() / 1000);

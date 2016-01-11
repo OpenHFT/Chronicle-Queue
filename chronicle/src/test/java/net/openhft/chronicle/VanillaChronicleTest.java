@@ -23,13 +23,22 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static final int N_THREADS = 4;
@@ -1091,8 +1100,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             readAvailableValues(tailer);
 
             //Get current file from tailer and check it exists under base directory
-            String file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
-            assertTrue(new File(baseDir + "/" + file).exists());
+            File file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
+            assertTrue(file.exists());
 
         } finally {
 
@@ -1101,4 +1110,45 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
+
+
+    @Test
+    public void testWithFsWatcher() throws Exception {
+        final String baseDir = getTestPath();
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
+            .enableFsWatcher(true)
+            .build();
+
+        //chronicle.clear();
+
+        try {
+
+            ExcerptTailer tailer = chronicle.createTailer();
+            tailer.toStart();
+
+            for(int i=0; i<100; i++) {
+                assertFalse(tailer.nextIndex());
+            }
+
+            ExcerptAppender appender = chronicle.createAppender();
+            for(int i=0; i<100; i++) {
+                appender.startExcerpt(4);
+                appender.writeInt(i);
+                appender.finish();
+            }
+
+            for(int i=0; i<100; i++) {
+                assertTrue(tailer.nextIndex());
+                assertEquals(i, tailer.readInt());
+                tailer.finish();
+            }
+
+            appender.close();
+            tailer.close();
+
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
 }

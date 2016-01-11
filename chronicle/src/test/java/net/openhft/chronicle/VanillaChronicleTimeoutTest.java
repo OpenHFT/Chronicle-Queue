@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.TimeZone;
 
+import static net.openhft.chronicle.VanillaChronicleUtils.dataFileFor;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -91,7 +92,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
                         .dataCacheCapacity(10000)
                         .cleanupOnClose(false);
 
-        final VanillaDateCache dateCache = new VanillaDateCache("yyyyMMddHHmmss", 1000, GMT);
+        final VanillaDateCache dateCache = new VanillaDateCache(baseDir, "yyyyMMddHHmmss", 1000, GMT);
         final VanillaDataCache dataCache = new VanillaDataCache(builder, dateCache, 10 + 7);
 
         try {
@@ -100,7 +101,7 @@ public class VanillaChronicleTimeoutTest extends VanillaChronicleTestBase {
                 int runs = 2000;
                 for (int i = 0; i < runs; i++) {
                     VanillaMappedBytes buffer = dataCache.dataFor(cycle, AffinitySupport.getThreadId(), i, true);
-                    File file = dataCache.fileFor(cycle, AffinitySupport.getThreadId(), i, true);
+                    File file = dataFileFor(cycle, AffinitySupport.getThreadId(), i, dateCache);
 
                     buffer.release(); // held by VanillaMappedCache
                     buffer.release(); // VanillaDataCache always call acquire()

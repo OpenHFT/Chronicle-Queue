@@ -28,6 +28,8 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
+import static net.openhft.chronicle.VanillaChronicleUtils.dataFileFor;
+
 public class VanillaDataCache implements Closeable {
     public static final String FILE_NAME_PREFIX = "data-";
 
@@ -74,8 +76,7 @@ public class VanillaDataCache implements Closeable {
             long start = System.nanoTime();
 
             File file = VanillaChronicleUtils.mkFiles(
-                basePath,
-                dateCache.formatFor(cycle),
+                dateCache.valueFor(cycle).path,
                 FILE_NAME_PREFIX + threadId + "-" + dataCount,
                 forWrite);
 
@@ -88,18 +89,12 @@ public class VanillaDataCache implements Closeable {
         return vmb;
     }
 
-    public File fileFor(int cycle, int threadId, int dataCount, boolean forWrite) {
-        return new File(
-                new File(basePath, dateCache.formatFor(cycle)),
-                FILE_NAME_PREFIX + threadId + "-" + dataCount);
-    }
-
     public File fileFor(int cycle, int threadId) {
-        String cycleStr = dateCache.formatFor(cycle);
-        String cyclePath = basePath + "/" + cycleStr;
-        String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
+        final File cyclePath = dateCache.valueFor(cycle).path;
+        final String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
+
         int maxCount = 0;
-        File[] files = new File(cyclePath).listFiles();
+        File[] files = cyclePath.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.getName().startsWith(dataPrefix)) {
@@ -110,7 +105,7 @@ public class VanillaDataCache implements Closeable {
             }
         }
 
-        return fileFor(cycle, threadId, maxCount, true);
+        return dataFileFor(cycle, threadId, maxCount, dateCache);
     }
 
     private void findEndOfData(final VanillaMappedBytes buffer) {
@@ -132,12 +127,11 @@ public class VanillaDataCache implements Closeable {
      * Find the count for the next data file to be written for a specific thread.
      */
     public int findNextDataCount(int cycle, int threadId) {
-        final String cycleStr = dateCache.formatFor(cycle);
-        final String cyclePath = basePath + "/" + cycleStr;
+        final File cyclePath = dateCache.valueFor(cycle).path;
         final String dataPrefix = FILE_NAME_PREFIX + threadId + "-";
 
         int maxCount = -1;
-        final File[] files = new File(cyclePath).listFiles();
+        final File[] files = cyclePath.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.getName().startsWith(dataPrefix)) {
