@@ -57,9 +57,8 @@ public class SingleChronicleQueueStore implements WireStore {
     Bounds bounds = new Bounds();
     private MappedBytes mappedBytes;
     private Closeable resourceCleaner;
-    private SingleChronicleQueueBuilder builder;
-    private long appendTimeout = 1_000;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
+    private long appendTimeout = 1_000;
     private SingleChronicleQueueBuilder builder;
     private Indexing indexing;
 
@@ -909,63 +908,9 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-    public enum IndexOffset {
-        ;
-
-        public static long toAddress0(long index) {
-
-            long siftedIndex = index >> (17L + 6L);
-            long mask = (1L << 17L) - 1L;
-            long maskedShiftedIndex = mask & siftedIndex;
-
-            // convert to an offset
-            return maskedShiftedIndex * 8L;
-        }
-
-        public static long toAddress1(long index) {
-
-            long siftedIndex = index >> (6L);
-            long mask = (1L << 17L) - 1L;
-            long maskedShiftedIndex = mask & siftedIndex;
-
-            // convert to an offset
-            return maskedShiftedIndex;// * 8L;
-        }
-
-        @NotNull
-        public static String toBinaryString(long i) {
-
-            StringBuilder sb = new StringBuilder();
-
-            for (int n = 63; n >= 0; n--)
-                sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
-
-            return sb.toString();
-        }
-
-        @NotNull
-        public static String toScale() {
-
-            StringBuilder units = new StringBuilder();
-            StringBuilder tens = new StringBuilder();
-
-            for (int n = 64; n >= 1; n--)
-                units.append((0 == (n % 10)) ? "|" : n % 10);
-
-            for (int n = 64; n >= 1; n--)
-                tens.append((0 == (n % 10)) ? n / 10 : " ");
-
-            return units.toString() + "\n" + tens.toString();
-        }
-    }
-
 // *************************************************************************
 //
 // *************************************************************************
-
-    enum RollFields implements WireKey {
-        cycle, length, format, timeZone, nextCycle, epoc, nextCycleMetaPosition, appendTimeout
-    }
 
     class Roll implements Marshallable {
         private long epoc;

@@ -203,7 +203,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
             final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
 
-
                 // final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
                 final AtomicReference<SingleChronicleQueueStore> result = new AtomicReference<>();
 
@@ -214,10 +213,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 }, null);
 
                 return result.get();
-
-            } catch (IOException e) {
-                Jvm.rethrow(e);
-            }
         }
 
         Consumer<WiredBytes<WireStore>> consumer = ws -> {

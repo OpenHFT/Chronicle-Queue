@@ -177,10 +177,10 @@ public class Excerpts {
             this.store = queue.storeForCycle(this.cycle, this.epoc);
             this.index = this.store.lastIndex();
 
-            final MappedBytes mappedFile = store.mappedBytes();
+            final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
-                LOG.debug("appender file=" + mappedFile.file().getAbsolutePath());
-            this.writeContext = new MappedBytes(mappedFile);
+                LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
+            this.writeContext = mappedBytes;
         }
 
         @Override
