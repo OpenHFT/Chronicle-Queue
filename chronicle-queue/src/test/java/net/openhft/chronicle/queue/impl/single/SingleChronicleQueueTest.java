@@ -290,8 +290,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                final long index = appender.writeDocument(wire -> wire.write(() -> "key").text
-                        ("value=" + j));
+                final long index = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
                 lastIndex = index;
             }
 

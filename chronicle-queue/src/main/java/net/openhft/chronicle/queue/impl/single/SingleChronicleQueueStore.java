@@ -424,7 +424,8 @@ public class SingleChronicleQueueStore implements WireStore {
         long chunkSize = wire.read(MetaDataField.chunkSize).int64();
         long overlapSize = wire.read(MetaDataField.overlapSize).int64();
 
-        final MappedBytes bytes = (MappedBytes) wire.bytes();
+        final Bytes<?> bytes1 = wire.bytes();
+        final MappedBytes bytes = (MappedBytes) bytes1;
         MappedBytes mappedBytes = bytes.withSizes(chunkSize, overlapSize);
         indexing = new Indexing(wireType, mappedBytes);
         wire.read(MetaDataField.indexing).marshallable(indexing);
