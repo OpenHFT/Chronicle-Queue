@@ -22,25 +22,27 @@ import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesMarshallable;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Results 27/10/2015 running on a MBP
- * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
+ * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740
+ * 8,000 / 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
+    @Ignore("long running")
     @Test
-    public void test() throws Exception{
+    public void test() throws Exception {
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -55,7 +57,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
             MyReadMarshallable myReadMarshallable = new MyReadMarshallable(histogram);
             AffinityLock lock = null;
             try {
-                if(Boolean.getBoolean("enableTailerAffinity")) {
+                if (Boolean.getBoolean("enableTailerAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 
@@ -68,7 +70,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     }
                 }
             } finally {
-                if(lock != null) {
+                if (lock != null) {
                     lock.release();
                 }
             }
@@ -77,7 +79,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Thread appenderThread = new Thread(() -> {
             AffinityLock lock = null;
             try {
-                if(Boolean.getBoolean("enableAppenderAffinity")) {
+                if (Boolean.getBoolean("enableAppenderAffinity")) {
                     lock = Affinity.acquireLock();
                 }
 
@@ -90,7 +92,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                if(lock != null) {
+                if (lock != null) {
                     lock.release();
                 }
             }

@@ -179,12 +179,8 @@ public class Excerpts {
 
             final MappedBytes mappedFile = store.mappedBytes();
             if (LOG.isDebugEnabled())
-                LOG.debug("appender file=" + mappedFile.mappedFile().file().getAbsolutePath());
-            this.writeContext = mappedFile;
-        }
-
-        public static void main(String[] args) {
-            System.out.println("" + (101 / 10));
+                LOG.debug("appender file=" + mappedFile.file().getAbsolutePath());
+            this.writeContext = new MappedBytes(mappedFile);
         }
 
         @Override
