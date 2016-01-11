@@ -72,7 +72,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException;
 
-    boolean moveToIndex(@NotNull MappedBytes context, long index);
+    long moveToIndex(@NotNull MappedBytes context, long index);
 
     void install(
             @NotNull MappedBytes mappedBytes,

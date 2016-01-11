@@ -74,8 +74,8 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param rollCycle
      * @param wireType
      * @param mappedBytes
-     * @param rollEpoc   sets an epoc offset as the number of number of milliseconds since January
-     *                   1, 1970,  00:00:00 GMT
+     * @param rollEpoc    sets an epoc offset as the number of number of milliseconds since January
+     *                    1, 1970,  00:00:00 GMT
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               final WireType wireType,
@@ -140,6 +140,10 @@ public class SingleChronicleQueueStore implements WireStore {
         return read(context, this::readWireMarshallable, reader);
     }
 
+    private <T> long readWireMarshallable(MappedBytes mappedBytes, long l, T t) {
+        return 0;
+    }
+
     @Override
     public long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException {
         return read(context, this::readBytesMarshallable, reader);
@@ -169,7 +173,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public boolean moveToIndex(@NotNull MappedBytes context, long index) {
+    public long moveToIndex(@NotNull MappedBytes context, long index) {
         return indexing.moveToIndex(context, index);
     }
 
@@ -213,7 +217,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public MappedBytes mappedBytes() {
-        return mappedBytes;
+        return new MappedBytes(mappedBytes.mappedFile());
     }
 
     // *************************************************************************
@@ -269,14 +273,31 @@ public class SingleChronicleQueueStore implements WireStore {
             @NotNull Reader<T> reader,
             @NotNull T marshaller) throws IOException {
 
-        long position = context.readPosition();
+        final Wire wire = wireType.apply(context);
 
-        final int spbHeader = context.readVolatileInt(position);
-        if (!Wires.isNotInitialized(spbHeader) && Wires.isReady(spbHeader)) {
-            int len = Wires.lengthOf(spbHeader);
-            if (Wires.isData(spbHeader)) {
-                return reader.read(context, len, marshaller);
-            } else {
+        for (; wire.bytes().readRemaining() > 0; ) {
+
+            final int spbHeader = context.readVolatileInt(context.readPosition());
+
+            if (Wires.isNotInitialized(spbHeader) || !Wires.isReady(spbHeader)) {
+                Thread.yield();
+                continue;
+            }
+
+
+            final long start = wire.bytes().readPosition();
+            //boolean wasDocument =false
+            try (@NotNull final DocumentContext _ = wire.readingDocument()) {
+                if (!_.isPresent())
+                    throw new IllegalStateException("document not present");
+
+                if (_.isData()) {
+                    //  wasDocument = true;
+//                    wire.bytes().readPosition(start);
+                    ((ReadMarshallable) marshaller).readMarshallable(wire);
+                    return wire.bytes().readPosition();
+                }
+
                 // In case of meta data, if we are found the "roll" meta, we returns
                 // the next cycle (negative)
                 final StringBuilder sb = Wires.acquireStringBuilder();
@@ -288,12 +309,10 @@ public class SingleChronicleQueueStore implements WireStore {
                     return read(context, reader, marshaller);
                 } else if ("roll".contentEquals(sb)) {
                     return -vi.int32();
-                } else {
-                    context.readLimit(context.capacity());
-                    context.readPosition(position + len + SPB_DATA_HEADER_SIZE);
-                    return read(context, reader, marshaller);
                 }
+
             }
+
         }
 
         return WireConstants.NO_DATA;
@@ -301,7 +320,8 @@ public class SingleChronicleQueueStore implements WireStore {
 
     //TODO : maybe move to wire
     @ForceInline
-    private long readWire(@NotNull WireIn wireIn, long size, @NotNull ReadMarshallable dataConsumer) {
+    private long readWire(@NotNull WireIn wireIn, long size,
+                          @NotNull ReadMarshallable dataConsumer) {
         final Bytes<?> bytes = wireIn.bytes();
         final long limit0 = bytes.readLimit();
         final long limit = bytes.readPosition() + size;
@@ -424,10 +444,8 @@ public class SingleChronicleQueueStore implements WireStore {
         long chunkSize = wire.read(MetaDataField.chunkSize).int64();
         long overlapSize = wire.read(MetaDataField.overlapSize).int64();
 
-        final Bytes<?> bytes1 = wire.bytes();
-        final MappedBytes bytes = (MappedBytes) bytes1;
-        MappedBytes mappedBytes = bytes.withSizes(chunkSize, overlapSize);
-        indexing = new Indexing(wireType, mappedBytes);
+        final MappedBytes mappedBytes = new MappedBytes(this.mappedBytes.mappedFile());
+        indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize, overlapSize));
         wire.read(MetaDataField.indexing).marshallable(indexing);
     }
 
@@ -439,7 +457,6 @@ public class SingleChronicleQueueStore implements WireStore {
         bounds,
         indexing,
         roll,
-        mappedFile,
         chunkSize,
         overlapSize
     }
@@ -593,8 +610,6 @@ public class SingleChronicleQueueStore implements WireStore {
         private LongValue index2Index;
         private LongValue lastIndex;
         private ThreadLocal<LongArrayValues> longArray;
-        private LongArrayValues values;
-        private boolean indexSuccess;
         private long startIndex;
 
         Indexing(@NotNull WireType wireType, final MappedBytes mappedBytes) {
@@ -785,22 +800,27 @@ public class SingleChronicleQueueStore implements WireStore {
          * occurs. The indexes are only built when the indexer is run, this could be on a background
          * thread. Each targetIndex is created into chronicle as an excerpt.
          */
-        public boolean moveToIndex(MappedBytes context, final long targetIndex) {
+        public long moveToIndex(MappedBytes context, final long targetIndex) {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(context);
 
-            final MappedBytes indexBytes = indexContext;
-            indexBytes.readLimit(indexBytes.capacity()).readPosition(indexToIndex0);
+            final Wire w = wireType.apply(indexContext);
+            final Bytes<?> bytes = w.bytes();
+            bytes.readLimit(indexContext.capacity()).readPosition(indexToIndex0);
 
-            final Wire w = wireType.apply(indexBytes);
-            indexSuccess = false;
             this.startIndex = ((targetIndex / 64L)) * 64L;
+            long result = bytes.readPosition();
 
-            w.readDocument(d -> {
-                // todo improve this
+            try (@NotNull final DocumentContext documentContext0 = w.readingDocument()) {
 
+                if (!documentContext0.isPresent())
+                    throw new IllegalStateException("document is not present");
 
-                final LongArrayValues primaryIndex = array(d, array);
+                if (documentContext0.isData())
+                    throw new IllegalStateException("Invalid index, expecting and index at " +
+                            "pos=" + indexToIndex0 + ", but found data instead.");
+
+                final LongArrayValues primaryIndex = array(w, array);
                 long primaryOffset = toAddress0(targetIndex);
 
                 do {
@@ -814,18 +834,23 @@ public class SingleChronicleQueueStore implements WireStore {
                         continue;
                     }
 
-                    indexBytes.readLimit(indexBytes.capacity());
-                    final Bytes bytes = indexBytes.readPosition(secondaryAddress);
-                    final Wire wire1 = wireType.apply(bytes);
+                    //indexContext.readLimit(indexContext.capacity());
+                    final Wire wire1 = wireType.apply(indexContext.readPosition(secondaryAddress));
 
-                    wire1.readDocument(document -> {
+                    final long limit = wire1.bytes().readLimit();
 
-                        final LongArrayValues array1 = array(document, array);
+                    try (@NotNull final DocumentContext documentContext1 = wire1.readingDocument()) {
+
+                        if (!documentContext1.isPresent())
+                            throw new IllegalStateException("document is not present");
+
+                        if (documentContext1.isData())
+                            continue;
+
+                        final LongArrayValues array1 = array(wire1, array);
                         long secondaryOffset = toAddress1(targetIndex);
 
                         do {
-
-
                             long fromAddress = array1.getValueAt(secondaryOffset);
                             if (fromAddress == 0) {
                                 secondaryOffset--;
@@ -835,31 +860,26 @@ public class SingleChronicleQueueStore implements WireStore {
                             }
 
                             if (targetIndex == startIndex) {
-                                readPosition(context, fromAddress);
-                                indexSuccess = true;
+                                return fromAddress;
+                            } else {
+                                wire1.bytes().readLimit(limit);
+                                return linearScan(wire1, targetIndex, startIndex, fromAddress);
+                            }
 
-                            } else
-                                indexSuccess = linearScan(context, targetIndex, startIndex, fromAddress);
-
-
-                            break;
                         } while (secondaryOffset >= 0);
 
-                    }, null);
+                    }
+
                     break;
 
                 } while (primaryOffset >= 0);
-            }, null);
+            }
 
-            return indexSuccess;
+
+            return result;
+
         }
 
-
-        private void readPosition(MappedBytes context, long position) {
-
-            context.readLimit(context.capacity());
-            context.readPosition(position);
-        }
 
         /**
          * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
@@ -871,41 +891,44 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param toIndex        the index that we wish to move the context to
          * @param fromKnownIndex a know index ( used as a starting point )
          * @param knownAddress   a know address ( used as a starting point )
-         * @return {@code true} if successful
+         * @return > -1, if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
-        private boolean linearScan(MappedBytes context, long toIndex, long fromKnownIndex, long knownAddress) {
+        private long linearScan(Wire context, long toIndex, long fromKnownIndex, long knownAddress) {
 
-            long position = knownAddress;
+            final Bytes<?> bytes = context.bytes();
 
-            for (long i = fromKnownIndex; i <= toIndex; ) {
+            final long p = bytes.readPosition();
+            final long l = bytes.readLimit();
 
-                readPosition(context, position);
+            bytes.readPosition(knownAddress);
 
-                final int spbHeader = context.readVolatileInt(position);
-                if (Wires.isReady(spbHeader)) {
-                    if (Wires.isData(spbHeader)) {
-                        if (toIndex == i) {
-                            return true;
-                        }
+            for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
 
-                        i++;
-                    }
+                // wait until ready - todo add timeout
+                for (; ; ) {
+                    if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
 
-                    // todo
-                    //  if (i % 64 == 0)
-                    //    storeIndexLocation(context,context.readPosition(),i);
+                        break;
+                    } else
+                        Thread.yield();
+                }
 
-                    final int len = Wires.lengthOf(spbHeader);
-                    context.readSkip(len + SPB_DATA_HEADER_SIZE);
-                    position = context.readPosition();
-                } else {
-                    return false;
+                try (@NotNull final DocumentContext documentContext = context.readingDocument()) {
+
+                    if (!documentContext.isPresent())
+                        throw new IllegalStateException("document is not present");
+
+                    if (!documentContext.isData())
+                        continue;
+
+                    if (toIndex == i)
+                        return context.bytes().readPosition() - 4;
+                    i++;
                 }
             }
-
-
-            return false;
+            bytes.readLimit(l).readPosition(p);
+            return -1;
         }
     }
 

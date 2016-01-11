@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
+import static net.openhft.chronicle.queue.ChronicleQueue.subIndex;
 
 public class Excerpts {
 
@@ -266,6 +267,7 @@ public class Excerpts {
 
             toStart();
 
+
             //  this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
             //  this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
 
@@ -360,14 +362,17 @@ public class Excerpts {
             if (nextCycle != queue.lastCycle())
                 cycle(nextCycle);
 
-            long index = ChronicleQueue.subIndex(fullIndex);
+            final long position = this.store.moveToIndex(readContext, subIndex(fullIndex));
+            readContext.readPosition(position);
+            readContext.readLimit(readContext.capacity());
 
-            if (this.store.moveToIndex(readContext, index)) {
-                this.index = index - 1;
+            if (position != -1) {
+                this.index = fullIndex - 1;
                 return true;
             }
 
             return false;
+
         }
 
 
@@ -383,6 +388,9 @@ public class Excerpts {
             }
 
             this.index = -1;
+
+            readContext.readPosition(0);
+            readContext.readLimit(readContext.capacity());
 
             return this;
         }
@@ -412,7 +420,7 @@ public class Excerpts {
                 }
                 this.cycle = cycle;
                 this.index = -1;
-                this.store = this.queue.storeForCycle(this.cycle, this.epoc);
+                this.store = this.queue.storeForCycle(cycle, this.epoc);
                 this.readContext = store.mappedBytes();
 
                 if (LOG.isDebugEnabled())
@@ -430,3 +438,4 @@ public class Excerpts {
         }
     }
 }
+
