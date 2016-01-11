@@ -15,7 +15,10 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
@@ -72,7 +75,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     boolean moveToIndex(@NotNull MappedBytes context, long index);
 
     void install(
-            @NotNull MappedFile mappedFile,
+            @NotNull MappedBytes mappedBytes,
             long length,
             boolean created,
             long cycle,
@@ -81,5 +84,5 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             @Nullable Closeable closeable)
             throws IOException;
 
-    MappedFile mappedFile();
+    MappedBytes mappedBytes();
 }

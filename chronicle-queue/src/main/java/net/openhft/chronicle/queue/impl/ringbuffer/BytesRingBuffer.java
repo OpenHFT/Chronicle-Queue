@@ -58,6 +58,12 @@ public class BytesRingBuffer {
         byteStore.writeLong(0, 0);
     }
 
+    private static void checkSize(@NotNull Bytes using, long elementSize) {
+        if (using.writeRemaining() < elementSize)
+            throw new IllegalStateException("requires size=" + elementSize +
+                    " bytes, but only " + using.readRemaining() + " remaining.");
+    }
+
     public void clear() {
         header.clear(capacity);
     }
@@ -257,12 +263,6 @@ public class BytesRingBuffer {
         return using;
     }
 
-    private static void checkSize(@NotNull Bytes using, long elementSize) {
-        if (using.writeRemaining() < elementSize)
-            throw new IllegalStateException("requires size=" + elementSize +
-                    " bytes, but only " + using.readRemaining() + " remaining.");
-    }
-
     private enum States {BUSY, READY, USED}
 
     public interface BytesProvider {
@@ -283,12 +283,11 @@ public class BytesRingBuffer {
      */
     private static class Header {
 
+        private final BytesStore bytesStore;
         // these fields are written using put ordered long ( so don't have to be volatile )
         private BinaryLongReference readLocationOffsetRef;
         private BinaryLongReference writeUpToRef;
         private BinaryLongReference writeLocation;
-
-        private final BytesStore bytesStore;
 
         /**
          * @param bytesStore the bytes for the header
@@ -359,6 +358,8 @@ public class BytesRingBuffer {
      */
     private class RingBuffer {
 
+        // if we want multi readers then we could later replace this with a thread-local
+        final Bytes bytes = Bytes.elasticByteBuffer();
         private final boolean isBytesBigEndian;
         private final long capacity;
         private final BytesStore byteStore;
@@ -453,12 +454,9 @@ public class BytesRingBuffer {
             return endOffSet;
         }
 
-        // if we want multi readers then we could later replace this with a thread-local
-        final Bytes bytes = Bytes.elasticByteBuffer();
-
-        private long read(@NotNull ReadBytesMarshallable readBytesMarshallable,
-                          long offset,
-                          long len) {
+        long read(@NotNull ReadBytesMarshallable readBytesMarshallable,
+                  long offset,
+                  long len) {
 
             bytes.clear();
 

@@ -15,9 +15,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -29,7 +29,7 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WiredFile;
+import net.openhft.chronicle.wire.WiredBytes;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -179,55 +179,53 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             parentFile.mkdirs();
         }
 
-        final Function<File, MappedFile> toMappedFile = file -> {
+        final Function<File, MappedBytes> toMappedBytes = file -> {
             try {
-                return MappedFile.mappedFile(file,
-                        SingleChronicleQueue.this.builder.blockSize(),
-                        SingleChronicleQueue.this.builder.blockSize());
+                long chunkSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize());
+                long overlapSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize() / 4);
+                return MappedBytes.mappedBytes(file,
+                        chunkSize,
+                        overlapSize);
+
             } catch (FileNotFoundException e) {
                 throw Jvm.rethrow(e);
             }
         };
 
-        Function<MappedFile, WireStore> supplyStore = mappedFile -> new SingleChronicleQueueStore
+        Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
-                        .builder.wireType(), mappedFile, epoc);
+                        .builder.wireType(), mappedBytes, epoc);
 
 
         if (cycleFile.exists()) {
-            final MappedFile apply = toMappedFile.apply(cycleFile);
-            try {
-                final Bytes bytes = apply.acquireBytesForRead(0);
-                final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
+            final MappedBytes bytes = toMappedBytes.apply(cycleFile);
 
-                final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
-                store.readMarshallable(wire);
-                return store;
+            final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
 
-            } catch (IOException e) {
-                Jvm.rethrow(e);
-            }
+            final SingleChronicleQueueStore store = new SingleChronicleQueueStore();
+            store.readMarshallable(wire);
+            return store;
         }
 
-        Consumer<WiredFile<WireStore>> consumer = ws -> {
+        Consumer<WiredBytes<WireStore>> consumer = ws -> {
             try {
                 ws.delegate().install(
-                        ws.mappedFile(),
+                        ws.mappedBytes(),
                         ws.headerLength(),
                         ws.headerCreated(),
                         cycle,
                         builder,
                         ws.wireSupplier(),
-                        ws.mappedFile()
+                        ws.mappedBytes()
                 );
             } catch (IOException e) {
                 throw Jvm.rethrow(e);
             }
         };
 
-        return WiredFile.build(
+        return WiredBytes.build(
                 cycleFile,
-                toMappedFile,
+                toMappedBytes,
                 builder.wireType(),
                 supplyStore,
                 consumer

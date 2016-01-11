@@ -16,7 +16,10 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -174,10 +177,14 @@ public class Excerpts {
             this.store = queue.storeForCycle(this.cycle, this.epoc);
             this.index = this.store.lastIndex();
 
-            final MappedFile mappedFile = store.mappedFile();
+            final MappedBytes mappedFile = store.mappedBytes();
             if (LOG.isDebugEnabled())
-                LOG.debug("appender file=" + mappedFile.file().getAbsolutePath());
-            this.writeContext = new MappedBytes(mappedFile);
+                LOG.debug("appender file=" + mappedFile.mappedFile().file().getAbsolutePath());
+            this.writeContext = mappedFile;
+        }
+
+        public static void main(String[] args) {
+            System.out.println("" + (101 / 10));
         }
 
         @Override
@@ -205,10 +212,6 @@ public class Excerpts {
             }
 
             return ChronicleQueue.index(cycle(), index);
-        }
-
-        public static void main(String[] args) {
-            System.out.println("" + (101 / 10));
         }
 
         @Override
@@ -414,11 +417,10 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(this.cycle, this.epoc);
-                final MappedFile mappedFile = store.mappedFile();
-                this.readContext = new MappedBytes(mappedFile);
+                this.readContext = store.mappedBytes();
 
                 if (LOG.isDebugEnabled())
-                    LOG.debug("tailer=" + mappedFile.file().getAbsolutePath().toString());
+                    LOG.debug("tailer=" + readContext.mappedFile().file().getAbsolutePath());
 
             }
 
