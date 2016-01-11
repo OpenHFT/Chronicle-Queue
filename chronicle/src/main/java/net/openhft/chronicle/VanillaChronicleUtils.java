@@ -23,6 +23,7 @@ import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class VanillaChronicleUtils {
@@ -34,21 +35,18 @@ public class VanillaChronicleUtils {
         }
     };
 
-
     /**
      *
-     * @param basePath
-     * @param cycleStr
+     * @param cycleDir
      * @param name
      * @param forAppend
      * @return null if !forAppend and file does not exist
      * @throws IOException
      */
     public static File mkFiles(
-            String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
+            File cycleDir, String name, boolean forAppend) throws IOException {
 
-        final File dir = new File(basePath, cycleStr);
-        final File file = new File(dir, name);
+        final File file = new File(cycleDir, name);
 
         if (!forAppend) {
             //This test needs to be done before any directories are created.
@@ -57,7 +55,7 @@ public class VanillaChronicleUtils {
             }
         }
 
-        dir.mkdirs();
+        cycleDir.mkdirs();
         if(!file.exists() && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
@@ -65,19 +63,32 @@ public class VanillaChronicleUtils {
         return file;
     }
 
-    public static File indexFileFor(
-            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) {
+    public static File indexFileFor(int cycle, int indexCount, VanillaDateCache dateCache) {
         return new File(
-            new File(basePath, dateCache.formatFor(cycle)),
+            dateCache.valueFor(cycle).path,
             VanillaIndexCache.FILE_NAME_PREFIX + indexCount
         );
     }
 
-    public static List<File> findLeafDirectories(File root) {
-        final List<File> files =  findLeafDirectories(new ArrayList<File>(), root);
-        files.remove(root);
+    public static File dataFileFor(int cycle, int threadId, int dataCount, VanillaDateCache dateCache) {
+        return new File(
+            dateCache.valueFor(cycle).path,
+            VanillaDataCache.FILE_NAME_PREFIX + threadId + "-" + dataCount
+        );
+    }
 
-        return files;
+    public static List<File> findLeafDirectories(File root) {
+        final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
+        if(files != null && files.length != 0) {
+            List<File> leafs = new ArrayList<>();
+            for(int i=files.length - 1; i >= 0; i--) {
+                findLeafDirectories(leafs, files[i]);
+            }
+
+            return leafs;
+        }
+
+        return Collections.emptyList();
     }
 
     public static List<File> findLeafDirectories(List<File> leafs, File root) {

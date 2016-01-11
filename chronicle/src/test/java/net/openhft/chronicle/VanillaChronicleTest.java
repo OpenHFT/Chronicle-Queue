@@ -1091,8 +1091,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             readAvailableValues(tailer);
 
             //Get current file from tailer and check it exists under base directory
-            String file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
-            assertTrue(new File(baseDir + "/" + file).exists());
+            File file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
+            assertTrue(file.exists());
 
         } finally {
 
@@ -1101,4 +1101,25 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
+
+
+    @Test
+    public void testX() throws Exception {
+        final String baseDir = getTestPath();
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir).build();
+
+        chronicle.clear();
+
+        try {
+
+            ExcerptTailer tailer = chronicle.createTailer();
+            tailer.toStart();
+
+            while(!tailer.nextIndex()) {
+            }
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
 }

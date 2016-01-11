@@ -28,7 +28,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,6 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
-    private final Map<IndexKey, File> cyclePathMap;
     private final Map<IndexKey, File> indexFileMap;
     private final FileLifecycleListener fileLifecycleListener;
 
@@ -65,7 +63,6 @@ public class VanillaIndexCache implements Closeable {
             builder.cleanupOnClose()
         );
 
-        this.cyclePathMap = new HashMap<>();
         this.indexFileMap = new LinkedHashMap<IndexKey, File>(32,1.0f,true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<IndexKey, File> eldest) {
@@ -117,21 +114,6 @@ public class VanillaIndexCache implements Closeable {
         return indices;
     }
 
-    public synchronized File cyclePathFor(int cycle) {
-        key.cycle = cycle;
-        key.indexCount = 0;
-
-        File path = this.cyclePathMap.get(key);
-        if(path == null) {
-            this.cyclePathMap.put(
-                key.clone(),
-                path = new File(baseFile, dateCache.formatFor(cycle))
-            );
-        }
-
-        return path;
-    }
-
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle = cycle;
         key.indexCount = indexCount;
@@ -142,7 +124,7 @@ public class VanillaIndexCache implements Closeable {
             if(file == null) {
                 this.indexFileMap.put(
                     key.clone(),
-                    file = indexFileFor(basePath, cycle, indexCount, dateCache)
+                    file = indexFileFor(cycle, indexCount, dateCache)
                 );
             }
 
@@ -185,7 +167,7 @@ public class VanillaIndexCache implements Closeable {
         }
 
         throw new AssertionError(
-            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.formatFor(cycle) + ")"
+            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.valueFor(cycle).text + ")"
         );
     }
 
@@ -201,7 +183,7 @@ public class VanillaIndexCache implements Closeable {
     int lastIndexFile(int cycle, int defaultCycle) {
         int maxIndex = -1;
 
-        final File cyclePath = cyclePathFor(cycle);
+        final File cyclePath = dateCache.valueFor(cycle).path;
         final String[] files = cyclePath.list();
         if (files != null) {
             for (int i=files.length - 1; i>=0; i--) {

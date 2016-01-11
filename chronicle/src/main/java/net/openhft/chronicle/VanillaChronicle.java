@@ -33,6 +33,7 @@ import net.openhft.lang.io.serialization.ObjectSerializer;
 import net.openhft.lang.io.serialization.impl.VanillaBytesMarshallerFactory;
 import net.openhft.lang.model.constraints.NotNull;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -98,7 +99,7 @@ public class VanillaChronicle implements Chronicle {
         this.name = builder.path().getName();
 
         this.dateCache = new VanillaDateCache(
-            builder.cycleFormat(), builder.cycleLength(), builder.cycleTimeZone());
+                builder.path(), builder.cycleFormat(), builder.cycleLength(), builder.cycleTimeZone());
 
         this.indexBlockSizeBits = Maths.intLog2(builder.indexBlockSize());
         this.indexBlockSizeMask = -1 >>> -indexBlockSizeBits;
@@ -344,7 +345,7 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public interface VanillaTailer extends VanillaExcerptCommon, ExcerptTailer {
-        public String getActiveWorkingDirectory();
+        public File getActiveWorkingDirectory();
     }
 
     // *************************************************************************
@@ -782,9 +783,9 @@ public class VanillaChronicle implements Chronicle {
          * @return directory path
          */
         @Override
-        public String getActiveWorkingDirectory() {
+        public File getActiveWorkingDirectory() {
             int cycle = (int)((index() >> 40) & 0xFFFFFF);
-            return dateCache.formatFor(cycle);
+            return dateCache.valueFor(cycle).path;
         }
     }
 
