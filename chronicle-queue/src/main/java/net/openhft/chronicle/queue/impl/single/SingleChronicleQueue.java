@@ -197,7 +197,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
                         .builder.wireType(), mappedBytes, epoc);
 
-
         if (cycleFile.exists()) {
             final MappedBytes bytes = toMappedBytes.apply(cycleFile);
 
