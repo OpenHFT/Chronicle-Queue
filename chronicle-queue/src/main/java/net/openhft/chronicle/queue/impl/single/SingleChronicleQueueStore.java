@@ -293,18 +293,19 @@ public class SingleChronicleQueueStore implements WireStore {
                     return wire.bytes().readPosition();
                 }
 
+
                 // In case of meta data, if we are found the "roll" meta, we returns
                 // the next cycle (negative)
-                final StringBuilder sb = Wires.acquireStringBuilder();
+               /* final StringBuilder sb = Wires.acquireStringBuilder();
 
                 // todo improve this line
-                final ValueIn vi = wire.read(sb);
+                final ValueIn vi = wire.readEventName(sb);
 
                 if ("index".contentEquals(sb)) {
                     return read(wire, reader, marshaller);
                 } else if ("roll".contentEquals(sb)) {
                     return -vi.int32();
-                }
+                }*/
 
             }
 
@@ -659,7 +660,7 @@ public class SingleChronicleQueueStore implements WireStore {
             final Bytes b = Bytes.elasticByteBuffer();
 
             templateIndex = wireType.apply(b);
-            templateIndex.writeDocument(true, w -> w.write(() -> "index")
+            templateIndex.writeDocument(true, w -> w.writeEventName(() -> "index")
                     .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
 
             this.wireType = wireType;
@@ -777,9 +778,14 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         private LongArrayValues array(WireIn w, LongArrayValues using) {
-            final ValueIn read = w.read(() -> "index");
 
-            read.int64array(using, this, (o1, o2) -> {
+            final StringBuilder sb = Wires.acquireStringBuilder();
+            final ValueIn valueIn = w.readEventName(sb);
+
+            if (!"index".contentEquals(sb))
+                throw new IllegalStateException("expecting and index");
+
+            valueIn.int64array(using, this, (o1, o2) -> {
             });
             return using;
         }
