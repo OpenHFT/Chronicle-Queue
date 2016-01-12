@@ -62,6 +62,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private SingleChronicleQueueBuilder builder;
     private Indexing indexing;
 
+
     /**
      * Default constructor needed for self boot-strapping
      */
@@ -107,14 +108,20 @@ public class SingleChronicleQueueStore implements WireStore {
      * 00:00:00 GMT
      */
     @Override
-    public long epoc() {
+    public long epoch() {
         return this.roll.epoch();
     }
 
     @Override
-    public long lastIndex() {
-        return this.indexing.getLastIndex();
+    public long firstSubIndex() {
+        return this.indexing.firstSubIndex();
     }
+
+    @Override
+    public long lastSubIndex() {
+        return this.indexing.lastSubIndex();
+    }
+
 
     @Override
     public long append(@NotNull Wire wire, @NotNull final WriteMarshallable marshallable) throws IOException {
@@ -164,6 +171,14 @@ public class SingleChronicleQueueStore implements WireStore {
         return false;
     }
 
+
+    /**
+     * Moves the position to the index
+     *
+     * @param wire  the data structure we are navigating
+     * @param index the index we wish to move to
+     * @return the position of the {@code targetIndex}  or -1 if the index can not be found
+     */
     @Override
     public long moveToIndex(@NotNull Wire wire, long index) {
         return indexing.moveToIndex(wire, index);
@@ -387,6 +402,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         final long index = indexing.incrementLastIndex();
         indexing.storeIndexLocation(context, position, index);
+
         return index;
     }
 
@@ -507,7 +523,7 @@ public class SingleChronicleQueueStore implements WireStore {
 // *************************************************************************
 
     enum IndexingFields implements WireKey {
-        indexCount, indexSpacing, index2Index, lastIndex
+        indexCount, indexSpacing, index2Index, fistIndex, lastIndex
     }
 
     public enum IndexOffset {
@@ -565,7 +581,7 @@ public class SingleChronicleQueueStore implements WireStore {
 // *************************************************************************
 
     enum RollFields implements WireKey {
-        cycle, length, format, timeZone, nextCycle, epoch, nextCycleMetaPosition
+        cycle, length, format, timeZone, nextCycle, epoch, firstCycle, lastCycle, nextCycleMetaPosition
     }
 
     @FunctionalInterface
@@ -651,16 +667,19 @@ public class SingleChronicleQueueStore implements WireStore {
         private LongValue index2Index;
         private LongValue lastIndex;
         private ThreadLocal<LongArrayValues> longArray;
-        private long startIndex;
+
+        private LongValue firstIndex;
 
         Indexing(@NotNull WireType wireType, final MappedBytes mappedBytes) {
             this.index2Index = wireType.newLongReference().get();
+            this.firstIndex = wireType.newLongReference().get();
+
             this.lastIndex = wireType.newLongReference().get();
 
             final Bytes b = Bytes.elasticByteBuffer();
 
             templateIndex = wireType.apply(b);
-            templateIndex.writeDocument(true, w -> w.writeEventName(() -> "index")
+            templateIndex.writeDocument(true, w -> w.write(() -> "index")
                     .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
 
             this.wireType = wireType;
@@ -670,34 +689,43 @@ public class SingleChronicleQueueStore implements WireStore {
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            //      System.out.println("writeMarshallable");
+
             wire.write(IndexingFields.indexCount).int32(indexCount)
                     .write(IndexingFields.indexSpacing).int32(indexSpacing)
                     .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
+                    .write(IndexingFields.fistIndex).int64forBinding(-1L, firstIndex)
                     .write(IndexingFields.lastIndex).int64forBinding(-1L, lastIndex);
         }
 
         @Override
         public void readMarshallable(@NotNull WireIn wire) {
-
-            //  System.out.println("readMarshallable");
             wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
                     .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
                     .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
+                    .read(IndexingFields.fistIndex).int64(this.firstIndex, this, (o, i) -> o.firstIndex = i)
                     .read(IndexingFields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
         }
 
         public long incrementLastIndex() {
             if (lastIndex == null)
                 return 0;
-            return this.lastIndex.addAtomicValue(1);
+            final long lastIndex = this.lastIndex.addAtomicValue(1);
+            firstIndex.compareAndSwapValue(-1L, lastIndex);
+            return lastIndex;
         }
 
-        public long getLastIndex() {
+        public long lastSubIndex() {
             if (lastIndex == null)
                 return 0;
             return this.lastIndex.getVolatileValue();
         }
+
+        public long firstSubIndex() {
+            if (firstIndex == null)
+                return 0;
+            return this.firstIndex.getVolatileValue();
+        }
+
 
         /**
          * atomically gets or creates the address of the first index the index is create and another
@@ -753,7 +781,6 @@ public class SingleChronicleQueueStore implements WireStore {
             final Bytes bytes0 = indexBytes.readPosition(indexToIndex0);
             final Wire w = wireType.apply(bytes0);
 
-            final long l = w.bytes().readPosition();
             w.readDocument(d -> {
 
                 final LongArrayValues primaryIndex = array(d, array);
@@ -779,13 +806,14 @@ public class SingleChronicleQueueStore implements WireStore {
 
         private LongArrayValues array(WireIn w, LongArrayValues using) {
 
-            final StringBuilder sb = Wires.acquireStringBuilder();
-            final ValueIn valueIn = w.readEventName(sb);
+            // final StringBuilder sb = Wires.acquireStringBuilder();
+            // final ValueIn valueIn = w.readEventName(sb);
 
-            if (!"index".contentEquals(sb))
-                throw new IllegalStateException("expecting and index");
+            //if (!"index".contentEquals(sb))
+            //    throw new IllegalStateException("expecting and index");
 
-            valueIn.int64array(using, this, (o1, o2) -> {
+
+            w.read(() -> "index").int64array(using, this, (o1, o2) -> {
             });
             return using;
         }
@@ -831,12 +859,12 @@ public class SingleChronicleQueueStore implements WireStore {
             }
 
             return -1;
-
-
         }
 
 
         /**
+         * Moves the position to the {@code index}
+         *
          * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in
          * other words the address of where ) the root first level targetIndex is stored. The
          * indexing works like a tree, but only 2 levels deep, the root of the tree is at
@@ -846,16 +874,18 @@ public class SingleChronicleQueueStore implements WireStore {
          * only stores the position of every 64th excerpt), so from every 64th excerpt a linear scan
          * occurs. The indexes are only built when the indexer is run, this could be on a background
          * thread. Each targetIndex is created into chronicle as an excerpt.
+         *
+         * @param wire  the data structure we are navigating
+         * @param index the index we wish to move to
+         * @return the position of the {@code targetIndex}  or -1 if the index can not be found
          */
-        public long moveToIndex(Wire wire, final long targetIndex) {
+        public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(wire.bytes());
 
             final Bytes<?> bytes = wire.bytes();
             bytes.readLimit(indexContext.capacity()).readPosition(indexToIndex0);
-
-            this.startIndex = ((targetIndex / 64L)) * 64L;
-            long result = bytes.readPosition();
+            long startIndex = ((index / 64L)) * 64L;
 
             try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
 
@@ -867,7 +897,7 @@ public class SingleChronicleQueueStore implements WireStore {
                             "pos=" + indexToIndex0 + ", but found data instead.");
 
                 final LongArrayValues primaryIndex = array(wire, array);
-                long primaryOffset = toAddress0(targetIndex);
+                long primaryOffset = toAddress0(index);
 
                 do {
 
@@ -894,7 +924,7 @@ public class SingleChronicleQueueStore implements WireStore {
                             continue;
 
                         final LongArrayValues array1 = array(wire1, array);
-                        long secondaryOffset = toAddress1(targetIndex);
+                        long secondaryOffset = toAddress1(index);
 
                         do {
                             long fromAddress = array1.getValueAt(secondaryOffset);
@@ -905,11 +935,11 @@ public class SingleChronicleQueueStore implements WireStore {
                                 continue;
                             }
 
-                            if (targetIndex == startIndex) {
+                            if (index == startIndex) {
                                 return fromAddress;
                             } else {
                                 wire1.bytes().readLimit(limit);
-                                return linearScan(wire1, targetIndex, startIndex, fromAddress);
+                                return linearScan(wire1, index, startIndex, fromAddress);
                             }
 
                         } while (secondaryOffset >= 0);
@@ -921,8 +951,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 } while (primaryOffset >= 0);
             }
 
-
-            return result;
+            return -1;
 
         }
 
@@ -990,6 +1019,7 @@ public class SingleChronicleQueueStore implements WireStore {
         private LongValue cycle;
         private LongValue nextCycle;
         private LongValue nextCycleMetaPosition;
+
 
         Roll(RollCycle rollCycle, long rollEpoc) {
             this.length = rollCycle != null ? rollCycle.length() : -1;

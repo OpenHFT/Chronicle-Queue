@@ -50,7 +50,7 @@ public interface Excerpt extends ExcerptTailer {
      * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(long index) throws IOException;
+    boolean moveToIndex(long index) throws IOException;
 
     /**
      * Randomly select an Excerpt.
@@ -59,7 +59,7 @@ public interface Excerpt extends ExcerptTailer {
      * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean index(int cycle, long index) throws IOException;
+    boolean moveToIndex(int cycle, long index) throws IOException;
 
     /**
      * Replay from the lower.

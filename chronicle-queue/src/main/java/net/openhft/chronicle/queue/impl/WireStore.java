@@ -43,12 +43,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
      * 00:00:00 GMT
      */
-    long epoc();
-
-    /**
-     * @return the first readable position
-     */
-    // long readPosition();
+    long epoch();
 
     /**
      * @return the first writable position
@@ -58,7 +53,10 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     /**
      * @return the last index
      */
-    long lastIndex();
+    long lastSubIndex();
+
+    long firstSubIndex();
+
 
     boolean appendRollMeta(@NotNull Wire context, long cycle) throws IOException;
 

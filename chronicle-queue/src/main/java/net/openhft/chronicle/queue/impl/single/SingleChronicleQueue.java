@@ -19,10 +19,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollDateCache;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -49,15 +46,21 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollCycle cycle;
     private final RollDateCache dateCache;
     private final WireStorePool pool;
-    private long firstCycle;
+    private long epoch;
+
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
-        this.pool = WireStorePool.withSupplier(this::newStore);
-        this.firstCycle = -1;
+        this.pool = WireStorePool.withSupplier(this::acquireStore);
         storeForCycle(cycle(), builder.epoch());
+        epoch = builder.epoch();
+    }
+
+    @Override
+    public long epoch() {
+        return epoch;
     }
 
     @NotNull
@@ -65,6 +68,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     public ExcerptAppender createAppender() throws IOException {
         return new Excerpts.StoreAppender(this);
     }
+
 
     @NotNull
     @Override
@@ -90,10 +94,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //TODO: reduce garbage
     //TODO: add a check on first file, in case it gets deleted
     @Override
-    protected long firstCycle() {
-        if (firstCycle != -1) {
-            return firstCycle;
-        }
+    public long firstIndex() {
+        final long cycle = firstCycle();
+        if (cycle == -1)
+            return -1;
+        final long subindex = acquireStore(cycle, epoch()).firstSubIndex();
+        if (subindex == -1)
+            return -1;
+        return ChronicleQueue.index(cycle, subindex);
+    }
+
+    private long firstCycle() {
+        long firstCycle = -1;
 
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
@@ -123,12 +135,27 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             firstCycle = firstDate;
         }
 
+
+        if (firstCycle == Long.MAX_VALUE) {
+            return -1;
+        }
+
         return firstCycle;
     }
 
     //TODO: reduce garbage
+
+
     @Override
-    protected long lastCycle() {
+    public long lastIndex() {
+        final long lastCycle = lastCycle();
+        if (lastCycle == -1)
+            return -1;
+        final long lastSubIndex = acquireStore(lastCycle, epoch()).lastSubIndex();
+        return ChronicleQueue.index(lastCycle, lastSubIndex);
+    }
+
+    private long lastCycle() {
         final String basePath = builder.path().getAbsolutePath();
         final File[] files = builder.path().listFiles();
 
@@ -160,6 +187,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return -1;
     }
 
+
     @Override
     public WireType wireType() {
         return builder.wireType();
@@ -169,15 +197,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    protected WireStore newStore(final long cycle, final long epoch) {
+    protected WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
         final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
 
-        final File parentFile = cycleFile.getParentFile();
-        if (parentFile != null & !parentFile.exists()) {
-            parentFile.mkdirs();
-        }
 
         final Function<File, MappedBytes> toMappedBytes = file -> {
             try {
@@ -192,7 +216,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             }
         };
 
-
         if (cycleFile.exists()) {
             final MappedBytes bytes = toMappedBytes.apply(cycleFile);
 
@@ -202,9 +225,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 if (_.isPresent() && _.isMetaData()) {
                     final WireStore readMarshallable = wire.getValueIn().typedMarshallable();
                     return readMarshallable;
-                }
+                } /*else {
+                    throw new IllegalStateException("unable to read the header in the chronicle " +
+                            "queue file that contains the 'WireStore' information.");
+                }*/
             }
 
+        }
+
+
+        final File parentFile = cycleFile.getParentFile();
+        if (parentFile != null & !parentFile.exists()) {
+            parentFile.mkdirs();
         }
 
         Consumer<WiredBytes<WireStore>> consumer = ws -> {

@@ -30,6 +30,8 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    public abstract long epoch();
+
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
@@ -59,19 +61,18 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     }
 
     @Override
-    public long firstAvailableIndex() {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public long index() {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
     public void close() throws IOException {
         throw new UnsupportedOperationException("Not implemented");
     }
+
+    public long firstIndex() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    public long lastIndex() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
 
     @Override
     public WireType wireType() {
@@ -80,8 +81,8 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     /**
      * @param cycle
-     * @param epoch   an epoch offset as the number of number of milliseconds since January
-     *                 1, 1970,  00:00:00 GMT
+     * @param epoch an epoch offset as the number of number of milliseconds since January 1, 1970,
+     *              00:00:00 GMT
      * @return
      * @throws IOException
      */
@@ -93,18 +94,9 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     protected abstract void release(WireStore store);
 
     /**
-     * @return
+     * @return the current cycle
      */
     protected abstract long cycle();
 
-    /**
-     * @return
-     */
-    protected abstract long firstCycle();
-
-    /**
-     * @return
-     */
-    protected abstract long lastCycle();
 
 }

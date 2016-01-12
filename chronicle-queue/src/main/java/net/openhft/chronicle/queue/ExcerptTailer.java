@@ -44,7 +44,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     /**
      * @return the index just read
      */
-    long index();
+    long moveToIndex();
 
 
     /**
@@ -55,7 +55,7 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return true if this is a valid entries.
      * @throws IOException if not able to read the chronicle file
      */
-    boolean index(long index) throws IOException;
+    boolean moveToIndex(long index) throws IOException;
 
 
     /**

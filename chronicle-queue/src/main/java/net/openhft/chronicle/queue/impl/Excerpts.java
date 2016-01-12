@@ -167,17 +167,15 @@ public class Excerpts {
 
             super(queue);
 
-            this.cycle = super.queue.lastCycle();
-
-            if (this.cycle == -1)
-                this.cycle = queue.cycle();
+            final long lastIndex = super.queue.lastIndex();
+            this.cycle = (lastIndex == -1) ? queue.cycle() : ChronicleQueue.cycle(lastIndex);
 
             if (this.cycle < 0)
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
 
             this.store = queue.storeForCycle(this.cycle, this.epoch);
-            this.index = this.store.lastIndex();
+            this.index = this.store.lastSubIndex();
 
             final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
@@ -256,7 +254,7 @@ public class Excerpts {
         private Wire wire;
 
         private long cycle;
-        private long epoch;
+
         private long index;
         private WireStore store;
 
@@ -280,14 +278,11 @@ public class Excerpts {
         @Override
         public boolean readDocument(@NotNull ReadMarshallable reader) throws IOException {
             if (this.store == null) {
-                long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
-                if (lastCycle == -1) {
+                final long index = queue.firstIndex();
+                if (index == -1) {
                     return false;
                 }
-
-                //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(lastCycle);
-                //     context(store::acquireBytesAtReadPositionForRead);
+                moveToIndex(index);
             }
 
             long position = store.read(wire, reader);
@@ -310,13 +305,14 @@ public class Excerpts {
         @Override
         public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
             if (this.store == null) {
-                long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
+                throw new IllegalStateException("store is NULL");
+                /*long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
                 if (lastCycle == -1) {
                     return false;
                 }
 
                 //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(lastCycle);
+                cycle(lastCycle);*/
                 //      context(store::acquireBytesAtReadPositionForRead);
             }
 
@@ -341,7 +337,7 @@ public class Excerpts {
          * @return provides an index that includes the cycle number
          */
         @Override
-        public long index() {
+        public long moveToIndex() {
             //TODO: should we raise an exception ?
             if (this.store == null) {
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
@@ -352,30 +348,31 @@ public class Excerpts {
 
 
         @Override
-        public boolean index(long fullIndex) throws IOException {
+        public boolean moveToIndex(long index) throws IOException {
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString
-                        (fullIndex));
+                LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
             }
 
-            final long nextCycle = ChronicleQueue.cycle(fullIndex);
-            if (nextCycle != queue.lastCycle())
-                cycle(nextCycle);
+            final long expectedCycle = ChronicleQueue.cycle(index);
+            if (expectedCycle != cycle)
+                // moves to the expected cycle
+                cycle(expectedCycle);
 
-            final long position = this.store.moveToIndex(wire, subIndex(fullIndex));
+            cycle = expectedCycle;
+
+            final long position = this.store.moveToIndex(wire, subIndex(index));
+
+            if (position == -1)
+                return false;
 
             final Bytes<?> readContext = wire.bytes();
             readContext.readPosition(position);
             readContext.readLimit(readContext.capacity());
+            this.index = index - 1;
+            return true;
 
-            if (position != -1) {
-                this.index = fullIndex - 1;
-                return true;
-            }
-
-            return false;
 
         }
 
@@ -383,18 +380,17 @@ public class Excerpts {
         @NotNull
         @Override
         public ExcerptTailer toStart() throws IOException {
-            long firstCycle = queue.firstCycle();
-            if (firstCycle > 0) {
-                cycle(firstCycle);
-                this.toStart = true;
-            } else {
-                this.toStart = false;
-            }
 
-            this.index = -1;
-            final Bytes<?> readContext = wire.bytes();
-            readContext.readPosition(0);
-            readContext.readLimit(readContext.capacity());
+            final long index = queue.firstIndex();
+            if (index == -1)
+                return this;
+
+            LOG.info("index=> subIndex=" + ChronicleQueue.subIndex(index) + ",cycle=" + ChronicleQueue
+                    .cycle(index));
+
+
+            if (!moveToIndex(index))
+                throw new IllegalStateException("unable to move to the start");
 
             return this;
         }
@@ -402,12 +398,9 @@ public class Excerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() throws IOException {
-            long cycle = queue.lastCycle();
-            if (cycle > 0) {
-                cycle(cycle);
-            }
 
-            this.toStart = false;
+            if (!moveToIndex(queue.lastIndex()))
+                throw new IllegalStateException("unable to move to the start");
 
             return this;
         }
@@ -424,7 +417,7 @@ public class Excerpts {
                 }
                 this.cycle = cycle;
                 this.index = -1;
-                this.store = this.queue.storeForCycle(cycle, this.epoch);
+                this.store = this.queue.storeForCycle(cycle, queue.epoch());
 
                 wire = queue.wireType().apply(store.mappedBytes());
                 if (LOG.isDebugEnabled())

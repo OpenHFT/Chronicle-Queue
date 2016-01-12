@@ -98,13 +98,14 @@ public interface ChronicleQueue extends Closeable {
      */
     void clear();
 
-    /**
-     * @return the lowest valid index available.
-     */
-    long firstAvailableIndex();
 
     /**
-     * @return the highest valid index immediately available.
+     * @return the lowest valid index available, or subindex=0 if none are found
+     */
+    long firstIndex();
+
+    /**
+     * @return the highest valid index immediately available. Or -1 if none available.
      *
      * The lowest 40bits of the index refer to the sequence number with the cycle, giving a maximum
      * of 1099511627776 excerpt per cycle. Each cycle has its own file. Each file holds its own
@@ -112,7 +113,7 @@ public interface ChronicleQueue extends Closeable {
      * bits  of the index are used for the cycle number (this equates to the filename), giving a
      * maximum  of 16777216 cycles ( aka files )
      */
-    long index();
+    long lastIndex();
 
 
     /**
@@ -130,6 +131,9 @@ public interface ChronicleQueue extends Closeable {
             throw new IllegalStateException("cycle value is too large, it must fit into 24bits, " +
                     "either use a larger rollType of increase the roll offset.");
 
+        if (result < 0)
+            throw new IllegalStateException("Invalid cycle=" + result + ", cycles can not be negative" +
+                    ".");
         return result;
     }
 

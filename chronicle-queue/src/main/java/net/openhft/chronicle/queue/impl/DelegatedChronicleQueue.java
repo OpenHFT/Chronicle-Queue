@@ -67,13 +67,13 @@ public class DelegatedChronicleQueue implements ChronicleQueue {
     }
 
     @Override
-    public long firstAvailableIndex() {
-        return queue.firstAvailableIndex();
+    public long firstIndex() {
+        return queue.firstIndex();
     }
 
     @Override
-    public long index() {
-        return queue.index();
+    public long lastIndex() {
+        return queue.lastIndex();
     }
 
     @Override

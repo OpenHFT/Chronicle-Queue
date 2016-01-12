@@ -76,7 +76,7 @@ public class WireStorePool {
     public synchronized void release(WireStore store) {
         store.release();
         if (store.refCount() <= 0) {
-            stores.remove(new RollDetails(store.cycle(), store.epoc()));
+            stores.remove(new RollDetails(store.cycle(), store.epoch()));
         }
     }
 
