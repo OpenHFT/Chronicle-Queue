@@ -24,11 +24,39 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class VanillaChronicleUtils {
+
+    private static Method GET_ATTRIBUTES;
+    private static Object FS;
+
+    static {
+        try {
+            Field field = File.class.getDeclaredField("fs");
+            field.setAccessible(true);
+
+            FS = field.get(null);
+            if(FS != null) {
+                try {
+                    GET_ATTRIBUTES = FS.getClass().getDeclaredMethod("getBooleanAttributes0", File.class);
+                    GET_ATTRIBUTES.setAccessible(true);
+                } catch (Exception ex) {
+                    GET_ATTRIBUTES = null;
+                }
+            }
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     public static final FileFilter IS_DIR = new FileFilter() {
         @Override
@@ -109,6 +137,12 @@ public class VanillaChronicleUtils {
     }
 
     public static boolean exists(@NotNull File path) {
-        return path != null && path.exists();
+        try {
+            return GET_ATTRIBUTES != null
+                ? ((Integer) GET_ATTRIBUTES.invoke(FS, path)) > 0
+                : path.exists();
+        } catch (Exception e) {
+            return path.exists();
+        }
     }
 }
