@@ -48,7 +48,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     /**
      * @return the first readable position
      */
-    long readPosition();
+    // long readPosition();
 
     /**
      * @return the first writable position
@@ -85,4 +85,5 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             throws IOException;
 
     MappedBytes mappedBytes();
+
 }

@@ -55,7 +55,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private final WireType wireType;
     private final Roll roll;
     Bounds bounds = new Bounds();
-    private MappedBytes mappedBytes;
+    private MappedFile mappedFile;
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
     private long appendTimeout = 1_000;
@@ -87,14 +87,10 @@ public class SingleChronicleQueueStore implements WireStore {
         this.resourceCleaner = null;
         this.builder = null;
         this.wireType = wireType;
-        this.mappedBytes = mappedBytes;
+        this.mappedFile = mappedBytes.mappedFile();
         this.indexing = new Indexing(wireType, mappedBytes);
     }
 
-    @Override
-    public long readPosition() {
-        return this.bounds.getReadPosition();
-    }
 
     @Override
     public long writePosition() {
@@ -198,7 +194,7 @@ public class SingleChronicleQueueStore implements WireStore {
             long length,
             boolean created,
             long cycle,
-            ChronicleQueueBuilder builder,
+            @NotNull ChronicleQueueBuilder builder,
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable) throws IOException {
 
@@ -211,10 +207,16 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+
+    /**
+     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
+     * can be at diffent locations.
+     */
     @Override
     public MappedBytes mappedBytes() {
-        return new MappedBytes(mappedBytes.mappedFile());
+        return new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
     }
+
 
     // *************************************************************************
     // Utilities
@@ -296,7 +298,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 final StringBuilder sb = Wires.acquireStringBuilder();
 
                 // todo improve this line
-                final ValueIn vi = wireType.apply(context).read(sb);
+                final ValueIn vi = wire.read(sb);
 
                 if ("index".contentEquals(sb)) {
                     return read(wire, reader, marshaller);
@@ -457,7 +459,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        MappedFile mappedFile = mappedBytes.mappedFile();
+
         wire.write(MetaDataField.bounds).marshallable(this.bounds)
                 .write(MetaDataField.roll).object(this.roll)
                 .write(MetaDataField.chunkSize).int64(mappedFile.chunkSize())
@@ -475,16 +477,16 @@ public class SingleChronicleQueueStore implements WireStore {
         long chunkSize = wire.read(MetaDataField.chunkSize).int64();
         long overlapSize = wire.read(MetaDataField.overlapSize).int64();
 
-        this.mappedBytes = (MappedBytes) wire.bytes();
-
-        final MappedBytes mappedBytes = new MappedBytes(this.mappedBytes.mappedFile());
-        indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize, overlapSize));
+        final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
+        this.mappedFile = mappedBytes.mappedFile();
+        indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize,
+                overlapSize));
         wire.read(MetaDataField.indexing).marshallable(indexing);
     }
 
-    // *************************************************************************
-    // Marshallable
-    // *************************************************************************
+// *************************************************************************
+// Marshallable
+// *************************************************************************
 
     enum MetaDataField implements WireKey {
         bounds,
