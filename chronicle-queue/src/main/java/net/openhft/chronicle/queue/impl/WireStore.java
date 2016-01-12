@@ -40,7 +40,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     long cycle();
 
     /**
-     * @return an epoc offset as the number of number of milliseconds since January 1, 1970,
+     * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
      * 00:00:00 GMT
      */
     long epoc();

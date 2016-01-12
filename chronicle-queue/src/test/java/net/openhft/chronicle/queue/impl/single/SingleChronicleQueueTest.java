@@ -407,6 +407,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
+    /**
+     * test that if we make EPOC the current time, then the cycle is == 0
+     *
+     * @throws Exception
+     */
     @Test
     public void testEPOC() throws Exception {
 
@@ -416,13 +421,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                     .wireType(this.wireType)
-                    .epoc(System.currentTimeMillis())
+                    .epoch(System.currentTimeMillis())
                     .rollCycle(RollCycles.HOURS)
                     .build();
 
             final ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
-            Assert.assertTrue(appender.cycle() >= 403476);
+            Assert.assertTrue(appender.cycle() == 0);
 
         } catch (Exception e) {
             e.printStackTrace();

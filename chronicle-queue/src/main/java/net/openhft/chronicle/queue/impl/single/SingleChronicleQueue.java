@@ -55,10 +55,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
-
         this.pool = WireStorePool.withSupplier(this::newStore);
         this.firstCycle = -1;
-        storeForCycle(cycle(), builder.epoc());
+        storeForCycle(cycle(), builder.epoch());
     }
 
     @NotNull
@@ -74,8 +73,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected WireStore storeForCycle(long cycle, final long epoc) throws IOException {
-        return this.pool.acquire(cycle, epoc);
+    protected WireStore storeForCycle(long cycle, final long epoch) throws IOException {
+        return this.pool.acquire(cycle, epoch);
     }
 
     @Override
@@ -85,7 +84,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     protected long cycle() {
-        return this.cycle.current();
+        return this.cycle.current(builder.epoch());
     }
 
     //TODO: reduce garbage
@@ -170,7 +169,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    protected WireStore newStore(final long cycle, final long epoc) {
+    protected WireStore newStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
         final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
@@ -227,7 +226,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
                 SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
-                        .builder.wireType(), mappedBytes, epoc);
+                        .builder.wireType(), mappedBytes, epoch);
 
         return WiredBytes.build(
                 cycleFile,

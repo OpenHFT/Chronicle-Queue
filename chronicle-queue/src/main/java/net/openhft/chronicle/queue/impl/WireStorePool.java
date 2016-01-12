@@ -27,11 +27,11 @@ public class WireStorePool {
     private class RollDetails {
 
         private long cycle;
-        private long epoc;
+        private long epoch;
 
         public RollDetails(long cycle, long epoc) {
             this.cycle = cycle;
-            this.epoc = epoc;
+            this.epoch = epoc;
         }
 
         @Override
@@ -42,14 +42,14 @@ public class WireStorePool {
             RollDetails rollDetails = (RollDetails) o;
 
             if (cycle != rollDetails.cycle) return false;
-            return epoc == rollDetails.epoc;
+            return epoch == rollDetails.epoch;
 
         }
 
         @Override
         public int hashCode() {
             int result = (int) (cycle ^ (cycle >>> 32));
-            result = 31 * result + (int) (epoc ^ (epoc >>> 32));
+            result = 31 * result + (int) (epoch ^ (epoch >>> 32));
             return result;
         }
     }
@@ -61,11 +61,11 @@ public class WireStorePool {
         this.stores = new ConcurrentHashMap<>();
     }
 
-    public synchronized WireStore acquire(long cycle, final long epoc) throws IOException {
-        final RollDetails rollDetails = new RollDetails(cycle, epoc);
+    public synchronized WireStore acquire(long cycle, final long epoch) throws IOException {
+        final RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {
-            stores.put(rollDetails, store = this.supplier.apply(cycle, epoc));
+            stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));
         } else {
             store.reserve();
         }

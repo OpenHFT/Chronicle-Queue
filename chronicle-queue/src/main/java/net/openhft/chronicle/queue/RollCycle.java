@@ -56,10 +56,12 @@ public interface RollCycle {
             public String format() {
                 return format;
             }
+
             @Override
             public int length() {
                 return length;
             }
+
             @Override
             public ZoneId zone() {
                 return zone;
@@ -73,7 +75,11 @@ public interface RollCycle {
 
     ZoneId zone();
 
-    default int current() {
-        return (int) (System.currentTimeMillis() / length());
+    /**
+     * @param epoch and EPOC offset, to all the user to define thier own epoch
+     * @return the cycle
+     */
+    default int current(long epoch) {
+        return (int) ((System.currentTimeMillis() - epoch) / length());
     }
 }

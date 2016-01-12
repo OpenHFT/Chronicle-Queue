@@ -158,7 +158,7 @@ public class Excerpts {
 
 
         private final Wire wire;
-        private long epoc;
+        private long epoch;
         private long cycle;
         private long index = -1;
         private WireStore store;
@@ -172,10 +172,11 @@ public class Excerpts {
             if (this.cycle == -1)
                 this.cycle = queue.cycle();
 
-            if (this.cycle <= 0)
-                throw new IllegalArgumentException();
+            if (this.cycle < 0)
+                throw new IllegalArgumentException("You can not have a cycle that starts " +
+                        "before Epoch. cycle=" + cycle);
 
-            this.store = queue.storeForCycle(this.cycle, this.epoc);
+            this.store = queue.storeForCycle(this.cycle, this.epoch);
             this.index = this.store.lastIndex();
 
             final MappedBytes mappedBytes = store.mappedBytes();
@@ -232,7 +233,7 @@ public class Excerpts {
                 }
 
                 this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle, epoc);
+                this.store = queue.storeForCycle(this.cycle, epoch);
                 //this.store.acquireBytesAtWritePositionForWrite(this.writeContext.bytes);
             }
 
@@ -255,7 +256,7 @@ public class Excerpts {
         private Wire wire;
 
         private long cycle;
-        private long epoc;
+        private long epoch;
         private long index;
         private WireStore store;
 
@@ -423,7 +424,7 @@ public class Excerpts {
                 }
                 this.cycle = cycle;
                 this.index = -1;
-                this.store = this.queue.storeForCycle(cycle, this.epoc);
+                this.store = this.queue.storeForCycle(cycle, this.epoch);
 
                 wire = queue.wireType().apply(store.mappedBytes());
                 if (LOG.isDebugEnabled())

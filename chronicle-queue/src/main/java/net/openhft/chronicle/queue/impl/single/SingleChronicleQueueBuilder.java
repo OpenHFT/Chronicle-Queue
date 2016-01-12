@@ -33,7 +33,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private RollCycle rollCycle;
 
     private int appendTimeout;
-    private long epoc;
+    private long epoch; // default is 1970-01-01 UTC
 
     public SingleChronicleQueueBuilder(String path) {
         this(new File(path));
@@ -45,7 +45,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.wireType = WireType.BINARY;
         this.appendTimeout = 10_000; // 10 seconds;
         this.rollCycle = RollCycles.DAYS;
-        this.epoc = 0;
+        this.epoch = 0;
     }
 
     public File path() {
@@ -86,19 +86,19 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
 
     /**
-     * sets epoc offset in milliseconds
+     * sets epoch offset in milliseconds
      *
-     * @param epoc sets an epoc offset as the number of number of milliseconds since January 1,
+     * @param epoch sets an epoch offset as the number of number of milliseconds since January 1,
      *             1970,  00:00:00 GMT
      * @return {@code this}
      */
-    public SingleChronicleQueueBuilder epoc(long epoc) {
-        this.epoc = epoc;
+    public SingleChronicleQueueBuilder epoch(long epoch) {
+        this.epoch = epoch;
         return this;
     }
 
-    public long epoc() {
-        return epoc;
+    public long epoch() {
+        return epoch;
     }
 
     public RollCycle rollCycle() {
