@@ -121,51 +121,47 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long append(@NotNull MappedBytes context, @NotNull final WriteMarshallable marshallable) throws IOException {
-        return write(context, Wires.UNKNOWN_LENGTH, this::writeWireMarshallable, marshallable);
+    public long append(@NotNull Wire wire, @NotNull final WriteMarshallable marshallable) throws IOException {
+        return write(wire, Wires.UNKNOWN_LENGTH, this::writeWireMarshallable, marshallable);
     }
 
     @Override
-    public long append(@NotNull MappedBytes context, @NotNull final WriteBytesMarshallable marshallable) throws IOException {
-        return write(context, Wires.UNKNOWN_LENGTH, this::writeBytesMarshallable, marshallable);
+    public long append(@NotNull Wire wire, @NotNull final WriteBytesMarshallable marshallable) throws IOException {
+        return write(wire, Wires.UNKNOWN_LENGTH, this::writeBytesMarshallable, marshallable);
     }
 
     @Override
-    public long append(@NotNull MappedBytes context, @NotNull final Bytes bytes) throws IOException {
-        return write(context, toIntU30(bytes.length()), this::writeBytes, bytes);
+    public long append(@NotNull Wire wire, @NotNull final Bytes bytes) throws IOException {
+        return write(wire.bytes(), toIntU30(bytes.length()), this::writeBytes, bytes);
     }
 
     @Override
-    public long read(@NotNull MappedBytes context, @NotNull ReadMarshallable reader) throws IOException {
-        return read(context, this::readWireMarshallable, reader);
+    public long read(@NotNull Wire wire, @NotNull ReadMarshallable reader) throws IOException {
+        return read(wire, this::readWireMarshallable, reader);
     }
 
-    private <T> long readWireMarshallable(MappedBytes mappedBytes, long l, T t) {
+    private <T> long readWireMarshallable(Bytes mappedBytes, long l, T t) {
         return 0;
     }
 
     @Override
-    public long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException {
-        return read(context, this::readBytesMarshallable, reader);
+    public long read(@NotNull Wire wire, @NotNull ReadBytesMarshallable reader) throws IOException {
+        return read(wire, this::readBytesMarshallable, reader);
     }
 
     @Override
-    public boolean appendRollMeta(@NotNull MappedBytes context, long cycle) throws IOException {
+    public boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException {
         if (roll.casNextRollCycle(cycle)) {
             final WriteMarshallable marshallable = x -> x.write(MetaDataField.roll).int32(cycle);
 
-            write(
-                    context,
-                    Wires.UNKNOWN_LENGTH,
-                    (MappedBytes ctx, long position, int size, WriteMarshallable w) -> {
-                        // todo improve this line
-                        Wires.writeMeta(wireType.apply(context), w);
-                        roll.nextCycleMetaPosition(position);
-                        return WireConstants.NO_INDEX;
-                    },
-                    marshallable
-            );
+            final WireWriter<WriteMarshallable> wireWriter = (context, position, size, writer1) -> {
+                // todo improve this line
+                Wires.writeMeta(wire, writer1);
+                roll.nextCycleMetaPosition(position);
+                return WireConstants.NO_INDEX;
+            };
 
+            write(wire, Wires.UNKNOWN_LENGTH, wireWriter, marshallable);
             return true;
         }
 
@@ -173,8 +169,8 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long moveToIndex(@NotNull MappedBytes context, long index) {
-        return indexing.moveToIndex(context, index);
+    public long moveToIndex(@NotNull Wire wire, long index) {
+        return indexing.moveToIndex(wire, index);
     }
 
     @Override
@@ -253,7 +249,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     private long readBytesMarshallable(
-            @NotNull MappedBytes context,
+            @NotNull Bytes context,
             int len,
             @NotNull ReadBytesMarshallable marshaller) {
 
@@ -269,13 +265,14 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     private <T> long read(
-            @NotNull MappedBytes context,
+            @NotNull Wire wire,
             @NotNull Reader<T> reader,
             @NotNull T marshaller) throws IOException {
 
-        final Wire wire = wireType.apply(context);
 
+        final Bytes<?> context = wire.bytes();
         for (; wire.bytes().readRemaining() > 0; ) {
+
 
             final int spbHeader = context.readVolatileInt(context.readPosition());
 
@@ -284,16 +281,12 @@ public class SingleChronicleQueueStore implements WireStore {
                 continue;
             }
 
-
-            final long start = wire.bytes().readPosition();
-            //boolean wasDocument =false
-            try (@NotNull final DocumentContext _ = wire.readingDocument()) {
-                if (!_.isPresent())
+            try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+                if (!documentContext.isPresent())
                     throw new IllegalStateException("document not present");
 
-                if (_.isData()) {
-                    //  wasDocument = true;
-//                    wire.bytes().readPosition(start);
+                if (documentContext.isData()) {
+
                     ((ReadMarshallable) marshaller).readMarshallable(wire);
                     return wire.bytes().readPosition();
                 }
@@ -306,7 +299,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 final ValueIn vi = wireType.apply(context).read(sb);
 
                 if ("index".contentEquals(sb)) {
-                    return read(context, reader, marshaller);
+                    return read(wire, reader, marshaller);
                 } else if ("roll".contentEquals(sb)) {
                     return -vi.int32();
                 }
@@ -337,13 +330,13 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     private long writeWireMarshallable(
-            @NotNull MappedBytes context,
+            @NotNull Wire wire,
             long position,
             int size,
             @NotNull final WriteMarshallable marshallable) throws IOException {
 
-        final long positionDataWritten = Wires.writeData(wireType.apply(context), marshallable);
-
+        final long positionDataWritten = Wires.writeData(wire, marshallable);
+        final Bytes<?> context = wire.bytes();
         // todo improve this line
         bounds.setWritePositionIfGreater(context.writePosition());
 
@@ -356,12 +349,14 @@ public class SingleChronicleQueueStore implements WireStore {
     // Utilities :: Write
     // *************************************************************************
 
+
     private long writeBytesMarshallable(
-            @NotNull MappedBytes context,
+            @NotNull Wire wire,
             long position,
             int size,
             @NotNull final WriteBytesMarshallable marshallable) throws IOException {
 
+        final Bytes<?> context = wire.bytes();
         context.writeSkip(SPB_DATA_HEADER_SIZE);
 
         marshallable.writeMarshallable(context);
@@ -378,7 +373,7 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     private long writeBytes(
-            @NotNull MappedBytes context,
+            @NotNull Bytes context,
             long position,
             int size,
             @NotNull final Bytes bytes) throws IOException {
@@ -394,20 +389,22 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     <T> long write(
-            @NotNull MappedBytes context,
+            @NotNull Wire wire,
             int size,
-            @NotNull Writer<T> writer,
+            @NotNull WireWriter<T> wireWriter,
             @NotNull T marshaller) throws IOException {
 
         final long end = System.currentTimeMillis() + appendTimeout;
         long position = writePosition();
+
+        final Bytes<?> context = wire.bytes();
         for (; ; ) {
 
             context.writeLimit(context.capacity());
             context.writePosition(position);
 
             if (context.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
-                return writer.write(context, position, size, marshaller);
+                return wireWriter.write(wire, position, size, marshaller);
             } else {
                 int spbHeader = context.readInt(position);
                 if (Wires.isKnownLength(spbHeader)) {
@@ -423,6 +420,40 @@ public class SingleChronicleQueueStore implements WireStore {
             }
         }
     }
+
+
+    <T> long write(
+            @NotNull Bytes bytes,
+            int size,
+            @NotNull BytesWriter<T> writer,
+            @NotNull T marshaller) throws IOException {
+
+        final long end = System.currentTimeMillis() + appendTimeout;
+        long position = writePosition();
+
+        for (; ; ) {
+
+            bytes.writeLimit(bytes.capacity());
+            bytes.writePosition(position);
+
+            if (bytes.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
+                return writer.write(bytes, position, size, marshaller);
+            } else {
+                int spbHeader = bytes.readInt(position);
+                if (Wires.isKnownLength(spbHeader)) {
+                    position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
+                } else {
+                    // TODO: wait strategy
+                    if (System.currentTimeMillis() > end) {
+                        throw new AssertionError("Timeout waiting to append");
+                    }
+
+                    Jvm.pause(1);
+                }
+            }
+        }
+    }
+
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
@@ -443,6 +474,8 @@ public class SingleChronicleQueueStore implements WireStore {
         wire.read(MetaDataField.roll).marshallable(this.roll);
         long chunkSize = wire.read(MetaDataField.chunkSize).int64();
         long overlapSize = wire.read(MetaDataField.overlapSize).int64();
+
+        this.mappedBytes = (MappedBytes) wire.bytes();
 
         final MappedBytes mappedBytes = new MappedBytes(this.mappedBytes.mappedFile());
         indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize, overlapSize));
@@ -534,12 +567,17 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @FunctionalInterface
     private interface Reader<T> {
-        long read(@NotNull MappedBytes context, int len, @NotNull T reader) throws IOException;
+        long read(@NotNull Bytes context, int len, @NotNull T reader) throws IOException;
     }
 
     @FunctionalInterface
-    private interface Writer<T> {
-        long write(@NotNull MappedBytes context, long position, int size, @NotNull T writer) throws IOException;
+    private interface WireWriter<T> {
+        long write(@NotNull Wire wire, long position, int size, @NotNull T writer) throws IOException;
+    }
+
+    @FunctionalInterface
+    private interface BytesWriter<T> {
+        long write(@NotNull Bytes wire, long position, int size, @NotNull T writer) throws IOException;
     }
 
     class Bounds implements Marshallable {
@@ -667,7 +705,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param writeContext used to write and index if it does not exist
          * @return the position of the index
          */
-        long indexToIndex(@Nullable final MappedBytes writeContext) {
+        long indexToIndex(@Nullable final Bytes writeContext) {
             for (; ; ) {
                 long index2Index = this.index2Index.getVolatileValue();
 
@@ -697,7 +735,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param address the address of the Excerpts which we are going to record
          * @param index   the index of the Excerpts which we are going to record
          */
-        public void storeIndexLocation(MappedBytes context,
+        public void storeIndexLocation(Bytes context,
                                        final long address,
                                        final long index) throws IOException {
 
@@ -754,7 +792,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param writeContext
          * @return the address of the Excerpt containing the usable index, just after the header
          */
-        long newIndex(MappedBytes writeContext) {
+        long newIndex(Bytes writeContext) {
 
             try {
                 final long start = writeContext.writePosition() + SPB_DATA_HEADER_SIZE;
@@ -767,19 +805,20 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         private long writeIndexBytes(
-                @NotNull MappedBytes context,
+                @NotNull Bytes target,
                 long position,
                 int size,
-                @NotNull final Bytes bytes) throws IOException {
+                @NotNull final Bytes sourceBytes) throws IOException {
 
-            context.writeSkip(4);
-            context.write(bytes);
-            context.compareAndSwapInt(position, size | Wires.NOT_READY, size);
+            target.writeSkip(4);
+            sourceBytes.writeLimit(size);
+            target.write(sourceBytes);
+            target.compareAndSwapInt(position, size | Wires.NOT_READY, size);
 
             // we don't want to index the meta data
-            if (Wires.isData(bytes.readLong(bytes.readPosition()))) {
+            if (Wires.isData(sourceBytes.readLong(sourceBytes.readPosition()))) {
                 final long index = indexing.incrementLastIndex();
-                indexing.storeIndexLocation(context, position, index);
+                indexing.storeIndexLocation(target, position, index);
                 return index;
             }
 
@@ -800,18 +839,17 @@ public class SingleChronicleQueueStore implements WireStore {
          * occurs. The indexes are only built when the indexer is run, this could be on a background
          * thread. Each targetIndex is created into chronicle as an excerpt.
          */
-        public long moveToIndex(MappedBytes context, final long targetIndex) {
+        public long moveToIndex(Wire wire, final long targetIndex) {
             final LongArrayValues array = this.longArray.get();
-            final long indexToIndex0 = indexToIndex(context);
+            final long indexToIndex0 = indexToIndex(wire.bytes());
 
-            final Wire w = wireType.apply(indexContext);
-            final Bytes<?> bytes = w.bytes();
+            final Bytes<?> bytes = wire.bytes();
             bytes.readLimit(indexContext.capacity()).readPosition(indexToIndex0);
 
             this.startIndex = ((targetIndex / 64L)) * 64L;
             long result = bytes.readPosition();
 
-            try (@NotNull final DocumentContext documentContext0 = w.readingDocument()) {
+            try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
 
                 if (!documentContext0.isPresent())
                     throw new IllegalStateException("document is not present");
@@ -820,7 +858,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     throw new IllegalStateException("Invalid index, expecting and index at " +
                             "pos=" + indexToIndex0 + ", but found data instead.");
 
-                final LongArrayValues primaryIndex = array(w, array);
+                final LongArrayValues primaryIndex = array(wire, array);
                 long primaryOffset = toAddress0(targetIndex);
 
                 do {

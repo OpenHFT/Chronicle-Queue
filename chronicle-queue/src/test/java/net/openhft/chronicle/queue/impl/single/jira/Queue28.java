@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,6 +58,7 @@ public class Queue28 extends ChronicleQueueTestBase {
      *
      * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-28
      */
+    @Ignore("rob to fix")
     @Test
     public void test() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())

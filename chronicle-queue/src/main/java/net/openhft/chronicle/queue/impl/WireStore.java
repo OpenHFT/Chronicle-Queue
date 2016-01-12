@@ -60,19 +60,19 @@ public interface WireStore extends ReferenceCounted, Marshallable {
      */
     long lastIndex();
 
-    boolean appendRollMeta(@NotNull MappedBytes context, long cycle) throws IOException;
+    boolean appendRollMeta(@NotNull Wire context, long cycle) throws IOException;
 
-    long append(@NotNull MappedBytes context, @NotNull WriteMarshallable marshallable) throws IOException;
+    long append(@NotNull Wire wire, @NotNull WriteMarshallable marshallable) throws IOException;
 
-    long append(@NotNull MappedBytes context, @NotNull WriteBytesMarshallable marshallable) throws IOException;
+    long append(@NotNull Wire wire, @NotNull WriteBytesMarshallable marshallable) throws IOException;
 
-    long append(@NotNull MappedBytes context, @NotNull Bytes bytes) throws IOException;
+    long append(@NotNull Wire wire, @NotNull Bytes bytes) throws IOException;
 
-    long read(@NotNull MappedBytes context, @NotNull ReadMarshallable reader) throws IOException;
+    long read(@NotNull Wire wire, @NotNull ReadMarshallable reader) throws IOException;
 
-    long read(@NotNull MappedBytes context, @NotNull ReadBytesMarshallable reader) throws IOException;
+    long read(@NotNull Wire v, @NotNull ReadBytesMarshallable reader) throws IOException;
 
-    long moveToIndex(@NotNull MappedBytes context, long index);
+    long moveToIndex(@NotNull Wire wire, long index);
 
     void install(
             @NotNull MappedBytes mappedBytes,

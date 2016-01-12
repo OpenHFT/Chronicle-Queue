@@ -21,7 +21,6 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.annotation.ForceInline;
-import net.openhft.chronicle.core.util.ThrowingAcceptor;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -157,7 +156,8 @@ public class Excerpts {
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
 
-        private final MappedBytes writeContext;
+
+        private final Wire wire;
         private long epoc;
         private long cycle;
         private long index = -1;
@@ -181,24 +181,25 @@ public class Excerpts {
             final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
-            this.writeContext = mappedBytes;
+            //this.writeContext = mappedBytes;
+            wire = this.queue().wireType().apply(mappedBytes);
         }
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            final long subindex = index = store().append(this.writeContext, writer);
+            final long subindex = index = store().append(wire, writer);
             return ChronicleQueue.index(cycle(), subindex);
         }
 
         @Override
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            index = store().append(this.writeContext, marshallable);
+            index = store().append(wire, marshallable);
             return ChronicleQueue.index(cycle, index);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) throws IOException {
-            index = store().append(this.writeContext, bytes);
+            index = store().append(wire, bytes);
             return ChronicleQueue.index(cycle(), index);
         }
 
@@ -226,7 +227,7 @@ public class Excerpts {
             if (this.cycle != queue.cycle()) {
                 long nextCycle = queue.cycle();
                 if (this.store != null) {
-                    this.store.appendRollMeta(this.writeContext, nextCycle);
+                    this.store.appendRollMeta(wire, nextCycle);
                     this.queue.release(this.store);
                 }
 
@@ -251,7 +252,7 @@ public class Excerpts {
      */
     public static class StoreTailer implements ExcerptTailer {
         private final AbstractChronicleQueue queue;
-        private MappedBytes readContext;
+        private Wire wire;
 
         private long cycle;
         private long epoc;
@@ -288,7 +289,7 @@ public class Excerpts {
                 //     context(store::acquireBytesAtReadPositionForRead);
             }
 
-            long position = store.read(readContext, reader);
+            long position = store.read(wire, reader);
             if (position > 0) {
                 this.index++;
 
@@ -318,7 +319,7 @@ public class Excerpts {
                 //      context(store::acquireBytesAtReadPositionForRead);
             }
 
-            long position = store.read(readContext, marshallable);
+            long position = store.read(wire, marshallable);
             if (position > 0) {
                 this.index++;
 
@@ -362,7 +363,9 @@ public class Excerpts {
             if (nextCycle != queue.lastCycle())
                 cycle(nextCycle);
 
-            final long position = this.store.moveToIndex(readContext, subIndex(fullIndex));
+            final long position = this.store.moveToIndex(wire, subIndex(fullIndex));
+
+            final Bytes<?> readContext = wire.bytes();
             readContext.readPosition(position);
             readContext.readLimit(readContext.capacity());
 
@@ -388,7 +391,7 @@ public class Excerpts {
             }
 
             this.index = -1;
-
+            final Bytes<?> readContext = wire.bytes();
             readContext.readPosition(0);
             readContext.readLimit(readContext.capacity());
 
@@ -421,21 +424,17 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.index = -1;
                 this.store = this.queue.storeForCycle(cycle, this.epoc);
-                this.readContext = store.mappedBytes();
 
+                wire = queue.wireType().apply(store.mappedBytes());
                 if (LOG.isDebugEnabled())
-                    LOG.debug("tailer=" + readContext.mappedFile().file().getAbsolutePath());
+                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
 
             }
 
             return this;
         }
 
-        private StoreTailer context(@NotNull ThrowingAcceptor<Bytes, IOException> acceptor)
-                throws IOException {
-            acceptor.accept(readContext);
-            return this;
-        }
+
     }
 }
 
