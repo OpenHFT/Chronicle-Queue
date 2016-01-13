@@ -157,7 +157,7 @@ public class Excerpts {
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
 
 
-        private final Wire wire;
+        private Wire wire;
         private long epoch;
         private long cycle;
         private long index = -1;
@@ -182,6 +182,7 @@ public class Excerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
             //this.writeContext = mappedBytes;
             wire = this.queue().wireType().apply(mappedBytes);
+
         }
 
         @Override
@@ -232,7 +233,7 @@ public class Excerpts {
 
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(this.cycle, epoch);
-                //this.store.acquireBytesAtWritePositionForWrite(this.writeContext.bytes);
+                this.wire = this.queue().wireType().apply(store.mappedBytes());
             }
 
             return this.store;
@@ -257,9 +258,6 @@ public class Excerpts {
 
         private long index;
         private WireStore store;
-
-        //TODO: refactor
-        private boolean toStart;
 
         public StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
@@ -294,6 +292,8 @@ public class Excerpts {
                 // roll detected, move to next cycle;
                 cycle(Math.abs(position));
                 //context(store::acquireBytesAtReadPositionForRead);
+                wire.bytes().readPosition(0);
+                wire.bytes().readLimit(store.writePosition());
 
                 // try to read from new cycle
                 return readDocument(reader);
@@ -362,7 +362,8 @@ public class Excerpts {
 
             cycle = expectedCycle;
 
-            final long position = this.store.moveToIndex(wire, subIndex(index));
+            final long subIndex = subIndex(index);
+            final long position = this.store.moveToIndex(wire, index);
 
             if (position == -1)
                 return false;
@@ -370,10 +371,8 @@ public class Excerpts {
             final Bytes<?> readContext = wire.bytes();
             readContext.readPosition(position);
             readContext.readLimit(readContext.capacity());
-            this.index = index - 1;
+            this.index = ChronicleQueue.index(cycle, subIndex - 1);
             return true;
-
-
         }
 
 
@@ -385,12 +384,12 @@ public class Excerpts {
             if (index == -1)
                 return this;
 
-            LOG.info("index=> subIndex=" + ChronicleQueue.subIndex(index) + ",cycle=" + ChronicleQueue
+            LOG.info("index=> index=" + ChronicleQueue.subIndex(index) + ",cycle=" + ChronicleQueue
                     .cycle(index));
 
 
             if (!moveToIndex(index))
-                throw new IllegalStateException("unable to move to the start");
+                throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
 
             return this;
         }
@@ -420,6 +419,7 @@ public class Excerpts {
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
 
                 wire = queue.wireType().apply(store.mappedBytes());
+                moveToIndex(ChronicleQueue.index(cycle, 0));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
 

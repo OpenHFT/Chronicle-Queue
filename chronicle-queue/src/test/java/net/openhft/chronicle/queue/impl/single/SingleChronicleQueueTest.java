@@ -183,6 +183,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
     @Ignore("rob to fix")
     @Test
     public void testAppendAndReadWithRolling2() throws IOException {
@@ -191,13 +192,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(dir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.SECONDS)
-                .epoch(System.currentTimeMillis())
+                .epoch(1452701442361L)
                 .build();
 
 
+        final ExcerptAppender appender = queue.createAppender();
         for (int i = 0; i < 10; i++) {
             final int n = i;
-            final ExcerptAppender appender = queue.createAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             Jvm.pause(500);
         }
@@ -210,6 +211,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 @Override
                 public void readMarshallable(@NotNull WireIn r) throws IORuntimeException {
                     assertEquals(n, r.read(TestKey.test).int32());
+                    System.out.println("**** read=" + n);
                 }
             });
             assertTrue(condition);
@@ -304,7 +306,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             StringBuilder sb = new StringBuilder();
 
-            for (int i : new int[]{65}) {
+            for (int i : new int[]{0, 64, 65, 66}) {
                 tailer.moveToIndex(index(cycle, i));
                 tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
                 Assert.assertEquals("value=" + i, sb.toString());

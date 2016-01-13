@@ -52,7 +52,20 @@ public class SingleChronicleQueueStore implements WireStore {
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class, "Roll");
     }
 
-    private final WireType wireType;
+    static Wire TEXT_TEMPLATE;
+    static Wire BINARY_TEMPLATE;
+
+    static {
+        TEXT_TEMPLATE = WireType.TEXT.apply(Bytes.elasticByteBuffer());
+        TEXT_TEMPLATE.writeDocument(true, w -> w.write(() -> "index")
+                .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
+
+        BINARY_TEMPLATE = WireType.BINARY.apply(Bytes.elasticByteBuffer());
+        BINARY_TEMPLATE.writeDocument(true, w -> w.write(() -> "index")
+                .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
+    }
+
+    private WireType wireType;
     private final Roll roll;
     Bounds bounds = new Bounds();
     private MappedFile mappedFile;
@@ -67,7 +80,6 @@ public class SingleChronicleQueueStore implements WireStore {
      * Default constructor needed for self boot-strapping
      */
     SingleChronicleQueueStore() {
-        this.wireType = WireType.BINARY;
         this.roll = new Roll(null, 0);
     }
 
@@ -229,7 +241,10 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public MappedBytes mappedBytes() {
-        return new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
+        final MappedBytes mappedBytes = new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
+        mappedBytes.writePosition(bounds.getWritePosition());
+        mappedBytes.readPosition(bounds.getReadPosition());
+        return mappedBytes;
     }
 
 
@@ -288,8 +303,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
         final Bytes<?> context = wire.bytes();
-        for (; wire.bytes().readRemaining() > 0; ) {
-
+        while (wire.bytes().readLong(wire.bytes().readPosition()) != 0) {
 
             final int spbHeader = context.readVolatileInt(context.readPosition());
 
@@ -308,19 +322,15 @@ public class SingleChronicleQueueStore implements WireStore {
                     return wire.bytes().readPosition();
                 }
 
-
                 // In case of meta data, if we are found the "roll" meta, we returns
                 // the next cycle (negative)
-               /* final StringBuilder sb = Wires.acquireStringBuilder();
+                final StringBuilder sb = Wires.acquireStringBuilder();
 
                 // todo improve this line
                 final ValueIn vi = wire.readEventName(sb);
-
-                if ("index".contentEquals(sb)) {
-                    return read(wire, reader, marshaller);
-                } else if ("roll".contentEquals(sb)) {
+                if ("roll".contentEquals(sb)) {
                     return -vi.int32();
-                }*/
+                }
 
             }
 
@@ -354,12 +364,15 @@ public class SingleChronicleQueueStore implements WireStore {
             @NotNull final WriteMarshallable marshallable) throws IOException {
 
         final long positionDataWritten = Wires.writeData(wire, marshallable);
-        final Bytes<?> context = wire.bytes();
+
+
         // todo improve this line
-        bounds.setWritePositionIfGreater(context.writePosition());
+        bounds.setWritePositionIfGreater(wire.bytes().writePosition());
 
         final long index = indexing.incrementLastIndex();
-        indexing.storeIndexLocation(context, positionDataWritten, index);
+        indexing.storeIndexLocation(wire.bytes(), positionDataWritten, index);
+        System.out.println
+                ("positionDataWritten=" + positionDataWritten + ",cycle=" + cycle() + ",index=" + index);
         return index;
     }
 
@@ -476,7 +489,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-
+        wire.write(MetaDataField.wireType).object(wireType);
         wire.write(MetaDataField.bounds).marshallable(this.bounds)
                 .write(MetaDataField.roll).object(this.roll)
                 .write(MetaDataField.chunkSize).int64(mappedFile.chunkSize())
@@ -488,7 +501,7 @@ public class SingleChronicleQueueStore implements WireStore {
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
 
         //  System.out.println(Wires.fromSizePrefixedBlobs(wire.bytes()));
-
+        wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         wire.read(MetaDataField.bounds).marshallable(this.bounds);
         wire.read(MetaDataField.roll).marshallable(this.roll);
         long chunkSize = wire.read(MetaDataField.chunkSize).int64();
@@ -499,6 +512,7 @@ public class SingleChronicleQueueStore implements WireStore {
         indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize,
                 overlapSize));
         wire.read(MetaDataField.indexing).marshallable(indexing);
+
     }
 
 // *************************************************************************
@@ -510,7 +524,7 @@ public class SingleChronicleQueueStore implements WireStore {
         indexing,
         roll,
         chunkSize,
-        overlapSize
+        wireType, overlapSize
     }
 
     enum BoundsField implements WireKey {
@@ -675,13 +689,13 @@ public class SingleChronicleQueueStore implements WireStore {
             this.firstIndex = wireType.newLongReference().get();
 
             this.lastIndex = wireType.newLongReference().get();
-
-            final Bytes b = Bytes.elasticByteBuffer();
-
-            templateIndex = wireType.apply(b);
-            templateIndex.writeDocument(true, w -> w.write(() -> "index")
-                    .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
-
+            if (wireType == WireType.TEXT)
+                templateIndex = TEXT_TEMPLATE;
+            else if (wireType == WireType.BINARY)
+                templateIndex = BINARY_TEMPLATE;
+            else {
+                throw new UnsupportedOperationException("type is not supported");
+            }
             this.wireType = wireType;
             this.longArray = withInitial(wireType.newLongArrayReference());
             this.indexContext = mappedBytes;
@@ -753,6 +767,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     return -1;
 
                 final long index = newIndex(writeContext);
+                System.out.println("index2Index=" + index);
                 this.index2Index.setOrderedValue(index);
                 return index;
             }
@@ -805,15 +820,11 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         private LongArrayValues array(WireIn w, LongArrayValues using) {
-
-            // final StringBuilder sb = Wires.acquireStringBuilder();
-            // final ValueIn valueIn = w.readEventName(sb);
-
-            //if (!"index".contentEquals(sb))
-            //    throw new IllegalStateException("expecting and index");
-
-
-            w.read(() -> "index").int64array(using, this, (o1, o2) -> {
+            final StringBuilder sb = Wires.acquireStringBuilder();
+            final ValueIn valueIn = w.readEventName(sb);
+            if (!"index".contentEquals(sb))
+                throw new IllegalStateException("expecting index");
+            valueIn.int64array(using, this, (o1, o2) -> {
             });
             return using;
         }
@@ -882,11 +893,11 @@ public class SingleChronicleQueueStore implements WireStore {
         public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(wire.bytes());
-
+            System.out.println("indexToIndex=" + indexToIndex0);
             final Bytes<?> bytes = wire.bytes();
             bytes.readLimit(indexContext.capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
-
+            //   final long limit = wire.bytes().readLimit();
             try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
 
                 if (!documentContext0.isPresent())
@@ -910,12 +921,13 @@ public class SingleChronicleQueueStore implements WireStore {
                         continue;
                     }
 
+                    wire.bytes().readPosition(secondaryAddress);
+
                     //indexContext.readLimit(indexContext.capacity());
-                    final Wire wire1 = wireType.apply(indexContext.readPosition(secondaryAddress));
+                    //  final Wire wire1 = wireType.apply(indexContext.readPosition
+                    // (secondaryAddress));
 
-                    final long limit = wire1.bytes().readLimit();
-
-                    try (@NotNull final DocumentContext documentContext1 = wire1.readingDocument()) {
+                    try (@NotNull final DocumentContext documentContext1 = wire.readingDocument()) {
 
                         if (!documentContext1.isPresent())
                             throw new IllegalStateException("document is not present");
@@ -923,7 +935,7 @@ public class SingleChronicleQueueStore implements WireStore {
                         if (documentContext1.isData())
                             continue;
 
-                        final LongArrayValues array1 = array(wire1, array);
+                        final LongArrayValues array1 = array(wire, array);
                         long secondaryOffset = toAddress1(index);
 
                         do {
@@ -938,8 +950,8 @@ public class SingleChronicleQueueStore implements WireStore {
                             if (index == startIndex) {
                                 return fromAddress;
                             } else {
-                                wire1.bytes().readLimit(limit);
-                                return linearScan(wire1, index, startIndex, fromAddress);
+                                wire.bytes().readLimit(bounds.getWritePosition());
+                                return linearScan(wire, index, startIndex, fromAddress);
                             }
 
                         } while (secondaryOffset >= 0);
@@ -1074,14 +1086,6 @@ public class SingleChronicleQueueStore implements WireStore {
         public Roll nextCycleMetaPosition(long position) {
             this.nextCycleMetaPosition.setOrderedValue(position);
             return this;
-        }
-
-        public long nextCycleMetaPosition() {
-            return this.nextCycleMetaPosition.getVolatileValue();
-        }
-
-        public long nextRollCycle() {
-            return this.nextCycle.getVolatileValue();
         }
 
         public boolean casNextRollCycle(long rollCycle) {
