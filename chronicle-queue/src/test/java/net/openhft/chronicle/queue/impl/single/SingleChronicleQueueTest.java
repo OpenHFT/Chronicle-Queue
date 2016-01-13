@@ -110,7 +110,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("rob to fix")
     @Test
     public void testReadAndAppend() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
