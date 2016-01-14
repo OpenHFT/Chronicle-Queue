@@ -25,8 +25,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(WireType.BINARY)
-                .blockSize(1_000_000_000)
+                .wireType(WireType.FIELDLESS_BINARY)
+                .blockSize(128 << 20)
                 .build();
 
         ExcerptAppender appender = queue.createAppender();
@@ -64,8 +64,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
 
                 TestTrade bt = new TestTrade();
                 MyWriteMarshallable myWriteMarshallable = new MyWriteMarshallable(bt);
-                for (int i = 0; i < 10_000_000; i++) {
-                    Jvm.busyWaitMicros(5);
+                for (int i = 0; i < 1_000_000; i++) {
+                    Jvm.busyWaitMicros(20);
                     bt.setTime(System.nanoTime());
                     appender.writeDocument(myWriteMarshallable);
                 }
@@ -120,10 +120,10 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             vi.marshallable(testTrade);
 
             long time = testTrade.getTime();
-            if (counter.get() > 1_000_000) {
+            if (counter.get() > 100_000) {
                 histogram.sample(System.nanoTime() - time);
             }
-            if (counter.incrementAndGet() % 1_000_000 == 0) {
+            if (counter.incrementAndGet() % 100_000 == 0) {
                 System.out.println(counter.get());
             }
         }

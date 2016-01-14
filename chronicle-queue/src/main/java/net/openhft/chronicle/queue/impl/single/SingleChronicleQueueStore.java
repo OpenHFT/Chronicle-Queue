@@ -371,8 +371,8 @@ public class SingleChronicleQueueStore implements WireStore {
 
         final long index = indexing.incrementLastIndex();
         indexing.storeIndexLocation(wire.bytes(), positionDataWritten, index);
-        System.out.println
-                ("positionDataWritten=" + positionDataWritten + ",cycle=" + cycle() + ",index=" + index);
+//        System.out.println
+//                ("positionDataWritten=" + positionDataWritten + ",cycle=" + cycle() + ",index=" + index);
         return index;
     }
 
@@ -691,7 +691,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.lastIndex = wireType.newLongReference().get();
             if (wireType == WireType.TEXT)
                 templateIndex = TEXT_TEMPLATE;
-            else if (wireType == WireType.BINARY)
+            else if (wireType == WireType.BINARY || wireType == WireType.FIELDLESS_BINARY)
                 templateIndex = BINARY_TEMPLATE;
             else {
                 throw new UnsupportedOperationException("type is not supported");
