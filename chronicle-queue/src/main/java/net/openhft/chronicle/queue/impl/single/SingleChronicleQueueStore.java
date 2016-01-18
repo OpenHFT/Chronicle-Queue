@@ -72,7 +72,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private MappedFile mappedFile;
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
-    private long appendTimeout = 1_000;
+
     private SingleChronicleQueueBuilder builder;
     private Indexing indexing;
 
@@ -190,7 +190,7 @@ public class SingleChronicleQueueStore implements WireStore {
             @Nullable Closeable closeable) throws IOException {
 
         this.builder = (SingleChronicleQueueBuilder) builder;
-        this.appendTimeout = ((SingleChronicleQueueBuilder) builder).appendTimeout();
+
         if (created) {
             this.bounds.setWritePosition(length);
             this.bounds.setReadPosition(length);
@@ -201,7 +201,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     /**
      * @return creates a new instance of mapped bytes, because, for example the tailer and appender
-     * can be at diffent locations.
+     * can be at different locations.
      */
     @Override
     public MappedBytes mappedBytes() {
@@ -453,7 +453,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.lastIndex = wireType.newLongReference().get();
             if (wireType == WireType.TEXT)
                 templateIndex = TEXT_TEMPLATE;
-            else if (wireType == WireType.BINARY)
+            else if (wireType == WireType.BINARY || wireType == WireType.FIELDLESS_BINARY)
                 templateIndex = BINARY_TEMPLATE;
             else {
                 throw new UnsupportedOperationException("type is not supported");
@@ -675,10 +675,6 @@ public class SingleChronicleQueueStore implements WireStore {
                     }
 
                     wire.bytes().readPosition(secondaryAddress);
-
-                    //indexContext.readLimit(indexContext.capacity());
-                    //  final Wire wire1 = wireType.apply(indexContext.readPosition
-                    // (secondaryAddress));
 
                     try (@NotNull final DocumentContext documentContext1 = wire.readingDocument()) {
 
