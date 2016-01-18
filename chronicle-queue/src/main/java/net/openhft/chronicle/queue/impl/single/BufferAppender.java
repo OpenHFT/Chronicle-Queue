@@ -22,7 +22,7 @@ import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedC
 public class BufferAppender implements ExcerptAppender {
 
     private final BytesRingBuffer ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity
-            (1 << 20));
+            (64 << 10));
     private final ExcerptAppender underlyingAppender;
     private final Wire wire;
 
