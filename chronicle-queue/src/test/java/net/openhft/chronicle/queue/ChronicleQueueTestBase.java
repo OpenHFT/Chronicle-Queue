@@ -20,11 +20,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireKey;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Rule;
-import org.junit.rules.ErrorCollector;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
+import org.junit.rules.*;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,10 +52,10 @@ public class ChronicleQueueTestBase {
     public TestRule watcher = new TestWatcher() {
         @Override
         protected void starting(Description description) {
-            if(TRACE_TEST_EXECUTION) {
+            if (TRACE_TEST_EXECUTION) {
                 LOGGER.info("Starting test: {}.{}",
-                    description.getClassName(),
-                    description.getMethodName()
+                        description.getClassName(),
+                        description.getMethodName()
                 );
             }
         }
@@ -77,28 +73,28 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    protected File getTmpDir() {
+    public static File getTmpDir() {
         try {
-            final File tmpDir = Files.createTempDirectory(getClass().getSimpleName() + "-").toFile();
+            final File tmpDir = Files.createTempDirectory("chronicle" + "-").toFile();
 
             DeleteStatic.INSTANCE.add(tmpDir);
 
             // Log the temporary directory in OSX as it is quite obscure
-            if(OS.isMacOSX()) {
+            if (OS.isMacOSX()) {
                 LOGGER.info("Tmp dir: {}", tmpDir);
             }
 
             return tmpDir;
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
     protected void warmup(WireType type, int iterations) throws IOException {
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-            .wireType(type)
-            .blockSize(640_000)
-            .build();
+                .wireType(type)
+                .blockSize(640_000)
+                .build();
 
         ExcerptAppender appender = queue.createAppender();
         ExcerptTailer tailer = queue.createTailer();
@@ -122,7 +118,7 @@ public class ChronicleQueueTestBase {
 
         {
             Runtime.getRuntime().addShutdownHook(new Thread(
-                () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
+                    () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
             ));
         }
 
@@ -132,17 +128,17 @@ public class ChronicleQueueTestBase {
     }
 
     private static void deleteDir(File dir) {
-        if(dir.isDirectory()) {
+        if (dir.isDirectory()) {
             File[] files = dir.listFiles();
-            if(files != null) {
+            if (files != null) {
                 File[] arr$ = files;
                 int len$ = files.length;
 
-                for(int i$ = 0; i$ < len$; ++i$) {
+                for (int i$ = 0; i$ < len$; ++i$) {
                     File file = arr$[i$];
-                    if(file.isDirectory()) {
+                    if (file.isDirectory()) {
                         deleteDir(file);
-                    } else if(!file.delete()) {
+                    } else if (!file.delete()) {
                         LOGGER.info("... unable to delete {}", file);
                     }
                 }
