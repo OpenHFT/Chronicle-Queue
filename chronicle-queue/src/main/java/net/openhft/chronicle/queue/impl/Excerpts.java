@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -32,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
@@ -139,19 +140,24 @@ public class Excerpts {
         public long cycle() {
             throw new UnsupportedOperationException("todo");
         }
+
+        @Override
+        public void prefetch() {
+            throw new UnsupportedOperationException("todo");
+
+        }
     }
 
     /**
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-
-
         private Wire wire;
         private long epoch;
         private long cycle;
         private long index = -1;
         private WireStore store;
+        private long nextPrefetch = OS.pageSize();
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) throws IOException {
 
@@ -235,6 +241,16 @@ public class Excerpts {
             return this.store;
         }
 
+        @Override
+        public void prefetch() {
+            long position = wire.bytes().writePosition();
+            if (position < nextPrefetch)
+                return;
+            long prefetch = OS.mapAlign(position) + OS.pageSize();
+            // touch the page without modifying it.
+            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
+            nextPrefetch = prefetch + OS.pageSize();
+        }
     }
 
     // *************************************************************************
@@ -254,6 +270,7 @@ public class Excerpts {
 
         private long index;
         private WireStore store;
+        private long nextPrefetch = OS.pageSize();
 
         public StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
             this.queue = queue;
@@ -264,20 +281,20 @@ public class Excerpts {
 
         @Override
         public boolean readDocument(@NotNull ReadMarshallable marshaller) throws IOException {
-            return readAtIndex(marshaller::readMarshallable);
+            return readAtIndex(marshaller, ReadMarshallable::readMarshallable);
         }
 
         @Override
         public boolean readBytes(@NotNull Bytes using) throws IOException {
-            return readAtIndex(w -> using.write(w.bytes()));
+            return readAtIndex(using, (t, w) -> t.write(w.bytes()));
         }
 
         @Override
         public boolean readBytes(@NotNull ReadBytesMarshallable using) throws IOException {
-            return readAtIndex(w -> using.readMarshallable(w.bytes()));
+            return readAtIndex(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
-        private boolean readAtIndex(@NotNull Consumer<Wire> c) throws IOException {
+        private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
 
             final long readPosition = wire.bytes().readPosition();
             final long readLimit = wire.bytes().readLimit();
@@ -292,7 +309,7 @@ public class Excerpts {
                 moveToIndex(firstIndex);
             }
 
-            final boolean success = readAtSubIndex(c);
+            final boolean success = readAtSubIndex(t, c);
 
             if (success) {
 
@@ -309,7 +326,7 @@ public class Excerpts {
             return false;
         }
 
-        private boolean readAtSubIndex(@NotNull Consumer<Wire> c) throws IOException {
+        private <T> boolean readAtSubIndex(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
 
             long roll;
             for (; ; ) {
@@ -324,7 +341,7 @@ public class Excerpts {
                             return false;
 
                         if (documentContext.isData()) {
-                            c.accept(wire);
+                            c.accept(t, wire);
                             return true;
                         }
 
@@ -461,6 +478,17 @@ public class Excerpts {
             return this;
         }
 
+
+        @Override
+        public void prefetch() {
+            long position = wire.bytes().readPosition();
+            if (position < nextPrefetch)
+                return;
+            long prefetch = OS.mapAlign(position) + OS.pageSize();
+            // touch the page without modifying it.
+            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
+            nextPrefetch = prefetch + OS.pageSize();
+        }
 
     }
 }

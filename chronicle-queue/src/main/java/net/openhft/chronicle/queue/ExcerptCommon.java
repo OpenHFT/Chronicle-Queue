@@ -23,4 +23,9 @@ public interface ExcerptCommon {
      * @return the queue associated with this Excerpt
      */
     ChronicleQueue queue();
+
+    /**
+     * Hint to the underlying store to get the next page(s)
+     */
+    void prefetch();
 }
