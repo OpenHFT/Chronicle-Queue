@@ -562,7 +562,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 final LongArrayValues array = this.longArray.get();
                 final long indexToIndex0 = indexToIndex(bytes);
 
-
                 try (DocumentContext _ = wire.readingDocument(indexToIndex0)) {
 
                     if (!_.isPresent())

@@ -143,6 +143,4 @@ public interface ChronicleQueue extends Closeable {
     static long index(long cycle, long subindex) {
         return (cycle << 40L) + (subindex & 0xFFFFFFFFFFL);
     }
-
-
 }
