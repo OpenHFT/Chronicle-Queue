@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.*;
@@ -158,7 +159,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-    //@Ignore("rob to fix")
     @Test
     public void testAppendAndReadWithRolling() throws IOException {
 
@@ -206,7 +206,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
 
-
         final ExcerptTailer tailer = queue.createTailer().toStart();
         for (int i = 0; i < 10; i++) {
             final int n = i;
@@ -226,7 +225,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
     }
-
 
 
     @Test
@@ -285,6 +283,39 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             file.delete();
         }
     }
+
+
+    @Test
+    public void testSimpleByteTest() throws Exception {
+
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+
+        try {
+
+            final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                    .wireType(this.wireType)
+                    .build();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
+            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            Bytes bytes = Bytes.elasticByteBuffer();
+
+            tailer.readBytes(bytes);
+            bytes.append(" ");
+            tailer.readBytes(bytes);
+
+            Assert.assertEquals("Steve Jobs", bytes.toString());
+
+        } finally {
+            file.delete();
+        }
+    }
+
 
     @Test
     public void testReadAtIndex() throws Exception {

@@ -95,9 +95,7 @@ public class SingleChronicleQueueStore implements WireStore {
                               final WireType wireType,
                               @NotNull MappedBytes mappedBytes,
                               long rollEpoc) {
-
         this.roll = new Roll(rollCycle, rollEpoc);
-
         this.resourceCleaner = null;
         this.builder = null;
         this.wireType = wireType;
@@ -111,6 +109,10 @@ public class SingleChronicleQueueStore implements WireStore {
         return this.bounds.getWritePosition();
     }
 
+    /**
+     * @return the file identifier based on the high 24bits of the index, when DAY ROLLING each day
+     * will have a unique cycle
+     */
     @Override
     public long cycle() {
         return this.roll.cycle();
@@ -125,11 +127,17 @@ public class SingleChronicleQueueStore implements WireStore {
         return this.roll.epoch();
     }
 
+    /**
+     * @return the first index available on the file system
+     */
     @Override
     public long firstSubIndex() {
         return this.indexing.firstSubIndex();
     }
 
+    /**
+     * @return the last index available on the file system
+     */
     @Override
     public long lastSubIndex() {
         return this.indexing.lastSubIndex();
@@ -140,11 +148,9 @@ public class SingleChronicleQueueStore implements WireStore {
     public boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException {
         if (!roll.casNextRollCycle(cycle))
             return false;
-
         wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
         bounds.setWritePosition(wire.bytes().writePosition());
         return true;
-
     }
 
 
@@ -575,6 +581,7 @@ public class SingleChronicleQueueStore implements WireStore {
                         primaryIndex.setValueAt(primaryOffset, secondaryAddress);
                     }
 
+                    bytes.readLimit(bytes.capacity());
                     try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
 
                         final LongArrayValues array1 = array(wire, array);
@@ -645,12 +652,12 @@ public class SingleChronicleQueueStore implements WireStore {
          */
         public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
-            final long indexToIndex0 = indexToIndex(wire.bytes());
-
-
             final Bytes<?> bytes = wire.bytes();
-            final long readPostion = wire.bytes().readPosition();
-            bytes.readLimit(wire.bytes().capacity()).readPosition(indexToIndex0);
+            final long indexToIndex0 = indexToIndex(bytes);
+
+
+            final long readPostion = bytes.readPosition();
+            bytes.readLimit(bytes.capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
             //   final long limit = wire.bytes().readLimit();
             try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
@@ -674,7 +681,8 @@ public class SingleChronicleQueueStore implements WireStore {
                         continue;
                     }
 
-                    wire.bytes().readPosition(secondaryAddress);
+                    bytes.readLimit(bytes.capacity());
+                    bytes.readPosition(secondaryAddress);
 
                     try (@NotNull final DocumentContext documentContext1 = wire.readingDocument()) {
 
@@ -698,7 +706,7 @@ public class SingleChronicleQueueStore implements WireStore {
                             if (index == startIndex) {
                                 return fromAddress;
                             } else {
-                                wire.bytes().readLimit(bounds.getWritePosition());
+                                bytes.readLimit(bounds.getWritePosition());
                                 return linearScan(wire, index, startIndex, fromAddress);
                             }
 
@@ -711,7 +719,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 } while (primaryOffset >= 0);
             }
 
-            wire.bytes().readPosition(readPostion);
+            bytes.readPosition(readPostion);
             return -1;
 
         }

@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.queue.ChronicleQueue.*;
@@ -60,10 +61,10 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            throw new UnsupportedOperationException();
-        }
+        //   @Override
+        ///    public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+        //       throw new UnsupportedOperationException();
+        //   }
 
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
@@ -104,7 +105,6 @@ public class Excerpts {
         }
 
 
-
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             this.buffer.clear();
@@ -117,6 +117,7 @@ public class Excerpts {
             return writeBytes(this.buffer);
         }
 
+
         @Override
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
             this.buffer.clear();
@@ -125,7 +126,6 @@ public class Excerpts {
             this.buffer.readPosition(0);
             this.buffer.writePosition(this.buffer.readLimit());
             this.buffer.writeLimit(this.buffer.readLimit());
-
             return writeBytes(this.buffer);
         }
 
@@ -169,11 +169,9 @@ public class Excerpts {
             final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
-            //this.writeContext = mappedBytes;
+
             wire = this.queue().wireType().apply(mappedBytes);
-
         }
-
 
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final WireStore store = store();
@@ -185,17 +183,16 @@ public class Excerpts {
             return ChronicleQueue.index(store.cycle(), index);
         }
 
+        @Override
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+            return writeDocument(wire1 -> marshallable.writeMarshallable(wire1.bytes()));
+        }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) throws IOException {
-            long position = wire.bytes().writePosition();
-            wire.writeDocument(false, wireOut -> wireOut.bytes().write(bytes));
-
-            final long index = store.incrementLastIndex();
-            store.storeIndexLocation(wire, position, index);
-
-            return ChronicleQueue.index(cycle(), index);
+            return writeDocument(wire1 -> wire1.bytes().write(bytes));
         }
+
 
         @Override
         public long index() {
@@ -262,6 +259,21 @@ public class Excerpts {
 
         @Override
         public boolean readDocument(@NotNull ReadMarshallable marshaller) throws IOException {
+            return readAtIndex(marshaller::readMarshallable);
+        }
+
+        @Override
+        public boolean readBytes(@NotNull Bytes using) throws IOException {
+            return readAtIndex(w -> using.write(w.bytes()));
+        }
+
+        @Override
+        public boolean readBytes(@NotNull ReadBytesMarshallable using) throws IOException {
+            return readAtIndex(w -> using.readMarshallable(w.bytes()));
+        }
+
+        private boolean readAtIndex(@NotNull Consumer<Wire> c) throws IOException {
+
             final long readPosition = wire.bytes().readPosition();
             final long readLimit = wire.bytes().readLimit();
             final long cycle = this.cycle;
@@ -275,7 +287,8 @@ public class Excerpts {
                 moveToIndex(firstIndex);
             }
 
-            final boolean success = read(marshaller);
+            final boolean success = readAtSubIndex(c);
+
             if (success) {
 
                 this.index = index(cycle, toSubIndex(index) + 1);
@@ -289,12 +302,9 @@ public class Excerpts {
             wire.bytes().readPosition(readPosition);
 
             return false;
-
         }
 
-
-        private boolean read(@NotNull ReadMarshallable reader) throws IOException {
-
+        private boolean readAtSubIndex(@NotNull Consumer<Wire> c) throws IOException {
 
             long roll;
             for (; ; ) {
@@ -309,7 +319,7 @@ public class Excerpts {
                             throw new IllegalStateException("document not present");
 
                         if (documentContext.isData()) {
-                            reader.readMarshallable(wire);
+                            c.accept(wire);
                             return true;
                         }
 
@@ -317,7 +327,6 @@ public class Excerpts {
                         // the next cycle (negative)
                         final StringBuilder sb = Wires.acquireStringBuilder();
 
-                        // todo improve this line
                         final ValueIn vi = wire.readEventName(sb);
                         if ("roll".contentEquals(sb)) {
                             roll = vi.int32();
@@ -337,12 +346,6 @@ public class Excerpts {
                     return false;
             }
 
-
-        }
-
-
-        public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
-            throw new UnsupportedOperationException("todo");
 
         }
 
