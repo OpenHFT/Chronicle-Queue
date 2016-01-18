@@ -25,9 +25,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +34,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
-import static net.openhft.chronicle.queue.ChronicleQueue.subIndex;
+import static net.openhft.chronicle.queue.ChronicleQueue.*;
 
 public class Excerpts {
 
@@ -105,16 +103,7 @@ public class Excerpts {
             this.writer = writer;
         }
 
-        public DelegatedAppender(
-                @NotNull ChronicleQueue queue,
-                @NotNull ExcerptAppender appender) throws IOException {
 
-            super(queue);
-
-            this.buffer = elasticByteBuffer();
-            this.wire = queue.wireType().apply(this.buffer);
-            this.writer = appender::writeBytes;
-        }
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
@@ -168,7 +157,7 @@ public class Excerpts {
             super(queue);
 
             final long lastIndex = super.queue.lastIndex();
-            this.cycle = (lastIndex == -1) ? queue.cycle() : ChronicleQueue.cycle(lastIndex);
+            this.cycle = (lastIndex == -1) ? queue.cycle() : toCycle(lastIndex);
 
             if (this.cycle < 0)
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
@@ -185,21 +174,26 @@ public class Excerpts {
 
         }
 
-        @Override
+
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            final long subindex = index = store().append(wire, writer);
-            return ChronicleQueue.index(cycle(), subindex);
+            final WireStore store = store();
+            long position = wire.bytes().writePosition();
+            wire.writeDocument(false, writer);
+            final long index = store.incrementLastIndex();
+            this.index = index;
+            store.storeIndexLocation(wire, position, index);
+            return ChronicleQueue.index(store.cycle(), index);
         }
 
-        @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            index = store().append(wire, marshallable);
-            return ChronicleQueue.index(cycle, index);
-        }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) throws IOException {
-            index = store().append(wire, bytes);
+            long position = wire.bytes().writePosition();
+            wire.writeDocument(false, wireOut -> wireOut.bytes().write(bytes));
+
+            final long index = store.incrementLastIndex();
+            store.storeIndexLocation(wire, position, index);
+
             return ChronicleQueue.index(cycle(), index);
         }
 
@@ -264,74 +258,94 @@ public class Excerpts {
             this.cycle = -1;
 
             toStart();
-
-
-            //  this.store = this.cycle > 0 ? queue.storeForCycle(this.cycle) : null;
-            //  this.index = this.cycle > 0 ? this.store.lastIndex() : -1;
-
-            //  ;
-
         }
 
         @Override
-        public boolean readDocument(@NotNull ReadMarshallable reader) throws IOException {
+        public boolean readDocument(@NotNull ReadMarshallable marshaller) throws IOException {
+            final long readPosition = wire.bytes().readPosition();
+            final long readLimit = wire.bytes().readLimit();
+            final long cycle = this.cycle;
+            final long index = this.index;
+
             if (this.store == null) {
-                final long index = queue.firstIndex();
+                final long firstIndex = queue.firstIndex();
                 if (index == -1) {
                     return false;
                 }
-                moveToIndex(index);
+                moveToIndex(firstIndex);
             }
 
-            long position = store.read(wire, reader);
-            if (position > 0) {
-                this.index++;
+            final boolean success = read(marshaller);
+            if (success) {
 
+                this.index = index(cycle, toSubIndex(index) + 1);
                 return true;
-            } else if (position < 0) {
-                // roll detected, move to next cycle;
-                cycle(Math.abs(position));
-                //context(store::acquireBytesAtReadPositionForRead);
-                wire.bytes().readPosition(0);
-                wire.bytes().readLimit(store.writePosition());
-
-                // try to read from new cycle
-                return readDocument(reader);
             }
+            // roll detected, move to next cycle;
+
+            //context(store::acquireBytesAtReadPositionForRead);
+            cycle(cycle);
+            wire.bytes().readLimit(readLimit);
+            wire.bytes().readPosition(readPosition);
 
             return false;
+
         }
 
-        @Override
-        public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
-            if (this.store == null) {
-                throw new IllegalStateException("store is NULL");
-                /*long lastCycle = this.toStart ? queue.firstCycle() : queue.lastCycle();
-                if (lastCycle == -1) {
-                    return false;
+
+        private boolean read(@NotNull ReadMarshallable reader) throws IOException {
+
+
+            long roll;
+            for (; ; ) {
+                roll = Long.MIN_VALUE;
+                wire.bytes().readLimit(wire.bytes().capacity());
+
+                while (wire.bytes().readLong(wire.bytes().readPosition()) != 0) {
+
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+
+                        if (!documentContext.isPresent())
+                            throw new IllegalStateException("document not present");
+
+                        if (documentContext.isData()) {
+                            reader.readMarshallable(wire);
+                            return true;
+                        }
+
+                        // In case of meta data, if we are found the "roll" meta, we returns
+                        // the next cycle (negative)
+                        final StringBuilder sb = Wires.acquireStringBuilder();
+
+                        // todo improve this line
+                        final ValueIn vi = wire.readEventName(sb);
+                        if ("roll".contentEquals(sb)) {
+                            roll = vi.int32();
+                            break;
+                        }
+
+                    }
+
                 }
 
-                //TODO: what should be done at the beginning ? toEnd/toStart
-                cycle(lastCycle);*/
-                //      context(store::acquireBytesAtReadPositionForRead);
+                if (roll == Long.MIN_VALUE)
+                    return false;
+
+                // roll to the next file
+                cycle(roll);
+                if (store == null)
+                    return false;
             }
 
-            long position = store.read(wire, marshallable);
-            if (position > 0) {
-                this.index++;
 
-                return true;
-            } else if (position < 0) {
-                // roll detected, move to next cycle;
-                cycle(Math.abs(position));
-                //  context(store::acquireBytesAtReadPositionForRead);
-
-                // try to read from new cycle
-                return readBytes(marshallable);
-            }
-
-            return false;
         }
+
+
+        public boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException {
+            throw new UnsupportedOperationException("todo");
+
+        }
+
 
         /**
          * @return provides an index that includes the cycle number
@@ -343,7 +357,7 @@ public class Excerpts {
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
             }
 
-            return ChronicleQueue.index(this.cycle, this.index);
+            return index(this.cycle, this.index);
         }
 
 
@@ -355,23 +369,32 @@ public class Excerpts {
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
             }
 
-            final long expectedCycle = ChronicleQueue.cycle(index);
+
+            final long expectedCycle = toCycle(index);
             if (expectedCycle != cycle)
                 // moves to the expected cycle
                 cycle(expectedCycle);
 
             cycle = expectedCycle;
 
-            final long subIndex = subIndex(index);
-            final long position = this.store.moveToIndex(wire, index);
+
+            final Bytes<?> bytes = wire.bytes();
+
+            final long subIndex = toSubIndex(index);
+            if (subIndex == -1) {
+                bytes.readPosition(0);
+                this.index = index(cycle, subIndex);
+                return true;
+            }
+
+            final long position = this.store.moveToIndex(wire, ChronicleQueue.toSubIndex(index));
 
             if (position == -1)
                 return false;
 
-            final Bytes<?> readContext = wire.bytes();
-            readContext.readPosition(position);
-            readContext.readLimit(readContext.capacity());
-            this.index = ChronicleQueue.index(cycle, subIndex - 1);
+            bytes.readPosition(position);
+            bytes.readLimit(bytes.capacity());
+            this.index = index(cycle, subIndex - 1);
             return true;
         }
 
@@ -381,11 +404,14 @@ public class Excerpts {
         public ExcerptTailer toStart() throws IOException {
 
             final long index = queue.firstIndex();
-            if (index == -1)
+            if (ChronicleQueue.toSubIndex(index) == -1) {
+                cycle(toCycle(index));
+                this.wire.bytes().readPosition(0);
                 return this;
+            }
 
-            LOG.info("index=> index=" + ChronicleQueue.subIndex(index) + ",cycle=" + ChronicleQueue
-                    .cycle(index));
+            LOG.info("index=> index=" + toSubIndex(index) + ",cycle=" +
+                    toCycle(index));
 
 
             if (!moveToIndex(index))
@@ -415,11 +441,11 @@ public class Excerpts {
                     this.queue.release(this.store);
                 }
                 this.cycle = cycle;
-                this.index = -1;
+                //  this.index = -1;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
 
                 wire = queue.wireType().apply(store.mappedBytes());
-                moveToIndex(ChronicleQueue.index(cycle, 0));
+                moveToIndex(index(cycle, -1));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
 

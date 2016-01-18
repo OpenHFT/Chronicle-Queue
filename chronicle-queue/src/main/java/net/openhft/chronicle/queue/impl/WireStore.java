@@ -17,14 +17,10 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,18 +53,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     long firstSubIndex();
 
-
-    boolean appendRollMeta(@NotNull Wire context, long cycle) throws IOException;
-
-    long append(@NotNull Wire wire, @NotNull WriteMarshallable marshallable) throws IOException;
-
-    long append(@NotNull Wire wire, @NotNull WriteBytesMarshallable marshallable) throws IOException;
-
-    long append(@NotNull Wire wire, @NotNull Bytes bytes) throws IOException;
-
-    long read(@NotNull Wire wire, @NotNull ReadMarshallable reader) throws IOException;
-
-    long read(@NotNull Wire v, @NotNull ReadBytesMarshallable reader) throws IOException;
+    boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException;
 
     long moveToIndex(@NotNull Wire wire, long index);
 
@@ -84,4 +69,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     MappedBytes mappedBytes();
 
+    long incrementLastIndex();
+
+    void storeIndexLocation(Wire wire, long position, long index);
 }

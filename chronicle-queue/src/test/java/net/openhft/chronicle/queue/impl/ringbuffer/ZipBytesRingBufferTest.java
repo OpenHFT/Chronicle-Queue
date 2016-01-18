@@ -30,7 +30,7 @@ import org.junit.Test;
 import java.io.File;
 import java.lang.reflect.Field;
 
-@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
+
 public class ZipBytesRingBufferTest {
 
     @Ignore

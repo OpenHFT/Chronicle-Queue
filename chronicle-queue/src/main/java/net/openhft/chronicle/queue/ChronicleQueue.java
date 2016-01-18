@@ -56,6 +56,8 @@ import java.io.IOException;
  */
 public interface ChronicleQueue extends Closeable {
 
+    long MINUS_1_40BIT = toSubIndex(-1);
+
     /**
      * @return A descriptive name for this queue which can be used for logging.
      */
@@ -121,11 +123,12 @@ public interface ChronicleQueue extends Closeable {
      */
     WireType wireType();
 
-    static long subIndex(long index) {
-        return index & 0xFFFFFFFFFFL;
+    static long toSubIndex(long index) {
+        final long l = index & 0xFFFFFFFFFFL;
+        return (l == MINUS_1_40BIT) ? -1 : l;
     }
 
-    static long cycle(long index) {
+    static long toCycle(long index) {
         int result = (int) (index >> 40L);
         if (result > (1 << 24))
             throw new IllegalStateException("cycle value is too large, it must fit into 24bits, " +

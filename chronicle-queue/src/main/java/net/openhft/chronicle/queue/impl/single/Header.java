@@ -136,7 +136,7 @@ public class Header implements Marshallable {
         h.init(Compression.NONE, WireType.TEXT);
         TextWire tw = new TextWire(NativeBytes.nativeBytes());
         tw.writeDocument(true, w -> w.write(() -> "header").marshallable(h));
-        System.out.println(tw.bytes().toString());
+
 
     }
 }

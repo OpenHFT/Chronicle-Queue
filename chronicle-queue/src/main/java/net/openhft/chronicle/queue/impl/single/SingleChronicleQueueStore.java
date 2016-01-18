@@ -15,10 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.IORuntimeException;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
-import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
@@ -36,7 +38,6 @@ import java.time.ZoneId;
 import java.util.function.Function;
 
 import static java.lang.ThreadLocal.withInitial;
-import static net.openhft.chronicle.queue.impl.WireConstants.SPB_DATA_HEADER_SIZE;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress0;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress1;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
@@ -57,11 +58,11 @@ public class SingleChronicleQueueStore implements WireStore {
 
     static {
         TEXT_TEMPLATE = WireType.TEXT.apply(Bytes.elasticByteBuffer());
-        TEXT_TEMPLATE.writeDocument(true, w -> w.write(() -> "index")
+        TEXT_TEMPLATE.writeDocument(true, w -> w.writeEventName(() -> "index")
                 .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
 
         BINARY_TEMPLATE = WireType.BINARY.apply(Bytes.elasticByteBuffer());
-        BINARY_TEMPLATE.writeDocument(true, w -> w.write(() -> "index")
+        BINARY_TEMPLATE.writeDocument(true, w -> w.writeEventName(() -> "index")
                 .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
     }
 
@@ -136,51 +137,14 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     @Override
-    public long append(@NotNull Wire wire, @NotNull final WriteMarshallable marshallable) throws IOException {
-        return write(wire, Wires.UNKNOWN_LENGTH, this::writeWireMarshallable, marshallable);
-    }
-
-    @Override
-    public long append(@NotNull Wire wire, @NotNull final WriteBytesMarshallable marshallable) throws IOException {
-        return write(wire, Wires.UNKNOWN_LENGTH, this::writeBytesMarshallable, marshallable);
-    }
-
-    @Override
-    public long append(@NotNull Wire wire, @NotNull final Bytes bytes) throws IOException {
-        return write(wire.bytes(), toIntU30(bytes.length()), this::writeBytes, bytes);
-    }
-
-    @Override
-    public long read(@NotNull Wire wire, @NotNull ReadMarshallable reader) throws IOException {
-        return read(wire, this::readWireMarshallable, reader);
-    }
-
-    private <T> long readWireMarshallable(Bytes mappedBytes, long l, T t) {
-        return 0;
-    }
-
-    @Override
-    public long read(@NotNull Wire wire, @NotNull ReadBytesMarshallable reader) throws IOException {
-        return read(wire, this::readBytesMarshallable, reader);
-    }
-
-    @Override
     public boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException {
-        if (roll.casNextRollCycle(cycle)) {
-            final WriteMarshallable marshallable = x -> x.write(MetaDataField.roll).int32(cycle);
+        if (!roll.casNextRollCycle(cycle))
+            return false;
 
-            final WireWriter<WriteMarshallable> wireWriter = (context, position, size, writer1) -> {
-                // todo improve this line
-                Wires.writeMeta(wire, writer1);
-                roll.nextCycleMetaPosition(position);
-                return WireConstants.NO_INDEX;
-            };
+        wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
+        bounds.setWritePosition(wire.bytes().writePosition());
+        return true;
 
-            write(wire, Wires.UNKNOWN_LENGTH, wireWriter, marshallable);
-            return true;
-        }
-
-        return false;
     }
 
 
@@ -247,6 +211,16 @@ public class SingleChronicleQueueStore implements WireStore {
         return mappedBytes;
     }
 
+    @Override
+    public long incrementLastIndex() {
+        return indexing.incrementLastIndex();
+    }
+
+    @Override
+    public void storeIndexLocation(Wire wire, long position, long subIndex) {
+        indexing.storeIndexLocation(wire, position, subIndex);
+    }
+
 
     // *************************************************************************
     // Utilities
@@ -271,220 +245,10 @@ public class SingleChronicleQueueStore implements WireStore {
     // Utilities :: Read
     // *************************************************************************
 
-    private long readWireMarshallable(
-            @NotNull MappedBytes context,
-            int len,
-            @NotNull ReadMarshallable marshaller) {
-
-        context.readSkip(SPB_DATA_HEADER_SIZE);
-        return readWire(wireType.apply(context), len, marshaller);
-    }
-
-    private long readBytesMarshallable(
-            @NotNull Bytes context,
-            int len,
-            @NotNull ReadBytesMarshallable marshaller) {
-
-        context.readSkip(SPB_DATA_HEADER_SIZE);
-        final long readp = context.readPosition();
-        final long readl = context.readLimit();
-
-        marshaller.readMarshallable(context);
-        context.readPosition(readp + len);
-        context.readLimit(readl);
-
-        return readp + len;
-    }
-
-    private <T> long read(
-            @NotNull Wire wire,
-            @NotNull Reader<T> reader,
-            @NotNull T marshaller) throws IOException {
-
-
-        final Bytes<?> context = wire.bytes();
-        while (wire.bytes().readLong(wire.bytes().readPosition()) != 0) {
-
-            final int spbHeader = context.readVolatileInt(context.readPosition());
-
-            if (Wires.isNotInitialized(spbHeader) || !Wires.isReady(spbHeader)) {
-                Thread.yield();
-                continue;
-            }
-
-            try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
-                if (!documentContext.isPresent())
-                    throw new IllegalStateException("document not present");
-
-                if (documentContext.isData()) {
-
-                    ((ReadMarshallable) marshaller).readMarshallable(wire);
-                    return wire.bytes().readPosition();
-                }
-
-                // In case of meta data, if we are found the "roll" meta, we returns
-                // the next cycle (negative)
-                final StringBuilder sb = Wires.acquireStringBuilder();
-
-                // todo improve this line
-                final ValueIn vi = wire.readEventName(sb);
-                if ("roll".contentEquals(sb)) {
-                    return -vi.int32();
-                }
-
-            }
-
-        }
-
-        return WireConstants.NO_DATA;
-    }
-
-    //TODO : maybe move to wire
-    @ForceInline
-    private long readWire(@NotNull WireIn wireIn, long size,
-                          @NotNull ReadMarshallable dataConsumer) {
-        final Bytes<?> bytes = wireIn.bytes();
-        final long limit0 = bytes.readLimit();
-        final long limit = bytes.readPosition() + size;
-        try {
-            bytes.readLimit(limit);
-            dataConsumer.readMarshallable(wireIn);
-        } finally {
-            bytes.readLimit(limit0);
-            bytes.readPosition(limit);
-        }
-
-        return bytes.readPosition();
-    }
-
-    private long writeWireMarshallable(
-            @NotNull Wire wire,
-            long position,
-            int size,
-            @NotNull final WriteMarshallable marshallable) throws IOException {
-
-        final long positionDataWritten = Wires.writeData(wire, marshallable);
-
-
-        // todo improve this line
-        bounds.setWritePositionIfGreater(wire.bytes().writePosition());
-
-        final long index = indexing.incrementLastIndex();
-        indexing.storeIndexLocation(wire.bytes(), positionDataWritten, index);
-        System.out.println
-                ("positionDataWritten=" + positionDataWritten + ",cycle=" + cycle() + ",index=" + index);
-        return index;
-    }
 
     // *************************************************************************
     // Utilities :: Write
     // *************************************************************************
-
-
-    private long writeBytesMarshallable(
-            @NotNull Wire wire,
-            long position,
-            int size,
-            @NotNull final WriteBytesMarshallable marshallable) throws IOException {
-
-        final Bytes<?> context = wire.bytes();
-        context.writeSkip(SPB_DATA_HEADER_SIZE);
-
-        marshallable.writeMarshallable(context);
-        context.compareAndSwapInt(
-                position,
-                Wires.NOT_READY,
-                toIntU30(context.writePosition() - position - SPB_DATA_HEADER_SIZE)
-        );
-
-        bounds.setWritePositionIfGreater(position);
-        final long index = indexing.incrementLastIndex();
-        indexing.storeIndexLocation(context, position, index);
-        return index;
-    }
-
-    private long writeBytes(
-            @NotNull Bytes context,
-            long position,
-            int size,
-            @NotNull final Bytes bytes) throws IOException {
-
-        context.writeSkip(4);
-        context.write(bytes);
-        context.compareAndSwapInt(position, size | Wires.NOT_READY, size);
-
-        final long index = indexing.incrementLastIndex();
-        indexing.storeIndexLocation(context, position, index);
-
-        return index;
-    }
-
-
-    <T> long write(
-            @NotNull Wire wire,
-            int size,
-            @NotNull WireWriter<T> wireWriter,
-            @NotNull T marshaller) throws IOException {
-
-        final long end = System.currentTimeMillis() + appendTimeout;
-        long position = writePosition();
-
-        final Bytes<?> context = wire.bytes();
-        for (; ; ) {
-
-            context.writeLimit(context.capacity());
-            context.writePosition(position);
-
-            if (context.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
-                return wireWriter.write(wire, position, size, marshaller);
-            } else {
-                int spbHeader = context.readInt(position);
-                if (Wires.isKnownLength(spbHeader)) {
-                    position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
-                } else {
-                    // TODO: wait strategy
-                    if (System.currentTimeMillis() > end) {
-                        throw new AssertionError("Timeout waiting to append");
-                    }
-
-                    Jvm.pause(1);
-                }
-            }
-        }
-    }
-
-
-    <T> long write(
-            @NotNull Bytes bytes,
-            int size,
-            @NotNull BytesWriter<T> writer,
-            @NotNull T marshaller) throws IOException {
-
-        final long end = System.currentTimeMillis() + appendTimeout;
-        long position = writePosition();
-
-        for (; ; ) {
-
-            bytes.writeLimit(bytes.capacity());
-            bytes.writePosition(position);
-
-            if (bytes.compareAndSwapInt(position, Wires.NOT_INITIALIZED, Wires.NOT_READY | size)) {
-                return writer.write(bytes, position, size, marshaller);
-            } else {
-                int spbHeader = bytes.readInt(position);
-                if (Wires.isKnownLength(spbHeader)) {
-                    position += Wires.lengthOf(spbHeader) + SPB_DATA_HEADER_SIZE;
-                } else {
-                    // TODO: wait strategy
-                    if (System.currentTimeMillis() > end) {
-                        throw new AssertionError("Timeout waiting to append");
-                    }
-
-                    Jvm.pause(1);
-                }
-            }
-        }
-    }
 
 
     @Override
@@ -499,8 +263,6 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-
-        //  System.out.println(Wires.fromSizePrefixedBlobs(wire.bytes()));
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         wire.read(MetaDataField.bounds).marshallable(this.bounds);
         wire.read(MetaDataField.roll).marshallable(this.roll);
@@ -674,7 +436,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     class Indexing implements Marshallable {
         private final WireType wireType;
-        private final MappedBytes indexContext;
+        //private final MappedBytes indexContext;
         private final Wire templateIndex;
         private int indexCount = 128 << 10;
         private int indexSpacing = 64;
@@ -698,7 +460,6 @@ public class SingleChronicleQueueStore implements WireStore {
             }
             this.wireType = wireType;
             this.longArray = withInitial(wireType.newLongArrayReference());
-            this.indexContext = mappedBytes;
         }
 
         @Override
@@ -735,6 +496,8 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         public long firstSubIndex() {
+            if (index2Index.getVolatileValue() == 0)
+                return -1;
             if (firstIndex == null)
                 return 0;
             return this.firstIndex.getVolatileValue();
@@ -747,10 +510,10 @@ public class SingleChronicleQueueStore implements WireStore {
          * the last index, in otherword it is not possible to access this except by calling index(),
          * it effectively invisible to the end-user
          *
-         * @param writeContext used to write and index if it does not exist
+         * @param bytes used to write and index if it does not exist
          * @return the position of the index
          */
-        long indexToIndex(@Nullable final Bytes writeContext) {
+        long indexToIndex(@Nullable final Bytes bytes) {
             for (; ; ) {
                 long index2Index = this.index2Index.getVolatileValue();
 
@@ -763,60 +526,71 @@ public class SingleChronicleQueueStore implements WireStore {
                 if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, NOT_READY))
                     continue;
 
-                if (writeContext == null)
+                if (bytes == null)
                     return -1;
 
-                final long index = newIndex(writeContext);
-                System.out.println("index2Index=" + index);
+                final long index = newIndex(bytes);
                 this.index2Index.setOrderedValue(index);
                 return index;
             }
         }
 
         /**
-         * records the the location of the index, only every 64th address is written to the index
-         * file, the first index is stored at {@code index2index}
+         * records the the location of the subIndex, only every 64th address is written to the
+         * subIndex file, the first subIndex is stored at {@code index2index}
          *
-         * @param context the context that we are referring to
-         * @param address the address of the Excerpts which we are going to record
-         * @param index   the index of the Excerpts which we are going to record
+         * @param wire     the context that we are referring to
+         * @param address  the address of the Excerpts which we are going to record
+         * @param subIndex the subIndex of the Excerpts which we are going to record
          */
-        public void storeIndexLocation(Bytes context,
+        public void storeIndexLocation(Wire wire,
                                        final long address,
-                                       final long index) throws IOException {
+                                       final long subIndex) {
+            long writePostion = wire.bytes().writePosition();
+            try {
+                final Bytes<?> bytes = wire.bytes();
 
-            if (index % 64 != 0)
-                return;
+                if (subIndex % 64 != 0)
+                    return;
 
-            final LongArrayValues array = this.longArray.get();
-            final long indexToIndex0 = indexToIndex(context);
+                final LongArrayValues array = this.longArray.get();
+                final long indexToIndex0 = indexToIndex(bytes);
 
-            final MappedBytes indexBytes = indexContext;
-            indexBytes.readLimit(indexBytes.capacity());
-            final Bytes bytes0 = indexBytes.readPosition(indexToIndex0);
-            final Wire w = wireType.apply(bytes0);
 
-            w.readDocument(d -> {
+                try (DocumentContext _ = wire.readingDocument(indexToIndex0)) {
 
-                final LongArrayValues primaryIndex = array(d, array);
-                final long primaryOffset = toAddress0(index);
-                long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
+                    if (!_.isPresent())
+                        throw new IllegalStateException("document not found");
 
-                if (secondaryAddress == Wires.NOT_INITIALIZED) {
-                    secondaryAddress = newIndex(context);
-                    primaryIndex.setValueAt(primaryOffset, secondaryAddress);
+                    if (!_.isMetaData())
+                        throw new IllegalStateException("subIndex not found");
+
+                    final LongArrayValues primaryIndex = array(wire, array);
+                    final long primaryOffset = toAddress0(subIndex);
+                    long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
+
+                    if (secondaryAddress == Wires.NOT_INITIALIZED) {
+                        secondaryAddress = newIndex(bytes);
+                        writePostion = Math.max(writePostion, wire.bytes().writePosition());
+                        primaryIndex.setValueAt(primaryOffset, secondaryAddress);
+                    }
+
+                    try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+
+                        final LongArrayValues array1 = array(wire, array);
+                        if (!context.isPresent())
+                            throw new IllegalStateException("document not found");
+
+                        if (!context.isMetaData())
+                            throw new IllegalStateException("subIndex not found");
+                        array1.setValueAt(toAddress1(subIndex), address);
+                    }
+
                 }
 
-                indexBytes.readLimit(indexBytes.capacity());
-                final Bytes bytes = indexBytes.readPosition(secondaryAddress);
-                final Wire wire1 = wireType.apply(bytes);
-                wire1.readDocument(document -> {
-                    final LongArrayValues array1 = array(document, array);
-                    array1.setValueAt(toAddress1(index), address);
-                }, null);
-
-            }, null);
-
+            } finally {
+                wire.bytes().writePosition(writePostion);
+            }
         }
 
         private LongArrayValues array(WireIn w, LongArrayValues using) {
@@ -824,6 +598,7 @@ public class SingleChronicleQueueStore implements WireStore {
             final ValueIn valueIn = w.readEventName(sb);
             if (!"index".contentEquals(sb))
                 throw new IllegalStateException("expecting index");
+
             valueIn.int64array(using, this, (o1, o2) -> {
             });
             return using;
@@ -836,40 +611,18 @@ public class SingleChronicleQueueStore implements WireStore {
          * index. The secondary index only records the address of every 64th except, the except are
          * linearly scanned from there on.
          *
-         * @param writeContext
+         * @param bytes
          * @return the address of the Excerpt containing the usable index, just after the header
          */
-        long newIndex(Bytes writeContext) {
+        long newIndex(Bytes bytes) {
 
             try {
-                final long start = writeContext.writePosition() + SPB_DATA_HEADER_SIZE;
-                final Bytes<?> bytes = templateIndex.bytes();
-                write(writeContext, toIntU30((long) bytes.length()) | Wires.META_DATA, this::writeIndexBytes, bytes);
-                return start;
+                final long position = bytes.writePosition();
+                bytes.write(templateIndex.bytes());
+                return position;
             } catch (Throwable e) {
                 throw Jvm.rethrow(e);
             }
-        }
-
-        private long writeIndexBytes(
-                @NotNull Bytes target,
-                long position,
-                int size,
-                @NotNull final Bytes sourceBytes) throws IOException {
-
-            target.writeSkip(4);
-            sourceBytes.writeLimit(size);
-            target.write(sourceBytes);
-            target.compareAndSwapInt(position, size | Wires.NOT_READY, size);
-
-            // we don't want to index the meta data
-            if (Wires.isData(sourceBytes.readLong(sourceBytes.readPosition()))) {
-                final long index = indexing.incrementLastIndex();
-                indexing.storeIndexLocation(target, position, index);
-                return index;
-            }
-
-            return -1;
         }
 
 
@@ -893,9 +646,11 @@ public class SingleChronicleQueueStore implements WireStore {
         public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
             final long indexToIndex0 = indexToIndex(wire.bytes());
-            System.out.println("indexToIndex=" + indexToIndex0);
+
+
             final Bytes<?> bytes = wire.bytes();
-            bytes.readLimit(indexContext.capacity()).readPosition(indexToIndex0);
+            final long readPostion = wire.bytes().readPosition();
+            bytes.readLimit(wire.bytes().capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
             //   final long limit = wire.bytes().readLimit();
             try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
@@ -916,8 +671,6 @@ public class SingleChronicleQueueStore implements WireStore {
                     if (secondaryAddress == 0) {
                         startIndex -= (1 << 23L);
                         primaryOffset--;
-                        System.out.println("SECONDARY INDEX NOT FOUND ! - its going to be a long " +
-                                "linuar scan !");
                         continue;
                     }
 
@@ -943,7 +696,6 @@ public class SingleChronicleQueueStore implements WireStore {
                             if (fromAddress == 0) {
                                 secondaryOffset--;
                                 startIndex -= 64;
-                                System.out.println("SECONDARY INDEX NOT FOUND !");
                                 continue;
                             }
 
@@ -963,6 +715,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 } while (primaryOffset >= 0);
             }
 
+            wire.bytes().readPosition(readPostion);
             return -1;
 
         }
@@ -981,18 +734,19 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return > -1, if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
-        private long linearScan(Wire context, long toIndex, long fromKnownIndex, long knownAddress) {
+        private long linearScan(Wire context, long toIndex, long fromKnownIndex,
+                                long knownAddress) {
 
             final Bytes<?> bytes = context.bytes();
 
             final long p = bytes.readPosition();
             final long l = bytes.readLimit();
-
+            bytes.readLimit(bytes.capacity());
             bytes.readPosition(knownAddress);
 
             for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
 
-                // wait until ready - todo add timeout
+                // ait until ready - todo add timeout
                 for (; ; ) {
                     if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
 

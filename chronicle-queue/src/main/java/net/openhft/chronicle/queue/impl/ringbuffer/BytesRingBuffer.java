@@ -372,7 +372,7 @@ public class BytesRingBuffer {
 
         private long writeLong(long offset, @NotNull Bytes bytes0) {
 
-            //  System.out.println("offset=" + offset + ",bytes=" + bytes0);
+
             long result = offset + bytes0.readRemaining();
             offset %= capacity();
 

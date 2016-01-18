@@ -35,7 +35,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author Rob Austin.
  */
-//@Ignore("Waiting to use the fixed Bytes.bytes() as a slice")
+
 public class BytesRingBufferTest {
 
     private final String EXPECTED = "hello world";
