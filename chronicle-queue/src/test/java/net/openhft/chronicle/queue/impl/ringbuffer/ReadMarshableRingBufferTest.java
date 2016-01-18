@@ -58,7 +58,7 @@ public class ReadMarshableRingBufferTest {
                     bytesRingBuffer.offer(data);
 
                     final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
-                    bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
+                    bytesRingBuffer.read(b -> q.add(b.readUTFΔ()));
 
                     Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
                 }
@@ -79,7 +79,7 @@ public class ReadMarshableRingBufferTest {
                 bytesRingBuffer.offer(data());
 
                 final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
-                bytesRingBuffer.apply(b -> q.add(b.readUTFΔ()));
+                bytesRingBuffer.read(b -> q.add(b.readUTFΔ()));
 
                 Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
             }

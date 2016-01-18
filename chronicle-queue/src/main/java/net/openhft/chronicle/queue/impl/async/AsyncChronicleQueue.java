@@ -89,7 +89,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     private boolean handleEvent() throws InvalidEventHandlerException {
         try {
-            return buffer.apply(this::append) > 0;
+            return buffer.read(this::append) > 0;
         } catch(InterruptedException e) {
             //TODO: what to do
             LOGGER.warn("", e);

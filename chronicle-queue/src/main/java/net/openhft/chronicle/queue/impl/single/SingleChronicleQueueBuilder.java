@@ -19,6 +19,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.threads.EventGroup;
+import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,6 +38,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private long epoch; // default is 1970-01-01 UTC
     private boolean isBuffered;
     private Consumer<Throwable> onThrowable;
+    private EventLoop eventGroup;
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
@@ -102,6 +105,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @NotNull
     public ChronicleQueue build() throws IOException {
+        if (isBuffered && eventGroup == null)
+            eventGroup = new EventGroup(true);
         return new SingleChronicleQueue(this.clone());
     }
 
@@ -177,5 +182,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      */
     public boolean buffered() {
         return this.isBuffered;
+    }
+
+    public EventLoop eventGroup() {
+        return eventGroup;
     }
 }

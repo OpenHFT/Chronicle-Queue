@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -23,30 +24,29 @@ public class BufferAppender implements ExcerptAppender {
     private final BytesRingBuffer ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity
             (1 << 20));
     private final ExcerptAppender underlyingAppender;
-
-
     private final Wire wire;
 
     public BufferAppender(@NotNull final EventLoop eventLoop,
                           @NotNull final ExcerptAppender underlyingAppender) {
 
+        final ReadBytesMarshallable readBytesMarshallable = bytes -> {
+            try {
+                underlyingAppender.writeBytes(bytes);
+            } catch (IOException e) {
+                throw Jvm.rethrow(e);
+            }
+        };
+
         eventLoop.addHandler(() -> {
                     try {
-                        long size = ringBuffer.apply(bytes -> {
-                            try {
-                                underlyingAppender.writeBytes(bytes);
-                            } catch (IOException e) {
-                                throw Jvm.rethrow(e);
-                            }
-                        });
-
+                        long size = ringBuffer.read(readBytesMarshallable);
                         return size > 0;
-
                     } catch (InterruptedException e) {
                         throw Jvm.rethrow(e);
                     }
                 }
         );
+
         eventLoop.start();
         this.underlyingAppender = underlyingAppender;
         this.wire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
@@ -86,7 +86,7 @@ public class BufferAppender implements ExcerptAppender {
 
     @Override
     public long cycle() {
-        throw new UnsupportedOperationException("");
+        return underlyingAppender.cycle();
     }
 
     @Override
@@ -101,8 +101,6 @@ public class BufferAppender implements ExcerptAppender {
 
     @Override
     public void prefetch() {
-        throw new UnsupportedOperationException("");
     }
-
 
 }

@@ -37,16 +37,14 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to tmpfs
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.8  4.7 / 14  31 / 1,080 - 27,790
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 2.0 / 3.1  4.7 / 14  967 / 9,180 - 18,350
- * <p>
- * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to ext4 on Samsung 840 SSD
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.2  4.7 / 28  36 / 160 - 29,880
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 2.1 / 2.5  5.8 / 113  160 / 1,670 - 20,450
- * <p>
- * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst
- * was 1.5 / 27  104 / 3,740 8,000 / 13,890 - 36,700
+ * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to tmpfs write: 50/90
+ * 99/99.9 99.99/99.999 - worst was 1.6 / 2.8  4.7 / 14  31 / 1,080 - 27,790 write-read: 50/90
+ * 99/99.9 99.99/99.999 - worst was 2.0 / 3.1  4.7 / 14  967 / 9,180 - 18,350 <p> Result on
+ * 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to ext4 on Samsung 840 SSD
+ * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.2  4.7 / 28  36 / 160 - 29,880 write-read:
+ * 50/90 99/99.9 99.99/99.999 - worst was 2.1 / 2.5  5.8 / 113  160 / 1,670 - 20,450 <p> Results
+ * 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740 8,000 /
+ * 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
@@ -70,6 +68,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .buffered(true)
                 .build();
 
         ExcerptAppender appender = wqueue.createAppender();

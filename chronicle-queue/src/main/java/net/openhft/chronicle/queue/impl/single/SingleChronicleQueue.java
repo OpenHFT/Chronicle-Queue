@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -61,7 +60,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         storeForCycle(cycle(), builder.epoch());
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
-        eventloop = new EventGroup(true);
+        eventloop = builder.eventGroup();
     }
 
     @Override

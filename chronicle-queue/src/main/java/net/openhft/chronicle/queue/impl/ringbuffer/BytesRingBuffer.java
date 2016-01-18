@@ -173,7 +173,7 @@ public class BytesRingBuffer {
      * @throws InterruptedException
      * @throws IllegalStateException
      */
-    public long apply(@NotNull ReadBytesMarshallable readBytesMarshallable) throws
+    public long read(@NotNull ReadBytesMarshallable readBytesMarshallable) throws
             InterruptedException {
 
         long writeLoc = writeLocation();

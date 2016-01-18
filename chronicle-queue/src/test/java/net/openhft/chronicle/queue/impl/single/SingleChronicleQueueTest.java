@@ -574,14 +574,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .build();
 
             final ExcerptAppender bufferedAppender = chronicle.createAppender();
-
             final ExcerptAppender underlying = bufferedAppender.underlying();
-
 
             // create 100 documents
             for (int i = 0; i < 5; i++) {
                 final int j = i;
-                long index = bufferedAppender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                bufferedAppender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
             // allow time for the ring buffer to populate the underlying

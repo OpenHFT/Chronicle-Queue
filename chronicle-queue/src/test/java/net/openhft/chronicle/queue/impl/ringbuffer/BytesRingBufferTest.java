@@ -135,7 +135,7 @@ public class BytesRingBufferTest {
 
                 for (; !shutdown.get(); ) {
                     try {
-                        if (bytesRingBuffer.apply(b -> q.offer(b.readUTFΔ())) == 0)
+                        if (bytesRingBuffer.read(b -> q.offer(b.readUTFΔ())) == 0)
                             Thread.sleep(1);
 
                     } catch (Throwable e) {
@@ -192,7 +192,7 @@ public class BytesRingBufferTest {
 
                 for (; !shutdown.get(); ) {
                     try {
-                        if (bytesRingBuffer.apply(b -> q.offer(b.readUTFΔ())) == 0)
+                        if (bytesRingBuffer.read(b -> q.offer(b.readUTFΔ())) == 0)
                             Thread.sleep(2);
 
                     } catch (Throwable e) {
