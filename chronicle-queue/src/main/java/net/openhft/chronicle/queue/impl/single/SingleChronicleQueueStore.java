@@ -217,10 +217,6 @@ public class SingleChronicleQueueStore implements WireStore {
         return mappedBytes;
     }
 
-    @Override
-    public long incrementLastIndex() {
-        return indexing.incrementLastIndex();
-    }
 
     @Override
     public void storeIndexLocation(Wire wire, long position, long subIndex) {
@@ -487,12 +483,9 @@ public class SingleChronicleQueueStore implements WireStore {
                     .read(IndexingFields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
         }
 
-        public long incrementLastIndex() {
-            if (lastIndex == null)
-                return 0;
-            final long lastIndex = this.lastIndex.addAtomicValue(1);
-            firstIndex.compareAndSwapValue(-1L, lastIndex);
-            return lastIndex;
+        public boolean setLastSubIndexIfGreater(long lastIndex) {
+            final long v = this.lastIndex.getVolatileValue();
+            return v < lastIndex && this.lastIndex.compareAndSwapValue(v, lastIndex);
         }
 
         public long lastSubIndex() {
@@ -552,6 +545,9 @@ public class SingleChronicleQueueStore implements WireStore {
         public void storeIndexLocation(Wire wire,
                                        final long address,
                                        final long subIndex) {
+
+            setLastSubIndexIfGreater(subIndex);
+
             long writePostion = wire.bytes().writePosition();
             try {
                 final Bytes<?> bytes = wire.bytes();

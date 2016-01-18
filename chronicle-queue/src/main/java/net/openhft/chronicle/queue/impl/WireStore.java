@@ -69,7 +69,6 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     MappedBytes mappedBytes();
 
-    long incrementLastIndex();
 
     void storeIndexLocation(Wire wire, long position, long index);
 }

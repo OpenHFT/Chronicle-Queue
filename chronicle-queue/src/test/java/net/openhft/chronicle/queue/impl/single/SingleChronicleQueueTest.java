@@ -79,7 +79,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build();
 
-
         final ExcerptAppender appender = queue.createAppender();
         final long cycle = appender.cycle();
         for (int i = 0; i < 10; i++) {
@@ -192,7 +191,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .epoch(1452701442361L)
                 .build();
 
-
         final ExcerptAppender appender = queue.createAppender();
         for (int i = 0; i < 10; i++) {
             final int n = i;
@@ -289,11 +287,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptAppender appender = chronicle.createAppender();
             appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
             appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
-
             final ExcerptTailer tailer = chronicle.createTailer();
-
             Bytes bytes = Bytes.elasticByteBuffer();
-
             tailer.readBytes(bytes);
             bytes.append(" ");
             tailer.readBytes(bytes);

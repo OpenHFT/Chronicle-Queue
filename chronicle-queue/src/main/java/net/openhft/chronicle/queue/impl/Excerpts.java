@@ -182,14 +182,9 @@ public class Excerpts {
 
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final WireStore store = store();
-
-            // long position = wire.bytes().writePosition();
-            //  wire.writeDocument(false, writer);
-
-            long position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
-
-            final long index = store.incrementLastIndex();
-            this.index = index;
+            this.index++;
+            long position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer,
+                    () -> this.index++);
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }
@@ -203,7 +198,6 @@ public class Excerpts {
         public long writeBytes(@NotNull Bytes bytes) throws IOException {
             return writeDocument(wire1 -> wire1.bytes().write(bytes));
         }
-
 
         @Override
         public long index() {
@@ -316,13 +310,11 @@ public class Excerpts {
                 this.index = ChronicleQueue.index(cycle, toSubIndex(index) + 1);
                 return true;
             }
-            // roll detected, move to next cycle;
 
-            //context(store::acquireBytesAtReadPositionForRead);
+            // roll detected, move to next cycle;
             cycle(cycle);
             wire.bytes().readLimit(readLimit);
             wire.bytes().readPosition(readPosition);
-
             return false;
         }
 
@@ -377,9 +369,8 @@ public class Excerpts {
         @Override
         public long index() {
 
-            if (this.store == null) {
+            if (this.store == null)
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
-            }
 
             return ChronicleQueue.index(this.cycle, this.index);
         }
@@ -400,7 +391,6 @@ public class Excerpts {
                 cycle(expectedCycle);
 
             cycle = expectedCycle;
-
 
             final Bytes<?> bytes = wire.bytes();
 
