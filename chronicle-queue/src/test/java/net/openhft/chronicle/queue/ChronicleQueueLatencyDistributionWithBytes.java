@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -55,7 +54,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
     private static final long INTERVAL_US = 20;
     public static final int BLOCK_SIZE = 16 << 20;
 
-    @Ignore("long running")
+    //   @Ignore("long running")
     @Test
     public void test() throws Exception {
         Histogram histogram = new Histogram();

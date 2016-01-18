@@ -63,10 +63,6 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-        //   @Override
-        ///    public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-        //       throw new UnsupportedOperationException();
-        //   }
 
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
@@ -182,9 +178,14 @@ public class Excerpts {
 
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final WireStore store = store();
-            this.index++;
-            long position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer,
-                    () -> this.index++);
+
+            long position;
+
+            do {
+                this.index++;
+                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
+            } while (position == -1);
+
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }
