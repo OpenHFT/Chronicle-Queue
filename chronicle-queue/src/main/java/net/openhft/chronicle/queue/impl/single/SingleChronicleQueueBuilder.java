@@ -32,10 +32,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     private RollCycle rollCycle;
 
-    private int appendTimeout;
     private long epoch; // default is 1970-01-01 UTC
 
-    public SingleChronicleQueueBuilder(String path) {
+    public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
@@ -43,7 +42,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
-        this.appendTimeout = 10_000; // 10 seconds;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
     }
@@ -70,26 +68,16 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.wireType;
     }
 
-    public SingleChronicleQueueBuilder appendTimeout(int appendTimeout) {
-        this.appendTimeout = appendTimeout;
-        return this;
-    }
-
-    public int appendTimeout() {
-        return this.appendTimeout;
-    }
-
-    public SingleChronicleQueueBuilder rollCycle(RollCycle rollCycle) {
+    public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         this.rollCycle = rollCycle;
         return this;
     }
-
 
     /**
      * sets epoch offset in milliseconds
      *
      * @param epoch sets an epoch offset as the number of number of milliseconds since January 1,
-     *             1970,  00:00:00 GMT
+     *              1970,  00:00:00 GMT
      * @return {@code this}
      */
     public SingleChronicleQueueBuilder epoch(long epoch) {
@@ -97,6 +85,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    /**
+     * @return poch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
+     * GMT
+     */
     public long epoch() {
         return epoch;
     }

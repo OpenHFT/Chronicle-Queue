@@ -182,7 +182,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-    //@Ignore("rob to fix")
     @Test
     public void testAppendAndReadWithRolling2() throws IOException, InterruptedException {
         final File dir = getTmpDir();

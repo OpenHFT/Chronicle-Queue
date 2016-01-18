@@ -32,7 +32,7 @@ import java.io.IOException;
  */
 public class Queue30 extends ChronicleQueueTestBase  {
 
-
+    @Ignore
     @Test
     public void testMT() throws Exception {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())

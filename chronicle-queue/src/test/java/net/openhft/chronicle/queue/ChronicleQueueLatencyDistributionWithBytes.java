@@ -29,7 +29,6 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 8,000 / 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
-    @Ignore("long running")
+    //   @Ignore("long running")
     @Test
     public void test() throws Exception {
         Histogram histogram = new Histogram();

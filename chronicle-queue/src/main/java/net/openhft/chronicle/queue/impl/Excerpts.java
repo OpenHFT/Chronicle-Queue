@@ -176,8 +176,12 @@ public class Excerpts {
 
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final WireStore store = store();
-            long position = wire.bytes().writePosition();
-            wire.writeDocument(false, writer);
+
+            // long position = wire.bytes().writePosition();
+            //  wire.writeDocument(false, writer);
+
+            long position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
+
             final long index = store.incrementLastIndex();
             this.index = index;
             store.storeIndexLocation(wire, position, index);
