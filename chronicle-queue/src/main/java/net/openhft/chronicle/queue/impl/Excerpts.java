@@ -317,7 +317,7 @@ public class Excerpts {
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
 
                         if (!documentContext.isPresent())
-                            throw new IllegalStateException("document not present");
+                            return false;
 
                         if (documentContext.isData()) {
                             c.accept(wire);
