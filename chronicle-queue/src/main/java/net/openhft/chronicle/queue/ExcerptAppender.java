@@ -30,21 +30,21 @@ import java.io.IOException;
 public interface ExcerptAppender extends ExcerptCommon {
     /**
      * @param writer to write to excerpt.
-     * @return the index last written.
+     * @return the index last written or -1 if a buffered appender is being used
      * @throws IOException
      */
     long writeDocument(@NotNull WriteMarshallable writer) throws IOException;
 
     /**
      * @param marshallable to write to excerpt.
-     * @return the index last written.
+     * @return the index last written or -1 if a buffered appender is being used
      * @throws IOException
      */
     long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException;
 
     /**
      * @param bytes to write to excerpt.
-     * @return the index last written.
+     * @return the index last written -1 if a buffered appender is being used
      * @throws IOException
      */
     long writeBytes(@NotNull Bytes<?> bytes) throws IOException;
@@ -59,4 +59,7 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @return the cycle this appender is on
      */
     long cycle();
+
+    ExcerptAppender underlying();
+
 }

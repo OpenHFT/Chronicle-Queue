@@ -134,12 +134,17 @@ public class Excerpts {
 
         @Override
         public long cycle() {
-            throw new UnsupportedOperationException("todo");
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ExcerptAppender underlying() {
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public void prefetch() {
-            throw new UnsupportedOperationException("todo");
+            throw new UnsupportedOperationException();
 
         }
     }
@@ -212,6 +217,11 @@ public class Excerpts {
         @Override
         public long cycle() {
             return this.store.cycle();
+        }
+
+        @Override
+        public ExcerptAppender underlying() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

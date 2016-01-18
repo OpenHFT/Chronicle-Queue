@@ -168,8 +168,8 @@ public class BytesRingBuffer {
      * they similar to net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer#take(net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer.BytesProvider)
      *
      * @param readBytesMarshallable used to read the bytes
-     * @return the number of bytes read, if ZERO its likely the read was blocked so you should call
-     * this method again
+     * @return the number of bytes read, if ZERO the read was blocked so you should call this method
+     * again if you want to read some data.
      * @throws InterruptedException
      * @throws IllegalStateException
      */

@@ -24,6 +24,8 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.threads.EventGroup;
+import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -46,7 +48,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollCycle cycle;
     private final RollDateCache dateCache;
     private final WireStorePool pool;
+    private final boolean bufferedAppends;
     private long epoch;
+    private EventLoop eventloop;
 
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
@@ -56,6 +60,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         this.pool = WireStorePool.withSupplier(this::acquireStore);
         storeForCycle(cycle(), builder.epoch());
         epoch = builder.epoch();
+        bufferedAppends = builder.buffered();
+        eventloop = new EventGroup(true);
     }
 
     @Override
@@ -66,7 +72,14 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return new Excerpts.StoreAppender(this);
+        final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
+
+        if (bufferedAppends)
+            return new BufferAppender(eventloop, storeAppender);
+        else {
+
+            return storeAppender;
+        }
     }
 
 

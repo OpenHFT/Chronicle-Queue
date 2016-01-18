@@ -28,12 +28,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.ChronicleQueue.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
+
+    public static final long TIMES = (4L << 20L);
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -342,6 +345,57 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testReadAtIndex4MB() throws Exception {
+
+        final File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+
+        try {
+
+            final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                    .wireType(this.wireType)
+                    .build();
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            long lastIndex = -1;
+            System.out.print("Percent written=");
+            long writtenPercent = 0;
+            // create 100 documents
+            for (long i = 0; i < TIMES; i++) {
+                final long j = i;
+                final long index = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                lastIndex = index;
+
+                if (i % (TIMES / 20) == 0) {
+                    System.out.println("" + (i * 100 / TIMES) + "%, ");
+                }
+            }
+
+
+            final long cycle = toCycle(lastIndex);
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            //   QueueDumpMain.dump(file, new PrintWriter(System.out));
+
+            StringBuilder sb = new StringBuilder();
+
+            for (long i = 0; i < (4L << 20L); i++) {
+                tailer.moveToIndex(index(cycle, i));
+                tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+                Assert.assertEquals("value=" + i, sb.toString());
+                if (i % (TIMES / 20) == 0) {
+                    System.out.println("Percent read= " + (i * 100 / TIMES) + "%");
+                }
+            }
+
+        } finally {
+            file.delete();
+        }
+    }
+
     @Test
     public void testLastWrittenIndexPerAppender() throws Exception {
 
@@ -499,6 +553,57 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
             Assert.assertEquals("value=4", sb.toString());
+        } finally {
+            file.delete();
+        }
+    }
+
+
+    @Test
+    public void testAppendWithRingBuffer() throws Throwable {
+        AtomicReference<Throwable> ref = new AtomicReference<>();
+        File file = File.createTempFile("chronicle.", "q");
+        file.deleteOnExit();
+        try {
+
+            final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                    .wireType(this.wireType)
+                    .rollCycle(RollCycles.HOURS)
+                    .buffered(true)
+                    .onThrowable(t -> ref.compareAndSet(null, t))
+                    .build();
+
+            final ExcerptAppender bufferedAppender = chronicle.createAppender();
+
+            final ExcerptAppender underlying = bufferedAppender.underlying();
+
+
+            // create 100 documents
+            for (int i = 0; i < 5; i++) {
+                final int j = i;
+                long index = bufferedAppender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+            }
+
+            // allow time for the ring buffer to populate the underlying
+            Thread.sleep(100);
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+            tailer.moveToIndex(index(underlying.cycle(), 2));
+
+            StringBuilder sb = new StringBuilder();
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            Assert.assertEquals("value=2", sb.toString());
+
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            Assert.assertEquals("value=3", sb.toString());
+
+            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
+            Assert.assertEquals("value=4", sb.toString());
+
+            final Throwable throwable = ref.get();
+            if (throwable != null)
+                throw throwable;
+
         } finally {
             file.delete();
         }

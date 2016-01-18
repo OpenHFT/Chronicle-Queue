@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private File path;
@@ -33,6 +34,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private RollCycle rollCycle;
 
     private long epoch; // default is 1970-01-01 UTC
+    private boolean isBuffered;
+    private Consumer<Throwable> onThrowable;
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
@@ -142,5 +145,37 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public static SingleChronicleQueueBuilder raw(String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
+    }
+
+    /**
+     * use this to trap exceptions  that came from the other threads
+     *
+     * @param onThrowable your exception handler
+     * @return this
+     */
+    public SingleChronicleQueueBuilder onThrowable(Consumer<Throwable> onThrowable) {
+        this.onThrowable = onThrowable;
+        return this;
+    }
+
+
+    /**
+     * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
+     * Chronicle Queue using a background thread
+     *
+     * @param isBuffered {@code true} if the append is buffered
+     * @return this
+     */
+    public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
+        this.isBuffered = isBuffered;
+        return this;
+    }
+
+    /**
+     * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
+     * Chronicle Queue using a background thread
+     */
+    public boolean buffered() {
+        return this.isBuffered;
     }
 }
