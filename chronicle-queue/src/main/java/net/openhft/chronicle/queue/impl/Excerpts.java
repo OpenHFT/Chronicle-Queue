@@ -35,7 +35,8 @@ import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
-import static net.openhft.chronicle.queue.ChronicleQueue.*;
+import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
+import static net.openhft.chronicle.queue.ChronicleQueue.toSubIndex;
 
 public class Excerpts {
 
@@ -291,7 +292,7 @@ public class Excerpts {
 
             if (success) {
 
-                this.index = index(cycle, toSubIndex(index) + 1);
+                this.index = ChronicleQueue.index(cycle, toSubIndex(index) + 1);
                 return true;
             }
             // roll detected, move to next cycle;
@@ -349,18 +350,17 @@ public class Excerpts {
 
         }
 
-
         /**
          * @return provides an index that includes the cycle number
          */
         @Override
-        public long moveToIndex() {
-            //TODO: should we raise an exception ?
+        public long index() {
+
             if (this.store == null) {
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
             }
 
-            return index(this.cycle, this.index);
+            return ChronicleQueue.index(this.cycle, this.index);
         }
 
 
@@ -386,7 +386,7 @@ public class Excerpts {
             final long subIndex = toSubIndex(index);
             if (subIndex == -1) {
                 bytes.readPosition(0);
-                this.index = index(cycle, subIndex);
+                this.index = ChronicleQueue.index(cycle, subIndex);
                 return true;
             }
 
@@ -397,7 +397,7 @@ public class Excerpts {
 
             bytes.readPosition(position);
             bytes.readLimit(bytes.capacity());
-            this.index = index(cycle, subIndex - 1);
+            this.index = ChronicleQueue.index(cycle, subIndex - 1);
             return true;
         }
 
@@ -448,7 +448,7 @@ public class Excerpts {
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
 
                 wire = queue.wireType().apply(store.mappedBytes());
-                moveToIndex(index(cycle, -1));
+                moveToIndex(ChronicleQueue.index(cycle, -1));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
 

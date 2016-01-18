@@ -95,7 +95,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 10; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-            assertEquals(n, toSubIndex(tailer.moveToIndex()));
+            assertEquals(n, toSubIndex(tailer.index()));
         }
 
         // Random read
@@ -103,7 +103,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final int n = i;
             assertTrue(tailer.moveToIndex(index(cycle, n)));
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-            assertEquals(n, toSubIndex(tailer.moveToIndex()));
+            assertEquals(n, toSubIndex(tailer.index()));
         }
     }
 
@@ -240,7 +240,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, toSubIndex(r.read(TestKey.test)
                     .int32()))));
-            assertEquals(n, toSubIndex(tailer.moveToIndex()));
+            assertEquals(n, toSubIndex(tailer.index()));
         }
     }
 
