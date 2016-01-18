@@ -17,12 +17,8 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.wire.ReadMarshallable;
-import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireType;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -210,18 +206,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 10; i++) {
             final int n = i;
             try {
-                final boolean condition = tailer.readDocument(new ReadMarshallable() {
-                    @Override
-                    public void readMarshallable(@NotNull WireIn r) throws IORuntimeException {
-                        assertEquals(n, r.read(TestKey.test).int32());
-                        System.out.println("**** read=" + n);
-                    }
-                });
+                final boolean condition = tailer.readDocument(
+                        r -> assertEquals(n, r.read(TestKey.test).int32()));
                 assertTrue(condition);
             } catch (IllegalStateException e) {
-                System.out.println("");
+                e.printStackTrace();
             }
-
 
         }
     }
