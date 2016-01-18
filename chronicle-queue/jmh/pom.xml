@@ -29,17 +29,16 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 THE POSSIBILITY OF SUCH DAMAGE.
 -->
 
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.sample</groupId>
-    <artifactId>chronicle-network-jmh</artifactId>
+    <artifactId>chronicle-queue-jmh</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>JMH Chronicle Network</name>
+    <name>JMH Chronicle Queue</name>
 
     <!--
        This is the demo/sample template build script for building Java benchmarks with JMH.
@@ -67,6 +66,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -85,7 +85,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-network</artifactId>
+            <artifactId>chronicle-queue</artifactId>
         </dependency>
 
         <dependency>
