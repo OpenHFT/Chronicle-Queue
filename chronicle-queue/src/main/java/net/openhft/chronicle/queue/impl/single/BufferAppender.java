@@ -46,8 +46,8 @@ public class BufferAppender implements ExcerptAppender {
         };
 
         eventLoop.addHandler(() -> {
-                        long size = ringBuffer.read(readBytesMarshallable);
-                        return size > 0;
+            long size = ringBuffer.read(readBytesMarshallable);
+            return size > 0;
                 }
         );
 
@@ -103,7 +103,11 @@ public class BufferAppender implements ExcerptAppender {
     @Override
     public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
         try {
-            ringBuffer.offer(bytes);
+
+            while (!ringBuffer.offer(bytes)) {
+                Thread.yield();
+            }
+
             eventLoop.unpause();
         } catch (InterruptedException e) {
             throw Jvm.rethrow(e);
