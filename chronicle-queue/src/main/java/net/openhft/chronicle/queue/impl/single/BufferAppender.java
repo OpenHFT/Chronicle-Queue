@@ -103,11 +103,8 @@ public class BufferAppender implements ExcerptAppender {
     @Override
     public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
         try {
-
-            while (!ringBuffer.offer(bytes)) {
+            while (!ringBuffer.offer(bytes))
                 Thread.yield();
-            }
-
             eventLoop.unpause();
         } catch (InterruptedException e) {
             throw Jvm.rethrow(e);

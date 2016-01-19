@@ -40,7 +40,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private Consumer<Throwable> onThrowable = Throwable::printStackTrace;
     private EventLoop eventGroup;
 
-    private long ringBufferSize = 256 << 10;
+    private long ringBufferSize = 2 << 20;
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
