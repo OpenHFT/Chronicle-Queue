@@ -48,7 +48,7 @@ public class BytesRingBuffer {
     private final Header header;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
-        capacity = byteStore.writeLimit() - Header.size();
+        capacity = byteStore.realCapacity() - Header.size();
 
         if (byteStore.writeRemaining() <= Header.size()) {
             throw new IllegalStateException("The byteStore is too small, the minimum recommended " +

@@ -19,7 +19,9 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.core.util.Histogram;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +33,7 @@ import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.BytesStore.wrap;
 import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rob Austin.
@@ -232,6 +235,26 @@ public class BytesRingBufferTest {
             executorService.shutdownNow();
             executorService.awaitTermination(1, TimeUnit.SECONDS);
 
+        }
+    }
+
+    @Test
+    public void perfTest() throws InterruptedException {
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
+        Bytes bytes = NativeBytes.nativeBytes(64).unchecked(true);
+        for (int t = 0; t < 5; t++) {
+            Histogram hist = new Histogram();
+            for (int j = 0; j < 10_000_000; j += 20_000) {
+                for (int i = 0; i < 20_000; i++) {
+                    bytes.readPosition(0);
+                    bytes.readLimit(bytes.realCapacity());
+                    long start = System.nanoTime();
+                    assertTrue(brb.offer(bytes));
+                    hist.sample(System.nanoTime() - start);
+                }
+                brb.clear();
+            }
+            System.out.println(hist.toMicrosFormat());
         }
     }
 
