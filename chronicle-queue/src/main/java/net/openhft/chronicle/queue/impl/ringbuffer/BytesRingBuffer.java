@@ -392,7 +392,7 @@ public class BytesRingBuffer {
     private class RingBuffer {
 
         // if we want multi readers then we could later replace this with a thread-local
-        final Bytes bytes = Bytes.elasticByteBuffer();
+        final Bytes bytes;
         private final boolean isBytesBigEndian;
         private final long capacity;
         private final BytesStore byteStore;
@@ -400,6 +400,7 @@ public class BytesRingBuffer {
         public RingBuffer(BytesStore byteStore, int start, long end) {
             this.byteStore = byteStore;
             this.capacity = end - start;
+            bytes = Bytes.allocateDirect(capacity);
             isBytesBigEndian = byteStore.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 

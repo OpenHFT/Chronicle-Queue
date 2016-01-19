@@ -36,20 +36,16 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to tmpfs
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.8  4.7 / 14  31 / 1,080 - 27,790
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 2.0 / 3.1  4.7 / 14  967 / 9,180 - 18,350
- * <p>
- * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to ext4 on Samsung 840 SSD
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.2  4.7 / 28  36 / 160 - 29,880
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 2.1 / 2.5  5.8 / 113  160 / 1,670 - 20,450
- * <p>
- * Result with out co-ordinated omission
- * write: 50/90 99/99.9 99.99/99.999 - worst was 2.8 / 4.5  9,180 / 222,300  247,460 / 255,850 - 255,850
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 3.4 / 5.0  2,290 / 222,300  247,460 / 255,850 - 255,850
- * <p>
- * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst
- * was 1.5 / 27  104 / 3,740 8,000 / 13,890 - 36,700
+ * Result on 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to tmpfs write: 50/90
+ * 99/99.9 99.99/99.999 - worst was 1.6 / 2.8  4.7 / 14  31 / 1,080 - 27,790 write-read: 50/90
+ * 99/99.9 99.99/99.999 - worst was 2.0 / 3.1  4.7 / 14  967 / 9,180 - 18,350 <p> Result on
+ * 18/1/2016 running on i7-3970X Ubuntu 10.04 with affinity writing to ext4 on Samsung 840 SSD
+ * write: 50/90 99/99.9 99.99/99.999 - worst was 1.6 / 2.2  4.7 / 28  36 / 160 - 29,880 write-read:
+ * 50/90 99/99.9 99.99/99.999 - worst was 2.1 / 2.5  5.8 / 113  160 / 1,670 - 20,450 <p> Result with
+ * out co-ordinated omission write: 50/90 99/99.9 99.99/99.999 - worst was 2.8 / 4.5  9,180 /
+ * 222,300  247,460 / 255,850 - 255,850 write-read: 50/90 99/99.9 99.99/99.999 - worst was 3.4 / 5.0
+ *  2,290 / 222,300  247,460 / 255,850 - 255,850 <p> Results 27/10/2015 running on a MBP 50/90
+ * 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740 8,000 / 13,890 - 36,700
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
@@ -68,11 +64,13 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .bufferCapacity(128 << 10)
                 .build();
 
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .bufferCapacity(128 << 10)
                 .buffered(true)
                 .build();
 
