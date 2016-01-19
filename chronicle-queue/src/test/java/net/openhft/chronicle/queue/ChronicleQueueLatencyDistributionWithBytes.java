@@ -133,7 +133,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     long start = next;
                     bt.setTime(start);
                     appender.writeBytes(bt);
-                    writeHistogram.sample(System.nanoTime() - start);
+                    if (i > 500000)
+                        writeHistogram.sample(System.nanoTime() - start);
                     next += INTERVAL_US * 1000;
 //                    pauser.unpause();
                 }
