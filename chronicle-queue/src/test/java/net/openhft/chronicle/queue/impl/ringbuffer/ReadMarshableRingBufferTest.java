@@ -43,7 +43,7 @@ public class ReadMarshableRingBufferTest {
         Bytes data = Bytes.elasticByteBuffer();
         data.writeUtf8(EXPECTED);
         final long len = data.writePosition();
-        for (int j = 50; j < 100; j++) {
+        for (int j = 300; j < 400; j++) {
 
             try (NativeBytesStore<Void> nativeStore = NativeBytesStore
                     .nativeStoreWithFixedCapacity(j)) {
@@ -69,7 +69,7 @@ public class ReadMarshableRingBufferTest {
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
-                (150)) {
+                (300)) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
