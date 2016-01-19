@@ -100,7 +100,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.builder = null;
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
-        this.indexing = new Indexing(wireType, mappedBytes);
+        this.indexing = new Indexing(wireType);
     }
 
 
@@ -273,8 +273,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
-        indexing = new Indexing(wireType, mappedBytes.withSizes(chunkSize,
-                overlapSize));
+        indexing = new Indexing(wireType);
         wire.read(MetaDataField.indexing).marshallable(indexing);
 
     }
@@ -437,9 +436,10 @@ public class SingleChronicleQueueStore implements WireStore {
 // *************************************************************************
 
     class Indexing implements Marshallable {
-        private final WireType wireType;
         //private final MappedBytes indexContext;
         private final Wire templateIndex;
+        // hold a reference to it so it doesn't get cleaned up.
+        private Bytes<?> mappedBytes;
         private int indexCount = 128 << 10;
         private int indexSpacing = 64;
         private LongValue index2Index;
@@ -448,7 +448,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         private LongValue firstIndex;
 
-        Indexing(@NotNull WireType wireType, final MappedBytes mappedBytes) {
+        Indexing(@NotNull WireType wireType) {
             this.index2Index = wireType.newLongReference().get();
             this.firstIndex = wireType.newLongReference().get();
 
@@ -460,13 +460,11 @@ public class SingleChronicleQueueStore implements WireStore {
             else {
                 throw new UnsupportedOperationException("type is not supported");
             }
-            this.wireType = wireType;
             this.longArray = withInitial(wireType.newLongArrayReference());
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-
             wire.write(IndexingFields.indexCount).int32(indexCount)
                     .write(IndexingFields.indexSpacing).int32(indexSpacing)
                     .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
@@ -630,7 +628,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         /**
          * Moves the position to the {@code index}
-         *
+         * <p>
          * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in
          * other words the address of where ) the root first level targetIndex is stored. The
          * indexing works like a tree, but only 2 levels deep, the root of the tree is at

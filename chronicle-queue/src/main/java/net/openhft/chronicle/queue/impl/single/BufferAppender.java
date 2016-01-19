@@ -27,11 +27,13 @@ public class BufferAppender implements ExcerptAppender {
     private final BytesRingBuffer ringBuffer;
     private final ExcerptAppender underlyingAppender;
     private final Wire wire;
+    @NotNull
+    private final EventLoop eventLoop;
 
     public BufferAppender(@NotNull final EventLoop eventLoop,
                           @NotNull final ExcerptAppender underlyingAppender,
-                          final long ringBufferCapacity) {
-
+                          final long ringBufferSize) {
+        this.eventLoop = eventLoop;
         ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity(
                 ringBufferCapacity));
 
@@ -44,12 +46,8 @@ public class BufferAppender implements ExcerptAppender {
         };
 
         eventLoop.addHandler(() -> {
-                    try {
                         long size = ringBuffer.read(readBytesMarshallable);
                         return size > 0;
-                    } catch (InterruptedException e) {
-                        throw Jvm.rethrow(e);
-                    }
                 }
         );
 
@@ -106,6 +104,7 @@ public class BufferAppender implements ExcerptAppender {
     public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
         try {
             ringBuffer.offer(bytes);
+            eventLoop.unpause();
         } catch (InterruptedException e) {
             throw Jvm.rethrow(e);
         }

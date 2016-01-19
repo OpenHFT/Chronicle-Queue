@@ -251,7 +251,8 @@ public class Excerpts {
             long position = wire.bytes().writePosition();
             if (position < nextPrefetch)
                 return;
-            long prefetch = OS.mapAlign(position) + OS.pageSize();
+            long prefetch = OS.mapAlign(position);
+//            System.out.println(Thread.currentThread().getName()+" prefetch "+prefetch);
             // touch the page without modifying it.
             wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
             nextPrefetch = prefetch + OS.pageSize();

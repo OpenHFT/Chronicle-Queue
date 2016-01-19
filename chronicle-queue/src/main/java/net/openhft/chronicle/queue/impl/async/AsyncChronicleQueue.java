@@ -87,15 +87,8 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         return WireConstants.NO_INDEX;
     }
 
-    private boolean handleEvent() throws InvalidEventHandlerException {
-        try {
+    private boolean handleEvent() throws InvalidEventHandlerException, InterruptedException {
             return buffer.read(this::append) > 0;
-        } catch(InterruptedException e) {
-            //TODO: what to do
-            LOGGER.warn("", e);
-        }
-
-        return false;
     }
 
     private void append(Bytes<?> bytes) {
