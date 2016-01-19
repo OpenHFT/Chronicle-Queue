@@ -71,15 +71,23 @@ public class BytesRingBuffer {
     }
 
     /**
-     * each time the ring is read, this logs the number of bytes in the write buffer, calling
-     * this method resets these statistics,
+     * each time the ring is read, this logs the number of bytes in the write buffer, calling this
+     * method resets these statistics,
      *
-     * @return  -1 if no read calls were made since the last time this method was called.
+     * @return -1 if no read calls were made since the last time this method was called.
      */
     public long minNumberOfWriteBytesRemainingSinceLastCall() {
         long result = minRemainingForWriteSinceLastPoll;
         minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
         return result == Integer.MAX_VALUE ? -1 : result;
+    }
+
+
+    /**
+     * @return the total capacity in bytes
+     */
+    public long capacity() {
+        return capacity;
     }
 
     /**

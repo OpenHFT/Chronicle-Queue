@@ -30,10 +30,10 @@ public class BufferAppender implements ExcerptAppender {
 
     public BufferAppender(@NotNull final EventLoop eventLoop,
                           @NotNull final ExcerptAppender underlyingAppender,
-                          final long ringBufferSize) {
+                          final long ringBufferCapacity) {
 
         ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity(
-                ringBufferSize));
+                ringBufferCapacity));
 
         final ReadBytesMarshallable readBytesMarshallable = bytes -> {
             try {
@@ -59,7 +59,17 @@ public class BufferAppender implements ExcerptAppender {
                 long writeBytesRemaining = ringBuffer
                         .minNumberOfWriteBytesRemainingSinceLastCall();
 
-                System.out.println("ring buffer writeBytesRemaining=" + writeBytesRemaining);
+
+                // the capacity1 is slightly less than the memory allocated to the ring
+                // as the ring buffer itself uses some memory for the header
+                final long capacity1 = ringBuffer.capacity();
+
+                final double percentage = ((double) writeBytesRemaining / (double)
+                        capacity1) * 100;
+                System.out.println("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
+                        "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% FreeSpace]");
+
+
                 return true;
             }
 

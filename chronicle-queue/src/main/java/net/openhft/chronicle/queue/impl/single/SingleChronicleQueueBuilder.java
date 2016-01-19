@@ -81,12 +81,19 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
-    public long ringBufferSize() {
+    /**
+     * @return ringBufferCapacity in bytes
+     */
+    public long ringBufferCapacity() {
         return ringBufferSize;
     }
 
 
-    public SingleChronicleQueueBuilder ringBufferSize(long ringBufferSize) {
+    /**
+     * @param ringBufferSize sets the ring buffer capacity in bytes
+     * @return this
+     */
+    public SingleChronicleQueueBuilder ringBufferCapacity(long ringBufferSize) {
         this.ringBufferSize = ringBufferSize;
         return this;
     }
@@ -104,7 +111,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     /**
-     * @return poch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
+     * @return epoch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
      * GMT
      */
     public long epoch() {
