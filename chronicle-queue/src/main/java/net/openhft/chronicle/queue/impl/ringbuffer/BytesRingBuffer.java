@@ -39,6 +39,8 @@ public class BytesRingBuffer {
     private static final int FLAG = 1;
     private final long capacity;
 
+    private long minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
+
     @NotNull
     private final RingBuffer bytes;
     @NotNull
@@ -69,6 +71,18 @@ public class BytesRingBuffer {
     }
 
     /**
+     * each time the ring is read, this logs the number of bytes in the write buffer, calling
+     * this method resets these statistics,
+     *
+     * @return  -1 if no read calls were made since the last time this method was called.
+     */
+    public long minNumberOfWriteBytesRemainingSinceLastCall() {
+        long result = minRemainingForWriteSinceLastPoll;
+        minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
+        return result == Integer.MAX_VALUE ? -1 : result;
+    }
+
+    /**
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity,
      *
@@ -90,14 +104,16 @@ public class BytesRingBuffer {
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 final long remainingForWrite = remainingForWrite(writeLocation);
+
+                this.minRemainingForWriteSinceLastPoll = Math.min
+                        (minRemainingForWriteSinceLastPoll, remainingForWrite);
+
                 if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
                     return false;
 
                 // writeBytes the size
                 long len = bytes0.readLimit();
-
                 long messageLen = SIZE + FLAG + len;
-
                 long offset = writeLocation;
 
                 // we want to ensure that only one thread ever gets in here at a time

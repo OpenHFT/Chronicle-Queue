@@ -40,6 +40,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private Consumer<Throwable> onThrowable;
     private EventLoop eventGroup;
 
+    private long ringBufferSize = 256 << 10;
+
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
@@ -79,6 +81,16 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    public long ringBufferSize() {
+        return ringBufferSize;
+    }
+
+
+    public SingleChronicleQueueBuilder ringBufferSize(long ringBufferSize) {
+        this.ringBufferSize = ringBufferSize;
+        return this;
+    }
+
     /**
      * sets epoch offset in milliseconds
      *
@@ -106,7 +118,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     @NotNull
     public ChronicleQueue build() throws IOException {
         if (isBuffered && eventGroup == null)
-            eventGroup = new EventGroup(true);
+            eventGroup = new EventGroup(true, onThrowable);
         return new SingleChronicleQueue(this.clone());
     }
 
@@ -187,4 +199,5 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public EventLoop eventGroup() {
         return eventGroup;
     }
+
 }

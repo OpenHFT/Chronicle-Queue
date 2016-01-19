@@ -27,4 +27,5 @@ public interface ChronicleQueueBuilder extends Cloneable {
     @NotNull
     ChronicleQueue build() throws IOException;
 
+
 }
