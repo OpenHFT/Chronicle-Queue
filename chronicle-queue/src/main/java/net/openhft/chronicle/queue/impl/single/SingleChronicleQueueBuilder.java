@@ -37,7 +37,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     private long epoch; // default is 1970-01-01 UTC
     private boolean isBuffered;
-    private Consumer<Throwable> onThrowable;
+    private Consumer<Throwable> onThrowable = Throwable::printStackTrace;
     private EventLoop eventGroup;
 
     private long ringBufferSize = 256 << 10;

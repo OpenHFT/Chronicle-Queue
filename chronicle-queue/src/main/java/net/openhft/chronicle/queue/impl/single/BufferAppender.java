@@ -32,7 +32,7 @@ public class BufferAppender implements ExcerptAppender {
 
     public BufferAppender(@NotNull final EventLoop eventLoop,
                           @NotNull final ExcerptAppender underlyingAppender,
-                          final long ringBufferSize) {
+                          final long ringBufferCapacity) {
         this.eventLoop = eventLoop;
         ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity(
                 ringBufferCapacity));
