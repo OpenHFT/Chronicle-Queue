@@ -23,6 +23,7 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.util.Histogram;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -239,7 +240,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    public void perfTest() throws InterruptedException {
+    public void perfTestWO() throws InterruptedException {
         BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
         Bytes bytes = NativeBytes.nativeBytes(64).unchecked(true);
         for (int t = 0; t < 5; t++) {
@@ -253,6 +254,30 @@ public class BytesRingBufferTest {
                     hist.sample(System.nanoTime() - start);
                 }
                 brb.clear();
+            }
+            System.out.println(hist.toMicrosFormat());
+        }
+    }
+
+    @Test
+    @Ignore("fails")
+    public void perfTestRW() throws InterruptedException {
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20)/*.unchecked(true)*/);
+        Bytes bytes = NativeBytes.nativeBytes(64);//.unchecked(true);
+        Bytes bytes2 = NativeBytes.nativeBytes(64);//.unchecked(true);
+        BytesRingBuffer.BytesProvider bytesProvider = i -> bytes2;
+        for (int t = 0; t < 5; t++) {
+            Histogram hist = new Histogram();
+            for (int j = 0; j < 10_000_000; j += 20_000) {
+                for (int i = 0; i < 20_000; i++) {
+                    bytes.readPosition(0);
+                    bytes.readLimit(bytes.realCapacity());
+                    long start = System.nanoTime();
+                    assertTrue(brb.offer(bytes));
+                    hist.sample(System.nanoTime() - start);
+
+                    brb.poll(bytesProvider);
+                }
             }
             System.out.println(hist.toMicrosFormat());
         }

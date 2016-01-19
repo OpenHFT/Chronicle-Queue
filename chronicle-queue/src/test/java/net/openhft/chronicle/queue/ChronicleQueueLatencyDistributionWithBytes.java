@@ -121,10 +121,11 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     long start = next;
                     bytes.readPosition(0);
                     bytes.readLimit(BYTES_LENGTH);
-                    bytes.writeLong(0L, System.nanoTime());
+                    long start2 = System.nanoTime();
+                    bytes.writeLong(0L, start2);
                     appender.writeBytes(bytes);
                     if (i > 500000)
-                        writeHistogram.sample(System.nanoTime() - start);
+                        writeHistogram.sample(System.nanoTime() - start2);
                     next += INTERVAL_US * 1000;
                 }
             } catch (IOException e) {
