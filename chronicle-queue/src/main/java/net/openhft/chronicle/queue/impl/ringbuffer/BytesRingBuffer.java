@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.wire.BinaryLongReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,9 +48,9 @@ public class BytesRingBuffer {
     private final Header header;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
-        capacity = byteStore.writeLimit() - 24;
+        capacity = byteStore.writeLimit() - Header.size();
 
-        if (byteStore.writeRemaining() <= 24) {
+        if (byteStore.writeRemaining() <= Header.size()) {
             throw new IllegalStateException("The byteStore is too small, the minimum recommended " +
                     "size = (max-size-of-element x number-of-elements) + 24");
         }
@@ -307,6 +308,7 @@ public class BytesRingBuffer {
      */
     private static class Header {
 
+        public static final int PAGE_ALIGN_SIZE = 64;
         private final BytesStore bytesStore;
         // these fields are written using put ordered long ( so don't have to be volatile )
         private BinaryLongReference readLocationOffsetRef;
@@ -321,14 +323,21 @@ public class BytesRingBuffer {
             this.bytesStore = bytesStore;
 
             readLocationOffsetRef = new BinaryLongReference();
-            readLocationOffsetRef.bytesStore(this.bytesStore, start + 0, 8);
+            readLocationOffsetRef.bytesStore(this.bytesStore, start, 8);
 
             writeUpToRef = new BinaryLongReference();
-            writeUpToRef.bytesStore(this.bytesStore, start + 8, 8);
+            writeUpToRef.bytesStore(this.bytesStore, start += PAGE_ALIGN_SIZE, 8);
 
             writeLocation = new BinaryLongReference();
-            writeLocation.bytesStore(this.bytesStore, start + 16, 8);
+            writeLocation.bytesStore(this.bytesStore, start += PAGE_ALIGN_SIZE, 8);
+
+            OS.pageAlign(PAGE_ALIGN_SIZE);
         }
+
+        public static int size() {
+            return PAGE_ALIGN_SIZE * 3;
+        }
+
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             return writeLocation.compareAndSwapValue(expectedValue, newValue);

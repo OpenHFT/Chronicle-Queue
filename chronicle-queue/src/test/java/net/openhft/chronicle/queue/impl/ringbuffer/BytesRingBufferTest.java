@@ -56,7 +56,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(500)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
             bytesRingBuffer.offer(data());
@@ -68,7 +68,7 @@ public class BytesRingBufferTest {
     @Test
     public void testWriteAndReadSingleThreadedWriteManyTimes() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (150)) {
+                (300)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
 
@@ -89,7 +89,7 @@ public class BytesRingBufferTest {
     @Test
     public void testPollWithNoData() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (150)) {
+                (300)) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
@@ -101,7 +101,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWithDifferentBufferSizes() throws Exception {
-        for (int j = 50; j < 200; j++) {
+        for (int j = 300; j < 600; j++) {
             try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(j)) {
 
                 final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
@@ -126,7 +126,7 @@ public class BytesRingBufferTest {
 
         final int numberOfIterations = 100;
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(300)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
@@ -183,7 +183,7 @@ public class BytesRingBufferTest {
 
         final int numberOfIterations = 100;
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(150)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(300)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
