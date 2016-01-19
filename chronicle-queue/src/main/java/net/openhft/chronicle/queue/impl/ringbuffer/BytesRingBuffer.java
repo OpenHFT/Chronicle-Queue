@@ -139,10 +139,10 @@ public class BytesRingBuffer {
                     continue;
 
                 // writeBytes a size
-                offset += this.bytes.writeLong(offset, len);
+                offset += this.bytes.write(offset, len);
 
                 // writeBytes the data
-                this.bytes.writeLong(offset, bytes0);
+                this.bytes.write(offset, bytes0);
                 this.bytes.writeByte(flagLoc, States.READY.ordinal());
 
                 return true;
@@ -228,7 +228,7 @@ public class BytesRingBuffer {
         final long next = offset + elementSize;
 
         bytes.read(readBytesMarshallable, offset, elementSize);
-        bytes.writeLong(flag, States.USED.ordinal());
+        bytes.write(flag, States.USED.ordinal());
 
         header.setWriteUpTo(next + bytes.capacity());
         header.setReadLocation(next);
@@ -252,9 +252,8 @@ public class BytesRingBuffer {
         long offset = header.getReadLocation();
         long readLocation = offset;//= this.readLocation.get();
 
-        if (readLocation >= writeLoc) {
+        if (readLocation >= writeLoc)
             return null;
-        }
 
         assert readLocation <= writeLoc : "reader has go ahead of the writer";
 
@@ -273,7 +272,6 @@ public class BytesRingBuffer {
         offset += 8;
 
         final long next = offset + elementSize;
-
         final Bytes using = bytesProvider.provide(elementSize);
 
         // checks that the 'using' bytes is large enough
@@ -404,9 +402,7 @@ public class BytesRingBuffer {
             isBytesBigEndian = byteStore.byteOrder() == ByteOrder.BIG_ENDIAN;
         }
 
-        private long writeLong(long offset, @NotNull Bytes bytes0) {
-
-
+        private long write(long offset, @NotNull Bytes bytes0) {
             long result = offset + bytes0.readRemaining();
             offset %= capacity();
 
@@ -436,7 +432,7 @@ public class BytesRingBuffer {
             return result % capacity();
         }
 
-        private long writeLong(long offset, long value) {
+        private long write(long offset, long value) {
 
             offset %= capacity();
 
