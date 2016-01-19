@@ -40,7 +40,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private Consumer<Throwable> onThrowable = Throwable::printStackTrace;
     private EventLoop eventGroup;
 
-    private long ringBufferSize = 2 << 20;
+    private long bufferCapacity = 2 << 20;
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
@@ -84,8 +84,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     /**
      * @return ringBufferCapacity in bytes
      */
-    public long ringBufferCapacity() {
-        return ringBufferSize;
+    public long bufferCapacity() {
+        return bufferCapacity;
     }
 
 
@@ -93,8 +93,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @param ringBufferSize sets the ring buffer capacity in bytes
      * @return this
      */
-    public SingleChronicleQueueBuilder ringBufferCapacity(long ringBufferSize) {
-        this.ringBufferSize = ringBufferSize;
+    public SingleChronicleQueueBuilder bufferCapacity(long ringBufferSize) {
+        this.bufferCapacity = ringBufferSize;
         return this;
     }
 
@@ -207,4 +207,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return eventGroup;
     }
 
+    public SingleChronicleQueueBuilder bufferCapacity(int bufferCapacity) {
+        this.bufferCapacity = bufferCapacity;
+        return this;
+    }
 }

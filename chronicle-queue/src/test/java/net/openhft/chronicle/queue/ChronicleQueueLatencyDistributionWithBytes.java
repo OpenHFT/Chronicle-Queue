@@ -65,11 +65,13 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .bufferCapacity(128 << 10)
                 .build();
 
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .bufferCapacity(128 << 10)
                 .buffered(true)
                 .build();
 

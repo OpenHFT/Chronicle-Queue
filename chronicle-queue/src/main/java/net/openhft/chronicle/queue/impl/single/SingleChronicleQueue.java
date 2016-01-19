@@ -62,7 +62,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
         eventloop = builder.eventGroup();
-        ringBufferCapacity = builder.ringBufferCapacity();
+        ringBufferCapacity = builder.bufferCapacity();
     }
 
     @Override
