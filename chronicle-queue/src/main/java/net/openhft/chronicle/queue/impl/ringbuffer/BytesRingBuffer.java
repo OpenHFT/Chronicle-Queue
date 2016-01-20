@@ -21,8 +21,8 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.wire.BinaryLongReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,13 +39,11 @@ public class BytesRingBuffer {
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
     private final long capacity;
-
-    private long minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
-
     @NotNull
     private final RingBuffer bytes;
     @NotNull
     private final Header header;
+    private long minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.realCapacity() - Header.size();

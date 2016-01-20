@@ -23,7 +23,6 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.util.Histogram;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -260,12 +259,14 @@ public class BytesRingBufferTest {
     }
 
     @Test
-    @Ignore("fails")
     public void perfTestRW() throws InterruptedException {
         BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
-        Bytes bytes = NativeBytes.nativeBytes(64);//.unchecked(true);
-        Bytes bytes2 = NativeBytes.nativeBytes(64);//.unchecked(true);
-        BytesRingBuffer.BytesProvider bytesProvider = i -> bytes2;
+        Bytes bytes = NativeBytes.nativeBytes(64).unchecked(true);
+        Bytes bytes2 = NativeBytes.nativeBytes(64).unchecked(true);
+        BytesRingBuffer.BytesProvider bytesProvider = i -> {
+            bytes2.clear();
+            return bytes2;
+        };
         for (int t = 0; t < 5; t++) {
             Histogram hist = new Histogram();
             for (int j = 0; j < 10_000_000; j += 20_000) {

@@ -137,4 +137,8 @@ public class BufferAppender implements ExcerptAppender {
     public void prefetch() {
     }
 
+    @Override
+    public Wire wire() {
+        throw new UnsupportedOperationException();
+    }
 }
