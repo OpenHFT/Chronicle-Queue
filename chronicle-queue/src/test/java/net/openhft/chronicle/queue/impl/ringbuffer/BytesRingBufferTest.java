@@ -24,6 +24,7 @@ import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.util.Histogram;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -240,6 +241,7 @@ public class BytesRingBufferTest {
     }
 
     @Test
+    @Ignore("long running")
     public void perfTestWO() throws InterruptedException {
         BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(2 << 20)).unchecked(true));
         Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
@@ -268,6 +270,7 @@ public class BytesRingBufferTest {
             bytes2.clear();
             return bytes2;
         };
+
         for (int t = 0; t < 3; t++) {
             Histogram hist = new Histogram();
             for (int j = 0; j < 10_000_000; j++) {
@@ -281,6 +284,53 @@ public class BytesRingBufferTest {
             }
             System.out.println("perfTestRW: " + hist.toMicrosFormat());
         }
+    }
+
+    @Test
+    @Ignore("long running")
+    public void perfTestRWBusyReader() throws InterruptedException {
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(64 << 10)).unchecked(true));
+        Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
+
+        Thread reader = new Thread(() -> {
+            Bytes bytes2 = NativeBytes.nativeBytes(128).unchecked(true);
+            BytesRingBuffer.BytesProvider bytesProvider = i -> {
+                bytes2.clear();
+                return bytes2;
+            };
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    brb.poll(bytesProvider);
+                }
+            } catch (InterruptedException ignored) {
+            }
+        });
+        reader.setDaemon(true);
+        reader.start();
+        int INTERVAL = 20_000;
+        long next = System.nanoTime() + INTERVAL;
+        for (int t = 0; t < 3; t++) {
+            Histogram hist = new Histogram();
+            int count = 0;
+
+            for (int j = 0; j < 1000_000; j++) {
+                while (System.nanoTime() < next)
+                    /* busy wait */ ;
+
+                bytes.readPosition(0);
+                bytes.readLimit(bytes.realCapacity());
+                long start = System.nanoTime();
+                boolean busy = false;
+                while (!brb.offer(bytes)) {
+                    busy = true;
+                }
+                if (busy) count++;
+                hist.sample(System.nanoTime() - start);
+                next += INTERVAL;
+            }
+            System.out.println("perfTestRWBusyReader, count: " + count + " " + hist.toMicrosFormat());
+        }
+        reader.interrupt();
     }
 
 }
