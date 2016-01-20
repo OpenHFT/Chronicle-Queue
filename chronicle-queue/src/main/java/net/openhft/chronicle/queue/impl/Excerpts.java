@@ -143,6 +143,11 @@ public class Excerpts {
         }
 
         @Override
+        public Wire wire() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void prefetch() {
             throw new UnsupportedOperationException();
 
@@ -154,7 +159,7 @@ public class Excerpts {
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
         private Wire wire;
-        private long epoch;
+
         private long cycle;
         private long index = -1;
         private WireStore store;
@@ -171,7 +176,7 @@ public class Excerpts {
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
 
-            this.store = queue.storeForCycle(this.cycle, this.epoch);
+            this.store = queue.storeForCycle(this.cycle, queue.epoch());
             this.index = this.store.lastSubIndex();
 
             final MappedBytes mappedBytes = store.mappedBytes();
@@ -225,6 +230,11 @@ public class Excerpts {
         }
 
         @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
         public ChronicleQueue queue() {
             return this.queue;
         }
@@ -239,7 +249,7 @@ public class Excerpts {
                 }
 
                 this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle, epoch);
+                this.store = queue.storeForCycle(this.cycle, queue.epoch());
                 this.wire = this.queue().wireType().apply(store.mappedBytes());
             }
 

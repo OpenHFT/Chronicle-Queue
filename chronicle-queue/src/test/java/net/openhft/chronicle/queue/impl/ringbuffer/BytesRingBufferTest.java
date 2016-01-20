@@ -262,7 +262,7 @@ public class BytesRingBufferTest {
     @Test
     @Ignore("fails")
     public void perfTestRW() throws InterruptedException {
-        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20)/*.unchecked(true)*/);
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
         Bytes bytes = NativeBytes.nativeBytes(64);//.unchecked(true);
         Bytes bytes2 = NativeBytes.nativeBytes(64);//.unchecked(true);
         BytesRingBuffer.BytesProvider bytesProvider = i -> bytes2;
