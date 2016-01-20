@@ -30,6 +30,8 @@ import java.util.function.Function;
 
 public interface WireStore extends ReferenceCounted, Marshallable {
 
+    void writePosition(long position);
+
     /**
      * @return the cycle this store refers to
      */

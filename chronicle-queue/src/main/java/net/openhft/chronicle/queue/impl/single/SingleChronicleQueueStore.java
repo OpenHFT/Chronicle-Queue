@@ -109,6 +109,11 @@ public class SingleChronicleQueueStore implements WireStore {
         return this.bounds.getWritePosition();
     }
 
+    @Override
+    public void writePosition(long position) {
+        this.bounds.setWritePosition(position);
+    }
+
     /**
      * @return the file identifier based on the high 24bits of the index, when DAY ROLLING each day
      * will have a unique cycle
@@ -413,11 +418,8 @@ public class SingleChronicleQueueStore implements WireStore {
             return this.writePosition.getVolatileValue();
         }
 
-        public void setWritePosition(long position) {
-            this.writePosition.setOrderedValue(position);
-        }
 
-        public void setWritePositionIfGreater(long writePosition) {
+        public void setWritePosition(long writePosition) {
             for (; ; ) {
                 long wp = writePosition();
                 if (writePosition > wp) {
@@ -627,17 +629,16 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
         /**
-         * Moves the position to the {@code index}
-         * <p>
-         * The indexes are stored in many excerpts, so the index2index tells chronicle where ( in
-         * other words the address of where ) the root first level targetIndex is stored. The
-         * indexing works like a tree, but only 2 levels deep, the root of the tree is at
-         * index2index ( this first level targetIndex is 1MB in size and there is only one of them,
-         * it only holds the addresses of the second level indexes, there will be many second level
-         * indexes ( created on demand ), each is about 1MB in size  (this second level targetIndex
-         * only stores the position of every 64th excerpt), so from every 64th excerpt a linear scan
-         * occurs. The indexes are only built when the indexer is run, this could be on a background
-         * thread. Each targetIndex is created into chronicle as an excerpt.
+         * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so
+         * the index2index tells chronicle where ( in other words the address of where ) the root
+         * first level targetIndex is stored. The indexing works like a tree, but only 2 levels
+         * deep, the root of the tree is at index2index ( this first level targetIndex is 1MB in
+         * size and there is only one of them, it only holds the addresses of the second level
+         * indexes, there will be many second level indexes ( created on demand ), each is about 1MB
+         * in size  (this second level targetIndex only stores the position of every 64th excerpt),
+         * so from every 64th excerpt a linear scan occurs. The indexes are only built when the
+         * indexer is run, this could be on a background thread. Each targetIndex is created into
+         * chronicle as an excerpt.
          *
          * @param wire  the data structure we are navigating
          * @param index the index we wish to move to
@@ -760,8 +761,11 @@ public class SingleChronicleQueueStore implements WireStore {
                     if (!documentContext.isData())
                         continue;
 
-                    if (toIndex == i)
-                        return context.bytes().readPosition() - 4;
+                    if (toIndex == i) {
+                        context.bytes().readSkip(-4);
+                        final long readPosition = context.bytes().readPosition();
+                        return readPosition;
+                    }
                     i++;
                 }
             }

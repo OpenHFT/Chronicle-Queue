@@ -75,7 +75,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     public ExcerptAppender createAppender() throws IOException {
         final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
         if (bufferedAppends) {
-            return new BufferAppender(eventloop, storeAppender, ringBufferCapacity);
+            return new Excerpts.BufferAppender(eventloop, storeAppender, ringBufferCapacity);
         } else
             return storeAppender;
     }

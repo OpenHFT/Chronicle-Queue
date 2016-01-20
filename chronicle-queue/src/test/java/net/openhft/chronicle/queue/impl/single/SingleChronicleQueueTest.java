@@ -559,7 +559,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testAppendWithRingBuffer() throws Throwable {
         AtomicReference<Throwable> ref = new AtomicReference<>();
@@ -575,7 +574,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .build();
 
             final ExcerptAppender bufferedAppender = chronicle.createAppender();
-            final ExcerptAppender underlying = bufferedAppender.underlying();
 
             // create 100 documents
             for (int i = 0; i < 5; i++) {
@@ -587,7 +585,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Thread.sleep(100);
 
             final ExcerptTailer tailer = chronicle.createTailer();
-            tailer.moveToIndex(index(underlying.cycle(), 2));
+            tailer.moveToIndex(index(bufferedAppender.cycle(), 2));
+
+
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));

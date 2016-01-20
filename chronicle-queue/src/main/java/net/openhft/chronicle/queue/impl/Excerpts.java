@@ -20,12 +20,18 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
+import net.openhft.chronicle.threads.HandlerPriority;
+import net.openhft.chronicle.threads.api.EventHandler;
+import net.openhft.chronicle.threads.api.EventLoop;
+import net.openhft.chronicle.threads.api.InvalidEventHandlerException;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -36,8 +42,10 @@ import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
+import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.ChronicleQueue.toSubIndex;
+import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
@@ -137,15 +145,6 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public ExcerptAppender underlying() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Wire wire() {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public void prefetch() {
@@ -154,6 +153,157 @@ public class Excerpts {
         }
     }
 
+
+    /**
+     * @author Rob Austin.
+     */
+    public static class BufferAppender implements ExcerptAppender {
+
+        private final BytesRingBuffer ringBuffer;
+        private final StoreAppender underlyingAppender;
+        private final Wire tempWire;
+
+        @NotNull
+        private final EventLoop eventLoop;
+
+        public BufferAppender(@NotNull final EventLoop eventLoop,
+                              @NotNull final StoreAppender underlyingAppender,
+                              final long ringBufferCapacity) {
+            this.eventLoop = eventLoop;
+            ringBuffer = new BytesRingBuffer(nativeStoreWithFixedCapacity(
+                    ringBufferCapacity));
+
+            this.underlyingAppender = underlyingAppender;
+            this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
+
+            final EventHandler handler = () -> {
+
+                final Wire wire = underlyingAppender.wire();
+                final Bytes<?> bytes = wire.bytes();
+                final long start = bytes.writePosition();
+
+                bytes.writeInt(Wires.NOT_READY);
+
+                try {
+                    if (!ringBuffer.read(bytes)) {
+                        bytes.writeSkip(-4);
+                        bytes.writeInt(bytes.writePosition(), 0);
+                        return false;
+                    }
+
+                    final long len = bytes.writePosition() - start - 4;
+
+                    // no data was read from the ring buffer, so we wont write any docuement to
+                    // the appender
+                    if (len == 0) {
+                        bytes.writeSkip(-4);
+                        bytes.writeInt(bytes.writePosition(), 0);
+                        return false;
+                    }
+
+                    bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                            "out of 30-bit int range."));
+
+                    underlyingAppender.index++;
+                    underlyingAppender.store().writePosition(wire.bytes().writePosition());
+                    underlyingAppender.store().storeIndexLocation(wire, start,
+                            underlyingAppender.index);
+
+                    return true;
+
+                } catch (Throwable t) {
+                    throw Jvm.rethrow(t);
+                }
+
+            };
+
+            eventLoop.addHandler(handler);
+
+            eventLoop.addHandler(new EventHandler() {
+                @Override
+                public boolean action() throws InvalidEventHandlerException {
+                    long writeBytesRemaining = ringBuffer
+                            .minNumberOfWriteBytesRemainingSinceLastCall();
+
+
+                    // the capacity1 is slightly less than the memory allocated to the ring
+                    // as the ring buffer itself uses some memory for the header
+                    final long capacity1 = ringBuffer.capacity();
+
+                    final double percentage = ((double) writeBytesRemaining / (double)
+                            capacity1) * 100;
+                    System.out.println("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
+                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free]");
+
+
+                    return true;
+                }
+
+                @NotNull
+                @Override
+                public HandlerPriority priority() {
+                    return HandlerPriority.MONITOR;
+                }
+            });
+
+            eventLoop.start();
+
+
+        }
+
+        @Override
+        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+            final Bytes<?> bytes = tempWire.bytes();
+            bytes.clear();
+            writer.writeMarshallable(tempWire);
+            return writeBytes(bytes);
+        }
+
+        @Override
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+            final Bytes<?> bytes = tempWire.bytes();
+            bytes.clear();
+            marshallable.writeMarshallable(bytes);
+            return writeBytes(bytes);
+        }
+
+        @Override
+        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
+            try {
+                while (!ringBuffer.offer(bytes))
+                    Thread.yield();
+                eventLoop.unpause();
+            } catch (InterruptedException e) {
+                throw Jvm.rethrow(e);
+            }
+
+            return -1;
+        }
+
+        @Override
+        public long index() {
+            throw new UnsupportedOperationException("");
+        }
+
+        @Override
+        public long cycle() {
+            return underlyingAppender.cycle();
+        }
+
+
+        @Override
+        public ChronicleQueue queue() {
+            return underlyingAppender.queue();
+        }
+
+
+        @Override
+        public void prefetch() {
+        }
+
+    }
+
+
     /**
      * StoreAppender
      */
@@ -161,7 +311,7 @@ public class Excerpts {
         private Wire wire;
 
         private long cycle;
-        private long index = -1;
+        long index = -1;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
 
@@ -192,10 +342,18 @@ public class Excerpts {
             long position;
 
             do {
-                this.index++;
-                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
-            } while (position == -1);
 
+                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
+
+                // this will be called if currently being modified with unknown length
+                if (position == 0)
+                    continue;
+
+                this.index++;
+
+            } while (position <= 0);
+
+            store.writePosition(wire.bytes().writePosition());
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }
@@ -224,19 +382,9 @@ public class Excerpts {
             return this.store.cycle();
         }
 
-        @Override
-        public ExcerptAppender underlying() {
-            throw new UnsupportedOperationException();
-        }
 
-        @Override
-        public Wire wire() {
+        Wire wire() {
             return wire;
-        }
-
-        @Override
-        public ChronicleQueue queue() {
-            return this.queue;
         }
 
         @ForceInline
@@ -269,11 +417,11 @@ public class Excerpts {
         }
     }
 
-    // *************************************************************************
-    //
-    // TAILERS
-    //
-    // *************************************************************************
+// *************************************************************************
+//
+// TAILERS
+//
+// *************************************************************************
 
     /**
      * Tailer
@@ -429,7 +577,8 @@ public class Excerpts {
                 return false;
 
             bytes.readPosition(position);
-            bytes.readLimit(bytes.capacity());
+            bytes.readLimit(bytes.realCapacity());
+
             this.index = ChronicleQueue.index(cycle, subIndex - 1);
             return true;
         }

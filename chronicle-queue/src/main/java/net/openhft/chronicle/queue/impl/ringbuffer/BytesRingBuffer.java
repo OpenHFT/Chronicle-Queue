@@ -236,6 +236,56 @@ public class BytesRingBuffer {
         return 8;
     }
 
+
+    /**
+     * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
+     * empty.
+     *
+     * @return {@code null} if this queue is empty, or a populated buffer if the element was retried
+     * @throws IllegalStateException is the {@code using} buffer is not large enough
+     */
+    public boolean read(@NotNull Bytes using) throws
+            InterruptedException,
+            IllegalStateException {
+
+        long writeLoc = writeLocation();
+        long offset = header.getReadLocation();
+        long readLocation = offset;//= this.readLocation.get();
+
+        if (readLocation >= writeLoc)
+            return false;
+
+        assert readLocation <= writeLoc : "reader has go ahead of the writer";
+
+        long flag = offset;
+
+        final byte state = bytes.readVolatileByte(flag);
+        offset += 1;
+
+        // the element is currently being written to, so let wait for the writeBytes to finish
+        if (state == States.BUSY.ordinal())
+            return false;
+
+        assert state == States.READY.ordinal() : " we are reading a message that we " +
+                "shouldn't,  state=" + state;
+
+        final long elementSize = bytes.readLong(offset);
+        offset += 8;
+
+        final long next = offset + elementSize;
+
+        // checks that the 'using' bytes is large enough
+        checkSize(using, elementSize);
+
+        bytes.read(using, offset, elementSize);
+        bytes.writeOrderedLong(flag, States.USED.ordinal());
+
+        header.setWriteUpTo(next + bytes.capacity());
+        header.setReadLocation(next);
+
+        return true;
+    }
+
     /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
      * empty.
@@ -285,6 +335,7 @@ public class BytesRingBuffer {
 
         return using;
     }
+
 
     private enum States {BUSY, READY, USED}
 
@@ -474,7 +525,10 @@ public class BytesRingBuffer {
             //other words is that start of the data at the end of the ring and the remaining
             //data at the start of the ring.
             if (endOffSet >= offset) {
+
+
                 bytes.write(byteStore, offset, len);
+
                 return endOffSet;
             }
 

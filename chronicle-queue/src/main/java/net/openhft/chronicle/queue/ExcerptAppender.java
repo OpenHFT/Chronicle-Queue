@@ -17,7 +17,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,14 +60,5 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     long cycle();
 
-    /**
-     * @return if an appender wraps another appender, this is the appender which was wrapped
-     */
-    ExcerptAppender underlying();
-
-    /**
-     * @return the underlying data structure used by the ExcerptAppender
-     */
-    Wire wire();
 
 }
