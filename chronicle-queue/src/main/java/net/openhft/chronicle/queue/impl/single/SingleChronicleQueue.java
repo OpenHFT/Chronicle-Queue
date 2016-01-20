@@ -40,6 +40,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
+
+    public static final String SUFFIX = ".cq4";
+
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
     }
@@ -129,7 +132,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             for (int i = files.length - 1; i >= 0; i--) {
                 try {
                     name = files[i].getAbsolutePath();
-                    if (name.endsWith(".chronicle")) {
+                    if (name.endsWith(SUFFIX)) {
                         name = name.substring(basePath.length() + 1);
                         name = name.substring(0, name.indexOf('.'));
 
@@ -178,7 +181,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             for (int i = files.length - 1; i >= 0; i--) {
                 try {
                     name = files[i].getAbsolutePath();
-                    if (name.endsWith(".chronicle")) {
+                    if (name.endsWith(SUFFIX)) {
                         name = name.substring(basePath.length() + 1);
                         name = name.substring(0, name.indexOf('.'));
 
@@ -211,7 +214,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     protected WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
-        final File cycleFile = new File(this.builder.path(), cycleFormat + ".chronicle");
+        final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
 
 
         final Function<File, MappedBytes> toMappedBytes = file -> {
