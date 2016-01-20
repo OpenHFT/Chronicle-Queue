@@ -21,8 +21,8 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.ref.BinaryLongReference;
-import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.bytes.ref.LongReference;
+import net.openhft.chronicle.bytes.ref.UncheckedLongReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,9 +46,9 @@ public class BytesRingBuffer {
     private long minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
-        capacity = byteStore.realCapacity() - Header.size();
+        capacity = byteStore.realCapacity() - Header.HEADER_SIZE;
 
-        if (byteStore.writeRemaining() <= Header.size()) {
+        if (byteStore.writeRemaining() <= Header.HEADER_SIZE) {
             throw new IllegalStateException("The byteStore is too small, the minimum recommended " +
                     "size = (max-size-of-element x number-of-elements) + 24");
         }
@@ -304,34 +304,30 @@ public class BytesRingBuffer {
      */
     private static class Header {
 
-        public static final int PAGE_ALIGN_SIZE = 64;
+        public static final int CACHE_LINE_SIZE = 64;
+        public static final int HEADER_SIZE = CACHE_LINE_SIZE * 2;
+
         private final BytesStore bytesStore;
         // these fields are written using put ordered long ( so don't have to be volatile )
-        private BinaryLongReference readLocationOffsetRef;
-        private BinaryLongReference writeUpToRef;
-        private BinaryLongReference writeLocation;
+        private final LongReference readLocationOffsetRef;
+        private final LongReference writeUpToRef;
+        private final LongReference writeLocation;
 
         /**
          * @param bytesStore the bytes for the header
          * @param start      the location where the header is to be written
          */
-        private Header(@NotNull BytesStore bytesStore, long start) {
+        Header(@NotNull BytesStore bytesStore, long start) {
             this.bytesStore = bytesStore;
 
-            readLocationOffsetRef = new BinaryLongReference();
-            readLocationOffsetRef.bytesStore(this.bytesStore, start, 8);
+            // used by reading thread
+            readLocationOffsetRef = UncheckedLongReference.create(this.bytesStore, start, Long.BYTES);
 
-            writeUpToRef = new BinaryLongReference();
-            writeUpToRef.bytesStore(this.bytesStore, start += PAGE_ALIGN_SIZE, 8);
+            // used by reading thread
+            writeUpToRef = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES, Long.BYTES);
 
-            writeLocation = new BinaryLongReference();
-            writeLocation.bytesStore(this.bytesStore, start += PAGE_ALIGN_SIZE, 8);
-
-            OS.pageAlign(PAGE_ALIGN_SIZE);
-        }
-
-        public static int size() {
-            return PAGE_ALIGN_SIZE * 3;
+            // used by writing thread.
+            writeLocation = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE, Long.BYTES);
         }
 
 
@@ -402,7 +398,8 @@ public class BytesRingBuffer {
 
         private long write(long offset, @NotNull Bytes bytes0) {
             long result = offset + bytes0.readRemaining();
-            offset %= capacity();
+            if (offset >= capacity())
+                offset %= capacity();
 
             long len = bytes0.readRemaining();
             long endOffSet = nextOffset(offset, len);

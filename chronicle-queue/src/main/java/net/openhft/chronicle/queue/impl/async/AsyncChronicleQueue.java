@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.async;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.DelegatedChronicleQueue;
@@ -45,7 +46,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     public AsyncChronicleQueue(@NotNull ChronicleQueue queue, long capacity) throws IOException {
         super(queue);
 
-        this.store = NativeBytesStore.nativeStoreWithFixedCapacity(capacity);
+        this.store = NativeBytesStore.nativeStoreWithFixedCapacity(OS.pageAlign(capacity));
         this.store.zeroOut(0, this.store.writeLimit());
         this.buffer = new BytesRingBuffer(this.store);
         this.storeAppender = queue.createAppender();
