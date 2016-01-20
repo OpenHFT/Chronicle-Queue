@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.util.Histogram;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -42,6 +43,7 @@ import static org.junit.Assert.assertTrue;
 
 public class BytesRingBufferTest {
 
+    public static final long SMALL_CAPACITY = BytesRingBuffer.sizeFor(OS.pageSize());
     private final String EXPECTED = "hello world";
 
     private Bytes<ByteBuffer> input = wrap(ByteBuffer.allocate(12)).bytesForRead();
@@ -60,7 +62,7 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWriteAndRead() throws Exception {
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(500)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(SMALL_CAPACITY)) {
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
             bytesRingBuffer.offer(data());
@@ -72,7 +74,7 @@ public class BytesRingBufferTest {
     @Test
     public void testWriteAndReadSingleThreadedWriteManyTimes() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (300)) {
+                (SMALL_CAPACITY)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
 
@@ -93,7 +95,7 @@ public class BytesRingBufferTest {
     @Test
     public void testPollWithNoData() throws Exception {
         try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity
-                (300)) {
+                (SMALL_CAPACITY)) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
@@ -105,8 +107,8 @@ public class BytesRingBufferTest {
 
     @Test
     public void testWithDifferentBufferSizes() throws Exception {
-        for (int j = 300; j < 600; j++) {
-            try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(j)) {
+        for (int j = 0; j < 10; j++) {
+            try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(BytesRingBuffer.sizeFor(OS.pageSize() << j))) {
 
                 final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
                 bytesRingBuffer.clear();
@@ -130,7 +132,7 @@ public class BytesRingBufferTest {
 
         final int numberOfIterations = 100;
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(300)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(SMALL_CAPACITY)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
@@ -187,7 +189,7 @@ public class BytesRingBufferTest {
 
         final int numberOfIterations = 100;
         final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(numberOfIterations);
-        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(300)) {
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(SMALL_CAPACITY)) {
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
             bytesRingBuffer.clear();
@@ -235,18 +237,18 @@ public class BytesRingBufferTest {
 
             executorService.shutdownNow();
             executorService.awaitTermination(1, TimeUnit.SECONDS);
-
         }
     }
 
     @Test
+    @Ignore("long running")
     public void perfTestWO() throws InterruptedException {
-        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
-        Bytes bytes = NativeBytes.nativeBytes(64).unchecked(true);
-        for (int t = 0; t < 5; t++) {
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(2 << 20)).unchecked(true));
+        Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
+        for (int t = 0; t < 3; t++) {
             Histogram hist = new Histogram();
-            for (int j = 0; j < 10_000_000; j += 20_000) {
-                for (int i = 0; i < 20_000; i++) {
+            for (int j = 0; j < 10_000_000; j += 10_000) {
+                for (int i = 0; i < 10_000; i++) {
                     bytes.readPosition(0);
                     bytes.readLimit(bytes.realCapacity());
                     long start = System.nanoTime();
@@ -255,32 +257,80 @@ public class BytesRingBufferTest {
                 }
                 brb.clear();
             }
-            System.out.println(hist.toMicrosFormat());
+            System.out.println("perfTestRO: " + hist.toMicrosFormat());
         }
     }
 
     @Test
-    @Ignore("fails")
     public void perfTestRW() throws InterruptedException {
-        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(2 << 20).unchecked(true));
-        Bytes bytes = NativeBytes.nativeBytes(64);//.unchecked(true);
-        Bytes bytes2 = NativeBytes.nativeBytes(64);//.unchecked(true);
-        BytesRingBuffer.BytesProvider bytesProvider = i -> bytes2;
-        for (int t = 0; t < 5; t++) {
-            Histogram hist = new Histogram();
-            for (int j = 0; j < 10_000_000; j += 20_000) {
-                for (int i = 0; i < 20_000; i++) {
-                    bytes.readPosition(0);
-                    bytes.readLimit(bytes.realCapacity());
-                    long start = System.nanoTime();
-                    assertTrue(brb.offer(bytes));
-                    hist.sample(System.nanoTime() - start);
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(32 << 10)).unchecked(true));
+        Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
+        Bytes bytes2 = NativeBytes.nativeBytes(128).unchecked(true);
+        BytesRingBuffer.BytesProvider bytesProvider = i -> {
+            bytes2.clear();
+            return bytes2;
+        };
 
+        for (int t = 0; t < 3; t++) {
+            Histogram hist = new Histogram();
+            for (int j = 0; j < 10_000_000; j++) {
+                bytes.readPosition(0);
+                bytes.readLimit(bytes.realCapacity());
+                long start = System.nanoTime();
+                assertTrue(brb.offer(bytes));
+                hist.sample(System.nanoTime() - start);
+
+                brb.poll(bytesProvider);
+            }
+            System.out.println("perfTestRW: " + hist.toMicrosFormat());
+        }
+    }
+
+    @Test
+    @Ignore("long running")
+    public void perfTestRWBusyReader() throws InterruptedException {
+        BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(64 << 10)).unchecked(true));
+        Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
+
+        Thread reader = new Thread(() -> {
+            Bytes bytes2 = NativeBytes.nativeBytes(128).unchecked(true);
+            BytesRingBuffer.BytesProvider bytesProvider = i -> {
+                bytes2.clear();
+                return bytes2;
+            };
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
                     brb.poll(bytesProvider);
                 }
+            } catch (InterruptedException ignored) {
             }
-            System.out.println(hist.toMicrosFormat());
+        });
+        reader.setDaemon(true);
+        reader.start();
+        int INTERVAL = 20_000;
+        long next = System.nanoTime() + INTERVAL;
+        for (int t = 0; t < 3; t++) {
+            Histogram hist = new Histogram();
+            int count = 0;
+
+            for (int j = 0; j < 1000_000; j++) {
+                while (System.nanoTime() < next)
+                    /* busy wait */ ;
+
+                bytes.readPosition(0);
+                bytes.readLimit(bytes.realCapacity());
+                long start = System.nanoTime();
+                boolean busy = false;
+                while (!brb.offer(bytes)) {
+                    busy = true;
+                }
+                if (busy) count++;
+                hist.sample(System.nanoTime() - start);
+                next += INTERVAL;
+            }
+            System.out.println("perfTestRWBusyReader, count: " + count + " " + hist.toMicrosFormat());
         }
+        reader.interrupt();
     }
 
 }

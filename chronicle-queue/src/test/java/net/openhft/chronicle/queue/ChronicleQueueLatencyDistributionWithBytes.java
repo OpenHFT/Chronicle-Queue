@@ -50,8 +50,8 @@ import java.io.IOException;
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
     public static final int BYTES_LENGTH = 16;
-    private static final long INTERVAL_US = 20;
     public static final int BLOCK_SIZE = 16 << 20;
+    private static final long INTERVAL_US = 20;
 
     //  @Ignore("long running")
     @Test
@@ -59,8 +59,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-//        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
-        String path = getTmpDir() + "/deleteme.q";
+        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+//        String path = getTmpDir() + "/deleteme.q";
         new File(path).deleteOnExit();
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
@@ -115,16 +115,16 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
-                for (int i = 0; i < 10_000_000; i++) {
+                for (int i = 0; i < 1_000_000; i++) {
                     while (System.nanoTime() < next)
                         /* busy wait*/ ;
                     long start = next;
                     bytes.readPosition(0);
                     bytes.readLimit(BYTES_LENGTH);
                     long start2 = System.nanoTime();
-                    bytes.writeLong(0L, start2);
+                    bytes.writeLong(0L, start);
                     appender.writeBytes(bytes);
-                    if (i > 500000)
+                    if (i > 200000)
                         writeHistogram.sample(System.nanoTime() - start2);
                     next += INTERVAL_US * 1000;
                 }

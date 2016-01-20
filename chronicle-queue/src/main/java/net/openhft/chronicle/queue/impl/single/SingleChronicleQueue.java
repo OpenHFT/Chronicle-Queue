@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -62,7 +63,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
         eventloop = builder.eventGroup();
-        ringBufferCapacity = builder.bufferCapacity();
+        ringBufferCapacity = BytesRingBuffer.sizeFor(builder.bufferCapacity());
     }
 
     @Override
