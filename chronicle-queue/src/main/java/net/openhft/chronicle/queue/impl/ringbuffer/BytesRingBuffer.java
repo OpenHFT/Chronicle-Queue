@@ -23,6 +23,8 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.ref.LongReference;
 import net.openhft.chronicle.bytes.ref.UncheckedLongReference;
+import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +40,7 @@ public class BytesRingBuffer {
     private static final int SIZE = 8;
     private static final int LOCKED = -1;
     private static final int FLAG = 1;
-    private final long capacity;
+    private final long capacity, mask;
     @NotNull
     private final RingBuffer bytes;
     @NotNull
@@ -47,6 +49,8 @@ public class BytesRingBuffer {
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.realCapacity() - Header.HEADER_SIZE;
+        assert Maths.isPowerOf2(capacity);
+        mask = capacity - 1;
 
         if (byteStore.writeRemaining() <= Header.HEADER_SIZE) {
             throw new IllegalStateException("The byteStore is too small, the minimum recommended " +
@@ -65,6 +69,10 @@ public class BytesRingBuffer {
                     " bytes, but only " + using.readRemaining() + " remaining.");
     }
 
+    public static long sizeFor(long cacacity) {
+        return Maths.nextPower2(cacacity, OS.pageSize()) + Header.HEADER_SIZE;
+    }
+
     public void clear() {
         header.clear(capacity);
     }
@@ -80,7 +88,6 @@ public class BytesRingBuffer {
         minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
         return result == Integer.MAX_VALUE ? -1 : result;
     }
-
 
     /**
      * @return the total capacity in bytes
@@ -320,13 +327,13 @@ public class BytesRingBuffer {
         Header(@NotNull BytesStore bytesStore, long start) {
             this.bytesStore = bytesStore;
 
-            // used by reading thread
+            // written by reading thread
             readLocationOffsetRef = UncheckedLongReference.create(this.bytesStore, start, Long.BYTES);
 
-            // used by reading thread
+            // written by reading thread
             writeUpToRef = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES, Long.BYTES);
 
-            // used by writing thread.
+            // written by writing thread.
             writeLocation = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE, Long.BYTES);
         }
 
@@ -398,8 +405,7 @@ public class BytesRingBuffer {
 
         private long write(long offset, @NotNull Bytes bytes0) {
             long result = offset + bytes0.readRemaining();
-            if (offset >= capacity())
-                offset %= capacity();
+            offset &= mask;
 
             long len = bytes0.readRemaining();
             long endOffSet = nextOffset(offset, len);
@@ -424,12 +430,12 @@ public class BytesRingBuffer {
             if (result < capacity())
                 return result;
 
-            return result % capacity();
+            return result & mask;
         }
 
         private long write(long offset, long value) {
 
-            offset %= capacity();
+            offset &= mask;
 
             if (nextOffset(offset, 8) > offset)
                 byteStore.writeLong(offset, value);
@@ -443,7 +449,7 @@ public class BytesRingBuffer {
 
         private long writeOrderedLong(long offset, long value) {
 
-            offset %= capacity();
+            offset &= mask;
 
             if (nextOffset(offset, 8) > offset)
                 byteStore.writeOrderedLong(offset, value);
@@ -456,13 +462,13 @@ public class BytesRingBuffer {
         }
 
         public long writeByte(long l, int i) {
-            byteStore.writeByte(l % capacity(), i);
+            byteStore.writeByte(l & mask, i);
             return l + 1;
         }
 
         private long read(@NotNull Bytes bytes, long offset, long len) {
 
-            offset %= capacity();
+            offset &= mask;
             long endOffSet = nextOffset(offset, len);
 
             // can the data be read straight out of the buffer or is it split around the ring, in
@@ -485,7 +491,7 @@ public class BytesRingBuffer {
 
             bytes.clear();
 
-            offset %= capacity();
+            offset &= mask;
             long endOffSet = nextOffset(offset, len);
 
             if (endOffSet >= offset) {
@@ -509,7 +515,7 @@ public class BytesRingBuffer {
 
         long readLong(long offset) {
 
-            offset %= capacity();
+            offset &= mask;
             if (nextOffset(offset, 8) > offset)
                 return byteStore.readLong(offset);
 
@@ -549,11 +555,11 @@ public class BytesRingBuffer {
         }
 
         public byte readByte(long l) {
-            return byteStore.readByte(l % capacity);
+            return byteStore.readByte(l & mask);
         }
 
         public byte readVolatileByte(long l) {
-            return byteStore.readVolatileByte(l % capacity);
+            return byteStore.readVolatileByte(l & mask);
         }
 
         void putLongB(long offset, long value) {
