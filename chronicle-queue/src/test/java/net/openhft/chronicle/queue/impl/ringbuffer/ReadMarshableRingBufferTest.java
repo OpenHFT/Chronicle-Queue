@@ -20,6 +20,7 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
+import net.openhft.chronicle.core.OS;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,10 +44,10 @@ public class ReadMarshableRingBufferTest {
         Bytes data = Bytes.elasticByteBuffer();
         data.writeUtf8(EXPECTED);
         final long len = data.writePosition();
-        for (int j = 300; j < 400; j++) {
+        for (int j = 0; j < 10; j++) {
 
             try (NativeBytesStore<Void> nativeStore = NativeBytesStore
-                    .nativeStoreWithFixedCapacity(j)) {
+                    .nativeStoreWithFixedCapacity(BytesRingBuffer.sizeFor(OS.pageSize() << j))) {
                 nativeStore.zeroOut(0, nativeStore.capacity());
 
                 final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
@@ -69,7 +70,7 @@ public class ReadMarshableRingBufferTest {
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
-                (300)) {
+                (BytesRingBuffer.sizeFor(OS.pageSize()))) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
             final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);

@@ -290,10 +290,10 @@ public class BytesRingBufferTest {
     @Ignore("long running")
     public void perfTestRWBusyReader() throws InterruptedException {
         BytesRingBuffer brb = new BytesRingBuffer(NativeBytes.nativeBytes(BytesRingBuffer.sizeFor(64 << 10)).unchecked(true));
-        Bytes bytes = NativeBytes.nativeBytes(128).unchecked(true);
+        Bytes bytes = NativeBytes.nativeBytes(256).unchecked(true);
 
         Thread reader = new Thread(() -> {
-            Bytes bytes2 = NativeBytes.nativeBytes(128).unchecked(true);
+            Bytes bytes2 = NativeBytes.nativeBytes(256).unchecked(true);
             BytesRingBuffer.BytesProvider bytesProvider = i -> {
                 bytes2.clear();
                 return bytes2;
