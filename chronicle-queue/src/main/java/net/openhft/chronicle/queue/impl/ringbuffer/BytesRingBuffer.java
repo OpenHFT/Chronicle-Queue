@@ -44,11 +44,6 @@ public class BytesRingBuffer {
     private final RingBuffer bytes;
     @NotNull
     private final Header header;
-    // read and updated by the write thread. Its stored as a fast approximation
-    long localWriteUpTo;
-    long localWriteLocaton;
-    // todo move these counters to the RingBuffer so we can control memory layout and thread safety.
-    private int readCount, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, writeCount;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.realCapacity() - Header.HEADER_SIZE;
@@ -90,7 +85,7 @@ public class BytesRingBuffer {
         long writeLocation = this.writeLocation();
 
         // if reading is occurring the remain capacity will only get larger, as have locked
-        long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+        long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
         return remainingForWrite;
     }
 
@@ -123,11 +118,10 @@ public class BytesRingBuffer {
 
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
-                long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+                long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
 
                 if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG) {
-                    localWriteUpTo = header.getWriteUpTo();
-                    remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+                    remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpToVolatile());
                     if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
                         return false;
                 }
@@ -157,7 +151,7 @@ public class BytesRingBuffer {
                 this.bytes.write(offset, bytes0);
                 this.bytes.writeByte(flagLoc, States.READY.ordinal());
 
-                writeCount++;
+                header.incrementWriteCount();
                 return true;
             }
 
@@ -193,13 +187,12 @@ public class BytesRingBuffer {
             InterruptedException,
             IllegalStateException {
 
-        long writeLoc = localWriteLocaton;
+        long writeLoc = header.writeLocation();
         long offset = header.getReadLocation();
         long readLocation = offset;//= this.readLocation.get();
 
         if (readLocation >= writeLoc) {
-            localWriteLocaton = header.writeLocation();
-            writeLoc = localWriteLocaton;
+            writeLoc = header.writeLocationVolatile();
 
             if (readLocation >= writeLoc)
                 return false;
@@ -235,20 +228,16 @@ public class BytesRingBuffer {
         header.setReadLocation(next);
 
         // note, not thread safe so fast but not reliable.
-        readCount++;
+        header.incrementReadCount();
         return true;
     }
 
-    public int numberOfReadsSinceLastCall() {
-        int ret = readCount;
-        readCount = 0;
-        return ret;
+    public long numberOfReadsSinceLastCall() {
+        return header.getAndClearReadCount();
     }
 
-    public int numberOfWritesSinceLastCall() {
-        int ret = writeCount;
-        writeCount = 0;
-        return ret;
+    public long numberOfWritesSinceLastCall() {
+        return header.getAndClearWriteCount();
     }
 
     private enum States {BUSY, READY, USED}
@@ -266,7 +255,9 @@ public class BytesRingBuffer {
         // these fields are written using put ordered long ( so don't have to be volatile )
         private final LongReference readLocationOffsetRef;
         private final LongReference writeUpToRef;
+        private final LongReference readCount;
         private final LongReference writeLocation;
+        private final LongReference writeCount;
 
         /**
          * @param bytesStore the bytes for the header
@@ -281,8 +272,14 @@ public class BytesRingBuffer {
             // written by reading thread
             writeUpToRef = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES, Long.BYTES);
 
+            // written by the reading thread
+            readCount = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES * 2, Long.BYTES);
+
             // written by writing thread.
             writeLocation = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE, Long.BYTES);
+
+            // written by writing thread.
+            writeCount = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE + Long.BYTES, Long.BYTES);
         }
 
 
@@ -291,14 +288,18 @@ public class BytesRingBuffer {
         }
 
 
-        private long writeLocation() {
+        long writeLocation() {
             return writeLocation.getValue();
+        }
+
+        long writeLocationVolatile() {
+            return writeLocation.getVolatileValue();
         }
 
         /**
          * @return the point at which you should not writeBytes any additional bits
          */
-        private long getWriteUpTo() {
+        long getWriteUpTo() {
             return writeUpToRef.getValue();
         }
 
@@ -307,6 +308,34 @@ public class BytesRingBuffer {
          */
         private void setWriteUpTo(long value) {
             writeUpToRef.setOrderedValue(value);
+        }
+
+        long getWriteUpToVolatile() {
+            return writeUpToRef.getVolatileValue();
+        }
+
+        void incrementReadCount() {
+            readCount.addAtomicValue(1);
+        }
+
+        long getAndClearReadCount() {
+            for (; ; ) {
+                long value = readCount.getVolatileValue();
+                if (readCount.compareAndSwapValue(value, 0L))
+                    return value;
+            }
+        }
+
+        void incrementWriteCount() {
+            writeCount.addAtomicValue(1);
+        }
+
+        long getAndClearWriteCount() {
+            for (; ; ) {
+                long value = writeCount.getVolatileValue();
+                if (writeCount.compareAndSwapValue(value, 0L))
+                    return value;
+            }
         }
 
         private long getReadLocation() {

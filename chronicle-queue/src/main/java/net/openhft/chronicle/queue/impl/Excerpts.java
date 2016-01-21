@@ -225,8 +225,8 @@ public class Excerpts {
                 public boolean action() throws InvalidEventHandlerException {
                     long writeBytesRemaining = ringBuffer
                             .minNumberOfWriteBytesRemaining();
-                    int readCount = ringBuffer.numberOfReadsSinceLastCall();
-                    int writeCount = ringBuffer.numberOfWritesSinceLastCall();
+                    long readCount = ringBuffer.numberOfReadsSinceLastCall();
+                    long writeCount = ringBuffer.numberOfWritesSinceLastCall();
 
 
                     // the capacity1 is slightly less than the memory allocated to the ring

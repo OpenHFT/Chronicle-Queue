@@ -41,21 +41,16 @@ import java.io.IOException;
  * write: 50/90 99/99.9 99.99/99.999 - worst was 1.7 / 1.8  1.8 / 2.4  1,610 / 4,330 - 4,590
  * write-read: 50/90 99/99.9 99.99/99.999 - worst was 4.7 / 7.6  20,450 / 155,190  188,740 / 188,740 - 188,740
  * <p>
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.8 / 2.6  5.2 / 13  121 / 319 - 672
- * write-read: 50/90 99/99.9 99.99/99.999 - worst was 2.2 / 3.8  5.8 / 13  258 / 516 - 1,210
- * <p>
- * write: 50/90 99/99.9 99.99/99.999 - worst was 0.49 / 1.1  3.6 / 80  8,650 / 20,450 - 22,540
- * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.53 / 1.1  3.8 / 6,160  17,300 / 21,500  23,590 / 23,590
- * <p>
- * write: 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 1.5  1.6 / 2.2  65 / 1,740 - 3,600
- * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 3.9 / 6.5  225 / 15,990  106,950 / 115,340  115,340 / 115,340
+ * Result on an E5-2650 v2 @ 2.60GHz, Ubuntu 10.04 writing to ext4.
+ * write: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.21 / 0.98  1.3 / 5.2  14 / 42  606 / 868
+ * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.62 / 1.6  13 / 6,160  66,060 / 81,790  85,980 / 85,980
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
     public static final int BYTES_LENGTH = 128;
     public static final int BLOCK_SIZE = 256 << 20;
-    public static final int BUFFER_CAPACITY = 1 << 30;
-    private static final long INTERVAL_US = 5;
+    public static final int BUFFER_CAPACITY = 32 << 10;
+    private static final long INTERVAL_US = 10;
 
     //  @Ignore("long running")
     @Test
@@ -63,8 +58,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-//        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
-        String path = getTmpDir() + "/deleteme.q";
+        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+//        String path = getTmpDir() + "/deleteme.q";
         new File(path).deleteOnExit();
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
