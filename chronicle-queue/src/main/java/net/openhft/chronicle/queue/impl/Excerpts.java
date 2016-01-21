@@ -16,10 +16,7 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
@@ -159,6 +156,10 @@ public class Excerpts {
      */
     public static class BufferAppender implements ExcerptAppender {
 
+        public BytesRingBuffer ringBuffer() {
+            return ringBuffer;
+        }
+
         private final BytesRingBuffer ringBuffer;
         private final StoreAppender underlyingAppender;
         private final Wire tempWire;
@@ -216,9 +217,14 @@ public class Excerpts {
                 }
 
             };
-
+            Bytes bytes2 = NativeBytes.nativeBytes(128).unchecked(true);
             eventLoop.addHandler(handler);
-
+            /*eventLoop.addHandler(() -> {
+                bytes2.clear();
+                ringBuffer.read(bytes2);
+                return true;
+            });
+                  */
             eventLoop.addHandler(new EventHandler() {
                 @Override
                 public boolean action() throws InvalidEventHandlerException {

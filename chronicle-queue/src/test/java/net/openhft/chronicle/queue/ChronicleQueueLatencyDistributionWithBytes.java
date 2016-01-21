@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -49,7 +50,7 @@ import java.io.IOException;
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
-    public static final int BYTES_LENGTH = 16;
+    public static final int BYTES_LENGTH = 128;
     public static final int BLOCK_SIZE = 16 << 20;
     private static final long INTERVAL_US = 20;
 
@@ -65,13 +66,13 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
-                .bufferCapacity(128 << 10)
+                .bufferCapacity(64 << 10)
                 .build();
 
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
-                .bufferCapacity(128 << 10)
+                .bufferCapacity(64 << 10)
                 .buffered(true)
                 .build();
 
@@ -79,7 +80,9 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ExcerptTailer tailer = rqueue.createTailer();
 
         Thread tailerThread = new Thread(() -> {
-            Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
+
+            Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
+            //   Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
             AffinityLock lock = null;
             try {
                 if (Boolean.getBoolean("enableTailerAffinity")) {
@@ -121,8 +124,9 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     long start = next;
                     bytes.readPosition(0);
                     bytes.readLimit(BYTES_LENGTH);
-                    long start2 = System.nanoTime();
                     bytes.writeLong(0L, start);
+                    long start2 = System.nanoTime();
+
                     appender.writeBytes(bytes);
                     if (i > 200000)
                         writeHistogram.sample(System.nanoTime() - start2);

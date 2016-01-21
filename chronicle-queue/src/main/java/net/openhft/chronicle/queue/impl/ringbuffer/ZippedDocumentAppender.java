@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -93,7 +92,7 @@ public class ZippedDocumentAppender implements Closeable {
      * used to consumer bytes out of the ring buffer, zip up the bytes using the {@code compresser}
      * and writeBytes these zipped bytes to {@code chronicleQueue}
      */
-    private class Consumer implements BytesRingBuffer.BytesProvider, Runnable {
+    private class Consumer implements Runnable {
 
         @NotNull
         private Deflater compresser = new Deflater();
@@ -130,9 +129,14 @@ public class ZippedDocumentAppender implements Closeable {
 
                     Bytes value;
 
-                    do {
-                        value = q.poll(this);
+                   /*
+
+                   TODO ADD BACK IN **************
+
+                   do {
+                        value = q.read(this);
                     } while (value == null);
+
 
                     compresser.setInput(input, (int) value.readPosition(), (int) value.readRemaining());
                     compresser.finish();
@@ -147,6 +151,7 @@ public class ZippedDocumentAppender implements Closeable {
                         w.write(() -> "zipped").bytes(outputBuffer);
 
                     });
+                          */
                 }
             } catch (Exception e) {
                 LOG.error("", e);
@@ -154,7 +159,6 @@ public class ZippedDocumentAppender implements Closeable {
         }
 
         @NotNull
-        @Override
         public Bytes provide(final long maxSize) {
 
             if (maxSize < inputBuffer.capacity())

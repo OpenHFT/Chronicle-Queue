@@ -59,8 +59,8 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
 
     @NotNull
     @Override
-    public synchronized  ExcerptAppender createAppender() throws IOException {
-        if(appender != null) {
+    public synchronized ExcerptAppender createAppender() throws IOException {
+        if (appender != null) {
             throw new IllegalStateException("Max 1 appender per queue");
         }
 
@@ -80,7 +80,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     private long offer(Bytes<?> bytes) throws IOException {
         try {
             this.buffer.offer(bytes);
-        } catch(InterruptedException e) {
+        } catch (InterruptedException e) {
             //TODO: what to do ?
             LOGGER.warn("", e);
         }
@@ -89,13 +89,13 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
     }
 
     private boolean handleEvent() throws InvalidEventHandlerException, InterruptedException {
-            return buffer.read(this::append) > 0;
+        return false; // todo buffer.read(this::append) > 0;
     }
 
     private void append(Bytes<?> bytes) {
         try {
             storeAppender.writeBytes(bytes);
-        } catch(IOException e) {
+        } catch (IOException e) {
             //TODO: what to do
             LOGGER.warn("", e);
         }

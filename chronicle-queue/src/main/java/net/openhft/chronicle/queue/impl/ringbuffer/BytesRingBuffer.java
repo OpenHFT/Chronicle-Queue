@@ -26,7 +26,6 @@ import net.openhft.chronicle.bytes.ref.UncheckedLongReference;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteOrder;
 
@@ -96,6 +95,9 @@ public class BytesRingBuffer {
         return capacity;
     }
 
+    // read and updated by the write thread. Its stored as a fast approximation
+    long localWriteUpTo;
+
     /**
      * Inserts the specified element at the tail of this queue if it is possible to do so
      * immediately without exceeding the queue's capacity,
@@ -116,14 +118,19 @@ public class BytesRingBuffer {
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
 
+
                 // if reading is occurring the remain capacity will only get larger, as have locked
-                final long remainingForWrite = remainingForWrite(writeLocation);
+                long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
 
                 this.minRemainingForWriteSinceLastPoll = Math.min
                         (minRemainingForWriteSinceLastPoll, remainingForWrite);
 
-                if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
-                    return false;
+                if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG) {
+                    localWriteUpTo = header.getWriteUpTo();
+                    remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+                    if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
+                        return false;
+                }
 
                 // writeBytes the size
                 long len = bytes0.readLimit();
@@ -165,82 +172,17 @@ public class BytesRingBuffer {
     private long writeLocation() {
         long writeLocation;
         for (; ; ) {
-            if ((writeLocation = header.getWriteLocation()) != LOCKED)
+            if ((writeLocation = header.writeLocation()) != LOCKED)
                 return writeLocation;
         }
     }
 
-    private long remainingForWrite(long offset) {
-        final long writeUpTo = header.getWriteUpTo();
-
+    private long remainingForWrite(long offset, final long writeUpTo) {
         return (writeUpTo - 1) - offset;
     }
 
-    /**
-     * @param bytesProvider provides a bytes to read into
-     * @return the Bytes written to
-     * @throws InterruptedException
-     * @throws IllegalStateException if the Bytes provided by the BytesProvider are not large
-     *                               enough
-     */
-    @NotNull
-    public Bytes take(@NotNull BytesProvider bytesProvider) throws
-            InterruptedException,
-            IllegalStateException {
-        Bytes poll;
-        do {
-            poll = poll(bytesProvider);
-        } while (poll == null);
-        return poll;
-    }
 
-    /**
-     * they similar to net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer#take(net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer.BytesProvider)
-     *
-     * @param readBytesMarshallable used to read the bytes
-     * @return the number of bytes read, if ZERO the read was blocked so you should call this method
-     * again if you want to read some data.
-     * @throws InterruptedException
-     * @throws IllegalStateException
-     */
-    public long read(@NotNull ReadBytesMarshallable readBytesMarshallable) throws
-            InterruptedException {
-
-        long writeLoc = writeLocation();
-        long offset = header.getReadLocation();
-        long readLocation = offset;
-
-        if (readLocation >= writeLoc)
-            return 0;
-
-        assert readLocation <= writeLoc : "reader has go ahead of the writer";
-
-        long flag = offset;
-
-        final byte state = bytes.readByte(flag);
-        offset += 1;
-
-        // the element is currently being written to, so let wait for the writeBytes to finish
-        if (state == States.BUSY.ordinal()) return 0;
-
-        assert state == States.READY.ordinal() : " we are reading a message that we " +
-                "shouldn't,  state=" + state + ", flag-location=" + flag + ", remainingForWrite=" +
-                remainingForWrite(header.getWriteLocation());
-
-        final long elementSize = bytes.readLong(offset);
-        offset += 8;
-
-        final long next = offset + elementSize;
-
-        bytes.read(readBytesMarshallable, offset, elementSize);
-        bytes.write(flag, States.USED.ordinal());
-
-        header.setWriteUpTo(next + bytes.capacity());
-        header.setReadLocation(next);
-
-        return 8;
-    }
-
+    long localWriteLocaton;
 
     /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
@@ -253,12 +195,18 @@ public class BytesRingBuffer {
             InterruptedException,
             IllegalStateException {
 
-        long writeLoc = writeLocation();
+        long writeLoc = localWriteLocaton;
         long offset = header.getReadLocation();
         long readLocation = offset;//= this.readLocation.get();
 
-        if (readLocation >= writeLoc)
-            return false;
+        if (readLocation >= writeLoc) {
+            localWriteLocaton = header.writeLocation();
+            writeLoc = localWriteLocaton;
+
+            if (readLocation >= writeLoc)
+                return false;
+
+        }
 
         assert readLocation <= writeLoc : "reader has go ahead of the writer";
 
@@ -291,71 +239,8 @@ public class BytesRingBuffer {
         return true;
     }
 
-    /**
-     * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
-     * empty.
-     *
-     * @return {@code null} if this queue is empty, or a populated buffer if the element was retried
-     * @throws IllegalStateException is the {@code using} buffer is not large enough
-     */
-    @Nullable
-    public Bytes poll(@NotNull BytesProvider bytesProvider) throws
-            InterruptedException,
-            IllegalStateException {
-
-        long writeLoc = writeLocation();
-        long offset = header.getReadLocation();
-        long readLocation = offset;//= this.readLocation.get();
-
-        if (readLocation >= writeLoc)
-            return null;
-
-        assert readLocation <= writeLoc : "reader has go ahead of the writer";
-
-        long flag = offset;
-
-        final byte state = bytes.readVolatileByte(flag);
-        offset += 1;
-
-        // the element is currently being written to, so let wait for the writeBytes to finish
-        if (state == States.BUSY.ordinal()) return null;
-
-        assert state == States.READY.ordinal() : " we are reading a message that we " +
-                "shouldn't,  state=" + state;
-
-        final long elementSize = bytes.readLong(offset);
-        offset += 8;
-
-        final long next = offset + elementSize;
-        final Bytes using = bytesProvider.provide(elementSize);
-
-        // checks that the 'using' bytes is large enough
-        checkSize(using, elementSize);
-
-        bytes.read(using, offset, elementSize);
-        bytes.writeOrderedLong(flag, States.USED.ordinal());
-
-        header.setWriteUpTo(next + bytes.capacity());
-        header.setReadLocation(next);
-
-        return using;
-    }
-
-
     private enum States {BUSY, READY, USED}
 
-    public interface BytesProvider {
-
-        /**
-         * sets up a buffer to back the ring buffer, the data wil be read into this buffer the size
-         * of the buffer must be as big as {@code maxSize}
-         *
-         * @param maxSize the number of bytes required
-         * @return a buffer of at least {@code maxSize} bytes remaining
-         */
-        @NotNull
-        Bytes provide(long maxSize);
-    }
 
     /**
      * used to store the locations around the ring buffer or reading and writing
@@ -393,7 +278,8 @@ public class BytesRingBuffer {
             return writeLocation.compareAndSwapValue(expectedValue, newValue);
         }
 
-        private long getWriteLocation() {
+
+        private long writeLocation() {
             return writeLocation.getValue();
         }
 
@@ -404,6 +290,10 @@ public class BytesRingBuffer {
             return writeUpToRef.getValue();
         }
 
+        private long getReadLocation() {
+            return readLocationOffsetRef.getValue();
+        }
+
         /**
          * sets the point at which you should not writeBytes any additional bits
          */
@@ -411,9 +301,6 @@ public class BytesRingBuffer {
             writeUpToRef.setOrderedValue(value);
         }
 
-        private long getReadLocation() {
-            return readLocationOffsetRef.getValue();
-        }
 
         private void setReadLocation(long value) {
             readLocationOffsetRef.setOrderedValue(value);
@@ -422,7 +309,7 @@ public class BytesRingBuffer {
         @Override
         public String toString() {
             return "Header{" +
-                    "writeLocation=" + getWriteLocation() +
+                    "writeLocation=" + writeLocation() +
                     ", writeUpTo=" + getWriteUpTo() +
                     ", readLocation=" + getReadLocation() + "}";
         }
@@ -526,10 +413,7 @@ public class BytesRingBuffer {
             //other words is that start of the data at the end of the ring and the remaining
             //data at the start of the ring.
             if (endOffSet >= offset) {
-
-
                 bytes.write(byteStore, offset, len);
-
                 return endOffSet;
             }
 

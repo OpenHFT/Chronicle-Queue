@@ -25,8 +25,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 
@@ -40,6 +38,7 @@ public class ReadMarshableRingBufferTest {
 
     @Test
     public void testWriteAndReadWithReadBytesMarshallable() throws Exception {
+        Bytes bytesRead = Bytes.elasticByteBuffer();
 
         Bytes data = Bytes.elasticByteBuffer();
         data.writeUtf8(EXPECTED);
@@ -58,10 +57,13 @@ public class ReadMarshableRingBufferTest {
                     data.readLimit(len);
                     bytesRingBuffer.offer(data);
 
-                    final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
-                    bytesRingBuffer.read(b -> q.add(b.readUTFΔ()));
 
-                    Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
+                    bytesRead.clear();
+                    bytesRingBuffer.read(bytesRead);
+                    final String s = bytesRead.readUTFΔ();
+
+
+                    Assert.assertEquals(EXPECTED, s);
                 }
             }
         }
@@ -69,6 +71,8 @@ public class ReadMarshableRingBufferTest {
 
     @Test
     public void testWriteAndRead3SingleThreadedWrite() throws Exception {
+        Bytes bytesRead = Bytes.elasticByteBuffer();
+
         try (NativeBytesStore<Void> nativeStore = NativeBytesStore.nativeStoreWithFixedCapacity
                 (BytesRingBuffer.sizeFor(OS.pageSize()))) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
@@ -79,10 +83,11 @@ public class ReadMarshableRingBufferTest {
 
                 bytesRingBuffer.offer(data());
 
-                final ArrayBlockingQueue<String> q = new ArrayBlockingQueue<>(1);
-                bytesRingBuffer.read(b -> q.add(b.readUTFΔ()));
 
-                Assert.assertEquals(EXPECTED, q.poll(1, TimeUnit.SECONDS));
+                bytesRead.clear();
+                bytesRingBuffer.read(bytesRead);
+                final String s = bytesRead.readUTFΔ();
+                Assert.assertEquals(EXPECTED, s);
             }
         }
     }
