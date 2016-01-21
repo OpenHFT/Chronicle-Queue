@@ -66,6 +66,30 @@ public class BytesRingBufferTest {
         return b;
     }
 
+
+    @Test
+    public void testLotsOfReadsAndWrites() throws Exception {
+
+        Bytes written = Bytes.elasticByteBuffer();
+        Bytes actual = Bytes.elasticByteBuffer();
+        try (NativeBytesStore<Void> nativeStore = nativeStoreWithFixedCapacity(SMALL_CAPACITY)) {
+            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+            bytesRingBuffer.clear();
+
+            for (int i = 0; i < (1 << 20); i++) {
+                written.clear();
+                final String expected = "hello world " + i;
+                written.writeUTFΔ(expected);
+                bytesRingBuffer.offer(written);
+                actual.clear();
+                bytesRingBuffer.read(actual);
+                assertEquals(expected, actual.readUTFΔ());
+
+            }
+        }
+    }
+
+
     @Test
     public void testWriteAndRead() throws Exception {
 
@@ -411,7 +435,7 @@ public class BytesRingBufferTest {
                 long start = System.nanoTime();
                 boolean busy = false;
                 appender.writeBytes(bytes);
-
+                Thread.yield();
                 if (busy) count++;
                 hist.sample(System.nanoTime() - start);
                 next += INTERVAL;
