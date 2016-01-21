@@ -227,6 +227,7 @@ public class Excerpts {
                             .minNumberOfWriteBytesRemaining();
                     long readCount = ringBuffer.numberOfReadsSinceLastCall();
                     long writeCount = ringBuffer.numberOfWritesSinceLastCall();
+                    long maxCopyTime = ringBuffer.maxCopyTimeSinceLastCall();
 
 
                     // the capacity1 is slightly less than the memory allocated to the ring
@@ -236,7 +237,7 @@ public class Excerpts {
                     final double percentage = ((double) writeBytesRemaining / (double)
                             capacity1) * 100;
                     System.out.println("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
-                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount);
+                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount + ", maxCopyTime=" + maxCopyTime / 1000 + " us");
 
 
                     return true;

@@ -27,6 +27,7 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.BusyPauser;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -47,12 +48,12 @@ import java.io.IOException;
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
-    public static final int BYTES_LENGTH = 128;
+    public static final int BYTES_LENGTH = 256;
     public static final int BLOCK_SIZE = 256 << 20;
     public static final int BUFFER_CAPACITY = 32 << 10;
     private static final long INTERVAL_US = 10;
 
-    //  @Ignore("long running")
+    @Ignore("long running")
     @Test
     public void test() throws IOException, InterruptedException {
         Histogram histogram = new Histogram();

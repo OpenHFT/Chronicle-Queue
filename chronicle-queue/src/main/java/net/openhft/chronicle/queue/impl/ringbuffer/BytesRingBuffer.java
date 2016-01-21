@@ -217,10 +217,13 @@ public class BytesRingBuffer {
 
         final long next = offset + elementSize;
 
+        long start = System.nanoTime();
         // checks that the 'using' bytes is large enough
         checkSize(using, elementSize);
 
         bytes.read(using, offset, elementSize);
+        long time = System.nanoTime() - start;
+        header.copyTime(time);
         bytes.writeOrderedLong(flag, States.USED.ordinal());
 
         header.setWriteUpTo(next + bytes.capacity());
@@ -239,6 +242,10 @@ public class BytesRingBuffer {
         return header.getAndClearWriteCount();
     }
 
+    public long maxCopyTimeSinceLastCall() {
+        return header.getAndClearMaxCopyTime();
+    }
+
     private enum States {BUSY, READY, USED}
 
 
@@ -255,6 +262,8 @@ public class BytesRingBuffer {
         private final LongReference readLocationOffsetRef;
         private final LongReference writeUpToRef;
         private final LongReference readCount;
+        private final LongReference maxCopyTime;
+
         private final LongReference writeLocation;
         private final LongReference writeCount;
 
@@ -274,6 +283,9 @@ public class BytesRingBuffer {
             // written by the reading thread
             readCount = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES * 2, Long.BYTES);
 
+            // written by the reading thread
+            maxCopyTime = UncheckedLongReference.create(this.bytesStore, start + Long.BYTES * 3, Long.BYTES);
+
             // written by writing thread.
             writeLocation = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE, Long.BYTES);
 
@@ -281,11 +293,17 @@ public class BytesRingBuffer {
             writeCount = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE + Long.BYTES, Long.BYTES);
         }
 
+        private static long getAndClear(LongReference readCount) {
+            for (; ; ) {
+                long value = readCount.getVolatileValue();
+                if (readCount.compareAndSwapValue(value, 0L))
+                    return value;
+            }
+        }
 
         private boolean compareAndSetWriteLocation(long expectedValue, long newValue) {
             return writeLocation.compareAndSwapValue(expectedValue, newValue);
         }
-
 
         long writeLocation() {
             return writeLocation.getValue();
@@ -318,11 +336,7 @@ public class BytesRingBuffer {
         }
 
         long getAndClearReadCount() {
-            for (; ; ) {
-                long value = readCount.getVolatileValue();
-                if (readCount.compareAndSwapValue(value, 0L))
-                    return value;
-            }
+            return getAndClear(readCount);
         }
 
         void incrementWriteCount() {
@@ -330,11 +344,7 @@ public class BytesRingBuffer {
         }
 
         long getAndClearWriteCount() {
-            for (; ; ) {
-                long value = writeCount.getVolatileValue();
-                if (writeCount.compareAndSwapValue(value, 0L))
-                    return value;
-            }
+            return getAndClear(writeCount);
         }
 
         private long getReadLocation() {
@@ -358,6 +368,20 @@ public class BytesRingBuffer {
             writeLocation.setOrderedValue(0);
             setReadLocation(0);
             setWriteUpTo(size);
+        }
+
+        public void copyTime(long time) {
+            for (; ; ) {
+                long copyTime = maxCopyTime.getVolatileValue();
+                if (copyTime >= time)
+                    return;
+                if (maxCopyTime.compareAndSwapValue(copyTime, time))
+                    return;
+            }
+        }
+
+        public long getAndClearMaxCopyTime() {
+            return getAndClear(maxCopyTime);
         }
     }
 
