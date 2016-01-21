@@ -24,6 +24,8 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.BusyPauser;
+import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
@@ -52,7 +54,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
 
     public static final int BYTES_LENGTH = 128;
     public static final int BLOCK_SIZE = 16 << 20;
-    private static final long INTERVAL_US = 20;
+    public static final int BUFFER_CAPACITY = 1 << 20;
+    private static final long INTERVAL_US = 5;
 
     //  @Ignore("long running")
     @Test
@@ -60,20 +63,21 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
-//        String path = getTmpDir() + "/deleteme.q";
+//        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+        String path = getTmpDir() + "/deleteme.q";
         new File(path).deleteOnExit();
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
-                .bufferCapacity(64 << 10)
                 .build();
 
+        EventGroup eventLoop = new EventGroup(true, Throwable::printStackTrace, BusyPauser.INSTANCE, true);
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
-                .bufferCapacity(64 << 10)
+                .bufferCapacity(BUFFER_CAPACITY)
                 .buffered(true)
+                .eventLoop(eventLoop)
                 .build();
 
         ExcerptAppender appender = wqueue.createAppender();
@@ -118,7 +122,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
-                for (int i = 0; i < 1_000_000; i++) {
+                for (int i = 0; i < 2_000_000; i++) {
                     while (System.nanoTime() < next)
                         /* busy wait*/ ;
                     long start = next;
@@ -156,5 +160,6 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         System.out.println("write-read: " + histogram.toMicrosFormat());
 //        rqueue.close();
 //        wqueue.close();
+        eventLoop.close();
     }
 }

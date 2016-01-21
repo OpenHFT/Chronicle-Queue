@@ -38,7 +38,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private long epoch; // default is 1970-01-01 UTC
     private boolean isBuffered;
     private Consumer<Throwable> onThrowable = Throwable::printStackTrace;
-    private EventLoop eventGroup;
+    private EventLoop eventLoop;
 
     private long bufferCapacity = 2 << 20;
 
@@ -52,6 +52,33 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
+    }
+
+    public static SingleChronicleQueueBuilder binary(File name) {
+        return binary(name.getAbsolutePath());
+    }
+
+    public static SingleChronicleQueueBuilder binary(String name) {
+        return new SingleChronicleQueueBuilder(name)
+                .wireType(WireType.BINARY);
+    }
+
+    public static SingleChronicleQueueBuilder text(File name) {
+        return text(name.getAbsolutePath());
+    }
+
+    public static SingleChronicleQueueBuilder text(String name) {
+        return new SingleChronicleQueueBuilder(name)
+                .wireType(WireType.TEXT);
+    }
+
+    public static SingleChronicleQueueBuilder raw(File name) {
+        return raw(name.getAbsolutePath());
+    }
+
+    public static SingleChronicleQueueBuilder raw(String name) {
+        return new SingleChronicleQueueBuilder(name)
+                .wireType(WireType.RAW);
     }
 
     public File path() {
@@ -88,6 +115,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return bufferCapacity;
     }
 
+    // *************************************************************************
+    // HELPERS
+    // *************************************************************************
 
     /**
      * @param ringBufferSize sets the ring buffer capacity in bytes
@@ -124,8 +154,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @NotNull
     public ChronicleQueue build() throws IOException {
-        if (isBuffered && eventGroup == null)
-            eventGroup = new EventGroup(true, onThrowable);
+        if (isBuffered && eventLoop == null)
+            eventLoop = new EventGroup(true, onThrowable);
         return new SingleChronicleQueue(this.clone());
     }
 
@@ -138,37 +168,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }
-    }
-
-    // *************************************************************************
-    // HELPERS
-    // *************************************************************************
-
-    public static SingleChronicleQueueBuilder binary(File name) {
-        return binary(name.getAbsolutePath());
-    }
-
-    public static SingleChronicleQueueBuilder binary(String name) {
-        return new SingleChronicleQueueBuilder(name)
-                .wireType(WireType.BINARY);
-    }
-
-    public static SingleChronicleQueueBuilder text(File name) {
-        return text(name.getAbsolutePath());
-    }
-
-    public static SingleChronicleQueueBuilder text(String name) {
-        return new SingleChronicleQueueBuilder(name)
-                .wireType(WireType.TEXT);
-    }
-
-    public static SingleChronicleQueueBuilder raw(File name) {
-        return raw(name.getAbsolutePath());
-    }
-
-    public static SingleChronicleQueueBuilder raw(String name) {
-        return new SingleChronicleQueueBuilder(name)
-                .wireType(WireType.RAW);
     }
 
     /**
@@ -203,8 +202,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.isBuffered;
     }
 
-    public EventLoop eventGroup() {
-        return eventGroup;
+    public EventLoop eventLoop() {
+        return eventLoop;
+    }
+
+    public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
+        this.eventLoop = eventLoop;
+        return this;
     }
 
     public SingleChronicleQueueBuilder bufferCapacity(int bufferCapacity) {

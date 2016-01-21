@@ -65,7 +65,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         storeForCycle(cycle(), builder.epoch());
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
-        eventloop = builder.eventGroup();
+        eventloop = builder.eventLoop();
         ringBufferCapacity = BytesRingBuffer.sizeFor(builder.bufferCapacity());
     }
 
