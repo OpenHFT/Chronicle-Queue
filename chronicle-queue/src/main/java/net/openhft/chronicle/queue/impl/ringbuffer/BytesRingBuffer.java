@@ -90,7 +90,7 @@ public class BytesRingBuffer {
         long writeLocation = this.writeLocation();
 
         // if reading is occurring the remain capacity will only get larger, as have locked
-        long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+        long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
         return remainingForWrite;
     }
 
@@ -120,7 +120,6 @@ public class BytesRingBuffer {
 
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
-
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
