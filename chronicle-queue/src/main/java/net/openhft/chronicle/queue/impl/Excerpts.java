@@ -156,14 +156,9 @@ public class Excerpts {
      */
     public static class BufferAppender implements ExcerptAppender {
 
-        public BytesRingBuffer ringBuffer() {
-            return ringBuffer;
-        }
-
         private final BytesRingBuffer ringBuffer;
         private final StoreAppender underlyingAppender;
         private final Wire tempWire;
-
         @NotNull
         private final EventLoop eventLoop;
 
@@ -229,7 +224,9 @@ public class Excerpts {
                 @Override
                 public boolean action() throws InvalidEventHandlerException {
                     long writeBytesRemaining = ringBuffer
-                            .minNumberOfWriteBytesRemainingSinceLastCall();
+                            .minNumberOfWriteBytesRemaining();
+                    int readCount = ringBuffer.numberOfReadsSinceLastCall();
+                    int writeCount = ringBuffer.numberOfWritesSinceLastCall();
 
 
                     // the capacity1 is slightly less than the memory allocated to the ring
@@ -239,7 +236,7 @@ public class Excerpts {
                     final double percentage = ((double) writeBytesRemaining / (double)
                             capacity1) * 100;
                     System.out.println("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
-                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free]");
+                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount);
 
 
                     return true;
@@ -255,6 +252,10 @@ public class Excerpts {
             eventLoop.start();
 
 
+        }
+
+        public BytesRingBuffer ringBuffer() {
+            return ringBuffer;
         }
 
         @Override
@@ -314,10 +315,9 @@ public class Excerpts {
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-        private Wire wire;
-
-        private long cycle;
         long index = -1;
+        private Wire wire;
+        private long cycle;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
 

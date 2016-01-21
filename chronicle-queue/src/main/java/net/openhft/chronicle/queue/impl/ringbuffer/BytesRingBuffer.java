@@ -44,7 +44,11 @@ public class BytesRingBuffer {
     private final RingBuffer bytes;
     @NotNull
     private final Header header;
-    private long minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
+    // read and updated by the write thread. Its stored as a fast approximation
+    long localWriteUpTo;
+    long localWriteLocaton;
+    // todo move these counters to the RingBuffer so we can control memory layout and thread safety.
+    private int readCount, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, writeCount;
 
     public BytesRingBuffer(@NotNull final BytesStore byteStore) {
         capacity = byteStore.realCapacity() - Header.HEADER_SIZE;
@@ -82,10 +86,12 @@ public class BytesRingBuffer {
      *
      * @return -1 if no read calls were made since the last time this method was called.
      */
-    public long minNumberOfWriteBytesRemainingSinceLastCall() {
-        long result = minRemainingForWriteSinceLastPoll;
-        minRemainingForWriteSinceLastPoll = Integer.MAX_VALUE;
-        return result == Integer.MAX_VALUE ? -1 : result;
+    public long minNumberOfWriteBytesRemaining() {
+        long writeLocation = this.writeLocation();
+
+        // if reading is occurring the remain capacity will only get larger, as have locked
+        long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
+        return remainingForWrite;
     }
 
     /**
@@ -94,9 +100,6 @@ public class BytesRingBuffer {
     public long capacity() {
         return capacity;
     }
-
-    // read and updated by the write thread. Its stored as a fast approximation
-    long localWriteUpTo;
 
     /**
      * Inserts the specified element at the tail of this queue if it is possible to do so
@@ -121,9 +124,6 @@ public class BytesRingBuffer {
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 long remainingForWrite = remainingForWrite(writeLocation, localWriteUpTo);
-
-                this.minRemainingForWriteSinceLastPoll = Math.min
-                        (minRemainingForWriteSinceLastPoll, remainingForWrite);
 
                 if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG) {
                     localWriteUpTo = header.getWriteUpTo();
@@ -157,6 +157,7 @@ public class BytesRingBuffer {
                 this.bytes.write(offset, bytes0);
                 this.bytes.writeByte(flagLoc, States.READY.ordinal());
 
+                writeCount++;
                 return true;
             }
 
@@ -181,14 +182,11 @@ public class BytesRingBuffer {
         return (writeUpTo - 1) - offset;
     }
 
-
-    long localWriteLocaton;
-
     /**
      * Retrieves and removes the head of this queue, or returns {@code null} if this queue is
      * empty.
      *
-     * @return {@code null} if this queue is empty, or a populated buffer if the element was retried
+     * @return false if this queue is empty, or a populated buffer if the element was retried
      * @throws IllegalStateException is the {@code using} buffer is not large enough
      */
     public boolean read(@NotNull Bytes using) throws
@@ -236,7 +234,21 @@ public class BytesRingBuffer {
         header.setWriteUpTo(next + bytes.capacity());
         header.setReadLocation(next);
 
+        // note, not thread safe so fast but not reliable.
+        readCount++;
         return true;
+    }
+
+    public int numberOfReadsSinceLastCall() {
+        int ret = readCount;
+        readCount = 0;
+        return ret;
+    }
+
+    public int numberOfWritesSinceLastCall() {
+        int ret = writeCount;
+        writeCount = 0;
+        return ret;
     }
 
     private enum States {BUSY, READY, USED}
@@ -290,10 +302,6 @@ public class BytesRingBuffer {
             return writeUpToRef.getValue();
         }
 
-        private long getReadLocation() {
-            return readLocationOffsetRef.getValue();
-        }
-
         /**
          * sets the point at which you should not writeBytes any additional bits
          */
@@ -301,6 +309,9 @@ public class BytesRingBuffer {
             writeUpToRef.setOrderedValue(value);
         }
 
+        private long getReadLocation() {
+            return readLocationOffsetRef.getValue();
+        }
 
         private void setReadLocation(long value) {
             readLocationOffsetRef.setOrderedValue(value);

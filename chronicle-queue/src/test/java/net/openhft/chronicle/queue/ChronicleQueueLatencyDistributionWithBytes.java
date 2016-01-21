@@ -53,8 +53,8 @@ import java.io.IOException;
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
     public static final int BYTES_LENGTH = 128;
-    public static final int BLOCK_SIZE = 16 << 20;
-    public static final int BUFFER_CAPACITY = 1 << 20;
+    public static final int BLOCK_SIZE = 256 << 20;
+    public static final int BUFFER_CAPACITY = 1 << 30;
     private static final long INTERVAL_US = 5;
 
     //  @Ignore("long running")
@@ -122,7 +122,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
-                for (int i = 0; i < 2_000_000; i++) {
+                for (int i = 0; i < 20_000_000; i++) {
                     while (System.nanoTime() < next)
                         /* busy wait*/ ;
                     long start = next;
