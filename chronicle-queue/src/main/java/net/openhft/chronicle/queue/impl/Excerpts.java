@@ -223,8 +223,9 @@ public class Excerpts {
             eventLoop.addHandler(new EventHandler() {
                 @Override
                 public boolean action() throws InvalidEventHandlerException {
-                    long writeBytesRemaining = ringBuffer
-                            .minNumberOfWriteBytesRemaining();
+                    long writeBytesRemaining = ringBuffer.minNumberOfWriteBytesRemaining();
+                    if (writeBytesRemaining == Long.MAX_VALUE)
+                        return false;
                     long readCount = ringBuffer.numberOfReadsSinceLastCall();
                     long writeCount = ringBuffer.numberOfWritesSinceLastCall();
                     long maxCopyTime = ringBuffer.maxCopyTimeSinceLastCall();

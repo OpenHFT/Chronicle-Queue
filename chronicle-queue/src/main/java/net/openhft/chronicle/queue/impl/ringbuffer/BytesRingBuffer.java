@@ -79,14 +79,10 @@ public class BytesRingBuffer {
      * each time the ring is read, this logs the number of bytes in the write buffer, calling this
      * method resets these statistics,
      *
-     * @return -1 if no read calls were made since the last time this method was called.
+     * @return Long.MAX_VALUE if no read calls were made since the last time this method was called.
      */
     public long minNumberOfWriteBytesRemaining() {
-        long writeLocation = this.writeLocation();
-
-        // if reading is occurring the remain capacity will only get larger, as have locked
-        long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
-        return remainingForWrite;
+        return header.getAndClearMinRemainingBytesCount();
     }
 
     /**
@@ -118,9 +114,11 @@ public class BytesRingBuffer {
 
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
+                header.sampleRemainingForWrite(remainingForWrite);
 
                 if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG) {
                     remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpToVolatile());
+                    header.sampleRemainingForWrite(remainingForWrite);
                     if (remainingForWrite < bytes0.readRemaining() + SIZE + FLAG)
                         return false;
                 }
@@ -266,6 +264,7 @@ public class BytesRingBuffer {
 
         private final LongReference writeLocation;
         private final LongReference writeCount;
+        private final LongReference minRemainingBytesCount;
 
         /**
          * @param bytesStore the bytes for the header
@@ -291,6 +290,9 @@ public class BytesRingBuffer {
 
             // written by writing thread.
             writeCount = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE + Long.BYTES, Long.BYTES);
+
+            // written by writing thread.
+            minRemainingBytesCount = UncheckedLongReference.create(this.bytesStore, start + CACHE_LINE_SIZE + Long.BYTES * 2, Long.BYTES);
         }
 
         private static long getAndClear(LongReference readCount) {
@@ -364,7 +366,6 @@ public class BytesRingBuffer {
         }
 
         public synchronized void clear(long size) {
-
             writeLocation.setOrderedValue(0);
             setReadLocation(0);
             setWriteUpTo(size);
@@ -382,6 +383,24 @@ public class BytesRingBuffer {
 
         public long getAndClearMaxCopyTime() {
             return getAndClear(maxCopyTime);
+        }
+
+        public void sampleRemainingForWrite(long remainingForWrite) {
+            for (; ; ) {
+                long value = minRemainingBytesCount.getVolatileValue();
+                if (value <= remainingForWrite)
+                    return;
+                if (minRemainingBytesCount.compareAndSwapValue(value, remainingForWrite))
+                    return;
+            }
+        }
+
+        public long getAndClearMinRemainingBytesCount() {
+            for (; ; ) {
+                long value = minRemainingBytesCount.getVolatileValue();
+                if (minRemainingBytesCount.compareAndSwapValue(value, Long.MAX_VALUE))
+                    return value;
+            }
         }
     }
 

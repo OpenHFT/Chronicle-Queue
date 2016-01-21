@@ -50,7 +50,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
 
     public static final int BYTES_LENGTH = 256;
     public static final int BLOCK_SIZE = 256 << 20;
-    public static final int BUFFER_CAPACITY = 32 << 10;
+    public static final int BUFFER_CAPACITY = 16 << 20;
     private static final long INTERVAL_US = 10;
 
     @Ignore("long running")
@@ -59,7 +59,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-        String path = "target/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+        String path = "/var/tmp/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
 //        String path = getTmpDir() + "/deleteme.q";
         new File(path).deleteOnExit();
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
