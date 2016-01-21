@@ -237,9 +237,9 @@ public class Excerpts {
 
                     final double percentage = ((double) writeBytesRemaining / (double)
                             capacity1) * 100;
-                    System.out.println("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
-                            "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount + ", maxCopyTime=" + maxCopyTime / 1000 + " us");
-
+                    if (percentage < 0.5)
+                        LOG.info("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
+                                "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount + ", maxCopyTime=" + maxCopyTime / 1000 + " us");
 
                     return true;
                 }
