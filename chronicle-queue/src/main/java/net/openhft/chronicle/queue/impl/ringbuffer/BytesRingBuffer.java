@@ -116,7 +116,6 @@ public class BytesRingBuffer {
                 if (Thread.currentThread().isInterrupted())
                     throw new InterruptedException();
 
-
                 // if reading is occurring the remain capacity will only get larger, as have locked
                 long remainingForWrite = remainingForWrite(writeLocation, header.getWriteUpTo());
 
