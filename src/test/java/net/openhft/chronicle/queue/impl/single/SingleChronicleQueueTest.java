@@ -559,6 +559,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore
     @Test
     public void testAppendWithRingBuffer() throws Throwable {
         AtomicReference<Throwable> ref = new AtomicReference<>();
