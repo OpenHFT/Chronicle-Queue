@@ -125,7 +125,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long cycle() {
-        final Roll roll = this.roll;
+        @Nullable final Roll roll = this.roll;
         if (roll == null) return -1;
 
         return roll.cycle();
@@ -137,7 +137,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long epoch() {
-        final Roll roll = this.roll;
+        @Nullable final Roll roll = this.roll;
         if (roll == null)
             return 0;
         return roll.epoch();
@@ -232,7 +232,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public MappedBytes mappedBytes() {
-        final MappedBytes mappedBytes = new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
+        @NotNull final MappedBytes mappedBytes = new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
         mappedBytes.writePosition(bounds.getWritePosition());
         mappedBytes.readPosition(bounds.getReadPosition());
         return mappedBytes;
@@ -289,7 +289,7 @@ public class SingleChronicleQueueStore implements WireStore {
         wire.read(MetaDataField.chunkSize).int64();
         wire.read(MetaDataField.overlapSize).int64();
 
-        final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
+        @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
         indexing = new Indexing(wireType);
         wire.read(MetaDataField.indexing).marshallable(indexing);
@@ -346,7 +346,7 @@ public class SingleChronicleQueueStore implements WireStore {
         @NotNull
         public static String toBinaryString(long i) {
 
-            StringBuilder sb = new StringBuilder();
+            @NotNull StringBuilder sb = new StringBuilder();
 
             for (int n = 63; n >= 0; n--)
                 sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
@@ -357,8 +357,8 @@ public class SingleChronicleQueueStore implements WireStore {
         @NotNull
         public static String toScale() {
 
-            StringBuilder units = new StringBuilder();
-            StringBuilder tens = new StringBuilder();
+            @NotNull StringBuilder units = new StringBuilder();
+            @NotNull StringBuilder tens = new StringBuilder();
 
             for (int n = 64; n >= 1; n--)
                 units.append((0 == (n % 10)) ? "|" : n % 10);
@@ -550,7 +550,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
             long writePosition = wire.bytes().writePosition();
             try {
-                final Bytes<?> bytes = wire.bytes();
+                @NotNull final Bytes<?> bytes = wire.bytes();
 
                 if (sequenceNumber % 64 != 0)
                     return;
@@ -566,7 +566,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     if (!context.isMetaData())
                         throw new IllegalStateException("sequenceNumber not found");
 
-                    final LongArrayValues primaryIndex = array(wire, array);
+                    @NotNull final LongArrayValues primaryIndex = array(wire, array);
                     final long primaryOffset = toAddress0(sequenceNumber);
                     long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
 
@@ -579,7 +579,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     bytes.readLimit(bytes.capacity());
                     try (DocumentContext context0 = wire.readingDocument(secondaryAddress)) {
 
-                        final LongArrayValues array1 = array(wire, array);
+                        @NotNull final LongArrayValues array1 = array(wire, array);
                         if (!context0.isPresent())
                             throw new IllegalStateException("document not found");
                         if (!context0.isMetaData())
@@ -594,9 +594,10 @@ public class SingleChronicleQueueStore implements WireStore {
             }
         }
 
-        private LongArrayValues array(@NotNull WireIn w, LongArrayValues using) {
+        @NotNull
+        private LongArrayValues array(@NotNull WireIn w, @NotNull LongArrayValues using) {
             final StringBuilder sb = Wires.acquireStringBuilder();
-            final ValueIn valueIn = w.readEventName(sb);
+            @NotNull final ValueIn valueIn = w.readEventName(sb);
             if (!"index".contentEquals(sb))
                 throw new IllegalStateException("expecting index");
 
@@ -643,7 +644,7 @@ public class SingleChronicleQueueStore implements WireStore {
          */
         public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
-            final Bytes<?> bytes = wire.bytes();
+            @NotNull final Bytes<?> bytes = wire.bytes();
             final long indexToIndex0 = indexToIndex(bytes);
 
 
@@ -660,7 +661,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     throw new IllegalStateException("Invalid index, expecting and index at " +
                             "pos=" + indexToIndex0 + ", but found data instead.");
 
-                final LongArrayValues primaryIndex = array(wire, array);
+                @NotNull final LongArrayValues primaryIndex = array(wire, array);
                 long primaryOffset = toAddress0(index);
 
                 do {
@@ -683,7 +684,7 @@ public class SingleChronicleQueueStore implements WireStore {
                         if (documentContext1.isData())
                             continue;
 
-                        final LongArrayValues array1 = array(wire, array);
+                        @NotNull final LongArrayValues array1 = array(wire, array);
                         long secondaryOffset = toAddress1(index);
 
                         do {
@@ -732,7 +733,7 @@ public class SingleChronicleQueueStore implements WireStore {
         private long linearScan(@NotNull Wire context, long toIndex, long fromKnownIndex,
                                 long knownAddress) {
 
-            final Bytes<?> bytes = context.bytes();
+            @NotNull final Bytes<?> bytes = context.bytes();
 
             final long p = bytes.readPosition();
             final long l = bytes.readLimit();

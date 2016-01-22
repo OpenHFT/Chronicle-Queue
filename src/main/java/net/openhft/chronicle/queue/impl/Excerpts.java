@@ -119,10 +119,10 @@ public class Excerpts {
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
-            final EventHandler handler = () -> {
+            @NotNull final EventHandler handler = () -> {
 
                 final Wire wire = underlyingAppender.wire();
-                final Bytes<?> bytes = wire.bytes();
+                @NotNull final Bytes<?> bytes = wire.bytes();
                 final long start = bytes.writePosition();
 
                 bytes.writeInt(Wires.NOT_READY);
@@ -211,7 +211,7 @@ public class Excerpts {
          */
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            final Bytes<?> bytes = tempWire.bytes();
+            @NotNull final Bytes<?> bytes = tempWire.bytes();
             bytes.clear();
             writer.writeMarshallable(tempWire);
             return writeBytes(bytes);
@@ -226,7 +226,7 @@ public class Excerpts {
          */
         @Override
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            final Bytes<?> bytes = tempWire.bytes();
+            @NotNull final Bytes<?> bytes = tempWire.bytes();
             bytes.clear();
             marshallable.writeMarshallable(bytes);
             return writeBytes(bytes);
@@ -301,7 +301,7 @@ public class Excerpts {
             this.store = queue.storeForCycle(this.cycle, queue.epoch());
             this.index = this.store.sequenceNumber();
 
-            final MappedBytes mappedBytes = store.mappedBytes();
+            @NotNull final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
@@ -484,7 +484,7 @@ public class Excerpts {
                         // the next cycle (negative)
                         final StringBuilder sb = Wires.acquireStringBuilder();
 
-                        final ValueIn vi = wire.readEventName(sb);
+                        @NotNull final ValueIn vi = wire.readEventName(sb);
                         if ("roll".contentEquals(sb)) {
                             roll = vi.int32();
                             break;
@@ -535,7 +535,7 @@ public class Excerpts {
 
             cycle = expectedCycle;
 
-            final Bytes<?> bytes = wire.bytes();
+            @NotNull final Bytes<?> bytes = wire.bytes();
 
             final long sequenceNumber = toSequenceNumber(index);
             if (sequenceNumber == -1) {

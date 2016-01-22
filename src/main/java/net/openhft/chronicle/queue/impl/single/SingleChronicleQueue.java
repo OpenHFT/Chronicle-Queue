@@ -31,6 +31,7 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredBytes;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -49,9 +50,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @NotNull
     private final SingleChronicleQueueBuilder builder;
+    @NotNull
     private final RollCycle cycle;
     @NotNull
     private final RollDateCache dateCache;
+    @NotNull
     private final WireStorePool pool;
     private final boolean bufferedAppends;
     private final long epoch;
@@ -78,7 +81,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     @Override
     public ExcerptAppender createAppender() {
-        final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
+        @NotNull final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
         if (bufferedAppends) {
             long ringBufferCapacity = BytesRingBuffer.sizeFor(builder
                     .bufferCapacity());
@@ -116,7 +119,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final long cycle = firstCycle();
         if (cycle == -1)
             return -1;
-        final WireStore store = acquireStore(cycle, epoch());
+        @NotNull final WireStore store = acquireStore(cycle, epoch());
         final long sequenceNumber = store.firstSequenceNumber();
         return ChronicleQueue.index(store.cycle(), sequenceNumber);
     }
@@ -124,8 +127,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private long firstCycle() {
         long firstCycle = -1;
 
-        final String basePath = builder.path().getAbsolutePath();
-        final File[] files = builder.path().listFiles();
+        @NotNull final String basePath = builder.path().getAbsolutePath();
+        @Nullable final File[] files = builder.path().listFiles();
 
         if (files != null && files.length > 0) {
             long firstDate = Long.MAX_VALUE;
@@ -173,8 +176,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     private long lastCycle() {
-        final String basePath = builder.path().getAbsolutePath();
-        final File[] files = builder.path().listFiles();
+        @NotNull final String basePath = builder.path().getAbsolutePath();
+        @Nullable final File[] files = builder.path().listFiles();
 
         if (files != null && files.length > 0) {
             long lastDate = Long.MIN_VALUE;
@@ -218,10 +221,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
-        final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
+        @NotNull final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
 
-
-        final Function<File, MappedBytes> toMappedBytes = file -> {
+        @NotNull final Function<File, MappedBytes> toMappedBytes = file -> {
             try {
                 long chunkSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize());
                 long overlapSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize() / 4);
@@ -247,20 +249,19 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         }
 
-
         final File parentFile = cycleFile.getParentFile();
         if (parentFile != null && !parentFile.exists()) {
             parentFile.mkdirs();
         }
 
-        Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
+        @NotNull Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
                 ws.headerLength(),
                 ws.headerCreated(),
                 cycle,
                 builder
         );
 
-        final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
+        @NotNull final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
                 SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
                         .builder.wireType(), mappedBytes, epoch);

@@ -39,7 +39,7 @@ public class WireStorePool {
             if (this == o) return true;
             if (!(o instanceof RollDetails)) return false;
 
-            RollDetails rollDetails = (RollDetails) o;
+            @NotNull RollDetails rollDetails = (RollDetails) o;
 
             return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
 
@@ -62,7 +62,7 @@ public class WireStorePool {
     }
 
     public synchronized WireStore acquire(long cycle, final long epoch) {
-        final RollDetails rollDetails = new RollDetails(cycle, epoch);
+        @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {
             stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));

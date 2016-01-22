@@ -60,7 +60,7 @@ public class RollDateCache {
         DateValue dv = values[hash];
         if (dv == null || dv.millis != millis) {
             synchronized (formatter) {
-                String text = formatter.format(new Date(millis));
+                @NotNull String text = formatter.format(new Date(millis));
                 values[hash] = new DateValue(millis, text);
                 return text;
             }

@@ -30,6 +30,8 @@ import java.util.function.Consumer;
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private final File path;
     private long blockSize;
+
+    @NotNull
     private WireType wireType;
 
     private RollCycle rollCycle;
@@ -101,11 +103,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder wireType(WireType wireType) {
+    public SingleChronicleQueueBuilder wireType(@NotNull WireType wireType) {
         this.wireType = wireType;
         return this;
     }
 
+    @NotNull
     public WireType wireType() {
         return this.wireType;
     }
@@ -158,6 +161,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return epoch;
     }
 
+    @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
     }
@@ -187,7 +191,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @return this
      */
     @NotNull
-    public SingleChronicleQueueBuilder onThrowable(Consumer<Throwable> onThrowable) {
+    public SingleChronicleQueueBuilder onThrowable(@NotNull Consumer<Throwable> onThrowable) {
         this.onThrowable = onThrowable;
         return this;
     }

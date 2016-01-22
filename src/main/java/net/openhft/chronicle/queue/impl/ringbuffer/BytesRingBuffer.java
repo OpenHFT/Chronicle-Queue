@@ -66,7 +66,7 @@ public interface BytesRingBuffer {
 
     static BytesRingBuffer newInstance(@NotNull NativeBytesStore<Void> bytesStore) {
         try {
-            final Class<BytesRingBuffer> aClass = clazz();
+            @NotNull final Class<BytesRingBuffer> aClass = clazz();
             final Constructor<BytesRingBuffer> constructor = aClass.getDeclaredConstructor(BytesStore.class);
             return constructor.newInstance(bytesStore);
 
