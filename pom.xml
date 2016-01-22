@@ -32,7 +32,7 @@
     <artifactId>chronicle-queue</artifactId>
     <version>4.0.3-beta-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>OpenHFT/Chronicle-Queue/chronicle-queue</name>
+    <name>OpenHFT/chronicle-queue</name>
 
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
@@ -53,7 +53,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
 
         </dependencies>
     </dependencyManagement>
