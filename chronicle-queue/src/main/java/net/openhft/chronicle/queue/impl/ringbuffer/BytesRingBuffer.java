@@ -15,7 +15,7 @@ import java.lang.reflect.Method;
  */
 public interface BytesRingBuffer {
 
-    static final Logger LOG = LoggerFactory.getLogger(BytesRingBuffer.class);
+    Logger LOG = LoggerFactory.getLogger(BytesRingBuffer.class);
 
     void clear();
 
