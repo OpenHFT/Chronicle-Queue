@@ -138,12 +138,10 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long sequenceNumber() {
-
         if (this.indexing == null)
             return 0;
         return this.indexing.lastSequenceNumber();
     }
-
 
     @Override
     public boolean appendRollMeta(@NotNull Wire wire, long cycle) {
@@ -153,7 +151,6 @@ public class SingleChronicleQueueStore implements WireStore {
         bounds.setWritePosition(wire.bytes().writePosition());
         return true;
     }
-
 
     /**
      * Moves the position to the index
@@ -473,7 +470,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire the current wire
          * @return the position of the index
          */
-        long indexToIndex(@Nullable final Wire wire) {
+        long indexToIndex(@NotNull final Wire wire) {
             for (; ; ) {
                 long index2Index = this.index2Index.getVolatileValue();
 
@@ -577,8 +574,7 @@ public class SingleChronicleQueueStore implements WireStore {
         long newIndex(@NotNull Wire wire) {
             long position;
             do {
-                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, true,
-                        INDEX_TEMPLATE);
+                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, true, INDEX_TEMPLATE);
             } while (position <= 0);
 
             return position;
