@@ -92,7 +92,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             return storeAppender;
     }
 
-
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
