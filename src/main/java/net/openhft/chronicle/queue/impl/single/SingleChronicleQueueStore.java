@@ -108,8 +108,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long cycle() {
-        @Nullable final Roll roll = this.roll;
-
+        final Roll roll = this.roll;
         return roll.cycle();
     }
 
@@ -119,7 +118,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long epoch() {
-        @Nullable final Roll roll = this.roll;
+        final Roll roll = this.roll;
         return roll.epoch();
     }
 
