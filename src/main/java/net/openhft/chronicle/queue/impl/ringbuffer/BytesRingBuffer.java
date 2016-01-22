@@ -64,7 +64,7 @@ public interface BytesRingBuffer {
     long maxCopyTimeSinceLastCall();
 
 
-    static BytesRingBuffer newInstance(NativeBytesStore<Void> bytesStore) {
+    static BytesRingBuffer newInstance(@NotNull NativeBytesStore<Void> bytesStore) {
         try {
             final Class<BytesRingBuffer> aClass = clazz();
             final Constructor<BytesRingBuffer> constructor = aClass.getDeclaredConstructor(BytesStore.class);

@@ -80,7 +80,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         if (bufferedAppends) {
             long ringBufferCapacity = BytesRingBuffer.sizeFor(builder
                     .bufferCapacity());
-            return new Excerpts.BufferAppender(eventloop, storeAppender, ringBufferCapacity);
+            return new Excerpts.BufferedAppender(eventloop, storeAppender, ringBufferCapacity);
         } else
             return storeAppender;
     }

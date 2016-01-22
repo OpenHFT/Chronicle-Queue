@@ -90,11 +90,14 @@ public class Excerpts {
     }
 
 
-
     /**
+     * Unlike the other appenders the write methods are not able to return the index that he exceprt
+     * was written to, as the write is deferred  using a ring buffer , and later written using a
+     * background thread
+     *
      * @author Rob Austin.
      */
-    public static class BufferAppender implements ExcerptAppender {
+    public static class BufferedAppender implements ExcerptAppender {
 
         private final BytesRingBuffer ringBuffer;
         private final StoreAppender underlyingAppender;
@@ -102,9 +105,9 @@ public class Excerpts {
         @NotNull
         private final EventLoop eventLoop;
 
-        public BufferAppender(@NotNull final EventLoop eventLoop,
-                              @NotNull final StoreAppender underlyingAppender,
-                              final long ringBufferCapacity) {
+        public BufferedAppender(@NotNull final EventLoop eventLoop,
+                                @NotNull final StoreAppender underlyingAppender,
+                                final long ringBufferCapacity) {
             this.eventLoop = eventLoop;
             ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
                     ringBufferCapacity));
@@ -194,6 +197,13 @@ public class Excerpts {
             return ringBuffer;
         }
 
+        /**
+         * for the best performance use net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.Bytes)
+         *
+         * @param writer to write to excerpt.
+         * @return always returns -1 when using the buffered appender
+         * @throws IOException
+         */
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final Bytes<?> bytes = tempWire.bytes();
@@ -202,6 +212,13 @@ public class Excerpts {
             return writeBytes(bytes);
         }
 
+        /**
+         * for the best performacne use net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.Bytes)
+         *
+         * @param marshallable to write to excerpt.
+         * @return always returns -1 when using the buffered appender
+         * @throws IOException
+         */
         @Override
         public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
             final Bytes<?> bytes = tempWire.bytes();
@@ -210,6 +227,14 @@ public class Excerpts {
             return writeBytes(bytes);
         }
 
+        /**
+         * for the best performance call this method, rather than net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)
+         * or net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeDocument(net.openhft.chronicle.wire.WriteMarshallable)
+         *
+         * @param bytes to write to excerpt.
+         * @return always returns -1 when using the buffered appender
+         * @throws IOException
+         */
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
             try {
