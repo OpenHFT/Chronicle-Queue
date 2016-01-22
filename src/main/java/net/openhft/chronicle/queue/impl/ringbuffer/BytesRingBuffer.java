@@ -63,7 +63,7 @@ public interface BytesRingBuffer {
 
     long maxCopyTimeSinceLastCall();
 
-
+    @NotNull
     static BytesRingBuffer newInstance(@NotNull NativeBytesStore<Void> bytesStore) {
         try {
             @NotNull final Class<BytesRingBuffer> aClass = clazz();

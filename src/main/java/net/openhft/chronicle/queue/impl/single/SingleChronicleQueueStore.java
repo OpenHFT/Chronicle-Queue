@@ -733,7 +733,8 @@ public class SingleChronicleQueueStore implements WireStore {
         private long linearScan(@NotNull Wire context, long toIndex, long fromKnownIndex,
                                 long knownAddress) {
 
-            @NotNull final Bytes<?> bytes = context.bytes();
+            @NotNull
+            final Bytes<?> bytes = context.bytes();
 
             final long p = bytes.readPosition();
             final long l = bytes.readLimit();

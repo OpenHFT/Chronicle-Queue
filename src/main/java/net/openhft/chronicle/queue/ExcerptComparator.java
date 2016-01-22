@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * For a binary search, provide a comparison of Excerpts
  */
@@ -26,5 +28,5 @@ public interface ExcerptComparator {
      * @param excerpt to check
      * @return -1 below, 0 = in range, +1 above range.
      */
-    int compare(Excerpt excerpt);
+    int compare(@NotNull Excerpt excerpt);
 }

@@ -121,6 +121,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * @return the type of wire used, for example TEXT_WIRE or BINARY WIRE
      */
+    @NotNull
     WireType wireType();
 
     static long toSequenceNumber(long index) {

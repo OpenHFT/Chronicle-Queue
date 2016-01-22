@@ -54,6 +54,7 @@ public class RollDateCache {
      * @param cycle the rollCycle number to format
      * @return the formatted date/time string
      */
+    @NotNull
     public String formatFor(long cycle) {
         long millis = cycle * length;
         int hash = Maths.hash32(millis) & (SIZE - 1);
@@ -68,7 +69,7 @@ public class RollDateCache {
         return dv.text;
     }
 
-    public long parseCount(String name) throws ParseException {
+    public long parseCount(@NotNull String name) throws ParseException {
         synchronized (formatter) {
             return formatter.parse(name).getTime() / length;
         }

@@ -581,10 +581,8 @@ public class Excerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() throws IOException {
-
             if (!moveToIndex(queue.lastIndex()))
                 throw new IllegalStateException("unable to move to the start");
-
             return this;
         }
 
@@ -608,9 +606,7 @@ public class Excerpts {
                 moveToIndex(ChronicleQueue.index(cycle, -1));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
-
             }
-
             return this;
         }
 

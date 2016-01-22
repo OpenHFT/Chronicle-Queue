@@ -34,6 +34,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     @NotNull
     private WireType wireType;
 
+    @NotNull
     private RollCycle rollCycle;
 
     private long epoch; // default is 1970-01-01 UTC
@@ -88,6 +89,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
                 .wireType(WireType.RAW);
     }
 
+    @NotNull
     public File path() {
         return this.path;
     }
@@ -228,9 +230,16 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    /**
+     * setting the {@code bufferCapacity} also sets {@code buffered} to {@code true}
+     *
+     * @param bufferCapacity the capacity of the ring buffer
+     * @return this
+     */
     @NotNull
     public SingleChronicleQueueBuilder bufferCapacity(int bufferCapacity) {
         this.bufferCapacity = bufferCapacity;
+        this.isBuffered = true;
         return this;
     }
 }

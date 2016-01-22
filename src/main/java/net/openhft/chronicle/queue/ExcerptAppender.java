@@ -50,14 +50,14 @@ public interface ExcerptAppender extends ExcerptCommon {
     long writeBytes(@NotNull Bytes<?> bytes) throws IOException;
 
     /**
-     * @return the index last written, this index includes the cycle
+     * @return the index last written, this index includes the cycle and the sequence number
      * @throws IllegalStateException if no index is available
      */
     long index();
 
     /**
-     * @return the cycle this appender is on, unsually with chronicle-queue each cycle will have its
-     * owne unique data file to store the exceprts
+     * @return the cycle this appender is on, unusually with chronicle-queue each cycle will have its
+     * own unique data file to store the excerpt
      */
     long cycle();
 

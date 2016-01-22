@@ -76,6 +76,7 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
 
     @Override
+    @NotNull
     public WireType wireType() {
         throw new UnsupportedOperationException("Not implemented");
     }
@@ -86,12 +87,13 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
      *              00:00:00 GMT
      * @return the {@code WireStore} associated with this {@code cycle}
      */
+    @NotNull
     protected abstract WireStore storeForCycle(long cycle, final long epoch);
 
     /**
      * @param store the {@code store} to release
      */
-    protected abstract void release(WireStore store);
+    protected abstract void release(@NotNull WireStore store);
 
     /**
      * @return the current cycle

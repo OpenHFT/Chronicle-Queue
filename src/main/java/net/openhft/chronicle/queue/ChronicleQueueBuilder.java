@@ -21,9 +21,6 @@ import org.jetbrains.annotations.NotNull;
  * @author Rob Austin.
  */
 public interface ChronicleQueueBuilder extends Cloneable {
-
     @NotNull
     ChronicleQueue build();
-
-
 }

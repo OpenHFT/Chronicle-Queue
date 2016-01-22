@@ -70,7 +70,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
         eventloop = builder.eventLoop();
-
     }
 
     @Override
@@ -97,6 +96,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return new Excerpts.StoreTailer(this);
     }
 
+    @NotNull
     @Override
     protected WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
@@ -163,8 +163,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         return firstCycle;
     }
 
-    //TODO: reduce garbage
-
 
     @Override
     public long lastIndex() {
@@ -208,6 +206,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
 
+    @NotNull
     @Override
     public WireType wireType() {
         return builder.wireType();
@@ -220,7 +219,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
-        final String cycleFormat = this.dateCache.formatFor(cycle);
+        @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
         @NotNull final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
 
         @NotNull final Function<File, MappedBytes> toMappedBytes = file -> {
@@ -254,14 +253,16 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             parentFile.mkdirs();
         }
 
-        @NotNull Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
+        @NotNull
+        Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
                 ws.headerLength(),
                 ws.headerCreated(),
                 cycle,
                 builder
         );
 
-        @NotNull final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
+        @NotNull
+        final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
                 SingleChronicleQueueStore
                 (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
                         .builder.wireType(), mappedBytes, epoch);
@@ -274,15 +275,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 consumer
         ).delegate();
 
-    }
-
-    @NotNull
-    private Excerpts.StoreTailer excerptTailer() {
-        try {
-            return new Excerpts.StoreTailer(this);
-        } catch (IOException e) {
-            throw Jvm.rethrow(e);
-        }
     }
 
 }
