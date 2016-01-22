@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
@@ -45,12 +44,19 @@ import java.io.IOException;
  * Result on an E5-2650 v2 @ 2.60GHz, Ubuntu 10.04 writing to ext4.
  * write: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.21 / 0.98  1.3 / 5.2  14 / 42  606 / 868
  * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.62 / 1.6  13 / 6,160  66,060 / 81,790  85,980 / 85,980
+ * <p>
+ * Result on an i7-4790 @ 3.6 GHz Centos 7 to tmpfs
+ * write: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.15 / 0.17  0.20 / 0.28  9.5 / 10  11 / 1,410
+ * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.56 / 0.66  4.0 / 10  34,600 / 40,890  40,890 / 40,890
+ * <p>
+ * write: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.15 / 0.16  0.23 / 0.56  9.5 / 10  12 / 68
+ * write-read: 50/90 99/99.9 99.99/99.999 99.9999/worst was 0.53 / 0.69  7.0 / 23  34,600 / 34,600  34,600 / 34,600
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
     public static final int BYTES_LENGTH = 256;
     public static final int BLOCK_SIZE = 256 << 20;
-    public static final int BUFFER_CAPACITY = 16 << 20;
+    public static final int BUFFER_CAPACITY = 256 << 10;
     private static final long INTERVAL_US = 10;
 
     @Ignore("long running")
@@ -59,8 +65,9 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-        String path = "/var/tmp/deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+        String path = "deleteme" + System.nanoTime() + ".q";
 //        String path = getTmpDir() + "/deleteme.q";
+
         new File(path).deleteOnExit();
         ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
@@ -80,14 +87,9 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ExcerptTailer tailer = rqueue.createTailer();
 
         Thread tailerThread = new Thread(() -> {
-
+            AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            //   Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
-            AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableTailerAffinity")) {
-                    lock = Affinity.acquireLock();
-                }
 
                 while (true) {
                     try {
@@ -103,18 +105,15 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     }
                 }
             } finally {
-                if (lock != null) {
-                    lock.release();
+                if (rlock != null) {
+                    rlock.release();
                 }
             }
         }, "tailer thread");
 
         Thread appenderThread = new Thread(() -> {
-            AffinityLock lock = null;
+            AffinityLock wlock = AffinityLock.acquireLock();
             try {
-                if (Boolean.getBoolean("enableAppenderAffinity")) {
-                    lock = Affinity.acquireLock();
-                }
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
@@ -135,8 +134,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                if (lock != null) {
-                    lock.release();
+                if (wlock != null) {
+                    wlock.release();
                 }
             }
         }, "appender thread");
