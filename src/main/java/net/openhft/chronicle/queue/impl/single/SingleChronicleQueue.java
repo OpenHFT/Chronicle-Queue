@@ -117,8 +117,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         if (cycle == -1)
             return -1;
         final WireStore store = acquireStore(cycle, epoch());
-        if (store == null)
-            return -1;
         final long sequenceNumber = store.firstSequenceNumber();
         return ChronicleQueue.index(store.cycle(), sequenceNumber);
     }
@@ -243,6 +241,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
             try (DocumentContext context = wire.readingDocument()) {
                 if (context.isPresent() && context.isMetaData())
+                    //noinspection ConstantConditions
                     return wire.getValueIn().typedMarshallable();
             }
 

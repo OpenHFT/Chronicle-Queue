@@ -131,8 +131,6 @@ public class ChronicleQueueTestBase {
         if (dir.isDirectory()) {
             File[] files = dir.listFiles();
             if (files != null) {
-                int len$ = files.length;
-
                 for (File file : files) {
                     if (file.isDirectory()) {
                         deleteDir(file);
