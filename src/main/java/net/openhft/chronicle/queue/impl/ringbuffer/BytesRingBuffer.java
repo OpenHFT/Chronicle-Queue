@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.ringbuffer;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import org.jetbrains.annotations.NotNull;
@@ -66,7 +67,7 @@ public interface BytesRingBuffer {
     static BytesRingBuffer newInstance(NativeBytesStore<Void> bytesStore) {
         try {
             final Class<BytesRingBuffer> aClass = clazz();
-            final Constructor<BytesRingBuffer> constructor = aClass.getDeclaredConstructor(NativeBytesStore.class);
+            final Constructor<BytesRingBuffer> constructor = aClass.getDeclaredConstructor(BytesStore.class);
             return constructor.newInstance(bytesStore);
 
         } catch (Exception e) {
@@ -85,7 +86,7 @@ public interface BytesRingBuffer {
 
     static long sizeFor(long cacacity) {
         try {
-            final Method sizeFor = clazz().getMethod("sizeFor", String.class);
+            final Method sizeFor = clazz().getMethod("sizeFor", long.class);
             return (long) sizeFor.invoke(null, cacacity);
         } catch (Exception e) {
             LOG.error("This is a a commercial feature, please contact " +
