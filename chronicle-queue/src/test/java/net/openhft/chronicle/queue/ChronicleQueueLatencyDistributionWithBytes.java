@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
@@ -66,7 +65,7 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         Histogram histogram = new Histogram();
         Histogram writeHistogram = new Histogram();
 
-        String path = "deleteme" + System.nanoTime() + ".q"; /*getTmpDir()*/
+        String path = "deleteme" + System.nanoTime() + ".q";
 //        String path = getTmpDir() + "/deleteme.q";
 
         new File(path).deleteOnExit();
@@ -88,14 +87,9 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
         ExcerptTailer tailer = rqueue.createTailer();
 
         Thread tailerThread = new Thread(() -> {
-
+            AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            //   Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
-            AffinityLock lock = null;
             try {
-                if (Boolean.getBoolean("enableTailerAffinity")) {
-                    lock = Affinity.acquireLock();
-                }
 
                 while (true) {
                     try {
@@ -111,18 +105,15 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
                     }
                 }
             } finally {
-                if (lock != null) {
-                    lock.release();
+                if (rlock != null) {
+                    rlock.release();
                 }
             }
         }, "tailer thread");
 
         Thread appenderThread = new Thread(() -> {
-            AffinityLock lock = null;
+            AffinityLock wlock = AffinityLock.acquireLock();
             try {
-                if (Boolean.getBoolean("enableAppenderAffinity")) {
-                    lock = Affinity.acquireLock();
-                }
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
                 long next = System.nanoTime() + INTERVAL_US * 1000;
@@ -143,8 +134,8 @@ public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTe
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                if (lock != null) {
-                    lock.release();
+                if (wlock != null) {
+                    wlock.release();
                 }
             }
         }, "appender thread");

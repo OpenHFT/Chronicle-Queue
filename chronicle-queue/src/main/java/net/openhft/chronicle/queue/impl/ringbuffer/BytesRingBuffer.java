@@ -495,6 +495,8 @@ public class BytesRingBuffer {
             //other words is that start of the data at the end of the ring and the remaining
             //data at the start of the ring.
             if (endOffSet >= offset) {
+                if (len > 1000)
+                    System.out.println("len:" + len);
                 bytes.write(byteStore, offset, len);
                 return endOffSet;
             }
