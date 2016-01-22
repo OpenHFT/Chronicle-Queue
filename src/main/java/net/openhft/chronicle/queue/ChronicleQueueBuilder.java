@@ -17,15 +17,13 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 /**
  * @author Rob Austin.
  */
 public interface ChronicleQueueBuilder extends Cloneable {
 
     @NotNull
-    ChronicleQueue build() throws IOException;
+    ChronicleQueue build();
 
 
 }

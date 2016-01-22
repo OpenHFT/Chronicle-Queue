@@ -4,6 +4,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,9 +32,9 @@ public class IndexTest extends ChronicleQueueTestBase {
     private final WireType wireType;
 
     /**
-     * @param wireType
+     * @param wireType the type of the wire
      */
-    public IndexTest(WireType wireType) {
+    public IndexTest(@NotNull WireType wireType) {
         this.wireType = wireType;
     }
 

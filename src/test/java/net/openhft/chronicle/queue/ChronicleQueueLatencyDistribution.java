@@ -116,7 +116,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         }
 
         @Override
-        public void writeMarshallable(WireOut w) {
+        public void writeMarshallable(@NotNull WireOut w) {
             w.write(() -> "TestTrade")
                     .marshallable(bt);
         }
@@ -133,7 +133,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         }
 
         @Override
-        public void readMarshallable(WireIn wireIn) throws IORuntimeException {
+        public void readMarshallable(@NotNull WireIn wireIn) throws IORuntimeException {
             ValueIn vi = wireIn.readEventName(messageType);
             vi.marshallable(testTrade);
 

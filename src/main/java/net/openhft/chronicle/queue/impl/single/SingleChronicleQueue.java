@@ -31,7 +31,6 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredBytes;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -55,11 +54,11 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollDateCache dateCache;
     private final WireStorePool pool;
     private final boolean bufferedAppends;
-    private long epoch;
-    private EventLoop eventloop;
+    private final long epoch;
+    private final EventLoop eventloop;
 
 
-    SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) throws IOException {
+    SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
@@ -78,7 +77,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() throws IOException {
+    public ExcerptAppender createAppender() {
         final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
         if (bufferedAppends) {
             long ringBufferCapacity = BytesRingBuffer.sizeFor(builder
@@ -118,6 +117,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         if (cycle == -1)
             return -1;
         final WireStore store = acquireStore(cycle, epoch());
+        if (store == null)
+            return -1;
         final long sequenceNumber = store.firstSequenceNumber();
         return ChronicleQueue.index(store.cycle(), sequenceNumber);
     }
@@ -215,7 +216,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    @Nullable
+    @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
@@ -249,20 +250,16 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
 
         final File parentFile = cycleFile.getParentFile();
-        if (parentFile != null & !parentFile.exists()) {
+        if (parentFile != null && !parentFile.exists()) {
             parentFile.mkdirs();
         }
 
-        Consumer<WiredBytes<WireStore>> consumer = ws -> {
-
-            ws.delegate().install(
-                    ws.headerLength(),
-                    ws.headerCreated(),
-                    cycle,
-                    builder
-            );
-
-        };
+        Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
+                ws.headerLength(),
+                ws.headerCreated(),
+                cycle,
+                builder
+        );
 
         final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
                 SingleChronicleQueueStore

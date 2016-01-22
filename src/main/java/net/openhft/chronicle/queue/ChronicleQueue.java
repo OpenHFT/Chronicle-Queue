@@ -88,7 +88,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws IOException if an IO problem occurs
      */
     @NotNull
-    ExcerptAppender createAppender() throws IOException;
+    ExcerptAppender createAppender();
 
     /**
      * @return The current estimated number of entries.

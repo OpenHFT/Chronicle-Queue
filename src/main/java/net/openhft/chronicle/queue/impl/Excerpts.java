@@ -287,7 +287,7 @@ public class Excerpts {
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
 
-        public StoreAppender(@NotNull AbstractChronicleQueue queue) throws IOException {
+        public StoreAppender(@NotNull AbstractChronicleQueue queue) {
 
             super(queue);
 
@@ -360,11 +360,13 @@ public class Excerpts {
         }
 
         @ForceInline
-        private WireStore store() throws IOException {
+        private WireStore store() {
             if (this.cycle != queue.cycle()) {
                 long nextCycle = queue.cycle();
                 if (this.store != null) {
-                    this.store.appendRollMeta(wire, nextCycle);
+                    while (!this.store.appendRollMeta(wire, nextCycle)) {
+                        Thread.yield();
+                    }
                     this.queue.release(this.store);
                 }
 

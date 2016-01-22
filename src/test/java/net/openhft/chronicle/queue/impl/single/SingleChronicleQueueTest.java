@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -49,9 +50,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private final WireType wireType;
 
     /**
-     * @param wireType
+     * @param wireType the type of wire
      */
-    public SingleChronicleQueueTest(WireType wireType) {
+    public SingleChronicleQueueTest(@NotNull WireType wireType) {
         this.wireType = wireType;
     }
 

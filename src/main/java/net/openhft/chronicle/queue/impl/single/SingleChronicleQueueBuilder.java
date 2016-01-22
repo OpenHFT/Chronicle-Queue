@@ -25,7 +25,6 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.function.Consumer;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
@@ -164,7 +163,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public ChronicleQueue build() throws IOException {
+    public ChronicleQueue build() {
         if (isBuffered && eventLoop == null)
             eventLoop = new EventGroup(true, onThrowable);
         return new SingleChronicleQueue(this.clone());

@@ -35,7 +35,7 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() throws IOException {
+    public ExcerptAppender createAppender() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

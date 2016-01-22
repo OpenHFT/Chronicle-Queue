@@ -125,7 +125,10 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long cycle() {
-        return this.roll.cycle();
+        final Roll roll = this.roll;
+        if (roll == null) return -1;
+
+        return roll.cycle();
     }
 
     /**
@@ -134,7 +137,10 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long epoch() {
-        return this.roll.epoch();
+        final Roll roll = this.roll;
+        if (roll == null)
+            return 0;
+        return roll.epoch();
     }
 
     /**
@@ -142,7 +148,10 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long firstSequenceNumber() {
+        if (this.indexing == null)
+            return 0;
         return this.indexing.firstSequenceNumber();
+
     }
 
     /**
@@ -150,12 +159,17 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long sequenceNumber() {
+
+        if (this.indexing == null)
+            return 0;
         return this.indexing.lastSequenceNumber();
     }
 
 
     @Override
     public boolean appendRollMeta(@NotNull Wire wire, long cycle) {
+        if (roll == null)
+            return false;
         if (!roll.casNextRollCycle(cycle))
             return false;
         wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
@@ -173,6 +187,8 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long moveToIndex(@NotNull Wire wire, long index) {
+        if (indexing == null)
+            return -1;
         return indexing.moveToIndex(wire, index);
     }
 
@@ -244,9 +260,6 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-    private int toIntU30(long len) {
-        return Wires.toIntU30(len, "Document length %,d out of 30-bit int range.");
-    }
 
     // *************************************************************************
     // Utilities :: Read
@@ -599,7 +612,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * index. The secondary index only records the address of every 64th except, the except are
          * linearly scanned from there on.
          *
-         * @param bytes
+         * @param bytes the underlying bytes
          * @return the address of the Excerpt containing the usable index, just after the header
          */
         long newIndex(@NotNull Bytes bytes) {
