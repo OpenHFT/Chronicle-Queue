@@ -49,7 +49,7 @@ public class ReadMarshableRingBufferTest {
                     .nativeStoreWithFixedCapacity(BytesRingBuffer.sizeFor(OS.pageSize() << j))) {
                 nativeStore.zeroOut(0, nativeStore.capacity());
 
-                final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+                final BytesRingBuffer bytesRingBuffer = BytesRingBuffer.newInstance(nativeStore);
                 bytesRingBuffer.clear();
 
                 for (int i = 0; i < 100; i++) {
@@ -77,7 +77,7 @@ public class ReadMarshableRingBufferTest {
                 (BytesRingBuffer.sizeFor(OS.pageSize()))) {
             nativeStore.zeroOut(0, nativeStore.writeLimit());
 
-            final BytesRingBuffer bytesRingBuffer = new BytesRingBuffer(nativeStore);
+            final BytesRingBuffer bytesRingBuffer = BytesRingBuffer.newInstance(nativeStore);
 
             for (int i = 0; i < 100; i++) {
 

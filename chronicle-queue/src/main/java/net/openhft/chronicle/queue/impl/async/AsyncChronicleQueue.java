@@ -48,7 +48,7 @@ public class AsyncChronicleQueue extends DelegatedChronicleQueue {
         long size = BytesRingBuffer.sizeFor(capacity);
         this.store = NativeBytesStore.nativeStoreWithFixedCapacity(size);
         this.store.zeroOut(0, this.store.writeLimit());
-        this.buffer = new BytesRingBuffer(this.store);
+        this.buffer = BytesRingBuffer.newInstance(this.store);
         this.storeAppender = queue.createAppender();
         this.eventGroup = new EventGroup(true);
         this.eventGroup.addHandler(this::handleEvent);
