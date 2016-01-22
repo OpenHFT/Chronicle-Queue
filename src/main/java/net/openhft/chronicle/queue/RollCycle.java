@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.time.ZoneId;
 import java.util.Objects;
 
@@ -50,8 +52,10 @@ public interface RollCycle {
      * @param zone
      * @return
      */
-    static RollCycle from(final int length, final String format, final ZoneId zone) {
+    @NotNull
+    static RollCycle from(final int length, @NotNull final String format, @NotNull final ZoneId zone) {
         return new RollCycle() {
+            @NotNull
             @Override
             public String format() {
                 return format;
@@ -62,6 +66,7 @@ public interface RollCycle {
                 return length;
             }
 
+            @NotNull
             @Override
             public ZoneId zone() {
                 return zone;

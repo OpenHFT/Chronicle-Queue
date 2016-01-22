@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
+    @NotNull
     private final WireStoreSupplier supplier;
 
     private class RollDetails {
@@ -54,6 +55,7 @@ public class WireStorePool {
         }
     }
 
+    @NotNull
     private final Map<RollDetails, WireStore> stores;
 
     public WireStorePool(@NotNull WireStoreSupplier supplier) {
@@ -73,13 +75,14 @@ public class WireStorePool {
         return store;
     }
 
-    public synchronized void release(WireStore store) {
+    public synchronized void release(@NotNull WireStore store) {
         store.release();
         if (store.refCount() <= 0) {
             stores.remove(new RollDetails(store.cycle(), store.epoch()));
         }
     }
 
+    @NotNull
     public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
         return new WireStorePool(supplier);
     }

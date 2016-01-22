@@ -31,6 +31,7 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.WiredBytes;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -47,8 +48,10 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
     }
 
+    @NotNull
     private final SingleChronicleQueueBuilder builder;
     private final RollCycle cycle;
+    @NotNull
     private final RollDateCache dateCache;
     private final WireStorePool pool;
     private final boolean bufferedAppends;
@@ -56,7 +59,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private EventLoop eventloop;
 
 
-    protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
@@ -212,6 +215,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
+    @Nullable
     protected WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);

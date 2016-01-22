@@ -54,29 +54,35 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.epoch = 0;
     }
 
-    public static SingleChronicleQueueBuilder binary(File name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder binary(@NotNull File name) {
         return binary(name.getAbsolutePath());
     }
 
-    public static SingleChronicleQueueBuilder binary(String name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder binary(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.BINARY);
     }
 
-    public static SingleChronicleQueueBuilder text(File name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder text(@NotNull File name) {
         return text(name.getAbsolutePath());
     }
 
-    public static SingleChronicleQueueBuilder text(String name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder text(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.TEXT);
     }
 
-    public static SingleChronicleQueueBuilder raw(File name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder raw(@NotNull File name) {
         return raw(name.getAbsolutePath());
     }
 
-    public static SingleChronicleQueueBuilder raw(String name) {
+    @NotNull
+    public static SingleChronicleQueueBuilder raw(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
     }
@@ -85,6 +91,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.path;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder blockSize(int blockSize) {
         this.blockSize = blockSize;
         return this;
@@ -94,6 +101,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.blockSize;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder wireType(WireType wireType) {
         this.wireType = wireType;
         return this;
@@ -103,6 +111,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.wireType;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder rollCycle(@NotNull RollCycle rollCycle) {
         this.rollCycle = rollCycle;
         return this;
@@ -123,6 +132,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @param ringBufferSize sets the ring buffer capacity in bytes
      * @return this
      */
+    @NotNull
     public SingleChronicleQueueBuilder bufferCapacity(long ringBufferSize) {
         this.bufferCapacity = ringBufferSize;
         return this;
@@ -135,6 +145,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      *              1970,  00:00:00 GMT
      * @return {@code this}
      */
+    @NotNull
     public SingleChronicleQueueBuilder epoch(long epoch) {
         this.epoch = epoch;
         return this;
@@ -176,6 +187,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @param onThrowable your exception handler
      * @return this
      */
+    @NotNull
     public SingleChronicleQueueBuilder onThrowable(Consumer<Throwable> onThrowable) {
         this.onThrowable = onThrowable;
         return this;
@@ -189,6 +201,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @param isBuffered {@code true} if the append is buffered
      * @return this
      */
+    @NotNull
     public SingleChronicleQueueBuilder buffered(boolean isBuffered) {
         this.isBuffered = isBuffered;
         return this;
@@ -206,11 +219,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return eventLoop;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
         return this;
     }
 
+    @NotNull
     public SingleChronicleQueueBuilder bufferCapacity(int bufferCapacity) {
         this.bufferCapacity = bufferCapacity;
         return this;

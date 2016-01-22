@@ -61,6 +61,7 @@ public interface ChronicleQueue extends Closeable {
     /**
      * @return A descriptive name for this queue which can be used for logging.
      */
+    @NotNull
     String name();
 
     /**

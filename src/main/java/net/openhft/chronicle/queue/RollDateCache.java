@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Maths;
+import org.jetbrains.annotations.NotNull;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -30,16 +31,19 @@ import java.util.TimeZone;
 public class RollDateCache {
     private static final int SIZE = 32;
 
+    @NotNull
     private final DateFormat formatter;
+    @NotNull
     private final DateValue[] values;
     private final int length;
+    @NotNull
     private final ZoneId zoneId;
 
-    public RollDateCache(final RollCycle cycle) {
+    public RollDateCache(@NotNull final RollCycle cycle) {
         this(cycle.length(), cycle.format(), cycle.zone());
     }
 
-    public RollDateCache(final int length, String format, final ZoneId zoneId) {
+    public RollDateCache(final int length, @NotNull String format, @NotNull final ZoneId zoneId) {
         this.length = length;
         this.zoneId = zoneId;
         this.values = new DateValue[SIZE];

@@ -58,6 +58,7 @@ public class Excerpts {
     // *************************************************************************
 
     public static abstract class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
+        @NotNull
         protected final T queue;
 
         public DefaultAppender(@NotNull T queue) {
@@ -83,6 +84,7 @@ public class Excerpts {
 
         public abstract long cycle();
 
+        @NotNull
         @Override
         public ChronicleQueue queue() {
             return this.queue;
@@ -99,7 +101,9 @@ public class Excerpts {
      */
     public static class BufferedAppender implements ExcerptAppender {
 
+        @NotNull
         private final BytesRingBuffer ringBuffer;
+        @NotNull
         private final StoreAppender underlyingAppender;
         private final Wire tempWire;
         @NotNull
@@ -193,6 +197,7 @@ public class Excerpts {
 
         }
 
+        @NotNull
         public BytesRingBuffer ringBuffer() {
             return ringBuffer;
         }
@@ -258,6 +263,7 @@ public class Excerpts {
             return underlyingAppender.cycle();
         }
 
+        @NotNull
         @Override
         public ChronicleQueue queue() {
             return underlyingAppender.queue();
@@ -393,6 +399,7 @@ public class Excerpts {
      * Tailer
      */
     public static class StoreTailer implements ExcerptTailer {
+        @NotNull
         private final AbstractChronicleQueue queue;
         private Wire wire;
 
@@ -579,11 +586,13 @@ public class Excerpts {
             return this;
         }
 
+        @NotNull
         @Override
         public ChronicleQueue queue() {
             return this.queue;
         }
 
+        @NotNull
         private StoreTailer cycle(long cycle) throws IOException {
             if (this.cycle != cycle) {
                 if (null != this.store) {

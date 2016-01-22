@@ -70,6 +70,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             @Nullable Closeable closeable)
             throws IOException;
 
+    @NotNull
     MappedBytes mappedBytes();
 
 

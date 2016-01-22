@@ -65,14 +65,20 @@ public class SingleChronicleQueueStore implements WireStore {
                 .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX));
     }
 
+    @Nullable
     private WireType wireType;
+    @Nullable
     private final Roll roll;
+    @NotNull
     Bounds bounds = new Bounds();
     private MappedFile mappedFile;
+    @Nullable
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
 
+    @Nullable
     private SingleChronicleQueueBuilder builder;
+    @Nullable
     private Indexing indexing;
 
 
@@ -91,7 +97,7 @@ public class SingleChronicleQueueStore implements WireStore {
      *                    1, 1970,  00:00:00 GMT
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
-                              final WireType wireType,
+                              @NotNull final WireType wireType,
                               @NotNull MappedBytes mappedBytes,
                               long rollEpoc) {
         this.roll = new Roll(rollCycle, rollEpoc);
@@ -213,6 +219,7 @@ public class SingleChronicleQueueStore implements WireStore {
      * @return creates a new instance of mapped bytes, because, for example the tailer and appender
      * can be at different locations.
      */
+    @NotNull
     @Override
     public MappedBytes mappedBytes() {
         final MappedBytes mappedBytes = new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
@@ -223,7 +230,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     @Override
-    public void storeIndexLocation(Wire wire, long position, long sequenceNumber) {
+    public void storeIndexLocation(@NotNull Wire wire, long position, long sequenceNumber) {
         indexing.storeIndexLocation(wire, position, sequenceNumber);
     }
 
@@ -367,7 +374,9 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     class Bounds implements Marshallable {
+        @Nullable
         private LongValue writePosition;
+        @Nullable
         private LongValue readPosition;
 
         Bounds() {
@@ -426,7 +435,7 @@ public class SingleChronicleQueueStore implements WireStore {
         //private final MappedBytes indexContext;
         private final Wire templateIndex;
         // hold a reference to it so it doesn't get cleaned up.
-        private Bytes<?> mappedBytes;
+
         private int indexCount = 128 << 10;
         private int indexSpacing = 64;
         private LongValue index2Index;
@@ -523,17 +532,17 @@ public class SingleChronicleQueueStore implements WireStore {
          * records the the location of the sequenceNumber, only every 64th address is written to the
          * sequenceNumber file, the first sequenceNumber is stored at {@code index2index}
          *
-         * @param wire     the context that we are referring to
-         * @param address  the address of the Excerpts which we are going to record
+         * @param wire           the context that we are referring to
+         * @param address        the address of the Excerpts which we are going to record
          * @param sequenceNumber the sequenceNumber of the Excerpts which we are going to record
          */
-        public void storeIndexLocation(Wire wire,
+        public void storeIndexLocation(@NotNull Wire wire,
                                        final long address,
                                        final long sequenceNumber) {
 
             lastSequenceNumber(sequenceNumber);
 
-            long writePostion = wire.bytes().writePosition();
+            long writePosition = wire.bytes().writePosition();
             try {
                 final Bytes<?> bytes = wire.bytes();
 
@@ -557,7 +566,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
                     if (secondaryAddress == Wires.NOT_INITIALIZED) {
                         secondaryAddress = newIndex(bytes);
-                        writePostion = Math.max(writePostion, wire.bytes().writePosition());
+                        writePosition = Math.max(writePosition, wire.bytes().writePosition());
                         primaryIndex.setValueAt(primaryOffset, secondaryAddress);
                     }
 
@@ -576,11 +585,11 @@ public class SingleChronicleQueueStore implements WireStore {
                 }
 
             } finally {
-                wire.bytes().writePosition(writePostion);
+                wire.bytes().writePosition(writePosition);
             }
         }
 
-        private LongArrayValues array(WireIn w, LongArrayValues using) {
+        private LongArrayValues array(@NotNull WireIn w, LongArrayValues using) {
             final StringBuilder sb = Wires.acquireStringBuilder();
             final ValueIn valueIn = w.readEventName(sb);
             if (!"index".contentEquals(sb))
@@ -601,7 +610,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param bytes
          * @return the address of the Excerpt containing the usable index, just after the header
          */
-        long newIndex(Bytes bytes) {
+        long newIndex(@NotNull Bytes bytes) {
 
             try {
                 final long position = bytes.writePosition();
@@ -717,7 +726,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return > -1, if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
-        private long linearScan(Wire context, long toIndex, long fromKnownIndex,
+        private long linearScan(@NotNull Wire context, long toIndex, long fromKnownIndex,
                                 long knownAddress) {
 
             final Bytes<?> bytes = context.bytes();
@@ -766,14 +775,19 @@ public class SingleChronicleQueueStore implements WireStore {
     class Roll implements Marshallable {
         private long epoch;
         private int length;
+        @Nullable
         private String format;
+        @Nullable
         private ZoneId zoneId;
+        @Nullable
         private LongValue cycle;
+        @Nullable
         private LongValue nextCycle;
+        @Nullable
         private LongValue nextCycleMetaPosition;
 
 
-        Roll(RollCycle rollCycle, long rollEpoc) {
+        Roll(@Nullable RollCycle rollCycle, long rollEpoc) {
             this.length = rollCycle != null ? rollCycle.length() : -1;
             this.format = rollCycle != null ? rollCycle.format() : null;
             this.zoneId = rollCycle != null ? rollCycle.zone() : null;
@@ -817,11 +831,13 @@ public class SingleChronicleQueueStore implements WireStore {
             return this.cycle.getVolatileValue();
         }
 
+        @NotNull
         public Roll cycle(long rollCycle) {
             this.cycle.setOrderedValue(rollCycle);
             return this;
         }
 
+        @NotNull
         public Roll nextCycleMetaPosition(long position) {
             this.nextCycleMetaPosition.setOrderedValue(position);
             return this;
