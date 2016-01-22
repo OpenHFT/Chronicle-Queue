@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.BytesRingBuffer;
+import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -24,7 +26,6 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
@@ -58,8 +59,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final WireStorePool pool;
     private final boolean bufferedAppends;
     private final long epoch;
-    @NotNull
+    @Nullable
     private final EventLoop eventloop;
+    private final Consumer<BytesRingBufferStats> onRingBufferStats;
 
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
@@ -71,6 +73,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
         eventloop = builder.eventLoop();
+        this.onRingBufferStats = builder.onRingBufferStats();
     }
 
     @Override
@@ -83,9 +86,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     public ExcerptAppender createAppender() {
         @NotNull final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
         if (bufferedAppends) {
-            long ringBufferCapacity = BytesRingBuffer.sizeFor(builder
-                    .bufferCapacity());
-            return new Excerpts.BufferedAppender(eventloop, storeAppender, ringBufferCapacity);
+            long ringBufferCapacity = BytesRingBuffer.sizeFor(builder.bufferCapacity());
+            return new Excerpts.BufferedAppender(eventloop, storeAppender, ringBufferCapacity, onRingBufferStats);
         } else
             return storeAppender;
     }

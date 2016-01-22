@@ -16,17 +16,13 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.threads.HandlerPriority;
 import net.openhft.chronicle.threads.api.EventHandler;
@@ -39,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
@@ -90,7 +87,6 @@ public class Excerpts {
         }
     }
 
-
     /**
      * Unlike the other appenders the write methods are not able to return the index that he exceprt
      * was written to, as the write is deferred  using a ring buffer , and later written using a
@@ -110,15 +106,18 @@ public class Excerpts {
 
         public BufferedAppender(@NotNull final EventLoop eventLoop,
                                 @NotNull final StoreAppender underlyingAppender,
-                                final long ringBufferCapacity) {
+                                final long ringBufferCapacity,
+                                @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
+
             this.eventLoop = eventLoop;
-            ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
+            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
                     ringBufferCapacity));
 
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
-            @NotNull final EventHandler handler = () -> {
+            @NotNull
+            final EventHandler handler = () -> {
 
                 @NotNull final Wire wire = underlyingAppender.wire();
                 @NotNull final Bytes<?> bytes = wire.bytes();
@@ -164,24 +163,7 @@ public class Excerpts {
             eventLoop.addHandler(new EventHandler() {
                 @Override
                 public boolean action() throws InvalidEventHandlerException {
-                    long writeBytesRemaining = ringBuffer.minNumberOfWriteBytesRemaining();
-                    if (writeBytesRemaining == Long.MAX_VALUE)
-                        return false;
-                    long readCount = ringBuffer.numberOfReadsSinceLastCall();
-                    long writeCount = ringBuffer.numberOfWritesSinceLastCall();
-                    long maxCopyTime = ringBuffer.maxCopyTimeSinceLastCall();
-
-
-                    // the capacity1 is slightly less than the memory allocated to the ring
-                    // as the ring buffer itself uses some memory for the header
-                    final long capacity1 = ringBuffer.capacity();
-
-                    final double percentage = ((double) writeBytesRemaining / (double)
-                            capacity1) * 100;
-                    if (percentage < 0.5)
-                        LOG.info("ring buffer=" + (capacity1 - writeBytesRemaining) / 1024 +
-                                "KB/" + capacity1 / 1024 + "KB [" + (int) percentage + "% Free], writes=" + writeCount + ", reads=" + readCount + ", maxCopyTime=" + maxCopyTime / 1000 + " us");
-
+                    ringBufferStats.accept(ringBuffer);
                     return true;
                 }
 
@@ -564,11 +546,6 @@ public class Excerpts {
                 this.wire.bytes().readPosition(0);
                 return this;
             }
-
-            LOG.info("index=> index=" + toSequenceNumber(index) + ",cycle=" +
-                    toCycle(index));
-
-
             if (!moveToIndex(index))
                 throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
 

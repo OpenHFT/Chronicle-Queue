@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
@@ -23,11 +24,15 @@ import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.function.Consumer;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class.getName());
     private final File path;
     private long blockSize;
 
@@ -40,20 +45,62 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private long epoch; // default is 1970-01-01 UTC
     private boolean isBuffered;
     private Consumer<Throwable> onThrowable = Throwable::printStackTrace;
+
+    @Nullable
     private EventLoop eventLoop;
 
     private long bufferCapacity = 2 << 20;
+
+    /**
+     * by default logs the performance stats of the ring buffer
+     */
+    private Consumer<BytesRingBufferStats> onRingBufferStats = r -> {
+
+        long writeBytesRemaining = r.minNumberOfWriteBytesRemaining();
+
+        if (writeBytesRemaining == Long.MAX_VALUE)
+            return;
+
+        double percentageFree = ((double) writeBytesRemaining / (double) r.capacity()) * 100;
+
+        if (percentageFree > 0.5)
+            return;
+
+        final long writeCount = r.getAndClearWriteCount();
+        final long readCount = r.getAndClearReadCount();
+
+        LOG.info(("ring buffer=" + (r.capacity() - writeBytesRemaining / 1024 +
+                "KB/" + r.capacity() / 1024 + "KB [" + (int) percentageFree + "% Free], " +
+                "" + "writes=" + writeCount + ", reads=" + readCount + ", " +
+                "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us")));
+    };
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
-    public SingleChronicleQueueBuilder(File path) {
+    public SingleChronicleQueueBuilder(@NotNull File path) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
+    }
+
+    /**
+     * consumer will be called every second, also as there is data to report
+     *
+     * @param onRingBufferStats a consumer of the BytesRingBufferStats
+     * @return this
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
+        this.onRingBufferStats = onRingBufferStats;
+        return this;
+    }
+
+    public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        return this.onRingBufferStats;
     }
 
     @NotNull
@@ -220,13 +267,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.isBuffered;
     }
 
-    @NotNull
+    @Nullable
     public EventLoop eventLoop() {
         return eventLoop;
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
+    public SingleChronicleQueueBuilder eventLoop(@NotNull EventLoop eventLoop) {
         this.eventLoop = eventLoop;
         return this;
     }
