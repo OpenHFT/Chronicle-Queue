@@ -22,7 +22,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytesStore;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.ringbuffer.BytesRingBuffer;
-import net.openhft.chronicle.queue.impl.ringbuffer.ZippedDocumentAppender;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;

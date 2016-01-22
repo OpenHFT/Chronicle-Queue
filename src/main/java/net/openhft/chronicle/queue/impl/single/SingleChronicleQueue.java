@@ -115,8 +115,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         if (cycle == -1)
             return -1;
         final WireStore store = acquireStore(cycle, epoch());
-        final long subindex = store.firstSequenceNumber();
-        return ChronicleQueue.index(store.cycle(), subindex);
+        final long sequenceNumber = store.firstSequenceNumber();
+        return ChronicleQueue.index(store.cycle(), sequenceNumber);
     }
 
     private long firstCycle() {
@@ -166,8 +166,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final long lastCycle = lastCycle();
         if (lastCycle == -1)
             return -1;
-        final long lastSubIndex = acquireStore(lastCycle, epoch()).sequenceNumber();
-        return ChronicleQueue.index(lastCycle, lastSubIndex);
+        final long lastSequenceNumber = acquireStore(lastCycle, epoch()).sequenceNumber();
+        return ChronicleQueue.index(lastCycle, lastSequenceNumber);
     }
 
     private long lastCycle() {

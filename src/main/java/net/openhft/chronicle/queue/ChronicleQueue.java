@@ -102,7 +102,7 @@ public interface ChronicleQueue extends Closeable {
 
 
     /**
-     * @return the lowest valid index available, or subindex=0 if none are found
+     * @return the lowest valid index available, or sequenceNumber=0 if none are found
      */
     long firstIndex();
 

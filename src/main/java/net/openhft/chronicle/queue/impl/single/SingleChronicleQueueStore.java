@@ -26,7 +26,6 @@ import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.impl.WireConstants;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -137,7 +136,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long firstSequenceNumber() {
-        return this.indexing.firstSubIndex();
+        return this.indexing.firstSequenceNumber();
     }
 
     /**
@@ -145,7 +144,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long sequenceNumber() {
-        return this.indexing.lastSubIndex();
+        return this.indexing.lastSequenceNumber();
     }
 
 
@@ -224,8 +223,8 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     @Override
-    public void storeIndexLocation(Wire wire, long position, long subIndex) {
-        indexing.storeIndexLocation(wire, position, subIndex);
+    public void storeIndexLocation(Wire wire, long position, long sequenceNumber) {
+        indexing.storeIndexLocation(wire, position, sequenceNumber);
     }
 
 
@@ -366,20 +365,6 @@ public class SingleChronicleQueueStore implements WireStore {
         cycle, length, format, timeZone, nextCycle, epoch, firstCycle, lastCycle, nextCycleMetaPosition
     }
 
-    @FunctionalInterface
-    private interface Reader<T> {
-        long read(@NotNull Bytes context, int len, @NotNull T reader) throws IOException;
-    }
-
-    @FunctionalInterface
-    private interface WireWriter<T> {
-        long write(@NotNull Wire wire, long position, int size, @NotNull T writer) throws IOException;
-    }
-
-    @FunctionalInterface
-    private interface BytesWriter<T> {
-        long write(@NotNull Bytes wire, long position, int size, @NotNull T writer) throws IOException;
-    }
 
     class Bounds implements Marshallable {
         private LongValue writePosition;
@@ -392,10 +377,10 @@ public class SingleChronicleQueueStore implements WireStore {
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(BoundsField.writePosition).int64forBinding(
-                    WireConstants.HEADER_OFFSET, writePosition = wire.newLongReference())
-                    .write(BoundsField.readPosition).int64forBinding(
-                    WireConstants.HEADER_OFFSET, readPosition = wire.newLongReference());
+            wire.write(BoundsField.writePosition).int64forBinding(0, writePosition = wire
+                    .newLongReference())
+                    .write(BoundsField.readPosition).int64forBinding(0, readPosition = wire
+                    .newLongReference());
         }
 
         @Override
@@ -445,7 +430,7 @@ public class SingleChronicleQueueStore implements WireStore {
         private int indexCount = 128 << 10;
         private int indexSpacing = 64;
         private LongValue index2Index;
-        private LongValue lastIndex;
+        private LongValue lastSequenceNumber;
         private ThreadLocal<LongArrayValues> longArray;
 
         private LongValue firstIndex;
@@ -454,7 +439,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.index2Index = wireType.newLongReference().get();
             this.firstIndex = wireType.newLongReference().get();
 
-            this.lastIndex = wireType.newLongReference().get();
+            this.lastSequenceNumber = wireType.newLongReference().get();
             if (wireType == WireType.TEXT)
                 templateIndex = TEXT_TEMPLATE;
             else if (wireType == WireType.BINARY || wireType == WireType.FIELDLESS_BINARY)
@@ -471,7 +456,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     .write(IndexingFields.indexSpacing).int32(indexSpacing)
                     .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
                     .write(IndexingFields.fistIndex).int64forBinding(-1L, firstIndex)
-                    .write(IndexingFields.lastIndex).int64forBinding(-1L, lastIndex);
+                    .write(IndexingFields.lastIndex).int64forBinding(-1L, lastSequenceNumber);
         }
 
         @Override
@@ -480,21 +465,21 @@ public class SingleChronicleQueueStore implements WireStore {
                     .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
                     .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
                     .read(IndexingFields.fistIndex).int64(this.firstIndex, this, (o, i) -> o.firstIndex = i)
-                    .read(IndexingFields.lastIndex).int64(this.lastIndex, this, (o, i) -> o.lastIndex = i);
+                    .read(IndexingFields.lastIndex).int64(this.lastSequenceNumber, this, (o, i) -> o.lastSequenceNumber = i);
         }
 
-        public boolean setLastSubIndexIfGreater(long lastIndex) {
-            final long v = this.lastIndex.getVolatileValue();
-            return v < lastIndex && this.lastIndex.compareAndSwapValue(v, lastIndex);
+        public boolean lastSequenceNumber(long lastIndex) {
+            final long v = this.lastSequenceNumber.getVolatileValue();
+            return v < lastIndex && this.lastSequenceNumber.compareAndSwapValue(v, lastIndex);
         }
 
-        public long lastSubIndex() {
-            if (lastIndex == null)
+        public long lastSequenceNumber() {
+            if (lastSequenceNumber == null)
                 return 0;
-            return this.lastIndex.getVolatileValue();
+            return this.lastSequenceNumber.getVolatileValue();
         }
 
-        public long firstSubIndex() {
+        public long firstSequenceNumber() {
             if (index2Index.getVolatileValue() == 0)
                 return -1;
             if (firstIndex == null)
@@ -535,24 +520,24 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         /**
-         * records the the location of the subIndex, only every 64th address is written to the
-         * subIndex file, the first subIndex is stored at {@code index2index}
+         * records the the location of the sequenceNumber, only every 64th address is written to the
+         * sequenceNumber file, the first sequenceNumber is stored at {@code index2index}
          *
          * @param wire     the context that we are referring to
          * @param address  the address of the Excerpts which we are going to record
-         * @param subIndex the subIndex of the Excerpts which we are going to record
+         * @param sequenceNumber the sequenceNumber of the Excerpts which we are going to record
          */
         public void storeIndexLocation(Wire wire,
                                        final long address,
-                                       final long subIndex) {
+                                       final long sequenceNumber) {
 
-            setLastSubIndexIfGreater(subIndex);
+            lastSequenceNumber(sequenceNumber);
 
             long writePostion = wire.bytes().writePosition();
             try {
                 final Bytes<?> bytes = wire.bytes();
 
-                if (subIndex % 64 != 0)
+                if (sequenceNumber % 64 != 0)
                     return;
 
                 final LongArrayValues array = this.longArray.get();
@@ -564,10 +549,10 @@ public class SingleChronicleQueueStore implements WireStore {
                         throw new IllegalStateException("document not found");
 
                     if (!_.isMetaData())
-                        throw new IllegalStateException("subIndex not found");
+                        throw new IllegalStateException("sequenceNumber not found");
 
                     final LongArrayValues primaryIndex = array(wire, array);
-                    final long primaryOffset = toAddress0(subIndex);
+                    final long primaryOffset = toAddress0(sequenceNumber);
                     long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
 
                     if (secondaryAddress == Wires.NOT_INITIALIZED) {
@@ -584,8 +569,8 @@ public class SingleChronicleQueueStore implements WireStore {
                             throw new IllegalStateException("document not found");
 
                         if (!context.isMetaData())
-                            throw new IllegalStateException("subIndex not found");
-                        array1.setValueAt(toAddress1(subIndex), address);
+                            throw new IllegalStateException("sequenceNumber not found");
+                        array1.setValueAt(toAddress1(sequenceNumber), address);
                     }
 
                 }
@@ -827,7 +812,6 @@ public class SingleChronicleQueueStore implements WireStore {
         public long epoch() {
             return this.epoch;
         }
-
 
         public long cycle() {
             return this.cycle.getVolatileValue();

@@ -439,10 +439,8 @@ public class Excerpts {
                 moveToIndex(firstIndex);
             }
 
-            final boolean success = readAtSubIndex(t, c);
-
+            final boolean success = readAt(t, c);
             if (success) {
-
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
                 return true;
             }
@@ -454,7 +452,7 @@ public class Excerpts {
             return false;
         }
 
-        private <T> boolean readAtSubIndex(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
+        private <T> boolean readAt(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
 
             long roll;
             for (; ; ) {
@@ -530,10 +528,10 @@ public class Excerpts {
 
             final Bytes<?> bytes = wire.bytes();
 
-            final long subIndex = toSequenceNumber(index);
-            if (subIndex == -1) {
+            final long sequenceNumber = toSequenceNumber(index);
+            if (sequenceNumber == -1) {
                 bytes.readPosition(0);
-                this.index = ChronicleQueue.index(cycle, subIndex);
+                this.index = ChronicleQueue.index(cycle, sequenceNumber);
                 return true;
             }
 
@@ -545,7 +543,7 @@ public class Excerpts {
             bytes.readPosition(position);
             bytes.readLimit(bytes.realCapacity());
 
-            this.index = ChronicleQueue.index(cycle, subIndex - 1);
+            this.index = ChronicleQueue.index(cycle, sequenceNumber - 1);
             return true;
         }
 
