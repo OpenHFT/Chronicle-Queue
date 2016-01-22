@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 
 /**
- * Created by peter.lawrey on 30/01/15.
+ * @author Rob Austin.
  */
 public interface ChronicleQueueBuilder extends Cloneable {
 

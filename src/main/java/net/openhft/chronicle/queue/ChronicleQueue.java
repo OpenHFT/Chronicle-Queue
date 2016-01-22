@@ -71,7 +71,7 @@ public interface ChronicleQueue extends Closeable {
      * @throws IOException if an IO problem occurs
      */
     @NotNull
-    Excerpt createExcerpt() throws IOException;
+    Excerpt createExcerpt();
 
     /**
      * A Tailer can be used to read sequentially from the lower of a given position.

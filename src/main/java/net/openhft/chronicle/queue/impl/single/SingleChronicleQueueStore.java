@@ -16,11 +16,11 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.ReferenceCounter;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
@@ -44,7 +44,7 @@ import static net.openhft.chronicle.wire.Wires.NOT_READY;
 
 public class SingleChronicleQueueStore implements WireStore {
 
-    public static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
+    private static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class, "Bounds");
@@ -52,8 +52,8 @@ public class SingleChronicleQueueStore implements WireStore {
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class, "Roll");
     }
 
-    static Wire TEXT_TEMPLATE;
-    static Wire BINARY_TEMPLATE;
+    private static final Wire TEXT_TEMPLATE;
+    private static final Wire BINARY_TEMPLATE;
 
     static {
         TEXT_TEMPLATE = WireType.TEXT.apply(Bytes.elasticByteBuffer());
@@ -70,6 +70,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @Nullable
     private final Roll roll;
     @NotNull
+    private final
     Bounds bounds = new Bounds();
     private MappedFile mappedFile;
     @Nullable
@@ -90,9 +91,9 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * @param rollCycle
-     * @param wireType
-     * @param mappedBytes
+     * @param rollCycle   the current rollCycle
+     * @param wireType    the wire type that is being used
+     * @param mappedBytes used to mapped the data store file
      * @param rollEpoc    sets an epoch offset as the number of number of milliseconds since January
      *                    1, 1970,  00:00:00 GMT
      */
@@ -155,7 +156,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     @Override
-    public boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException {
+    public boolean appendRollMeta(@NotNull Wire wire, long cycle) {
         if (!roll.casNextRollCycle(cycle))
             return false;
         wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
@@ -197,13 +198,12 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void install(
-            @NotNull MappedBytes mappedBytes,
             long length,
             boolean created,
             long cycle,
             @NotNull ChronicleQueueBuilder builder,
             @NotNull Function<Bytes, Wire> wireSupplier,
-            @Nullable Closeable closeable) throws IOException {
+            @Nullable Closeable closeable) {
 
         this.builder = (SingleChronicleQueueBuilder) builder;
 
@@ -331,10 +331,9 @@ public class SingleChronicleQueueStore implements WireStore {
 
             long siftedIndex = index >> (6L);
             long mask = (1L << 17L) - 1L;
-            long maskedShiftedIndex = mask & siftedIndex;
 
             // convert to an offset
-            return maskedShiftedIndex;// * 8L;
+            return mask & siftedIndex;// * 8L;
         }
 
         @NotNull
@@ -552,12 +551,12 @@ public class SingleChronicleQueueStore implements WireStore {
                 final LongArrayValues array = this.longArray.get();
                 final long indexToIndex0 = indexToIndex(bytes);
 
-                try (DocumentContext _ = wire.readingDocument(indexToIndex0)) {
+                try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
 
-                    if (!_.isPresent())
+                    if (!context.isPresent())
                         throw new IllegalStateException("document not found");
 
-                    if (!_.isMetaData())
+                    if (!context.isMetaData())
                         throw new IllegalStateException("sequenceNumber not found");
 
                     final LongArrayValues primaryIndex = array(wire, array);
@@ -571,13 +570,12 @@ public class SingleChronicleQueueStore implements WireStore {
                     }
 
                     bytes.readLimit(bytes.capacity());
-                    try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                    try (DocumentContext context0 = wire.readingDocument(secondaryAddress)) {
 
                         final LongArrayValues array1 = array(wire, array);
-                        if (!context.isPresent())
+                        if (!context0.isPresent())
                             throw new IllegalStateException("document not found");
-
-                        if (!context.isMetaData())
+                        if (!context0.isMetaData())
                             throw new IllegalStateException("sequenceNumber not found");
                         array1.setValueAt(toAddress1(sequenceNumber), address);
                     }
@@ -757,8 +755,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
                     if (toIndex == i) {
                         context.bytes().readSkip(-4);
-                        final long readPosition = context.bytes().readPosition();
-                        return readPosition;
+                        return context.bytes().readPosition();
                     }
                     i++;
                 }

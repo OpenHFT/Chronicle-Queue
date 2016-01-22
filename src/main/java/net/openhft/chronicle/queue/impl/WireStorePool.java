@@ -17,7 +17,6 @@ package net.openhft.chronicle.queue.impl;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,8 +26,8 @@ public class WireStorePool {
 
     private class RollDetails {
 
-        private long cycle;
-        private long epoch;
+        private final long cycle;
+        private final long epoch;
 
         public RollDetails(long cycle, long epoch) {
             this.cycle = cycle;
@@ -42,8 +41,7 @@ public class WireStorePool {
 
             RollDetails rollDetails = (RollDetails) o;
 
-            if (cycle != rollDetails.cycle) return false;
-            return epoch == rollDetails.epoch;
+            return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
 
         }
 
@@ -58,12 +56,12 @@ public class WireStorePool {
     @NotNull
     private final Map<RollDetails, WireStore> stores;
 
-    public WireStorePool(@NotNull WireStoreSupplier supplier) {
+    private WireStorePool(@NotNull WireStoreSupplier supplier) {
         this.supplier = supplier;
         this.stores = new ConcurrentHashMap<>();
     }
 
-    public synchronized WireStore acquire(long cycle, final long epoch) throws IOException {
+    public synchronized WireStore acquire(long cycle, final long epoch) {
         final RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {

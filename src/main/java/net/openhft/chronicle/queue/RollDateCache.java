@@ -36,16 +36,13 @@ public class RollDateCache {
     @NotNull
     private final DateValue[] values;
     private final int length;
-    @NotNull
-    private final ZoneId zoneId;
 
     public RollDateCache(@NotNull final RollCycle cycle) {
         this(cycle.length(), cycle.format(), cycle.zone());
     }
 
-    public RollDateCache(final int length, @NotNull String format, @NotNull final ZoneId zoneId) {
+    private RollDateCache(final int length, @NotNull String format, @NotNull final ZoneId zoneId) {
         this.length = length;
-        this.zoneId = zoneId;
         this.values = new DateValue[SIZE];
         this.formatter = new SimpleDateFormat(format);
         this.formatter.setTimeZone(TimeZone.getTimeZone(zoneId));

@@ -25,7 +25,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.function.Function;
 
 public interface WireStore extends ReferenceCounted, Marshallable {
@@ -56,19 +55,18 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     long firstSequenceNumber();
 
-    boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException;
+    boolean appendRollMeta(@NotNull Wire wire, long cycle);
 
     long moveToIndex(@NotNull Wire wire, long index);
 
     void install(
-            @NotNull MappedBytes mappedBytes,
             long length,
             boolean created,
             long cycle,
             @NotNull ChronicleQueueBuilder builder,
             @NotNull Function<Bytes, Wire> wireSupplier,
             @Nullable Closeable closeable)
-            throws IOException;
+            ;
 
     @NotNull
     MappedBytes mappedBytes();

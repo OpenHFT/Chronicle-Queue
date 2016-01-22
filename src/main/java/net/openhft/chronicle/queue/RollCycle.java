@@ -20,9 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.time.ZoneId;
 import java.util.Objects;
 
-/**
- * Created by peter.lawrey on 19/09/2015.
- */
+
 public interface RollCycle {
     static RollCycle forLength(int length) {
         for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {
@@ -44,14 +42,7 @@ public interface RollCycle {
         throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
     }
 
-    /**
-     * TODO: refactor
-     *
-     * @param length
-     * @param format
-     * @param zone
-     * @return
-     */
+
     @NotNull
     static RollCycle from(final int length, @NotNull final String format, @NotNull final ZoneId zone) {
         return new RollCycle() {

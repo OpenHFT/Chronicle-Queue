@@ -42,7 +42,7 @@ import java.util.function.Function;
 
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
-    public static final String SUFFIX = ".cq4";
+    private static final String SUFFIX = ".cq4";
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
@@ -59,7 +59,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private EventLoop eventloop;
 
 
-    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) throws IOException {
+    SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
@@ -216,7 +216,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     // *************************************************************************
 
     @Nullable
-    protected WireStore acquireStore(final long cycle, final long epoch) {
+    private WireStore acquireStore(final long cycle, final long epoch) {
 
         final String cycleFormat = this.dateCache.formatFor(cycle);
         final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
@@ -240,14 +240,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
             final Wire wire = SingleChronicleQueue.this.builder.wireType().apply(bytes);
 
-            try (DocumentContext _ = wire.readingDocument()) {
-                if (_.isPresent() && _.isMetaData()) {
-                    final WireStore readMarshallable = wire.getValueIn().typedMarshallable();
-                    return readMarshallable;
-                } /*else {
-                    throw new IllegalStateException("unable to read the header in the chronicle " +
-                            "queue file that contains the 'WireStore' information.");
-                }*/
+            try (DocumentContext context = wire.readingDocument()) {
+                if (context.isPresent() && context.isMetaData())
+                    return wire.getValueIn().typedMarshallable();
             }
 
         }
@@ -259,19 +254,16 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         }
 
         Consumer<WiredBytes<WireStore>> consumer = ws -> {
-            try {
-                ws.delegate().install(
-                        ws.mappedBytes(),
-                        ws.headerLength(),
-                        ws.headerCreated(),
-                        cycle,
-                        builder,
-                        ws.wireSupplier(),
-                        ws.mappedBytes()
-                );
-            } catch (IOException e) {
-                throw Jvm.rethrow(e);
-            }
+
+            ws.delegate().install(
+                    ws.headerLength(),
+                    ws.headerCreated(),
+                    cycle,
+                    builder,
+                    ws.wireSupplier(),
+                    ws.mappedBytes()
+            );
+
         };
 
         final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new

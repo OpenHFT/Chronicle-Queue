@@ -47,7 +47,7 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
 
     @NotNull
     @Override
-    public Excerpt createExcerpt() throws IOException {
+    public Excerpt createExcerpt() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -81,16 +81,16 @@ public abstract class AbstractChronicleQueue implements ChronicleQueue {
     }
 
     /**
-     * @param cycle
+     * @param cycle the cycle
      * @param epoch an epoch offset as the number of number of milliseconds since January 1, 1970,
      *              00:00:00 GMT
-     * @return
+     * @return the {@code WireStore} associated with this {@code cycle}
      * @throws IOException
      */
     protected abstract WireStore storeForCycle(long cycle, final long epoch) throws IOException;
 
     /**
-     * @param store
+     * @param store the {@code store} to release
      */
     protected abstract void release(WireStore store);
 

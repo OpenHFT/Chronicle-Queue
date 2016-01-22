@@ -80,7 +80,8 @@ public interface BytesRingBuffer {
 
     @NotNull
     static Class<BytesRingBuffer> clazz() throws ClassNotFoundException {
-        return (Class<BytesRingBuffer>) BytesRingBuffer.class.forName(
+        //noinspection AccessStaticViaInstance
+        return (Class<BytesRingBuffer>) Class.forName(
                 "software.chronicle.enterprise.queue.EnterpriseBytesRingBuffer");
     }
 

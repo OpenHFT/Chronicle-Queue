@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
-    private File path;
+    private final File path;
     private long blockSize;
     private WireType wireType;
 
@@ -60,7 +60,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull String name) {
+    private static SingleChronicleQueueBuilder binary(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.BINARY);
     }
@@ -71,7 +71,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder text(@NotNull String name) {
+    private static SingleChronicleQueueBuilder text(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.TEXT);
     }
@@ -82,7 +82,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder raw(@NotNull String name) {
+    private static SingleChronicleQueueBuilder raw(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
     }

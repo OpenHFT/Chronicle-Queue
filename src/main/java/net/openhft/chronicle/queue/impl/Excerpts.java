@@ -59,7 +59,7 @@ public class Excerpts {
 
     public static abstract class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
         @NotNull
-        protected final T queue;
+        final T queue;
 
         public DefaultAppender(@NotNull T queue) {
             this.queue = queue;
