@@ -58,6 +58,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final WireStorePool pool;
     private final boolean bufferedAppends;
     private final long epoch;
+    @NotNull
     private final EventLoop eventloop;
 
 

@@ -220,6 +220,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this.isBuffered;
     }
 
+    @NotNull
     public EventLoop eventLoop() {
         return eventLoop;
     }

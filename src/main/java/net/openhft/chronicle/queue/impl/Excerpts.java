@@ -120,7 +120,7 @@ public class Excerpts {
 
             @NotNull final EventHandler handler = () -> {
 
-                final Wire wire = underlyingAppender.wire();
+                @NotNull final Wire wire = underlyingAppender.wire();
                 @NotNull final Bytes<?> bytes = wire.bytes();
                 final long start = bytes.writePosition();
 
