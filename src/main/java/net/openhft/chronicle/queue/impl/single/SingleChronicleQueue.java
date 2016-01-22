@@ -55,7 +55,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private long epoch;
     private EventLoop eventloop;
 
-    private long ringBufferCapacity;
 
     protected SingleChronicleQueue(final SingleChronicleQueueBuilder builder) throws IOException {
         this.cycle = builder.rollCycle();
@@ -66,7 +65,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         epoch = builder.epoch();
         bufferedAppends = builder.buffered();
         eventloop = builder.eventLoop();
-        ringBufferCapacity = BytesRingBuffer.sizeFor(builder.bufferCapacity());
+
     }
 
     @Override
@@ -79,6 +78,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     public ExcerptAppender createAppender() throws IOException {
         final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
         if (bufferedAppends) {
+            long ringBufferCapacity = BytesRingBuffer.sizeFor(builder
+                    .bufferCapacity());
             return new Excerpts.BufferAppender(eventloop, storeAppender, ringBufferCapacity);
         } else
             return storeAppender;

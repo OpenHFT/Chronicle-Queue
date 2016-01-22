@@ -38,10 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
 
-import static net.openhft.chronicle.bytes.Bytes.elasticByteBuffer;
 import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.ChronicleQueue.toSubIndex;
@@ -91,67 +89,6 @@ public class Excerpts {
         }
     }
 
-    /**
-     * Delegates the appender
-     */
-    public static class DelegatedAppender extends DefaultAppender<ChronicleQueue> {
-        private final Bytes<ByteBuffer> buffer;
-        private final Wire wire;
-        private final BytesWriter writer;
-
-        public DelegatedAppender(
-                @NotNull ChronicleQueue queue,
-                @NotNull BytesWriter writer) throws IOException {
-
-            super(queue);
-
-            this.buffer = elasticByteBuffer();
-            this.wire = queue.wireType().apply(this.buffer);
-            this.writer = writer;
-        }
-
-
-        @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
-            this.buffer.clear();
-            writer.writeMarshallable(this.wire);
-            this.buffer.readLimit(this.buffer.writePosition());
-            this.buffer.readPosition(0);
-            this.buffer.writePosition(this.buffer.readLimit());
-            this.buffer.writeLimit(this.buffer.readLimit());
-
-            return writeBytes(this.buffer);
-        }
-
-
-        @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
-            this.buffer.clear();
-            marshallable.writeMarshallable(this.buffer);
-            this.buffer.readLimit(this.buffer.writePosition());
-            this.buffer.readPosition(0);
-            this.buffer.writePosition(this.buffer.readLimit());
-            this.buffer.writeLimit(this.buffer.readLimit());
-            return writeBytes(this.buffer);
-        }
-
-        @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
-            return writer.write(bytes);
-        }
-
-        @Override
-        public long cycle() {
-            throw new UnsupportedOperationException();
-        }
-
-
-        @Override
-        public void prefetch() {
-            throw new UnsupportedOperationException();
-
-        }
-    }
 
 
     /**
