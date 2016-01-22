@@ -610,7 +610,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * method is used for creating both the primary and secondary indexes. Chronicle Queue uses
          * a root primary index ( each entry in the primary index points to a unique a secondary
          * index. The secondary index only records the address of every 64th except, the except are
-         * linearly scanned from there on.
+         * linearly scanned from there on.  )
          *
          * @param bytes the underlying bytes
          * @return the address of the Excerpt containing the usable index, just after the header
@@ -635,9 +635,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * size and there is only one of them, it only holds the addresses of the second level
          * indexes, there will be many second level indexes ( created on demand ), each is about 1MB
          * in size  (this second level targetIndex only stores the position of every 64th excerpt),
-         * so from every 64th excerpt a linear scan occurs. The indexes are only built when the
-         * indexer is run, this could be on a background thread. Each targetIndex is created into
-         * chronicle as an excerpt.
+         * so from every 64th excerpt a linear scan occurs.
          *
          * @param wire  the data structure we are navigating
          * @param index the index we wish to move to
