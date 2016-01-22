@@ -70,7 +70,6 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
             throw new UnsupportedOperationException();
@@ -310,11 +309,9 @@ public class Excerpts {
 
         public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
             final WireStore store = store();
-
             long position;
 
             do {
-
                 position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
 
                 // this will be called if currently being modified with unknown length
