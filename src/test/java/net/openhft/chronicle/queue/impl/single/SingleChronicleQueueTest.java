@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static net.openhft.chronicle.queue.ChronicleQueue.*;
 import static org.junit.Assert.*;
@@ -559,54 +558,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore
-    @Test
-    public void testAppendWithRingBuffer() throws Throwable {
-        AtomicReference<Throwable> ref = new AtomicReference<>();
-        File file = File.createTempFile("chronicle.", "q");
-        file.deleteOnExit();
-        try {
 
-            final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
-                    .wireType(this.wireType)
-                    .rollCycle(RollCycles.HOURS)
-                    .buffered(true)
-                    .onThrowable(t -> ref.compareAndSet(null, t))
-                    .build();
-
-            final ExcerptAppender bufferedAppender = chronicle.createAppender();
-
-            // create 100 documents
-            for (int i = 0; i < 5; i++) {
-                final int j = i;
-                bufferedAppender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
-            }
-
-            // allow time for the ring buffer to populate the underlying
-            Thread.sleep(100);
-
-            final ExcerptTailer tailer = chronicle.createTailer();
-            tailer.moveToIndex(index(bufferedAppender.cycle(), 2));
-
-
-            StringBuilder sb = new StringBuilder();
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
-            Assert.assertEquals("value=2", sb.toString());
-
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
-            Assert.assertEquals("value=3", sb.toString());
-
-            tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
-            Assert.assertEquals("value=4", sb.toString());
-
-            final Throwable throwable = ref.get();
-            if (throwable != null)
-                throw throwable;
-
-        } finally {
-            file.delete();
-        }
-    }
 
 
 }
