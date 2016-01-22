@@ -40,7 +40,7 @@ public interface Excerpt extends ExcerptTailer {
      * two binary search. This doesn't access the same index two. The best case is one additional
      * comparison and the worst case is the same.
      *
-     * @param startEnd   lower (inclusive) to upper (enclusive). Will be equal if no exact match is
+     * @param startEnd   lower (inclusive) to upper (exclusive). Will be equal if no exact match is
      *                   found.
      * @param comparator to use for comparison.
      */

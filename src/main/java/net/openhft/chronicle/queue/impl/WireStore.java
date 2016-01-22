@@ -40,7 +40,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
 
     /**
      * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
-     * 00:00:00 GMT, if you set the epoch to the current time, then the cuycle will be ZERO
+     * 00:00:00 GMT, if you set the epoch to the current time, then the cycle will be ZERO
      */
     long epoch();
 

@@ -787,11 +787,11 @@ public class SingleChronicleQueueStore implements WireStore {
         private LongValue nextCycleMetaPosition;
 
 
-        Roll(@Nullable RollCycle rollCycle, long rollEpoc) {
+        Roll(@Nullable RollCycle rollCycle, long rollEpoch) {
             this.length = rollCycle != null ? rollCycle.length() : -1;
             this.format = rollCycle != null ? rollCycle.format() : null;
             this.zoneId = rollCycle != null ? rollCycle.zone() : null;
-            this.epoch = rollEpoc;
+            this.epoch = rollEpoch;
             this.cycle = null;
             this.nextCycle = null;
             this.nextCycleMetaPosition = null;

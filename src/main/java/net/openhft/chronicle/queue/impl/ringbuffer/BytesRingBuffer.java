@@ -85,10 +85,10 @@ public interface BytesRingBuffer {
     }
 
 
-    static long sizeFor(long cacacity) {
+    static long sizeFor(long capacity) {
         try {
             final Method sizeFor = clazz().getMethod("sizeFor", long.class);
-            return (long) sizeFor.invoke(null, cacacity);
+            return (long) sizeFor.invoke(null, capacity);
         } catch (Exception e) {
             LOG.error("This is a a commercial feature, please contact " +
                     "sales@higherfrequencytrading.com to unlock this feature.");

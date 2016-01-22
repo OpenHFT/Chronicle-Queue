@@ -30,9 +30,9 @@ public class WireStorePool {
         private long cycle;
         private long epoch;
 
-        public RollDetails(long cycle, long epoc) {
+        public RollDetails(long cycle, long epoch) {
             this.cycle = cycle;
-            this.epoch = epoc;
+            this.epoch = epoch;
         }
 
         @Override
