@@ -56,7 +56,8 @@ public interface ExcerptAppender extends ExcerptCommon {
     long index();
 
     /**
-     * @return the cycle this appender is on
+     * @return the cycle this appender is on, unsually with chronicle-queue each cycle will have its
+     * owne unique data file to store the exceprts
      */
     long cycle();
 

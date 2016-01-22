@@ -42,7 +42,7 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
-import static net.openhft.chronicle.queue.ChronicleQueue.toSubIndex;
+import static net.openhft.chronicle.queue.ChronicleQueue.toSequenceNumber;
 import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
@@ -258,7 +258,6 @@ public class Excerpts {
             return underlyingAppender.cycle();
         }
 
-
         @Override
         public ChronicleQueue queue() {
             return underlyingAppender.queue();
@@ -294,7 +293,7 @@ public class Excerpts {
                         "before Epoch. cycle=" + cycle);
 
             this.store = queue.storeForCycle(this.cycle, queue.epoch());
-            this.index = this.store.lastSubIndex();
+            this.index = this.store.sequenceNumber();
 
             final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
@@ -444,7 +443,7 @@ public class Excerpts {
 
             if (success) {
 
-                this.index = ChronicleQueue.index(cycle, toSubIndex(index) + 1);
+                this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
                 return true;
             }
 
@@ -531,14 +530,14 @@ public class Excerpts {
 
             final Bytes<?> bytes = wire.bytes();
 
-            final long subIndex = toSubIndex(index);
+            final long subIndex = toSequenceNumber(index);
             if (subIndex == -1) {
                 bytes.readPosition(0);
                 this.index = ChronicleQueue.index(cycle, subIndex);
                 return true;
             }
 
-            final long position = this.store.moveToIndex(wire, ChronicleQueue.toSubIndex(index));
+            final long position = this.store.moveToIndex(wire, ChronicleQueue.toSequenceNumber(index));
 
             if (position == -1)
                 return false;
@@ -556,13 +555,13 @@ public class Excerpts {
         public ExcerptTailer toStart() throws IOException {
 
             final long index = queue.firstIndex();
-            if (ChronicleQueue.toSubIndex(index) == -1) {
+            if (ChronicleQueue.toSequenceNumber(index) == -1) {
                 cycle(toCycle(index));
                 this.wire.bytes().readPosition(0);
                 return this;
             }
 
-            LOG.info("index=> index=" + toSubIndex(index) + ",cycle=" +
+            LOG.info("index=> index=" + toSequenceNumber(index) + ",cycle=" +
                     toCycle(index));
 
 

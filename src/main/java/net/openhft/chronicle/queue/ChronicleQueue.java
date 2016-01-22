@@ -56,7 +56,7 @@ import java.io.IOException;
  */
 public interface ChronicleQueue extends Closeable {
 
-    long MINUS_1_40BIT = toSubIndex(-1);
+    long MINUS_1_40BIT = toSequenceNumber(-1);
 
     /**
      * @return A descriptive name for this queue which can be used for logging.
@@ -123,7 +123,7 @@ public interface ChronicleQueue extends Closeable {
      */
     WireType wireType();
 
-    static long toSubIndex(long index) {
+    static long toSequenceNumber(long index) {
         final long l = index & 0xFFFFFFFFFFL;
         return (l == MINUS_1_40BIT) ? -1 : l;
     }
@@ -140,7 +140,7 @@ public interface ChronicleQueue extends Closeable {
         return result;
     }
 
-    static long index(long cycle, long subindex) {
-        return (cycle << 40L) + (subindex & 0xFFFFFFFFFFL);
+    static long index(long cycle, long sequenceNumber) {
+        return (cycle << 40L) + (sequenceNumber & 0xFFFFFFFFFFL);
     }
 }

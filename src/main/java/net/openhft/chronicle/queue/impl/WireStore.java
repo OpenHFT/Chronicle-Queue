@@ -33,27 +33,28 @@ public interface WireStore extends ReferenceCounted, Marshallable {
     void writePosition(long position);
 
     /**
-     * @return the cycle this store refers to
+     * @return the cycle this store refers to, this is based on the time offset by {@code epoch} and
+     * calculated using the roll type
      */
     long cycle();
 
     /**
      * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
-     * 00:00:00 GMT
+     * 00:00:00 GMT, if you set the epoch to the current time, then the cuycle will be ZERO
      */
     long epoch();
 
     /**
-     * @return the first writable position
+     * @return the next writable position
      */
     long writePosition();
 
     /**
-     * @return the last index
+     * @return the sequence number with the cycle
      */
-    long lastSubIndex();
+    long sequenceNumber();
 
-    long firstSubIndex();
+    long firstSequenceNumber();
 
     boolean appendRollMeta(@NotNull Wire wire, long cycle) throws IOException;
 

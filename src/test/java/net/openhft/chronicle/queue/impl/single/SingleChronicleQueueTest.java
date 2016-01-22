@@ -70,7 +70,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptAppender appender = queue.createAppender();
         for (int i = 0; i < 10; i++) {
             final int n = i;
-            assertEquals(n, toSubIndex(appender.writeDocument(w -> w
+            assertEquals(n, toSequenceNumber(appender.writeDocument(w -> w
                     .write(TestKey.test).int32(n))));
         }
     }
@@ -86,9 +86,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final long cycle = appender.cycle();
         for (int i = 0; i < 10; i++) {
             final int n = i;
-            assertEquals(n, toSubIndex(appender.writeDocument(w
+            assertEquals(n, toSequenceNumber(appender.writeDocument(w
                     -> w.write(TestKey.test).int32(n))));
-            assertEquals(n, toSubIndex(appender.index()));
+            assertEquals(n, toSequenceNumber(appender.index()));
         }
 
         final ExcerptTailer tailer = queue.createTailer();
@@ -97,7 +97,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 10; i++) {
             final int n = i;
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-            assertEquals(n, toSubIndex(tailer.index()));
+            assertEquals(n, toSequenceNumber(tailer.index()));
         }
 
         // Random read
@@ -105,7 +105,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final int n = i;
             assertTrue(tailer.moveToIndex(index(cycle, n)));
             assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-            assertEquals(n, toSubIndex(tailer.index()));
+            assertEquals(n, toSequenceNumber(tailer.index()));
         }
     }
 
@@ -227,9 +227,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         appender.cycle();
         for (int i = 0; i < 5; i++) {
             final int n = i;
-            assertEquals(n, toSubIndex(appender.writeDocument(w -> w.write(TestKey.test)
+            assertEquals(n, toSequenceNumber(appender.writeDocument(w -> w.write(TestKey.test)
                     .int32(n))));
-            assertEquals(n, toSubIndex(appender.index()));
+            assertEquals(n, toSequenceNumber(appender.index()));
         }
 
         final ExcerptTailer tailer = queue.createTailer();
@@ -238,9 +238,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(tailer.moveToIndex(index));
 
             final int n = i;
-            assertTrue(tailer.readDocument(r -> assertEquals(n, toSubIndex(r.read(TestKey.test)
+            assertTrue(tailer.readDocument(r -> assertEquals(n, toSequenceNumber(r.read(TestKey.test)
                     .int32()))));
-            assertEquals(n, toSubIndex(tailer.index()));
+            assertEquals(n, toSequenceNumber(tailer.index()));
         }
     }
 
@@ -409,7 +409,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptAppender appender = chronicle.createAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
-            Assert.assertEquals(0, toSubIndex(appender.index()));
+            Assert.assertEquals(0, toSequenceNumber(appender.index()));
 
         } finally {
             file.delete();

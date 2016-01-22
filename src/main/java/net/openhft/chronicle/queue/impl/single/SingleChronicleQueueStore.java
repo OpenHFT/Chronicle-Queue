@@ -136,7 +136,7 @@ public class SingleChronicleQueueStore implements WireStore {
      * @return the first index available on the file system
      */
     @Override
-    public long firstSubIndex() {
+    public long firstSequenceNumber() {
         return this.indexing.firstSubIndex();
     }
 
@@ -144,7 +144,7 @@ public class SingleChronicleQueueStore implements WireStore {
      * @return the last index available on the file system
      */
     @Override
-    public long lastSubIndex() {
+    public long sequenceNumber() {
         return this.indexing.lastSubIndex();
     }
 
