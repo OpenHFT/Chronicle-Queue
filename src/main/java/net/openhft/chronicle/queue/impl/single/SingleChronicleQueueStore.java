@@ -34,7 +34,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.ZoneId;
-import java.util.function.Function;
 
 import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress0;
@@ -197,13 +196,8 @@ public class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
 
     @Override
-    public void install(
-            long length,
-            boolean created,
-            long cycle,
-            @NotNull ChronicleQueueBuilder builder,
-            @NotNull Function<Bytes, Wire> wireSupplier,
-            @Nullable Closeable closeable) {
+    public void install(long length, boolean created, long cycle,
+                        @NotNull ChronicleQueueBuilder builder) {
 
         this.builder = (SingleChronicleQueueBuilder) builder;
 
@@ -279,8 +273,8 @@ public class SingleChronicleQueueStore implements WireStore {
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         wire.read(MetaDataField.bounds).marshallable(this.bounds);
         wire.read(MetaDataField.roll).marshallable(this.roll);
-        long chunkSize = wire.read(MetaDataField.chunkSize).int64();
-        long overlapSize = wire.read(MetaDataField.overlapSize).int64();
+        wire.read(MetaDataField.chunkSize).int64();
+        wire.read(MetaDataField.overlapSize).int64();
 
         final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();

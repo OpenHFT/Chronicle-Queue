@@ -20,8 +20,8 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.affinity.Affinity;
 import net.openhft.affinity.AffinityLock;
-import net.openhft.chronicle.bytes.IORuntimeException;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.*;
@@ -108,7 +108,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     }
 
     static class MyWriteMarshallable implements WriteMarshallable {
-        private TestTrade bt;
+        private final TestTrade bt;
 
         public MyWriteMarshallable(TestTrade bt) {
 
@@ -123,10 +123,10 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     }
 
     static class MyReadMarshallable implements ReadMarshallable {
-        StringBuilder messageType = new StringBuilder();
-        AtomicInteger counter = new AtomicInteger(0);
-        private Histogram histogram;
-        TestTrade testTrade = new TestTrade();
+        final StringBuilder messageType = new StringBuilder();
+        final AtomicInteger counter = new AtomicInteger(0);
+        private final Histogram histogram;
+        final TestTrade testTrade = new TestTrade();
 
         public MyReadMarshallable(Histogram histogram) {
             this.histogram = histogram;

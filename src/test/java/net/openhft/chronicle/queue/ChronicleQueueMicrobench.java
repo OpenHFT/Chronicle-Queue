@@ -33,9 +33,9 @@ public class ChronicleQueueMicrobench {
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
     protected static final int DEFAULT_MEASURE_ITERATIONS = 10;
 
-    protected static final String[] EMPTY_JVM_ARGS = {};
+    private static final String[] EMPTY_JVM_ARGS = {};
 
-    protected static final String[] BASE_JVM_ARGS = {
+    private static final String[] BASE_JVM_ARGS = {
             "-server",
             "-dsa",
             "-da",
@@ -51,7 +51,7 @@ public class ChronicleQueueMicrobench {
     //
     // *************************************************************************
 
-    protected ChainedOptionsBuilder newOptionsBuilder() {
+    private ChainedOptionsBuilder newOptionsBuilder() {
         String className = getClass().getSimpleName();
 
         final ChainedOptionsBuilder runnerOptions = new OptionsBuilder()
@@ -85,19 +85,19 @@ public class ChronicleQueueMicrobench {
         return runnerOptions;
     }
 
-    protected String[] jvmArgs() {
+    private String[] jvmArgs() {
         return EMPTY_JVM_ARGS;
     }
 
-    protected int getWarmupIterations() {
+    private int getWarmupIterations() {
         return Integer.getInteger("warmupIterations", -1);
     }
 
-    protected int getMeasureIterations() {
+    private int getMeasureIterations() {
         return Integer.getInteger("measureIterations", -1);
     }
 
-    protected String getReportDir() {
+    private String getReportDir() {
         return System.getProperty("perfReportDir");
     }
 

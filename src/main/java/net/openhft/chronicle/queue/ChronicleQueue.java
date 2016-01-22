@@ -68,7 +68,6 @@ public interface ChronicleQueue extends Closeable {
      * An Excerpt can be used access entries randomly and optionally change them.
      *
      * @return Excerpt
-     * @throws IOException if an IO problem occurs
      */
     @NotNull
     Excerpt createExcerpt();

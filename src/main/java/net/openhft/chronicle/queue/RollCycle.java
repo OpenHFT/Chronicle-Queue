@@ -72,7 +72,7 @@ public interface RollCycle {
     ZoneId zone();
 
     /**
-     * @param epoch and EPOC offset, to all the user to define thier own epoch
+     * @param epoch and EPOCH offset, to all the user to define thier own epoch
      * @return the cycle
      */
     default int current(long epoch) {

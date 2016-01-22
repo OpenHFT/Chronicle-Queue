@@ -96,7 +96,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected WireStore storeForCycle(long cycle, final long epoch) throws IOException {
+    protected WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
 
@@ -130,8 +130,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
         if (files != null && files.length > 0) {
             long firstDate = Long.MAX_VALUE;
-            long date = -1;
-            String name = null;
+            long date;
+            String name;
 
             for (int i = files.length - 1; i >= 0; i--) {
                 try {
@@ -259,9 +259,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                     ws.headerLength(),
                     ws.headerCreated(),
                     cycle,
-                    builder,
-                    ws.wireSupplier(),
-                    ws.mappedBytes()
+                    builder
             );
 
         };

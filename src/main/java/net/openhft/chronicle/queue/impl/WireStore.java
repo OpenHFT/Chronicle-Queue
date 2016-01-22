@@ -15,17 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.io.Closeable;
-import java.util.function.Function;
 
 public interface WireStore extends ReferenceCounted, Marshallable {
 
@@ -63,9 +58,7 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             long length,
             boolean created,
             long cycle,
-            @NotNull ChronicleQueueBuilder builder,
-            @NotNull Function<Bytes, Wire> wireSupplier,
-            @Nullable Closeable closeable)
+            @NotNull ChronicleQueueBuilder builder)
             ;
 
     @NotNull

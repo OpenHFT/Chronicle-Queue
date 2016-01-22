@@ -36,7 +36,7 @@ import static org.junit.Assert.*;
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
-    public static final long TIMES = (4L << 20L);
+    private static final long TIMES = (4L << 20L);
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
@@ -321,8 +321,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
-                final long index = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
-                lastIndex = index;
+                lastIndex = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
 
@@ -361,12 +360,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             long lastIndex = -1;
             System.out.print("Percent written=");
-            long writtenPercent = 0;
+
             // create 100 documents
             for (long i = 0; i < TIMES; i++) {
                 final long j = i;
-                final long index = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
-                lastIndex = index;
+                lastIndex = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
 
                 if (i % (TIMES / 20) == 0) {
                     System.out.println("" + (i * 100 / TIMES) + "%, ");
@@ -557,8 +555,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             file.delete();
         }
     }
-
-
 
 
 }

@@ -51,9 +51,9 @@ import java.io.IOException;
  */
 public class ChronicleQueueLatencyDistributionWithBytes extends ChronicleQueueTestBase {
 
-    public static final int BYTES_LENGTH = 256;
-    public static final int BLOCK_SIZE = 256 << 20;
-    public static final int BUFFER_CAPACITY = 256 << 10;
+    private static final int BYTES_LENGTH = 256;
+    private static final int BLOCK_SIZE = 256 << 20;
+    private static final int BUFFER_CAPACITY = 256 << 10;
     private static final long INTERVAL_US = 10;
 
     @Ignore("long running")

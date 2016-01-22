@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
-    protected static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
+    private static final boolean TRACE_TEST_EXECUTION = Boolean.getBoolean("queue.traceTestExecution");
 
     // *************************************************************************
     // JUNIT Rules
@@ -65,7 +65,7 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    public static enum TestKey implements WireKey {
+    public enum TestKey implements WireKey {
         test
     }
 
@@ -73,7 +73,7 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    public static File getTmpDir() {
+    protected static File getTmpDir() {
         try {
             final File tmpDir = Files.createTempDirectory("chronicle" + "-").toFile();
 
@@ -131,11 +131,10 @@ public class ChronicleQueueTestBase {
         if (dir.isDirectory()) {
             File[] files = dir.listFiles();
             if (files != null) {
-                File[] arr$ = files;
                 int len$ = files.length;
 
                 for (int i$ = 0; i$ < len$; ++i$) {
-                    File file = arr$[i$];
+                    File file = files[i$];
                     if (file.isDirectory()) {
                         deleteDir(file);
                     } else if (!file.delete()) {
