@@ -354,7 +354,7 @@ public class Excerpts {
             return this.store.cycle();
         }
 
-
+        @NotNull
         Wire wire() {
             return wire;
         }
