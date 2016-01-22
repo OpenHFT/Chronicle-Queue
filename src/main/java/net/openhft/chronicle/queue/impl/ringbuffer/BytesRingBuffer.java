@@ -80,7 +80,7 @@ public interface BytesRingBuffer {
 
     static Class<BytesRingBuffer> clazz() throws ClassNotFoundException {
         return (Class<BytesRingBuffer>) BytesRingBuffer.class.forName(
-                "net.openhft.chronicle.queue.enterprise.EnterpriseBytesRingBuffer");
+                "software.chronicle.enterprise.queue.EnterpriseBytesRingBuffer");
     }
 
 
