@@ -20,8 +20,6 @@ import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
  *
@@ -31,23 +29,20 @@ public interface ExcerptAppender extends ExcerptCommon {
     /**
      * @param writer to write to excerpt.
      * @return the index last written or -1 if a buffered appender is being used
-     * @throws IOException
      */
-    long writeDocument(@NotNull WriteMarshallable writer) throws IOException;
+    long writeDocument(@NotNull WriteMarshallable writer);
 
     /**
      * @param marshallable to write to excerpt.
      * @return the index last written or -1 if a buffered appender is being used
-     * @throws IOException
      */
-    long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException;
+    long writeBytes(@NotNull WriteBytesMarshallable marshallable);
 
     /**
      * @param bytes to write to excerpt.
      * @return the index last written -1 if a buffered appender is being used
-     * @throws IOException
      */
-    long writeBytes(@NotNull Bytes<?> bytes) throws IOException;
+    long writeBytes(@NotNull Bytes<?> bytes);
 
     /**
      * @return the index last written, this index includes the cycle and the sequence number
@@ -56,8 +51,8 @@ public interface ExcerptAppender extends ExcerptCommon {
     long index();
 
     /**
-     * @return the cycle this appender is on, unusually with chronicle-queue each cycle will have its
-     * own unique data file to store the excerpt
+     * @return the cycle this appender is on, unusually with chronicle-queue each cycle will have
+     * its own unique data file to store the excerpt
      */
     long cycle();
 

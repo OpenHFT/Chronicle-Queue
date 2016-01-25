@@ -63,12 +63,12 @@ public class Excerpts {
         }
 
         @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+        public long writeDocument(@NotNull WriteMarshallable writer) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
+        public long writeBytes(@NotNull Bytes<?> bytes) {
             throw new UnsupportedOperationException();
         }
 
@@ -187,10 +187,9 @@ public class Excerpts {
          *
          * @param writer to write to excerpt.
          * @return always returns -1 when using the buffered appender
-         * @throws IOException
          */
         @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+        public long writeDocument(@NotNull WriteMarshallable writer) {
             @NotNull final Bytes<?> bytes = tempWire.bytes();
             bytes.clear();
             writer.writeMarshallable(tempWire);
@@ -202,10 +201,9 @@ public class Excerpts {
          *
          * @param marshallable to write to excerpt.
          * @return always returns -1 when using the buffered appender
-         * @throws IOException
          */
         @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) {
             @NotNull final Bytes<?> bytes = tempWire.bytes();
             bytes.clear();
             marshallable.writeMarshallable(bytes);
@@ -221,7 +219,7 @@ public class Excerpts {
          * @throws IOException
          */
         @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) throws IOException {
+        public long writeBytes(@NotNull Bytes<?> bytes) {
             try {
                 while (!ringBuffer.offer(bytes))
                     Thread.yield();
@@ -281,7 +279,7 @@ public class Excerpts {
             wire = this.queue().wireType().apply(mappedBytes);
         }
 
-        public long writeDocument(@NotNull WriteMarshallable writer) throws IOException {
+        public long writeDocument(@NotNull WriteMarshallable writer) {
             final WireStore store = store();
             long position;
 
@@ -302,12 +300,12 @@ public class Excerpts {
         }
 
         @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) throws IOException {
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) {
             return writeDocument(wire1 -> marshallable.writeMarshallable(wire1.bytes()));
         }
 
         @Override
-        public long writeBytes(@NotNull Bytes bytes) throws IOException {
+        public long writeBytes(@NotNull Bytes bytes) {
             return writeDocument(wire1 -> wire1.bytes().write(bytes));
         }
 

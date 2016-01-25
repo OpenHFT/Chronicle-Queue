@@ -25,8 +25,6 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.IOException;
-
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
  */
@@ -55,7 +53,7 @@ public class Queue30 extends ChronicleQueueTestBase {
                         LOGGER.info(name + "> " + count);
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         };

@@ -86,7 +86,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                     bt.setTime(System.nanoTime());
                     appender.writeDocument(myWriteMarshallable);
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             } finally {
                 if (lock != null) {
