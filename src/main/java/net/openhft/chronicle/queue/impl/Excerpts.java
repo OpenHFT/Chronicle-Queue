@@ -382,7 +382,7 @@ public class Excerpts {
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
 
-        public StoreTailer(@NotNull AbstractChronicleQueue queue) throws IOException {
+        public StoreTailer(@NotNull AbstractChronicleQueue queue) {
             this.queue = queue;
             this.cycle = -1;
 
@@ -390,21 +390,21 @@ public class Excerpts {
         }
 
         @Override
-        public boolean readDocument(@NotNull ReadMarshallable marshaller) throws IOException {
+        public boolean readDocument(@NotNull ReadMarshallable marshaller) {
             return readAtIndex(marshaller, ReadMarshallable::readMarshallable);
         }
 
         @Override
-        public boolean readBytes(@NotNull Bytes using) throws IOException {
+        public boolean readBytes(@NotNull Bytes using) {
             return readAtIndex(using, (t, w) -> t.write(w.bytes()));
         }
 
         @Override
-        public boolean readBytes(@NotNull ReadBytesMarshallable using) throws IOException {
+        public boolean readBytes(@NotNull ReadBytesMarshallable using) {
             return readAtIndex(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
-        private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
+        private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) {
 
             final long readPosition = wire.bytes().readPosition();
             final long readLimit = wire.bytes().readLimit();
@@ -432,7 +432,7 @@ public class Excerpts {
             return false;
         }
 
-        private <T> boolean readAt(T t, @NotNull BiConsumer<T, Wire> c) throws IOException {
+        private <T> boolean readAt(T t, @NotNull BiConsumer<T, Wire> c) {
 
             long roll;
             for (; ; ) {
@@ -491,7 +491,7 @@ public class Excerpts {
 
 
         @Override
-        public boolean moveToIndex(long index) throws IOException {
+        public boolean moveToIndex(long index) {
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
@@ -530,7 +530,7 @@ public class Excerpts {
 
         @NotNull
         @Override
-        public ExcerptTailer toStart() throws IOException {
+        public ExcerptTailer toStart() {
 
             final long index = queue.firstIndex();
             if (ChronicleQueue.toSequenceNumber(index) == -1) {
@@ -554,7 +554,7 @@ public class Excerpts {
 
 
         @NotNull
-        private StoreTailer cycle(long cycle) throws IOException {
+        private StoreTailer cycle(long cycle) {
             if (this.cycle != cycle) {
                 if (null != this.store) {
                     this.queue.release(this.store);

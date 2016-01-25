@@ -33,26 +33,26 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return {@code true} if successful
      * @throws IOException if not able to read the chronicle file
      */
-    boolean readDocument(@NotNull ReadMarshallable reader) throws IOException;
+    boolean readDocument(@NotNull ReadMarshallable reader);
 
     /**
      * @param marshallable used to read the document
      * @return {@code true} if successful
      * @throws IOException if not able to read the chronicle file
      */
-    boolean readBytes(@NotNull ReadBytesMarshallable marshallable) throws IOException;
+    boolean readBytes(@NotNull ReadBytesMarshallable marshallable);
 
     /**
      * @param using used to read the document
      * @return {@code true} if successful
      * @throws IOException if not able to read the chronicle file
      */
-    boolean readBytes(@NotNull Bytes using) throws IOException;
+    boolean readBytes(@NotNull Bytes using);
 
 
     /**
-     * @return the index just read , this include the cycle and the sequence number from
-     *              with this cycle
+     * @return the index just read , this include the cycle and the sequence number from with this
+     * cycle
      */
     long index();
 

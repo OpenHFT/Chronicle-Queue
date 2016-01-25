@@ -61,8 +61,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 while (true) {
                     try {
                         tailer.readDocument(myReadMarshallable);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) {
                         break;
                     }
                 }
