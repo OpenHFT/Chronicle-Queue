@@ -15,17 +15,10 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * @author peter.lawrey
  */
 public interface ExcerptCommon {
-    /**
-     * @return the queue associated with this Excerpt
-     */
-    @NotNull
-    ChronicleQueue queue();
 
     /**
      * Hint to the underlying store to get the next page(s)

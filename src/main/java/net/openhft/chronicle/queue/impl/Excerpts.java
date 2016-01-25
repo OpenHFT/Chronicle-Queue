@@ -81,7 +81,6 @@ public class Excerpts {
         public abstract long cycle();
 
         @NotNull
-        @Override
         public ChronicleQueue queue() {
             return this.queue;
         }
@@ -243,13 +242,6 @@ public class Excerpts {
         public long cycle() {
             return underlyingAppender.cycle();
         }
-
-        @NotNull
-        @Override
-        public ChronicleQueue queue() {
-            return underlyingAppender.queue();
-        }
-
 
         @Override
         public void prefetch() {
@@ -560,11 +552,6 @@ public class Excerpts {
             return this;
         }
 
-        @NotNull
-        @Override
-        public ChronicleQueue queue() {
-            return this.queue;
-        }
 
         @NotNull
         private StoreTailer cycle(long cycle) throws IOException {
