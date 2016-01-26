@@ -383,7 +383,6 @@ public class Excerpts {
         public StoreTailer(@NotNull AbstractChronicleQueue queue) {
             this.queue = queue;
             this.cycle = -1;
-
             toStart();
         }
 

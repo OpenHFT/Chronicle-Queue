@@ -85,7 +85,6 @@ public interface ChronicleQueue extends Closeable {
      * An Appender can be used to writeBytes new excerpts sequentially to the upper.
      *
      * @return ExcerptAppender
-     * @throws IOException if an IO problem occurs
      */
     @NotNull
     ExcerptAppender createAppender();
@@ -116,7 +115,6 @@ public interface ChronicleQueue extends Closeable {
      * maximum  of 16777216 cycles ( aka files )
      */
     long lastIndex();
-
 
     /**
      * @return the type of wire used, for example TEXT_WIRE or BINARY WIRE
