@@ -400,6 +400,14 @@ public class SingleChronicleQueueStore implements WireStore {
                 }
             }
         }
+
+        @Override
+        public String toString() {
+            return "Bounds{" +
+                    "writePosition=" + writePosition +
+                    ", readPosition=" + readPosition +
+                    '}';
+        }
     }
 
 // *************************************************************************

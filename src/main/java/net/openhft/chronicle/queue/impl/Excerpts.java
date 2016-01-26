@@ -77,7 +77,6 @@ public class Excerpts {
             throw new UnsupportedOperationException();
         }
 
-
         public abstract long cycle();
 
         @NotNull
@@ -373,9 +372,7 @@ public class Excerpts {
         @NotNull
         private final AbstractChronicleQueue queue;
         private Wire wire;
-
         private long cycle;
-
         private long index;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
@@ -384,6 +381,18 @@ public class Excerpts {
             this.queue = queue;
             this.cycle = -1;
             toStart();
+        }
+
+        @Override
+        public String toString() {
+            return "StoreTailer{" +
+
+                    "index sequence=" + ChronicleQueue.toSequenceNumber(index) +
+                    ", index cycle=" + ChronicleQueue.toCycle(index) +
+                    ", store=" + store +
+                    ", queue=" + queue +
+
+                    '}';
         }
 
         @Override
@@ -411,6 +420,7 @@ public class Excerpts {
             if (this.store == null) {
                 final long firstIndex = queue.firstIndex();
                 if (index == -1) {
+                    Thread.yield();
                     return false;
                 }
                 moveToIndex(firstIndex);
@@ -494,7 +504,6 @@ public class Excerpts {
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
             }
-
 
             final long expectedCycle = toCycle(index);
             if (expectedCycle != cycle)
