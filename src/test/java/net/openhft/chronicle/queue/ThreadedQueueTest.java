@@ -43,19 +43,12 @@ public class ThreadedQueueTest {
         final ExcerptAppender appender = wqueue.createAppender();
         final Bytes message = Bytes.elasticByteBuffer();
 
-
         Executors.newSingleThreadExecutor(new NamedThreadFactory("tailer", true)).submit(() -> {
-
             while (counter.get() < REQUIRED_COUNT) {
                 bytes.clear();
-
                 if (tailer.readBytes(bytes)) {
-//                    System.out.println(bytes);
                     counter.incrementAndGet();
-//                } else {
-//                    Thread.yield();
                 }
-
             }
             System.out.println("Read " + counter);
         });
@@ -67,7 +60,6 @@ public class ThreadedQueueTest {
                 appender.writeBytes(message);
             }
         });
-
 
         while (counter.get() < REQUIRED_COUNT) {
             Thread.yield();

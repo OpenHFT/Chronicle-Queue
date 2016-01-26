@@ -55,8 +55,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     private final Roll roll;
     @NotNull
-    private final
-    Bounds bounds = new Bounds();
+    private final Bounds bounds = new Bounds();
     private MappedFile mappedFile;
     @Nullable
     private Closeable resourceCleaner;
@@ -94,12 +93,12 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long writePosition() {
-        return this.bounds.getWritePosition();
+        return this.bounds.writePosition();
     }
 
     @Override
     public void writePosition(long position) {
-        this.bounds.setWritePosition(position);
+        this.bounds.writePosition(position);
     }
 
     /**
@@ -148,7 +147,7 @@ public class SingleChronicleQueueStore implements WireStore {
         if (!roll.casNextRollCycle(cycle))
             return false;
         wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
-        bounds.setWritePosition(wire.bytes().writePosition());
+        bounds.writePosition(wire.bytes().writePosition());
         return true;
     }
 
@@ -189,8 +188,8 @@ public class SingleChronicleQueueStore implements WireStore {
     public void install(long length, boolean created, long cycle,
                         @NotNull ChronicleQueueBuilder builder) {
         if (created) {
-            this.bounds.setWritePosition(length);
-            this.bounds.setReadPosition(length);
+            this.bounds.writePosition(length);
+            this.bounds.readPosition(length);
             this.roll.cycle(cycle);
         }
     }
@@ -204,8 +203,8 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public MappedBytes mappedBytes() {
         @NotNull final MappedBytes mappedBytes = new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
-        mappedBytes.writePosition(bounds.getWritePosition());
-        mappedBytes.readPosition(bounds.getReadPosition());
+        mappedBytes.writePosition(bounds.writePosition());
+        mappedBytes.readPosition(bounds.readPosition());
         return mappedBytes;
     }
 
@@ -375,20 +374,19 @@ public class SingleChronicleQueueStore implements WireStore {
                     this.readPosition, this, (o, i) -> o.readPosition = i);
         }
 
-        public long getReadPosition() {
+        public long readPosition() {
             return this.readPosition.getVolatileValue();
         }
 
-        public void setReadPosition(long position) {
+        public void readPosition(long position) {
             this.readPosition.setOrderedValue(position);
         }
 
-        public long getWritePosition() {
+        public long writePosition() {
             return this.writePosition.getVolatileValue();
         }
 
-
-        public void setWritePosition(long writePosition) {
+        public void writePosition(long writePosition) {
             for (; ; ) {
                 long wp = writePosition();
                 if (writePosition > wp) {
@@ -657,7 +655,7 @@ public class SingleChronicleQueueStore implements WireStore {
                             if (index == startIndex) {
                                 return fromAddress;
                             } else {
-                                bytes.readLimit(bounds.getWritePosition());
+                                bytes.readLimit(bounds.writePosition());
                                 return linearScan(wire, index, startIndex, fromAddress);
                             }
 

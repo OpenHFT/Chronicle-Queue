@@ -419,10 +419,9 @@ public class Excerpts {
 
             if (this.store == null) {
                 final long firstIndex = queue.firstIndex();
-                if (index == -1) {
-                    Thread.yield();
+                if (index == -1)
                     return false;
-                }
+
                 moveToIndex(firstIndex);
             }
 
