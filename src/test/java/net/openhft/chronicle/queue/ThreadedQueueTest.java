@@ -46,22 +46,19 @@ public class ThreadedQueueTest {
         Executors.newSingleThreadExecutor(new NamedThreadFactory("tailer", true)).submit(() -> {
             while (counter.get() < REQUIRED_COUNT) {
                 bytes.clear();
-                if (tailer.readBytes(bytes)) {
-                //    System.out.println("data=" + bytes.toString());
+                if (tailer.readBytes(bytes))
                     counter.incrementAndGet();
-                }
+
             }
-            System.out.println("Read " + counter);
         });
 
         Executors.newSingleThreadExecutor(new NamedThreadFactory("appender", true)).submit(() -> {
             for (int i = 0; i < REQUIRED_COUNT; i++) {
-                //    System.out.println("w");
                 message.clear();
                 message.append(i);
                 appender.writeBytes(message);
             }
-          //  System.out.println("write finished");
+
         });
 
         while (counter.get() < REQUIRED_COUNT) {

@@ -414,7 +414,7 @@ public class Excerpts {
         private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) {
 
             final long readPosition = wire.bytes().readPosition();
-            System.out.println("readPosition=" + readPosition);
+         //   System.out.println("readPosition=" + readPosition);
             final long readLimit = wire.bytes().readLimit();
             final long cycle = this.cycle;
             final long index = this.index;
@@ -426,7 +426,7 @@ public class Excerpts {
 
                 moveToIndex(firstIndex);
             }
-            System.out.println("readPosition=" + wire.bytes().readPosition());
+         //   System.out.println("readPosition=" + wire.bytes().readPosition());
             final boolean success = readAt(t, c);
             if (success) {
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
