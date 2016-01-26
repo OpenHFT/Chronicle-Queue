@@ -15,9 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ThreadedQueueTest {
 
-    private static final int BLOCK_SIZE = 256 << 20;
     public static final int MESSAGE_SIZE = 1024;
     public static final int REQUIRED_COUNT = 100_000;
+    private static final int BLOCK_SIZE = 256 << 20;
 
     @Test(timeout = 5000)
     public void testName() throws Exception {
@@ -50,13 +50,14 @@ public class ThreadedQueueTest {
                 bytes.clear();
 
                 if (tailer.readBytes(bytes)) {
-                    System.out.println(bytes);
+//                    System.out.println(bytes);
                     counter.incrementAndGet();
-                } else {
-                    Thread.yield();
+//                } else {
+//                    Thread.yield();
                 }
 
             }
+            System.out.println("Read " + counter);
         });
 
         Executors.newSingleThreadExecutor(new NamedThreadFactory("appender", true)).submit(() -> {
