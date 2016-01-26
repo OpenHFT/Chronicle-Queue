@@ -87,22 +87,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.epoch = 0;
     }
 
-    /**
-     * consumer will be called every second, also as there is data to report
-     *
-     * @param onRingBufferStats a consumer of the BytesRingBufferStats
-     * @return this
-     */
-    @NotNull
-    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
-        this.onRingBufferStats = onRingBufferStats;
-        return this;
-    }
-
-    public Consumer<BytesRingBufferStats> onRingBufferStats() {
-        return this.onRingBufferStats;
-    }
-
     @NotNull
     public static SingleChronicleQueueBuilder binary(@NotNull File name) {
         return binary(name.getAbsolutePath());
@@ -134,6 +118,22 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private static SingleChronicleQueueBuilder raw(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
+    }
+
+    /**
+     * consumer will be called every second, also as there is data to report
+     *
+     * @param onRingBufferStats a consumer of the BytesRingBufferStats
+     * @return this
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
+        this.onRingBufferStats = onRingBufferStats;
+        return this;
+    }
+
+    public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        return this.onRingBufferStats;
     }
 
     @NotNull
@@ -273,7 +273,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder eventLoop(@NotNull EventLoop eventLoop) {
+    public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
         return this;
     }
