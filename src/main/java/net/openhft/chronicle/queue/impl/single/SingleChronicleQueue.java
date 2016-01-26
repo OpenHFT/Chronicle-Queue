@@ -15,9 +15,9 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.BytesRingBuffer;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.BytesRingBuffer;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
@@ -102,6 +102,12 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     @Override
     protected WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
+    }
+
+
+    @Override
+    public void close() throws IOException {
+        // todo
     }
 
     @Override
