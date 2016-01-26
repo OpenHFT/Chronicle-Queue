@@ -31,21 +31,18 @@ public interface ExcerptTailer extends ExcerptCommon {
     /**
      * @param reader user to read the document
      * @return {@code true} if successful
-     * @throws IOException if not able to read the chronicle file
      */
     boolean readDocument(@NotNull ReadMarshallable reader);
 
     /**
      * @param marshallable used to read the document
      * @return {@code true} if successful
-     * @throws IOException if not able to read the chronicle file
      */
     boolean readBytes(@NotNull ReadBytesMarshallable marshallable);
 
     /**
      * @param using used to read the document
      * @return {@code true} if successful
-     * @throws IOException if not able to read the chronicle file
      */
     boolean readBytes(@NotNull Bytes using);
 

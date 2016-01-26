@@ -18,11 +18,9 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
@@ -48,11 +46,9 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 .blockSize(BLOCK_SIZE)
                 .build();
 
-        EventGroup eventLoop = null;
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
-                .eventLoop(eventLoop)
                 .build();
 
         ExcerptAppender appender = wqueue.createAppender();
@@ -60,7 +56,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
 
         AtomicLong counter = new AtomicLong();
         Thread tailerThread = new Thread(() -> {
-            AffinityLock rlock = AffinityLock.acquireLock();
+
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
             long count = 0;
             try {
@@ -75,9 +71,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
-                if (rlock != null) {
-                    rlock.release();
-                }
                 System.out.printf("Read %,d messages", count);
             }
         }, "tailer thread");
@@ -85,7 +78,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         long runs = 20_000;
 
         Thread appenderThread = new Thread(() -> {
-            AffinityLock wlock = AffinityLock.acquireLock();
+
             try {
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
@@ -103,10 +96,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                if (wlock != null) {
-                    wlock.release();
-                }
             }
         }, "appender thread");
 
