@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
@@ -48,6 +49,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @Nullable
     private EventLoop eventLoop;
+
+    @NotNull
+    private ExcerptFactory<SingleChronicleQueue> excerptFactory;
 
     private long bufferCapacity = 2 << 20;
 
@@ -85,22 +89,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
-    }
-
-    /**
-     * consumer will be called every second, also as there is data to report
-     *
-     * @param onRingBufferStats a consumer of the BytesRingBufferStats
-     * @return this
-     */
-    @NotNull
-    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
-        this.onRingBufferStats = onRingBufferStats;
-        return this;
-    }
-
-    public Consumer<BytesRingBufferStats> onRingBufferStats() {
-        return this.onRingBufferStats;
+        this.excerptFactory = SingleChronicleQueueExcerptFactory.INSTANCE;
     }
 
     @NotNull
@@ -134,6 +123,22 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private static SingleChronicleQueueBuilder raw(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
+    }
+
+    /**
+     * consumer will be called every second, also as there is data to report
+     *
+     * @param onRingBufferStats a consumer of the BytesRingBufferStats
+     * @return this
+     */
+    @NotNull
+    public SingleChronicleQueueBuilder onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats) {
+        this.onRingBufferStats = onRingBufferStats;
+        return this;
+    }
+
+    public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        return this.onRingBufferStats;
     }
 
     @NotNull
@@ -175,10 +180,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return bufferCapacity;
     }
 
-    // *************************************************************************
-    // HELPERS
-    // *************************************************************************
-
     /**
      * @param ringBufferSize sets the ring buffer capacity in bytes
      * @return this
@@ -214,6 +215,20 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public RollCycle rollCycle() {
         return this.rollCycle;
     }
+
+    @NotNull
+    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this.excerptFactory = excerptFactory;
+        return this;
+    }
+
+    public ExcerptFactory<SingleChronicleQueue> excertpFactory() {
+        return this.excerptFactory;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @NotNull
     public ChronicleQueue build() {
