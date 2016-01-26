@@ -69,10 +69,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         final long writeCount = r.getAndClearWriteCount();
         final long readCount = r.getAndClearReadCount();
 
-        LOG.info(("ring buffer=" + (r.capacity() - writeBytesRemaining / 1024 +
+        LOG.info("ring buffer=" + (r.capacity() - writeBytesRemaining) / 1024 +
                 "KB/" + r.capacity() / 1024 + "KB [" + (int) percentageFree + "% Free], " +
                 "" + "writes=" + writeCount + ", reads=" + readCount + ", " +
-                "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us")));
+                "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us");
     };
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
