@@ -293,7 +293,8 @@ public class Excerpts {
 
             } while (position <= 0);
 
-            store.writePosition(wire.bytes().writePosition());
+            store.writePosition(position);
+         //   System.out.println("write position=" + position);
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }
@@ -413,6 +414,7 @@ public class Excerpts {
         private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) {
 
             final long readPosition = wire.bytes().readPosition();
+            System.out.println("readPosition=" + readPosition);
             final long readLimit = wire.bytes().readLimit();
             final long cycle = this.cycle;
             final long index = this.index;
@@ -424,7 +426,7 @@ public class Excerpts {
 
                 moveToIndex(firstIndex);
             }
-
+            System.out.println("readPosition=" + wire.bytes().readPosition());
             final boolean success = readAt(t, c);
             if (success) {
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
@@ -445,7 +447,7 @@ public class Excerpts {
                 roll = Long.MIN_VALUE;
                 wire.bytes().readLimit(wire.bytes().capacity());
 
-                while (wire.bytes().readLong(wire.bytes().readPosition()) != 0) {
+                while (wire.bytes().readInt(wire.bytes().readPosition()) != 0) {
 
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
 
@@ -453,6 +455,8 @@ public class Excerpts {
                             return false;
 
                         if (documentContext.isData()) {
+                            final long l = wire.bytes().readLimit();
+                            ((ReadDocumentContext) documentContext).closeReadPosition(l);
                             c.accept(t, wire);
                             return true;
                         }
