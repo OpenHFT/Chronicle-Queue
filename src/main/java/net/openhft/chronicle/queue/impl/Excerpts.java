@@ -294,7 +294,7 @@ public class Excerpts {
             } while (position <= 0);
 
             store.writePosition(position);
-         //   System.out.println("write position=" + position);
+            //   System.out.println("write position=" + position);
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }
@@ -455,8 +455,12 @@ public class Excerpts {
                             return false;
 
                         if (documentContext.isData()) {
-                            final long l = wire.bytes().readLimit();
-                            ((ReadDocumentContext) documentContext).closeReadPosition(l);
+
+                            // this will move to the except the position event the the accept below
+                            // fails to read all the bytes
+                            ((ReadDocumentContext) documentContext).
+                                    closeReadPosition(wire.bytes().readLimit());
+
                             c.accept(t, wire);
                             return true;
                         }

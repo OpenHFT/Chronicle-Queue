@@ -16,10 +16,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ThreadedQueueTest {
 
     public static final int MESSAGE_SIZE = 1024;
-    public static final int REQUIRED_COUNT = 100_000;
+    public static final int REQUIRED_COUNT = 10;
     private static final int BLOCK_SIZE = 256 << 20;
 
-    @Test(timeout = 5000)
+    @Test(timeout = 500000)
     public void testName() throws Exception {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
@@ -47,6 +47,7 @@ public class ThreadedQueueTest {
             while (counter.get() < REQUIRED_COUNT) {
                 bytes.clear();
                 if (tailer.readBytes(bytes)) {
+                //    System.out.println("data=" + bytes.toString());
                     counter.incrementAndGet();
                 }
             }
@@ -55,10 +56,12 @@ public class ThreadedQueueTest {
 
         Executors.newSingleThreadExecutor(new NamedThreadFactory("appender", true)).submit(() -> {
             for (int i = 0; i < REQUIRED_COUNT; i++) {
+                //    System.out.println("w");
                 message.clear();
                 message.append(i);
                 appender.writeBytes(message);
             }
+          //  System.out.println("write finished");
         });
 
         while (counter.get() < REQUIRED_COUNT) {
