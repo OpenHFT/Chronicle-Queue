@@ -433,16 +433,14 @@ public class Excerpts {
                 moveToIndex(firstIndex);
             }
             //   System.out.println("readPosition=" + wire.bytes().readPosition());
-            final boolean success = readAt(t, c);
-            if (success) {
+            if (readAt(t, c)) {
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
                 return true;
             }
 
-            // roll detected, move to next cycle;
-            cycle(cycle);
-            wire.bytes().readLimit(readLimit);
-            wire.bytes().readPosition(readPosition);
+            //  cycle(cycle);
+            //   wire.bytes().readLimit(readLimit);
+            //  wire.bytes().readPosition(readPosition);
             return false;
         }
 
@@ -452,13 +450,15 @@ public class Excerpts {
             for (; ; ) {
                 roll = Long.MIN_VALUE;
                 wire.bytes().readLimit(wire.bytes().capacity());
-
-                while (wire.bytes().readInt(wire.bytes().readPosition()) != 0) {
+                long start;
+                Boolean result = null;
+                while (wire.bytes().readVolatileInt(start = wire.bytes().readPosition()) != 0) {
 
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
 
                         if (!documentContext.isPresent())
                             return false;
+
 
                         if (documentContext.isData()) {
                             c.accept(t, wire);
@@ -477,11 +477,12 @@ public class Excerpts {
                         }
 
                     }
-
                 }
 
+                // we got to the end of the file and there is no roll information
                 if (roll == Long.MIN_VALUE)
                     return false;
+
 
                 // roll to the next file
                 cycle(roll);

@@ -19,7 +19,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.ReferenceCounter;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
@@ -33,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.ZoneId;
+import java.util.function.Supplier;
 
 import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress0;
@@ -51,12 +51,12 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @NotNull
-    private WireType wireType;
+    private final WireType wireType;
     @NotNull
     private final Roll roll;
     @NotNull
-    private final Bounds bounds = new Bounds();
-    private MappedFile mappedFile;
+    private final Bounds bounds;
+    private final MappedFile mappedFile;
     @Nullable
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
@@ -66,11 +66,21 @@ public class SingleChronicleQueueStore implements WireStore {
             .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
 
     /**
-     * Default constructor needed for self boot-strapping
+     * used by {@link net.openhft.chronicle.wire.Demarshallable}
+     *
+     * @param wire a wire
      */
-    SingleChronicleQueueStore() {
-        this.roll = new Roll(null, 0);
-        this.wireType = WireType.BINARY;
+    private SingleChronicleQueueStore(WireIn wire) {
+        wireType = wire.read(MetaDataField.wireType).object(WireType.class);
+        this.bounds = wire.read(MetaDataField.bounds).typedMarshallable();
+        this.roll = wire.read(MetaDataField.roll).typedMarshallable();
+        wire.read(MetaDataField.chunkSize).int64();
+        wire.read(MetaDataField.overlapSize).int64();
+
+        @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
+        this.mappedFile = mappedBytes.mappedFile();
+        indexing = new Indexing(wireType);
+        wire.read(MetaDataField.indexing).marshallable(indexing);
     }
 
     /**
@@ -89,6 +99,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
         this.indexing = new Indexing(wireType);
+        bounds = new Bounds(wireType.newLongReference());
     }
 
     @Override
@@ -129,7 +140,6 @@ public class SingleChronicleQueueStore implements WireStore {
         if (this.indexing == null)
             return 0;
         return this.indexing.firstSequenceNumber();
-
     }
 
     /**
@@ -203,6 +213,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public MappedBytes mappedBytes() {
         final MappedBytes mappedBytes = new MappedBytes(mappedFile);
+        mappedBytes.readPosition(0);
         mappedBytes.writePosition(writePosition());
         return mappedBytes;
     }
@@ -241,27 +252,13 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         wire.write(MetaDataField.wireType).object(wireType);
-        wire.write(MetaDataField.bounds).marshallable(this.bounds)
-                .write(MetaDataField.roll).object(this.roll)
+        wire.write(MetaDataField.bounds).typedMarshallable(this.bounds)
+                .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.chunkSize).int64(mappedFile.chunkSize())
                 .write(MetaDataField.overlapSize).int64(mappedFile.overlapSize())
                 .write(MetaDataField.indexing).object(this.indexing);
     }
 
-    @Override
-    public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-        wireType = wire.read(MetaDataField.wireType).object(WireType.class);
-        wire.read(MetaDataField.bounds).marshallable(this.bounds);
-        wire.read(MetaDataField.roll).marshallable(this.roll);
-        wire.read(MetaDataField.chunkSize).int64();
-        wire.read(MetaDataField.overlapSize).int64();
-
-        @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
-        this.mappedFile = mappedBytes.mappedFile();
-        indexing = new Indexing(wireType);
-        wire.read(MetaDataField.indexing).marshallable(indexing);
-
-    }
 
 // *************************************************************************
 // Marshallable
@@ -346,32 +343,37 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
 
-    class Bounds implements Marshallable {
+    static class Bounds implements Demarshallable, WriteMarshallable {
         @Nullable
-        private LongValue writePosition;
+        private final LongValue writePosition;
         @Nullable
-        private LongValue readPosition;
+        private final LongValue readPosition;
 
-        Bounds() {
-            this.writePosition = null;
-            this.readPosition = null;
+        /**
+         * used by {@link net.openhft.chronicle.wire.Demarshallable}
+         *
+         * @param wire a wire
+         */
+        private Bounds(WireIn wire) {
+            writePosition = wire.newLongReference();
+            readPosition = wire.newLongReference();
+            wire.read(BoundsField.writePosition).int64(
+                    this.writePosition)
+                    .read(BoundsField.readPosition).int64(
+                    this.readPosition);
+        }
+
+        Bounds(Supplier<LongValue> supplier) {
+            writePosition = supplier.get();
+            readPosition = supplier.get();
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(BoundsField.writePosition).int64forBinding(0, writePosition = wire
-                    .newLongReference())
-                    .write(BoundsField.readPosition).int64forBinding(0, readPosition = wire
-                    .newLongReference());
+            wire.write(BoundsField.writePosition).int64forBinding(0, writePosition)
+                    .write(BoundsField.readPosition).int64forBinding(0, readPosition);
         }
 
-        @Override
-        public void readMarshallable(@NotNull WireIn wire) {
-            wire.read(BoundsField.writePosition).int64(
-                    this.writePosition, this, (o, i) -> o.writePosition = i)
-                    .read(BoundsField.readPosition).int64(
-                    this.readPosition, this, (o, i) -> o.readPosition = i);
-        }
 
         public long readPosition() {
             return this.readPosition.getVolatileValue();
@@ -732,7 +734,7 @@ public class SingleChronicleQueueStore implements WireStore {
 //
 // *************************************************************************
 
-    class Roll implements Marshallable {
+    static class Roll implements Demarshallable, WriteMarshallable {
         private long epoch;
         private int length;
         @Nullable
@@ -746,6 +748,21 @@ public class SingleChronicleQueueStore implements WireStore {
         @Nullable
         private LongValue nextCycleMetaPosition;
 
+        /**
+         * used by {@link net.openhft.chronicle.wire.Demarshallable}
+         *
+         * @param wire a wire
+         */
+        private Roll(WireIn wire) {
+            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
+                    .read(RollFields.length).int32(this, (o, i) -> o.length = i)
+                    .read(RollFields.format).text(this, (o, i) -> o.format = i)
+                    .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
+                    .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
+                    .read(RollFields.epoch).int64(this, (o, i) -> o.epoch = i)
+                    .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
+
+        }
 
         Roll(@Nullable RollCycle rollCycle, long rollEpoch) {
             this.length = rollCycle != null ? rollCycle.length() : -1;
@@ -768,16 +785,6 @@ public class SingleChronicleQueueStore implements WireStore {
                     .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
         }
 
-        @Override
-        public void readMarshallable(@NotNull WireIn wire) {
-            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
-                    .read(RollFields.length).int32(this, (o, i) -> o.length = i)
-                    .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                    .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
-                    .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
-                    .read(RollFields.epoch).int64(this, (o, i) -> o.epoch = i)
-                    .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
-        }
 
         /**
          * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
