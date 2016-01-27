@@ -293,8 +293,7 @@ public class Excerpts {
 
             } while (position <= 0);
 
-            store.writePosition(position);
-            //   System.out.println("write position=" + position);
+            store.writePosition(wire.bytes().writePosition());
             store.storeIndexLocation(wire, position, index);
             return ChronicleQueue.index(store.cycle(), index);
         }

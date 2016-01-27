@@ -358,9 +358,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 lastIndex = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
-
             final long cycle = toCycle(lastIndex);
-
             final ExcerptTailer tailer = chronicle.createTailer();
 
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));
