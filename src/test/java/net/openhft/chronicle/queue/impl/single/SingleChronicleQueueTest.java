@@ -21,7 +21,6 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -376,7 +375,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("long running test")
+   // @Ignore("long running test")
     @Test
     public void testReadAtIndex4MB() throws Exception {
 
