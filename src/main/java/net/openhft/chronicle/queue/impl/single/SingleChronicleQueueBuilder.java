@@ -73,10 +73,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         final long writeCount = r.getAndClearWriteCount();
         final long readCount = r.getAndClearReadCount();
 
-        LOG.info(("ring buffer=" + (r.capacity() - writeBytesRemaining / 1024 +
+        LOG.info("ring buffer=" + (r.capacity() - writeBytesRemaining) / 1024 +
                 "KB/" + r.capacity() / 1024 + "KB [" + (int) percentageFree + "% Free], " +
                 "" + "writes=" + writeCount + ", reads=" + readCount + ", " +
-                "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us")));
+                "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us");
     };
 
     public SingleChronicleQueueBuilder(@NotNull String path) {
@@ -288,7 +288,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder eventLoop(@NotNull EventLoop eventLoop) {
+    public SingleChronicleQueueBuilder eventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
         return this;
     }
