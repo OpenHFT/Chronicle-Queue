@@ -283,15 +283,22 @@ public class Excerpts {
             long position;
 
             do {
+
+                final long readPosition = wire.bytes().readPosition();
+                boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
+
                 position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
 
                 // this will be called if currently being modified with unknown length
                 if (position == 0)
                     continue;
 
-                this.index++;
+                if (!isMetaData)
+                    this.index++;
 
-            } while (position <= 0);
+            } while (position < 0);
+
+            this.index++;
 
             store.writePosition(wire.bytes().writePosition());
             store.storeIndexLocation(wire, position, index);
