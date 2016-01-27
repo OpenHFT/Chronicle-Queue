@@ -19,8 +19,8 @@ public class ThreadedQueueTest {
     public static final int REQUIRED_COUNT = 10;
     private static final int BLOCK_SIZE = 256 << 20;
 
-    @Test(timeout = 500000)
-    public void testName() throws Exception {
+    @Test(timeout = 1000)
+    public void testMultipleThreads() throws Exception {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
 

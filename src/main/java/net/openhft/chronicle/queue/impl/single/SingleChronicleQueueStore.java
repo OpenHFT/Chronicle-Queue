@@ -202,7 +202,9 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public MappedBytes mappedBytes() {
-        return new MappedBytes(mappedFile);//.withSizes(this.chunkSize, this.overlapSize);
+        final MappedBytes mappedBytes = new MappedBytes(mappedFile);
+        mappedBytes.writePosition(writePosition());
+        return mappedBytes;
     }
 
     @Override

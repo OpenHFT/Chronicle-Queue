@@ -36,7 +36,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
-    @Test(timeout = 5000)
+    @Test(timeout = 2000)
     public void testUnbuffered() throws IOException, InterruptedException {
         String path = getTmpDir() + "/deleteme.q";
 
