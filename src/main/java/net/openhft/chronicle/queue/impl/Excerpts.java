@@ -378,7 +378,7 @@ public class Excerpts {
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
 
-        public StoreTailer(@NotNull AbstractChronicleQueue queue) {
+        public StoreTailer(@NotNull final AbstractChronicleQueue queue) {
             this.queue = queue;
             this.cycle = -1;
             toStart();
@@ -397,24 +397,24 @@ public class Excerpts {
         }
 
         @Override
-        public boolean readDocument(@NotNull ReadMarshallable marshaller) {
+        public boolean readDocument(@NotNull final ReadMarshallable marshaller) {
             return readAtIndex(marshaller, ReadMarshallable::readMarshallable);
         }
 
         @Override
-        public boolean readBytes(@NotNull Bytes using) {
+        public boolean readBytes(@NotNull final Bytes using) {
             return readAtIndex(using, (t, w) -> t.write(w.bytes()));
         }
 
         @Override
-        public boolean readBytes(@NotNull ReadBytesMarshallable using) {
+        public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
             return readAtIndex(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
-        private <T> boolean readAtIndex(T t, @NotNull BiConsumer<T, Wire> c) {
+        private <T> boolean readAtIndex(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
 
             final long readPosition = wire.bytes().readPosition();
-         //   System.out.println("readPosition=" + readPosition);
+            //   System.out.println("readPosition=" + readPosition);
             final long readLimit = wire.bytes().readLimit();
             final long cycle = this.cycle;
             final long index = this.index;
@@ -426,7 +426,7 @@ public class Excerpts {
 
                 moveToIndex(firstIndex);
             }
-         //   System.out.println("readPosition=" + wire.bytes().readPosition());
+            //   System.out.println("readPosition=" + wire.bytes().readPosition());
             final boolean success = readAt(t, c);
             if (success) {
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
@@ -440,7 +440,7 @@ public class Excerpts {
             return false;
         }
 
-        private <T> boolean readAt(T t, @NotNull BiConsumer<T, Wire> c) {
+        private <T> boolean readAt(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
 
             long roll;
             for (; ; ) {
@@ -455,12 +455,6 @@ public class Excerpts {
                             return false;
 
                         if (documentContext.isData()) {
-
-                            // this will move to the except the position event the the accept below
-                            // fails to read all the bytes
-                            ((ReadDocumentContext) documentContext).
-                                    closeReadPosition(wire.bytes().readLimit());
-
                             c.accept(t, wire);
                             return true;
                         }
@@ -469,7 +463,8 @@ public class Excerpts {
                         // the next cycle (negative)
                         final StringBuilder sb = Wires.acquireStringBuilder();
 
-                        @NotNull final ValueIn vi = wire.readEventName(sb);
+                        @NotNull
+                        final ValueIn vi = wire.readEventName(sb);
                         if ("roll".contentEquals(sb)) {
                             roll = vi.int32();
                             break;
@@ -488,7 +483,6 @@ public class Excerpts {
                     return false;
             }
 
-
         }
 
         /**
@@ -496,16 +490,14 @@ public class Excerpts {
          */
         @Override
         public long index() {
-
             if (this.store == null)
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
-
             return ChronicleQueue.index(this.cycle, this.index);
         }
 
 
         @Override
-        public boolean moveToIndex(long index) {
+        public boolean moveToIndex(final long index) {
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
@@ -567,16 +559,14 @@ public class Excerpts {
 
 
         @NotNull
-        private StoreTailer cycle(long cycle) {
+        private StoreTailer cycle(final long cycle) {
             if (this.cycle != cycle) {
                 if (null != this.store) {
                     this.queue.release(this.store);
                 }
                 this.cycle = cycle;
-                //  this.index = -1;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
-
-                wire = queue.wireType().apply(store.mappedBytes());
+                this.wire = queue.wireType().apply(store.mappedBytes());
                 moveToIndex(ChronicleQueue.index(cycle, -1));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());

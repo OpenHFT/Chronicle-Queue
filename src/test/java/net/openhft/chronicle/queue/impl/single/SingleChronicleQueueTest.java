@@ -78,6 +78,39 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    public void testReadingLessBytesThanWritten() throws IOException {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
+
+        final ExcerptAppender appender = queue.createAppender();
+
+        final Bytes<byte[]> expected = Bytes.wrapForRead("some long message".getBytes());
+        for (int i = 0; i < 10; i++) {
+
+            appender.writeBytes(expected);
+        }
+
+        final ExcerptTailer tailer = queue.createTailer();
+
+        // Sequential read
+        for (int i = 0; i < 10; i++) {
+
+            Bytes b = Bytes.allocateDirect(8);
+
+            try {
+                tailer.readBytes(b);
+            } catch (Error e) {
+
+            }
+
+            Assert.assertEquals(expected.readInt(0), b.readInt(0));
+        }
+
+    }
+
+
+    @Test
     public void testAppendAndRead() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
