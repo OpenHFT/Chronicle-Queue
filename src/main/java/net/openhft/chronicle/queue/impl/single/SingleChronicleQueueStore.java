@@ -97,8 +97,9 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void writePosition(long position) {
+    public WireStore writePosition(long position) {
         this.bounds.writePosition(position);
+        return this;
     }
 
     /**

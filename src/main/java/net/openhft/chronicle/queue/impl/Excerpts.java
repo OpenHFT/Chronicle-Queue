@@ -16,18 +16,16 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
-import net.openhft.chronicle.threads.HandlerPriority;
-import net.openhft.chronicle.threads.api.EventHandler;
-import net.openhft.chronicle.threads.api.EventLoop;
-import net.openhft.chronicle.threads.api.InvalidEventHandlerException;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -35,18 +33,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.ChronicleQueue.toSequenceNumber;
 import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
+    @FunctionalInterface
+    public interface BytesConsumer {
+        boolean accept(Bytes<?> bytes)
+            throws InterruptedException;
+    }
 
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
-
 
     // *************************************************************************
     //
@@ -85,173 +85,12 @@ public class Excerpts {
         }
     }
 
-    /**
-     * Unlike the other appenders the write methods are not able to return the index that he exceprt
-     * was written to, as the write is deferred  using a ring buffer , and later written using a
-     * background thread
-     *
-     * @author Rob Austin.
-     */
-    public static class BufferedAppender implements ExcerptAppender {
-
-        @NotNull
-        private final BytesRingBuffer ringBuffer;
-        @NotNull
-        private final StoreAppender underlyingAppender;
-        private final Wire tempWire;
-        @NotNull
-        private final EventLoop eventLoop;
-
-        public BufferedAppender(@NotNull final EventLoop eventLoop,
-                                @NotNull final StoreAppender underlyingAppender,
-                                final long ringBufferCapacity,
-                                @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
-
-            this.eventLoop = eventLoop;
-            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
-                    ringBufferCapacity));
-
-            this.underlyingAppender = underlyingAppender;
-            this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
-
-            @NotNull
-            final EventHandler handler = () -> {
-
-                @NotNull final Wire wire = underlyingAppender.wire();
-                @NotNull final Bytes<?> bytes = wire.bytes();
-                final long start = bytes.writePosition();
-
-                bytes.writeInt(Wires.NOT_READY);
-
-                try {
-                    if (!ringBuffer.read(bytes)) {
-                        bytes.writeSkip(-4);
-                        bytes.writeInt(bytes.writePosition(), 0);
-                        return false;
-                    }
-
-                    final long len = bytes.writePosition() - start - 4;
-
-                    // no data was read from the ring buffer, so we wont write any docuement to
-                    // the appender
-                    if (len == 0) {
-                        bytes.writeSkip(-4);
-                        bytes.writeInt(bytes.writePosition(), 0);
-                        return false;
-                    }
-
-                    bytes.writeInt(start, toIntU30(len, "Document length %,d " +
-                            "out of 30-bit int range."));
-
-                    underlyingAppender.index++;
-                    underlyingAppender.store().writePosition(wire.bytes().writePosition());
-                    underlyingAppender.store().storeIndexLocation(wire, start,
-                            underlyingAppender.index);
-
-                    return true;
-
-                } catch (Throwable t) {
-                    throw Jvm.rethrow(t);
-                }
-
-            };
-
-            eventLoop.addHandler(handler);
-
-            eventLoop.addHandler(new EventHandler() {
-                @Override
-                public boolean action() throws InvalidEventHandlerException {
-                    ringBufferStats.accept(ringBuffer);
-                    return true;
-                }
-
-                @NotNull
-                @Override
-                public HandlerPriority priority() {
-                    return HandlerPriority.MONITOR;
-                }
-            });
-
-            eventLoop.start();
-
-        }
-
-        @NotNull
-        public BytesRingBuffer ringBuffer() {
-            return ringBuffer;
-        }
-
-        /**
-         * for the best performance use net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.Bytes)
-         *
-         * @param writer to write to excerpt.
-         * @return always returns -1 when using the buffered appender
-         */
-        @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) {
-            @NotNull final Bytes<?> bytes = tempWire.bytes();
-            bytes.clear();
-            writer.writeMarshallable(tempWire);
-            return writeBytes(bytes);
-        }
-
-        /**
-         * for the best performacne use net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.Bytes)
-         *
-         * @param marshallable to write to excerpt.
-         * @return always returns -1 when using the buffered appender
-         */
-        @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) {
-            @NotNull final Bytes<?> bytes = tempWire.bytes();
-            bytes.clear();
-            marshallable.writeMarshallable(bytes);
-            return writeBytes(bytes);
-        }
-
-        /**
-         * for the best performance call this method, rather than net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)
-         * or net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeDocument(net.openhft.chronicle.wire.WriteMarshallable)
-         *
-         * @param bytes to write to excerpt.
-         * @return always returns -1 when using the buffered appender
-         * @throws IOException
-         */
-        @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) {
-            try {
-                while (!ringBuffer.offer(bytes))
-                    Thread.yield();
-                eventLoop.unpause();
-            } catch (InterruptedException e) {
-                throw Jvm.rethrow(e);
-            }
-
-            return -1;
-        }
-
-        @Override
-        public long index() {
-            throw new UnsupportedOperationException("");
-        }
-
-        @Override
-        public long cycle() {
-            return underlyingAppender.cycle();
-        }
-
-        @Override
-        public void prefetch() {
-        }
-
-    }
-
 
     /**
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-        long index = -1;
+        private long index = -1;
         private Wire wire;
         private long cycle;
         private WireStore store;
@@ -323,9 +162,35 @@ public class Excerpts {
             return this.store.cycle();
         }
 
-        @NotNull
-        Wire wire() {
-            return wire;
+        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            final long start = bytes.writePosition();
+
+            bytes.writeInt(Wires.NOT_READY);
+
+            if (!consumer.accept(bytes)) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            final long len = bytes.writePosition() - start - 4;
+
+            // no data was read from the ring buffer, so we wont write any document
+            // to the appender
+            if (len == 0) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                "out of 30-bit int range."));
+
+            store().writePosition(bytes.writePosition())
+                .storeIndexLocation(wire, start, ++index);
+
+            return true;
         }
 
         @ForceInline
@@ -360,11 +225,11 @@ public class Excerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer

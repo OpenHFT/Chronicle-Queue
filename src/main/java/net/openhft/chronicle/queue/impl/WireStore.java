@@ -24,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 public interface WireStore extends ReferenceCounted, Marshallable {
 
-    void writePosition(long position);
+    WireStore writePosition(long position);
 
     /**
      * @return the cycle this store refers to, this is based on the time offset by {@code epoch} and
@@ -58,12 +58,10 @@ public interface WireStore extends ReferenceCounted, Marshallable {
             long length,
             boolean created,
             long cycle,
-            @NotNull ChronicleQueueBuilder builder)
-            ;
+            @NotNull ChronicleQueueBuilder builder);
 
     @NotNull
     MappedBytes mappedBytes();
-
 
     void storeIndexLocation(Wire wire, long position, long index);
 }

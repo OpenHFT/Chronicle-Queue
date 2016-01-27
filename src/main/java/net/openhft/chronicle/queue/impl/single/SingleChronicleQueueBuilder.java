@@ -83,13 +83,21 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this(new File(path));
     }
 
+    protected SingleChronicleQueueBuilder(@NotNull String path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this(new File(path), excerptFactory);
+    }
+
     public SingleChronicleQueueBuilder(@NotNull File path) {
+        this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
+    }
+
+    protected SingleChronicleQueueBuilder(@NotNull File path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
-        this.excerptFactory = SingleChronicleQueueExcerptFactory.INSTANCE;
+        this.excerptFactory = excerptFactory;
     }
 
     @NotNull
@@ -234,7 +242,8 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     public ChronicleQueue build() {
         if (isBuffered && eventLoop == null)
             eventLoop = new EventGroup(true, onThrowable);
-        return new SingleChronicleQueue(this.clone());
+
+        return new SingleChronicleQueue(clone());
     }
 
     @NotNull

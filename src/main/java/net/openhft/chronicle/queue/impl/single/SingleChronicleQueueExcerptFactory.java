@@ -14,7 +14,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.BytesRingBuffer;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -22,8 +21,7 @@ import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.queue.impl.Excerpts;
 
 class SingleChronicleQueueExcerptFactory implements ExcerptFactory<SingleChronicleQueue> {
-
-    static final SingleChronicleQueueExcerptFactory INSTANCE = new SingleChronicleQueueExcerptFactory();
+    public static final SingleChronicleQueueExcerptFactory INSTANCE = new SingleChronicleQueueExcerptFactory();
 
     @Override
     public Excerpt createExcerpt(SingleChronicleQueue queue) {
@@ -40,12 +38,8 @@ class SingleChronicleQueueExcerptFactory implements ExcerptFactory<SingleChronic
         ExcerptAppender appender = new Excerpts.StoreAppender(queue);
 
         if (queue.builder().buffered()) {
-            appender = new Excerpts.BufferedAppender(
-                queue.builder().eventLoop(),
-                (Excerpts.StoreAppender)appender,
-                BytesRingBuffer.sizeFor(queue.builder().bufferCapacity()),
-                queue.builder().onRingBufferStats()
-            );
+            throw new IllegalStateException(
+                "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature.");
         }
 
         return appender;

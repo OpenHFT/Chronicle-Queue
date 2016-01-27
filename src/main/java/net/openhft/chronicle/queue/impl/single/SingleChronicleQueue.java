@@ -15,8 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.BytesRingBuffer;
-import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -39,7 +37,7 @@ import java.text.ParseException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-class SingleChronicleQueue extends AbstractChronicleQueue {
+public class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private static final String SUFFIX = ".cq4";
 
@@ -269,7 +267,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
-    SingleChronicleQueueBuilder builder() {
+    public SingleChronicleQueueBuilder builder() {
         return this.builder;
     }
 
