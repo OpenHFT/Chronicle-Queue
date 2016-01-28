@@ -60,8 +60,8 @@ public class SingleChronicleQueueStore implements WireStore {
     @Nullable
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
-    @Nullable
-    private Indexing indexing;
+    @NotNull
+    private final Indexing indexing;
     public static final WriteMarshallable INDEX_TEMPLATE = w -> w.writeEventName(() -> "index")
             .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
 
@@ -72,15 +72,14 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     private SingleChronicleQueueStore(WireIn wire) {
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
+        assert wireType != null;
+
         this.bounds = wire.read(MetaDataField.bounds).typedMarshallable();
         this.roll = wire.read(MetaDataField.roll).typedMarshallable();
-        wire.read(MetaDataField.chunkSize).int64();
-        wire.read(MetaDataField.overlapSize).int64();
 
         @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
-        indexing = new Indexing(wireType);
-        wire.read(MetaDataField.indexing).marshallable(indexing);
+        this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
     }
 
     /**
@@ -99,7 +98,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
         this.indexing = new Indexing(wireType);
-        bounds = new Bounds(wireType.newLongReference());
+        this.bounds = new Bounds(wireType.newLongReference());
     }
 
     @Override
@@ -137,8 +136,6 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long firstSequenceNumber() {
-        if (this.indexing == null)
-            return 0;
         return this.indexing.firstSequenceNumber();
     }
 
@@ -147,8 +144,6 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long sequenceNumber() {
-        if (this.indexing == null)
-            return 0;
         return this.indexing.lastSequenceNumber();
     }
 
@@ -170,8 +165,6 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long moveToIndex(@NotNull Wire wire, long index) {
-        if (indexing == null)
-            return -1;
         return indexing.moveToIndex(wire, index);
     }
 
@@ -251,12 +244,10 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
-        wire.write(MetaDataField.wireType).object(wireType);
-        wire.write(MetaDataField.bounds).typedMarshallable(this.bounds)
+        wire.write(MetaDataField.wireType).object(wireType)
+                .write(MetaDataField.bounds).typedMarshallable(this.bounds)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
-                .write(MetaDataField.chunkSize).int64(mappedFile.chunkSize())
-                .write(MetaDataField.overlapSize).int64(mappedFile.overlapSize())
-                .write(MetaDataField.indexing).object(this.indexing);
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing);
     }
 
 
@@ -268,8 +259,7 @@ public class SingleChronicleQueueStore implements WireStore {
         bounds,
         indexing,
         roll,
-        chunkSize,
-        wireType, overlapSize
+        wireType,
     }
 
     enum BoundsField implements WireKey {
@@ -413,15 +403,37 @@ public class SingleChronicleQueueStore implements WireStore {
 //
 // *************************************************************************
 
-    class Indexing implements Marshallable {
+
+    static class Indexing implements Demarshallable, WriteMarshallable {
 
         private int indexCount = 128 << 10;
         private int indexSpacing = 64;
-        private LongValue index2Index;
-        private LongValue lastSequenceNumber;
-        private ThreadLocal<LongArrayValues> longArray;
+        private final LongValue index2Index;
+        private final LongValue lastSequenceNumber;
+        private final LongValue firstIndex;
+        private final ThreadLocal<LongArrayValues> longArray;
 
-        private LongValue firstIndex;
+        /**
+         * used by {@link net.openhft.chronicle.wire.Demarshallable}
+         *
+         * @param wire a wire
+         */
+        private Indexing(@NotNull WireIn wire) {
+
+            index2Index = wire.newLongReference();
+            lastSequenceNumber = wire.newLongReference();
+            firstIndex = wire.newLongReference();
+            this.longArray = withInitial(wire::newLongArrayReference);
+
+            wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
+                    .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
+                    .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o
+                    .index2Index.setOrderedValue(i.getVolatileValue()))
+                    .read(IndexingFields.fistIndex).int64(this.firstIndex, this, (o, i) -> o
+                    .firstIndex.setOrderedValue(i.getVolatileValue()))
+                    .read(IndexingFields.lastIndex).int64(this.lastSequenceNumber, this, (o, i)
+                    -> o.lastSequenceNumber.setOrderedValue(i.getVolatileValue()));
+        }
 
         Indexing(@NotNull WireType wireType) {
             this.index2Index = wireType.newLongReference().get();
@@ -439,14 +451,6 @@ public class SingleChronicleQueueStore implements WireStore {
                     .write(IndexingFields.lastIndex).int64forBinding(-1L, lastSequenceNumber);
         }
 
-        @Override
-        public void readMarshallable(@NotNull WireIn wire) {
-            wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
-                    .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
-                    .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o.index2Index = i)
-                    .read(IndexingFields.fistIndex).int64(this.firstIndex, this, (o, i) -> o.firstIndex = i)
-                    .read(IndexingFields.lastIndex).int64(this.lastSequenceNumber, this, (o, i) -> o.lastSequenceNumber = i);
-        }
 
         public boolean lastSequenceNumber(long lastIndex) {
             final long v = this.lastSequenceNumber.getVolatileValue();
@@ -656,7 +660,7 @@ public class SingleChronicleQueueStore implements WireStore {
                             if (index == startIndex) {
                                 return fromAddress;
                             } else {
-                                bytes.readLimit(bounds.writePosition());
+                                bytes.readLimit(bytes.realCapacity());
                                 return linearScan(wire, index, startIndex, fromAddress);
                             }
 

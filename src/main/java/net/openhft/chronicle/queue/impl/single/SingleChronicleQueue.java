@@ -63,7 +63,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final EventLoop eventloop;
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
 
-
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
