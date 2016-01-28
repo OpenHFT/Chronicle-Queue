@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesRingBuffer;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -27,10 +28,7 @@ import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WiredBytes;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +42,7 @@ import java.util.function.Function;
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private static final String SUFFIX = ".cq4";
+    public static final int TIMEOUT = 10_000;
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
@@ -260,27 +259,72 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             parentFile.mkdirs();
         }
 
-        @NotNull
-        Consumer<WiredBytes<WireStore>> consumer = ws -> ws.delegate().install(
-                ws.headerLength(),
-                ws.headerCreated(),
-                cycle,
-                builder
-        );
 
-        @NotNull
-        final Function<MappedBytes, WireStore> supplyStore = mappedBytes -> new
-                SingleChronicleQueueStore
-                (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
-                        .builder.wireType(), mappedBytes, epoch);
 
-        return WiredBytes.build(
-                cycleFile,
-                toMappedBytes,
-                builder.wireType(),
-                supplyStore,
-                consumer
-        ).delegate();
+                WireType wireType = builder.wireType();
+
+        File parentFile1 = cycleFile.getParentFile();
+        if (parentFile1 != null) {
+            //noinspection ResultOfMethodCallIgnored
+            parentFile1.mkdirs();                                             simp
+        }
+
+        MappedBytes mappedBytes = toMappedBytes.apply(cycleFile);
+
+
+        //noinspection PointlessBitwiseExpression
+        if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
+            Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
+
+
+            final SingleChronicleQueueStore wireStore = new
+                    SingleChronicleQueueStore
+                    (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
+                            .builder.wireType(), mappedBytes, epoch);
+            wireType.apply(bytes).getValueOut().typedMarshallable(wireStore);
+
+            final long length = bytes.writePosition();
+
+
+            final WiredBytes<WireStore> wiredBytes = new WiredBytes<>(wireType, mappedBytes, wireStore, length, true);
+            wiredBytes.delegate().install(
+                    wiredBytes.headerLength(),
+                    wiredBytes.headerCreated(),
+                    cycle,
+                    builder
+            );
+
+
+            mappedBytes.writeOrderedInt(0L, Wires.META_DATA | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
+            return wiredBytes.delegate();
+        } else {
+            long end = System.currentTimeMillis() + TIMEOUT;
+            while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
+                if (System.currentTimeMillis() > end) {
+                    throw new IllegalStateException("Timed out waiting for the header record to be ready in " + cycleFile);
+                }
+
+                Jvm.pause(1);
+            }
+
+            mappedBytes.readPosition(0);
+            mappedBytes.writePosition(mappedBytes.capacity());
+            int len = Wires.lengthOf(mappedBytes.readVolatileInt());
+            final long length = mappedBytes.readPosition() + len;
+            mappedBytes.readLimit(length);
+            //noinspection unchecked
+            final WireStore wireStore = wireType.apply(mappedBytes).getValueIn().typedMarshallable();
+
+            final WiredBytes<WireStore> wiredBytes = new WiredBytes<>(wireType, mappedBytes, wireStore, length, false);
+            wiredBytes.delegate().install(
+                    wiredBytes.headerLength(),
+                    wiredBytes.headerCreated(),
+                    cycle,
+                    builder);
+
+            return wiredBytes.delegate();
+        }
+
 
     }
 
