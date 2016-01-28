@@ -22,7 +22,7 @@ import java.util.Objects;
 
 
 public interface RollCycle {
-    static RollCycle forLength(int length) {
+/*    static RollCycle forLength(int length) {
         for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {
             if (RollCycles.VALUES[i].length == length) {
                 return RollCycles.VALUES[i];
@@ -30,7 +30,7 @@ public interface RollCycle {
         }
 
         throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
-    }
+    }*/
 
     static RollCycle forFormat(String format) {
         for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {

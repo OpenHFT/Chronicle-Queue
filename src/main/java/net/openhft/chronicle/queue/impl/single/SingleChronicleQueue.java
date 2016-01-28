@@ -39,10 +39,13 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.function.Consumer;
 
+import static net.openhft.chronicle.wire.Wires.lengthOf;
+
 class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private static final String SUFFIX = ".cq4";
     public static final int TIMEOUT = 10_000;
+    public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
@@ -224,7 +227,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private MappedBytes mappedBytes(SingleChronicleQueueBuilder builder, File cycleFile)
             throws FileNotFoundException {
-        final WireType wireType = builder.wireType();
         long chunkSize = OS.pageAlign(builder.blockSize());
         long overlapSize = OS.pageAlign(builder.blockSize() / 4);
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
@@ -236,11 +238,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
         @NotNull final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
         try {
-
             final File parentFile = cycleFile.getParentFile();
-            if (parentFile != null && !parentFile.exists()) {
+            if (parentFile != null && !parentFile.exists())
                 parentFile.mkdirs();
-            }
 
             final WireType wireType = builder.wireType();
             final MappedBytes mappedBytes = mappedBytes(builder, cycleFile);
@@ -248,49 +248,32 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             //noinspection PointlessBitwiseExpression
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
                     | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
-
                 final SingleChronicleQueueStore wireStore = new
                         SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch);
-
                 final Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
                 wireType.apply(bytes).getValueOut().typedMarshallable(wireStore);
-
-                final long length = bytes.writePosition();
-                wireStore.install(
-                        length,
-                        true,
-                        cycle,
-                        builder
-                );
-
-                mappedBytes.writeOrderedInt(0L, Wires.META_DATA | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
+                wireStore.cycle(cycle);
+                wireStore.writePosition(bytes.writePosition());
+                mappedBytes.writeOrderedInt(0L, Wires.META_DATA
+                        | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
                 return wireStore;
             } else {
                 long end = System.currentTimeMillis() + TIMEOUT;
                 while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
-                    if (System.currentTimeMillis() > end) {
-                        throw new IllegalStateException("Timed out waiting for the header record to be ready in " + cycleFile);
-                    }
-
+                    if (System.currentTimeMillis() > end)
+                        throw new IllegalStateException(MESSAGE + cycleFile);
                     Jvm.pause(1);
                 }
 
-                mappedBytes.readPosition(0);
-                mappedBytes.writePosition(mappedBytes.capacity());
-                final int len = Wires.lengthOf(mappedBytes.readVolatileInt());
-                final long length = mappedBytes.readPosition() + len;
-                mappedBytes.readLimit(length);
+                mappedBytes.readPosition(0).writePosition(mappedBytes.capacity());
+                final int len = lengthOf(mappedBytes.readVolatileInt());
+                mappedBytes.readLimit(mappedBytes.readPosition() + len);
                 //noinspection unchecked
-                final WireStore wireStore = wireType.apply(mappedBytes).getValueIn().typedMarshallable();
-                wireStore.install(length, false, cycle, builder);
-
-                return wireStore;
+                return wireType.apply(mappedBytes).getValueIn().typedMarshallable();
             }
         } catch (FileNotFoundException e) {
             throw Jvm.rethrow(e);
         }
-
-
     }
 
 }

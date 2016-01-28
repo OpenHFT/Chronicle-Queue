@@ -22,7 +22,6 @@ import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
@@ -87,7 +86,6 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param wireType    the wire type that is being used
      * @param mappedBytes used to mapped the data store file
      * @param rollEpoc    sets an epoch offset as the number of number of milliseconds since January
-     *                    1, 1970,  00:00:00 GMT
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               @NotNull final WireType wireType,
@@ -121,6 +119,11 @@ public class SingleChronicleQueueStore implements WireStore {
         return roll.cycle();
     }
 
+    SingleChronicleQueueStore cycle(long cycle) {
+        this.roll.cycle(cycle);
+        return this;
+    }
+
     /**
      * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
      * 00:00:00 GMT
@@ -130,6 +133,7 @@ public class SingleChronicleQueueStore implements WireStore {
         final Roll roll = this.roll;
         return roll.epoch();
     }
+
 
     /**
      * @return the first index available on the file system
@@ -187,16 +191,6 @@ public class SingleChronicleQueueStore implements WireStore {
     // BOOTSTRAP
     // *************************************************************************
 
-    @Override
-    public void install(long length, boolean created, long cycle,
-                        @NotNull ChronicleQueueBuilder builder) {
-        if (created) {
-            this.bounds.writePosition(length);
-            this.bounds.readPosition(length);
-            this.roll.cycle(cycle);
-        }
-    }
-
 
     /**
      * @return creates a new instance of mapped bytes, because, for example the tailer and appender
@@ -230,7 +224,6 @@ public class SingleChronicleQueueStore implements WireStore {
             //TODO
         }
     }
-
 
 
     @Override
