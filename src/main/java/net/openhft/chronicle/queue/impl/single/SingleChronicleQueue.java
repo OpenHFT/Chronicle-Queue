@@ -28,7 +28,9 @@ import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.WiredBytes;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -221,9 +223,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     //
     // *************************************************************************
 
+    private MappedBytes mappedBytes(SingleChronicleQueueBuilder builder, File cycleFile)
+            throws FileNotFoundException {
+        final WireType wireType = builder.wireType();
+        long chunkSize = OS.pageAlign(builder.blockSize());
+        long overlapSize = OS.pageAlign(builder.blockSize() / 4);
+        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
+    }
+
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
-
+        @NotNull final RollCycle rollCycle = builder.rollCycle();
         @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
         @NotNull final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
         try {
@@ -234,18 +244,17 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             }
 
             final WireType wireType = builder.wireType();
-            long chunkSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize());
-            long overlapSize = OS.pageAlign(SingleChronicleQueue.this.builder.blockSize() / 4);
-            final MappedBytes mappedBytes = MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
+            final MappedBytes mappedBytes = mappedBytes(builder, cycleFile);
 
             //noinspection PointlessBitwiseExpression
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
                     | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
-                final Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
+
+
                 final SingleChronicleQueueStore wireStore = new
-                        SingleChronicleQueueStore
-                        (SingleChronicleQueue.this.builder.rollCycle(), SingleChronicleQueue.this
-                                .builder.wireType(), mappedBytes, epoch);
+                        SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch);
+
+                final Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
                 wireType.apply(bytes).getValueOut().typedMarshallable(wireStore);
 
                 final long length = bytes.writePosition();
@@ -271,7 +280,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
 
                 mappedBytes.readPosition(0);
                 mappedBytes.writePosition(mappedBytes.capacity());
-                int len = Wires.lengthOf(mappedBytes.readVolatileInt());
+                final int len = Wires.lengthOf(mappedBytes.readVolatileInt());
                 final long length = mappedBytes.readPosition() + len;
                 mappedBytes.readLimit(length);
                 //noinspection unchecked
