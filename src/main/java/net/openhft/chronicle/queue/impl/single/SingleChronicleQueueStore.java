@@ -692,9 +692,10 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return > -1, if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
-        private long linearScan(@NotNull Wire context, long toIndex, long fromKnownIndex,
-                                long knownAddress) {
-
+        private long linearScan(@NotNull final Wire context,
+                                final long toIndex,
+                                final long fromKnownIndex,
+                                final long knownAddress) {
             @NotNull
             final Bytes<?> bytes = context.bytes();
 
@@ -705,10 +706,9 @@ public class SingleChronicleQueueStore implements WireStore {
 
             for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
 
-                // ait until ready - todo add timeout
+                // wait until ready - todo add timeout
                 for (; ; ) {
                     if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
-
                         break;
                     } else
                         Thread.yield();
