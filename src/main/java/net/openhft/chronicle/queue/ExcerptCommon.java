@@ -24,6 +24,5 @@ public interface ExcerptCommon {
      * Hint to the underlying store to get the next page(s)
      */
     default void prefetch() {
-
     }
 }

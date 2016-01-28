@@ -18,30 +18,9 @@ package net.openhft.chronicle.queue;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.ZoneId;
-import java.util.Objects;
 
 
 public interface RollCycle {
-/*    static RollCycle forLength(int length) {
-        for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {
-            if (RollCycles.VALUES[i].length == length) {
-                return RollCycles.VALUES[i];
-            }
-        }
-
-        throw new IllegalArgumentException("Unknown value for CycleLength (" + length + ")");
-    }*/
-
-    static RollCycle forFormat(String format) {
-        for (int i = RollCycles.VALUES.length - 1; i >= 0; i--) {
-            if (Objects.equals(RollCycles.VALUES[i].format, format) || RollCycles.VALUES[i].format.equals(format)) {
-                return RollCycles.VALUES[i];
-            }
-        }
-
-        throw new IllegalArgumentException("Unknown value for CycleFormat (" + format + ")");
-    }
-
 
     @NotNull
     static RollCycle from(final int length, @NotNull final String format, @NotNull final ZoneId zone) {

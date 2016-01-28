@@ -54,7 +54,6 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long moveToIndex(@NotNull Wire wire, long index);
 
-
     @NotNull
     MappedBytes mappedBytes();
 

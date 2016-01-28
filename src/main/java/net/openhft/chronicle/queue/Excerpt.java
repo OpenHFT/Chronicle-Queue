@@ -54,7 +54,6 @@ public interface Excerpt extends ExcerptTailer {
      */
     boolean moveToIndex(long index) throws IOException;
 
-
     /**
      * Replay from the lower.
      *

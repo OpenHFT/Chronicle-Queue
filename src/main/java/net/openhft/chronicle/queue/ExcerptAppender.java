@@ -55,6 +55,4 @@ public interface ExcerptAppender extends ExcerptCommon {
      * its own unique data file to store the excerpt
      */
     long cycle();
-
-
 }

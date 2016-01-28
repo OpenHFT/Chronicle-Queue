@@ -46,13 +46,11 @@ public interface ExcerptTailer extends ExcerptCommon {
      */
     boolean readBytes(@NotNull Bytes using);
 
-
     /**
      * @return the index just read , this include the cycle and the sequence number from with this
      * cycle
      */
     long index();
-
 
     /**
      * Randomly select an Excerpt.
@@ -63,7 +61,6 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @throws IOException if not able to read the chronicle file
      */
     boolean moveToIndex(long index) throws IOException;
-
 
     /**
      * Replay from the lower.

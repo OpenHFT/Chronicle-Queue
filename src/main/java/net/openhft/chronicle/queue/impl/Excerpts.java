@@ -106,11 +106,8 @@ public class Excerpts {
                                 @NotNull final StoreAppender underlyingAppender,
                                 final long ringBufferCapacity,
                                 @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
-
             this.eventLoop = eventLoop;
-            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
-                    ringBufferCapacity));
-
+            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(ringBufferCapacity));
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
@@ -147,9 +144,7 @@ public class Excerpts {
                     underlyingAppender.store().writePosition(wire.bytes().writePosition());
                     underlyingAppender.store().storeIndexLocation(wire, start,
                             underlyingAppender.index);
-
                     return true;
-
                 } catch (Throwable t) {
                     throw Jvm.rethrow(t);
                 }
@@ -215,7 +210,6 @@ public class Excerpts {
          *
          * @param bytes to write to excerpt.
          * @return always returns -1 when using the buffered appender
-         * @throws IOException
          */
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) {
@@ -243,9 +237,7 @@ public class Excerpts {
         @Override
         public void prefetch() {
         }
-
     }
-
 
     /**
      * StoreAppender
@@ -393,13 +385,9 @@ public class Excerpts {
         @Override
         public String toString() {
             return "StoreTailer{" +
-
                     "index sequence=" + ChronicleQueue.toSequenceNumber(index) +
                     ", index cycle=" + ChronicleQueue.toCycle(index) +
-                    ", store=" + store +
-                    ", queue=" + queue +
-
-                    '}';
+                    ", store=" + store + ", queue=" + queue + '}';
         }
 
         @Override
@@ -418,10 +406,6 @@ public class Excerpts {
         }
 
         private <T> boolean readAtIndex(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
-
-            final long readPosition = wire.bytes().readPosition();
-            //   System.out.println("readPosition=" + readPosition);
-            final long readLimit = wire.bytes().readLimit();
             final long cycle = this.cycle;
             final long index = this.index;
 
@@ -429,18 +413,12 @@ public class Excerpts {
                 final long firstIndex = queue.firstIndex();
                 if (index == -1)
                     return false;
-
                 moveToIndex(firstIndex);
             }
-            //   System.out.println("readPosition=" + wire.bytes().readPosition());
             if (readAt(t, c)) {
                 this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
                 return true;
             }
-
-            //  cycle(cycle);
-            //   wire.bytes().readLimit(readLimit);
-            //  wire.bytes().readPosition(readPosition);
             return false;
         }
 
@@ -450,15 +428,12 @@ public class Excerpts {
             for (; ; ) {
                 roll = Long.MIN_VALUE;
                 wire.bytes().readLimit(wire.bytes().capacity());
-                long start;
-                Boolean result = null;
-                while (wire.bytes().readVolatileInt(start = wire.bytes().readPosition()) != 0) {
+                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
 
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
 
                         if (!documentContext.isPresent())
                             return false;
-
 
                         if (documentContext.isData()) {
                             c.accept(t, wire);
@@ -475,14 +450,12 @@ public class Excerpts {
                             roll = vi.int32();
                             break;
                         }
-
                     }
                 }
 
                 // we got to the end of the file and there is no roll information
                 if (roll == Long.MIN_VALUE)
                     return false;
-
 
                 // roll to the next file
                 cycle(roll);
@@ -518,7 +491,8 @@ public class Excerpts {
 
             cycle = expectedCycle;
 
-            @NotNull final Bytes<?> bytes = wire.bytes();
+            @NotNull
+            final Bytes<?> bytes = wire.bytes();
 
             final long sequenceNumber = toSequenceNumber(index);
             if (sequenceNumber == -1) {
@@ -528,7 +502,6 @@ public class Excerpts {
             }
 
             final long position = this.store.moveToIndex(wire, ChronicleQueue.toSequenceNumber(index));
-
             if (position == -1)
                 return false;
 
@@ -543,7 +516,6 @@ public class Excerpts {
         @NotNull
         @Override
         public ExcerptTailer toStart() {
-
             final long index = queue.firstIndex();
             if (ChronicleQueue.toSequenceNumber(index) == -1) {
                 cycle(toCycle(index));

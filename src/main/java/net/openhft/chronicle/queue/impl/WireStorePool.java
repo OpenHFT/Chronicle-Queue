@@ -38,11 +38,8 @@ public class WireStorePool {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof RollDetails)) return false;
-
             @NotNull RollDetails rollDetails = (RollDetails) o;
-
             return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
-
         }
 
         @Override
@@ -69,7 +66,6 @@ public class WireStorePool {
         } else {
             store.reserve();
         }
-
         return store;
     }
 
