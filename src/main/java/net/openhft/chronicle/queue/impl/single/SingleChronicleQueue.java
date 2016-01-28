@@ -16,20 +16,15 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesRingBuffer;
-import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
-import net.openhft.chronicle.queue.impl.Excerpts;
+import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +34,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
@@ -53,8 +47,8 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
     }
 
-    @NotNull
-    private final SingleChronicleQueueBuilder builder;
+    // @NotNull
+    // private final SingleChronicleQueueBuilder builder;
     @NotNull
     private final RollCycle cycle;
     @NotNull
@@ -62,13 +56,26 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     private final WireStorePool pool;
     private final long epoch;
+    private final boolean isBuffered;
+    private final ExcerptFactory<SingleChronicleQueue> appenderFactory;
+    private final ExcerptFactory<SingleChronicleQueue> tailerFactory;
+    private final File path;
+    private final WireType wireType;
+    private final long blockSize;
+    private final RollCycle rollCycle;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
-        this.cycle = builder.rollCycle();
-        this.dateCache = new RollDateCache(this.cycle);
-        this.builder = builder;
-        this.pool = WireStorePool.withSupplier(this::acquireStore);
-        this.epoch = builder.epoch();
+        cycle = builder.rollCycle();
+        dateCache = new RollDateCache(this.cycle);
+        pool = WireStorePool.withSupplier(this::acquireStore);
+        epoch = builder.epoch();
+        isBuffered = builder.buffered();
+        appenderFactory = builder.excertpFactory();
+        tailerFactory = builder.excertpFactory();
+        path = builder.path();
+        wireType = builder.wireType();
+        blockSize = builder.blockSize();
+        rollCycle = builder.rollCycle();
         storeForCycle(cycle(), this.epoch);
     }
 
@@ -77,16 +84,24 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
         return epoch;
     }
 
+    /**
+     * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
+     * Chronicle Queue using a background thread
+     */
+    public boolean buffered() {
+        return this.isBuffered;
+    }
+
     @NotNull
     @Override
     public ExcerptAppender createAppender() {
-        return builder.excertpFactory().createAppender(this);
+        return appenderFactory.createAppender(this);
     }
 
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return builder.excertpFactory().createTailer(this);
+        return tailerFactory.createTailer(this);
     }
 
     @NotNull
@@ -108,7 +123,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
 
     @Override
     protected final long cycle() {
-        return this.cycle.current(builder.epoch());
+        return this.cycle.current(epoch);
     }
 
     @Override
@@ -124,8 +139,8 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     private long firstCycle() {
         long firstCycle = -1;
 
-        @NotNull final String basePath = builder.path().getAbsolutePath();
-        @Nullable final File[] files = builder.path().listFiles();
+        @NotNull final String basePath = path.getAbsolutePath();
+        @Nullable final File[] files = path.listFiles();
 
         if (files != null && files.length > 0) {
             long firstDate = Long.MAX_VALUE;
@@ -171,8 +186,8 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     private long lastCycle() {
-        @NotNull final String basePath = builder.path().getAbsolutePath();
-        @Nullable final File[] files = builder.path().listFiles();
+        @NotNull final String basePath = path.getAbsolutePath();
+        @Nullable final File[] files = path.listFiles();
 
         if (files != null && files.length > 0) {
             long lastDate = Long.MIN_VALUE;
@@ -206,32 +221,31 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     @Override
     public WireType wireType() {
-        return builder.wireType();
+        return wireType;
     }
 
     // *************************************************************************
     //
     // *************************************************************************
 
-    private MappedBytes mappedBytes(SingleChronicleQueueBuilder builder, File cycleFile)
+    private MappedBytes mappedBytes(File cycleFile)
             throws FileNotFoundException {
-        long chunkSize = OS.pageAlign(builder.blockSize());
-        long overlapSize = OS.pageAlign(builder.blockSize() / 4);
+        long chunkSize = OS.pageAlign(blockSize);
+        long overlapSize = OS.pageAlign(blockSize / 4);
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
     }
 
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
-        @NotNull final RollCycle rollCycle = builder.rollCycle();
+
         @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
-        @NotNull final File cycleFile = new File(this.builder.path(), cycleFormat + SUFFIX);
+        @NotNull final File cycleFile = new File(path, cycleFormat + SUFFIX);
         try {
             final File parentFile = cycleFile.getParentFile();
             if (parentFile != null && !parentFile.exists())
                 parentFile.mkdirs();
 
-            final WireType wireType = builder.wireType();
-            final MappedBytes mappedBytes = mappedBytes(builder, cycleFile);
+            final MappedBytes mappedBytes = mappedBytes(cycleFile);
 
             //noinspection PointlessBitwiseExpression
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA

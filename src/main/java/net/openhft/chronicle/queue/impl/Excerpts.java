@@ -16,10 +16,8 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -222,7 +220,6 @@ public class Excerpts {
          *
          * @param bytes to write to excerpt.
          * @return always returns -1 when using the buffered appender
-         * @throws IOException
          */
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) {
@@ -250,9 +247,7 @@ public class Excerpts {
         @Override
         public void prefetch() {
         }
-
     }
-
 
     /**
      * StoreAppender
@@ -353,6 +348,11 @@ public class Excerpts {
         @Override
         public long cycle() {
             return this.store.cycle();
+        }
+
+        @NotNull
+        Wire wire() {
+            return wire;
         }
 
         public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {

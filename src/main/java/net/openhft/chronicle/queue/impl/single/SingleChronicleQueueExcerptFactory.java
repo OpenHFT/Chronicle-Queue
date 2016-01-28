@@ -37,9 +37,9 @@ class SingleChronicleQueueExcerptFactory implements ExcerptFactory<SingleChronic
     public ExcerptAppender createAppender(SingleChronicleQueue queue) {
         ExcerptAppender appender = new Excerpts.StoreAppender(queue);
 
-        if (queue.builder().buffered()) {
+        if (queue.buffered()) {
             throw new IllegalStateException(
-                "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature.");
+                    "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature.");
         }
 
         return appender;

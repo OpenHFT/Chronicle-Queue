@@ -79,11 +79,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
                 "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us");
     };
 
+
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull String path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
         this(new File(path), excerptFactory);
     }
 
@@ -91,7 +92,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull File path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
@@ -314,4 +315,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.isBuffered = true;
         return this;
     }
+
+
 }
