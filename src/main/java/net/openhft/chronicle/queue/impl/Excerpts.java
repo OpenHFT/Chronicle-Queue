@@ -16,8 +16,10 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -44,7 +46,14 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
+    @FunctionalInterface
+    public interface BytesConsumer {
+        boolean accept(Bytes<?> bytes)
+            throws InterruptedException;
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+
 
     // *************************************************************************
     //
@@ -104,8 +113,11 @@ public class Excerpts {
                                 @NotNull final StoreAppender underlyingAppender,
                                 final long ringBufferCapacity,
                                 @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
+
             this.eventLoop = eventLoop;
-            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(ringBufferCapacity));
+            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
+                    ringBufferCapacity));
+
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
@@ -142,7 +154,9 @@ public class Excerpts {
                     underlyingAppender.store().writePosition(wire.bytes().writePosition());
                     underlyingAppender.store().storeIndexLocation(wire, start,
                             underlyingAppender.index);
+
                     return true;
+
                 } catch (Throwable t) {
                     throw Jvm.rethrow(t);
                 }
@@ -208,6 +222,7 @@ public class Excerpts {
          *
          * @param bytes to write to excerpt.
          * @return always returns -1 when using the buffered appender
+         * @throws IOException
          */
         @Override
         public long writeBytes(@NotNull Bytes<?> bytes) {
@@ -235,13 +250,15 @@ public class Excerpts {
         @Override
         public void prefetch() {
         }
+
     }
+
 
     /**
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-        long index = -1;
+        private long index = -1;
         private Wire wire;
         private long cycle;
         private WireStore store;
@@ -338,9 +355,35 @@ public class Excerpts {
             return this.store.cycle();
         }
 
-        @NotNull
-        Wire wire() {
-            return wire;
+        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            final long start = bytes.writePosition();
+
+            bytes.writeInt(Wires.NOT_READY);
+
+            if (!consumer.accept(bytes)) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            final long len = bytes.writePosition() - start - 4;
+
+            // no data was read from the ring buffer, so we wont write any document
+            // to the appender
+            if (len == 0) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                "out of 30-bit int range."));
+
+            store().writePosition(bytes.writePosition())
+                .storeIndexLocation(wire, start, ++index);
+
+            return true;
         }
 
         @ForceInline
@@ -375,11 +418,11 @@ public class Excerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer

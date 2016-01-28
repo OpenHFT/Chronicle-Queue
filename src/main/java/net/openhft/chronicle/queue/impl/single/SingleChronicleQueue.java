@@ -27,6 +27,8 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.Excerpts;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
@@ -41,7 +43,7 @@ import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
-class SingleChronicleQueue extends AbstractChronicleQueue {
+public class SingleChronicleQueue extends AbstractChronicleQueue {
 
     private static final String SUFFIX = ".cq4";
     public static final int TIMEOUT = 10_000;
@@ -59,22 +61,15 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     private final RollDateCache dateCache;
     @NotNull
     private final WireStorePool pool;
-    private final boolean bufferedAppends;
     private final long epoch;
-    @Nullable
-    private final EventLoop eventloop;
-    private final Consumer<BytesRingBufferStats> onRingBufferStats;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         this.cycle = builder.rollCycle();
         this.dateCache = new RollDateCache(this.cycle);
         this.builder = builder;
         this.pool = WireStorePool.withSupplier(this::acquireStore);
-        storeForCycle(cycle(), builder.epoch());
-        epoch = builder.epoch();
-        bufferedAppends = builder.buffered();
-        eventloop = builder.eventLoop();
-        this.onRingBufferStats = builder.onRingBufferStats();
+        this.epoch = builder.epoch();
+        storeForCycle(cycle(), this.epoch);
     }
 
     @Override
@@ -85,23 +80,18 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     @NotNull
     @Override
     public ExcerptAppender createAppender() {
-        @NotNull final Excerpts.StoreAppender storeAppender = new Excerpts.StoreAppender(this);
-        if (bufferedAppends) {
-            long ringBufferCapacity = BytesRingBuffer.sizeFor(builder.bufferCapacity());
-            return new Excerpts.BufferedAppender(eventloop, storeAppender, ringBufferCapacity, onRingBufferStats);
-        } else
-            return storeAppender;
+        return builder.excertpFactory().createAppender(this);
     }
 
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return new Excerpts.StoreTailer(this);
+        return builder.excertpFactory().createTailer(this);
     }
 
     @NotNull
     @Override
-    protected WireStore storeForCycle(long cycle, final long epoch) {
+    protected final WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
 
@@ -112,25 +102,23 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
     @Override
-    protected void release(@NotNull WireStore store) {
+    protected final void release(@NotNull WireStore store) {
         this.pool.release(store);
     }
 
     @Override
-    protected long cycle() {
+    protected final long cycle() {
         return this.cycle.current(builder.epoch());
     }
 
-    //TODO: reduce garbage
-    //TODO: add a check on first file, in case it gets deleted
     @Override
     public long firstIndex() {
         final long cycle = firstCycle();
         if (cycle == -1)
             return -1;
+
         @NotNull final WireStore store = acquireStore(cycle, epoch());
-        final long sequenceNumber = store.firstSequenceNumber();
-        return ChronicleQueue.index(store.cycle(), sequenceNumber);
+        return ChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
     }
 
     private long firstCycle() {
@@ -178,8 +166,8 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         final long lastCycle = lastCycle();
         if (lastCycle == -1)
             return -1;
-        final long lastSequenceNumber = acquireStore(lastCycle, epoch()).sequenceNumber();
-        return ChronicleQueue.index(lastCycle, lastSequenceNumber);
+
+        return ChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
     }
 
     private long lastCycle() {

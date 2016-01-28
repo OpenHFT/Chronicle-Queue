@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
@@ -48,6 +49,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @Nullable
     private EventLoop eventLoop;
+
+    @NotNull
+    private ExcerptFactory<SingleChronicleQueue> excerptFactory;
 
     private long bufferCapacity = 2 << 20;
 
@@ -79,12 +83,21 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this(new File(path));
     }
 
+    protected SingleChronicleQueueBuilder(@NotNull String path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this(new File(path), excerptFactory);
+    }
+
     public SingleChronicleQueueBuilder(@NotNull File path) {
+        this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
+    }
+
+    protected SingleChronicleQueueBuilder(@NotNull File path, ExcerptFactory<SingleChronicleQueue> excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
+        this.excerptFactory = excerptFactory;
     }
 
     @NotNull
@@ -175,10 +188,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return bufferCapacity;
     }
 
-    // *************************************************************************
-    // HELPERS
-    // *************************************************************************
-
     /**
      * @param ringBufferSize sets the ring buffer capacity in bytes
      * @return this
@@ -216,10 +225,25 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     }
 
     @NotNull
+    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this.excerptFactory = excerptFactory;
+        return this;
+    }
+
+    public ExcerptFactory<SingleChronicleQueue> excertpFactory() {
+        return this.excerptFactory;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @NotNull
     public ChronicleQueue build() {
         if (isBuffered && eventLoop == null)
             eventLoop = new EventGroup(true, onThrowable);
-        return new SingleChronicleQueue(this.clone());
+
+        return new SingleChronicleQueue(clone());
     }
 
     @NotNull
