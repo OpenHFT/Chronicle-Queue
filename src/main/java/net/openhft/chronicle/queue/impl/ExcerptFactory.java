@@ -15,27 +15,28 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueFields;
+import org.jetbrains.annotations.NotNull;
 
-public interface ExcerptFactory<Q extends ChronicleQueue> {
+public interface ExcerptFactory<Q extends SingleChronicleQueueFields> {
     /**
-     *
-     * @param queue
-     * @return
+     * @param queue immutable fields of the queue
+     * @return a createExcerpt
      */
-    Excerpt createExcerpt(Q queue);
-
-    /**
-     *
-     * @param queue
-     * @return
-     */
-    ExcerptTailer createTailer(Q queue);
+    Excerpt createExcerpt(@NotNull Q queue);
 
     /**
-     *
-     * @param queue
-     * @return
+     * @param queue immutable fields of the queue
+     * @return a ExcerptTailer
      */
-    ExcerptAppender createAppender(Q queue);
+    ExcerptTailer createTailer(@NotNull Q queue);
+
+    /**
+     * @param queue immutable fields of the queue
+     * @return an ExcerptAppender
+     */
+    ExcerptAppender createAppender(@NotNull Q queue);
 }

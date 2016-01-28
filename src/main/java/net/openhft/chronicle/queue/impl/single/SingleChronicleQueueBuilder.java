@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.function.Consumer;
 
-public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
+public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, SingleChronicleQueueFields {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class.getName());
     private final File path;
     private long blockSize;
@@ -146,10 +146,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
 
+    @Override
     @NotNull
     public File path() {
         return this.path;
@@ -161,6 +163,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     public long blockSize() {
         return this.blockSize;
     }
@@ -171,6 +174,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     @NotNull
     public WireType wireType() {
         return this.wireType;
@@ -185,6 +189,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     /**
      * @return ringBufferCapacity in bytes
      */
+    @Override
     public long bufferCapacity() {
         return bufferCapacity;
     }
@@ -216,10 +221,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @return epoch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
      * GMT
      */
+    @Override
     public long epoch() {
         return epoch;
     }
 
+    @Override
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
@@ -288,10 +295,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
      * Chronicle Queue using a background thread
      */
+    @Override
     public boolean buffered() {
         return this.isBuffered;
     }
 
+    @Override
     @Nullable
     public EventLoop eventLoop() {
         return eventLoop;

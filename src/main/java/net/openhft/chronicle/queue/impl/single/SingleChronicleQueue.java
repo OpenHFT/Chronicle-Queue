@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
@@ -25,6 +26,7 @@ import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -34,10 +36,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
-public class SingleChronicleQueue extends AbstractChronicleQueue {
+public class SingleChronicleQueue extends AbstractChronicleQueue implements SingleChronicleQueueFields {
 
     private static final String SUFFIX = ".cq4";
     public static final int TIMEOUT = 10_000;
@@ -47,8 +50,6 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
     }
 
-    // @NotNull
-    // private final SingleChronicleQueueBuilder builder;
     @NotNull
     private final RollCycle cycle;
     @NotNull
@@ -63,6 +64,9 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     private final WireType wireType;
     private final long blockSize;
     private final RollCycle rollCycle;
+    private final Consumer<BytesRingBufferStats> onRingBufferStats;
+    private final EventLoop eventLoop;
+    private final long bufferCapacity;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
@@ -76,6 +80,9 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
         wireType = builder.wireType();
         blockSize = builder.blockSize();
         rollCycle = builder.rollCycle();
+        eventLoop = builder.eventLoop();
+        bufferCapacity = builder.bufferCapacity();
+        this.onRingBufferStats = builder.onRingBufferStats();
         storeForCycle(cycle(), this.epoch);
     }
 
@@ -84,12 +91,24 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
         return epoch;
     }
 
+    @NotNull
+    @Override
+    public RollCycle rollCycle() {
+        throw new UnsupportedOperationException("todo");
+    }
+
     /**
      * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
      * Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
+    }
+
+    @Nullable
+    @Override
+    public EventLoop eventLoop() {
+        return this.eventLoop;
     }
 
     @NotNull
@@ -218,10 +237,31 @@ public class SingleChronicleQueue extends AbstractChronicleQueue {
     }
 
 
+    @Override
+    public Consumer<BytesRingBufferStats> onRingBufferStats() {
+        return this.onRingBufferStats;
+    }
+
+    @NotNull
+    @Override
+    public File path() {
+        throw new UnsupportedOperationException("todo");
+    }
+
+    @Override
+    public long blockSize() {
+        throw new UnsupportedOperationException("todo");
+    }
+
     @NotNull
     @Override
     public WireType wireType() {
         return wireType;
+    }
+
+    @Override
+    public long bufferCapacity() {
+        return this.bufferCapacity;
     }
 
     // *************************************************************************
