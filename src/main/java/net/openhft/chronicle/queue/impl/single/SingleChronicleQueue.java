@@ -29,7 +29,6 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.WiredBytes;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -250,7 +249,6 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
                     | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
 
-
                 final SingleChronicleQueueStore wireStore = new
                         SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch);
 
@@ -258,16 +256,15 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 wireType.apply(bytes).getValueOut().typedMarshallable(wireStore);
 
                 final long length = bytes.writePosition();
-                final WiredBytes<WireStore> wiredBytes = new WiredBytes<>(wireType, mappedBytes, wireStore, length, true);
-                wiredBytes.delegate().install(
-                        wiredBytes.headerLength(),
-                        wiredBytes.headerCreated(),
+                wireStore.install(
+                        length,
+                        true,
                         cycle,
                         builder
                 );
 
                 mappedBytes.writeOrderedInt(0L, Wires.META_DATA | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
-                return wiredBytes.delegate();
+                return wireStore;
             } else {
                 long end = System.currentTimeMillis() + TIMEOUT;
                 while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
@@ -285,15 +282,9 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
                 mappedBytes.readLimit(length);
                 //noinspection unchecked
                 final WireStore wireStore = wireType.apply(mappedBytes).getValueIn().typedMarshallable();
+                wireStore.install(length, false, cycle, builder);
 
-                final WiredBytes<WireStore> wiredBytes = new WiredBytes<>(wireType, mappedBytes, wireStore, length, false);
-                wiredBytes.delegate().install(
-                        wiredBytes.headerLength(),
-                        wiredBytes.headerCreated(),
-                        cycle,
-                        builder);
-
-                return wiredBytes.delegate();
+                return wireStore;
             }
         } catch (FileNotFoundException e) {
             throw Jvm.rethrow(e);
