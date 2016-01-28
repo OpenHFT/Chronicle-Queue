@@ -59,7 +59,6 @@
 
     <dependencies>
 
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-bytes</artifactId>
