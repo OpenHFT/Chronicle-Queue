@@ -266,7 +266,7 @@ class SingleChronicleQueue extends AbstractChronicleQueue {
         File parentFile1 = cycleFile.getParentFile();
         if (parentFile1 != null) {
             //noinspection ResultOfMethodCallIgnored
-            parentFile1.mkdirs();                                             simp
+            parentFile1.mkdirs();
         }
 
         MappedBytes mappedBytes = toMappedBytes.apply(cycleFile);
