@@ -557,7 +557,7 @@ public class SingleChronicleQueueStore implements WireStore {
         long newIndex(@NotNull Wire wire) {
             long position;
             do {
-                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, true, INDEX_TEMPLATE);
+                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, true, INDEX_TEMPLATE);
             } while (position <= 0);
             return position;
         }
