@@ -272,10 +272,8 @@ public class Excerpts {
             long position;
 
             do {
-
                 final long readPosition = wire.bytes().readPosition();
                 boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
-
                 position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, writer);
 
                 // this will be called if currently being modified with unknown length
@@ -303,7 +301,6 @@ public class Excerpts {
 
                 final long readPosition = wire.bytes().readPosition();
                 boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
-
                 position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, bytes);
 
                 // this will be called if currently being modified with unknown length
