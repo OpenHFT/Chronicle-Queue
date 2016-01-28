@@ -19,8 +19,8 @@ public class ThreadedQueueTest {
     public static final int REQUIRED_COUNT = 10;
     private static final int BLOCK_SIZE = 256 << 20;
 
-    @Test(timeout = 500000)
-    public void testName() throws Exception {
+    @Test(timeout = 1000000)
+    public void testMultipleThreads() throws Exception {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
 
@@ -28,12 +28,7 @@ public class ThreadedQueueTest {
 
         final Bytes bytes = Bytes.elasticByteBuffer();
         final AtomicInteger counter = new AtomicInteger();
-        final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
-                .wireType(WireType.FIELDLESS_BINARY)
-                .blockSize(BLOCK_SIZE)
-                .build();
 
-        final ExcerptTailer tailer = rqueue.createTailer();
 
         final ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
@@ -41,28 +36,52 @@ public class ThreadedQueueTest {
                 .build();
 
         final ExcerptAppender appender = wqueue.createAppender();
+
+
+        final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
+                .wireType(WireType.FIELDLESS_BINARY)
+                .blockSize(BLOCK_SIZE)
+                .build();
+
+        final ExcerptTailer tailer = rqueue.createTailer();
+
         final Bytes message = Bytes.elasticByteBuffer();
 
         Executors.newSingleThreadExecutor(new NamedThreadFactory("tailer", true)).submit(() -> {
-            while (counter.get() < REQUIRED_COUNT) {
-                bytes.clear();
-                if (tailer.readBytes(bytes))
-                    counter.incrementAndGet();
 
+            try {
+                int i = 0;
+                while (counter.get() < REQUIRED_COUNT) {
+                    bytes.clear();
+                    if (tailer.readBytes(bytes))
+                        counter.incrementAndGet();
+
+
+                }
+
+            } catch (Throwable t) {
+                t.printStackTrace();
             }
+
         });
 
         Executors.newSingleThreadExecutor(new NamedThreadFactory("appender", true)).submit(() -> {
-            for (int i = 0; i < REQUIRED_COUNT; i++) {
-                message.clear();
-                message.append(i);
-                appender.writeBytes(message);
+            try {
+                for (int i = 0; i < REQUIRED_COUNT; i++) {
+                    message.clear();
+                    message.append(i);
+                    appender.writeBytes(message);
+                }
+            } catch (Throwable t) {
+                t.printStackTrace();
             }
 
         });
 
         while (counter.get() < REQUIRED_COUNT) {
             Thread.yield();
+
+
         }
 
     }

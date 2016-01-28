@@ -78,6 +78,39 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    public void testReadingLessBytesThanWritten() throws IOException {
+        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build();
+
+        final ExcerptAppender appender = queue.createAppender();
+
+        final Bytes<byte[]> expected = Bytes.wrapForRead("some long message".getBytes());
+        for (int i = 0; i < 10; i++) {
+
+            appender.writeBytes(expected);
+        }
+
+        final ExcerptTailer tailer = queue.createTailer();
+
+        // Sequential read
+        for (int i = 0; i < 10; i++) {
+
+            Bytes b = Bytes.allocateDirect(8);
+
+            try {
+                tailer.readBytes(b);
+            } catch (Error e) {
+
+            }
+
+            Assert.assertEquals(expected.readInt(0), b.readInt(0));
+        }
+
+    }
+
+
+    @Test
     public void testAppendAndRead() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
@@ -159,7 +192,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
-    public void testAppendAndReadWithRolling() throws IOException {
+    public void testAppendAndReadWithRolling() throws IOException, InterruptedException {
 
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
@@ -174,8 +207,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.write(TestKey.test).int32(n));
         }
 
-        System.out.println("");
-
         final ExcerptTailer tailer = queue.createTailer().toStart();
         for (int i = 0; i < 5; i++) {
             final int n = i;
@@ -183,7 +214,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(condition);
         }
     }
-
 
     @Test
     public void testAppendAndReadWithRolling2() throws IOException, InterruptedException {
@@ -325,9 +355,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 lastIndex = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
-
             final long cycle = toCycle(lastIndex);
-
             final ExcerptTailer tailer = chronicle.createTailer();
 
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));

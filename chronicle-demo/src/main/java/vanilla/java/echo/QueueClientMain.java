@@ -63,11 +63,7 @@ public class QueueClientMain {
                             appender.writeLong(System.nanoTime()); // when it should have sent the message.
                             appender.finish();
                             now += spacing;
-/*
-                            System.out.print("+");
-                            if ((j & 127) == 0)
-                                System.out.println();
-*/
+
                         }
                         appender.startExcerpt();
                         appender.writeLong(END_OF_TEST);
