@@ -93,7 +93,7 @@ public class SingleChronicleQueueStore implements WireStore {
                               @NotNull final WireType wireType,
                               @NotNull MappedBytes mappedBytes,
                               long rollEpoc) {
-        this.roll = new Roll(rollCycle, rollEpoc);
+        this.roll = new Roll(rollCycle, rollEpoc, wireType);
         this.resourceCleaner = null;
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
@@ -613,7 +613,7 @@ public class SingleChronicleQueueStore implements WireStore {
             final long readPostion = bytes.readPosition();
             bytes.readLimit(bytes.capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
-            //   final long limit = wire.bytes().readLimit();
+
             try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
 
                 if (!documentContext0.isPresent())
@@ -739,18 +739,18 @@ public class SingleChronicleQueueStore implements WireStore {
 // *************************************************************************
 
     static class Roll implements Demarshallable, WriteMarshallable {
-        private long epoch;
-        private int length;
+        private final long epoch;
+        private final int length;
         @Nullable
-        private String format;
+        private final String format;
         @Nullable
-        private ZoneId zoneId;
+        private final ZoneId zoneId;
         @Nullable
-        private LongValue cycle;
+        private final LongValue cycle;
         @Nullable
-        private LongValue nextCycle;
+        private final LongValue nextCycle;
         @Nullable
-        private LongValue nextCycleMetaPosition;
+        private final LongValue nextCycleMetaPosition;
 
         /**
          * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -758,35 +758,45 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire a wire
          */
         private Roll(WireIn wire) {
-            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o.cycle = i)
-                    .read(RollFields.length).int32(this, (o, i) -> o.length = i)
-                    .read(RollFields.format).text(this, (o, i) -> o.format = i)
-                    .read(RollFields.timeZone).text(this, (o, i) -> o.zoneId = ZoneId.of(i))
-                    .read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o.nextCycle = i)
-                    .read(RollFields.epoch).int64(this, (o, i) -> o.epoch = i)
-                    .read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o.nextCycleMetaPosition = i);
+            nextCycleMetaPosition = wire.newLongReference();
+            nextCycle = wire.newLongReference();
+            cycle = wire.newLongReference();
 
+            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o
+                    .cycle.setOrderedValue(i.getVolatileValue()));
+
+            length = wire.read(RollFields.length).int32();
+            format = wire.read(RollFields.format).text();
+            zoneId = ZoneId.of(wire.read(RollFields.timeZone).text());
+
+            wire.read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o
+                    .nextCycle.setOrderedValue(i.getVolatileValue()));
+
+            epoch = wire.read(RollFields.epoch).int64();
+
+            wire.read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o
+                    .nextCycleMetaPosition.setOrderedValue(i.getVolatileValue()));
         }
 
-        Roll(@Nullable RollCycle rollCycle, long rollEpoch) {
+        Roll(@Nullable RollCycle rollCycle, long rollEpoch, WireType wireType) {
             this.length = rollCycle != null ? rollCycle.length() : -1;
             this.format = rollCycle != null ? rollCycle.format() : null;
             this.zoneId = rollCycle != null ? rollCycle.zone() : null;
             this.epoch = rollEpoch;
-            this.cycle = null;
-            this.nextCycle = null;
-            this.nextCycleMetaPosition = null;
+            this.cycle = wireType.newLongReference().get();
+            this.nextCycle = wireType.newLongReference().get();
+            this.nextCycleMetaPosition = wireType.newLongReference().get();
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(RollFields.cycle).int64forBinding(-1, cycle = wire.newLongReference())
+            wire.write(RollFields.cycle).int64forBinding(-1, cycle)
                     .write(RollFields.length).int32(length)
                     .write(RollFields.format).text(format)
                     .write(RollFields.timeZone).text(zoneId.getId())
-                    .write(RollFields.nextCycle).int64forBinding(-1, nextCycle = wire.newLongReference())
+                    .write(RollFields.nextCycle).int64forBinding(-1, nextCycle)
                     .write(RollFields.epoch).int64(epoch)
-                    .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition = wire.newLongReference());
+                    .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition);
         }
 
 
