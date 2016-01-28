@@ -44,7 +44,14 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
+    @FunctionalInterface
+    public interface BytesConsumer {
+        boolean accept(Bytes<?> bytes)
+            throws InterruptedException;
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+
 
     // *************************************************************************
     //
@@ -104,8 +111,11 @@ public class Excerpts {
                                 @NotNull final StoreAppender underlyingAppender,
                                 final long ringBufferCapacity,
                                 @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
+
             this.eventLoop = eventLoop;
-            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(ringBufferCapacity));
+            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
+                    ringBufferCapacity));
+
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
@@ -142,7 +152,9 @@ public class Excerpts {
                     underlyingAppender.store().writePosition(wire.bytes().writePosition());
                     underlyingAppender.store().storeIndexLocation(wire, start,
                             underlyingAppender.index);
+
                     return true;
+
                 } catch (Throwable t) {
                     throw Jvm.rethrow(t);
                 }
@@ -241,7 +253,7 @@ public class Excerpts {
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-        long index = -1;
+        private long index = -1;
         private Wire wire;
         private long cycle;
         private WireStore store;
@@ -343,6 +355,37 @@ public class Excerpts {
             return wire;
         }
 
+        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            final long start = bytes.writePosition();
+
+            bytes.writeInt(Wires.NOT_READY);
+
+            if (!consumer.accept(bytes)) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            final long len = bytes.writePosition() - start - 4;
+
+            // no data was read from the ring buffer, so we wont write any document
+            // to the appender
+            if (len == 0) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                "out of 30-bit int range."));
+
+            store().writePosition(bytes.writePosition())
+                .storeIndexLocation(wire, start, ++index);
+
+            return true;
+        }
+
         @ForceInline
         private WireStore store() {
             if (this.cycle != queue.cycle()) {
@@ -375,11 +418,11 @@ public class Excerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer

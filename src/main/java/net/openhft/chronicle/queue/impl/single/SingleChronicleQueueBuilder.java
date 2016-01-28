@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.function.Consumer;
 
-public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
+public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, SingleChronicleQueueFields {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class.getName());
     private final File path;
     private long blockSize;
@@ -48,6 +49,9 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
     @Nullable
     private EventLoop eventLoop;
+
+    @NotNull
+    private ExcerptFactory<SingleChronicleQueue> excerptFactory;
 
     private long bufferCapacity = 2 << 20;
 
@@ -75,16 +79,26 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
                 "maxCopyTimeNs=" + r.maxCopyTimeNs() / 1000 + " us");
     };
 
+
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
+    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this(new File(path), excerptFactory);
+    }
+
     public SingleChronicleQueueBuilder(@NotNull File path) {
+        this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
+    }
+
+    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
         this.rollCycle = RollCycles.DAYS;
         this.epoch = 0;
+        this.excerptFactory = excerptFactory;
     }
 
     @NotNull
@@ -132,10 +146,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
 
+    @Override
     @NotNull
     public File path() {
         return this.path;
@@ -147,6 +163,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     public long blockSize() {
         return this.blockSize;
     }
@@ -157,6 +174,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    @Override
     @NotNull
     public WireType wireType() {
         return this.wireType;
@@ -171,13 +189,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     /**
      * @return ringBufferCapacity in bytes
      */
+    @Override
     public long bufferCapacity() {
         return bufferCapacity;
     }
-
-    // *************************************************************************
-    // HELPERS
-    // *************************************************************************
 
     /**
      * @param ringBufferSize sets the ring buffer capacity in bytes
@@ -206,20 +221,37 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @return epoch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
      * GMT
      */
+    @Override
     public long epoch() {
         return epoch;
     }
 
+    @Override
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
     }
 
     @NotNull
+    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+        this.excerptFactory = excerptFactory;
+        return this;
+    }
+
+    public ExcerptFactory<SingleChronicleQueue> excertpFactory() {
+        return this.excerptFactory;
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @NotNull
     public ChronicleQueue build() {
         if (isBuffered && eventLoop == null)
             eventLoop = new EventGroup(true, onThrowable);
-        return new SingleChronicleQueue(this.clone());
+
+        return new SingleChronicleQueue(clone());
     }
 
     @NotNull
@@ -263,10 +295,12 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
      * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
      * Chronicle Queue using a background thread
      */
+    @Override
     public boolean buffered() {
         return this.isBuffered;
     }
 
+    @Override
     @Nullable
     public EventLoop eventLoop() {
         return eventLoop;
@@ -290,4 +324,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         this.isBuffered = true;
         return this;
     }
+
+
 }
