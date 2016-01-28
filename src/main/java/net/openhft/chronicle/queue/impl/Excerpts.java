@@ -44,9 +44,7 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
-
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
-
 
     // *************************************************************************
     //
@@ -250,7 +248,6 @@ public class Excerpts {
         private long nextPrefetch = OS.pageSize();
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
-
             super(queue);
 
             final long lastIndex = super.queue.lastIndex();

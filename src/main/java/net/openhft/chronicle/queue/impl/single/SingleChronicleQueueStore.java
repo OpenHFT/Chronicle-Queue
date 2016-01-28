@@ -85,7 +85,8 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param rollCycle   the current rollCycle
      * @param wireType    the wire type that is being used
      * @param mappedBytes used to mapped the data store file
-     * @param rollEpoc    sets an epoch offset as the number of number of milliseconds since January
+     * @param rollEpoc    sets an epoch offset as the number of number of milliseconds since
+     *                    January
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               @NotNull final WireType wireType,
@@ -115,8 +116,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long cycle() {
-        final Roll roll = this.roll;
-        return roll.cycle();
+        return this.roll.cycle();
     }
 
     SingleChronicleQueueStore cycle(long cycle) {
@@ -130,10 +130,8 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @Override
     public long epoch() {
-        final Roll roll = this.roll;
-        return roll.epoch();
+        return this.roll.epoch();
     }
-
 
     /**
      * @return the first index available on the file system
@@ -190,7 +188,6 @@ public class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
     // BOOTSTRAP
     // *************************************************************************
-
 
     /**
      * @return creates a new instance of mapped bytes, because, for example the tailer and appender
@@ -500,7 +497,6 @@ public class SingleChronicleQueueStore implements WireStore {
 
             long writePosition = wire.bytes().writePosition();
             try {
-                @NotNull final Bytes<?> bytes = wire.bytes();
 
                 if (sequenceNumber % 64 != 0)
                     return;
@@ -525,7 +521,7 @@ public class SingleChronicleQueueStore implements WireStore {
                         writePosition = Math.max(writePosition, wire.bytes().writePosition());
                         primaryIndex.setValueAt(primaryOffset, secondaryAddress);
                     }
-
+                    @NotNull final Bytes<?> bytes = wire.bytes();
                     bytes.readLimit(bytes.capacity());
                     try (DocumentContext context0 = wire.readingDocument(secondaryAddress)) {
 
@@ -571,10 +567,8 @@ public class SingleChronicleQueueStore implements WireStore {
             do {
                 position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, true, INDEX_TEMPLATE);
             } while (position <= 0);
-
             return position;
         }
-
 
         /**
          * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so
@@ -659,9 +653,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
             bytes.readPosition(readPostion);
             return -1;
-
         }
-
 
         /**
          * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
@@ -682,7 +674,6 @@ public class SingleChronicleQueueStore implements WireStore {
                                 final long knownAddress) {
             @NotNull
             final Bytes<?> bytes = context.bytes();
-
             final long p = bytes.readPosition();
             final long l = bytes.readLimit();
             bytes.readLimit(bytes.capacity());
