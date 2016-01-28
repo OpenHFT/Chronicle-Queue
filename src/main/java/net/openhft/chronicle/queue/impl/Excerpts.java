@@ -295,13 +295,36 @@ public class Excerpts {
         }
 
         @Override
-        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) {
-            return writeDocument(wire1 -> marshallable.writeMarshallable(wire1.bytes()));
+        public long writeBytes(@NotNull Bytes bytes) {
+            final WireStore store = store();
+            long position;
+
+            do {
+
+                final long readPosition = wire.bytes().readPosition();
+                boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
+
+                position = WireInternal.writeDataOrAdvanceIfNotEmpty(wire, false, bytes);
+
+                // this will be called if currently being modified with unknown length
+                if (position == 0)
+                    continue;
+
+                if (!isMetaData)
+                    this.index++;
+
+            } while (position < 0);
+
+            this.index++;
+
+            store.writePosition(wire.bytes().writePosition());
+            store.storeIndexLocation(wire, position, index);
+            return ChronicleQueue.index(store.cycle(), index);
         }
 
         @Override
-        public long writeBytes(@NotNull Bytes bytes) {
-            return writeDocument(wire1 -> wire1.bytes().write(bytes));
+        public long writeBytes(@NotNull WriteBytesMarshallable marshallable) {
+            return writeDocument(w -> marshallable.writeMarshallable(w.bytes()));
         }
 
         @Override

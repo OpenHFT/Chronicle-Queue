@@ -260,38 +260,30 @@ public class SingleChronicleQueueStore implements WireStore {
         ;
 
         public static long toAddress0(long index) {
-
             long siftedIndex = index >> (17L + 6L);
             long mask = (1L << 17L) - 1L;
             long maskedShiftedIndex = mask & siftedIndex;
-
             // convert to an offset
             return maskedShiftedIndex * 8L;
         }
 
         public static long toAddress1(long index) {
-
             long siftedIndex = index >> (6L);
             long mask = (1L << 17L) - 1L;
-
             // convert to an offset
             return mask & siftedIndex;// * 8L;
         }
 
         @NotNull
         public static String toBinaryString(long i) {
-
             @NotNull StringBuilder sb = new StringBuilder();
-
             for (int n = 63; n >= 0; n--)
                 sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
-
             return sb.toString();
         }
 
         @NotNull
         public static String toScale() {
-
             @NotNull StringBuilder units = new StringBuilder();
             @NotNull StringBuilder tens = new StringBuilder();
 
@@ -582,7 +574,7 @@ public class SingleChronicleQueueStore implements WireStore {
          *
          * @param wire  the data structure we are navigating
          * @param index the index we wish to move to
-         * @return the position of the {@code targetIndex}  or -1 if the index can not be found
+         * @return the position of the {@code targetIndex} or -1 if the index can not be found
          */
         public long moveToIndex(@NotNull final Wire wire, final long index) {
             final LongArrayValues array = this.longArray.get();
@@ -605,7 +597,6 @@ public class SingleChronicleQueueStore implements WireStore {
                 long primaryOffset = toAddress0(index);
 
                 do {
-
                     long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
                     if (secondaryAddress == 0) {
                         startIndex -= (1 << 23L);
@@ -643,7 +634,6 @@ public class SingleChronicleQueueStore implements WireStore {
                             }
 
                         } while (secondaryOffset >= 0);
-
                     }
 
                     break;
@@ -665,7 +655,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param toIndex        the index that we wish to move the context to
          * @param fromKnownIndex a know index ( used as a starting point )
          * @param knownAddress   a know address ( used as a starting point )
-         * @return > -1, if successful
+         * @return > -1 if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
         private long linearScan(@NotNull final Wire context,
