@@ -65,6 +65,5 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     @NotNull
     MappedBytes mappedBytes();
 
-
     void storeIndexLocation(Wire wire, long position, long index);
 }

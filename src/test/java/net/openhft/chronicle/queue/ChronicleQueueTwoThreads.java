@@ -18,9 +18,12 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.BusyPauser;
+import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
@@ -36,8 +39,13 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
-    @Test(timeout = 5000)
+    @Test
     public void testUnbuffered() throws IOException, InterruptedException {
+        doTest(false);
+    }
+
+
+    void doTest(boolean buffered) throws IOException, InterruptedException {
         String path = getTmpDir() + "/deleteme.q";
 
         new File(path).deleteOnExit();
@@ -46,9 +54,14 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 .blockSize(BLOCK_SIZE)
                 .build();
 
+        EventGroup eventLoop = buffered
+                ? new EventGroup(true, Throwable::printStackTrace, BusyPauser.INSTANCE, true)
+                : null;
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .buffered(buffered)
+                .eventLoop(eventLoop)
                 .build();
 
         ExcerptAppender appender = wqueue.createAppender();
@@ -56,7 +69,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
 
         AtomicLong counter = new AtomicLong();
         Thread tailerThread = new Thread(() -> {
-
+            AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
             long count = 0;
             try {
@@ -71,6 +84,9 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
+                if (rlock != null) {
+                    rlock.release();
+                }
                 System.out.printf("Read %,d messages", count);
             }
         }, "tailer thread");
@@ -78,7 +94,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         long runs = 20_000;
 
         Thread appenderThread = new Thread(() -> {
-
+            AffinityLock wlock = AffinityLock.acquireLock();
             try {
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 
@@ -96,6 +112,10 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                if (wlock != null) {
+                    wlock.release();
+                }
             }
         }, "appender thread");
 
@@ -116,7 +136,9 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
 
         assertEquals(runs, counter.get());
 
+//        rqueue.close();
+//        wqueue.close();
+//            eventLoop.close();
+
     }
-
-
 }

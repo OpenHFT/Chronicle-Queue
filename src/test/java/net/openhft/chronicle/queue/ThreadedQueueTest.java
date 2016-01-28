@@ -57,7 +57,7 @@ public class ThreadedQueueTest {
                         counter.incrementAndGet();
 
 
-                }
+                    }
 
             } catch (Throwable t) {
                 t.printStackTrace();
@@ -118,7 +118,6 @@ public class ThreadedQueueTest {
         bytes.clear();
         tailer.readBytes(bytes);
 
-        //   System.out.println("");
 
 
     }
