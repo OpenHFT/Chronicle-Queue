@@ -335,7 +335,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return new SourceChronicleQueueBuilder(this);
         }
 
-        public IndexedChronicleQueueBuilder fileGrowthListener(FileLifecycleListener fileLifecycleListener) {
+        public IndexedChronicleQueueBuilder fileLifecycleListener(FileLifecycleListener fileLifecycleListener) {
             this.fileLifecycleListener = fileLifecycleListener;
             return this;
         }
