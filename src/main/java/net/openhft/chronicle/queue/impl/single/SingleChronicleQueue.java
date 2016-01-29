@@ -297,7 +297,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
                 wireStore.cycle(cycle);
                 wireStore.writePosition(bytes.writePosition());
                 mappedBytes.writeOrderedInt(0L, Wires.META_DATA
-                        | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
+                        | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large=%,d"));
                 return wireStore;
             } else {
                 long end = System.currentTimeMillis() + TIMEOUT;
