@@ -47,7 +47,7 @@ public class Excerpts {
     @FunctionalInterface
     public interface BytesConsumer {
         boolean accept(Bytes<?> bytes)
-            throws InterruptedException;
+                throws InterruptedException;
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
@@ -378,10 +378,10 @@ public class Excerpts {
             }
 
             bytes.writeInt(start, toIntU30(len, "Document length %,d " +
-                "out of 30-bit int range."));
+                    "out of 30-bit int range."));
 
             store().writePosition(bytes.writePosition())
-                .storeIndexLocation(wire, start, ++index);
+                    .storeIndexLocation(wire, start, ++index);
 
             return true;
         }
