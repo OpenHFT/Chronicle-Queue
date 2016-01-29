@@ -44,6 +44,8 @@ Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repos
   * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
   * [Non-blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
   * [Data Filtering](https://github.com/OpenHFT/Chronicle-Queue#data-filtering)
+  * [File Lifecycle](https://github.com/OpenHFT/Chronicle-Queue#file-lifecycle)
+  * [Use WatchService as initial tailer trigger](https://github.com/OpenHFT/Chronicle-Queue#watch-service-as-initial-tailer-trigger)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
@@ -561,6 +563,34 @@ final Chronicle highLowSink = sink(sinkHighLowBasePath)
 
 [Full example](https://github.com/lburgazzoli/Chronicle-Queue/blob/master/chronicle/src/test/java/net/openhft/chronicle/tcp/WithMappedTest.java)
 
+### File Lifecycle
+
+Sometimes it may be useful to get notified about events on the files managed by Chronicle-Queue and that's possible by registering a FileLifecycleListener:
+
+```java
+Chronicle chronicle = ChronicleQueueBuilder.vanilla(path)
+    .fileLifecycleListener(FileLifecycleListener.FileLifecycleListeners.LOG)
+    .build()
+
+```
+
+Out of the box, Chronicle-Queue provides three listeners:
+- FileLifecycleListeners.IGNORE which does nothing
+- FileLifecycleListeners.CONSOLE which prints events to STDOUT
+- FileLifecycleListeners.LOG which logs events using slf4j
+
+### Watch Service as initial tailer trigger
+
+If a tailer spins an empty Vanilla Chronicle Queue, you may get some garbage created by Java NIO's implementation that can grow very quickly so to reduce it you can configure Chronicle-Queue to use Java's WatchService to trigger the tailer the first time.
+
+```java
+Chronicle chronicle = ChronicleQueueBuilder.vanilla(path)
+    .enableFsWatcher(true)
+    .build()
+
+```
+
+When WatchService is enable, the tailer's nextIndex() returns false until a file creation event is triggered, then the default behavior is restored.
 
 ##  Support
 * [Chronicle FAQ](https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.md)
