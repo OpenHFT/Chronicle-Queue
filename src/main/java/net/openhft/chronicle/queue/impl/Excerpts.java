@@ -59,41 +59,12 @@ public class Excerpts {
     //
     // *************************************************************************
 
-    public static abstract class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
-        @NotNull
-        final T queue;
-
-        public DefaultAppender(@NotNull T queue) {
-            this.queue = queue;
-        }
-
-        @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long index() {
-            throw new UnsupportedOperationException();
-        }
-
-        public abstract long cycle();
-
-        @NotNull
-        public ChronicleQueue queue() {
-            return this.queue;
-        }
-    }
-
     /**
      * StoreAppender
      */
-    public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
+    public static class StoreAppender implements ExcerptAppender {
+        @NotNull
+        private final AbstractChronicleQueue queue;
         private long index = -1;
         private Wire wire;
         private long cycle;
@@ -101,9 +72,8 @@ public class Excerpts {
         private long nextPrefetch = OS.pageSize();
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
-            super(queue);
-
-            final long lastIndex = super.queue.lastIndex();
+            this.queue = queue;
+            final long lastIndex = this.queue.lastIndex();
             this.cycle = (lastIndex == -1) ? queue.cycle() : toCycle(lastIndex);
 
             if (this.cycle < 0)
@@ -117,7 +87,7 @@ public class Excerpts {
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
-            wire = this.queue().wireType().apply(mappedBytes);
+            wire = this.queue.wireType().apply(mappedBytes);
         }
 
         public long writeDocument(@NotNull WriteMarshallable writer) {
@@ -192,8 +162,8 @@ public class Excerpts {
         }
 
         @NotNull
-        Wire wire() {
-            return wire;
+        public ChronicleQueue queue() {
+            return this.queue;
         }
 
         public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
