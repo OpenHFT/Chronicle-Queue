@@ -50,6 +50,15 @@ public class Excerpts {
             throws InterruptedException;
     }
 
+    @FunctionalInterface
+    public interface WireWriterConsumer<T> {
+        long accept(
+            @NotNull WireOut wireOut,
+            boolean metaData,
+            @NotNull T writer);
+    }
+
+
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
 
 
@@ -120,56 +129,14 @@ public class Excerpts {
             wire = this.queue().wireType().apply(mappedBytes);
         }
 
+        @Override
         public long writeDocument(@NotNull WriteMarshallable writer) {
-            final WireStore store = store();
-            long position;
-
-            do {
-                final long readPosition = wire.bytes().readPosition();
-                boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
-                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, false, writer);
-
-                // this will be called if currently being modified with unknown length
-                if (position == 0)
-                    continue;
-
-                if (!isMetaData)
-                    this.index++;
-
-            } while (position < 0);
-
-            this.index++;
-
-            store.writePosition(wire.bytes().writePosition());
-            store.storeIndexLocation(wire, position, index);
-            return ChronicleQueue.index(store.cycle(), index);
+            return internalWiteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) {
-            final WireStore store = store();
-            long position;
-
-            do {
-
-                final long readPosition = wire.bytes().readPosition();
-                boolean isMetaData = (wire.bytes().readInt(readPosition) & Wires.META_DATA) != 0;
-                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, false, bytes);
-
-                // this will be called if currently being modified with unknown length
-                if (position == 0)
-                    continue;
-
-                if (!isMetaData)
-                    this.index++;
-
-            } while (position < 0);
-
-            this.index++;
-
-            store.writePosition(wire.bytes().writePosition());
-            store.storeIndexLocation(wire, position, index);
-            return ChronicleQueue.index(store.cycle(), index);
+            return internalWiteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
         }
 
         @Override
@@ -189,11 +156,6 @@ public class Excerpts {
         @Override
         public long cycle() {
             return this.store.cycle();
-        }
-
-        @NotNull
-        Wire wire() {
-            return wire;
         }
 
         public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
@@ -227,6 +189,38 @@ public class Excerpts {
             return true;
         }
 
+        private <T> long internalWiteBytes(@NotNull WireWriterConsumer<T> consumer, @NotNull T writer) {
+            WireStore store = store();
+            Bytes<?> bytes = wire.bytes();
+
+            long position;
+
+            do {
+                final long readPosition = bytes.readPosition();
+                boolean isMetaData = (bytes.readInt(readPosition) & Wires.META_DATA) != 0;
+                if(isMetaData) {
+                    store = store();
+                    bytes = wire.bytes();
+                }
+
+                position = consumer.accept(wire, false, writer);
+
+                // this will be called if currently being modified with unknown length
+                if (position == 0)
+                    continue;
+
+                if (!isMetaData)
+                    this.index++;
+
+            } while (position < 0);
+
+            this.index++;
+
+            store.writePosition(bytes.writePosition());
+            store.storeIndexLocation(wire, position, index);
+            return ChronicleQueue.index(store.cycle(), index);
+        }
+
         @ForceInline
         private WireStore store() {
             if (this.cycle != queue.cycle()) {
@@ -241,6 +235,7 @@ public class Excerpts {
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(this.cycle, queue.epoch());
                 this.wire = this.queue().wireType().apply(store.mappedBytes());
+                this.index = this.store.firstSequenceNumber();
             }
 
             return this.store;
