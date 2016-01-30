@@ -40,10 +40,9 @@ class SingleChronicleQueueExcerptFactory implements ExcerptFactory<SingleChronic
 
         if (queue.buffered()) {
             throw new IllegalStateException(
-                    "This is a a commercial feature, please contact sales@higherfrequencytrading" +
-                            ".com to unlock this feature, or instead use the " +
-                            "'software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder'" +
-                            "'");
+                "This is a a commercial feature, please contact sales@higherfrequencytrading.com" +
+                    "to unlock this feature, or instead use the " +
+                    "'software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder'");
         }
 
         return appender;
