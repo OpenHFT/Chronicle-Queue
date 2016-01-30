@@ -68,41 +68,12 @@ public class Excerpts {
     //
     // *************************************************************************
 
-    public static abstract class DefaultAppender<T extends ChronicleQueue> implements ExcerptAppender {
-        @NotNull
-        final T queue;
-
-        public DefaultAppender(@NotNull T queue) {
-            this.queue = queue;
-        }
-
-        @Override
-        public long writeDocument(@NotNull WriteMarshallable writer) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long writeBytes(@NotNull Bytes<?> bytes) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long index() {
-            throw new UnsupportedOperationException();
-        }
-
-        public abstract long cycle();
-
-        @NotNull
-        public ChronicleQueue queue() {
-            return this.queue;
-        }
-    }
-
     /**
      * StoreAppender
      */
-    public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
+    public static class StoreAppender implements ExcerptAppender {
+        @NotNull
+        private final AbstractChronicleQueue queue;
         private long index = -1;
         private Wire wire;
         private long cycle;
@@ -110,9 +81,8 @@ public class Excerpts {
         private long nextPrefetch = OS.pageSize();
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
-            super(queue);
-
-            final long lastIndex = super.queue.lastIndex();
+            this.queue = queue;
+            final long lastIndex = this.queue.lastIndex();
             this.cycle = (lastIndex == -1) ? queue.cycle() : toCycle(lastIndex);
 
             if (this.cycle < 0)
@@ -126,17 +96,17 @@ public class Excerpts {
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
-            wire = this.queue().wireType().apply(mappedBytes);
+            wire = this.queue.wireType().apply(mappedBytes);
         }
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) {
-            return internalWiteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
+            return internalWriteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) {
-            return internalWiteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
+            return internalWriteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
         }
 
         @Override
@@ -189,7 +159,7 @@ public class Excerpts {
             return true;
         }
 
-        private <T> long internalWiteBytes(@NotNull WireWriterConsumer<T> consumer, @NotNull T writer) {
+        private <T> long internalWriteBytes(@NotNull WireWriterConsumer<T> consumer, @NotNull T writer) {
             WireStore store = store();
             Bytes<?> bytes = wire.bytes();
 
@@ -210,11 +180,11 @@ public class Excerpts {
                     continue;
 
                 if (!isMetaData)
-                    this.index++;
+                    index++;
 
             } while (position < 0);
 
-            this.index++;
+            index++;
 
             store.writePosition(bytes.writePosition());
             store.storeIndexLocation(wire, position, index);
@@ -223,22 +193,22 @@ public class Excerpts {
 
         @ForceInline
         private WireStore store() {
-            if (this.cycle != queue.cycle()) {
+            if (cycle != queue.cycle()) {
                 long nextCycle = queue.cycle();
-                if (this.store != null) {
-                    while (!this.store.appendRollMeta(wire, nextCycle)) {
+                if (store != null) {
+                    while (!store.appendRollMeta(wire, nextCycle)) {
                         Thread.yield();
                     }
-                    this.queue.release(this.store);
+                    queue.release(store);
                 }
 
                 this.cycle = nextCycle;
-                this.store = queue.storeForCycle(this.cycle, queue.epoch());
-                this.wire = this.queue().wireType().apply(store.mappedBytes());
-                this.index = this.store.firstSequenceNumber();
+                this.store = queue.storeForCycle(cycle, queue.epoch());
+                this.wire  = queue.wireType().apply(store.mappedBytes());
+                this.index = store.firstSequenceNumber();
             }
 
-            return this.store;
+            return store;
         }
 
         @Override

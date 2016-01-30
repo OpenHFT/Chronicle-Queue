@@ -15,8 +15,8 @@
   ~     along with this program.  If not, see <http://www.gnu.org/licenses />.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <properties>
@@ -32,7 +32,7 @@
     <artifactId>chronicle-queue</artifactId>
     <version>4.0.5-beta-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>OpenHFT/chronicle-queue</name>
+    <name>OpenHFT/Chronicle-Queue</name>
 
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
@@ -67,11 +67,6 @@
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-network</artifactId>
         </dependency>
 
         <dependency>
