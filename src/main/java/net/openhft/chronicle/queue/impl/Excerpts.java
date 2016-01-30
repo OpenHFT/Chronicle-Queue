@@ -17,17 +17,12 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
-import net.openhft.chronicle.threads.HandlerPriority;
-import net.openhft.chronicle.threads.api.EventHandler;
-import net.openhft.chronicle.threads.api.EventLoop;
-import net.openhft.chronicle.threads.api.InvalidEventHandlerException;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -35,9 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import static net.openhft.chronicle.bytes.NativeBytesStore.nativeStoreWithFixedCapacity;
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.ChronicleQueue.toSequenceNumber;
 import static net.openhft.chronicle.wire.Wires.toIntU30;
@@ -51,8 +44,8 @@ public class Excerpts {
     }
 
     @FunctionalInterface
-    public interface WireWriterConsumer<T> {
-        long accept(
+    public interface WireWriter<T> {
+        long writeOrAdvanceIfNotEmpty(
             @NotNull WireOut wireOut,
             boolean metaData,
             @NotNull T writer);
@@ -159,7 +152,7 @@ public class Excerpts {
             return true;
         }
 
-        private <T> long internalWriteBytes(@NotNull WireWriterConsumer<T> consumer, @NotNull T writer) {
+        private <T> long internalWriteBytes(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
             WireStore store = store();
             Bytes<?> bytes = wire.bytes();
 
@@ -173,7 +166,7 @@ public class Excerpts {
                     bytes = wire.bytes();
                 }
 
-                position = consumer.accept(wire, false, writer);
+                position = wireWriter.writeOrAdvanceIfNotEmpty(wire, false, writer);
 
                 // this will be called if currently being modified with unknown length
                 if (position == 0)
