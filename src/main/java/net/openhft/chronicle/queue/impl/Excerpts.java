@@ -156,26 +156,36 @@ public class Excerpts {
             WireStore store = store();
             Bytes<?> bytes = wire.bytes();
 
-            long position;
+            long position = -1;
 
             do {
                 final long readPosition = bytes.readPosition();
-                boolean isMetaData = (bytes.readInt(readPosition) & Wires.META_DATA) != 0;
-                if(isMetaData) {
-                    store = store();
-                    bytes = wire.bytes();
+                final int pbeHeader = bytes.readInt(readPosition);
+
+                boolean isMetaData = !Wires.isData(pbeHeader);// bytes.readInt(readPosition) & Wires.META_DATA) != 0;
+
+                if (isMetaData) {
+                    // If meta-data document is detected, we need to determine
+                    // its type as in case of rolling meta, the underlying store
+                    // needs to be refreshed
+                    if(Wires.isReady(pbeHeader)) {
+                        //
+                        // store = store();
+                        // bytes = wire.bytes();
+                    } else {
+                        // if not ready loop again waiting for meta-data
+                        continue;
+                    }
                 }
 
+                // position will be set to zero if currently being modified with
+                // unknown len
                 position = wireWriter.writeOrAdvanceIfNotEmpty(wire, false, writer);
-
-                // this will be called if currently being modified with unknown length
-                if (position == 0)
-                    continue;
 
                 if (!isMetaData)
                     index++;
 
-            } while (position < 0);
+            } while (position <= 0);
 
             index++;
 
