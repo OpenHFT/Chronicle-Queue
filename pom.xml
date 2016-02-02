@@ -42,14 +42,14 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.23</version>
+                <version>3.4.26-SNAPSHOT</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-               <version>1.11.7</version>
+                <version>1.11.7</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -120,7 +120,7 @@
         </dependency>
 
         <!-- for benchmarks -->
-<!--
+
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
@@ -131,8 +131,9 @@
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
             <scope>test</scope>
+            <version>1.11.3</version>
         </dependency>
--->
+
 
     </dependencies>
 

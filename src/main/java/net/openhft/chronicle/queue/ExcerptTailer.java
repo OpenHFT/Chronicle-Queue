@@ -48,16 +48,14 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean readBytes(@NotNull Bytes using);
 
     /**
-     *
-     * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but
-     * with out the use of a lambda expression.
+     * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
+     * lambda expression.
      *
      * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
      *
      * @return the document context
      */
     DocumentContext readingDocument();
-
 
     /**
      * @return the index just read , this include the cycle and the sequence number from with this

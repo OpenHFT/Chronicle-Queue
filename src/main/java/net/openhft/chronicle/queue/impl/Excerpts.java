@@ -461,6 +461,11 @@ public class Excerpts {
         }
 
         @Override
+        public DocumentContext readingDocument() {
+            throw new UnsupportedOperationException("todo");
+        }
+
+        @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
             return readAtIndex(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
