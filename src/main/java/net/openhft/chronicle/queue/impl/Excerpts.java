@@ -16,14 +16,25 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireInternal;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +64,8 @@ public class Excerpts {
 
 
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+    private static final int ROLL_KEY = BytesUtil.asInt("roll");
+    private static final int SPB_HEADER_SIZE = 4;
 
 
     // *************************************************************************
@@ -160,20 +173,22 @@ public class Excerpts {
 
             do {
                 final long readPosition = bytes.readPosition();
-                final int pbeHeader = bytes.readInt(readPosition);
+                final int spbHeader = bytes.readInt(readPosition);
 
-                boolean isMetaData = !Wires.isData(pbeHeader);// bytes.readInt(readPosition) & Wires.META_DATA) != 0;
-
-                if (isMetaData) {
+                if ((spbHeader & Wires.META_DATA) != 0) {
                     // If meta-data document is detected, we need to determine
                     // its type as in case of rolling meta, the underlying store
                     // needs to be refreshed
-                    if(Wires.isReady(pbeHeader)) {
-                        //
-                        // store = store();
-                        // bytes = wire.bytes();
+                    if (Wires.isReady(spbHeader)) {
+                        if (bytes.readInt(readPosition + SPB_HEADER_SIZE) == ROLL_KEY) {
+                            store = store();
+                            bytes = wire.bytes();
+                            bytes.writePosition(store.writePosition());
+                            bytes.readPosition(store.writePosition());
+                        }
                     } else {
-                        // if not ready loop again waiting for meta-data
+                        // if not ready loop again waiting for meta-data being
+                        // written
                         continue;
                     }
                 }
@@ -181,16 +196,13 @@ public class Excerpts {
                 // position will be set to zero if currently being modified with
                 // unknown len
                 position = wireWriter.writeOrAdvanceIfNotEmpty(wire, false, writer);
-
-                if (!isMetaData)
-                    index++;
-
             } while (position <= 0);
 
             index++;
 
             store.writePosition(bytes.writePosition());
             store.storeIndexLocation(wire, position, index);
+
             return ChronicleQueue.index(store.cycle(), index);
         }
 
