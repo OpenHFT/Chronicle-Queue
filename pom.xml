@@ -120,6 +120,7 @@
         </dependency>
 
         <!-- for benchmarks -->
+<!--
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
@@ -131,6 +132,7 @@
             <artifactId>jmh-generator-annprocess</artifactId>
             <scope>test</scope>
         </dependency>
+-->
 
     </dependencies>
 

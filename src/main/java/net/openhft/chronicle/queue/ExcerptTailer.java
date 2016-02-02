@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,6 +46,18 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return {@code true} if successful
      */
     boolean readBytes(@NotNull Bytes using);
+
+    /**
+     *
+     * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but
+     * with out the use of a lambda expression.
+     *
+     * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
+     *
+     * @return the document context
+     */
+    DocumentContext readingDocument();
+
 
     /**
      * @return the index just read , this include the cycle and the sequence number from with this
