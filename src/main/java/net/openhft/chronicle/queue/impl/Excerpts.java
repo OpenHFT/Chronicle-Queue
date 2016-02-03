@@ -80,14 +80,16 @@ public class Excerpts {
     public static class StoreAppender implements ExcerptAppender {
         @NotNull
         private final AbstractChronicleQueue queue;
-        private long index = -1;
+        private long index;
         private Wire wire;
         private long cycle;
         private WireStore store;
-        private long nextPrefetch = OS.pageSize();
+        private long nextPrefetch;
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
+            this.nextPrefetch = OS.pageSize();
             this.queue = queue;
+
             final long lastIndex = this.queue.lastIndex();
             this.cycle = (lastIndex == -1) ? queue.cycle() : toCycle(lastIndex);
 
@@ -224,11 +226,13 @@ public class Excerpts {
         private long cycle;
         private long index;
         private WireStore store;
-        private long nextPrefetch = OS.pageSize();
+        private long nextPrefetch;
 
         public StoreTailer(@NotNull final AbstractChronicleQueue queue) {
+            this.nextPrefetch = OS.pageSize();
             this.queue = queue;
             this.cycle = -1;
+            this.index = -1;
             toStart();
         }
 
@@ -242,34 +246,17 @@ public class Excerpts {
 
         @Override
         public boolean readDocument(@NotNull final ReadMarshallable marshaller) {
-            return readAtIndex(marshaller, ReadMarshallable::readMarshallable);
+            return read(marshaller, ReadMarshallable::readMarshallable);
         }
 
         @Override
         public boolean readBytes(@NotNull final Bytes using) {
-            return readAtIndex(using, (t, w) -> t.write(w.bytes()));
+            return read(using, (t, w) -> t.write(w.bytes()));
         }
 
         @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
-            return readAtIndex(using, (t, w) -> t.readMarshallable(w.bytes()));
-        }
-
-        private <T> boolean readAtIndex(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
-            final long cycle = this.cycle;
-            final long index = this.index;
-
-            if (this.store == null) {
-                final long firstIndex = queue.firstIndex();
-                if (index == -1)
-                    return false;
-                moveToIndex(firstIndex);
-            }
-            if (readAt(t, c)) {
-                this.index = ChronicleQueue.index(cycle, toSequenceNumber(index) + 1);
-                return true;
-            }
-            return false;
+            return read(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
         /**
@@ -324,18 +311,19 @@ public class Excerpts {
             return true;
         }
 
-
         @NotNull
         @Override
-        public ExcerptTailer toStart() {
+        public final ExcerptTailer toStart() {
             final long index = queue.firstIndex();
-            if (ChronicleQueue.toSequenceNumber(index) == -1) {
-                cycle(toCycle(index));
-                this.wire.bytes().readPosition(0);
-                return this;
+            if (index != -1) {
+                if (ChronicleQueue.toSequenceNumber(index) == -1) {
+                    cycle(toCycle(index));
+                    this.wire.bytes().readPosition(0);
+                    return this;
+                }
+                if (!moveToIndex(index))
+                    throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
             }
-            if (!moveToIndex(index))
-                throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
 
             return this;
         }
@@ -359,7 +347,23 @@ public class Excerpts {
             nextPrefetch = prefetch + OS.pageSize();
         }
 
-        private <T> boolean readAt(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
+        private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
+            long index = this.index;
+            if (this.store == null) {
+                index = queue.firstIndex();
+                if (index == -1)
+                    return false;
+                moveToIndex(index);
+            }
+
+            if (read0(t, c)) {
+                this.index = ChronicleQueue.index(this.cycle, toSequenceNumber(index) + 1);
+                return true;
+            }
+            return false;
+        }
+
+        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             long roll;
             for (; ; ) {
                 roll = Long.MIN_VALUE;
@@ -376,8 +380,8 @@ public class Excerpts {
                             return true;
                         }
 
-                        // In case of meta data, if we are found the "roll" meta, we returns
-                        // the next cycle (negative)
+                        // In case of meta data, if we have found the "roll" meta,
+                        // the next cycle (negative) is returned
                         final StringBuilder sb = Wires.acquireStringBuilder();
 
                         @NotNull
@@ -403,7 +407,7 @@ public class Excerpts {
         @NotNull
         private StoreTailer cycle(final long cycle) {
             if (this.cycle != cycle) {
-                if (null != this.store) {
+                if (this.store != null) {
                     this.queue.release(this.store);
                 }
                 this.cycle = cycle;

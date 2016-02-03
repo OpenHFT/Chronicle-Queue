@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
 import net.openhft.chronicle.queue.impl.ExcerptFactory;
+import net.openhft.chronicle.queue.impl.RollDateCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
@@ -58,8 +59,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    private final ExcerptFactory<SingleChronicleQueue> appenderFactory;
-    private final ExcerptFactory<SingleChronicleQueue> tailerFactory;
+    private final ExcerptFactory<SingleChronicleQueue> excerptFactory;
     private final File path;
     private final WireType wireType;
     private final long blockSize;
@@ -70,20 +70,20 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
-        dateCache = new RollDateCache(this.cycle);
+        dateCache = new RollDateCache(this.cycle, name -> new File(builder.path(), name + SUFFIX));
         pool = WireStorePool.withSupplier(this::acquireStore);
         epoch = builder.epoch();
         isBuffered = builder.buffered();
-        appenderFactory = builder.excertpFactory();
-        tailerFactory = builder.excertpFactory();
+        excerptFactory = builder.excertpFactory();
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
         rollCycle = builder.rollCycle();
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
-        this.onRingBufferStats = builder.onRingBufferStats();
-        storeForCycle(cycle(), this.epoch);
+        onRingBufferStats = builder.onRingBufferStats();
+
+        //storeForCycle(cycle(), this.epoch);
     }
 
     @Override
@@ -94,12 +94,12 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     @Override
     public RollCycle rollCycle() {
-        throw new UnsupportedOperationException("todo");
+        return this.cycle;
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
-     * Chronicle Queue using a background thread
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are
+     * written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
@@ -113,14 +113,20 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
 
     @NotNull
     @Override
+    public Excerpt createExcerpt() {
+        return excerptFactory.createExcerpt(this);
+    }
+
+    @NotNull
+    @Override
     public ExcerptAppender createAppender() {
-        return appenderFactory.createAppender(this);
+        return excerptFactory.createAppender(this);
     }
 
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return tailerFactory.createTailer(this);
+        return excerptFactory.createTailer(this);
     }
 
     @NotNull
@@ -278,14 +284,13 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
-        @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
-        @NotNull final File cycleFile = new File(path, cycleFormat + SUFFIX);
+        @NotNull final RollDateCache.DateValue dateValue = this.dateCache.dateValueFor(cycle);
         try {
-            final File parentFile = cycleFile.getParentFile();
+            final File parentFile = dateValue.path.getParentFile();
             if (parentFile != null && !parentFile.exists())
                 parentFile.mkdirs();
 
-            final MappedBytes mappedBytes = mappedBytes(cycleFile);
+            final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
             //noinspection PointlessBitwiseExpression
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
@@ -304,7 +309,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
                 long end = System.currentTimeMillis() + TIMEOUT;
                 while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
                     if (System.currentTimeMillis() > end)
-                        throw new IllegalStateException(MESSAGE + cycleFile);
+                        throw new IllegalStateException(MESSAGE + dateValue.path);
                     Jvm.pause(1);
                 }
 
