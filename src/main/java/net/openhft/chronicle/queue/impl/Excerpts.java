@@ -282,6 +282,11 @@ public class Excerpts {
             return ChronicleQueue.index(this.cycle, this.index);
         }
 
+        @Override
+        public long cycle() {
+            return this.cycle;
+        }
+
 
         @Override
         public boolean moveToIndex(final long index) {

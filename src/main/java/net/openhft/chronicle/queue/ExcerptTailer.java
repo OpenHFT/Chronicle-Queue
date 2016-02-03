@@ -53,6 +53,12 @@ public interface ExcerptTailer extends ExcerptCommon {
     long index();
 
     /**
+     * @return the cycle this appender is on, usually with chronicle-queue each cycle will have
+     * its own unique data file to store the excerpt
+     */
+    long cycle();
+
+    /**
      * Randomly select an Excerpt.
      *
      * @param index index to look up, the index includes the cycle number and a sequence number from
