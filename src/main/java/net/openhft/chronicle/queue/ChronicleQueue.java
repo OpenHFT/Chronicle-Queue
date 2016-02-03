@@ -56,13 +56,11 @@ import java.io.IOException;
  */
 public interface ChronicleQueue extends Closeable {
 
-    long MINUS_1_40BIT = toSequenceNumber(-1);
-
     /**
      * @return A descriptive name for this queue which can be used for logging.
      */
-    @NotNull
-    String name();
+    //@NotNull
+    //String name();
 
     /**
      * An Excerpt can be used access entries randomly and optionally change them.
@@ -92,12 +90,12 @@ public interface ChronicleQueue extends Closeable {
     /**
      * @return The current estimated number of entries.
      */
-    long size();
+    //long size();
 
     /**
      * Remove all the entries in the queue.
      */
-    void clear();
+    //void clear();
 
 
     /**
@@ -121,25 +119,4 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     WireType wireType();
-
-    static long toSequenceNumber(long index) {
-        final long l = index & 0xFFFFFFFFFFL;
-        return (l == MINUS_1_40BIT) ? -1 : l;
-    }
-
-    static long toCycle(long index) {
-        int result = (int) (index >> 40L);
-        if (result > (1 << 24))
-            throw new IllegalStateException("cycle value is too large, it must fit into 24bits, " +
-                    "either use a larger rollType of increase the roll offset.");
-
-        if (result < 0)
-            throw new IllegalStateException("Invalid cycle=" + result + ", cycles can not be negative" +
-                    ".");
-        return result;
-    }
-
-    static long index(long cycle, long sequenceNumber) {
-        return (cycle << 40L) + (sequenceNumber & 0xFFFFFFFFFFL);
-    }
 }

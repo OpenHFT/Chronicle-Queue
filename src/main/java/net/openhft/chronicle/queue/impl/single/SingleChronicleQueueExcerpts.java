@@ -1,5 +1,5 @@
-/*
- *     Copyright (C) 2015  higherfrequencytrading.com
+/**
+ *     Copyright (C) 2016  higherfrequencytrading.com
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Lesser General Public License as published by
@@ -14,7 +14,7 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.openhft.chronicle.queue.impl;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesUtil;
@@ -23,10 +23,10 @@ import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.ValueIn;
@@ -42,10 +42,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.function.BiConsumer;
 
-import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
-import static net.openhft.chronicle.queue.ChronicleQueue.toSequenceNumber;
+import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toCycle;
+import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toSequenceNumber;
+import static net.openhft.chronicle.wire.Wires.toIntU30;
 
-public class Excerpts {
+public class SingleChronicleQueueExcerpts {
 
     @FunctionalInterface
     public interface BytesConsumer {
@@ -62,7 +63,7 @@ public class Excerpts {
     }
 
 
-    private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
     private static final String ROLL_STRING = "roll";
     private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
     private static final int SPB_HEADER_SIZE = 4;
@@ -79,14 +80,14 @@ public class Excerpts {
      */
     public static class StoreAppender implements ExcerptAppender {
         @NotNull
-        private final AbstractChronicleQueue queue;
+        private final SingleChronicleQueue queue;
         private long index;
         private Wire wire;
         private long cycle;
         private WireStore store;
         private long nextPrefetch;
 
-        public StoreAppender(@NotNull AbstractChronicleQueue queue) {
+        public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
             this.queue = queue;
 
@@ -128,7 +129,7 @@ public class Excerpts {
                 throw new IllegalStateException();
             }
 
-            return ChronicleQueue.index(cycle(), index);
+            return RollingChronicleQueue.index(cycle(), index);
         }
 
         @Override
@@ -146,6 +147,41 @@ public class Excerpts {
             // touch the page without modifying it.
             wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
             nextPrefetch = prefetch + OS.pageSize();
+        }
+
+        public SingleChronicleQueue queue() {
+            return queue;
+        }
+
+        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            final long start = bytes.writePosition();
+
+            bytes.writeInt(Wires.NOT_READY);
+
+            if (!consumer.accept(bytes)) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            final long len = bytes.writePosition() - start - 4;
+
+            // no data was read from the ring buffer, so we wont write any document
+            // to the appender
+            if (len == 0) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                    "out of 30-bit int range."));
+
+            store().writePosition(bytes.writePosition())
+                    .storeIndexLocation(wire, start, ++index);
+
+            return true;
         }
 
         private <T> long append(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
@@ -186,7 +222,7 @@ public class Excerpts {
             store.writePosition(bytes.writePosition());
             store.storeIndexLocation(wire, position, index);
 
-            return ChronicleQueue.index(store.cycle(), index);
+            return RollingChronicleQueue.index(store.cycle(), index);
         }
 
         @ForceInline
@@ -221,14 +257,14 @@ public class Excerpts {
      */
     public static class StoreTailer implements ExcerptTailer {
         @NotNull
-        private final AbstractChronicleQueue queue;
+        private final SingleChronicleQueue queue;
         private Wire wire;
         private long cycle;
         private long index;
         private WireStore store;
         private long nextPrefetch;
 
-        public StoreTailer(@NotNull final AbstractChronicleQueue queue) {
+        public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
             this.queue = queue;
             this.cycle = -1;
@@ -239,8 +275,8 @@ public class Excerpts {
         @Override
         public String toString() {
             return "StoreTailer{" +
-                    "index sequence=" + ChronicleQueue.toSequenceNumber(index) +
-                    ", index cycle=" + ChronicleQueue.toCycle(index) +
+                    "index sequence=" + RollingChronicleQueue.toSequenceNumber(index) +
+                    ", index cycle=" + RollingChronicleQueue.toCycle(index) +
                     ", store=" + store + ", queue=" + queue + '}';
         }
 
@@ -266,7 +302,7 @@ public class Excerpts {
         public long index() {
             if (this.store == null)
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
-            return ChronicleQueue.index(this.cycle, this.index);
+            return RollingChronicleQueue.index(this.cycle, this.index);
         }
 
         @Override
@@ -296,7 +332,7 @@ public class Excerpts {
             final long sequenceNumber = toSequenceNumber(index);
             if (sequenceNumber == -1) {
                 bytes.readPosition(0);
-                this.index = ChronicleQueue.index(cycle, sequenceNumber);
+                this.index = RollingChronicleQueue.index(cycle, sequenceNumber);
                 return true;
             }
 
@@ -307,7 +343,7 @@ public class Excerpts {
             bytes.readPosition(position);
             bytes.readLimit(bytes.realCapacity());
 
-            this.index = ChronicleQueue.index(cycle, sequenceNumber - 1);
+            this.index = RollingChronicleQueue.index(cycle, sequenceNumber - 1);
             return true;
         }
 
@@ -316,7 +352,7 @@ public class Excerpts {
         public final ExcerptTailer toStart() {
             final long index = queue.firstIndex();
             if (index != -1) {
-                if (ChronicleQueue.toSequenceNumber(index) == -1) {
+                if (RollingChronicleQueue.toSequenceNumber(index) == -1) {
                     cycle(toCycle(index));
                     this.wire.bytes().readPosition(0);
                     return this;
@@ -347,6 +383,10 @@ public class Excerpts {
             nextPrefetch = prefetch + OS.pageSize();
         }
 
+        public RollingChronicleQueue queue() {
+            return queue;
+        }
+
         private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             long index = this.index;
             if (this.store == null) {
@@ -357,7 +397,7 @@ public class Excerpts {
             }
 
             if (read0(t, c)) {
-                this.index = ChronicleQueue.index(this.cycle, toSequenceNumber(index) + 1);
+                this.index = RollingChronicleQueue.index(this.cycle, toSequenceNumber(index) + 1);
                 return true;
             }
             return false;
@@ -413,7 +453,7 @@ public class Excerpts {
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = queue.wireType().apply(store.mappedBytes());
-                moveToIndex(ChronicleQueue.index(cycle, -1));
+                moveToIndex(RollingChronicleQueue.index(cycle, -1));
                 if (LOG.isDebugEnabled())
                     LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
             }

@@ -22,9 +22,9 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.ExcerptFactory;
-import net.openhft.chronicle.queue.impl.RollDateCache;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
@@ -41,7 +41,7 @@ import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
-public class SingleChronicleQueue extends AbstractChronicleQueue implements SingleChronicleQueueFields {
+public class SingleChronicleQueue implements RollingChronicleQueue, SingleChronicleQueueTrait {
 
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
@@ -54,12 +54,12 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     private final RollCycle cycle;
     @NotNull
-    private final RollDateCache dateCache;
+    private final RollingResourcesCache dateCache;
     @NotNull
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    private final ExcerptFactory<SingleChronicleQueue> excerptFactory;
+    private final ExcerptFactory excerptFactory;
     private final File path;
     private final WireType wireType;
     private final long blockSize;
@@ -70,7 +70,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
-        dateCache = new RollDateCache(this.cycle, name -> new File(builder.path(), name + SUFFIX));
+        dateCache = new RollingResourcesCache(this.cycle, name -> new File(builder.path(), name + SUFFIX));
         pool = WireStorePool.withSupplier(this::acquireStore);
         epoch = builder.epoch();
         isBuffered = builder.buffered();
@@ -82,8 +82,6 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
         onRingBufferStats = builder.onRingBufferStats();
-
-        //storeForCycle(cycle(), this.epoch);
     }
 
     @Override
@@ -131,7 +129,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
 
     @NotNull
     @Override
-    protected final WireStore storeForCycle(long cycle, final long epoch) {
+    public final WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
 
@@ -142,12 +140,12 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     }
 
     @Override
-    protected final void release(@NotNull WireStore store) {
+    public final void release(@NotNull WireStore store) {
         this.pool.release(store);
     }
 
     @Override
-    protected final long cycle() {
+    public final long cycle() {
         return this.cycle.current(epoch);
     }
 
@@ -158,7 +156,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
             return -1;
 
         @NotNull final WireStore store = acquireStore(cycle, epoch());
-        return ChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
+        return RollingChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
     }
 
     private long firstCycle() {
@@ -207,7 +205,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
         if (lastCycle == -1)
             return -1;
 
-        return ChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
+        return RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
     }
 
     private long lastCycle() {
@@ -284,7 +282,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
-        @NotNull final RollDateCache.DateValue dateValue = this.dateCache.dateValueFor(cycle);
+        @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
         try {
             final File parentFile = dateValue.path.getParentFile();
             if (parentFile != null && !parentFile.exists())

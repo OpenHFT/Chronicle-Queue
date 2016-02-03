@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static net.openhft.chronicle.queue.ChronicleQueue.*;
+import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)

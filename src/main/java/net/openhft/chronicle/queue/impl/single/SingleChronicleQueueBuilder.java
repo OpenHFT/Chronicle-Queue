@@ -30,9 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
-public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, SingleChronicleQueueFields {
+public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, SingleChronicleQueueTrait {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class.getName());
     private final File path;
     private long blockSize;
@@ -51,7 +52,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     private EventLoop eventLoop;
 
     @NotNull
-    private ExcerptFactory<SingleChronicleQueue> excerptFactory;
+    private ExcerptFactory excerptFactory;
 
     private long bufferCapacity = 2 << 20;
 
@@ -80,19 +81,21 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     };
 
 
+    @SuppressWarnings("uncheked")
     public SingleChronicleQueueBuilder(@NotNull String path) {
-        this(new File(path));
+        this(new File(path), loadService(ExcerptFactory.class, SingleChronicleQueueExcerptFactory.INSTANCE));
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull ExcerptFactory excerptFactory) {
         this(new File(path), excerptFactory);
     }
 
+    @SuppressWarnings("uncheked")
     public SingleChronicleQueueBuilder(@NotNull File path) {
-        this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
+        this(path, loadService(ExcerptFactory.class, SingleChronicleQueueExcerptFactory.INSTANCE));
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull ExcerptFactory excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
@@ -233,12 +236,13 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory excerptFactory) {
         this.excerptFactory = excerptFactory;
         return this;
     }
 
-    public ExcerptFactory<SingleChronicleQueue> excertpFactory() {
+    @NotNull
+    public ExcerptFactory excertpFactory() {
         return this.excerptFactory;
     }
 
@@ -326,4 +330,17 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     }
 
 
+    static <T> T loadService(Class<T> type, T defaultValue) {
+        for (T result : ServiceLoader.load(type)) {
+            if(LOG.isDebugEnabled()) {
+                LOG.debug("Found service for {} --> {}", type, result.getClass());
+            }
+
+            if (result != null) {
+                return result;
+            }
+        }
+
+        return defaultValue;
+    }
 }
