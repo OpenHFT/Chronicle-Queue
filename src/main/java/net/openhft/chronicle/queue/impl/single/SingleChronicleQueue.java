@@ -42,9 +42,9 @@ import static net.openhft.chronicle.wire.Wires.lengthOf;
 
 public class SingleChronicleQueue extends AbstractChronicleQueue implements SingleChronicleQueueFields {
 
-    private static final String SUFFIX = ".cq4";
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
+    private static final String SUFFIX = ".cq4";
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
@@ -299,6 +299,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
                 mappedBytes.writeOrderedInt(0L, Wires.META_DATA
                         | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large"));
                 return wireStore;
+
             } else {
                 long end = System.currentTimeMillis() + TIMEOUT;
                 while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
