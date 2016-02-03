@@ -571,7 +571,7 @@ public class SingleChronicleQueueStore implements WireStore {
             final LongArrayValues array = this.longArray.get();
             @NotNull final Bytes<?> bytes = wire.bytes();
             final long indexToIndex0 = indexToIndex(wire);
-            final long readPostion = bytes.readPosition();
+            final long readPosition = bytes.readPosition();
             bytes.readLimit(bytes.capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
 
@@ -632,7 +632,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 } while (primaryOffset >= 0);
             }
 
-            bytes.readPosition(readPostion);
+            bytes.readPosition(readPosition);
             return -1;
         }
 

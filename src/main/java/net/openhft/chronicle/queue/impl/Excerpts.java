@@ -44,7 +44,6 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.ChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.ChronicleQueue.toSequenceNumber;
-import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
@@ -64,7 +63,8 @@ public class Excerpts {
 
 
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
-    private static final int ROLL_KEY = BytesUtil.asInt("roll");
+    private static final String ROLL_STRING = "roll";
+    private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
     private static final int SPB_HEADER_SIZE = 4;
 
 
@@ -107,12 +107,12 @@ public class Excerpts {
 
         @Override
         public long writeDocument(@NotNull WriteMarshallable writer) {
-            return internalWriteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
+            return append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
         }
 
         @Override
         public long writeBytes(@NotNull Bytes bytes) {
-            return internalWriteBytes(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
+            return append(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
         }
 
         @Override
@@ -134,38 +134,19 @@ public class Excerpts {
             return this.store.cycle();
         }
 
-        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
-            @NotNull final Bytes<?> bytes = wire.bytes();
-            final long start = bytes.writePosition();
+        @Override
+        public void prefetch() {
+            long position = wire.bytes().writePosition();
+            if (position < nextPrefetch)
+                return;
+            long prefetch = OS.mapAlign(position);
 
-            bytes.writeInt(Wires.NOT_READY);
-
-            if (!consumer.accept(bytes)) {
-                bytes.writeSkip(-4);
-                bytes.writeInt(bytes.writePosition(), 0);
-                return false;
-            }
-
-            final long len = bytes.writePosition() - start - 4;
-
-            // no data was read from the ring buffer, so we wont write any document
-            // to the appender
-            if (len == 0) {
-                bytes.writeSkip(-4);
-                bytes.writeInt(bytes.writePosition(), 0);
-                return false;
-            }
-
-            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
-                "out of 30-bit int range."));
-
-            store().writePosition(bytes.writePosition())
-                .storeIndexLocation(wire, start, ++index);
-
-            return true;
+            // touch the page without modifying it.
+            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
+            nextPrefetch = prefetch + OS.pageSize();
         }
 
-        private <T> long internalWriteBytes(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
+        private <T> long append(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
             WireStore store = store();
             Bytes<?> bytes = wire.bytes();
 
@@ -224,18 +205,6 @@ public class Excerpts {
             }
 
             return store;
-        }
-
-        @Override
-        public void prefetch() {
-            long position = wire.bytes().writePosition();
-            if (position < nextPrefetch)
-                return;
-            long prefetch = OS.mapAlign(position);
-
-            // touch the page without modifying it.
-            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
-            nextPrefetch = prefetch + OS.pageSize();
         }
     }
 
@@ -303,49 +272,6 @@ public class Excerpts {
             return false;
         }
 
-        private <T> boolean readAt(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
-
-            long roll;
-            for (; ; ) {
-                roll = Long.MIN_VALUE;
-                wire.bytes().readLimit(wire.bytes().capacity());
-                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
-
-                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
-
-                        if (!documentContext.isPresent())
-                            return false;
-
-                        if (documentContext.isData()) {
-                            c.accept(t, wire);
-                            return true;
-                        }
-
-                        // In case of meta data, if we are found the "roll" meta, we returns
-                        // the next cycle (negative)
-                        final StringBuilder sb = Wires.acquireStringBuilder();
-
-                        @NotNull
-                        final ValueIn vi = wire.readEventName(sb);
-                        if ("roll".contentEquals(sb)) {
-                            roll = vi.int32();
-                            break;
-                        }
-                    }
-                }
-
-                // we got to the end of the file and there is no roll information
-                if (roll == Long.MIN_VALUE)
-                    return false;
-
-                // roll to the next file
-                cycle(roll);
-                if (store == null)
-                    return false;
-            }
-
-        }
-
         /**
          * @return provides an index that includes the cycle number
          */
@@ -359,16 +285,16 @@ public class Excerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-
             if (LOG.isDebugEnabled()) {
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
                 LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
             }
 
             final long expectedCycle = toCycle(index);
-            if (expectedCycle != cycle)
+            if (expectedCycle != cycle) {
                 // moves to the expected cycle
                 cycle(expectedCycle);
+            }
 
             cycle = expectedCycle;
 
@@ -382,7 +308,7 @@ public class Excerpts {
                 return true;
             }
 
-            final long position = this.store.moveToIndex(wire, ChronicleQueue.toSequenceNumber(index));
+            final long position = this.store.moveToIndex(wire, sequenceNumber);
             if (position == -1)
                 return false;
 
@@ -417,6 +343,57 @@ public class Excerpts {
             return this;
         }
 
+        @Override
+        public void prefetch() {
+            long position = wire.bytes().readPosition();
+            if (position < nextPrefetch)
+                return;
+            long prefetch = OS.mapAlign(position) + OS.pageSize();
+            // touch the page without modifying it.
+            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
+            nextPrefetch = prefetch + OS.pageSize();
+        }
+
+        private <T> boolean readAt(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
+            long roll;
+            for (; ; ) {
+                roll = Long.MIN_VALUE;
+                wire.bytes().readLimit(wire.bytes().capacity());
+                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
+
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+
+                        if (!documentContext.isPresent())
+                            return false;
+
+                        if (documentContext.isData()) {
+                            c.accept(t, wire);
+                            return true;
+                        }
+
+                        // In case of meta data, if we are found the "roll" meta, we returns
+                        // the next cycle (negative)
+                        final StringBuilder sb = Wires.acquireStringBuilder();
+
+                        @NotNull
+                        final ValueIn vi = wire.readEventName(sb);
+                        if (ROLL_STRING.contentEquals(sb)) {
+                            roll = vi.int32();
+                            break;
+                        }
+                    }
+                }
+
+                // we got to the end of the file and there is no roll information
+                if (roll == Long.MIN_VALUE)
+                    return false;
+
+                // roll to the next file
+                cycle(roll);
+                if (store == null)
+                    return false;
+            }
+        }
 
         @NotNull
         private StoreTailer cycle(final long cycle) {
@@ -433,19 +410,6 @@ public class Excerpts {
             }
             return this;
         }
-
-
-        @Override
-        public void prefetch() {
-            long position = wire.bytes().readPosition();
-            if (position < nextPrefetch)
-                return;
-            long prefetch = OS.mapAlign(position) + OS.pageSize();
-            // touch the page without modifying it.
-            wire.bytes().compareAndSwapInt(prefetch, ~0, ~0);
-            nextPrefetch = prefetch + OS.pageSize();
-        }
-
     }
 }
 
