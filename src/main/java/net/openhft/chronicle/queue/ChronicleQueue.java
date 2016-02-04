@@ -55,13 +55,6 @@ import java.io.IOException;
  * @author peter.lawrey
  */
 public interface ChronicleQueue extends Closeable {
-
-    /**
-     * @return A descriptive name for this queue which can be used for logging.
-     */
-    //@NotNull
-    //String name();
-
     /**
      * An Excerpt can be used access entries randomly and optionally change them.
      *
@@ -86,17 +79,6 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     ExcerptAppender createAppender();
-
-    /**
-     * @return The current estimated number of entries.
-     */
-    //long size();
-
-    /**
-     * Remove all the entries in the queue.
-     */
-    //void clear();
-
 
     /**
      * @return the lowest valid index available, or sequenceNumber=0 if none are found
