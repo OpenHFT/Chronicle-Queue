@@ -21,9 +21,11 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
@@ -41,7 +43,7 @@ import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
-public class SingleChronicleQueue implements RollingChronicleQueue, SingleChronicleQueueTrait {
+public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
@@ -59,7 +61,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue, SingleChroni
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    private final ExcerptFactory excerptFactory;
+    private final SingleChronicleQueueExcerptFactory excerptFactory;
     private final File path;
     private final WireType wireType;
     private final long blockSize;
@@ -90,7 +92,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue, SingleChroni
     }
 
     @NotNull
-    @Override
     public RollCycle rollCycle() {
         return this.cycle;
     }
@@ -104,7 +105,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue, SingleChroni
     }
 
     @Nullable
-    @Override
     public EventLoop eventLoop() {
         return this.eventLoop;
     }
@@ -240,19 +240,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue, SingleChroni
         return -1;
     }
 
-
-    @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
 
     @NotNull
-    @Override
     public File path() {
         throw new UnsupportedOperationException("todo");
     }
 
-    @Override
     public long blockSize() {
         throw new UnsupportedOperationException("todo");
     }
@@ -263,7 +259,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue, SingleChroni
         return wireType;
     }
 
-    @Override
     public long bufferCapacity() {
         return this.bufferCapacity;
     }
