@@ -87,6 +87,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public void clear() {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @NotNull
+    public File path() {
+        return path;
+    }
+
+    @Override
     public long epoch() {
         return epoch;
     }
@@ -242,11 +252,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
-    }
-
-    @NotNull
-    public File path() {
-        throw new UnsupportedOperationException("todo");
     }
 
     public long blockSize() {

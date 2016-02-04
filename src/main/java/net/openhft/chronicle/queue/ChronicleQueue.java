@@ -19,6 +19,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -101,4 +102,16 @@ public interface ChronicleQueue extends Closeable {
      */
     @NotNull
     WireType wireType();
+
+    /**
+     * Remove all the entries in the queue.
+     */
+    void clear();
+
+    /**
+     * @return the base path where ChronicleQueue stores its data.
+     */
+    @NotNull
+    File path();
+
 }
