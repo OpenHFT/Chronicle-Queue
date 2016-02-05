@@ -18,9 +18,11 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.ExcerptFactory;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
@@ -30,9 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Iterator;
+import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
-public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, SingleChronicleQueueFields {
+public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueBuilder.class.getName());
     private final File path;
     private long blockSize;
@@ -51,7 +55,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     private EventLoop eventLoop;
 
     @NotNull
-    private ExcerptFactory<SingleChronicleQueue> excerptFactory;
+    private SingleChronicleQueueExcerptFactory excerptFactory;
 
     private long bufferCapacity = 2 << 20;
 
@@ -80,19 +84,21 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     };
 
 
+    @SuppressWarnings("uncheked")
     public SingleChronicleQueueBuilder(@NotNull String path) {
-        this(new File(path));
+        this(new File(path), loadService(SingleChronicleQueueExcerptFactory.class, new ExcerptFactory()));
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull String path, @NotNull SingleChronicleQueueExcerptFactory excerptFactory) {
         this(new File(path), excerptFactory);
     }
 
+    @SuppressWarnings("uncheked")
     public SingleChronicleQueueBuilder(@NotNull File path) {
-        this(path, SingleChronicleQueueExcerptFactory.INSTANCE);
+        this(path, loadService(SingleChronicleQueueExcerptFactory.class, new ExcerptFactory()));
     }
 
-    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    protected SingleChronicleQueueBuilder(@NotNull File path, @NotNull SingleChronicleQueueExcerptFactory excerptFactory) {
         this.path = path;
         this.blockSize = 64L << 20;
         this.wireType = WireType.BINARY;
@@ -146,12 +152,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
         return this;
     }
 
-    @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
 
-    @Override
     @NotNull
     public File path() {
         return this.path;
@@ -163,7 +167,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
         return this;
     }
 
-    @Override
     public long blockSize() {
         return this.blockSize;
     }
@@ -174,7 +177,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
         return this;
     }
 
-    @Override
     @NotNull
     public WireType wireType() {
         return this.wireType;
@@ -189,7 +191,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
     /**
      * @return ringBufferCapacity in bytes
      */
-    @Override
     public long bufferCapacity() {
         return bufferCapacity;
     }
@@ -221,48 +222,24 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
      * @return epoch offset as the number of number of milliseconds since January 1, 1970,  00:00:00
      * GMT
      */
-    @Override
     public long epoch() {
         return epoch;
     }
 
-    @Override
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
     }
 
     @NotNull
-    public SingleChronicleQueueBuilder excertpFactory(@NotNull ExcerptFactory<SingleChronicleQueue> excerptFactory) {
+    public SingleChronicleQueueBuilder excertpFactory(@NotNull SingleChronicleQueueExcerptFactory excerptFactory) {
         this.excerptFactory = excerptFactory;
         return this;
     }
 
-    public ExcerptFactory<SingleChronicleQueue> excertpFactory() {
+    @NotNull
+    public SingleChronicleQueueExcerptFactory excertpFactory() {
         return this.excerptFactory;
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    @NotNull
-    public ChronicleQueue build() {
-        if (isBuffered && eventLoop == null)
-            eventLoop = new EventGroup(true, onThrowable);
-
-        return new SingleChronicleQueue(clone());
-    }
-
-    @NotNull
-    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
-    @Override
-    public SingleChronicleQueueBuilder clone() {
-        try {
-            return (SingleChronicleQueueBuilder) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);
-        }
     }
 
     /**
@@ -295,12 +272,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
      * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
      * Chronicle Queue using a background thread
      */
-    @Override
     public boolean buffered() {
         return this.isBuffered;
     }
 
-    @Override
     @Nullable
     public EventLoop eventLoop() {
         return eventLoop;
@@ -325,5 +300,68 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder, Singl
         return this;
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
 
+    @NotNull
+    public ChronicleQueue build() {
+        if (isBuffered && eventLoop == null)
+            eventLoop = new EventGroup(true, onThrowable);
+
+        return new SingleChronicleQueue(clone());
+    }
+
+    @NotNull
+    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+    @Override
+    public SingleChronicleQueueBuilder clone() {
+        try {
+            return (SingleChronicleQueueBuilder) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private static <T> T loadService(Class<T> type, T defaultValue) {
+        T result = defaultValue;
+        Iterator<T> it = ServiceLoader.load(type).iterator();
+        if (it.hasNext()) {
+            result = it.next();
+
+            if(LOG.isDebugEnabled()) {
+                LOG.debug("Found implementation {} for {}", result.getClass().getName(), type.getName());
+            }
+        }
+
+        return result;
+    }
+
+    private static class ExcerptFactory implements SingleChronicleQueueExcerptFactory {
+        @Override
+        public Excerpt createExcerpt(@NotNull SingleChronicleQueue queue) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public ExcerptTailer createTailer(@NotNull SingleChronicleQueue queue) {
+            return new SingleChronicleQueueExcerpts.StoreTailer(queue);
+        }
+
+        @Override
+        public ExcerptAppender createAppender(@NotNull SingleChronicleQueue queue) {
+            ExcerptAppender appender = new SingleChronicleQueueExcerpts.StoreAppender(queue);
+
+            if (queue.buffered()) {
+                throw new IllegalStateException(
+                    "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature");
+            }
+
+            return appender;
+        }
+    }
 }

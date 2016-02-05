@@ -21,9 +21,12 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.AbstractChronicleQueue;
-import net.openhft.chronicle.queue.impl.ExcerptFactory;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.api.EventLoop;
@@ -40,7 +43,7 @@ import java.util.function.Consumer;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
-public class SingleChronicleQueue extends AbstractChronicleQueue implements SingleChronicleQueueFields {
+public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
@@ -53,13 +56,12 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     private final RollCycle cycle;
     @NotNull
-    private final RollDateCache dateCache;
+    private final RollingResourcesCache dateCache;
     @NotNull
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    private final ExcerptFactory<SingleChronicleQueue> appenderFactory;
-    private final ExcerptFactory<SingleChronicleQueue> tailerFactory;
+    private final SingleChronicleQueueExcerptFactory excerptFactory;
     private final File path;
     private final WireType wireType;
     private final long blockSize;
@@ -70,20 +72,28 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
-        dateCache = new RollDateCache(this.cycle);
+        dateCache = new RollingResourcesCache(this.cycle, name -> new File(builder.path(), name + SUFFIX));
         pool = WireStorePool.withSupplier(this::acquireStore);
         epoch = builder.epoch();
         isBuffered = builder.buffered();
-        appenderFactory = builder.excertpFactory();
-        tailerFactory = builder.excertpFactory();
+        excerptFactory = builder.excertpFactory();
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
         rollCycle = builder.rollCycle();
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
-        this.onRingBufferStats = builder.onRingBufferStats();
-        storeForCycle(cycle(), this.epoch);
+        onRingBufferStats = builder.onRingBufferStats();
+    }
+
+    @Override
+    public void clear() {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @NotNull
+    public File path() {
+        return path;
     }
 
     @Override
@@ -92,40 +102,44 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     }
 
     @NotNull
-    @Override
     public RollCycle rollCycle() {
-        throw new UnsupportedOperationException("todo");
+        return this.cycle;
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
-     * Chronicle Queue using a background thread
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are
+     * written to the Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
     }
 
     @Nullable
-    @Override
     public EventLoop eventLoop() {
         return this.eventLoop;
     }
 
     @NotNull
     @Override
+    public Excerpt createExcerpt() {
+        return excerptFactory.createExcerpt(this);
+    }
+
+    @NotNull
+    @Override
     public ExcerptAppender createAppender() {
-        return appenderFactory.createAppender(this);
+        return excerptFactory.createAppender(this);
     }
 
     @NotNull
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return tailerFactory.createTailer(this);
+        return excerptFactory.createTailer(this);
     }
 
     @NotNull
     @Override
-    protected final WireStore storeForCycle(long cycle, final long epoch) {
+    public final WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
 
@@ -136,12 +150,12 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     }
 
     @Override
-    protected final void release(@NotNull WireStore store) {
+    public final void release(@NotNull WireStore store) {
         this.pool.release(store);
     }
 
     @Override
-    protected final long cycle() {
+    public final long cycle() {
         return this.cycle.current(epoch);
     }
 
@@ -152,7 +166,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
             return -1;
 
         @NotNull final WireStore store = acquireStore(cycle, epoch());
-        return ChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
+        return RollingChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
     }
 
     private long firstCycle() {
@@ -201,7 +215,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
         if (lastCycle == -1)
             return -1;
 
-        return ChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
+        return RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
     }
 
     private long lastCycle() {
@@ -236,19 +250,10 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
         return -1;
     }
 
-
-    @Override
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
         return this.onRingBufferStats;
     }
 
-    @NotNull
-    @Override
-    public File path() {
-        throw new UnsupportedOperationException("todo");
-    }
-
-    @Override
     public long blockSize() {
         throw new UnsupportedOperationException("todo");
     }
@@ -259,7 +264,6 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
         return wireType;
     }
 
-    @Override
     public long bufferCapacity() {
         return this.bufferCapacity;
     }
@@ -278,14 +282,13 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
-        @NotNull final String cycleFormat = this.dateCache.formatFor(cycle);
-        @NotNull final File cycleFile = new File(path, cycleFormat + SUFFIX);
+        @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
         try {
-            final File parentFile = cycleFile.getParentFile();
+            final File parentFile = dateValue.path.getParentFile();
             if (parentFile != null && !parentFile.exists())
                 parentFile.mkdirs();
 
-            final MappedBytes mappedBytes = mappedBytes(cycleFile);
+            final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
             //noinspection PointlessBitwiseExpression
             if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
@@ -304,7 +307,7 @@ public class SingleChronicleQueue extends AbstractChronicleQueue implements Sing
                 long end = System.currentTimeMillis() + TIMEOUT;
                 while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
                     if (System.currentTimeMillis() > end)
-                        throw new IllegalStateException(MESSAGE + cycleFile);
+                        throw new IllegalStateException(MESSAGE + dateValue.path);
                     Jvm.pause(1);
                 }
 

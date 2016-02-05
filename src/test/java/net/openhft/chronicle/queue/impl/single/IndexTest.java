@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -49,10 +50,10 @@ public class IndexTest extends ChronicleQueueTestBase {
         final long cycle = appender.cycle();
         for (int i = 0; i < 5; i++) {
             final int n = i;
-            assertEquals(ChronicleQueue.index(cycle, n), appender.writeDocument(w -> w.write
-                    (ChronicleQueueTestBase.TestKey
-                            .test).int32(n)));
-            assertEquals(ChronicleQueue.index(cycle, n), appender.index());
+            assertEquals(RollingChronicleQueue.index(cycle, n), appender.writeDocument(w -> w.write(
+                    ChronicleQueueTestBase.TestKey.test).int32(n))
+            );
+            assertEquals(RollingChronicleQueue.index(cycle, n), appender.index());
         }
     }
 
