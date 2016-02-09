@@ -521,10 +521,19 @@ public class Excerpts {
                 final Wire wire = this.wire;
                 wire.bytes().readLimit(wire.bytes().capacity());
                 while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
+                    long position = wire.bytes().readPosition();
+                    long limit = wire.bytes().readLimit();
+
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
                         if (!documentContext.isPresent()) return false;
-                        if (documentContext.isData())
-                            return true; // In case of meta data, if we are found the "roll" meta, we returns
+                        if (documentContext.isData()) {
+                            // as we have the document, we have to roll it back to the start
+                            // position in the close() method so that it can be read by the user.
+                            ((ReadDocumentContext) documentContext).closeReadPosition(position);
+                            ((ReadDocumentContext) documentContext).closeReadLimit(limit);
+                            return true;
+                        }
+                        // In case of meta data, if we are found the "roll" meta, we returns
                         // the next cycle (negative)
 
                         final StringBuilder sb = Wires.acquireStringBuilder();
@@ -534,8 +543,9 @@ public class Excerpts {
                             break;
                         }
                     }
-                } // we got to the end of the file and there is no roll information
+                }
 
+                // we got to the end of the file and there is no roll information
                 if (roll == Long.MIN_VALUE) return false; // roll to the next file
 
                 this.cycle(roll);
