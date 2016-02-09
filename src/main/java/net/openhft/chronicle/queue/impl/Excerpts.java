@@ -418,6 +418,47 @@ public class Excerpts {
         }
     }
 
+
+    private static class TailerDocumentContext implements DocumentContext {
+
+        private final ReadDocumentContext dc;
+        private final StoreTailer storeTailer;
+
+
+        TailerDocumentContext(Wire wire, StoreTailer storeTailer) {
+            this.storeTailer = storeTailer;
+            this.dc = new ReadDocumentContext(wire);
+        }
+
+        public void start() {
+            dc.start();
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public void close() {
+            storeTailer.index = ChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
+            dc.close();
+        }
+
+
+    }
+
+
     // *************************************************************************
     //
     // TAILERS
@@ -435,11 +476,13 @@ public class Excerpts {
         private long index;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
+        private TailerDocumentContext documentContext;
 
         public StoreTailer(@NotNull final AbstractChronicleQueue queue) {
             this.queue = queue;
             this.cycle = -1;
             toStart();
+            documentContext = new TailerDocumentContext(wire, this);
         }
 
         @Override
@@ -462,8 +505,45 @@ public class Excerpts {
 
         @Override
         public DocumentContext readingDocument() {
-            throw new UnsupportedOperationException("todo");
+            next();
+            documentContext.start();
+            return documentContext;
         }
+
+        public boolean next() {
+            if (this.store == null) { // load the first store
+                final long firstIndex = queue.firstIndex();
+                if (!this.moveToIndex(firstIndex)) return false;
+            }
+            long roll;
+            for (; ; ) {
+                roll = Long.MIN_VALUE;
+                final Wire wire = this.wire;
+                wire.bytes().readLimit(wire.bytes().capacity());
+                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+                        if (!documentContext.isPresent()) return false;
+                        if (documentContext.isData())
+                            return true; // In case of meta data, if we are found the "roll" meta, we returns
+                        // the next cycle (negative)
+
+                        final StringBuilder sb = Wires.acquireStringBuilder();
+                        @NotNull final ValueIn vi = wire.readEventName(sb);
+                        if ("roll".contentEquals(sb)) {
+                            roll = vi.int32();
+                            break;
+                        }
+                    }
+                } // we got to the end of the file and there is no roll information
+
+                if (roll == Long.MIN_VALUE) return false; // roll to the next file
+
+                this.cycle(roll);
+                if (this.store == null)
+                    return false;
+            }
+        }
+
 
         @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
