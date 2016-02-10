@@ -44,6 +44,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     long cycle();
 
 
+
     static long toSequenceNumber(long index) {
         final long l = index & 0xFFFFFFFFFFL;
         return (l == MINUS_1_40BIT) ? -1 : l;

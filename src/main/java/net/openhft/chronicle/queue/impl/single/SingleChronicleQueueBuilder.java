@@ -16,7 +16,13 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
-import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ChronicleQueueBuilder;
+import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.threads.api.EventLoop;
 import net.openhft.chronicle.wire.WireType;
@@ -327,7 +333,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         if (it.hasNext()) {
             result = it.next();
 
-            if (LOG.isDebugEnabled()) {
+            if(LOG.isDebugEnabled()) {
                 LOG.debug("Found implementation {} for {}", result.getClass().getName(), type.getName());
             }
         }
@@ -352,7 +358,7 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
 
             if (queue.buffered()) {
                 throw new IllegalStateException(
-                        "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature");
+                    "This is a a commercial feature, please contact sales@higherfrequencytrading.com to unlock this feature");
             }
 
             return appender;

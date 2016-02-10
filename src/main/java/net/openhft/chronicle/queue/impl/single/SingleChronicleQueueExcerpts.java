@@ -1,28 +1,40 @@
 /**
- * Copyright (C) 2016  higherfrequencytrading.com
+ *     Copyright (C) 2016  higherfrequencytrading.com
  *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
- * of the License.
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
- * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ *     You should have received a copy of the GNU Lesser General Public License
+ *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesUtil;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.ForceInline;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireInternal;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,15 +51,15 @@ public class SingleChronicleQueueExcerpts {
     @FunctionalInterface
     public interface BytesConsumer {
         boolean accept(Bytes<?> bytes)
-                throws InterruptedException;
+            throws InterruptedException;
     }
 
     @FunctionalInterface
     public interface WireWriter<T> {
         long writeOrAdvanceIfNotEmpty(
-                @NotNull WireOut wireOut,
-                boolean metaData,
-                @NotNull T writer);
+            @NotNull WireOut wireOut,
+            boolean metaData,
+            @NotNull T writer);
     }
 
 
@@ -226,7 +238,7 @@ public class SingleChronicleQueueExcerpts {
 
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(cycle, queue.epoch());
-                this.wire = queue.wireType().apply(store.mappedBytes());
+                this.wire  = queue.wireType().apply(store.mappedBytes());
                 this.index = store.firstSequenceNumber();
             }
 

@@ -44,8 +44,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {WireType.TEXT},
-                {WireType.BINARY}
+                { WireType.TEXT },
+                { WireType.BINARY }
                 //{ WireType.FIELDLESS_BINARY }
         });
     }
