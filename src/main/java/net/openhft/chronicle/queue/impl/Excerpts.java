@@ -185,6 +185,12 @@ public class Excerpts {
             return ringBuffer;
         }
 
+        @Override
+        public DocumentContext writingDocument(boolean metaData) {
+            // this can not be supported until we have a ring buffer that implements Bytes
+            throw new UnsupportedOperationException();
+        }
+
         /**
          * for the best performance use net.openhft.chronicle.queue.impl.Excerpts.BufferedAppender#writeBytes(net.openhft.chronicle.bytes.Bytes)
          *
@@ -248,6 +254,52 @@ public class Excerpts {
         }
     }
 
+
+    private static class AppenderDocumentContext implements DocumentContext {
+
+        private final WriteDocumentContext dc;
+        private final Wire wire;
+        private final StoreAppender storeAppender;
+
+        AppenderDocumentContext(InternalWire wire, StoreAppender storeAppender) {
+            this.storeAppender = storeAppender;
+            this.dc = new WriteDocumentContext(wire);
+            this.wire = wire;
+        }
+
+        public void start(boolean metaData) {
+            dc.start(metaData);
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public void close() {
+            storeAppender.index++;
+            dc.close();
+        }
+
+    }
+
+
     /**
      * StoreAppender
      */
@@ -257,6 +309,7 @@ public class Excerpts {
         private long cycle;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
+        private AppenderDocumentContext dc;
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
             super(queue);
@@ -276,6 +329,13 @@ public class Excerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = this.queue().wireType().apply(mappedBytes);
+            dc = new AppenderDocumentContext((InternalWire) wire, this);
+        }
+
+        @Override
+        public DocumentContext writingDocument(boolean metaData) {
+            dc.start(metaData);
+            return dc;
         }
 
         public long writeDocument(@NotNull WriteMarshallable writer) {

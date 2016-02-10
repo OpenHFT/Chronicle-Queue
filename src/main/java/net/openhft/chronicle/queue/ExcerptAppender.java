@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,6 +27,9 @@ import org.jetbrains.annotations.NotNull;
  * @author peter.lawrey
  */
 public interface ExcerptAppender extends ExcerptCommon {
+
+    DocumentContext writingDocument(boolean metaData);
+
     /**
      * @param writer to write to excerpt.
      * @return the index last written or -1 if a buffered appender is being used
