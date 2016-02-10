@@ -20,7 +20,9 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.TextWire;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,36 +37,50 @@ public enum ChronicleReader {
 
     public static void main(String... args) throws IOException, InterruptedException {
         if (args.length < 1) {
-            System.err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} [from-index]");
+            System.err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
             System.exit(-1);
         }
 
         String basePath = args[0];
+        String regex = args.length > 0 ? args[1] : "";
+        long index = args.length > 1 ? Long.decode(args[2]) : 0;
+        tailFileFrom(basePath, regex, index, false);
+    }
+
+    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) throws IOException, InterruptedException {
         ChronicleQueue ic = SingleChronicleQueueBuilder.binary(new File(basePath)).build();
         ExcerptTailer tailer = ic.createTailer();
-        if (args.length > 1) {
-            long index = Long.parseLong(args[1]);
-            while (!tailer.moveToIndex(index))
-                Thread.sleep(50);
+        if (index > 0) {
+            System.out.println("Waiting for index " + index);
+            while (!tailer.moveToIndex(index)) {
+                Thread.sleep(500);
+            }
         }
 
+        Bytes bytes2 = Bytes.elasticByteBuffer();
         //noinspection InfiniteLoopStatement
         while (true) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 if (!dc.isPresent()) {
+                    if (stopAtEnd)
+                        break;
                     Thread.sleep(50);
                     continue;
                 }
-                System.out.print(Long.toHexString(dc.index()) + ": ");
+                System.out.print("0x" + Long.toHexString(dc.index()) + ": ");
                 Bytes<?> bytes = dc.wire().bytes();
-                byte b0 = bytes.readByte(0);
+                byte b0 = bytes.readByte(bytes.readPosition());
+                String text;
                 if (b0 < 0) {
-                    System.out.println(bytes.toHexString());
+                    bytes2.clear();
+                    new BinaryWire(bytes).copyTo(new TextWire(bytes2));
+                    text = bytes2.toString();
                 } else {
-                    System.out.println(bytes.toString());
+                    text = bytes.toString();
                 }
+                if (regex.isEmpty() || text.matches(regex))
+                    System.out.println(text);
             }
-            System.out.println();
         }
     }
 }
