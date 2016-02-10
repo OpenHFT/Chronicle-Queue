@@ -73,6 +73,7 @@ public class SingleChronicleQueueExcerpts {
         private long cycle;
         private WireStore store;
         private long nextPrefetch;
+        private AppenderDocumentContext dc;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
@@ -93,11 +94,13 @@ public class SingleChronicleQueueExcerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = this.queue.wireType().apply(mappedBytes);
+            dc = new AppenderDocumentContext((InternalWire) wire, this);
         }
 
         @Override
         public DocumentContext writingDocument(boolean metaData) {
-            throw new UnsupportedOperationException("todo");
+            dc.start(metaData);
+            return dc;
         }
 
         @Override
@@ -238,6 +241,96 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
+
+    private static class AppenderDocumentContext implements DocumentContext {
+
+        private final WriteDocumentContext dc;
+        private final Wire wire;
+        private final StoreAppender storeAppender;
+
+        AppenderDocumentContext(InternalWire wire, StoreAppender storeAppender) {
+            this.storeAppender = storeAppender;
+            this.dc = new WriteDocumentContext(wire);
+            this.wire = wire;
+        }
+
+        public void start(boolean metaData) {
+            dc.start(metaData);
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public void close() {
+            storeAppender.index++;
+            dc.close();
+        }
+
+    }
+
+
+    private static class TailerDocumentContext implements DocumentContext {
+
+        private final ReadDocumentContext dc;
+        private final StoreTailer storeTailer;
+        private final Wire wire;
+
+        TailerDocumentContext(Wire wire, StoreTailer storeTailer) {
+            this.storeTailer = storeTailer;
+            this.dc = new ReadDocumentContext(wire);
+            this.wire = wire;
+        }
+
+        public void start() {
+            dc.start();
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public void close() {
+            storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
+            dc.close();
+        }
+
+    }
+
     // *************************************************************************
     //
     // TAILERS
@@ -255,6 +348,7 @@ public class SingleChronicleQueueExcerpts {
         private long index;
         private WireStore store;
         private long nextPrefetch;
+        private TailerDocumentContext dc;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
@@ -262,7 +356,9 @@ public class SingleChronicleQueueExcerpts {
             this.cycle = -1;
             this.index = -1;
             toStart();
+            dc = new TailerDocumentContext(wire, this);
         }
+
 
         @Override
         public String toString() {
@@ -282,10 +378,59 @@ public class SingleChronicleQueueExcerpts {
             return read(using, (t, w) -> t.write(w.bytes()));
         }
 
+
         @Override
         public DocumentContext readingDocument() {
-            throw new UnsupportedOperationException("todo");
+            next();
+            dc.start();
+            return dc;
         }
+
+
+        private boolean next() {
+            if (this.store == null) { // load the first store
+                final long firstIndex = queue.firstIndex();
+                if (!this.moveToIndex(firstIndex)) return false;
+            }
+            long roll;
+            for (; ; ) {
+                roll = Long.MIN_VALUE;
+                final Wire wire = this.wire;
+                wire.bytes().readLimit(wire.bytes().capacity());
+                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
+                    long position = wire.bytes().readPosition();
+                    long limit = wire.bytes().readLimit();
+
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+                        if (!documentContext.isPresent()) return false;
+                        if (documentContext.isData()) {
+                            // as we have the document, we have to roll it back to the start
+                            // position in the close() method so that it can be read by the user.
+                            ((ReadDocumentContext) documentContext).closeReadPosition(position);
+                            ((ReadDocumentContext) documentContext).closeReadLimit(limit);
+                            return true;
+                        }
+                        // In case of meta data, if we are found the "roll" meta, we returns
+                        // the next cycle (negative)
+
+                        final StringBuilder sb = Wires.acquireStringBuilder();
+                        @NotNull final ValueIn vi = wire.readEventName(sb);
+                        if ("roll".contentEquals(sb)) {
+                            roll = vi.int32();
+                            break;
+                        }
+                    }
+                }
+
+                // we got to the end of the file and there is no roll information
+                if (roll == Long.MIN_VALUE) return false; // roll to the next file
+
+                this.cycle(roll);
+                if (this.store == null)
+                    return false;
+            }
+        }
+
 
         @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
