@@ -17,8 +17,6 @@ package net.openhft.chronicle.queue;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 /**
  * The main data container of a {@link ChronicleQueue}, an extended version of {@link ExcerptTailer}
  * which also facilitates random access.
@@ -52,7 +50,7 @@ public interface Excerpt extends ExcerptTailer {
      * @param index index to look up
      * @return true if this is a valid entries and not padding.
      */
-    boolean moveToIndex(long index) throws IOException;
+    boolean moveToIndex(long index);
 
     /**
      * Replay from the lower.

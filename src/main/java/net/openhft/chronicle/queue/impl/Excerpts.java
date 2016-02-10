@@ -33,7 +33,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -690,7 +689,7 @@ public class Excerpts {
 
         @NotNull
         @Override
-        public ExcerptTailer toEnd() throws IOException {
+        public ExcerptTailer toEnd() {
             if (!moveToIndex(queue.lastIndex()))
                 throw new IllegalStateException("unable to move to the start");
             return this;

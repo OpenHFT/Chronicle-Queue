@@ -21,8 +21,6 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
  *
@@ -69,25 +67,22 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @param index index to look up, the index includes the cycle number and a sequence number from
      *              with this cycle
      * @return true if this is a valid entries.
-     * @throws IOException if not able to read the chronicle file
      */
-    boolean moveToIndex(long index) throws IOException;
+    boolean moveToIndex(long index);
 
     /**
      * Replay from the lower.
      *
      * @return this Excerpt
-     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toStart() throws IOException;
+    ExcerptTailer toStart();
 
     /**
      * Wind to the upper.
      *
      * @return this Excerpt
-     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toEnd() throws IOException;
+    ExcerptTailer toEnd();
 }
