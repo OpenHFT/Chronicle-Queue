@@ -17,35 +17,24 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.queue.Excerpt;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.impl.ExcerptFactory;
-import net.openhft.chronicle.queue.impl.Excerpts;
 import org.jetbrains.annotations.NotNull;
 
-class SingleChronicleQueueExcerptFactory implements ExcerptFactory<SingleChronicleQueue> {
-    public static final SingleChronicleQueueExcerptFactory INSTANCE = new SingleChronicleQueueExcerptFactory();
+public interface SingleChronicleQueueExcerptFactory {
+    /**
+     * @param queue immutable fields of the queue
+     * @return a createExcerpt
+     */
+    Excerpt createExcerpt(@NotNull SingleChronicleQueue queue);
 
-    @Override
-    public Excerpt createExcerpt(@NotNull SingleChronicleQueue queue) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
+    /**
+     * @param queue immutable fields of the queue
+     * @return a ExcerptTailer
+     */
+    ExcerptTailer createTailer(@NotNull SingleChronicleQueue queue);
 
-    @Override
-    public ExcerptTailer createTailer(@NotNull SingleChronicleQueue queue) {
-        return new Excerpts.StoreTailer(queue);
-    }
-
-    @Override
-    public ExcerptAppender createAppender(@NotNull SingleChronicleQueue queue) {
-        ExcerptAppender appender = new Excerpts.StoreAppender(queue);
-
-        if (queue.buffered()) {
-            throw new IllegalStateException(
-                    "This is a a commercial feature, please contact sales@higherfrequencytrading" +
-                            ".com to unlock this feature, or instead use the " +
-                            "'software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder'" +
-                            "'");
-        }
-
-        return appender;
-    }
+    /**
+     * @param queue immutable fields of the queue
+     * @return an ExcerptAppender
+     */
+    ExcerptAppender createAppender(@NotNull SingleChronicleQueue queue);
 }

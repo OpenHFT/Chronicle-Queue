@@ -191,8 +191,8 @@ public class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
 
     /**
-     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
-     * can be at different locations.
+     * @return creates a new instance of mapped bytes, because, for example the
+     * tailer and appender can be at different locations.
      */
     @NotNull
     @Override
@@ -224,18 +224,9 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
 
-    @Override
-    public void writeMarshallable(@NotNull WireOut wire) {
-        wire.write(MetaDataField.wireType).object(wireType)
-                .write(MetaDataField.bounds).typedMarshallable(this.bounds)
-                .write(MetaDataField.roll).typedMarshallable(this.roll)
-                .write(MetaDataField.indexing).typedMarshallable(this.indexing);
-    }
-
-
-// *************************************************************************
-// Marshallable
-// *************************************************************************
+    // *************************************************************************
+    // MARSHALLABLE
+    // *************************************************************************
 
     enum MetaDataField implements WireKey {
         bounds,
@@ -244,66 +235,21 @@ public class SingleChronicleQueueStore implements WireStore {
         wireType,
     }
 
+    @Override
+    public void writeMarshallable(@NotNull WireOut wire) {
+        wire.write(MetaDataField.wireType).object(wireType)
+                .write(MetaDataField.bounds).typedMarshallable(this.bounds)
+                .write(MetaDataField.roll).typedMarshallable(this.roll)
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing);
+    }
+
+    // *************************************************************************
+    // BOUNDS
+    // *************************************************************************
+
     enum BoundsField implements WireKey {
         writePosition,
         readPosition,
-    }
-
-// *************************************************************************
-//
-// *************************************************************************
-
-    enum IndexingFields implements WireKey {
-        indexCount, indexSpacing, index2Index, fistIndex, lastIndex
-    }
-
-    public enum IndexOffset {
-        ;
-
-        public static long toAddress0(long index) {
-            long siftedIndex = index >> (17L + 6L);
-            long mask = (1L << 17L) - 1L;
-            long maskedShiftedIndex = mask & siftedIndex;
-            // convert to an offset
-            return maskedShiftedIndex * 8L;
-        }
-
-        public static long toAddress1(long index) {
-            long siftedIndex = index >> (6L);
-            long mask = (1L << 17L) - 1L;
-            // convert to an offset
-            return mask & siftedIndex;// * 8L;
-        }
-
-        @NotNull
-        public static String toBinaryString(long i) {
-            @NotNull StringBuilder sb = new StringBuilder();
-            for (int n = 63; n >= 0; n--)
-                sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
-            return sb.toString();
-        }
-
-        @NotNull
-        public static String toScale() {
-            @NotNull StringBuilder units = new StringBuilder();
-            @NotNull StringBuilder tens = new StringBuilder();
-
-            for (int n = 64; n >= 1; n--)
-                units.append((0 == (n % 10)) ? "|" : n % 10);
-
-            for (int n = 64; n >= 1; n--)
-                tens.append((0 == (n % 10)) ? n / 10 : " ");
-
-            return units.toString() + "\n" + tens.toString();
-        }
-    }
-
-// *************************************************************************
-//
-// *************************************************************************
-
-    enum RollFields implements WireKey {
-        cycle, length, format, timeZone, nextCycle, epoch, firstCycle, lastCycle, nextCycleMetaPosition
     }
 
 
@@ -373,10 +319,54 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-// *************************************************************************
-//
-// *************************************************************************
+    // *************************************************************************
+    // INDEXING
+    // *************************************************************************
 
+    enum IndexingFields implements WireKey {
+        indexCount, indexSpacing, index2Index, fistIndex, lastIndex
+    }
+
+    public enum IndexOffset {
+        ;
+
+        public static long toAddress0(long index) {
+            long siftedIndex = index >> (17L + 6L);
+            long mask = (1L << 17L) - 1L;
+            long maskedShiftedIndex = mask & siftedIndex;
+            // convert to an offset
+            return maskedShiftedIndex * 8L;
+        }
+
+        public static long toAddress1(long index) {
+            long siftedIndex = index >> (6L);
+            long mask = (1L << 17L) - 1L;
+            // convert to an offset
+            return mask & siftedIndex;// * 8L;
+        }
+
+        @NotNull
+        public static String toBinaryString(long i) {
+            @NotNull StringBuilder sb = new StringBuilder();
+            for (int n = 63; n >= 0; n--)
+                sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
+            return sb.toString();
+        }
+
+        @NotNull
+        public static String toScale() {
+            @NotNull StringBuilder units = new StringBuilder();
+            @NotNull StringBuilder tens = new StringBuilder();
+
+            for (int n = 64; n >= 1; n--)
+                units.append((0 == (n % 10)) ? "|" : n % 10);
+
+            for (int n = 64; n >= 1; n--)
+                tens.append((0 == (n % 10)) ? n / 10 : " ");
+
+            return units.toString() + "\n" + tens.toString();
+        }
+    }
 
     static class Indexing implements Demarshallable, WriteMarshallable {
 
@@ -581,7 +571,7 @@ public class SingleChronicleQueueStore implements WireStore {
             final LongArrayValues array = this.longArray.get();
             @NotNull final Bytes<?> bytes = wire.bytes();
             final long indexToIndex0 = indexToIndex(wire);
-            final long readPostion = bytes.readPosition();
+            final long readPosition = bytes.readPosition();
             bytes.readLimit(bytes.capacity()).readPosition(indexToIndex0);
             long startIndex = ((index / 64L)) * 64L;
 
@@ -642,7 +632,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 } while (primaryOffset >= 0);
             }
 
-            bytes.readPosition(readPostion);
+            bytes.readPosition(readPosition);
             return -1;
         }
 
@@ -700,9 +690,14 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-// *************************************************************************
-//
-// *************************************************************************
+    // *************************************************************************
+    // ROLLING
+    // *************************************************************************
+
+    enum RollFields implements WireKey {
+        cycle, length, format, timeZone, epoch,
+        firstCycle, lastCycle, nextCycle, nextCycleMetaPosition
+    }
 
     static class Roll implements Demarshallable, WriteMarshallable {
         private final long epoch;

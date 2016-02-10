@@ -33,7 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static net.openhft.chronicle.queue.ChronicleQueue.*;
+import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -44,8 +44,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {WireType.TEXT},
-                {WireType.BINARY}
+                { WireType.TEXT },
+                { WireType.BINARY }
+                //{ WireType.FIELDLESS_BINARY }
         });
     }
 
