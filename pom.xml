@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.0.5-beta-SNAPSHOT</version>
+    <version>4.0.7-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/chronicle-queue</name>
 
