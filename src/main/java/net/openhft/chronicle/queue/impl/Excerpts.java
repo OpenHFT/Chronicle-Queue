@@ -423,11 +423,12 @@ public class Excerpts {
 
         private final ReadDocumentContext dc;
         private final StoreTailer storeTailer;
-
+        private final Wire wire;
 
         TailerDocumentContext(Wire wire, StoreTailer storeTailer) {
             this.storeTailer = storeTailer;
             this.dc = new ReadDocumentContext(wire);
+            this.wire = wire;
         }
 
         public void start() {
@@ -450,11 +451,15 @@ public class Excerpts {
         }
 
         @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
         public void close() {
             storeTailer.index = ChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
             dc.close();
         }
-
 
     }
 
