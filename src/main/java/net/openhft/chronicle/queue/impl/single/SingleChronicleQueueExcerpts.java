@@ -35,12 +35,15 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class SingleChronicleQueueExcerpts {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
+    private static final String ROLL_STRING = "roll";
+    private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
+    private static final int SPB_HEADER_SIZE = 4;
     @FunctionalInterface
     public interface BytesConsumer {
         boolean accept(Bytes<?> bytes)
                 throws InterruptedException;
     }
-
     @FunctionalInterface
     public interface WireWriter<T> {
         long writeOrAdvanceIfNotEmpty(
@@ -48,12 +51,6 @@ public class SingleChronicleQueueExcerpts {
                 boolean metaData,
                 @NotNull T writer);
     }
-
-
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-    private static final String ROLL_STRING = "roll";
-    private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
-    private static final int SPB_HEADER_SIZE = 4;
 
 
     // *************************************************************************
@@ -279,6 +276,11 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public long index() {
+            throw new UnsupportedOperationException("todo");
+        }
+
+        @Override
         public void close() {
             storeAppender.index++;
             dc.close();
@@ -299,8 +301,13 @@ public class SingleChronicleQueueExcerpts {
             this.wire = wire;
         }
 
-        public void start() {
-            dc.start();
+        public void start(boolean next, long index) {
+            dc.start(next, index);
+        }
+
+        @Override
+        public long index() {
+            return dc.index();
         }
 
         @Override
@@ -381,8 +388,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext readingDocument() {
-            next();
-            dc.start();
+            dc.start(next(), index);
             return dc;
         }
 
