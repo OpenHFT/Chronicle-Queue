@@ -17,10 +17,9 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
-
-import java.io.IOException;
 
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
@@ -47,6 +46,16 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean readBytes(@NotNull Bytes using);
 
     /**
+     * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
+     * lambda expression.
+     *
+     * This method is the ExcerptTailer equivalent of {@link net.openhft.chronicle.wire.WireIn#readingDocument()}
+     *
+     * @return the document context
+     */
+    DocumentContext readingDocument();
+
+    /**
      * @return the index just read , this include the cycle and the sequence number from with this
      * cycle
      */
@@ -58,25 +67,22 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @param index index to look up, the index includes the cycle number and a sequence number from
      *              with this cycle
      * @return true if this is a valid entries.
-     * @throws IOException if not able to read the chronicle file
      */
-    boolean moveToIndex(long index) throws IOException;
+    boolean moveToIndex(long index);
 
     /**
      * Replay from the lower.
      *
      * @return this Excerpt
-     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toStart() throws IOException;
+    ExcerptTailer toStart();
 
     /**
      * Wind to the upper.
      *
      * @return this Excerpt
-     * @throws IOException if not able to read the chronicle file
      */
     @NotNull
-    ExcerptTailer toEnd() throws IOException;
+    ExcerptTailer toEnd();
 }

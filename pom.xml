@@ -42,23 +42,21 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.23</version>
+                <version>3.4.26-SNAPSHOT</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.11.5-SNAPSHOT</version>
+                <version>1.11.11-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
-
 
         <dependency>
             <groupId>net.openhft</groupId>
@@ -100,17 +98,6 @@
             <artifactId>annotations</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>koloboke-api-jdk8</artifactId>
-            <version>0.6.7</version>
-        </dependency>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>koloboke-impl-jdk8</artifactId>
-            <version>0.6.7</version>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- for testing -->
         <dependency>
@@ -132,6 +119,7 @@
         </dependency>
 
         <!-- for benchmarks -->
+
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
@@ -141,9 +129,10 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.11</version>
             <scope>test</scope>
+            <version>1.11.3</version>
         </dependency>
+
 
     </dependencies>
 

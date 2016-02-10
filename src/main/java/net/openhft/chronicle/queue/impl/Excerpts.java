@@ -33,7 +33,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -44,7 +43,14 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class Excerpts {
 
+    @FunctionalInterface
+    public interface BytesConsumer {
+        boolean accept(Bytes<?> bytes)
+                throws InterruptedException;
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(Excerpts.class);
+
 
     // *************************************************************************
     //
@@ -104,8 +110,11 @@ public class Excerpts {
                                 @NotNull final StoreAppender underlyingAppender,
                                 final long ringBufferCapacity,
                                 @NotNull final Consumer<BytesRingBufferStats> ringBufferStats) {
+
             this.eventLoop = eventLoop;
-            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(ringBufferCapacity));
+            this.ringBuffer = BytesRingBuffer.newInstance(nativeStoreWithFixedCapacity(
+                    ringBufferCapacity));
+
             this.underlyingAppender = underlyingAppender;
             this.tempWire = underlyingAppender.queue().wireType().apply(Bytes.elasticByteBuffer());
 
@@ -142,7 +151,9 @@ public class Excerpts {
                     underlyingAppender.store().writePosition(wire.bytes().writePosition());
                     underlyingAppender.store().storeIndexLocation(wire, start,
                             underlyingAppender.index);
+
                     return true;
+
                 } catch (Throwable t) {
                     throw Jvm.rethrow(t);
                 }
@@ -172,6 +183,12 @@ public class Excerpts {
         @NotNull
         public BytesRingBuffer ringBuffer() {
             return ringBuffer;
+        }
+
+        @Override
+        public DocumentContext writingDocument(boolean metaData) {
+            // this can not be supported until we have a ring buffer that implements Bytes
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -237,15 +254,62 @@ public class Excerpts {
         }
     }
 
+
+    private static class AppenderDocumentContext implements DocumentContext {
+
+        private final WriteDocumentContext dc;
+        private final Wire wire;
+        private final StoreAppender storeAppender;
+
+        AppenderDocumentContext(InternalWire wire, StoreAppender storeAppender) {
+            this.storeAppender = storeAppender;
+            this.dc = new WriteDocumentContext(wire);
+            this.wire = wire;
+        }
+
+        public void start(boolean metaData) {
+            dc.start(metaData);
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public void close() {
+            storeAppender.index++;
+            dc.close();
+        }
+
+    }
+
+
     /**
      * StoreAppender
      */
     public static class StoreAppender extends DefaultAppender<AbstractChronicleQueue> {
-        long index = -1;
+        private long index = -1;
         private Wire wire;
         private long cycle;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
+        private AppenderDocumentContext dc;
 
         public StoreAppender(@NotNull AbstractChronicleQueue queue) {
             super(queue);
@@ -265,6 +329,13 @@ public class Excerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = this.queue().wireType().apply(mappedBytes);
+            dc = new AppenderDocumentContext((InternalWire) wire, this);
+        }
+
+        @Override
+        public DocumentContext writingDocument(boolean metaData) {
+            dc.start(metaData);
+            return dc;
         }
 
         public long writeDocument(@NotNull WriteMarshallable writer) {
@@ -343,6 +414,37 @@ public class Excerpts {
             return wire;
         }
 
+        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            final long start = bytes.writePosition();
+
+            bytes.writeInt(Wires.NOT_READY);
+
+            if (!consumer.accept(bytes)) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            final long len = bytes.writePosition() - start - 4;
+
+            // no data was read from the ring buffer, so we wont write any document
+            // to the appender
+            if (len == 0) {
+                bytes.writeSkip(-4);
+                bytes.writeInt(bytes.writePosition(), 0);
+                return false;
+            }
+
+            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
+                    "out of 30-bit int range."));
+
+            store().writePosition(bytes.writePosition())
+                    .storeIndexLocation(wire, start, ++index);
+
+            return true;
+        }
+
         @ForceInline
         private WireStore store() {
             if (this.cycle != queue.cycle()) {
@@ -375,11 +477,57 @@ public class Excerpts {
         }
     }
 
-// *************************************************************************
-//
-// TAILERS
-//
-// *************************************************************************
+
+    private static class TailerDocumentContext implements DocumentContext {
+
+        private final ReadDocumentContext dc;
+        private final StoreTailer storeTailer;
+        private final Wire wire;
+
+        TailerDocumentContext(Wire wire, StoreTailer storeTailer) {
+            this.storeTailer = storeTailer;
+            this.dc = new ReadDocumentContext(wire);
+            this.wire = wire;
+        }
+
+        public void start() {
+            dc.start();
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return dc.isMetaData();
+        }
+
+        @Override
+        public boolean isPresent() {
+            return dc.isPresent();
+        }
+
+        @Override
+        public boolean isData() {
+            return dc.isData();
+        }
+
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public void close() {
+            storeTailer.index = ChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
+            dc.close();
+        }
+
+    }
+
+
+    // *************************************************************************
+    //
+    // TAILERS
+    //
+    // *************************************************************************
 
     /**
      * Tailer
@@ -392,11 +540,13 @@ public class Excerpts {
         private long index;
         private WireStore store;
         private long nextPrefetch = OS.pageSize();
+        private TailerDocumentContext documentContext;
 
         public StoreTailer(@NotNull final AbstractChronicleQueue queue) {
             this.queue = queue;
             this.cycle = -1;
             toStart();
+            documentContext = new TailerDocumentContext(wire, this);
         }
 
         @Override
@@ -416,6 +566,58 @@ public class Excerpts {
         public boolean readBytes(@NotNull final Bytes using) {
             return readAtIndex(using, (t, w) -> t.write(w.bytes()));
         }
+
+        @Override
+        public DocumentContext readingDocument() {
+            next();
+            documentContext.start();
+            return documentContext;
+        }
+
+        public boolean next() {
+            if (this.store == null) { // load the first store
+                final long firstIndex = queue.firstIndex();
+                if (!this.moveToIndex(firstIndex)) return false;
+            }
+            long roll;
+            for (; ; ) {
+                roll = Long.MIN_VALUE;
+                final Wire wire = this.wire;
+                wire.bytes().readLimit(wire.bytes().capacity());
+                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
+                    long position = wire.bytes().readPosition();
+                    long limit = wire.bytes().readLimit();
+
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
+                        if (!documentContext.isPresent()) return false;
+                        if (documentContext.isData()) {
+                            // as we have the document, we have to roll it back to the start
+                            // position in the close() method so that it can be read by the user.
+                            ((ReadDocumentContext) documentContext).closeReadPosition(position);
+                            ((ReadDocumentContext) documentContext).closeReadLimit(limit);
+                            return true;
+                        }
+                        // In case of meta data, if we are found the "roll" meta, we returns
+                        // the next cycle (negative)
+
+                        final StringBuilder sb = Wires.acquireStringBuilder();
+                        @NotNull final ValueIn vi = wire.readEventName(sb);
+                        if ("roll".contentEquals(sb)) {
+                            roll = vi.int32();
+                            break;
+                        }
+                    }
+                }
+
+                // we got to the end of the file and there is no roll information
+                if (roll == Long.MIN_VALUE) return false; // roll to the next file
+
+                this.cycle(roll);
+                if (this.store == null)
+                    return false;
+            }
+        }
+
 
         @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
@@ -547,7 +749,7 @@ public class Excerpts {
 
         @NotNull
         @Override
-        public ExcerptTailer toEnd() throws IOException {
+        public ExcerptTailer toEnd() {
             if (!moveToIndex(queue.lastIndex()))
                 throw new IllegalStateException("unable to move to the start");
             return this;
