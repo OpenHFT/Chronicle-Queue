@@ -2,11 +2,11 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,7 +47,8 @@ public class ThreadedQueueTest {
 
         final Bytes message = Bytes.elasticByteBuffer();
 
-        Executors.newSingleThreadExecutor(new NamedThreadFactory("tailer", true)).submit(() -> {
+        ExecutorService tailerES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("tailer", true)*/);
+        tailerES.submit(() -> {
 
             try {
                 int i = 0;
@@ -57,7 +58,7 @@ public class ThreadedQueueTest {
                         counter.incrementAndGet();
 
 
-                    }
+                }
 
             } catch (Throwable t) {
                 t.printStackTrace();
@@ -65,7 +66,8 @@ public class ThreadedQueueTest {
 
         });
 
-        Executors.newSingleThreadExecutor(new NamedThreadFactory("appender", true)).submit(() -> {
+        ExecutorService appenderES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("appender", true)*/);
+        appenderES.submit(() -> {
             try {
                 for (int i = 0; i < REQUIRED_COUNT; i++) {
                     message.clear();
@@ -83,6 +85,8 @@ public class ThreadedQueueTest {
 
 
         }
+        appenderES.shutdown();
+        tailerES.shutdown();
 
     }
 
