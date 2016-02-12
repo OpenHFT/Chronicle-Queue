@@ -215,7 +215,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (lastCycle == -1)
             return -1;
 
-        return RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
+        long index = RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
+        long maxIndex = ((System.currentTimeMillis() - epoch) / 86400000 + 1) << 40;
+        assert index <= maxIndex;
+        return index;
     }
 
     private long lastCycle() {

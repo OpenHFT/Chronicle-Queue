@@ -636,6 +636,63 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testReadingDocumentWithFirstAMoveWithEpoch() throws IOException {
+
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .epoch(System.currentTimeMillis())
+                .rollCycle(RollCycles.HOURS)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+            long cycle = appender.cycle();
+
+            // create 100 documents
+            for (int i = 0; i < 5; i++) {
+                final int j = i;
+                long index = appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
+                if (i == 2) {
+                    final long cycle1 = toCycle(index);
+                    Assert.assertEquals(cycle1, cycle);
+                }
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+            tailer.moveToIndex(index(cycle, 2));
+
+            final StringBuilder sb = Wires.acquireStringBuilder();
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                assert dc.isPresent();
+                assert dc.isData();
+                dc.wire().read(() -> "key").text(sb);
+                Assert.assertEquals("value=2", sb.toString());
+            }
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                assert dc.isPresent();
+                assert dc.isData();
+                dc.wire().read(() -> "key").text(sb);
+                Assert.assertEquals("value=3", sb.toString());
+            }
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                assert dc.isPresent();
+                assert dc.isData();
+                dc.wire().read(() -> "key").text(sb);
+                Assert.assertEquals("value=4", sb.toString());
+            }
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+                assert !dc.isPresent();
+                assert !dc.isData();
+                assert !dc.isMetaData();
+            }
+        }
+    }
+
     @Test
     public void testToEnd() throws IOException {
         File tmpDir = getTmpDir();
