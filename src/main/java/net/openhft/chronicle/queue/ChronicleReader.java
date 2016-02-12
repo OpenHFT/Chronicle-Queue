@@ -42,8 +42,8 @@ public enum ChronicleReader {
         }
 
         String basePath = args[0];
-        String regex = args.length > 0 ? args[1] : "";
-        long index = args.length > 1 ? Long.decode(args[2]) : 0;
+        String regex = args.length > 1 ? args[1] : "";
+        long index = args.length > 2 ? Long.decode(args[2]) : 0;
         tailFileFrom(basePath, regex, index, false);
     }
 
@@ -67,7 +67,6 @@ public enum ChronicleReader {
                     Thread.sleep(50);
                     continue;
                 }
-                System.out.print("0x" + Long.toHexString(dc.index()) + ": ");
                 Bytes<?> bytes = dc.wire().bytes();
                 byte b0 = bytes.readByte(bytes.readPosition());
                 String text;
@@ -78,8 +77,10 @@ public enum ChronicleReader {
                 } else {
                     text = bytes.toString();
                 }
-                if (regex.isEmpty() || text.matches(regex))
+                if (regex.isEmpty() || text.matches(regex)) {
+                    System.out.print("0x" + Long.toHexString(dc.index()) + ": ");
                     System.out.println(text);
+                }
             }
         }
     }
