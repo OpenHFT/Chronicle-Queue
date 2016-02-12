@@ -36,9 +36,16 @@ import static net.openhft.chronicle.wire.Wires.toIntU30;
 public class SingleChronicleQueueExcerpts {
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
+    private static final boolean ASSERTIONS;
     private static final String ROLL_STRING = "roll";
     private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
     private static final int SPB_HEADER_SIZE = 4;
+
+    static {
+        boolean assertions = false;
+        assert assertions = true;
+        ASSERTIONS = assertions;
+    }
 
     @FunctionalInterface
     public interface BytesConsumer {
@@ -73,6 +80,7 @@ public class SingleChronicleQueueExcerpts {
         private WireStore store;
         private long nextPrefetch;
         private AppenderDocumentContext dc;
+        private volatile Thread appendingThread = null;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
@@ -179,6 +187,12 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> long append(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
+            if (ASSERTIONS) {
+                Thread appendingThread = this.appendingThread;
+                if (appendingThread != null)
+                    throw new IllegalStateException("Attempting to use Appneder in " + Thread.currentThread() + " while used by " + appendingThread);
+                this.appendingThread = Thread.currentThread();
+            }
             WireStore store = store();
             Bytes<?> bytes = wire.bytes();
 
@@ -216,7 +230,11 @@ public class SingleChronicleQueueExcerpts {
             store.writePosition(bytes.writePosition());
             store.storeIndexLocation(wire, position, index);
 
-            return RollingChronicleQueue.index(store.cycle(), index);
+            long index = RollingChronicleQueue.index(store.cycle(), this.index);
+            if (ASSERTIONS)
+                appendingThread = null;
+
+            return index;
         }
 
         @ForceInline

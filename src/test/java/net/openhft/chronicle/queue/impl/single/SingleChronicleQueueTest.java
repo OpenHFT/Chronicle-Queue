@@ -687,4 +687,40 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
         }
     }
+
+    @Test
+    @Ignore("Not sure it is useful")
+    public void testReadWrite() throws IOException {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(RollCycles.HOURS)
+                .blockSize(2 << 20)
+                .build();
+             ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
+                     .wireType(this.wireType)
+                     .rollCycle(RollCycles.HOURS)
+                     .blockSize(2 << 20)
+                     .build()) {
+            ExcerptAppender append = chronicle2.createAppender();
+            for (int i = 0; i < 1000000; i++)
+                append.writeDocument(w -> w.write(() -> "test - message").text("text"));
+
+            ExcerptTailer tailer = chronicle.createTailer();
+            ExcerptTailer tailer2 = chronicle.createTailer();
+            ExcerptTailer tailer3 = chronicle.createTailer();
+            ExcerptTailer tailer4 = chronicle.createTailer();
+            for (int i = 0; i < 1_000_000; i++) {
+                if (i % 10000 == 0)
+                    System.gc();
+                if (i % 2 == 0)
+                    assertTrue(tailer2.readDocument(w -> w.read(() -> "test - message").text("text", Assert::assertEquals)));
+                if (i % 3 == 0)
+                    assertTrue(tailer3.readDocument(w -> w.read(() -> "test - message").text("text", Assert::assertEquals)));
+                if (i % 4 == 0)
+                    assertTrue(tailer4.readDocument(w -> w.read(() -> "test - message").text("text", Assert::assertEquals)));
+                assertTrue(tailer.readDocument(w -> w.read(() -> "test - message").text("text", Assert::assertEquals)));
+            }
+        }
+    }
 }
