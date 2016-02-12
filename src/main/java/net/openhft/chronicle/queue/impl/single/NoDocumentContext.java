@@ -4,7 +4,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wire;
 
 /**
- * Created by peter_2 on 12/02/2016.
+ * Created by peter on 12/02/2016.
  */
 public enum NoDocumentContext implements DocumentContext {
     INSTANCE;
