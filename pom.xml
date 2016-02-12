@@ -15,9 +15,7 @@
   ~     along with this program.  If not, see <http://www.gnu.org/licenses />.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
@@ -26,11 +24,11 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.10</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.0.7-SNAPSHOT</version>
+    <version>4.0.8-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/chronicle-queue</name>
 
@@ -42,14 +40,14 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.26-SNAPSHOT</version>
+                <version>3.5.0</version>
                 <scope>import</scope>
             </dependency>
 
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.11.11-SNAPSHOT</version>
+                <version>1.11.13</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -57,35 +55,9 @@
     </dependencyManagement>
 
     <dependencies>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-bytes</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-wire</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-network</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-threads</artifactId>
         </dependency>
 
         <dependency>
@@ -93,13 +65,13 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
+        <!-- for testing -->
         <dependency>
-            <groupId>com.intellij</groupId>
-            <artifactId>annotations</artifactId>
+            <groupId>net.openhft</groupId>
+            <artifactId>affinity</artifactId>
+            <scope>test</scope>
         </dependency>
 
-
-        <!-- for testing -->
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>

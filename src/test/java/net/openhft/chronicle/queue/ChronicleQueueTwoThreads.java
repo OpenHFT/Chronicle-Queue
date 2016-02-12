@@ -22,8 +22,6 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.threads.BusyPauser;
-import net.openhft.chronicle.threads.EventGroup;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
@@ -54,14 +52,10 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 .blockSize(BLOCK_SIZE)
                 .build();
 
-        EventGroup eventLoop = buffered
-                ? new EventGroup(true, Throwable::printStackTrace, BusyPauser.INSTANCE, true)
-                : null;
         ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
                 .buffered(buffered)
-                .eventLoop(eventLoop)
                 .build();
 
         ExcerptAppender appender = wqueue.createAppender();

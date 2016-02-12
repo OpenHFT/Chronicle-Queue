@@ -25,6 +25,8 @@ import net.openhft.chronicle.wire.WireType;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
+
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
  */
@@ -32,12 +34,13 @@ public class Queue30 extends ChronicleQueueTestBase {
 
     @Ignore
     @Test
-    public void testMT() throws Exception {
+    public void testMT() throws IOException, InterruptedException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(WireType.TEXT)
                 .blockSize(640_000)
                 .build();
 
+        Throwable[] tref = {null};
         Runnable r = () -> {
             try {
                 final String name = Thread.currentThread().getName();
@@ -53,8 +56,8 @@ public class Queue30 extends ChronicleQueueTestBase {
                         LOGGER.info(name + "> " + count);
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable t) {
+                tref[0] = t;
             }
         };
 
@@ -66,11 +69,14 @@ public class Queue30 extends ChronicleQueueTestBase {
 
         t1.join();
         t2.join();
+        if (tref != null)
+            throw new AssertionError(tref[0]);
+
     }
 
     @Ignore
     @Test
-    public void testST() throws Exception {
+    public void testST() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(WireType.TEXT)
                 .blockSize(640_000)

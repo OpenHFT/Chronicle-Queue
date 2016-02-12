@@ -16,15 +16,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ChronicleQueueBuilder;
-import net.openhft.chronicle.queue.Excerpt;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.threads.EventGroup;
-import net.openhft.chronicle.threads.api.EventLoop;
+import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
@@ -138,6 +132,20 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
     private static SingleChronicleQueueBuilder raw(@NotNull String name) {
         return new SingleChronicleQueueBuilder(name)
                 .wireType(WireType.RAW);
+    }
+
+    private static <T> T loadService(Class<T> type, T defaultValue) {
+        T result = defaultValue;
+        Iterator<T> it = ServiceLoader.load(type).iterator();
+        if (it.hasNext()) {
+            result = it.next();
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Found implementation {} for {}", result.getClass().getName(), type.getName());
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -254,7 +262,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
-
     /**
      * when set to {@code true}. uses a ring buffer to buffer appends, excerpts are written to the
      * Chronicle Queue using a background thread
@@ -287,6 +294,10 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     /**
      * setting the {@code bufferCapacity} also sets {@code buffered} to {@code true}
      *
@@ -300,17 +311,24 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         return this;
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     @NotNull
     public ChronicleQueue build() {
-        if (isBuffered && eventLoop == null)
-            eventLoop = new EventGroup(true, onThrowable);
+        if (isBuffered && eventLoop == null) {
+            try {
+                Class<?> egClass = Class.forName("net.openhft.chronicle.threads.EventGroup");
+                Constructor<?> constructor = egClass.getConstructor(boolean.class, Consumer.class);
+                eventLoop = (EventLoop) constructor.newInstance(true, onThrowable);
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
+        }
 
         return new SingleChronicleQueue(clone());
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @NotNull
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
@@ -321,24 +339,6 @@ public class SingleChronicleQueueBuilder implements ChronicleQueueBuilder {
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private static <T> T loadService(Class<T> type, T defaultValue) {
-        T result = defaultValue;
-        Iterator<T> it = ServiceLoader.load(type).iterator();
-        if (it.hasNext()) {
-            result = it.next();
-
-            if(LOG.isDebugEnabled()) {
-                LOG.debug("Found implementation {} for {}", result.getClass().getName(), type.getName());
-            }
-        }
-
-        return result;
     }
 
     private static class ExcerptFactory implements SingleChronicleQueueExcerptFactory {
