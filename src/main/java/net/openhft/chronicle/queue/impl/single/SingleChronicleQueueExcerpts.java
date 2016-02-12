@@ -296,6 +296,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public void start() {
+        }
+
+        @Override
         public void close() {
             storeAppender.index++;
             dc.close();
@@ -366,7 +370,7 @@ public class SingleChronicleQueueExcerpts {
         private long index;
         private WireStore store;
         private long nextPrefetch;
-        private TailerDocumentContext dc;
+        private DocumentContext dc;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.nextPrefetch = OS.pageSize();
@@ -374,7 +378,8 @@ public class SingleChronicleQueueExcerpts {
             this.cycle = -1;
             this.index = -1;
             toStart();
-            dc = new TailerDocumentContext(wire, this);
+
+            dc = wire == null ? NoDocumentContext.INSTANCE : new TailerDocumentContext(wire, this);
         }
 
 
@@ -510,15 +515,16 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public final ExcerptTailer toStart() {
             final long index = queue.firstIndex();
-            if (index != -1) {
-                if (RollingChronicleQueue.toSequenceNumber(index) == -1) {
-                    cycle(toCycle(index));
-                    this.wire.bytes().readPosition(0);
-                    return this;
-                }
-                if (!moveToIndex(index))
-                    throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
+            if (index == -1) {
+                return this;
             }
+            if (RollingChronicleQueue.toSequenceNumber(index) == -1) {
+                cycle(toCycle(index));
+                this.wire.bytes().readPosition(0);
+                return this;
+            }
+            if (!moveToIndex(index))
+                throw new IllegalStateException("unable to move to the start, cycle=" + cycle);
 
             return this;
         }
@@ -608,8 +614,6 @@ public class SingleChronicleQueueExcerpts {
 
         @NotNull
         private StoreTailer cycle(final long cycle) {
-            if (cycle != 16843)
-                throw new AssertionError();
             if (this.cycle != cycle) {
                 if (this.store != null) {
                     this.queue.release(this.store);
