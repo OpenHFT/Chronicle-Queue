@@ -78,7 +78,7 @@ public enum ChronicleReader {
                     text = bytes.toString();
                 }
                 if (regex.isEmpty() || text.matches(regex)) {
-                    System.out.print("0x" + Long.toHexString(dc.index()) + ": ");
+                    System.out.print("0x" + Long.toHexString(tailer.index()) + ": ");
                     System.out.println(text);
                 }
             }
