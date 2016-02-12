@@ -26,12 +26,12 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.
 public class IndexOffsetTest {
 
     @Test
-    public void testFindExcerpt2() throws Exception {
+    public void testFindExcerpt2() {
         Assert.assertEquals(8, SingleChronicleQueueStore.IndexOffset.toAddress0(1L << (17L + 6L)));
     }
 
     @Test
-    public void testFindExcerpt() throws Exception {
+    public void testFindExcerpt() {
         Assert.assertEquals(1, toAddress1(64));
         Assert.assertEquals(1, toAddress1(65));
         Assert.assertEquals(2, toAddress1(128));

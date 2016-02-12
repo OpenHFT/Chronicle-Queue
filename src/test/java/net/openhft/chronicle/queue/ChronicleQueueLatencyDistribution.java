@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Ignore("long running")
     @Test
-    public void test() throws Exception {
+    public void test() throws IOException, InterruptedException {
         Histogram histogram = new Histogram();
 
         ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -124,8 +124,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static class MyReadMarshallable implements ReadMarshallable {
         final StringBuilder messageType = new StringBuilder();
         final AtomicInteger counter = new AtomicInteger(0);
-        private final Histogram histogram;
         final TestTrade testTrade = new TestTrade();
+        private final Histogram histogram;
 
         public MyReadMarshallable(Histogram histogram) {
             this.histogram = histogram;

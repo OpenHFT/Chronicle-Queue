@@ -20,7 +20,7 @@ public class ThreadedQueueTest {
     private static final int BLOCK_SIZE = 256 << 20;
 
     @Test(timeout = 1000000)
-    public void testMultipleThreads() throws Exception {
+    public void testMultipleThreads() throws java.io.IOException {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
 
@@ -92,7 +92,7 @@ public class ThreadedQueueTest {
 
 
     @Test(timeout = 5000)
-    public void testTailerReadingEmptyQueue() throws Exception {
+    public void testTailerReadingEmptyQueue() throws java.io.IOException {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
 
