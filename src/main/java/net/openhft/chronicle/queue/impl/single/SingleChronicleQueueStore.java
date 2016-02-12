@@ -191,8 +191,8 @@ public class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
 
     /**
-     * @return creates a new instance of mapped bytes, because, for example the
-     * tailer and appender can be at different locations.
+     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
+     * can be at different locations.
      */
     @NotNull
     @Override
@@ -673,7 +673,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 try (@NotNull final DocumentContext documentContext = context.readingDocument()) {
 
                     if (!documentContext.isPresent())
-                        throw new IllegalStateException("document is not present");
+                        return -1;
 
                     if (!documentContext.isData())
                         continue;

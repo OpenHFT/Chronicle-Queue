@@ -39,11 +39,13 @@ public class SingleChronicleQueueExcerpts {
     private static final String ROLL_STRING = "roll";
     private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
     private static final int SPB_HEADER_SIZE = 4;
+
     @FunctionalInterface
     public interface BytesConsumer {
         boolean accept(Bytes<?> bytes)
                 throws InterruptedException;
     }
+
     @FunctionalInterface
     public interface WireWriter<T> {
         long writeOrAdvanceIfNotEmpty(
@@ -507,8 +509,11 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            if (!moveToIndex(queue.lastIndex()))
-                throw new IllegalStateException("unable to move to the start");
+            // this is the last written index so the end is 1 + last written index
+            final long index = queue.lastIndex();
+            if (index == -1)
+                return this;
+            moveToIndex(index + 1);
             return this;
         }
 
