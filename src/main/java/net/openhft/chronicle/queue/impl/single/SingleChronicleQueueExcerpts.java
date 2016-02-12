@@ -474,8 +474,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean moveToIndex(final long index) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
-                LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
+                LOG.debug("moveToIndex: " + Long.toHexString(index));
             }
 
             final long expectedCycle = toCycle(index);
@@ -609,6 +608,8 @@ public class SingleChronicleQueueExcerpts {
 
         @NotNull
         private StoreTailer cycle(final long cycle) {
+            if (cycle != 16843)
+                throw new AssertionError();
             if (this.cycle != cycle) {
                 if (this.store != null) {
                     this.queue.release(this.store);

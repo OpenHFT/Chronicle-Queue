@@ -216,8 +216,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             return -1;
 
         long index = RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
-        long maxIndex = ((System.currentTimeMillis() - epoch) / 86400000 + 1) << 40;
-        assert index <= maxIndex;
+        assert index < ((System.currentTimeMillis() - epoch) / 86400000 + 1) << 40;
         return index;
     }
 
@@ -285,6 +284,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private WireStore acquireStore(final long cycle, final long epoch) {
 
+        if (cycle > 16843)
+            throw new AssertionError();
         @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
         try {
             final File parentFile = dateValue.path.getParentFile();
