@@ -301,6 +301,7 @@ public class SingleChronicleQueueExcerpts {
 
         public void start() {
             dc.start();
+            storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
         }
 
         @Override
@@ -325,7 +326,6 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void close() {
-            storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
             dc.close();
         }
 
