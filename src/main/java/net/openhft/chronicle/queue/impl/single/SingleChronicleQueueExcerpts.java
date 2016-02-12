@@ -462,8 +462,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean moveToIndex(final long index) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug(SingleChronicleQueueStore.IndexOffset.toBinaryString(index));
-                LOG.debug(SingleChronicleQueueStore.IndexOffset.toScale());
+                LOG.debug("moveToIndex: " + Long.toHexString(index));
             }
 
             final long expectedCycle = toCycle(index);
