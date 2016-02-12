@@ -723,4 +723,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
+
+    @Test
+    public void testReadingDocumentForEmptyQueue() throws IOException {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(RollCycles.HOURS)
+                .blockSize(2 << 20)
+                .build()) {
+            ExcerptTailer tailer = chronicle.createTailer();
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
+            }
+        }
+    }
 }
