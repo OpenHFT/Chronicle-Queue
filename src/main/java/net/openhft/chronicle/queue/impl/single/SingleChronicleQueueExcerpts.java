@@ -404,7 +404,7 @@ public class SingleChronicleQueueExcerpts {
             if (wire == null)
                 if (dc == NoDocumentContext.INSTANCE)
                     return dc;
-            ((ReadDocumentContext) dc).start();
+            ((TailerDocumentContext) dc).start();
             return dc;
         }
 
