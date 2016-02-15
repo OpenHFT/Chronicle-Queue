@@ -399,9 +399,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext readingDocument() {
-            next();
-            if (dc == NoDocumentContext.INSTANCE)
-                return dc;
+            if (!next() || dc == NoDocumentContext.INSTANCE)
+                return NoDocumentContext.INSTANCE;
             ((TailerDocumentContext) dc).start();
             return dc;
         }
