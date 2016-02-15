@@ -295,9 +295,6 @@ public class SingleChronicleQueueExcerpts {
             return wire;
         }
 
-        @Override
-        public void start() {
-        }
 
         @Override
         public void close() {
@@ -378,7 +375,6 @@ public class SingleChronicleQueueExcerpts {
             this.cycle = -1;
             this.index = -1;
             toStart();
-
             dc = wire == null ? NoDocumentContext.INSTANCE : new TailerDocumentContext(wire, this);
         }
 
@@ -405,7 +401,10 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument() {
             next();
-            dc.start();
+            if (wire == null)
+                if (dc == NoDocumentContext.INSTANCE)
+                    return dc;
+            ((ReadDocumentContext) dc).start();
             return dc;
         }
 
