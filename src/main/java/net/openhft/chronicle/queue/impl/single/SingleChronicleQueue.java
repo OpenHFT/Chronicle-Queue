@@ -107,8 +107,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerpts are
-     * written to the Chronicle Queue using a background thread
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
+     * Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
@@ -243,6 +243,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     // ignored
                 }
             }
+
+            if (Long.MIN_VALUE == lastDate)
+                return -1;
 
             return lastDate;
         }

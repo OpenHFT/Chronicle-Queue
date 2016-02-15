@@ -88,7 +88,6 @@ public class SingleChronicleQueueExcerpts {
 
             final long lastIndex = this.queue.lastIndex();
             this.cycle = (lastIndex == -1) ? queue.cycle() : toCycle(lastIndex);
-
             if (this.cycle < 0)
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
