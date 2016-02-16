@@ -70,7 +70,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final EventLoop eventLoop;
     private final long bufferCapacity;
     long firstCycleTimeout = 0;
-    long firstCycleTimeout = 0;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
