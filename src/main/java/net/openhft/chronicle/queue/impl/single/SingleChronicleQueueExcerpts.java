@@ -295,10 +295,8 @@ public class SingleChronicleQueueExcerpts {
             return wire;
         }
 
-
         @Override
         public void close() {
-
             dc.close();
         }
 
