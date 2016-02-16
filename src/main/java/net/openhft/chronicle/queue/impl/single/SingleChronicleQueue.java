@@ -69,6 +69,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final EventLoop eventLoop;
     private final long bufferCapacity;
+    long firstCycleTimeout = 0;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
@@ -160,6 +161,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
+        long now = System.currentTimeMillis();
+        if (now < firstCycleTimeout)
+            return -1;
+        firstCycleTimeout = now + 20; // don't call more than once every 20 ms.
         final long cycle = firstCycle();
         if (cycle == -1)
             return -1;
