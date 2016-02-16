@@ -133,7 +133,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptTailer createTailer() throws IOException {
+    public ExcerptTailer createTailer() {
         return excerptFactory.createTailer(this);
     }
 
@@ -142,7 +142,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public final WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
-
 
     @Override
     public void close() throws IOException {

@@ -74,7 +74,7 @@ public class SingleChronicleQueueExcerpts {
     public static class StoreAppender implements ExcerptAppender {
         @NotNull
         private final SingleChronicleQueue queue;
-        private long index;
+        private long sequenceNumber;
         private Wire wire;
         private long cycle;
         private WireStore store;
@@ -93,7 +93,7 @@ public class SingleChronicleQueueExcerpts {
                         "before Epoch. cycle=" + cycle);
 
             this.store = queue.storeForCycle(this.cycle, queue.epoch());
-            this.index = this.store.sequenceNumber();
+            this.sequenceNumber = this.store.sequenceNumber();
 
             @NotNull final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
@@ -104,8 +104,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public DocumentContext writingDocument(boolean metaData) {
-            dc.start(metaData);
+        public DocumentContext writingDocument() {
+            dc.start(false);
             return dc;
         }
 
@@ -126,11 +126,11 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public long index() {
-            if (this.index == -1) {
+            if (this.sequenceNumber == -1) {
                 throw new IllegalStateException();
             }
 
-            return RollingChronicleQueue.index(cycle(), index);
+            return RollingChronicleQueue.index(cycle(), sequenceNumber);
         }
 
         @Override
@@ -180,7 +180,7 @@ public class SingleChronicleQueueExcerpts {
                     "out of 30-bit int range."));
 
             store().writePosition(bytes.writePosition())
-                    .storeIndexLocation(wire, start, ++index);
+                    .storeIndexLocation(wire, start, ++sequenceNumber);
 
             return true;
         }
@@ -224,12 +224,12 @@ public class SingleChronicleQueueExcerpts {
                 position = wireWriter.writeOrAdvanceIfNotEmpty(wire, false, writer);
             } while (position <= 0);
 
-            index++;
+            sequenceNumber++;
 
             store.writePosition(bytes.writePosition());
-            store.storeIndexLocation(wire, position, index);
+            store.storeIndexLocation(wire, position, sequenceNumber);
 
-            long index = RollingChronicleQueue.index(store.cycle(), this.index);
+            long index = RollingChronicleQueue.index(store.cycle(), this.sequenceNumber);
             if (ASSERTIONS)
                 appendingThread = null;
 
@@ -250,7 +250,7 @@ public class SingleChronicleQueueExcerpts {
                 this.cycle = nextCycle;
                 this.store = queue.storeForCycle(cycle, queue.epoch());
                 this.wire = queue.wireType().apply(store.mappedBytes());
-                this.index = store.firstSequenceNumber();
+                this.sequenceNumber = store.firstSequenceNumber();
             }
 
             return store;
@@ -272,6 +272,7 @@ public class SingleChronicleQueueExcerpts {
 
         public void start(boolean metaData) {
             dc.start(metaData);
+            storeAppender.sequenceNumber++;
         }
 
         @Override
@@ -297,7 +298,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void close() {
-            storeAppender.index++;
+
             dc.close();
         }
 
@@ -318,7 +319,9 @@ public class SingleChronicleQueueExcerpts {
 
         public void start() {
             dc.start();
-            storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
+            if (isPresent())
+                storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle,
+                        toSequenceNumber(storeTailer.index) + 1);
         }
 
         @Override
@@ -343,7 +346,6 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void close() {
-            storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle, toSequenceNumber(storeTailer.index) + 1);
             dc.close();
         }
 

@@ -20,7 +20,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -68,10 +67,9 @@ public interface ChronicleQueue extends Closeable {
      * A Tailer can be used to read sequentially from the lower of a given position.
      *
      * @return ExcerptTailer
-     * @throws IOException if an IO problem occurs
      */
     @NotNull
-    ExcerptTailer createTailer() throws IOException;
+    ExcerptTailer createTailer();
 
     /**
      * An Appender can be used to writeBytes new excerpts sequentially to the upper.
