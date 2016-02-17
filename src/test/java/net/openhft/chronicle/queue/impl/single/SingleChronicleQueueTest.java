@@ -695,7 +695,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testToEnd() throws IOException {
+    public void testToEnd() throws IOException, InterruptedException {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
                 .wireType(this.wireType)
@@ -715,7 +715,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 append.writeDocument(w -> w.write(() -> "test").text("text"));
 
             }
-
+            Thread.sleep(100);
             assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
         }
     }
