@@ -161,10 +161,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
-        long now = System.currentTimeMillis();
-        if (now < firstCycleTimeout)
-            return -1;
-        firstCycleTimeout = now + 20; // don't call more than once every 20 ms.
+
+        // TODO - as discuessed, peter is going find another way to do this as this solution
+        // currently breaks tests in chroncile engine - seenet.openhft.chronicle.engine.queue.LocalQueueRefTest
+
+        //    long now = System.currentTimeMillis();
+        //   if (now < firstCycleTimeout)
+        //      return -1;
+        //  firstCycleTimeout = now + 20; // don't call more than once every 20 ms.
         final long cycle = firstCycle();
         if (cycle == -1)
             return -1;
