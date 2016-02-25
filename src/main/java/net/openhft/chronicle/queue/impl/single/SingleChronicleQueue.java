@@ -69,6 +69,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final EventLoop eventLoop;
     private final long bufferCapacity;
+    long firstCycleTimeout = 0;
 
     SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
@@ -107,8 +108,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerpts are
-     * written to the Chronicle Queue using a background thread
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
+     * Chronicle Queue using a background thread
      */
     public boolean buffered() {
         return this.isBuffered;
@@ -133,7 +134,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptTailer createTailer() throws IOException {
+    public ExcerptTailer createTailer() {
         return excerptFactory.createTailer(this);
     }
 
@@ -142,7 +143,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public final WireStore storeForCycle(long cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
-
 
     @Override
     public void close() throws IOException {
@@ -161,6 +161,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
+
+        // TODO - as discuessed, peter is going find another way to do this as this solution
+        // currently breaks tests in chroncile engine - seenet.openhft.chronicle.engine.queue.LocalQueueRefTest
+
+        //    long now = System.currentTimeMillis();
+        //   if (now < firstCycleTimeout)
+        //      return -1;
+        //  firstCycleTimeout = now + 20; // don't call more than once every 20 ms.
         final long cycle = firstCycle();
         if (cycle == -1)
             return -1;
@@ -243,6 +251,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     // ignored
                 }
             }
+
+            if (Long.MIN_VALUE == lastDate)
+                return -1;
 
             return lastDate;
         }

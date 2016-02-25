@@ -59,7 +59,7 @@ public class Queue28 extends ChronicleQueueTestBase {
      */
 
     @Test
-    public void test() throws IOException {
+    public void test() throws IOException, InterruptedException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build();
@@ -69,7 +69,7 @@ public class Queue28 extends ChronicleQueueTestBase {
 
         final ExcerptAppender appender = queue.createAppender();
         appender.writeDocument(w -> w.write(TestKey.test).int32(1));
-
+        Thread.sleep(100);
         assertTrue(tailer.readDocument(r -> r.read(TestKey.test).int32()));
     }
 }

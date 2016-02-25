@@ -30,11 +30,6 @@ public enum NoDocumentContext implements DocumentContext {
     }
 
     @Override
-    public void start() {
-
-    }
-
-    @Override
     public void close() {
 
     }

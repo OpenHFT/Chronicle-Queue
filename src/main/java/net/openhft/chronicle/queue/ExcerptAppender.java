@@ -28,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface ExcerptAppender extends ExcerptCommon {
 
-    DocumentContext writingDocument(boolean metaData);
+    DocumentContext writingDocument();
 
     /**
      * @param writer to write to excerpt.
