@@ -77,7 +77,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     boolean moveToIndex(long index);
 
     /**
-     * Replay from the lower.
+     * Replay from the first entry in the first cycle.
      *
      * @return this Excerpt
      */
@@ -85,10 +85,23 @@ public interface ExcerptTailer extends ExcerptCommon {
     ExcerptTailer toStart();
 
     /**
-     * Wind to the upper.
+     * Wind to the last entry int eh last entry
      *
      * @return this Excerpt
      */
     @NotNull
     ExcerptTailer toEnd();
+
+    /**
+     * @return the direction of movement after reading an entry.
+     */
+    TailerDirection direction();
+
+    /**
+     * Set the direction of movement.
+     *
+     * @param direction NONE, FORWARD, BACKWARD
+     * @return this
+     */
+    ExcerptTailer direction(TailerDirection direction);
 }

@@ -15,24 +15,26 @@
  */
 package net.openhft.chronicle.queue;
 
-import java.time.ZoneId;
+import net.openhft.chronicle.core.Maths;
 
 public enum RollCycles implements RollCycle {
-    SECONDS("yyyyMMddHHmmss", 1000, ZoneId.of("UTC")),
-    MINUTES("yyyyMMddHHmm", 60 * 1000, ZoneId.of("UTC")),
-    HOURS("yyyyMMddHH", 60 * 60 * 1000, ZoneId.of("UTC")),
-    DAYS("yyyyMMdd", 24 * 60 * 60 * 1000, ZoneId.of("UTC"));
-
-    static final RollCycles[] VALUES = values();
+    SECONDLY("yyyyMMdd-HHmmss", 1000, 8 << 10, 16),
+    MINUTELY("yyyyMMdd-HHmm", 60 * 1000, 32 << 10, 32),
+    HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 128 << 10, 64),
+    DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 128 << 10, 64);
 
     final String format;
     final int length;
-    final ZoneId zone;
+    final int cycleShift;
+    final int indexCount;
+    final int indexSpacing;
 
-    RollCycles(String format, int length, ZoneId zone) {
+    RollCycles(String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
-        this.zone = zone;
+        this.indexCount = Maths.nextPower2(indexCount, 64);
+        this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
+        cycleShift = Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing);
     }
 
     @Override
@@ -45,8 +47,11 @@ public enum RollCycles implements RollCycle {
         return this.length;
     }
 
-    @Override
-    public ZoneId zone() {
-        return this.zone;
+    public int defaultIndexCount() {
+        return indexCount;
+    }
+
+    public int defaultIndexSpacing() {
+        return indexSpacing;
     }
 }

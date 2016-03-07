@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single.jira;
 
-
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 
 /**

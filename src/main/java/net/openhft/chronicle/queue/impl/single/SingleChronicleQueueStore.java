@@ -15,10 +15,13 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
@@ -30,21 +33,16 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.time.ZoneId;
 import java.util.function.Supplier;
 
 import static java.lang.ThreadLocal.withInitial;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress0;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.IndexOffset.toAddress1;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
-import static net.openhft.chronicle.wire.Wires.NOT_READY;
 
 public class SingleChronicleQueueStore implements WireStore {
-
+    private static final long LONG_NOT_READY = -1;
     private static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
 
     static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(Bounds.class, "Bounds");
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class, "Indexing");
         ClassAliasPool.CLASS_ALIASES.addAlias(Roll.class, "Roll");
     }
@@ -54,74 +52,80 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     private final Roll roll;
     @NotNull
-    private final Bounds bounds;
+    private final LongValue writePosition;
     private final MappedFile mappedFile;
+    @NotNull
+    private final Indexing indexing;
     @Nullable
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
-    @NotNull
-    private final Indexing indexing;
-    public static final WriteMarshallable INDEX_TEMPLATE = w -> w.writeEventName(() -> "index")
-            .int64array(NUMBER_OF_ENTRIES_IN_EACH_INDEX);
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
      *
      * @param wire a wire
      */
+//    @UsedViaReflection
     private SingleChronicleQueueStore(WireIn wire) {
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         assert wireType != null;
 
-        this.bounds = wire.read(MetaDataField.bounds).typedMarshallable();
+        this.writePosition = wire.newLongReference();
+        wire.read(MetaDataField.writePosition).int64(writePosition);
+
         this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
         @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
         this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
+        assert indexing != null;
+        indexing.writePosition = writePosition;
     }
 
     /**
-     * @param rollCycle   the current rollCycle
-     * @param wireType    the wire type that is being used
-     * @param mappedBytes used to mapped the data store file
-     * @param rollEpoc    sets an epoch offset as the number of number of milliseconds since
-     *                    January
+     * @param rollCycle    the current rollCycle
+     * @param wireType     the wire type that is being used
+     * @param mappedBytes  used to mapped the data store file
+     * @param rollEpoc     sets an epoch offset as the number of number of milliseconds since
+     * @param indexCount   the number of entries in each index.
+     * @param indexSpacing the spacing between indexed entries.
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               @NotNull final WireType wireType,
                               @NotNull MappedBytes mappedBytes,
-                              long rollEpoc) {
+                              long rollEpoc, int indexCount, int indexSpacing) {
         this.roll = new Roll(rollCycle, rollEpoc, wireType);
         this.resourceCleaner = null;
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
-        this.indexing = new Indexing(wireType);
-        this.bounds = new Bounds(wireType.newLongReference());
+        indexCount = Maths.nextPower2(indexCount, 8);
+        indexSpacing = Maths.nextPower2(indexSpacing, 1);
+        this.indexing = new Indexing(wireType, indexCount, indexSpacing);
+        indexing.writePosition =
+                this.writePosition = wireType.newLongReference().get();
+    }
+
+    public static void dumpStore(Wire wire) {
+        Bytes<?> bytes = wire.bytes();
+        bytes.readPosition(0);
+        System.out.println(Wires.fromSizePrefixedBlobs(bytes));
+    }
+
+    @Override
+    public String dump() {
+        MappedBytes bytes = new MappedBytes(mappedFile);
+        bytes.readLimit(bytes.realCapacity());
+        return Wires.fromSizePrefixedBlobs(bytes);
     }
 
     @Override
     public long writePosition() {
-        return this.bounds.writePosition();
+        return this.writePosition.getVolatileValue();
     }
 
     @Override
     public WireStore writePosition(long position) {
-        this.bounds.writePosition(position);
-        return this;
-    }
-
-    /**
-     * @return the file identifier based on the high 24bits of the index, when DAY ROLLING each day
-     * will have a unique cycle
-     */
-    @Override
-    public long cycle() {
-        return this.roll.cycle();
-    }
-
-    SingleChronicleQueueStore cycle(long cycle) {
-        this.roll.cycle(cycle);
+        writePosition.setMaxValue(position);
         return this;
     }
 
@@ -135,27 +139,19 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * @return the first index available on the file system
-     */
-    @Override
-    public long firstSequenceNumber() {
-        return this.indexing.firstSequenceNumber();
-    }
-
-    /**
      * @return the last index available on the file system
      */
     @Override
-    public long sequenceNumber() {
-        return this.indexing.lastSequenceNumber();
+    public long lastEntryIndexed(Wire wire) {
+        return this.indexing.lastEntryIndexed(wire);
     }
 
     @Override
     public boolean appendRollMeta(@NotNull Wire wire, long cycle) {
-        if (!roll.casNextRollCycle(cycle))
+        if ((writePosition() & ROLLED_BIT) != 0)
             return false;
         wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
-        bounds.writePosition(wire.bytes().writePosition());
+        writePosition(wire.bytes().writePosition() | ROLLED_BIT);
         return true;
     }
 
@@ -181,14 +177,14 @@ public class SingleChronicleQueueStore implements WireStore {
         this.refCount.release();
     }
 
+    // *************************************************************************
+    // BOOTSTRAP
+    // *************************************************************************
+
     @Override
     public long refCount() {
         return this.refCount.get();
     }
-
-    // *************************************************************************
-    // BOOTSTRAP
-    // *************************************************************************
 
     /**
      * @return creates a new instance of mapped bytes, because, for example the tailer and appender
@@ -199,17 +195,26 @@ public class SingleChronicleQueueStore implements WireStore {
     public MappedBytes mappedBytes() {
         final MappedBytes mappedBytes = new MappedBytes(mappedFile);
         mappedBytes.readPosition(0);
-        mappedBytes.writePosition(writePosition());
+        mappedBytes.writePosition(writePosition() & (WireStore.ROLLED_BIT - 1));
         return mappedBytes;
     }
 
     @Override
-    public void storeIndexLocation(@NotNull Wire wire, long position, long sequenceNumber) {
-        indexing.storeIndexLocation(wire, position, sequenceNumber);
+    public long storeIndexLocation(@NotNull Wire wire, long position) {
+        return indexing.storeIndexLocation(wire, position);
     }
 
     // *************************************************************************
     // Utilities
+    // *************************************************************************
+
+    @Override
+    public long indexForPosition(Wire wire, long position) {
+        return indexing.indexForPosition(wire, position);
+    }
+
+    // *************************************************************************
+    // MARSHALLABLE
     // *************************************************************************
 
     private synchronized void performRelease() {
@@ -223,159 +228,53 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-
-    // *************************************************************************
-    // MARSHALLABLE
-    // *************************************************************************
-
-    enum MetaDataField implements WireKey {
-        bounds,
-        indexing,
-        roll,
-        wireType,
-    }
-
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         wire.write(MetaDataField.wireType).object(wireType)
-                .write(MetaDataField.bounds).typedMarshallable(this.bounds)
+                .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing);
-    }
-
-    // *************************************************************************
-    // BOUNDS
-    // *************************************************************************
-
-    enum BoundsField implements WireKey {
-        writePosition,
-        readPosition,
-    }
-
-
-    static class Bounds implements Demarshallable, WriteMarshallable {
-        @Nullable
-        private final LongValue writePosition;
-        @Nullable
-        private final LongValue readPosition;
-
-        /**
-         * used by {@link net.openhft.chronicle.wire.Demarshallable}
-         *
-         * @param wire a wire
-         */
-        private Bounds(WireIn wire) {
-            writePosition = wire.newLongReference();
-            readPosition = wire.newLongReference();
-            wire.read(BoundsField.writePosition).int64(
-                    this.writePosition)
-                    .read(BoundsField.readPosition).int64(
-                    this.readPosition);
-        }
-
-        Bounds(Supplier<LongValue> supplier) {
-            writePosition = supplier.get();
-            readPosition = supplier.get();
-        }
-
-        @Override
-        public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(BoundsField.writePosition).int64forBinding(0, writePosition)
-                    .write(BoundsField.readPosition).int64forBinding(0, readPosition);
-        }
-
-
-        public long readPosition() {
-            return this.readPosition.getVolatileValue();
-        }
-
-        public void readPosition(long position) {
-            this.readPosition.setOrderedValue(position);
-        }
-
-        public long writePosition() {
-            return this.writePosition.getVolatileValue();
-        }
-
-        public void writePosition(long writePosition) {
-            for (; ; ) {
-                long wp = writePosition();
-                if (writePosition > wp) {
-                    if (this.writePosition.compareAndSwapValue(wp, writePosition)) {
-                        return;
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "Bounds{" +
-                    "writePosition=" + writePosition +
-                    ", readPosition=" + readPosition +
-                    '}';
-        }
     }
 
     // *************************************************************************
     // INDEXING
     // *************************************************************************
 
+    enum MetaDataField implements WireKey {
+        wireType,
+        writePosition,
+        roll,
+        indexing;
+
+        @Nullable
+        @Override
+        public Object defaultValue() {
+            throw new IORuntimeException("field " + name() + " required");
+        }
+    }
+
     enum IndexingFields implements WireKey {
-        indexCount, indexSpacing, index2Index, fistIndex, lastIndex
+        indexCount, indexSpacing, index2Index, lastIndex
     }
 
-    public enum IndexOffset {
-        ;
-
-        public static long toAddress0(long index) {
-            long siftedIndex = index >> (17L + 6L);
-            long mask = (1L << 17L) - 1L;
-            long maskedShiftedIndex = mask & siftedIndex;
-            // convert to an offset
-            return maskedShiftedIndex * 8L;
-        }
-
-        public static long toAddress1(long index) {
-            long siftedIndex = index >> (6L);
-            long mask = (1L << 17L) - 1L;
-            // convert to an offset
-            return mask & siftedIndex;// * 8L;
-        }
-
-        @NotNull
-        public static String toBinaryString(long i) {
-            @NotNull StringBuilder sb = new StringBuilder();
-            for (int n = 63; n >= 0; n--)
-                sb.append(((i & (1L << n)) != 0 ? "1" : "0"));
-            return sb.toString();
-        }
-
-        @NotNull
-        public static String toScale() {
-            @NotNull StringBuilder units = new StringBuilder();
-            @NotNull StringBuilder tens = new StringBuilder();
-
-            for (int n = 64; n >= 1; n--)
-                units.append((0 == (n % 10)) ? "|" : n % 10);
-
-            for (int n = 64; n >= 1; n--)
-                tens.append((0 == (n % 10)) ? n / 10 : " ");
-
-            return units.toString() + "\n" + tens.toString();
-        }
+    enum RollFields implements WireKey {
+        cycle, length, format, epoch,
     }
+
+    // *************************************************************************
+    // ROLLING
+    // *************************************************************************
 
     static class Indexing implements Demarshallable, WriteMarshallable {
-
-        private int indexCount = 128 << 10;
-        private int indexSpacing = 64;
+        private final int indexCount, indexCountBits;
+        private final int indexSpacing, indexSpacingBits;
         private final LongValue index2Index;
-        private final LongValue lastSequenceNumber;
-        private final LongValue firstIndex;
-        private final ThreadLocal<LongArrayValues> longArray;
+        private final LongValue nextEntryToIndex;
+        private final ThreadLocal<LongArrayValues> index2indexArray;
+        private final ThreadLocal<LongArrayValues> indexArray;
+        private final WriteMarshallable index2IndexTemplate;
+        private final WriteMarshallable indexTemplate;
+        LongValue writePosition;
 
         /**
          * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -383,58 +282,54 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire a wire
          */
         private Indexing(@NotNull WireIn wire) {
-
-            index2Index = wire.newLongReference();
-            lastSequenceNumber = wire.newLongReference();
-            firstIndex = wire.newLongReference();
-            this.longArray = withInitial(wire::newLongArrayReference);
-
-            wire.read(IndexingFields.indexCount).int32(this, (o, i) -> o.indexCount = i)
-                    .read(IndexingFields.indexSpacing).int32(this, (o, i) -> o.indexSpacing = i)
-                    .read(IndexingFields.index2Index).int64(this.index2Index, this, (o, i) -> o
-                    .index2Index.setOrderedValue(i.getVolatileValue()))
-                    .read(IndexingFields.fistIndex).int64(this.firstIndex, this, (o, i) -> o
-                    .firstIndex.setOrderedValue(i.getVolatileValue()))
-                    .read(IndexingFields.lastIndex).int64(this.lastSequenceNumber, this, (o, i)
-                    -> o.lastSequenceNumber.setOrderedValue(i.getVolatileValue()));
+            this(wire.read(IndexingFields.indexCount).int32(),
+                    wire.read(IndexingFields.indexSpacing).int32(),
+                    wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
+                    wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
+                    wire::newLongArrayReference);
         }
 
-        Indexing(@NotNull WireType wireType) {
-            this.index2Index = wireType.newLongReference().get();
-            this.firstIndex = wireType.newLongReference().get();
-            this.lastSequenceNumber = wireType.newLongReference().get();
-            this.longArray = withInitial(wireType.newLongArrayReference());
+        Indexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
+            this(indexCount, indexSpacing, wireType.newLongReference().get(), wireType.newLongReference().get(), wireType.newLongArrayReference());
+        }
+
+        public Indexing(int indexCount, int indexSpacing, LongValue index2Index, LongValue nextEntryToIndex, Supplier<LongArrayValues> longArraySupplier) {
+            this.indexCount = indexCount;
+            indexCountBits = Maths.intLog2(indexCount);
+            this.indexSpacing = indexSpacing;
+            indexSpacingBits = Maths.intLog2(indexSpacing);
+            this.index2Index = index2Index;
+            this.nextEntryToIndex = nextEntryToIndex;
+            this.index2indexArray = withInitial(longArraySupplier);
+            this.indexArray = withInitial(longArraySupplier);
+            index2IndexTemplate = w -> w.writeEventName(() -> "index2index")
+                    .int64array(indexCount);
+            indexTemplate = w -> w.writeEventName(() -> "index")
+                    .int64array(indexCount);
+        }
+
+        public long toAddress0(long index) {
+            long siftedIndex = index >> (indexSpacingBits + indexCountBits);
+            long mask = indexCount - 1L;
+            long maskedShiftedIndex = mask & siftedIndex;
+            // convert to an offset
+            return maskedShiftedIndex;
+        }
+
+        public long toAddress1(long index) {
+            long siftedIndex = index >> indexSpacingBits;
+            long mask = indexCount - 1L;
+            // convert to an offset
+            return mask & siftedIndex;
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(IndexingFields.indexCount).int32(indexCount)
-                    .write(IndexingFields.indexSpacing).int32(indexSpacing)
+            wire.write(IndexingFields.indexCount).int64(indexCount)
+                    .write(IndexingFields.indexSpacing).int64(indexSpacing)
                     .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
-                    .write(IndexingFields.fistIndex).int64forBinding(-1L, firstIndex)
-                    .write(IndexingFields.lastIndex).int64forBinding(-1L, lastSequenceNumber);
+                    .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToIndex);
         }
-
-
-        public boolean lastSequenceNumber(long lastIndex) {
-            final long v = this.lastSequenceNumber.getVolatileValue();
-            return v < lastIndex && this.lastSequenceNumber.compareAndSwapValue(v, lastIndex);
-        }
-
-        public long lastSequenceNumber() {
-            if (lastSequenceNumber == null)
-                return 0;
-            return this.lastSequenceNumber.getVolatileValue();
-        }
-
-        public long firstSequenceNumber() {
-            if (index2Index.getVolatileValue() == 0)
-                return -1;
-            if (firstIndex == null)
-                return 0;
-            return this.firstIndex.getVolatileValue();
-        }
-
 
         /**
          * atomically gets or creates the address of the first index the index is create and another
@@ -446,89 +341,51 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return the position of the index
          */
         long indexToIndex(@NotNull final Wire wire) {
-            for (; ; ) {
+            long index2Index = this.index2Index.getVolatileValue();
+            return index2Index > 0 ? index2Index : acquireIndex2Index(wire);
+        }
+
+        long acquireIndex2Index(Wire wire) {
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() < start + 10e9) {
                 long index2Index = this.index2Index.getVolatileValue();
 
-                if (index2Index == NOT_READY)
+                if (index2Index == LONG_NOT_READY) {
+                    Thread.yield();
                     continue;
+                }
 
                 if (index2Index != NOT_INITIALIZED)
                     return index2Index;
 
-                if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, NOT_READY))
+                if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
                     continue;
-
-                final long index = newIndex(wire);
+                final long index = newIndex(wire, true);
                 this.index2Index.setOrderedValue(index);
                 return index;
             }
+            throw new IllegalStateException("index2index NOT_READY for too long.");
         }
 
         /**
          * records the the location of the sequenceNumber, only every 64th address is written to the
          * sequenceNumber file, the first sequenceNumber is stored at {@code index2index}
          *
-         * @param wire           the context that we are referring to
-         * @param address        the address of the Excerpts which we are going to record
-         * @param sequenceNumber the sequenceNumber of the Excerpts which we are going to record
+         * @param wire    the context that we are referring to
+         * @param address the address of the Excerpts which we are going to record
          */
-        public void storeIndexLocation(@NotNull Wire wire,
-                                       final long address,
-                                       final long sequenceNumber) {
-
-            lastSequenceNumber(sequenceNumber);
-
-            long writePosition = wire.bytes().writePosition();
-            try {
-
-                if (sequenceNumber % 64 != 0)
-                    return;
-
-                final LongArrayValues array = this.longArray.get();
-                final long indexToIndex0 = indexToIndex(wire);
-
-                try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
-
-                    if (!context.isPresent())
-                        throw new IllegalStateException("document not found");
-
-                    if (!context.isMetaData())
-                        throw new IllegalStateException("sequenceNumber not found");
-
-                    @NotNull final LongArrayValues primaryIndex = array(wire, array);
-                    final long primaryOffset = toAddress0(sequenceNumber);
-                    long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
-
-                    if (secondaryAddress == Wires.NOT_INITIALIZED) {
-                        secondaryAddress = newIndex(wire);
-                        writePosition = Math.max(writePosition, wire.bytes().writePosition());
-                        primaryIndex.setValueAt(primaryOffset, secondaryAddress);
-                    }
-                    @NotNull final Bytes<?> bytes = wire.bytes();
-                    bytes.readLimit(bytes.capacity());
-                    try (DocumentContext context0 = wire.readingDocument(secondaryAddress)) {
-
-                        @NotNull final LongArrayValues array1 = array(wire, array);
-                        if (!context0.isPresent())
-                            throw new IllegalStateException("document not found");
-                        if (!context0.isMetaData())
-                            throw new IllegalStateException("sequenceNumber not found");
-                        array1.setValueAt(toAddress1(sequenceNumber), address);
-                    }
-
-                }
-
-            } finally {
-                wire.bytes().writePosition(writePosition);
-            }
+        public long storeIndexLocation(@NotNull Wire wire, final long address) {
+            // for now, only index on read attempts.
+            return -1;
         }
 
         @NotNull
-        private LongArrayValues array(@NotNull WireIn w, @NotNull LongArrayValues using) {
+        private LongArrayValues array(@NotNull WireIn w, @NotNull LongArrayValues using, boolean index2index) {
             final StringBuilder sb = Wires.acquireStringBuilder();
             @NotNull final ValueIn valueIn = w.readEventName(sb);
-            if (!"index".contentEquals(sb))
-                throw new IllegalStateException("expecting index");
+            String name = index2index ? "index2index" : "index";
+            if (!name.contentEquals(sb))
+                throw new IllegalStateException("expecting index, was " + sb);
 
             valueIn.int64array(using, this, (o1, o2) -> {
             });
@@ -545,11 +402,18 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire the current wire
          * @return the address of the Excerpt containing the usable index, just after the header
          */
-        long newIndex(@NotNull Wire wire) {
+        long newIndex(@NotNull Wire wire, boolean index2index) {
+            long writePosition = this.writePosition.getValue();
+            if (writePosition >= WireStore.ROLLED_BIT)
+                throw new IllegalStateException("ROLLED");
+
+            wire.bytes().writePosition(writePosition);
             long position;
             do {
-                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, true, INDEX_TEMPLATE);
+                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, true, index2index ? index2IndexTemplate : indexTemplate);
             } while (position <= 0);
+            int len = Wires.lengthOf(wire.bytes().readInt(position));
+            this.writePosition.setMaxValue(position + len + 4);
             return position;
         }
 
@@ -568,71 +432,74 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return the position of the {@code targetIndex} or -1 if the index can not be found
          */
         public long moveToIndex(@NotNull final Wire wire, final long index) {
-            final LongArrayValues array = this.longArray.get();
-            @NotNull final Bytes<?> bytes = wire.bytes();
+            long ret = moveToIndex0(wire, index);
+            if (ret <= 0) {
+                checkIndexerUpToDate(wire);
+                ret = moveToIndex0(wire, index);
+            }
+            return ret;
+        }
+
+        long moveToIndex0(@NotNull final Wire wire, final long index) {
+
+            LongArrayValues index2index = getIndex2index(wire);
             final long indexToIndex0 = indexToIndex(wire);
+
+            @NotNull final Bytes<?> bytes = wire.bytes();
+            bytes.writeLimit(bytes.capacity());
             final long readPosition = bytes.readPosition();
-            bytes.readLimit(bytes.capacity()).readPosition(indexToIndex0);
-            long startIndex = ((index / 64L)) * 64L;
+            long limit = bytes.readLimit();
+            try {
+                bytes.readLimit(bytes.capacity());
+                bytes.readPosition(indexToIndex0);
+                long startIndex = index & ~(indexSpacing - 1);
 
-            try (@NotNull final DocumentContext documentContext0 = wire.readingDocument()) {
-
-                if (!documentContext0.isPresent())
-                    throw new IllegalStateException("document is not present");
-
-                if (documentContext0.isData())
-                    throw new IllegalStateException("Invalid index, expecting and index at " +
-                            "pos=" + indexToIndex0 + ", but found data instead.");
-
-                @NotNull final LongArrayValues primaryIndex = array(wire, array);
                 long primaryOffset = toAddress0(index);
 
-                do {
-                    long secondaryAddress = primaryIndex.getValueAt(primaryOffset);
+                long secondaryAddress = 0;
+                while (primaryOffset >= 0) {
+                    secondaryAddress = index2index.getValueAt(primaryOffset);
                     if (secondaryAddress == 0) {
-                        startIndex -= (1 << 23L);
+                        startIndex -= indexCount * indexSpacing;
                         primaryOffset--;
-                        continue;
+                    } else {
+                        break;
                     }
+                }
+                if (secondaryAddress <= 0)
+                    return -1;
 
-                    bytes.readLimit(bytes.capacity());
-                    bytes.readPosition(secondaryAddress);
+                bytes.readPosition(secondaryAddress);
 
-                    try (@NotNull final DocumentContext documentContext1 = wire.readingDocument()) {
+                try (@NotNull final DocumentContext context = wire.readingDocument()) {
 
-                        if (!documentContext1.isPresent())
-                            throw new IllegalStateException("document is not present");
+                    final LongArrayValues array = this.indexArray.get();
+                    if (!context.isPresent() || !context.isMetaData())
+                        throw new IllegalStateException("document is present=" + context.isPresent() + ", metaData=" + context.isMetaData());
 
-                        if (documentContext1.isData())
+                    @NotNull final LongArrayValues array1 = array(wire, array, false);
+                    long secondaryOffset = toAddress1(index);
+
+                    do {
+                        long fromAddress = array1.getValueAt(secondaryOffset);
+                        if (fromAddress == 0) {
+                            secondaryOffset--;
+                            startIndex -= indexSpacing;
                             continue;
+                        }
 
-                        @NotNull final LongArrayValues array1 = array(wire, array);
-                        long secondaryOffset = toAddress1(index);
+                        if (index == startIndex) {
+                            return fromAddress;
+                        } else {
+                            return linearScan(wire, index, startIndex, fromAddress);
+                        }
 
-                        do {
-                            long fromAddress = array1.getValueAt(secondaryOffset);
-                            if (fromAddress == 0) {
-                                secondaryOffset--;
-                                startIndex -= 64;
-                                continue;
-                            }
-
-                            if (index == startIndex) {
-                                return fromAddress;
-                            } else {
-                                bytes.readLimit(bytes.realCapacity());
-                                return linearScan(wire, index, startIndex, fromAddress);
-                            }
-
-                        } while (secondaryOffset >= 0);
-                    }
-
-                    break;
-
-                } while (primaryOffset >= 0);
+                    } while (secondaryOffset >= 0);
+                }
+            } finally {
+                bytes.readLimit(limit).readPosition(readPosition);
             }
 
-            bytes.readPosition(readPosition);
             return -1;
         }
 
@@ -649,54 +516,204 @@ public class SingleChronicleQueueStore implements WireStore {
          * @return > -1 if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
+
         private long linearScan(@NotNull final Wire context,
                                 final long toIndex,
                                 final long fromKnownIndex,
                                 final long knownAddress) {
             @NotNull
             final Bytes<?> bytes = context.bytes();
-            final long p = bytes.readPosition();
             final long l = bytes.readLimit();
-            bytes.readLimit(bytes.capacity());
-            bytes.readPosition(knownAddress);
+            final long p = bytes.readPosition();
 
-            for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
+            try {
+                bytes.readLimit(bytes.capacity()).readPosition(knownAddress);
+                for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
 
-                // wait until ready - todo add timeout
-                for (; ; ) {
-                    if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
-                        break;
-                    } else
-                        Thread.yield();
-                }
-
-                try (@NotNull final DocumentContext documentContext = context.readingDocument()) {
-
-                    if (!documentContext.isPresent())
-                        return -1;
-
-                    if (!documentContext.isData())
-                        continue;
-
-                    if (toIndex == i) {
-                        context.bytes().readSkip(-4);
-                        return context.bytes().readPosition();
+                    // wait until ready - todo add timeout
+                    for (; ; ) {
+                        if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
+                            break;
+                        } else
+                            Thread.yield();
                     }
-                    i++;
+
+                    try (@NotNull final DocumentContext documentContext = context.readingDocument()) {
+
+                        if (!documentContext.isPresent())
+                            return -1;
+
+                        if (!documentContext.isData())
+                            continue;
+
+                        if (toIndex == i) {
+                            context.bytes().readSkip(-4);
+                            return context.bytes().readPosition();
+                        }
+                        i++;
+                    }
                 }
+            } finally {
+                bytes.readLimit(l).readPosition(p);
             }
-            bytes.readLimit(l).readPosition(p);
             return -1;
         }
-    }
 
-    // *************************************************************************
-    // ROLLING
-    // *************************************************************************
+        public long lastEntryIndexed(Wire wire) {
+            checkIndexerUpToDate(wire);
+            return nextEntryToIndex.getValue() - 1;
+        }
 
-    enum RollFields implements WireKey {
-        cycle, length, format, timeZone, epoch,
-        firstCycle, lastCycle, nextCycle, nextCycleMetaPosition
+        private long positionForIndex(Wire wire, long value) {
+            return moveToIndex(wire, value);
+        }
+
+        public LongArrayValues getIndex2index(Wire wire) {
+            LongArrayValues values = index2indexArray.get();
+            if (((Byteable) values).bytesStore() != null)
+                return values;
+            final long indexToIndex0 = indexToIndex(wire);
+            try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
+                if (!context.isPresent() || !context.isMetaData()) {
+                    dumpStore(wire);
+                    throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
+                }
+
+                return array(wire, values, true);
+            }
+        }
+
+        public long indexForPosition(Wire wire, long position) {
+            checkIndexerUpToDate(wire);
+            // find the index2index
+            final LongArrayValues index2index = getIndex2index(wire);
+            int index2 = 0;
+
+            final LongArrayValues index = indexArray.get();
+            for (; index2 < indexCount; index2++) {
+                long secondaryAddress = index2index.getValueAt(index2 + 1);
+                if (secondaryAddress == 0)
+                    break;
+                try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                    if (!context.isPresent() || !context.isMetaData())
+                        throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
+
+                    @NotNull final LongArrayValues array1 = array(wire, index, false);
+                    long position2 = array1.getValueAt(indexCount - 1);
+                    if (position2 == 0 || position <= position2) {
+                        index2++;
+                        break;
+                    }
+                }
+            }
+
+            int index3 = 0;
+            long address3 = index.getValueAt(0);
+            for (; index3 < indexCount; index3++) {
+                long address3b = index.getValueAt(index3 + 1);
+                if (address3b == 0 || address3b >= position)
+                    break;
+                address3 = address3b;
+            }
+            // linear scan from here.
+
+            int index4 = 0;
+            while (address3 < position) {
+                int header = wire.bytes().readInt(address3);
+                if (!Wires.isReady(header))
+                    throw new IllegalStateException("For an entry which is not ready at " + address3);
+                if (header == 0)
+                    throw new IllegalStateException("No entry at " + address3 + " " + position + " " + index4);
+                if (Wires.isData(header)) {
+                    index4++;
+                }
+                address3 += Wires.lengthOf(header) + 4;
+            }
+            return ((((long) index2 << indexCountBits) + index3) << indexSpacingBits) + index4;
+        }
+
+        private void checkIndexerUpToDate(Wire wire) {
+            long index = nextEntryToIndex.getValue() - 1;
+            long position = index < 0 ? 0L : moveToIndex0(wire, index);
+            if (position < 0) {
+                moveToIndex0(wire, index);
+                throw new AssertionError();
+            }
+            LongArrayValues index2index = getIndex2index(wire);
+            Bytes bytes = wire.bytes();
+            long nextIndex = (index + indexSpacing) & ~(indexSpacing - 1);
+            index = checkUpToDate0(wire, index, position, index2index, bytes, nextIndex);
+            System.out.println("index: " + index);
+            nextEntryToIndex.setMaxValue(index + 1);
+        }
+
+        private long checkUpToDate0(Wire wire, long index, long position, LongArrayValues index2index, Bytes bytes, long nextIndex) {
+            int len, header;
+            // if its a known position, start with the next one.
+            if (index >= 0) {
+                header = bytes.readVolatileInt(position);
+                len = Wires.lengthOf(header);
+                position += len + 4;
+            }
+            for (; ; ) {
+                header = bytes.readVolatileInt(position);
+                len = Wires.lengthOf(header);
+
+                if (len == 0)
+                    break;
+                if (Wires.isData(header))
+                    index++;
+
+                if (index < nextIndex) {
+                    position += len + 4;
+                    continue;
+                }
+
+                long secondaryAddress;
+
+                final long primaryOffset = toAddress0(index);
+                // initialise it if needed.
+                if (index2index.compareAndSet(primaryOffset, NOT_INITIALIZED, LONG_NOT_READY)) {
+                    boolean ok = false;
+
+                    try {
+                        secondaryAddress = newIndex(wire, false);
+                        index2index.setValueAt(primaryOffset, secondaryAddress);
+                        ok = true;
+                    } finally {
+                        if (!ok) {
+                            System.out.println("Failed update " + primaryOffset);
+                            index2index.compareAndSet(primaryOffset, LONG_NOT_READY, NOT_INITIALIZED);
+                        }
+                    }
+
+                } else {
+                    secondaryAddress = index2index.getValueAt(primaryOffset);
+                    if (secondaryAddress == LONG_NOT_READY) {
+                        long start = System.currentTimeMillis();
+                        do {
+                            Thread.yield();
+                            secondaryAddress = index2index.getVolatileValueAt(primaryOffset);
+                            if (System.currentTimeMillis() > start + 10e3)
+                                throw new IllegalStateException("Index " + primaryOffset + " not ready");
+                        } while (secondaryAddress == LONG_NOT_READY);
+                    }
+                }
+
+                try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                    if (!context.isPresent() || !context.isMetaData())
+                        throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
+
+                    @NotNull final LongArrayValues indexArr = array(wire, indexArray.get(), false);
+                    indexArr.setValueAt(toAddress1(index), position);
+//                    assert position <= writePosition.getValue();
+                    writePosition.setMaxValue(position);
+                }
+                nextIndex += indexSpacing;
+                position += len + 4;
+            }
+            return index;
+        }
     }
 
     static class Roll implements Demarshallable, WriteMarshallable {
@@ -704,14 +721,6 @@ public class SingleChronicleQueueStore implements WireStore {
         private final int length;
         @Nullable
         private final String format;
-        @Nullable
-        private final ZoneId zoneId;
-        @Nullable
-        private final LongValue cycle;
-        @Nullable
-        private final LongValue nextCycle;
-        @Nullable
-        private final LongValue nextCycleMetaPosition;
 
         /**
          * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -719,47 +728,24 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire a wire
          */
         private Roll(WireIn wire) {
-            nextCycleMetaPosition = wire.newLongReference();
-            nextCycle = wire.newLongReference();
-            cycle = wire.newLongReference();
-
-            wire.read(RollFields.cycle).int64(this.cycle, this, (o, i) -> o
-                    .cycle.setOrderedValue(i.getVolatileValue()));
-
             length = wire.read(RollFields.length).int32();
             format = wire.read(RollFields.format).text();
-            zoneId = ZoneId.of(wire.read(RollFields.timeZone).text());
-
-            wire.read(RollFields.nextCycle).int64(this.nextCycle, this, (o, i) -> o
-                    .nextCycle.setOrderedValue(i.getVolatileValue()));
 
             epoch = wire.read(RollFields.epoch).int64();
-
-            wire.read(RollFields.nextCycleMetaPosition).int64(this.nextCycleMetaPosition, this, (o, i) -> o
-                    .nextCycleMetaPosition.setOrderedValue(i.getVolatileValue()));
         }
 
-        Roll(@Nullable RollCycle rollCycle, long rollEpoch, WireType wireType) {
-            this.length = rollCycle != null ? rollCycle.length() : -1;
-            this.format = rollCycle != null ? rollCycle.format() : null;
-            this.zoneId = rollCycle != null ? rollCycle.zone() : null;
+        Roll(@NotNull RollCycle rollCycle, long rollEpoch, WireType wireType) {
+            this.length = rollCycle.length();
+            this.format = rollCycle.format();
             this.epoch = rollEpoch;
-            this.cycle = wireType.newLongReference().get();
-            this.nextCycle = wireType.newLongReference().get();
-            this.nextCycleMetaPosition = wireType.newLongReference().get();
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(RollFields.cycle).int64forBinding(-1, cycle)
-                    .write(RollFields.length).int32(length)
+            wire.write(RollFields.length).int32(length)
                     .write(RollFields.format).text(format)
-                    .write(RollFields.timeZone).text(zoneId.getId())
-                    .write(RollFields.nextCycle).int64forBinding(-1, nextCycle)
-                    .write(RollFields.epoch).int64(epoch)
-                    .write(RollFields.nextCycleMetaPosition).int64forBinding(-1, nextCycleMetaPosition);
+                    .write(RollFields.epoch).int64(epoch);
         }
-
 
         /**
          * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
@@ -767,26 +753,6 @@ public class SingleChronicleQueueStore implements WireStore {
          */
         public long epoch() {
             return this.epoch;
-        }
-
-        public long cycle() {
-            return this.cycle.getVolatileValue();
-        }
-
-        @NotNull
-        public Roll cycle(long rollCycle) {
-            this.cycle.setOrderedValue(rollCycle);
-            return this;
-        }
-
-        @NotNull
-        public Roll nextCycleMetaPosition(long position) {
-            this.nextCycleMetaPosition.setOrderedValue(position);
-            return this;
-        }
-
-        public boolean casNextRollCycle(long rollCycle) {
-            return this.nextCycle.compareAndSwapValue(-1, rollCycle);
         }
     }
 }

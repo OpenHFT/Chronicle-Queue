@@ -34,29 +34,30 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @param writer to write to excerpt.
      * @return the index last written or -1 if a buffered appender is being used
      */
-    long writeDocument(@NotNull WriteMarshallable writer);
+    void writeDocument(@NotNull WriteMarshallable writer);
 
     /**
      * @param marshallable to write to excerpt.
      * @return the index last written or -1 if a buffered appender is being used
      */
-    long writeBytes(@NotNull WriteBytesMarshallable marshallable);
+    void writeBytes(@NotNull WriteBytesMarshallable marshallable);
 
     /**
      * @param bytes to write to excerpt.
      * @return the index last written -1 if a buffered appender is being used
      */
-    long writeBytes(@NotNull Bytes<?> bytes);
+    void writeBytes(@NotNull Bytes<?> bytes);
 
     /**
      * @return the index last written, this index includes the cycle and the sequence number
      * @throws IllegalStateException if no index is available
      */
-    long index();
+    long lastIndexAppended();
 
     /**
      * @return the cycle this tailer is on, usually with chronicle-queue each cycle will have
      * its own unique data file to store the excerpt
      */
     long cycle();
+
 }

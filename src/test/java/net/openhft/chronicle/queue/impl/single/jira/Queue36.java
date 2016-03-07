@@ -15,7 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single.jira;
 
-
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -37,14 +36,21 @@ public class Queue36 extends ChronicleQueueTestBase {
     public void testTail() throws IOException {
         File basePath = getTmpDir();
         ChronicleQueue queue = new SingleChronicleQueueBuilder(basePath)
-            .wireType(WireType.TEXT)
+                .wireType(WireType.BINARY)
             .build();
 
+        checkNoFiles(basePath);
         ExcerptTailer tailer = queue.createTailer();
+        checkNoFiles(basePath);
         tailer.toStart();
+        checkNoFiles(basePath);
 
         assertFalse(tailer.readDocument(d -> {}));
 
+        checkNoFiles(basePath);
+    }
+
+    public void checkNoFiles(File basePath) {
         String[] fileNames = basePath.list();
         assertTrue(fileNames == null || fileNames.length == 0);
     }

@@ -20,9 +20,9 @@ import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
-import net.openhft.chronicle.queue.Excerpt;
+import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
@@ -30,6 +30,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.StreamCorruptedException;
 import java.text.ParseException;
 import java.util.function.Consumer;
 
@@ -47,12 +48,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
-    private static final String SUFFIX = ".cq4";
-
-    static {
-        ClassAliasPool.CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "WireStore");
-    }
-
+    public static final String SUFFIX = ".cq4";
+    protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
     @NotNull
     private final RollCycle cycle;
     @NotNull
@@ -61,7 +58,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    private final SingleChronicleQueueExcerptFactory excerptFactory;
     private final File path;
     private final WireType wireType;
     private final long blockSize;
@@ -69,15 +65,15 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final EventLoop eventLoop;
     private final long bufferCapacity;
-    long firstCycleTimeout = 0;
+    private final int indexSpacing;
+    private final int indexCount;
 
-    SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
+    protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
-        dateCache = new RollingResourcesCache(this.cycle, name -> new File(builder.path(), name + SUFFIX));
-        pool = WireStorePool.withSupplier(this::acquireStore);
         epoch = builder.epoch();
+        dateCache = new RollingResourcesCache(this.cycle, epoch, name -> new File(builder.path(), name + SUFFIX));
+        pool = WireStorePool.withSupplier(this::acquireStore);
         isBuffered = builder.buffered();
-        excerptFactory = builder.excertpFactory();
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
@@ -85,6 +81,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
         onRingBufferStats = builder.onRingBufferStats();
+        indexCount = builder.indexCount();
+        indexSpacing = builder.indexSpacing();
     }
 
     @Override
@@ -95,6 +93,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public File path() {
         return path;
+    }
+
+    @Override
+    public String dump() {
+        return storeForCycle(cycle(), epoch).dump();
     }
 
     @Override
@@ -120,22 +123,20 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return this.eventLoop;
     }
 
-    @NotNull
-    @Override
-    public Excerpt createExcerpt() {
-        return excerptFactory.createExcerpt(this);
+    protected ExcerptAppender newAppender() {
+        return new SingleChronicleQueueExcerpts.StoreAppender(this);
     }
 
     @NotNull
     @Override
     public ExcerptAppender createAppender() {
-        return excerptFactory.createAppender(this);
+        return excerptAppenderThreadLocal.get();
     }
 
     @NotNull
     @Override
     public ExcerptTailer createTailer() {
-        return excerptFactory.createTailer(this);
+        return new SingleChronicleQueueExcerpts.StoreTailer(this);
     }
 
     @NotNull
@@ -145,8 +146,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public void close() throws IOException {
-        // todo
+    public void close() {
+        this.pool.close();
     }
 
     @Override
@@ -161,104 +162,78 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
-
         // TODO - as discuessed, peter is going find another way to do this as this solution
-        // currently breaks tests in chroncile engine - seenet.openhft.chronicle.engine.queue.LocalQueueRefTest
+        // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
-        //    long now = System.currentTimeMillis();
-        //   if (now < firstCycleTimeout)
-        //      return -1;
-        //  firstCycleTimeout = now + 20; // don't call more than once every 20 ms.
-        final long cycle = firstCycle();
-        if (cycle == -1)
-            return -1;
+        int cycle = firstCycle();
+        if (cycle == Integer.MAX_VALUE)
+            return Long.MAX_VALUE;
 
-        @NotNull final WireStore store = acquireStore(cycle, epoch());
-        return RollingChronicleQueue.index(store.cycle(), store.firstSequenceNumber());
+        return RollingChronicleQueue.index(cycle, 0);
     }
 
-    private long firstCycle() {
-        long firstCycle = -1;
+    public int firstCycle() {
+        int firstCycle = Integer.MAX_VALUE;
 
-        @NotNull final String basePath = path.getAbsolutePath();
-        @Nullable final File[] files = path.listFiles();
+        @Nullable final String[] files = path.list();
 
-        if (files != null && files.length > 0) {
-            long firstDate = Long.MAX_VALUE;
-            long date;
-            String name;
+        if (files == null)
+            return Integer.MAX_VALUE;
 
-            for (int i = files.length - 1; i >= 0; i--) {
-                try {
-                    name = files[i].getAbsolutePath();
-                    if (name.endsWith(SUFFIX)) {
-                        name = name.substring(basePath.length() + 1);
-                        name = name.substring(0, name.indexOf('.'));
+        for (String file : files) {
+            try {
+                if (!file.endsWith(SUFFIX))
+                    continue;
 
-                        date = dateCache.parseCount(name);
-                        if (firstDate > date) {
-                            firstDate = date;
-                        }
-                    }
-                } catch (ParseException ignored) {
-                    // ignored
-                }
+                file = file.substring(0, file.length() - SUFFIX.length());
+
+                int fileCycle = dateCache.parseCount(file);
+                if (firstCycle > fileCycle)
+                    firstCycle = fileCycle;
+
+            } catch (ParseException ignored) {
+                // ignored
             }
-
-            firstCycle = firstDate;
         }
-
-
-        if (firstCycle == Long.MAX_VALUE) {
-            return -1;
-        }
-
         return firstCycle;
     }
-
 
     @Override
     public long lastIndex() {
         final long lastCycle = lastCycle();
-        if (lastCycle == -1)
-            return -1;
+        if (lastCycle == Integer.MIN_VALUE)
+            return Long.MIN_VALUE;
 
-        return RollingChronicleQueue.index(lastCycle, acquireStore(lastCycle, epoch()).sequenceNumber());
+        ExcerptTailer tailer = createTailer();
+        if (tailer instanceof SingleChronicleQueueExcerpts.StoreTailer)
+            return ((SingleChronicleQueueExcerpts.StoreTailer) tailer).lastIndex(lastCycle);
+        throw new UnsupportedOperationException();
     }
 
-    private long lastCycle() {
-        @NotNull final String basePath = path.getAbsolutePath();
-        @Nullable final File[] files = path.listFiles();
+    public int lastCycle() {
+        int lastCycle = Integer.MIN_VALUE;
 
-        if (files != null && files.length > 0) {
-            long lastDate = Long.MIN_VALUE;
-            long date;
-            String name;
+        @Nullable final String[] files = path.list();
 
-            for (int i = files.length - 1; i >= 0; i--) {
-                try {
-                    name = files[i].getAbsolutePath();
-                    if (name.endsWith(SUFFIX)) {
-                        name = name.substring(basePath.length() + 1);
-                        name = name.substring(0, name.indexOf('.'));
+        if (files == null)
+            return Integer.MAX_VALUE;
 
-                        date = dateCache.parseCount(name);
-                        if (lastDate < date) {
-                            lastDate = date;
-                        }
-                    }
-                } catch (ParseException ignored) {
-                    // ignored
-                }
+        for (String file : files) {
+            try {
+                if (!file.endsWith(SUFFIX))
+                    continue;
+
+                file = file.substring(0, file.length() - SUFFIX.length());
+
+                int fileCycle = dateCache.parseCount(file);
+                if (lastCycle < fileCycle)
+                    lastCycle = fileCycle;
+
+            } catch (ParseException ignored) {
+                // ignored
             }
-
-            if (Long.MIN_VALUE == lastDate)
-                return -1;
-
-            return lastDate;
         }
-
-        return -1;
+        return lastCycle;
     }
 
     public Consumer<BytesRingBufferStats> onRingBufferStats() {
@@ -301,21 +276,27 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
             //noinspection PointlessBitwiseExpression
-            if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, Wires.META_DATA
-                    | Wires.NOT_READY | Wires.UNKNOWN_LENGTH)) {
+            int unknownMetaDataNotReady = Wires.META_DATA | Wires.NOT_READY | Wires.UNKNOWN_LENGTH;
+            if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, unknownMetaDataNotReady)) {
                 final SingleChronicleQueueStore wireStore = new
-                        SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch);
+                        SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch, indexCount, indexSpacing);
                 final Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
-                wireType.apply(bytes).getValueOut().typedMarshallable(wireStore);
-                wireStore.cycle(cycle);
+                wireType.apply(bytes).writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
                 wireStore.writePosition(bytes.writePosition());
                 mappedBytes.writeOrderedInt(0L, Wires.META_DATA
                         | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large=%,d"));
                 return wireStore;
 
             } else {
+                int headerLen = mappedBytes.readVolatileInt(0);
+                if (headerLen != unknownMetaDataNotReady) {
+                    int topBits = headerLen & 0xFFFF_0000;
+                    if (topBits != Wires.META_DATA)
+                        throw new IORuntimeException(new StreamCorruptedException(
+                                "Magic number at the start of the file is not correct " + Integer.toHexString(headerLen)));
+                }
                 long end = System.currentTimeMillis() + TIMEOUT;
-                while ((mappedBytes.readVolatileInt(0) & Wires.NOT_READY) == Wires.NOT_READY) {
+                while ((headerLen & Wires.NOT_READY) == Wires.NOT_READY) {
                     if (System.currentTimeMillis() > end)
                         throw new IllegalStateException(MESSAGE + dateValue.path);
                     Jvm.pause(1);
@@ -325,11 +306,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 final int len = lengthOf(mappedBytes.readVolatileInt());
                 mappedBytes.readLimit(mappedBytes.readPosition() + len);
                 //noinspection unchecked
-                return wireType.apply(mappedBytes).getValueIn().typedMarshallable();
+                StringBuilder name = Wires.acquireStringBuilder();
+                ValueIn valueIn = wireType.apply(mappedBytes).readEventName(name);
+                if (StringUtils.isEqual(name, MetaDataKeys.header.name()))
+                    return valueIn.typedMarshallable();
+                throw new IORuntimeException(new StreamCorruptedException("The first message should be the header, was " + name));
             }
         } catch (FileNotFoundException e) {
             throw Jvm.rethrow(e);
         }
     }
 
+    public long presentCycle() {
+        return (System.currentTimeMillis() - epoch) / cycle.length();
+    }
 }

@@ -38,18 +38,18 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class Queue28 extends ChronicleQueueTestBase {
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][]{
-                {WireType.TEXT},
-                {WireType.BINARY}
-        });
-    }
-
     private final WireType wireType;
 
     public Queue28(WireType wireType) {
         this.wireType = wireType;
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+//                {WireType.TEXT},
+                {WireType.BINARY}
+        });
     }
 
     /*

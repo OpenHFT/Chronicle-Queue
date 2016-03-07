@@ -20,29 +20,17 @@ import org.jetbrains.annotations.NotNull;
 
 public interface RollingChronicleQueue extends ChronicleQueue {
 
-    long MINUS_1_40BIT = toSequenceNumber(-1);
-
     static long toSequenceNumber(long index) {
-        final long l = index & 0xFFFFFFFFFFL;
-        return (l == MINUS_1_40BIT) ? -1 : l;
+        return index & 0xFF_FFFF_FFFFL;
     }
 
     static long toCycle(long index) {
         // the very last possible entry in a cycle is the value just before the next cycle.
-        int result = (int) ((index + 1) >>> 40L);
-        if (result > (1 << 24))
-            throw new IllegalStateException("cycle value is too large, it must fit into 24bits, " +
-                    "either use a larger rollType of increase the roll offset.");
-
-        if (result < 0)
-            throw new IllegalStateException("Invalid cycle=" + result +
-                    ", cycles can not be negative.");
-        return result;
+        return (int) (index >>> 40L);
     }
 
     static long index(long cycle, long sequenceNumber) {
-        // sequenceNumber == -1 means there is zero entries.
-        return (cycle << 40L) + ((sequenceNumber + 1) & 0xFFFFFFFFFFL) - 1;
+        return (cycle << 40L) + toSequenceNumber(sequenceNumber);
     }
 
     long epoch();

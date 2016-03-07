@@ -15,12 +15,80 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.BytesRingBufferStats;
+import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.io.File;
+import java.util.function.Consumer;
 
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder extends Cloneable {
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue> extends Cloneable {
     @NotNull
-    ChronicleQueue build();
+    Q build();
+
+    @NotNull
+    B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
+
+    Consumer<BytesRingBufferStats> onRingBufferStats();
+
+    @NotNull
+    File path();
+
+    @NotNull
+    B blockSize(int blockSize);
+
+    long blockSize();
+
+    @NotNull
+    B wireType(@NotNull WireType wireType);
+
+    @NotNull
+    WireType wireType();
+
+    @NotNull
+    B rollCycle(@NotNull RollCycle rollCycle);
+
+    long bufferCapacity();
+
+    @NotNull
+    B bufferCapacity(long ringBufferSize);
+
+    @NotNull
+    B epoch(long epoch);
+
+    long epoch();
+
+    @NotNull
+    RollCycle rollCycle();
+
+    @NotNull
+    B onThrowable(@NotNull Consumer<Throwable> onThrowable);
+
+    @NotNull
+    B buffered(boolean isBuffered);
+
+    boolean buffered();
+
+    @Nullable
+    EventLoop eventLoop();
+
+    @NotNull
+    B eventLoop(EventLoop eventLoop);
+
+    @NotNull
+    B bufferCapacity(int bufferCapacity);
+
+    B indexCount(int indexCount);
+
+    int indexCount();
+
+    B indexSpacing(int indexSpacing);
+
+    int indexSpacing();
+
 }

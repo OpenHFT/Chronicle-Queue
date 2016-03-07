@@ -15,10 +15,10 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.Closeable;
 import java.io.File;
 
 /**
@@ -56,17 +56,7 @@ import java.io.File;
  */
 public interface ChronicleQueue extends Closeable {
     /**
-     * An Excerpt can be used access entries randomly and optionally change them.
-     *
-     * @return Excerpt
-     */
-    @NotNull
-    Excerpt createExcerpt();
-
-    /**
-     * A Tailer can be used to read sequentially from the lower of a given position.
-     *
-     * @return ExcerptTailer
+     * @return a new ExcerptTailer to read sequentially.
      */
     @NotNull
     ExcerptTailer createTailer();
@@ -74,18 +64,23 @@ public interface ChronicleQueue extends Closeable {
     /**
      * An Appender can be used to writeBytes new excerpts sequentially to the upper.
      *
-     * @return ExcerptAppender
+     * @return A thread local Appender for writing new entries to the end.
      */
     @NotNull
     ExcerptAppender createAppender();
 
     /**
-     * @return the lowest valid index available, or sequenceNumber=0 if none are found
+     * @return the lowest valid index available, or Long.MAX_VALUE if none are found
      */
     long firstIndex();
 
     /**
-     * @return the highest valid index immediately available. Or -1 if none available.
+     * @return the first cycle number found, or Integer.MAX_VALUE is none found.
+     */
+    int firstCycle();
+
+    /**
+     * @return the index one more than the highest valid index immediately available. Or Long.MIN_VALUE if none available.
      *
      * The lowest 40bits of the index refer to the sequence number with the cycle, giving a maximum
      * of 1099511627776 excerpt per cycle. Each cycle has its own file. Each file holds its own
@@ -96,7 +91,12 @@ public interface ChronicleQueue extends Closeable {
     long lastIndex();
 
     /**
-     * @return the type of wire used, for example TEXT_WIRE or BINARY WIRE
+     * @return the lastCycle available or Integer.MIN_VALUE if none is found.
+     */
+    int lastCycle();
+
+    /**
+     * @return the type of wire used, for example WireTypes.TEXT or WireTypes.BINARY
      */
     @NotNull
     WireType wireType();
@@ -112,4 +112,10 @@ public interface ChronicleQueue extends Closeable {
     @NotNull
     File path();
 
+    /**
+     * Dump a Queue in YAML format.
+     *
+     * @return the contents of the Queue as YAML.
+     */
+    String dump();
 }

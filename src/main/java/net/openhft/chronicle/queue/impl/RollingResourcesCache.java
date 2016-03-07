@@ -1,17 +1,17 @@
 /**
- *     Copyright (C) 2016  higherfrequencytrading.com
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation, either version 3 of the License.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Lesser General Public License for more details.
- *
- *     You should have received a copy of the GNU Lesser General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2016  higherfrequencytrading.com
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * <p>
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package net.openhft.chronicle.queue.impl;
@@ -21,12 +21,13 @@ import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.TimeZone;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.function.Function;
 
 public class RollingResourcesCache {
@@ -35,20 +36,22 @@ public class RollingResourcesCache {
     @NotNull
     private final Function<String, File> fileFactory;
     @NotNull
-    private final DateFormat formatter;
+    private final DateTimeFormatter formatter;
     @NotNull
     private final Resource[] values;
     private final int length;
 
-    public RollingResourcesCache(@NotNull final RollCycle cycle, @NotNull Function<String, File> fileFactory) {
-        this(cycle.length(), cycle.format(), cycle.zone(), fileFactory);
+    public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch, @NotNull Function<String, File> fileFactory) {
+        this(cycle.length(), cycle.format(), epoch, fileFactory);
     }
 
-    private RollingResourcesCache(final int length, @NotNull String format, @NotNull final ZoneId zoneId, @NotNull Function<String, File> fileFactory) {
+    private RollingResourcesCache(final int length, @NotNull String format, long epoch, @NotNull Function<String, File> fileFactory) {
         this.length = length;
         this.values = new Resource[SIZE];
-        this.formatter = new SimpleDateFormat(format);
-        this.formatter.setTimeZone(TimeZone.getTimeZone(zoneId));
+        long millis = ((epoch + 43200000) % 86400000) - 43200000;
+        ZoneOffset zoneOffset = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
+        ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffset);
+        this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
         this.fileFactory = fileFactory;
     }
 
@@ -64,18 +67,18 @@ public class RollingResourcesCache {
         int hash = Maths.hash32(millis) & (SIZE - 1);
         Resource dv = values[hash];
         if (dv == null || dv.millis != millis) {
-            synchronized (formatter) {
-                @NotNull String text = formatter.format(new Date(millis));
-                values[hash] = dv = new Resource(millis, text, fileFactory.apply(text));
-            }
+            @NotNull String text = formatter.format(Instant.ofEpochMilli(millis));
+            values[hash] = dv = new Resource(millis, text, fileFactory.apply(text));
         }
         return dv;
     }
 
-    public long parseCount(@NotNull String name) throws ParseException {
-        synchronized (formatter) {
-            return formatter.parse(name).getTime() / length;
-        }
+    public int parseCount(@NotNull String name) throws ParseException {
+        TemporalAccessor parse = formatter.parse(name);
+        long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
+        if (parse.isSupported(ChronoField.SECOND_OF_DAY))
+            epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
+        return Maths.toInt32(epochDay / (length / 1000));
     }
 
     public static class Resource {

@@ -23,14 +23,9 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+    public static final long ROLLED_BIT = 0x4000_0000_0000_0000L;
 
     WireStore writePosition(long position);
-
-    /**
-     * @return the cycle this store refers to, this is based on the time offset by {@code epoch} and
-     * calculated using the roll type
-     */
-    long cycle();
 
     /**
      * @return an epoch offset as the number of number of milliseconds since January 1, 1970,
@@ -39,16 +34,14 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     long epoch();
 
     /**
-     * @return the next writable position
+     * @return the next writable position, Will be or-ed with ROLLED_BIT if it has rolled.
      */
     long writePosition();
 
     /**
      * @return the sequence number with the cycle
      */
-    long sequenceNumber();
-
-    long firstSequenceNumber();
+    long lastEntryIndexed(Wire wire);
 
     boolean appendRollMeta(@NotNull Wire wire, long cycle);
 
@@ -57,5 +50,22 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     @NotNull
     MappedBytes mappedBytes();
 
-    void storeIndexLocation(Wire wire, long position, long index);
+    /**
+     * Return the sequence number
+     *
+     * @param wire     to write to.
+     * @param position to index
+     * @return the excerpt index if known.
+     */
+    long storeIndexLocation(Wire wire, long position);
+
+    /**
+     * Reverse look up an index for a position.
+     *
+     * @param position of the start of the message
+     * @return index in this store.
+     */
+    long indexForPosition(Wire wire, long position);
+
+    String dump();
 }

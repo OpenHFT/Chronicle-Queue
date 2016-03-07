@@ -23,6 +23,42 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WireStorePool {
     @NotNull
     private final WireStoreSupplier supplier;
+    @NotNull
+    private final Map<RollDetails, WireStore> stores;
+
+    private WireStorePool(@NotNull WireStoreSupplier supplier) {
+        this.supplier = supplier;
+        this.stores = new ConcurrentHashMap<>();
+    }
+
+    @NotNull
+    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
+        return new WireStorePool(supplier);
+    }
+
+    public void close() {
+        // todo
+    }
+
+    public synchronized WireStore acquire(long cycle, final long epoch) {
+        @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
+        WireStore store = stores.get(rollDetails);
+        if (store == null) {
+            stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));
+        } else {
+            store.reserve();
+        }
+        return store;
+    }
+
+    public synchronized void release(@NotNull WireStore store) {
+        store.release();
+        if (store.refCount() <= 0) {
+            for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet())
+                if (entry.getValue() == store)
+                    stores.remove(entry.getKey());
+        }
+    }
 
     private class RollDetails {
 
@@ -48,36 +84,5 @@ public class WireStorePool {
             result = 31 * result + (int) (epoch ^ (epoch >>> 32));
             return result;
         }
-    }
-
-    @NotNull
-    private final Map<RollDetails, WireStore> stores;
-
-    private WireStorePool(@NotNull WireStoreSupplier supplier) {
-        this.supplier = supplier;
-        this.stores = new ConcurrentHashMap<>();
-    }
-
-    public synchronized WireStore acquire(long cycle, final long epoch) {
-        @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
-        WireStore store = stores.get(rollDetails);
-        if (store == null) {
-            stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));
-        } else {
-            store.reserve();
-        }
-        return store;
-    }
-
-    public synchronized void release(@NotNull WireStore store) {
-        store.release();
-        if (store.refCount() <= 0) {
-            stores.remove(new RollDetails(store.cycle(), store.epoch()));
-        }
-    }
-
-    @NotNull
-    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
-        return new WireStorePool(supplier);
     }
 }
