@@ -108,10 +108,10 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException("ROLLED");
             position = writePosition;
 
-            int initHeader = Wires.NOT_READY | Wires.UNKNOWN_LENGTH;
+            tmpHeader = Wires.NOT_READY | Wires.UNKNOWN_LENGTH;
             Bytes<?> bytes = wire.bytes();
             for (; ; ) {
-                if (bytes.compareAndSwapInt(position, 0, initHeader)) {
+                if (bytes.compareAndSwapInt(position, 0, tmpHeader)) {
                     bytes.writeLimit(position + MAX_MESG_SIZE);
                     bytes.writePosition(position + 4);
                     return this;
@@ -127,6 +127,12 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
             }
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            store.writePosition(wire.bytes().writePosition());
         }
 
         @Override
@@ -362,6 +368,12 @@ public class SingleChronicleQueueExcerpts {
                 return NoDocumentContext.INSTANCE;
             start();
             return this;
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            index++;
         }
 
         private boolean next() {

@@ -643,7 +643,7 @@ public class SingleChronicleQueueStore implements WireStore {
             Bytes bytes = wire.bytes();
             long nextIndex = (index + indexSpacing) & ~(indexSpacing - 1);
             index = checkUpToDate0(wire, index, position, index2index, bytes, nextIndex);
-            System.out.println("index: " + index);
+//            System.out.println("index: " + index);
             nextEntryToIndex.setMaxValue(index + 1);
         }
 

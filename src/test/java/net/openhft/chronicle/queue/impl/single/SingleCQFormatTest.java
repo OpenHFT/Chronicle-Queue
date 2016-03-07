@@ -10,6 +10,7 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.*;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -28,6 +29,8 @@ public class SingleCQFormatTest {
         // init class
         SingleChronicleQueueBuilder.init();
     }
+
+    int appendMode;
 
     public static void assertHexEquals(long a, long b) {
         if (a != b)
@@ -320,169 +323,173 @@ public class SingleCQFormatTest {
 
     @Test
     public void testWritingThreeMessages() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
-        dir.mkdir();
+        for (int m = 0; m <= 2; m++) {
+            appendMode = m;
 
-        SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
-                .indexCount(8)
-                .indexSpacing(1)
-                .build();
+            File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+            dir.mkdir();
 
-        long start = queue.presentCycle() << 40;
-        appendMessage(queue, start, "Hello World");
-        String expected1 = "--- !!meta-data #binary\n" +
-                "header: !SCQStore {\n" +
-                "  wireType: !WireType BINARY,\n" +
-                "  writePosition: 419,\n" +
-                "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
-                "    format: yyyyMMdd,\n" +
-                "    epoch: 0\n" +
-                "  },\n" +
-                "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: 8,\n" +
-                "    indexSpacing: 1,\n" +
-                "    index2Index: 245,\n" +
-                "    lastIndex: 1\n" +
-                "  }\n" +
-                "}\n" +
-                "# position: 225\n" +
-                "--- !!data #binary\n" +
-                "msg: Hello World\n" +
-                "# position: 245\n" +
-                "--- !!meta-data #binary\n" +
-                "index2index: [\n" +
-                "  335,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "# position: 335\n" +
-                "--- !!meta-data #binary\n" +
-                "index: [\n" +
-                "  225,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "...\n" +
-                "# 5242457 bytes remaining\n";
-        checkFileContents(dir.listFiles()[0], expected1);
+            SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
+                    .blockSize(TEST_CHUNK_SIZE)
+                    .indexCount(8)
+                    .indexSpacing(1)
+                    .build();
 
-        appendMessage(queue, start + 1, "Another Hello World");
-        String expected2 = "--- !!meta-data #binary\n" +
-                "header: !SCQStore {\n" +
-                "  wireType: !WireType BINARY,\n" +
-                "  writePosition: 419,\n" +
-                "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
-                "    format: yyyyMMdd,\n" +
-                "    epoch: 0\n" +
-                "  },\n" +
-                "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: 8,\n" +
-                "    indexSpacing: 1,\n" +
-                "    index2Index: 245,\n" +
-                "    lastIndex: 2\n" +
-                "  }\n" +
-                "}\n" +
-                "# position: 225\n" +
-                "--- !!data #binary\n" +
-                "msg: Hello World\n" +
-                "# position: 245\n" +
-                "--- !!meta-data #binary\n" +
-                "index2index: [\n" +
-                "  335,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "# position: 335\n" +
-                "--- !!meta-data #binary\n" +
-                "index: [\n" +
-                "  225,\n" +
-                "  419,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "# position: 419\n" +
-                "--- !!data #binary\n" +
-                "msg: Another Hello World\n" +
-                "...\n" +
-                "# 5242429 bytes remaining\n";
-        checkFileContents(dir.listFiles()[0], expected2);
+            long start = queue.presentCycle() << 40;
+            appendMessage(queue, start, "Hello World");
+            String expected1 = "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 419,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 245,\n" +
+                    "    lastIndex: 1\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 225\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 245\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  335,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "# position: 335\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  225,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "...\n" +
+                    "# 5242457 bytes remaining\n";
+            checkFileContents(dir.listFiles()[0], expected1);
 
-        appendMessage(queue, start + 2, "Bye for now");
+            appendMessage(queue, start + 1, "Another Hello World");
+            String expected2 = "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 447,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 245,\n" +
+                    "    lastIndex: 2\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 225\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 245\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  335,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "# position: 335\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  225,\n" +
+                    "  419,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "# position: 419\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Another Hello World\n" +
+                    "...\n" +
+                    "# 5242429 bytes remaining\n";
+            checkFileContents(dir.listFiles()[0], expected2);
 
-        String expected = "--- !!meta-data #binary\n" +
-                "header: !SCQStore {\n" +
-                "  wireType: !WireType BINARY,\n" +
-                "  writePosition: 447,\n" +
-                "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
-                "    format: yyyyMMdd,\n" +
-                "    epoch: 0\n" +
-                "  },\n" +
-                "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: 8,\n" +
-                "    indexSpacing: 1,\n" +
-                "    index2Index: 245,\n" +
-                "    lastIndex: 3\n" +
-                "  }\n" +
-                "}\n" +
-                "# position: 225\n" +
-                "--- !!data #binary\n" +
-                "msg: Hello World\n" +
-                "# position: 245\n" +
-                "--- !!meta-data #binary\n" +
-                "index2index: [\n" +
-                "  335,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "# position: 335\n" +
-                "--- !!meta-data #binary\n" +
-                "index: [\n" +
-                "  225,\n" +
-                "  419,\n" +
-                "  447,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0,\n" +
-                "  0\n" +
-                "]\n" +
-                "# position: 419\n" +
-                "--- !!data #binary\n" +
-                "msg: Another Hello World\n" +
-                "# position: 447\n" +
-                "--- !!data #binary\n" +
-                "msg: Bye for now\n" +
-                "...\n" +
-                "# 5242409 bytes remaining\n";
-        checkFileContents(dir.listFiles()[0], expected);
+            appendMessage(queue, start + 2, "Bye for now");
+
+            String expected = "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 467,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 245,\n" +
+                    "    lastIndex: 3\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 225\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 245\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  335,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "# position: 335\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  225,\n" +
+                    "  419,\n" +
+                    "  447,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0,\n" +
+                    "  0\n" +
+                    "]\n" +
+                    "# position: 419\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Another Hello World\n" +
+                    "# position: 447\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Bye for now\n" +
+                    "...\n" +
+                    "# 5242409 bytes remaining\n";
+            checkFileContents(dir.listFiles()[0], expected);
+        }
     }
 
     public void checkFileContents(File file, String expected) throws FileNotFoundException {
@@ -946,10 +953,29 @@ public class SingleCQFormatTest {
         }
     }
 
+    @Before
+    public void resetAppendMode() {
+        appendMode = 0;
+    }
+
     public void appendMessage(SingleChronicleQueue queue, long expectedIndex, String msg) {
         ExcerptAppender appender = queue.createAppender();
-        try (DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write(() -> "msg").text(msg);
+        switch (appendMode) {
+            case 1:
+                appender.writeDocument(w -> w.write(() -> "msg").text(msg));
+                break;
+
+            case 2:
+                Bytes bytes = Bytes.elasticByteBuffer();
+                new BinaryWire(bytes).write(() -> "msg").text(msg);
+                appender.writeBytes(bytes);
+                break;
+
+            default:
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write(() -> "msg").text(msg);
+                }
+                break;
         }
         long index = appender.lastIndexAppended();
         assertHexEquals(expectedIndex, index);
