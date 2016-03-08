@@ -374,9 +374,61 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire    the context that we are referring to
          * @param address the address of the Excerpts which we are going to record
          */
-        public long storeIndexLocation(@NotNull Wire wire, final long address) {
-            // for now, only index on read attempts.
+        public long storeIndexLocation(@NotNull Wire wire,
+                                       final long address) {
+
             return -1;
+            /*
+            lastSequenceNumber(sequenceNumber);
+
+            long writePosition = wire.bytes().writePosition();
+            try {
+
+                if (sequenceNumber % 64 != 0)
+                    return;
+
+                final LongArrayValues array = this.longArray.get();
+                final long indexToIndex0 = indexToIndex(wire);
+
+                long secondaryAddress;
+                try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
+
+                    if (!context.isPresent())
+                        throw new IllegalStateException("document not found");
+
+                    if (!context.isMetaData()) {
+                        System.out.println("===\n"+Wires.fromSizePrefixedBlobs(wire.bytes(), 0, 2048)+"\n===");
+//                        System.out.println("=== 495 +++\n"+Wires.fromSizePrefixedBlobs(wire.bytes(), 495, 2048)+"\n<<< 495 +++");
+                        throw new IllegalStateException("sequenceNumber not found");
+                    }
+
+                    @NotNull final LongArrayValues primaryIndex = array(wire, array);
+                    final long primaryOffset = toAddress0(sequenceNumber);
+                    // TODO fix a race condition here.
+                    secondaryAddress = primaryIndex.getValueAt(primaryOffset);
+
+                    if (secondaryAddress == Wires.NOT_INITIALIZED) {
+                        secondaryAddress = newIndex(wire);
+                        writePosition = Math.max(writePosition, wire.bytes().writePosition());
+                        primaryIndex.setValueAt(primaryOffset, secondaryAddress);
+                    }
+                }
+                @NotNull final Bytes<?> bytes = wire.bytes();
+                bytes.readLimit(bytes.capacity());
+                try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+
+                    @NotNull final LongArrayValues array1 = array(wire, array);
+                    if (!context.isPresent())
+                        throw new IllegalStateException("document not found");
+                    if (!context.isMetaData())
+                        throw new IllegalStateException("sequenceNumber not found");
+                    array1.setValueAt(toAddress1(sequenceNumber), address);
+                }
+
+            } finally {
+                wire.bytes().writePosition(writePosition);
+            }
+            */
         }
 
         @NotNull

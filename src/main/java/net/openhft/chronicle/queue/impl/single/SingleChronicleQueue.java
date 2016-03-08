@@ -216,7 +216,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         @Nullable final String[] files = path.list();
 
         if (files == null)
-            return Integer.MAX_VALUE;
+            return Integer.MIN_VALUE;
 
         for (String file : files) {
             try {
