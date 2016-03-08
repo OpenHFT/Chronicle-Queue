@@ -367,13 +367,16 @@ public class SingleChronicleQueueExcerpts {
             if (!next())
                 return NoDocumentContext.INSTANCE;
             start();
+
             return this;
         }
 
         @Override
         public void close() {
+            if (isPresent())
+                index = RollingChronicleQueue.index(cycle,
+                        toSequenceNumber(index) + 1);
             super.close();
-            index++;
         }
 
         private boolean next() {
