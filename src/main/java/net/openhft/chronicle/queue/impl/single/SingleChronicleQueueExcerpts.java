@@ -172,6 +172,7 @@ public class SingleChronicleQueueExcerpts {
             @NotNull final Bytes<?> bytes = wire.bytes();
             final long start = bytes.writePosition();
 
+            // TODO this is not thread safe and assumes no index enteries have been added.
             bytes.writeInt(Wires.NOT_READY);
 
             // TODO FIX this action can only be reverted in a single threaded context.
