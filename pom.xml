@@ -105,6 +105,11 @@
             <scope>test</scope>
             <version>1.11.3</version>
         </dependency>
+        <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-queue</artifactId>
+            <version>4.0.8</version>
+        </dependency>
 
 
     </dependencies>

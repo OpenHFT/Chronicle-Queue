@@ -1,16 +1,11 @@
 /**
- * Copyright (C) 2016  higherfrequencytrading.com
- * <p>
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
- * of the License.
- * <p>
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
- * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * <p>
- * You should have received a copy of the GNU Lesser General Public License along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2016  higherfrequencytrading.com <p> This program is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the License. <p> This program is
+ * distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+ * General Public License for more details. <p> You should have received a copy of the GNU Lesser
+ * General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 package net.openhft.chronicle.queue.impl.single;
@@ -31,7 +26,6 @@ import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toCycle;
 import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toSequenceNumber;
-import static net.openhft.chronicle.wire.Wires.toIntU30;
 
 public class SingleChronicleQueueExcerpts {
 
@@ -47,11 +41,6 @@ public class SingleChronicleQueueExcerpts {
         ASSERTIONS = assertions;
     }
 
-    @FunctionalInterface
-    public interface BytesConsumer {
-        boolean accept(Bytes<?> bytes)
-                throws InterruptedException;
-    }
 
     @FunctionalInterface
     public interface WireWriter<T> {
@@ -168,37 +157,11 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        public boolean consumeBytes(BytesConsumer consumer) throws InterruptedException {
-            @NotNull final Bytes<?> bytes = wire.bytes();
-            final long start = bytes.writePosition();
-
-            // TODO this is not thread safe and assumes no index enteries have been added.
-            bytes.writeInt(Wires.NOT_READY);
-
-            // TODO FIX this action can only be reverted in a single threaded context.
-            if (!consumer.accept(bytes)) {
-                bytes.writeSkip(-4);
-                bytes.writeInt(bytes.writePosition(), 0);
+        public boolean consumeBytes(@NotNull BytesConsumer consumer) throws InterruptedException {
+            if (consumer.isEmpty())
                 return false;
-            }
-
-            final long len = bytes.writePosition() - start - 4;
-
-            // no data was read from the ring buffer, so we wont write any document
-            // to the appender
-            // TODO FIX this action can only be reverted in a single threaded context.
-            if (len == 0) {
-                bytes.writeSkip(-4);
-                bytes.writeInt(bytes.writePosition(), 0);
-                return false;
-            }
-
-            bytes.writeInt(start, toIntU30(len, "Document length %,d " +
-                    "out of 30-bit int range."));
-
-            store().writePosition(bytes.writePosition())
-                    .storeIndexLocation(wire, start);
-
+            WriteMarshallable writer = wire -> consumer.read(wire.bytes());
+            append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
             return true;
         }
 
