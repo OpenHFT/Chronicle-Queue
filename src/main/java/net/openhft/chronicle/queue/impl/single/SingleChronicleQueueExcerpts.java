@@ -160,7 +160,7 @@ public class SingleChronicleQueueExcerpts {
         public boolean consumeBytes(@NotNull BytesConsumer consumer) throws InterruptedException {
             if (consumer.isEmpty())
                 return false;
-            WriteMarshallable writer = wire -> consumer.read(wire.bytes());
+            final WriteMarshallable writer = wire -> consumer.read(wire.bytes());
             append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
             return true;
         }
