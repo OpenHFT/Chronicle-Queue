@@ -155,12 +155,8 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        public boolean consumeBytes(@NotNull BytesConsumer consumer) throws InterruptedException {
-            if (consumer.isEmpty())
-                return false;
-            final WriteMarshallable writer = wire -> consumer.read(wire.bytes());
+        public void append(@NotNull WriteMarshallable writer) throws InterruptedException {
             append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
-            return true;
         }
 
         private <T> long append(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
