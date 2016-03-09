@@ -141,10 +141,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public long lastIndexAppended() {
-            if (this.position() == -1) {
+            if (this.position() == -1)
                 throw new IllegalStateException("no messages written");
-            }
-
             return RollingChronicleQueue.index(cycle, store.indexForPosition(wire, position));
         }
 
