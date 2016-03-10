@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
@@ -33,6 +34,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import static java.lang.ThreadLocal.withInitial;
@@ -65,7 +68,7 @@ public class SingleChronicleQueueStore implements WireStore {
      *
      * @param wire a wire
      */
-//    @UsedViaReflection
+    @UsedViaReflection
     private SingleChronicleQueueStore(WireIn wire) {
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         assert wireType != null;
@@ -347,22 +350,26 @@ public class SingleChronicleQueueStore implements WireStore {
 
         long acquireIndex2Index(Wire wire) {
             long start = System.currentTimeMillis();
-            while (System.currentTimeMillis() < start + 10e9) {
-                long index2Index = this.index2Index.getVolatileValue();
+            try {
+                while (System.currentTimeMillis() < start + 10e9) {
+                    long index2Index = this.index2Index.getVolatileValue();
 
-                if (index2Index == LONG_NOT_READY) {
-                    Thread.yield();
-                    continue;
+                    if (index2Index == LONG_NOT_READY) {
+                        wire.pauser().pause();
+                        continue;
+                    }
+
+                    if (index2Index != NOT_INITIALIZED)
+                        return index2Index;
+
+                    if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
+                        continue;
+                    final long index = newIndex(wire, true);
+                    this.index2Index.setOrderedValue(index);
+                    return index;
                 }
-
-                if (index2Index != NOT_INITIALIZED)
-                    return index2Index;
-
-                if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
-                    continue;
-                final long index = newIndex(wire, true);
-                this.index2Index.setOrderedValue(index);
-                return index;
+            } finally {
+                wire.pauser().reset();
             }
             throw new IllegalStateException("index2index NOT_READY for too long.");
         }
@@ -740,15 +747,20 @@ public class SingleChronicleQueueStore implements WireStore {
                     }
 
                 } else {
-                    secondaryAddress = index2index.getValueAt(primaryOffset);
-                    if (secondaryAddress == LONG_NOT_READY) {
-                        long start = System.currentTimeMillis();
-                        do {
-                            Thread.yield();
-                            secondaryAddress = index2index.getVolatileValueAt(primaryOffset);
-                            if (System.currentTimeMillis() > start + 10e3)
-                                throw new IllegalStateException("Index " + primaryOffset + " not ready");
-                        } while (secondaryAddress == LONG_NOT_READY);
+                    try {
+                        for (; ; ) {
+                            secondaryAddress = index2index.getValueAt(primaryOffset);
+                            if (secondaryAddress != LONG_NOT_READY)
+                                break;
+
+                            wire.pauser().pause(10, TimeUnit.SECONDS);
+                        }
+
+                    } catch (TimeoutException e) {
+                        throw new IllegalStateException("Index " + primaryOffset + " not ready");
+
+                    } finally {
+                        wire.pauser().reset();
                     }
                 }
 

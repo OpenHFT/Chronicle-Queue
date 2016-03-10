@@ -88,6 +88,7 @@ public class SingleChronicleQueueExcerpts {
 
         public void updateWire(MappedBytes mappedBytes) {
             wire = (InternalWire) this.queue.wireType().apply(mappedBytes);
+            wire.pauser(queue.pauserSupplier.get());
         }
 
         @Override
@@ -109,9 +110,10 @@ public class SingleChronicleQueueExcerpts {
                     int header = bytes.readVolatileInt(position);
                     int len = Wires.lengthOf(header);
                     if (len == Wires.UNKNOWN_LENGTH) {
-                        Thread.yield();
+                        wire.pauser().pause();
                     } else {
                         position += len + 4;
+                        wire.pauser().reset();
                         break;
                     }
                 }
@@ -218,8 +220,9 @@ public class SingleChronicleQueueExcerpts {
                 long nextCycle = queue.cycle();
                 if (store != null) {
                     while (!store.appendRollMeta(wire, nextCycle)) {
-                        Thread.yield();
+                        wire.pauser().pause();
                     }
+                    wire.pauser().reset();
                     queue.release(store);
                 }
 
@@ -556,6 +559,7 @@ public class SingleChronicleQueueExcerpts {
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = (InternalWire) queue.wireType().apply(store.mappedBytes());
+                this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
             }

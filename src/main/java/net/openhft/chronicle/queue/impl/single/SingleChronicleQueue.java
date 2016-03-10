@@ -22,6 +22,7 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -30,6 +31,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.ValueIn;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
@@ -41,6 +43,7 @@ import java.io.FileNotFoundException;
 import java.io.StreamCorruptedException;
 import java.text.ParseException;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static net.openhft.chronicle.wire.Wires.lengthOf;
 
@@ -49,7 +52,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
     public static final String SUFFIX = ".cq4";
+
     protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
+    final Supplier<Pauser> pauserSupplier;
     @NotNull
     private final RollCycle cycle;
     @NotNull
@@ -67,6 +72,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
+    private final TimeProvider time;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
@@ -83,6 +89,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         onRingBufferStats = builder.onRingBufferStats();
         indexCount = builder.indexCount();
         indexSpacing = builder.indexSpacing();
+        time = builder.timeProvider();
+        pauserSupplier = builder.pauserSupplier();
     }
 
     @Override
@@ -157,7 +165,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public final long cycle() {
-        return this.cycle.current(epoch);
+        return this.cycle.current(time, epoch);
     }
 
     @Override
@@ -315,9 +323,5 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         } catch (FileNotFoundException e) {
             throw Jvm.rethrow(e);
         }
-    }
-
-    public long presentCycle() {
-        return (System.currentTimeMillis() - epoch) / cycle.length();
     }
 }
