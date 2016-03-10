@@ -649,10 +649,13 @@ public class SingleChronicleQueueStore implements WireStore {
             int index2 = 0;
 
             final LongArrayValues index = indexArray.get();
+            index.reset();
             for (; index2 < indexCount; index2++) {
-                long secondaryAddress = index2index.getValueAt(index2 + 1);
-                if (secondaryAddress == 0)
+                long secondaryAddress = index2index.getValueAt(index2);
+                if (secondaryAddress == 0) {
+                    index2--;
                     break;
+                }
                 try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
                     if (!context.isPresent() || !context.isMetaData())
                         throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
@@ -660,33 +663,44 @@ public class SingleChronicleQueueStore implements WireStore {
                     @NotNull final LongArrayValues array1 = array(wire, index, false);
                     long position2 = array1.getValueAt(indexCount - 1);
                     if (position2 == 0 || position <= position2) {
-                        index2++;
                         break;
                     }
                 }
             }
 
             int index3 = 0;
-            long address3 = index.getValueAt(0);
-            for (; index3 < indexCount; index3++) {
-                long address3b = index.getValueAt(index3 + 1);
-                if (address3b == 0 || address3b >= position)
-                    break;
-                address3 = address3b;
-            }
-            // linear scan from here.
-
+            long address3 = 0;
             int index4 = 0;
-            while (address3 < position) {
-                int header = wire.bytes().readInt(address3);
-                if (!Wires.isReady(header))
-                    throw new IllegalStateException("For an entry which is not ready at " + address3);
-                if (header == 0)
-                    throw new IllegalStateException("No entry at " + address3 + " " + position + " " + index4);
-                if (Wires.isData(header)) {
-                    index4++;
+            found:
+            {
+                if (index.isNull()) {
+                    index2 = 0;
+                } else {
+                    address3 = index.getValueAt(0);
+                    for (; index3 < indexCount; index3++) {
+                        long address3b = index.getValueAt(index3);
+                        if (address3b == 0 || address3b > position) {
+                            break;
+                        }
+                        address3 = address3b;
+                        if (address3b == position)
+                            break found;
+                    }
+                    index3--;
                 }
-                address3 += Wires.lengthOf(header) + 4;
+                // linear scan from here.
+
+                while (address3 < position) {
+                    int header = wire.bytes().readInt(address3);
+                    if (!Wires.isReady(header))
+                        throw new IllegalStateException("For an entry which is not ready at " + address3);
+                    if (header == 0)
+                        throw new IllegalStateException("No entry at " + address3 + " " + position + " " + index4);
+                    if (Wires.isData(header)) {
+                        index4++;
+                    }
+                    address3 += Wires.lengthOf(header) + 4;
+                }
             }
             return ((((long) index2 << indexCountBits) + index3) << indexSpacingBits) + index4;
         }

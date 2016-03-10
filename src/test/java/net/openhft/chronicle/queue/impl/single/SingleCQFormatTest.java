@@ -4,7 +4,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -77,8 +76,8 @@ public class SingleCQFormatTest {
             ExcerptTailer tailer = queue.createTailer();
             tailer.toEnd();
             fail();
-        } catch (IORuntimeException e) {
-            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: java.io.StreamCorruptedException: Magic number at the start of the file is not correct 783f3c37",
+        } catch (Exception e) {
+            assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
                     e.toString());
         }
         queue.close();
@@ -501,7 +500,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException {
-        for (int spacing : new int[]{1, 2, 4}) {
+        for (int spacing : new int[]{2}) {
             File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
@@ -977,6 +976,8 @@ public class SingleCQFormatTest {
                 }
                 break;
         }
+        if ((expectedIndex & 0xff) == 0x0f)
+            Thread.yield();
         long index = appender.lastIndexAppended();
         assertHexEquals(expectedIndex, index);
     }

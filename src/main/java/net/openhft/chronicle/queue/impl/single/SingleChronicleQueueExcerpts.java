@@ -22,6 +22,10 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
+import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toCycle;
@@ -33,7 +37,6 @@ public class SingleChronicleQueueExcerpts {
     private static final boolean ASSERTIONS;
     private static final String ROLL_STRING = "roll";
     private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
-    private static final int SPB_HEADER_SIZE = 4;
 
     static {
         boolean assertions = false;
@@ -59,16 +62,17 @@ public class SingleChronicleQueueExcerpts {
     /**
      * StoreAppender
      */
-    public static class StoreAppender extends WriteDocumentContext implements ExcerptAppender {
-        public static final int MAX_MESG_SIZE = (1 << 30) - 1;
+    public static class StoreAppender implements ExcerptAppender, DocumentContext {
         @NotNull
         private final SingleChronicleQueue queue;
         private long cycle;
         private WireStore store;
         private volatile Thread appendingThread = null;
+        private Wire wire;
+        private long position = -1;
+        private boolean metaData = false;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
-            super(null);
             this.queue = queue;
 
             final long lastIndex = this.queue.lastIndex();
@@ -87,43 +91,51 @@ public class SingleChronicleQueueExcerpts {
         }
 
         public void updateWire(MappedBytes mappedBytes) {
-            wire = (InternalWire) this.queue.wireType().apply(mappedBytes);
+            wire = this.queue.wireType().apply(mappedBytes);
             wire.pauser(queue.pauserSupplier.get());
         }
 
         @Override
-        public DocumentContext writingDocument() {
-            long writePosition = store.writePosition();
-            if (writePosition >= WireStore.ROLLED_BIT)
-                throw new IllegalStateException("ROLLED");
-            position = writePosition;
+        public boolean isPresent() {
+            return false;
+        }
 
-            tmpHeader = Wires.NOT_READY | Wires.UNKNOWN_LENGTH;
-            Bytes<?> bytes = wire.bytes();
-            for (; ; ) {
-                if (bytes.compareAndSwapInt(position, 0, tmpHeader)) {
-                    bytes.writeLimit(position + MAX_MESG_SIZE);
-                    bytes.writePosition(position + 4);
-                    return this;
-                }
-                for (; ; ) {
-                    int header = bytes.readVolatileInt(position);
-                    int len = Wires.lengthOf(header);
-                    if (len == Wires.UNKNOWN_LENGTH) {
-                        wire.pauser().pause();
-                    } else {
-                        position += len + 4;
-                        wire.pauser().reset();
-                        break;
-                    }
-                }
+        @Override
+        public Wire wire() {
+            return wire;
+        }
+
+        @Override
+        public DocumentContext writingDocument() {
+            try {
+                position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                metaData = false;
+            } catch (TimeoutException e) {
+                throw new IllegalStateException(e);
+            } catch (EOFException e) {
+                throw new UnsupportedOperationException("Must roll to the next cycle");
             }
+            return this;
+        }
+
+        @Override
+        public boolean isMetaData() {
+            return metaData;
+        }
+
+        public void metaData(boolean metaData) {
+            this.metaData = metaData;
         }
 
         @Override
         public void close() {
-            super.close();
-            store.writePosition(wire.bytes().writePosition());
+            try {
+                wire.updateHeader(position, metaData);
+                long position = wire.bytes().writePosition();
+                store.writePosition(position);
+            } catch (StreamCorruptedException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         @Override
@@ -143,7 +155,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public long lastIndexAppended() {
-            if (this.position() == -1)
+            if (this.position == -1)
                 throw new IllegalStateException("no messages written");
             return RollingChronicleQueue.index(cycle, store.indexForPosition(wire, position));
         }
@@ -181,7 +193,7 @@ public class SingleChronicleQueueExcerpts {
                     // its type as in case of rolling meta, the underlying store
                     // needs to be refreshed
                     if (Wires.isReady(spbHeader)) {
-                        if (bytes.readInt(readPosition + SPB_HEADER_SIZE) == ROLL_KEY) {
+                        if (bytes.readInt(readPosition + Wires.SPB_HEADER_SIZE) == ROLL_KEY) {
                             store = store();
                             bytes = wire.bytes();
                             long writePosition = store.writePosition();
@@ -558,7 +570,7 @@ public class SingleChronicleQueueExcerpts {
                 }
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
-                this.wire = (InternalWire) queue.wireType().apply(store.mappedBytes());
+                this.wire = queue.wireType().apply(store.mappedBytes());
                 this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());

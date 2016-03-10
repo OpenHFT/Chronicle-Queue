@@ -47,6 +47,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(128);
+    private long timeoutMS = 10_000; // 10 seconds.
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -264,6 +265,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     public B pauserSupplier(Supplier<Pauser> pauser) {
         this.pauserSupplier = pauser;
         return (B) this;
+    }
+
+    public B timeoutMS(long timeoutMS) {
+        this.timeoutMS = timeoutMS;
+        return (B) this;
+    }
+
+    public long timeoutMS() {
+        return timeoutMS;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
