@@ -34,4 +34,6 @@ public interface RollCycle {
     default int current(TimeProvider time, long epoch) {
         return (int) ((time.currentTimeMillis() - epoch) / length());
     }
+
+    long toIndex(int cycle, long sequenceNumber);
 }

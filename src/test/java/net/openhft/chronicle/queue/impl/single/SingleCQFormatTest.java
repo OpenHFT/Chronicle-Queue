@@ -334,7 +334,7 @@ public class SingleCQFormatTest {
                     .indexSpacing(1)
                     .build();
 
-            long start = queue.cycle() << 40;
+            long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             appendMessage(queue, start, "Hello World");
             String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -511,7 +511,7 @@ public class SingleCQFormatTest {
                     .indexSpacing(spacing)
                     .build();
 
-            long start = queue.cycle() << 40;
+            long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.moveToIndex(start));
             checkFileContents(dir.listFiles()[0],

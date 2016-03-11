@@ -166,7 +166,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public final long cycle() {
+    public final int cycle() {
         return this.cycle.current(time, epoch);
     }
 

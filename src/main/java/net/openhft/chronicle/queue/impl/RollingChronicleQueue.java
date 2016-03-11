@@ -24,7 +24,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
         return index & 0xFF_FFFF_FFFFL;
     }
 
-    static long toCycle(long index) {
+    static int toCycle(long index) {
         // the very last possible entry in a cycle is the value just before the next cycle.
         return (int) (index >>> 40L);
     }
@@ -52,5 +52,5 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     /**
      * @return the current cycle
      */
-    long cycle();
+    int cycle();
 }

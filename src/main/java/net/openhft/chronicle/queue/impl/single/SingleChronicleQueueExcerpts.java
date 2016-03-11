@@ -11,7 +11,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.*;
-import net.openhft.chronicle.core.annotation.ForceInline;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.TailerDirection;
@@ -47,10 +48,9 @@ public class SingleChronicleQueueExcerpts {
 
     @FunctionalInterface
     public interface WireWriter<T> {
-        long writeOrAdvanceIfNotEmpty(
-                @NotNull WireOut wireOut,
-                boolean metaData,
-                @NotNull T writer);
+        void write(
+                T message,
+                WireOut wireOut);
     }
 
     // *************************************************************************
@@ -65,33 +65,43 @@ public class SingleChronicleQueueExcerpts {
     public static class StoreAppender implements ExcerptAppender, DocumentContext {
         @NotNull
         private final SingleChronicleQueue queue;
-        private long cycle;
+        private int cycle = Integer.MIN_VALUE;
         private WireStore store;
-        private volatile Thread appendingThread = null;
         private Wire wire;
         private long position = -1;
         private boolean metaData = false;
+        private volatile Thread appendingThread = null;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
 
-            final long lastIndex = this.queue.lastIndex();
-            this.cycle = (lastIndex == Long.MIN_VALUE) ? queue.cycle() : toCycle(lastIndex);
-            if (this.cycle < 0)
+            long index = this.queue.lastIndex();
+            setCycleForIndex(index);
+        }
+
+        private void setCycleForIndex(long index) {
+            setCycle(index == Long.MIN_VALUE ? queue.cycle() : toCycle(index));
+        }
+
+        private void setCycle(int cycle) {
+            if (cycle != this.cycle)
+                setCycle2(cycle);
+        }
+
+        private void setCycle2(int cycle) {
+            if (cycle < 0)
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
 
-            this.store = queue.storeForCycle(this.cycle, queue.epoch());
+            this.cycle = cycle;
+            SingleChronicleQueue queue = this.queue;
+            this.store = queue.storeForCycle(cycle, queue.epoch());
 
             @NotNull final MappedBytes mappedBytes = store.mappedBytes();
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
-            updateWire(mappedBytes);
-        }
-
-        public void updateWire(MappedBytes mappedBytes) {
-            wire = this.queue.wireType().apply(mappedBytes);
+            wire = queue.wireType().apply(mappedBytes);
             wire.pauser(queue.pauserSupplier.get());
         }
 
@@ -123,6 +133,7 @@ public class SingleChronicleQueueExcerpts {
             return metaData;
         }
 
+        @Override
         public void metaData(boolean metaData) {
             this.metaData = metaData;
         }
@@ -140,17 +151,17 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeDocument(@NotNull WriteMarshallable writer) {
-            append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
+            append(Wires.UNKNOWN_LENGTH, WriteMarshallable::writeMarshallable, writer);
         }
 
         @Override
         public void writeBytes(@NotNull Bytes bytes) {
-            append(WireInternal::writeWireOrAdvanceIfNotEmpty, bytes);
+            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
 
         @Override
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) {
-            writeDocument(w -> marshallable.writeMarshallable(w.bytes()));
+            append(Wires.UNKNOWN_LENGTH, (m, w) -> m.writeMarshallable(w.bytes()), marshallable);
         }
 
         @Override
@@ -169,128 +180,56 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        public void append(@NotNull WriteMarshallable writer) throws InterruptedException {
-            append(WireInternal::writeWireOrAdvanceIfNotEmpty, writer);
-        }
+        private <T> void append(int length, WireWriter<T> wireWriter, T writer) {
+            assert checkAppendingThread();
+            try {
+                int cycle = queue.cycle();
+                if (this.cycle != cycle)
+                    rollCycleTo(cycle);
 
-        private <T> long append(@NotNull WireWriter<T> wireWriter, @NotNull T writer) {
-            if (ASSERTIONS) {
-                Thread appendingThread = this.appendingThread;
-                if (appendingThread != null)
-                    throw new IllegalStateException("Attempting to use Appneder in " + Thread.currentThread() + " while used by " + appendingThread);
-                this.appendingThread = Thread.currentThread();
-            }
-            WireStore store = store();
-            Bytes<?> bytes = wire.bytes();
-            long position = -1;
+                try {
+                    position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    wireWriter.write(writer, wire);
+                    wire.updateHeader(length, position, false);
 
-            do {
-                final long readPosition = bytes.readPosition();
-                final int spbHeader = bytes.readInt(readPosition);
-
-                if ((spbHeader & Wires.META_DATA) != 0) {
-                    // If meta-data document is detected, we need to determine
-                    // its type as in case of rolling meta, the underlying store
-                    // needs to be refreshed
-                    if (Wires.isReady(spbHeader)) {
-                        if (bytes.readInt(readPosition + Wires.SPB_HEADER_SIZE) == ROLL_KEY) {
-                            store = store();
-                            bytes = wire.bytes();
-                            long writePosition = store.writePosition();
-                            if (writePosition >= WireStore.ROLLED_BIT)
-                                throw new IllegalStateException("ROLLED");
-                            bytes.writePosition(writePosition);
-                            bytes.readPosition(writePosition);
-                        }
-                    } else {
-                        // if not ready loop again waiting for meta-data being
-                        // written
-                        continue;
-                    }
+                } catch (EOFException theySeeMeRolling) {
+                    append2(length, wireWriter, writer);
                 }
+            } catch (TimeoutException | EOFException | StreamCorruptedException e) {
+                throw Jvm.rethrow(e);
 
-                // position will be set to zero if currently being modified with
-                // unknown len
-
-                position = wireWriter.writeOrAdvanceIfNotEmpty(wire, false, writer);
-            } while (position <= 0);
-
-            this.position = position;
-            store.writePosition(bytes.writePosition());
-            long sequenceNumber = store.storeIndexLocation(wire, position);
-
-            long index = RollingChronicleQueue.index(cycle, sequenceNumber);
-            if (ASSERTIONS)
-                appendingThread = null;
-
-            return index;
-        }
-
-        @ForceInline
-        private WireStore store() {
-            if (cycle != queue.cycle()) {
-                long nextCycle = queue.cycle();
-                if (store != null) {
-                    while (!store.appendRollMeta(wire, nextCycle)) {
-                        wire.pauser().pause();
-                    }
-                    wire.pauser().reset();
-                    queue.release(store);
-                }
-
-                this.cycle = nextCycle;
-                this.store = queue.storeForCycle(cycle, queue.epoch());
-                updateWire(store.mappedBytes());
+            } finally {
+                store.writePosition(wire.bytes().writePosition());
+                assert resetAppendingThread();
             }
-
-            return store;
-        }
-    }
-
-    private static class TailerDocumentContext implements DocumentContext {
-
-        private final ReadDocumentContext dc;
-        private final StoreTailer storeTailer;
-        private final Wire wire;
-
-        TailerDocumentContext(Wire wire, StoreTailer storeTailer) {
-            this.storeTailer = storeTailer;
-            this.dc = new ReadDocumentContext(wire);
-            this.wire = wire;
         }
 
-        public void start() {
-            dc.start();
-            if (isPresent())
-                storeTailer.index = RollingChronicleQueue.index(storeTailer.cycle,
-                        toSequenceNumber(storeTailer.index) + 1);
+        private void rollCycleTo(int cycle) throws TimeoutException {
+            wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
+            setCycle2(cycle);
         }
 
-        @Override
-        public boolean isMetaData() {
-            return dc.isMetaData();
+        private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
+            setCycle(queue.cycle());
+            position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+            wireWriter.write(writer, wire);
+            wire.updateHeader(length, position, false);
         }
 
-        @Override
-        public boolean isPresent() {
-            return dc.isPresent();
+        private boolean checkAppendingThread() {
+            Thread appendingThread = this.appendingThread;
+            if (appendingThread != null)
+                throw new IllegalStateException("Attempting to use Appneder in " + Thread.currentThread() + " while used by " + appendingThread);
+            this.appendingThread = Thread.currentThread();
+            return true;
         }
 
-        @Override
-        public boolean isData() {
-            return dc.isData();
+        private boolean resetAppendingThread() {
+            if (this.appendingThread == null)
+                throw new IllegalStateException("Attempting to release Appender in " + Thread.currentThread() + " but already released");
+            this.appendingThread = null;
+            return true;
         }
-
-        @Override
-        public Wire wire() {
-            return wire;
-        }
-
-        @Override
-        public void close() {
-            dc.close();
-        }
-
     }
 
     // *************************************************************************
