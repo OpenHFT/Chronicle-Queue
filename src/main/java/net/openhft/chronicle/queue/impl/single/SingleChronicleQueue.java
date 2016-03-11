@@ -210,7 +210,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long lastIndex() {
-        final long lastCycle = lastCycle();
+        final int lastCycle = lastCycle();
         if (lastCycle == Integer.MIN_VALUE)
             return Long.MIN_VALUE;
 
@@ -291,6 +291,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 final SingleChronicleQueueStore wireStore = new
                         SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch, indexCount, indexSpacing);
                 wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+                wireStore.writePosition(wire.bytes().writePosition());
                 wire.updateFirstHeader();
                 return wireStore;
             }

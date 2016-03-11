@@ -22,9 +22,10 @@ import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
-    public static final long ROLLED_BIT = 0x4000_0000_0000_0000L;
+import java.io.EOFException;
+import java.util.concurrent.TimeoutException;
 
+public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
     WireStore writePosition(long position);
 
     /**
@@ -41,11 +42,11 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * @return the sequence number with the cycle
      */
-    long lastEntryIndexed(Wire wire);
+    long lastEntryIndexed(Wire wire, long timeoutMS);
 
-    boolean appendRollMeta(@NotNull Wire wire, long cycle);
+    boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException;
 
-    long moveToIndex(@NotNull Wire wire, long index);
+    long moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
 
     @NotNull
     MappedBytes mappedBytes();
@@ -63,9 +64,10 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * Reverse look up an index for a position.
      *
      * @param position of the start of the message
+     * @param timeoutMS
      * @return index in this store.
      */
-    long indexForPosition(Wire wire, long position);
+    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException;
 
     String dump();
 }

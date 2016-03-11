@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -499,7 +500,7 @@ public class SingleCQFormatTest {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException {
+    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException, TimeoutException {
         for (int spacing : new int[]{2}) {
             File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();

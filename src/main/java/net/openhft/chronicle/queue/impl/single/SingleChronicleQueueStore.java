@@ -33,7 +33,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.StreamCorruptedException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -145,16 +147,13 @@ public class SingleChronicleQueueStore implements WireStore {
      * @return the last index available on the file system
      */
     @Override
-    public long lastEntryIndexed(Wire wire) {
-        return this.indexing.lastEntryIndexed(wire);
+    public long lastEntryIndexed(Wire wire, long timeoutMS) {
+        return this.indexing.lastEntryIndexed(wire, timeoutMS);
     }
 
     @Override
-    public boolean appendRollMeta(@NotNull Wire wire, long cycle) {
-        if ((writePosition() & ROLLED_BIT) != 0)
-            return false;
-        wire.writeDocument(true, d -> d.write(MetaDataField.roll).int32(cycle));
-        writePosition(wire.bytes().writePosition() | ROLLED_BIT);
+    public boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException {
+        wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -163,11 +162,12 @@ public class SingleChronicleQueueStore implements WireStore {
      *
      * @param wire  the data structure we are navigating
      * @param index the index we wish to move to
+     * @param timeoutMS
      * @return the position of the {@code targetIndex}  or -1 if the index can not be found
      */
     @Override
-    public long moveToIndex(@NotNull Wire wire, long index) {
-        return indexing.moveToIndex(wire, index);
+    public long moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException {
+        return indexing.moveToIndex(wire, index, timeoutMS);
     }
 
     @Override
@@ -196,10 +196,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @NotNull
     @Override
     public MappedBytes mappedBytes() {
-        final MappedBytes mappedBytes = MappedBytes.mappedBytes(mappedFile);
-        mappedBytes.readPosition(0);
-        mappedBytes.writePosition(writePosition() & (WireStore.ROLLED_BIT - 1));
-        return mappedBytes;
+        return MappedBytes.mappedBytes(mappedFile);
     }
 
     @Override
@@ -212,8 +209,8 @@ public class SingleChronicleQueueStore implements WireStore {
     // *************************************************************************
 
     @Override
-    public long indexForPosition(Wire wire, long position) {
-        return indexing.indexForPosition(wire, position);
+    public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
+        return indexing.indexForPosition(wire, position, timeoutMS);
     }
 
     // *************************************************************************
@@ -343,19 +340,19 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire the current wire
          * @return the position of the index
          */
-        long indexToIndex(@NotNull final Wire wire) {
+        long indexToIndex(@NotNull final Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             long index2Index = this.index2Index.getVolatileValue();
-            return index2Index > 0 ? index2Index : acquireIndex2Index(wire);
+            return index2Index > 0 ? index2Index : acquireIndex2Index(wire, timeoutMS);
         }
 
-        long acquireIndex2Index(Wire wire) {
+        long acquireIndex2Index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             long start = System.currentTimeMillis();
             try {
-                while (System.currentTimeMillis() < start + 10e9) {
+                while (System.currentTimeMillis() < start + timeoutMS) {
                     long index2Index = this.index2Index.getVolatileValue();
 
                     if (index2Index == LONG_NOT_READY) {
-                        wire.pauser().pause();
+                        wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
                         continue;
                     }
 
@@ -364,7 +361,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
                     if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
                         continue;
-                    final long index = newIndex(wire, true);
+                    final long index = newIndex(wire, true, timeoutMS);
                     this.index2Index.setOrderedValue(index);
                     return index;
                 }
@@ -461,18 +458,21 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param wire the current wire
          * @return the address of the Excerpt containing the usable index, just after the header
          */
-        long newIndex(@NotNull Wire wire, boolean index2index) {
+        long newIndex(@NotNull Wire wire, boolean index2index, long timeoutMS) throws EOFException {
             long writePosition = this.writePosition.getValue();
-            if (writePosition >= WireStore.ROLLED_BIT)
-                throw new IllegalStateException("ROLLED");
-
             wire.bytes().writePosition(writePosition);
-            long position;
-            do {
-                position = WireInternal.writeWireOrAdvanceIfNotEmpty(wire, true, index2index ? index2IndexTemplate : indexTemplate);
-            } while (position <= 0);
-            int len = Wires.lengthOf(wire.bytes().readInt(position));
-            this.writePosition.setMaxValue(position + len + 4);
+            long position = 0;
+            try {
+                position = wire.writeHeader(timeoutMS, TimeUnit.MILLISECONDS);
+                WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
+                writer.writeMarshallable(wire);
+                wire.updateHeader(position, true);
+
+            } catch (TimeoutException | StreamCorruptedException e) {
+                throw new AssertionError(e);
+            }
+
+            this.writePosition.setMaxValue(wire.bytes().writePosition());
             return position;
         }
 
@@ -490,26 +490,31 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param index the index we wish to move to
          * @return the position of the {@code targetIndex} or -1 if the index can not be found
          */
-        public long moveToIndex(@NotNull final Wire wire, final long index) {
-            long ret = moveToIndex0(wire, index);
-            if (ret <= 0) {
-                checkIndexerUpToDate(wire);
-                ret = moveToIndex0(wire, index);
+        long moveToIndex(@NotNull final Wire wire, final long index, long timeoutMS) throws TimeoutException {
+            long ret = 0;
+            try {
+                ret = moveToIndex0(wire, index, timeoutMS);
+                if (ret <= 0) {
+                    checkIndexerUpToDate(wire, timeoutMS);
+                    ret = moveToIndex0(wire, index, timeoutMS);
+                }
+            } catch (EOFException e) {
+                // scan from the start.
+                linearScan(wire, index, 0, 0);
             }
             return ret;
         }
 
-        long moveToIndex0(@NotNull final Wire wire, final long index) {
+        long moveToIndex0(@NotNull final Wire wire, final long index, long timeoutMS) throws EOFException, TimeoutException {
 
-            LongArrayValues index2index = getIndex2index(wire);
-            final long indexToIndex0 = indexToIndex(wire);
+            LongArrayValues index2index = getIndex2index(wire, timeoutMS);
+            final long indexToIndex0 = indexToIndex(wire, timeoutMS);
 
             @NotNull final Bytes<?> bytes = wire.bytes();
-            bytes.writeLimit(bytes.capacity());
+            bytes.writeLimit(bytes.capacity()).readLimit(bytes.capacity());
             final long readPosition = bytes.readPosition();
-            long limit = bytes.readLimit();
+
             try {
-                bytes.readLimit(bytes.capacity());
                 bytes.readPosition(indexToIndex0);
                 long startIndex = index & ~(indexSpacing - 1);
 
@@ -556,7 +561,8 @@ public class SingleChronicleQueueStore implements WireStore {
                     } while (secondaryOffset >= 0);
                 }
             } finally {
-                bytes.readLimit(limit).readPosition(readPosition);
+                bytes.writePosition(writePosition.getValue());
+                bytes.readPosition(readPosition);
             }
 
             return -1;
@@ -567,7 +573,7 @@ public class SingleChronicleQueueStore implements WireStore {
          * fromKnownIndex} at  {@code knownAddress} <p/> note meta data is skipped and does not
          * count to the indexes
          *
-         * @param context        if successful, moves the context to an address relating to the
+         * @param wire        if successful, moves the context to an address relating to the
          *                       index {@code toIndex }
          * @param toIndex        the index that we wish to move the context to
          * @param fromKnownIndex a know index ( used as a starting point )
@@ -576,12 +582,12 @@ public class SingleChronicleQueueStore implements WireStore {
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
 
-        private long linearScan(@NotNull final Wire context,
+        private long linearScan(@NotNull final Wire wire,
                                 final long toIndex,
                                 final long fromKnownIndex,
                                 final long knownAddress) {
             @NotNull
-            final Bytes<?> bytes = context.bytes();
+            final Bytes<?> bytes = wire.bytes();
             final long l = bytes.readLimit();
             final long p = bytes.readPosition();
 
@@ -590,14 +596,12 @@ public class SingleChronicleQueueStore implements WireStore {
                 for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
 
                     // wait until ready - todo add timeout
-                    for (; ; ) {
-                        if (Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
-                            break;
-                        } else
-                            Thread.yield();
+                    while (!Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
+                        wire.pauser().pause();
                     }
+                    wire.pauser().reset();
 
-                    try (@NotNull final DocumentContext documentContext = context.readingDocument()) {
+                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
 
                         if (!documentContext.isPresent())
                             return -1;
@@ -606,8 +610,8 @@ public class SingleChronicleQueueStore implements WireStore {
                             continue;
 
                         if (toIndex == i) {
-                            context.bytes().readSkip(-4);
-                            return context.bytes().readPosition();
+                            wire.bytes().readSkip(-4);
+                            return wire.bytes().readPosition();
                         }
                         i++;
                     }
@@ -618,20 +622,20 @@ public class SingleChronicleQueueStore implements WireStore {
             return -1;
         }
 
-        public long lastEntryIndexed(Wire wire) {
-            checkIndexerUpToDate(wire);
+        public long lastEntryIndexed(Wire wire, long timeoutMS) {
+            try {
+                checkIndexerUpToDate(wire, timeoutMS);
+            } catch (EOFException | TimeoutException e) {
+                e.printStackTrace();
+            }
             return nextEntryToIndex.getValue() - 1;
         }
 
-        private long positionForIndex(Wire wire, long value) {
-            return moveToIndex(wire, value);
-        }
-
-        public LongArrayValues getIndex2index(Wire wire) {
+        public LongArrayValues getIndex2index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             LongArrayValues values = index2indexArray.get();
             if (((Byteable) values).bytesStore() != null)
                 return values;
-            final long indexToIndex0 = indexToIndex(wire);
+            final long indexToIndex0 = indexToIndex(wire, timeoutMS);
             try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
                 if (!context.isPresent() || !context.isMetaData()) {
                     dumpStore(wire);
@@ -642,10 +646,10 @@ public class SingleChronicleQueueStore implements WireStore {
             }
         }
 
-        public long indexForPosition(Wire wire, long position) {
-            checkIndexerUpToDate(wire);
+        public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
+            checkIndexerUpToDate(wire, timeoutMS);
             // find the index2index
-            final LongArrayValues index2index = getIndex2index(wire);
+            final LongArrayValues index2index = getIndex2index(wire, timeoutMS);
             int index2 = 0;
 
             final LongArrayValues index = indexArray.get();
@@ -705,22 +709,27 @@ public class SingleChronicleQueueStore implements WireStore {
             return ((((long) index2 << indexCountBits) + index3) << indexSpacingBits) + index4;
         }
 
-        private void checkIndexerUpToDate(Wire wire) {
+        private void checkIndexerUpToDate(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             long index = nextEntryToIndex.getValue() - 1;
-            long position = index < 0 ? 0L : moveToIndex0(wire, index);
+            long position = index < 0 ? 0L : moveToIndex0(wire, index, timeoutMS);
             if (position < 0) {
-                moveToIndex0(wire, index);
+                moveToIndex0(wire, index, timeoutMS);
                 throw new AssertionError();
             }
-            LongArrayValues index2index = getIndex2index(wire);
-            Bytes bytes = wire.bytes();
-            long nextIndex = (index + indexSpacing) & ~(indexSpacing - 1);
-            index = checkUpToDate0(wire, index, position, index2index, bytes, nextIndex);
+            try {
+                LongArrayValues index2index = getIndex2index(wire, timeoutMS);
+                Bytes bytes = wire.bytes();
+                long nextIndex = (index + indexSpacing) & ~(indexSpacing - 1);
+                index = checkUpToDate0(wire, index, position, index2index, bytes, nextIndex, timeoutMS);
 //            System.out.println("index: " + index);
-            nextEntryToIndex.setMaxValue(index + 1);
+                nextEntryToIndex.setMaxValue(index + 1);
+            } catch (TimeoutException e) {
+                // log for now and continue;
+                e.printStackTrace();
+            }
         }
 
-        private long checkUpToDate0(Wire wire, long index, long position, LongArrayValues index2index, Bytes bytes, long nextIndex) {
+        private long checkUpToDate0(Wire wire, long index, long position, LongArrayValues index2index, Bytes bytes, long nextIndex, long timeoutMS) throws EOFException {
             int len, header;
             // if its a known position, start with the next one.
             if (index >= 0) {
@@ -750,7 +759,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     boolean ok = false;
 
                     try {
-                        secondaryAddress = newIndex(wire, false);
+                        secondaryAddress = newIndex(wire, false, timeoutMS);
                         index2index.setValueAt(primaryOffset, secondaryAddress);
                         ok = true;
                     } finally {
