@@ -56,7 +56,7 @@ public interface ExcerptTailer extends ExcerptCommon {
     DocumentContext readingDocument();
 
     /**
-     * @return the index just read , this include the cycle and the sequence number from with this
+     * @return the index just read, this include the cycle and the sequence number from with this
      * cycle
      */
     long index();
