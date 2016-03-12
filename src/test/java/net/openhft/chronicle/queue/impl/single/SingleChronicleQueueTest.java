@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.*;
 import static org.junit.Assert.*;
@@ -113,7 +114,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testAppendAndRead() throws IOException {
+    public void testAppendAndRead() throws IOException, TimeoutException {
         try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
@@ -253,7 +254,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testAppendAndReadAtIndex() throws IOException {
+    public void testAppendAndReadAtIndex() throws IOException, TimeoutException {
         try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
@@ -320,7 +321,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testReadAtIndex() throws IOException {
+    public void testReadAtIndex() throws IOException, TimeoutException {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
@@ -350,7 +351,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Ignore("long running test")
     @Test
-    public void testReadAtIndex4MB() throws IOException {
+    public void testReadAtIndex4MB() throws IOException, TimeoutException {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
@@ -425,7 +426,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testHeaderIndexReadAtIndex() throws IOException {
+    public void testHeaderIndexReadAtIndex() throws IOException, TimeoutException {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
@@ -469,7 +470,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testIndex() throws IOException {
+    public void testIndex() throws IOException, TimeoutException {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
@@ -571,7 +572,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    public void testReadingDocumentWithFirstAMove() throws IOException {
+    public void testReadingDocumentWithFirstAMove() throws IOException, TimeoutException {
 
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
@@ -628,7 +629,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     // TODO Test fails if you are at Epoch.
     @Test
     @Ignore("TODO Fix")
-    public void testReadingDocumentWithFirstAMoveWithEpoch() throws IOException {
+    public void testReadingDocumentWithFirstAMoveWithEpoch() throws IOException, TimeoutException {
 
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)

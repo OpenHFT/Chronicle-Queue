@@ -15,13 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -30,7 +29,9 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
@@ -38,18 +39,23 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.text.ParseException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-
-import static net.openhft.chronicle.wire.Wires.lengthOf;
+import java.util.function.Supplier;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final int TIMEOUT = 10_000;
     public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
     public static final String SUFFIX = ".cq4";
+
     protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
+    final Supplier<Pauser> pauserSupplier;
+    final long timeoutMS;
     @NotNull
     private final RollCycle cycle;
     @NotNull
@@ -67,6 +73,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
+    private final TimeProvider time;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         cycle = builder.rollCycle();
@@ -83,6 +90,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         onRingBufferStats = builder.onRingBufferStats();
         indexCount = builder.indexCount();
         indexSpacing = builder.indexSpacing();
+        time = builder.timeProvider();
+        pauserSupplier = builder.pauserSupplier();
+        timeoutMS = builder.timeoutMS();
     }
 
     @Override
@@ -156,8 +166,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public final long cycle() {
-        return this.cycle.current(epoch);
+    public final int cycle() {
+        return this.cycle.current(time, epoch);
     }
 
     @Override
@@ -200,7 +210,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long lastIndex() {
-        final long lastCycle = lastCycle();
+        final int lastCycle = lastCycle();
         if (lastCycle == Integer.MIN_VALUE)
             return Long.MIN_VALUE;
 
@@ -275,49 +285,28 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
-            //noinspection PointlessBitwiseExpression
-            int unknownMetaDataNotReady = Wires.META_DATA | Wires.NOT_READY | Wires.UNKNOWN_LENGTH;
-            if (mappedBytes.compareAndSwapInt(0, Wires.NOT_INITIALIZED, unknownMetaDataNotReady)) {
+            Wire wire = wireType.apply(mappedBytes);
+            wire.pauser(pauserSupplier.get());
+            if (wire.writeFirstHeader()) {
                 final SingleChronicleQueueStore wireStore = new
                         SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch, indexCount, indexSpacing);
-                final Bytes<?> bytes = mappedBytes.bytesForWrite().writePosition(4);
-                wireType.apply(bytes).writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
-                wireStore.writePosition(bytes.writePosition());
-                mappedBytes.writeOrderedInt(0L, Wires.META_DATA
-                        | Wires.toIntU30(bytes.writePosition() - 4, "Delegate too large=%,d"));
+                wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+                wireStore.writePosition(wire.bytes().writePosition());
+                wire.updateFirstHeader();
                 return wireStore;
-
-            } else {
-                int headerLen = mappedBytes.readVolatileInt(0);
-                if (headerLen != unknownMetaDataNotReady) {
-                    int topBits = headerLen & 0xFFFF_0000;
-                    if (topBits != Wires.META_DATA)
-                        throw new IORuntimeException(new StreamCorruptedException(
-                                "Magic number at the start of the file is not correct " + Integer.toHexString(headerLen)));
-                }
-                long end = System.currentTimeMillis() + TIMEOUT;
-                while ((headerLen & Wires.NOT_READY) == Wires.NOT_READY) {
-                    if (System.currentTimeMillis() > end)
-                        throw new IllegalStateException(MESSAGE + dateValue.path);
-                    Jvm.pause(1);
-                }
-
-                mappedBytes.readPosition(0).writePosition(mappedBytes.capacity());
-                final int len = lengthOf(mappedBytes.readVolatileInt());
-                mappedBytes.readLimit(mappedBytes.readPosition() + len);
-                //noinspection unchecked
-                StringBuilder name = Wires.acquireStringBuilder();
-                ValueIn valueIn = wireType.apply(mappedBytes).readEventName(name);
-                if (StringUtils.isEqual(name, MetaDataKeys.header.name()))
-                    return valueIn.typedMarshallable();
-                throw new IORuntimeException(new StreamCorruptedException("The first message should be the header, was " + name));
             }
-        } catch (FileNotFoundException e) {
+
+            wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+
+            StringBuilder name = Wires.acquireStringBuilder();
+            ValueIn valueIn = wire.readEventName(name);
+            if (StringUtils.isEqual(name, MetaDataKeys.header.name()))
+                return valueIn.typedMarshallable();
+            //noinspection unchecked
+            throw new StreamCorruptedException("The first message should be the header, was " + name);
+
+        } catch (TimeoutException | IOException e) {
             throw Jvm.rethrow(e);
         }
-    }
-
-    public long presentCycle() {
-        return (System.currentTimeMillis() - epoch) / cycle.length();
     }
 }

@@ -54,4 +54,10 @@ public enum RollCycles implements RollCycle {
     public int defaultIndexSpacing() {
         return indexSpacing;
     }
+
+    @Override
+    public long toIndex(int cycle, long sequenceNumber) {
+        // todo fix for SECONDLY, MINUTELY
+        return ((long) cycle << 40) + (sequenceNumber & ((1L << 40) - 1));
+    }
 }

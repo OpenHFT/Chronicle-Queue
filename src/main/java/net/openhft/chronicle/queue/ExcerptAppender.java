@@ -55,6 +55,6 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @return the cycle this tailer is on, usually with chronicle-queue each cycle will have its
      * own unique data file to store the excerpt
      */
-    long cycle();
+    int cycle();
 
 }

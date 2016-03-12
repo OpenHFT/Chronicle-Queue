@@ -15,6 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.time.TimeProvider;
+
 public interface RollCycle {
 
     String format();
@@ -29,7 +31,9 @@ public interface RollCycle {
      * @param epoch and EPOCH offset, to all the user to define thier own epoch
      * @return the cycle
      */
-    default int current(long epoch) {
-        return (int) ((System.currentTimeMillis() - epoch) / length());
+    default int current(TimeProvider time, long epoch) {
+        return (int) ((time.currentTimeMillis() - epoch) / length());
     }
+
+    long toIndex(int cycle, long sequenceNumber);
 }

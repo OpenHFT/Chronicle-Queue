@@ -10,7 +10,7 @@ import java.io.File;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * @author Rob Austin.
@@ -83,7 +83,7 @@ public class ThreadedQueueTest {
         assertEquals(REQUIRED_COUNT, counter.get());
     }
 
-    @Test(timeout = 5000)
+    @Test//(timeout = 5000)
     public void testTailerReadingEmptyQueue() throws java.io.IOException {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
@@ -104,13 +104,14 @@ public class ThreadedQueueTest {
                 .build();
 
         Bytes bytes = Bytes.elasticByteBuffer();
-        tailer.readBytes(bytes);
+        assertFalse(tailer.readBytes(bytes));
 
         final ExcerptAppender appender = wqueue.createAppender();
         appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes()));
 
         bytes.clear();
-        tailer.readBytes(bytes);
+        assertTrue(tailer.readBytes(bytes));
+        assertEquals("Hello World", bytes.toString());
 
 
     }

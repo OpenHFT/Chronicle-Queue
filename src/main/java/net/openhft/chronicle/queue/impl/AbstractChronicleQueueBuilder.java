@@ -3,10 +3,14 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.time.SystemTimeProvider;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Created by peter on 05/03/2016.
@@ -40,6 +45,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      * by default logs the performance stats of the ring buffer
      */
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
+    private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
+    private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(128);
+    private long timeoutMS = 10_000; // 10 seconds.
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -239,6 +247,33 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     public int indexSpacing() {
         return indexSpacing <= 0 ? rollCycle.defaultIndexSpacing() : indexSpacing;
+    }
+
+    public TimeProvider timeProvider() {
+        return timeProvider;
+    }
+
+    public B timeProvider(TimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
+        return (B) this;
+    }
+
+    public Supplier<Pauser> pauserSupplier() {
+        return pauserSupplier;
+    }
+
+    public B pauserSupplier(Supplier<Pauser> pauser) {
+        this.pauserSupplier = pauser;
+        return (B) this;
+    }
+
+    public B timeoutMS(long timeoutMS) {
+        this.timeoutMS = timeoutMS;
+        return (B) this;
+    }
+
+    public long timeoutMS() {
+        return timeoutMS;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

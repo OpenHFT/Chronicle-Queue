@@ -19,6 +19,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.BinaryWire;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -26,6 +27,7 @@ import net.openhft.chronicle.wire.TextWire;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Display records in a Chronicle in a text form.
@@ -47,13 +49,18 @@ public enum ChronicleReader {
         tailFileFrom(basePath, regex, index, false);
     }
 
-    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) throws IOException, InterruptedException {
+    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) throws IOException {
         ChronicleQueue ic = SingleChronicleQueueBuilder.binary(new File(basePath)).build();
         ExcerptTailer tailer = ic.createTailer();
         if (index > 0) {
             System.out.println("Waiting for index " + index);
-            while (!tailer.moveToIndex(index)) {
-                Thread.sleep(500);
+            for (; ; ) {
+                try {
+                    if (tailer.moveToIndex(index))
+                        break;
+                } catch (TimeoutException e) {
+                    Jvm.pause(500);
+                }
             }
         }
 
@@ -64,7 +71,7 @@ public enum ChronicleReader {
                 if (!dc.isPresent()) {
                     if (stopAtEnd)
                         break;
-                    Thread.sleep(50);
+                    Jvm.pause(50);
                     continue;
                 }
                 Bytes<?> bytes = dc.wire().bytes();

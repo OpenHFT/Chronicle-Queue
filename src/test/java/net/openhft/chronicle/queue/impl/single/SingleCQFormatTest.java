@@ -4,7 +4,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -16,6 +15,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -77,8 +77,8 @@ public class SingleCQFormatTest {
             ExcerptTailer tailer = queue.createTailer();
             tailer.toEnd();
             fail();
-        } catch (IORuntimeException e) {
-            assertEquals("net.openhft.chronicle.core.io.IORuntimeException: java.io.StreamCorruptedException: Magic number at the start of the file is not correct 783f3c37",
+        } catch (Exception e) {
+            assertEquals("java.io.StreamCorruptedException: Unexpected magic number 783f3c37",
                     e.toString());
         }
         queue.close();
@@ -335,7 +335,7 @@ public class SingleCQFormatTest {
                     .indexSpacing(1)
                     .build();
 
-            long start = queue.presentCycle() << 40;
+            long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             appendMessage(queue, start, "Hello World");
             String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -500,8 +500,8 @@ public class SingleCQFormatTest {
     }
 
     @Test
-    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException {
-        for (int spacing : new int[]{1, 2, 4}) {
+    public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException, TimeoutException {
+        for (int spacing : new int[]{2}) {
             File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
@@ -512,7 +512,7 @@ public class SingleCQFormatTest {
                     .indexSpacing(spacing)
                     .build();
 
-            long start = queue.presentCycle() << 40;
+            long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.moveToIndex(start));
             checkFileContents(dir.listFiles()[0],
@@ -977,6 +977,8 @@ public class SingleCQFormatTest {
                 }
                 break;
         }
+        if ((expectedIndex & 0xff) == 0x0f)
+            Thread.yield();
         long index = appender.lastIndexAppended();
         assertHexEquals(expectedIndex, index);
     }
