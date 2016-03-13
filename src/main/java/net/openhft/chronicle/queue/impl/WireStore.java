@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.queue.impl.single.ScanResult;
 import net.openhft.chronicle.wire.Demarshallable;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
@@ -46,19 +47,10 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException;
 
-    long moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
+    ScanResult moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
 
     @NotNull
     MappedBytes mappedBytes();
-
-    /**
-     * Return the sequence number
-     *
-     * @param wire     to write to.
-     * @param position to index
-     * @return the excerpt index if known.
-     */
-    long storeIndexLocation(Wire wire, long position);
 
     /**
      * Reverse look up an index for a position.

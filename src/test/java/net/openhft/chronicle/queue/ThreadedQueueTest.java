@@ -15,6 +15,7 @@ import static org.junit.Assert.*;
 /**
  * @author Rob Austin.
  */
+@Ignore("TODO FIX")
 public class ThreadedQueueTest {
 
     public static final int MESSAGE_SIZE = 1024;
@@ -22,7 +23,6 @@ public class ThreadedQueueTest {
     private static final int BLOCK_SIZE = 256 << 20;
 
     @Test(timeout = 10000)
-    @Ignore("TODO FIX")
     public void testMultipleThreads() throws java.io.IOException, InterruptedException, ExecutionException, TimeoutException {
 
         final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";

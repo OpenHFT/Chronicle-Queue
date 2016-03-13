@@ -75,12 +75,10 @@ public class SingleChronicleQueueExcerpts {
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
 
-            long index = this.queue.lastIndex();
-            setCycleForIndex(index);
-        }
-
-        private void setCycleForIndex(long index) {
-            setCycle(index == Long.MIN_VALUE ? queue.cycle() : toCycle(index));
+            int cycle = this.queue.lastCycle();
+            if (cycle < 0)
+                cycle = queue.cycle();
+            setCycle2(cycle);
         }
 
         private void setCycle(int cycle) {
@@ -178,6 +176,8 @@ public class SingleChronicleQueueExcerpts {
                 return RollingChronicleQueue.index(cycle, sequenceNumber);
             } catch (EOFException | TimeoutException e) {
                 throw new AssertionError(e);
+            } finally {
+                wire.bytes().writePosition(store.writePosition());
             }
         }
 
@@ -257,6 +257,7 @@ public class SingleChronicleQueueExcerpts {
         private int cycle;
         private long index; // index of the next read.
         private WireStore store;
+        private TailerDirection direction;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             super(null);
@@ -310,8 +311,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void close() {
             if (isPresent())
-                index = RollingChronicleQueue.index(cycle,
-                        toSequenceNumber(index) + 1);
+                incrementIndex();
             super.close();
         }
 
@@ -403,15 +403,13 @@ public class SingleChronicleQueueExcerpts {
             }
             this.index = index;
 
-            @NotNull
-            final Bytes<?> bytes = wire.bytes();
-            final long position = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
-            if (position < 0) {
-                bytes.readPosition(bytes.readLimit());
-                return false;
+            ScanResult scanResult = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
+            Bytes<?> bytes = wire.bytes();
+            if (scanResult == ScanResult.FOUND) {
+                return true;
             }
-            setPositionAtMessage(bytes, position);
-            return true;
+            bytes.readLimit(bytes.readPosition());
+            return false;
         }
 
         private void setPositionAtMessage(Bytes<?> bytes, long position) {
@@ -428,15 +426,16 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public final ExcerptTailer toStart() {
+            direction = TailerDirection.FORWARD;
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
                 return this;
             }
-            try {
-                moveToIndex(firstCycle, 0);
-            } catch (TimeoutException e) {
-                throw new AssertionError(e);
+            if (firstCycle != this.cycle) {
+                // moves to the expected cycle
+                cycle(firstCycle);
             }
+            index = RollingChronicleQueue.index(cycle, 0);
             this.wire.bytes().readPosition(0);
             return this;
         }
@@ -445,11 +444,13 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptTailer toEnd() {
             // this is the last written index so the end is 1 + last written index
-            final long index = queue.lastIndex();
+            long index = queue.lastIndex();
             if (index == Long.MIN_VALUE)
                 return this;
             try {
-                moveToIndex(index + 1);
+                if (direction == TailerDirection.FORWARD)
+                    index++;
+                moveToIndex(index);
             } catch (TimeoutException e) {
                 throw new AssertionError(e);
             }
@@ -458,13 +459,12 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public TailerDirection direction() {
-            return TailerDirection.FORWARD;
+            return direction;
         }
 
         @Override
         public ExcerptTailer direction(TailerDirection direction) {
-            if (direction != TailerDirection.FORWARD)
-                throw new UnsupportedOperationException();
+            this.direction = direction;
             return this;
         }
 
@@ -473,72 +473,61 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) throws TimeoutException {
-            long index = this.index;
             if (this.store == null) {
-                index = queue.firstIndex();
-                if (index == Long.MAX_VALUE)
-                    return false;
-                try {
-                    moveToIndex(index);
-                } catch (TimeoutException e) {
-                    throw new AssertionError(e);
-                }
+                toStart();
+                if (this.store == null) return false;
             }
 
-            Bytes<?> bytes = wire.bytes();
-            long limit = bytes.readLimit();
-            try {
-                bytes.readLimit(bytes.capacity());
-                if (read0(t, c, timeoutMS)) {
-                    this.index = RollingChronicleQueue.index(this.cycle, toSequenceNumber(index) + 1);
-                    return true;
-                }
-                return false;
-            } finally {
-                bytes.readLimit(limit);
+            if (read0(t, c, timeoutMS)) {
+                incrementIndex();
+                return true;
             }
+            return false;
         }
 
-        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) throws TimeoutException {
+        private void incrementIndex() {
+            long seq = toSequenceNumber(this.index);
+            this.index = RollingChronicleQueue.index(this.cycle, seq + direction.add());
+        }
+
+        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) {
             Bytes<?> bytes = wire.bytes();
-            Integer roll;
-            for (; ; ) {
-                roll = Integer.MIN_VALUE;
-
-                while (bytes.readVolatileInt(bytes.readPosition()) != 0) {
-
-                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
-
-                        if (!documentContext.isPresent())
+            bytes.readLimit(bytes.capacity());
+            for (int i = 0; i < 1000; i++) {
+                try {
+                    if (direction != TailerDirection.FORWARD)
+                        try {
+                            moveToIndex(index);
+                        } catch (TimeoutException notReady) {
                             return false;
+                        }
 
-                        if (documentContext.isData()) {
+                    if (wire.readDataHeader()) {
+                        wire.readAndSetLength(bytes.readPosition());
+                        long end = bytes.readLimit();
+                        try {
                             c.accept(t, wire);
                             return true;
-                        }
-
-                        // In case of meta data, if we have found the "roll" meta,
-                        // the next cycle (negative) is returned
-                        final StringBuilder sb = Wires.acquireStringBuilder();
-
-                        @NotNull
-                        final ValueIn vi = wire.readEventName(sb);
-                        if (ROLL_STRING.contentEquals(sb)) {
-                            roll = vi.int32();
-                            break;
+                        } finally {
+                            bytes.readLimit(bytes.capacity()).readPosition(end);
                         }
                     }
+                    return false;
+
+                } catch (EOFException eof) {
+                    if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
+                        try {
+                            if (moveToIndex(cycle + direction.add(), 0)) {
+                                bytes = wire.bytes();
+                                continue;
+                            }
+                        } catch (TimeoutException failed) {
+                            // no more entries yet.
+                        }
+                    return false;
                 }
-
-                // we got to the end of the file and there is no roll information
-                if (roll == Integer.MIN_VALUE)
-                    return false;
-
-                // roll to the next file
-                moveToIndex(roll, 0, timeoutMS);
-                if (store == null)
-                    return false;
             }
+            throw new IllegalStateException("Unable to progress to the next cycle");
         }
 
         @NotNull

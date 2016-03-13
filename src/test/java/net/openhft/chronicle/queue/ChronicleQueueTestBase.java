@@ -65,14 +65,6 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    public enum TestKey implements WireKey {
-        test
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     protected static File getTmpDir() {
         try {
             final File tmpDir = Files.createTempDirectory("chronicle" + "-").toFile();
@@ -88,6 +80,27 @@ public class ChronicleQueueTestBase {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    private static void deleteDir(File dir) {
+        if (dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        deleteDir(file);
+                    } else if (!file.delete()) {
+                        LOGGER.info("... unable to delete {}", file);
+                    }
+                }
+            }
+        }
+
+        dir.delete();
     }
 
     protected void warmup(WireType type, int iterations) throws IOException {
@@ -112,6 +125,10 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
+    public enum TestKey implements WireKey {
+        test, test2
+    }
+
     enum DeleteStatic {
         INSTANCE;
         final Set<File> toDeleteList = new LinkedHashSet<>();
@@ -125,22 +142,5 @@ public class ChronicleQueueTestBase {
         synchronized void add(File path) {
             toDeleteList.add(path);
         }
-    }
-
-    private static void deleteDir(File dir) {
-        if (dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDir(file);
-                    } else if (!file.delete()) {
-                        LOGGER.info("... unable to delete {}", file);
-                    }
-                }
-            }
-        }
-
-        dir.delete();
     }
 }

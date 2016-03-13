@@ -160,13 +160,13 @@ public class SingleChronicleQueueStore implements WireStore {
     /**
      * Moves the position to the index
      *
-     * @param wire  the data structure we are navigating
-     * @param index the index we wish to move to
+     * @param wire      the data structure we are navigating
+     * @param index     the index we wish to move to
      * @param timeoutMS
-     * @return the position of the {@code targetIndex}  or -1 if the index can not be found
+     * @return whether the index was found for reading.
      */
     @Override
-    public long moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException {
+    public ScanResult moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException {
         return indexing.moveToIndex(wire, index, timeoutMS);
     }
 
@@ -197,11 +197,6 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public MappedBytes mappedBytes() {
         return MappedBytes.mappedBytes(mappedFile);
-    }
-
-    @Override
-    public long storeIndexLocation(@NotNull Wire wire, long position) {
-        return indexing.storeIndexLocation(wire, position);
     }
 
     // *************************************************************************
@@ -361,78 +356,18 @@ public class SingleChronicleQueueStore implements WireStore {
 
                     if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
                         continue;
-                    final long index = newIndex(wire, true, timeoutMS);
-                    this.index2Index.setOrderedValue(index);
+                    long index = NOT_INITIALIZED;
+                    try {
+                        index = newIndex(wire, true, timeoutMS);
+                    } finally {
+                        this.index2Index.setOrderedValue(index);
+                    }
                     return index;
                 }
             } finally {
                 wire.pauser().reset();
             }
             throw new IllegalStateException("index2index NOT_READY for too long.");
-        }
-
-        /**
-         * records the the location of the sequenceNumber, only every 64th address is written to the
-         * sequenceNumber file, the first sequenceNumber is stored at {@code index2index}
-         *
-         * @param wire    the context that we are referring to
-         * @param address the address of the Excerpts which we are going to record
-         */
-        public long storeIndexLocation(@NotNull Wire wire,
-                                       final long address) {
-
-            return -1;
-            /*
-            lastSequenceNumber(sequenceNumber);
-
-            long writePosition = wire.bytes().writePosition();
-            try {
-
-                if (sequenceNumber % 64 != 0)
-                    return;
-
-                final LongArrayValues array = this.longArray.get();
-                final long indexToIndex0 = indexToIndex(wire);
-
-                long secondaryAddress;
-                try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
-
-                    if (!context.isPresent())
-                        throw new IllegalStateException("document not found");
-
-                    if (!context.isMetaData()) {
-                        System.out.println("===\n"+Wires.fromSizePrefixedBlobs(wire.bytes(), 0, 2048)+"\n===");
-//                        System.out.println("=== 495 +++\n"+Wires.fromSizePrefixedBlobs(wire.bytes(), 495, 2048)+"\n<<< 495 +++");
-                        throw new IllegalStateException("sequenceNumber not found");
-                    }
-
-                    @NotNull final LongArrayValues primaryIndex = array(wire, array);
-                    final long primaryOffset = toAddress0(sequenceNumber);
-                    // TODO fix a race condition here.
-                    secondaryAddress = primaryIndex.getValueAt(primaryOffset);
-
-                    if (secondaryAddress == Wires.NOT_INITIALIZED) {
-                        secondaryAddress = newIndex(wire);
-                        writePosition = Math.max(writePosition, wire.bytes().writePosition());
-                        primaryIndex.setValueAt(primaryOffset, secondaryAddress);
-                    }
-                }
-                @NotNull final Bytes<?> bytes = wire.bytes();
-                bytes.readLimit(bytes.capacity());
-                try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
-
-                    @NotNull final LongArrayValues array1 = array(wire, array);
-                    if (!context.isPresent())
-                        throw new IllegalStateException("document not found");
-                    if (!context.isMetaData())
-                        throw new IllegalStateException("sequenceNumber not found");
-                    array1.setValueAt(toAddress1(sequenceNumber), address);
-                }
-
-            } finally {
-                wire.bytes().writePosition(writePosition);
-            }
-            */
         }
 
         @NotNull
@@ -476,6 +411,25 @@ public class SingleChronicleQueueStore implements WireStore {
             return position;
         }
 
+        long newIndex(Wire wire, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException {
+            if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_READY)) {
+                long pos = newIndex(wire, false, timeoutMS);
+                if (index2Index.compareAndSet(index2, LONG_NOT_READY, pos)) {
+                    return pos;
+                }
+                throw new IllegalStateException("Index " + index2 + " in index2index was altered");
+            }
+            for (; ; ) {
+                long pos = index2Index.getVolatileValueAt(index2);
+                if (pos == LONG_NOT_READY) {
+                    wire.pauser().pause();
+                } else {
+                    wire.pauser().reset();
+                    return pos;
+                }
+            }
+        }
+
         /**
          * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so
          * the index2index tells chronicle where ( in other words the address of where ) the root
@@ -490,82 +444,76 @@ public class SingleChronicleQueueStore implements WireStore {
          * @param index the index we wish to move to
          * @return the position of the {@code targetIndex} or -1 if the index can not be found
          */
-        long moveToIndex(@NotNull final Wire wire, final long index, long timeoutMS) throws TimeoutException {
-            long ret = 0;
+        ScanResult moveToIndex(@NotNull final Wire wire, final long index, long timeoutMS) throws TimeoutException {
             try {
-                ret = moveToIndex0(wire, index, timeoutMS);
-                if (ret <= 0) {
-                    checkIndexerUpToDate(wire, timeoutMS);
-                    ret = moveToIndex0(wire, index, timeoutMS);
-                }
+                ScanResult scanResult = moveToIndex0(wire, index, timeoutMS);
+                if (scanResult != null)
+                    return scanResult;
             } catch (EOFException e) {
                 // scan from the start.
-                linearScan(wire, index, 0, 0);
             }
-            return ret;
+            return moveToIndexFromTheStart(wire, index);
         }
 
-        long moveToIndex0(@NotNull final Wire wire, final long index, long timeoutMS) throws EOFException, TimeoutException {
+        private ScanResult moveToIndexFromTheStart(@NotNull Wire wire, long index) {
+            try {
+                wire.bytes().readPosition(0);
+                if (wire.readDataHeader())
+                    return linearScan(wire, index, 0, wire.bytes().readPosition());
+            } catch (EOFException e) {
+            }
+            return ScanResult.NOT_FOUND;
+        }
+
+        ScanResult moveToIndex0(@NotNull final Wire wire, final long index, long timeoutMS) throws EOFException, TimeoutException {
 
             LongArrayValues index2index = getIndex2index(wire, timeoutMS);
-            final long indexToIndex0 = indexToIndex(wire, timeoutMS);
 
             @NotNull final Bytes<?> bytes = wire.bytes();
             bytes.writeLimit(bytes.capacity()).readLimit(bytes.capacity());
-            final long readPosition = bytes.readPosition();
 
-            try {
-                bytes.readPosition(indexToIndex0);
-                long startIndex = index & ~(indexSpacing - 1);
+            long primaryOffset = toAddress0(index);
 
-                long primaryOffset = toAddress0(index);
-
-                long secondaryAddress = 0;
-                while (primaryOffset >= 0) {
-                    secondaryAddress = index2index.getValueAt(primaryOffset);
-                    if (secondaryAddress == 0) {
-                        startIndex -= indexCount * indexSpacing;
-                        primaryOffset--;
-                    } else {
-                        break;
-                    }
+            long secondaryAddress = 0;
+            long startIndex = index & ~(indexSpacing - 1);
+            while (primaryOffset >= 0) {
+                secondaryAddress = index2index.getValueAt(primaryOffset);
+                if (secondaryAddress == 0) {
+                    startIndex -= indexCount * indexSpacing;
+                    primaryOffset--;
+                } else {
+                    break;
                 }
-                if (secondaryAddress <= 0)
-                    return -1;
-
-                bytes.readPosition(secondaryAddress);
-
-                try (@NotNull final DocumentContext context = wire.readingDocument()) {
-
-                    final LongArrayValues array = this.indexArray.get();
-                    if (!context.isPresent() || !context.isMetaData())
-                        throw new IllegalStateException("document is present=" + context.isPresent() + ", metaData=" + context.isMetaData());
-
-                    @NotNull final LongArrayValues array1 = array(wire, array, false);
-                    long secondaryOffset = toAddress1(index);
-
-                    do {
-                        long fromAddress = array1.getValueAt(secondaryOffset);
-                        if (fromAddress == 0) {
-                            secondaryOffset--;
-                            startIndex -= indexSpacing;
-                            continue;
-                        }
-
-                        if (index == startIndex) {
-                            return fromAddress;
-                        } else {
-                            return linearScan(wire, index, startIndex, fromAddress);
-                        }
-
-                    } while (secondaryOffset >= 0);
-                }
-            } finally {
-                bytes.writePosition(writePosition.getValue());
-                bytes.readPosition(readPosition);
             }
 
-            return -1;
+            if (secondaryAddress <= 0) {
+                return null;
+            }
+            bytes.readPosition(secondaryAddress);
+            wire.readMetaDataHeader();
+
+            final LongArrayValues array = this.indexArray.get();
+
+            @NotNull final LongArrayValues array1 = array(wire, array, false);
+            long secondaryOffset = toAddress1(index);
+
+            do {
+                long fromAddress = array1.getValueAt(secondaryOffset);
+                if (fromAddress == 0) {
+                    secondaryOffset--;
+                    startIndex -= indexSpacing;
+                    continue;
+                }
+
+                if (index == startIndex) {
+                    bytes.readLimit(bytes.capacity()).readPosition(fromAddress);
+                    return ScanResult.FOUND;
+                } else {
+                    return linearScan(wire, index, startIndex, fromAddress);
+                }
+
+            } while (secondaryOffset >= 0);
+            return null; // no index,
         }
 
         /**
@@ -573,61 +521,76 @@ public class SingleChronicleQueueStore implements WireStore {
          * fromKnownIndex} at  {@code knownAddress} <p/> note meta data is skipped and does not
          * count to the indexes
          *
-         * @param wire        if successful, moves the context to an address relating to the
+         * @param wire           if successful, moves the context to an address relating to the
          *                       index {@code toIndex }
          * @param toIndex        the index that we wish to move the context to
          * @param fromKnownIndex a know index ( used as a starting point )
          * @param knownAddress   a know address ( used as a starting point )
-         * @return > -1 if successful
          * @see net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore.Indexing#moveToIndex
          */
 
-        private long linearScan(@NotNull final Wire wire,
-                                final long toIndex,
-                                final long fromKnownIndex,
-                                final long knownAddress) {
+        private ScanResult linearScan(@NotNull final Wire wire,
+                                      final long toIndex,
+                                      final long fromKnownIndex,
+                                      final long knownAddress) {
             @NotNull
             final Bytes<?> bytes = wire.bytes();
-            final long l = bytes.readLimit();
-            final long p = bytes.readPosition();
 
-            try {
-                bytes.readLimit(bytes.capacity()).readPosition(knownAddress);
-                for (long i = fromKnownIndex; bytes.readRemaining() > 0; ) {
+            bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
 
-                    // wait until ready - todo add timeout
-                    while (!Wires.isReady(bytes.readVolatileInt(bytes.readPosition()))) {
-                        wire.pauser().pause();
+            for (long i = fromKnownIndex; ; i++) {
+                try {
+                    if (bytes.readRemaining() < 4)
+                        return ScanResult.NOT_REACHED;
+
+                    if (wire.readDataHeader()) {
+                        if (i == toIndex)
+                            return ScanResult.FOUND;
+                        bytes.readSkip(Wires.lengthOf(bytes.readInt()));
+                        continue;
                     }
-                    wire.pauser().reset();
-
-                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
-
-                        if (!documentContext.isPresent())
-                            return -1;
-
-                        if (!documentContext.isData())
-                            continue;
-
-                        if (toIndex == i) {
-                            wire.bytes().readSkip(-4);
-                            return wire.bytes().readPosition();
-                        }
-                        i++;
-                    }
+                } catch (EOFException e) {
+                    // reached the end of the file.
                 }
-            } finally {
-                bytes.readLimit(l).readPosition(p);
+                return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
             }
-            return -1;
+        }
+
+        private long linearScanByPosition(@NotNull final Wire wire,
+                                          final long toPosition,
+                                          final long fromKnownIndex,
+                                          final long knownAddress) throws EOFException {
+            @NotNull
+            final Bytes<?> bytes = wire.bytes();
+
+            bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
+
+            for (long i = fromKnownIndex; ; i++) {
+
+                boolean found = wire.readDataHeader();
+
+                if (bytes.readPosition() == toPosition)
+                    return i;
+
+                bytes.readSkip(Wires.lengthOf(bytes.readInt()));
+                if (bytes.readPosition() > toPosition)
+                    return i;
+
+                if (!found) {
+                    if (toPosition == Long.MAX_VALUE)
+                        return i - 1;
+                    throw new EOFException();
+                }
+            }
         }
 
         public long lastEntryIndexed(Wire wire, long timeoutMS) {
             try {
-                checkIndexerUpToDate(wire, timeoutMS);
-            } catch (EOFException | TimeoutException e) {
-                e.printStackTrace();
+                indexForPosition(wire, Long.MAX_VALUE, timeoutMS);
+            } catch (Exception e) {
+                // ignore.
             }
+
             return nextEntryToIndex.getValue() - 1;
         }
 
@@ -647,159 +610,76 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
-            checkIndexerUpToDate(wire, timeoutMS);
             // find the index2index
-            final LongArrayValues index2index = getIndex2index(wire, timeoutMS);
-            int index2 = 0;
+            final LongArrayValues index2indexArr = getIndex2index(wire, timeoutMS);
+            final LongArrayValues indexArr = indexArray.get();
+            long lastKnownAddress = 0;
+            long lastKnownIndex = -1;
+            Bytes<?> bytes = wire.bytes();
+            for (int index2 = 0; index2 < indexCount; index2++) {
+                long secondaryAddress = index2indexArr.getValueAt(index2);
+                if (secondaryAddress == 0)
+                    secondaryAddress = newIndex(wire, index2indexArr, index2, timeoutMS);
 
-            final LongArrayValues index = indexArray.get();
-            index.reset();
-            for (; index2 < indexCount; index2++) {
-                long secondaryAddress = index2index.getValueAt(index2);
-                if (secondaryAddress == 0) {
-                    index2--;
-                    break;
-                }
+                bytes.readLimit(bytes.capacity());
                 try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
                     if (!context.isPresent() || !context.isMetaData())
                         throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
 
-                    @NotNull final LongArrayValues array1 = array(wire, index, false);
-                    long position2 = array1.getValueAt(indexCount - 1);
-                    if (position2 == 0 || position <= position2) {
-                        break;
+                    @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
+                    // check the last one first.
+                    long posN = array1.getValueAt(indexCount - 1);
+                    if (posN > 0 && posN < position) {
+                        lastKnownAddress = posN;
+                        lastKnownIndex = ((index2 + 1L << indexCountBits) - 1) << indexSpacingBits;
+                        continue;
                     }
-                }
-            }
 
-            int index3 = 0;
-            long address3 = 0;
-            int index4 = 0;
-            found:
-            {
-                if (index.isNull()) {
-                    index2 = 0;
-                } else {
-                    address3 = index.getValueAt(0);
-                    for (; index3 < indexCount; index3++) {
-                        long address3b = index.getValueAt(index3);
-                        if (address3b == 0 || address3b > position) {
-                            break;
+                    // otherwise we need to scan the current entries.
+                    for (int index1 = 0; index1 < indexCount; index1++) {
+                        long pos = array1.getValueAt(index1);
+                        if (pos != 0) {
+                            lastKnownAddress = pos;
+                            lastKnownIndex = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
+                            continue;
                         }
-                        address3 = address3b;
-                        if (address3b == position)
-                            break found;
-                    }
-                    index3--;
-                }
-                // linear scan from here.
+                        ScanResult scanResult;
+                        long nextIndex;
+                        if (lastKnownIndex < 0) {
+                            scanResult = firstScan(wire);
+                            nextIndex = 0;
+                        } else {
+                            nextIndex = lastKnownIndex + indexSpacing;
+                            scanResult = linearScan(wire, nextIndex, lastKnownIndex, lastKnownAddress);
+                        }
+                        if (scanResult == ScanResult.FOUND) {
+                            long nextPosition = bytes.readPosition();
+                            array1.setOrderedValueAt(index1, lastKnownAddress = nextPosition);
 
-                while (address3 < position) {
-                    int header = wire.bytes().readInt(address3);
-                    if (!Wires.isReady(header))
-                        throw new IllegalStateException("For an entry which is not ready at " + address3);
-                    if (header == 0)
-                        throw new IllegalStateException("No entry at " + address3 + " " + position + " " + index4);
-                    if (Wires.isData(header)) {
-                        index4++;
+                            if (nextPosition == position) {
+                                nextEntryToIndex.setMaxValue(nextIndex + 1);
+                                return nextIndex;
+                            }
+                            lastKnownIndex = nextIndex;
+                        } else {
+                            long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+                            nextEntryToIndex.setMaxValue(ret + 1);
+                            return ret;
+                        }
                     }
-                    address3 += Wires.lengthOf(header) + 4;
                 }
             }
-            return ((((long) index2 << indexCountBits) + index3) << indexSpacingBits) + index4;
+            throw new AssertionError();
         }
 
-        private void checkIndexerUpToDate(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
-            long index = nextEntryToIndex.getValue() - 1;
-            long position = index < 0 ? 0L : moveToIndex0(wire, index, timeoutMS);
-            if (position < 0) {
-                moveToIndex0(wire, index, timeoutMS);
-                throw new AssertionError();
-            }
+        @NotNull
+        private ScanResult firstScan(Wire wire) {
             try {
-                LongArrayValues index2index = getIndex2index(wire, timeoutMS);
-                Bytes bytes = wire.bytes();
-                long nextIndex = (index + indexSpacing) & ~(indexSpacing - 1);
-                index = checkUpToDate0(wire, index, position, index2index, bytes, nextIndex, timeoutMS);
-//            System.out.println("index: " + index);
-                nextEntryToIndex.setMaxValue(index + 1);
-            } catch (TimeoutException e) {
-                // log for now and continue;
-                e.printStackTrace();
+                wire.bytes().readPosition(0);
+                return wire.readDataHeader() ? ScanResult.FOUND : ScanResult.NOT_REACHED;
+            } catch (EOFException e) {
+                return ScanResult.NOT_FOUND;
             }
-        }
-
-        private long checkUpToDate0(Wire wire, long index, long position, LongArrayValues index2index, Bytes bytes, long nextIndex, long timeoutMS) throws EOFException {
-            int len, header;
-            // if its a known position, start with the next one.
-            if (index >= 0) {
-                header = bytes.readVolatileInt(position);
-                len = Wires.lengthOf(header);
-                position += len + 4;
-            }
-            for (; ; ) {
-                header = bytes.readVolatileInt(position);
-                len = Wires.lengthOf(header);
-
-                if (len == 0)
-                    break;
-                if (Wires.isData(header))
-                    index++;
-
-                if (index < nextIndex) {
-                    position += len + 4;
-                    continue;
-                }
-
-                long secondaryAddress;
-
-                final long primaryOffset = toAddress0(index);
-                // initialise it if needed.
-                if (index2index.compareAndSet(primaryOffset, NOT_INITIALIZED, LONG_NOT_READY)) {
-                    boolean ok = false;
-
-                    try {
-                        secondaryAddress = newIndex(wire, false, timeoutMS);
-                        index2index.setValueAt(primaryOffset, secondaryAddress);
-                        ok = true;
-                    } finally {
-                        if (!ok) {
-                            System.out.println("Failed update " + primaryOffset);
-                            index2index.compareAndSet(primaryOffset, LONG_NOT_READY, NOT_INITIALIZED);
-                        }
-                    }
-
-                } else {
-                    try {
-                        for (; ; ) {
-                            secondaryAddress = index2index.getValueAt(primaryOffset);
-                            if (secondaryAddress != LONG_NOT_READY)
-                                break;
-
-                            wire.pauser().pause(10, TimeUnit.SECONDS);
-                        }
-
-                    } catch (TimeoutException e) {
-                        throw new IllegalStateException("Index " + primaryOffset + " not ready");
-
-                    } finally {
-                        wire.pauser().reset();
-                    }
-                }
-
-                try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
-                    if (!context.isPresent() || !context.isMetaData())
-                        throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
-
-                    @NotNull final LongArrayValues indexArr = array(wire, indexArray.get(), false);
-                    indexArr.setValueAt(toAddress1(index), position);
-//                    assert position <= writePosition.getValue();
-                    writePosition.setMaxValue(position);
-                }
-                nextIndex += indexSpacing;
-                position += len + 4;
-            }
-            return index;
         }
     }
 
@@ -843,3 +723,4 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 }
+

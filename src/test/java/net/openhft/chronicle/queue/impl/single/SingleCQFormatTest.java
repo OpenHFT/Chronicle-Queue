@@ -501,7 +501,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException, TimeoutException {
-        for (int spacing : new int[]{2}) {
+        for (int spacing : new int[]{1, 2, 4}) {
             File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
@@ -599,6 +599,7 @@ public class SingleCQFormatTest {
                 assertFalse(tailer.moveToIndex(start + i));
                 appendMessage(queue, start + i, "Another Hello World " + (i + 1));
                 assertTrue(tailer.moveToIndex(start + i));
+//                System.out.println(queue.dump());
             }
             assertFalse(tailer.moveToIndex(start + 19));
             appendMessage(queue, start + 19, "Bye for now");
@@ -751,7 +752,7 @@ public class SingleCQFormatTest {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  335,\n" +
-                    "  907,\n" +
+                    "  876,\n" +
                     "  0,\n" +
                     "  0,\n" +
                     "  0,\n" +
@@ -820,12 +821,9 @@ public class SingleCQFormatTest {
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
                     "# position: 876\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Another Hello World 17\n" +
-                    "# position: 907\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  876,\n" +
+                    "  960,\n" +
                     "  1022,\n" +
                     "  0,\n" +
                     "  0,\n" +
@@ -834,6 +832,9 @@ public class SingleCQFormatTest {
                     "  0,\n" +
                     "  0\n" +
                     "]\n" +
+                    "# position: 960\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Another Hello World 17\n" +
                     "# position: 991\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
@@ -977,7 +978,7 @@ public class SingleCQFormatTest {
                 }
                 break;
         }
-        if ((expectedIndex & 0xff) == 0x0f)
+        if ((expectedIndex & 0xff) == 0x08)
             Thread.yield();
         long index = appender.lastIndexAppended();
         assertHexEquals(expectedIndex, index);

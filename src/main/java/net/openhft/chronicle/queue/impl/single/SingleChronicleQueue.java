@@ -107,7 +107,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public String dump() {
-        return storeForCycle(cycle(), epoch).dump();
+        StringBuilder sb = new StringBuilder();
+        for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
+            sb.append(storeForCycle(i, epoch).dump());
+        }
+        return sb.toString();
     }
 
     @Override

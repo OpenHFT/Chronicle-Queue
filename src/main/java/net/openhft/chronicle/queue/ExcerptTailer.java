@@ -88,6 +88,9 @@ public interface ExcerptTailer extends ExcerptCommon {
 
     /**
      * Wind to the last entry int eh last entry
+     * <p>
+     *     If the direction() == FORWARD, this will be 1 more than the last entry.<br/>Otherwise the index will be the last entry.
+     * </p>
      *
      * @return this Excerpt
      */

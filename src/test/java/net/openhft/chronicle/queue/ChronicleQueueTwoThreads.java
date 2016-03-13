@@ -39,7 +39,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final long INTERVAL_US = 10;
 
     @Test(timeout = 10000)
-    @Ignore("TODO Fix")
+    @Ignore("TODO FIX, test is broken but doesn't fail")
     public void testUnbuffered() throws IOException, InterruptedException {
         doTest(false);
     }

@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -28,11 +29,11 @@ public class ToEndTest {
         System.out.println(baseDir);
         IOTools.shallowDeleteDirWithFiles(baseDir);
         List<Integer> results = new ArrayList<>();
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir).
-                bufferCapacity(4 << 20)
-                .buffered(false)
+        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
                 .wireType(WireType.BINARY)
-                .blockSize(64 << 20)
+                .blockSize(4 << 20)
+                .indexCount(8)
+                .indexSpacing(1)
                 .build();
 
         checkOneFile(baseDir);
@@ -50,6 +51,7 @@ public class ToEndTest {
         checkOneFile(baseDir);
 
         tailer.toEnd();
+        assertEquals(10, RollingChronicleQueue.toSequenceNumber(tailer.index()));
         checkOneFile(baseDir);
         fillResults(tailer, results);
         checkOneFile(baseDir);
@@ -77,7 +79,8 @@ public class ToEndTest {
     @NotNull
     private List<Integer> fillResults(ExcerptTailer tailer, List<Integer> results) {
         for (int i = 0; i < 10; i++) {
-            tailer.readDocument(wire -> results.add(wire.read(() -> "msg").int32()));
+            if (!tailer.readDocument(wire -> results.add(wire.read(() -> "msg").int32())))
+                break;
         }
         return results;
     }
