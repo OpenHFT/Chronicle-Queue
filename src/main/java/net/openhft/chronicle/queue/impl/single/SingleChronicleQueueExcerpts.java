@@ -10,11 +10,15 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
@@ -29,22 +33,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
-import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toCycle;
-import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.toSequenceNumber;
-
 public class SingleChronicleQueueExcerpts {
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
-    private static final boolean ASSERTIONS;
-    private static final String ROLL_STRING = "roll";
-    private static final int ROLL_KEY = BytesUtil.asInt(ROLL_STRING);
-
-    static {
-        boolean assertions = false;
-        assert assertions = true;
-        ASSERTIONS = assertions;
-    }
-
 
     @FunctionalInterface
     public interface WireWriter<T> {
@@ -173,7 +164,7 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException("no messages written");
             try {
                 long sequenceNumber = store.indexForPosition(wire, position, queue.timeoutMS);
-                return RollingChronicleQueue.index(cycle, sequenceNumber);
+                return queue.rollCycle().toIndex(cycle, sequenceNumber);
             } catch (EOFException | TimeoutException e) {
                 throw new AssertionError(e);
             } finally {
@@ -270,8 +261,8 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public String toString() {
             return "StoreTailer{" +
-                    "index sequence=" + RollingChronicleQueue.toSequenceNumber(index) +
-                    ", index cycle=" + RollingChronicleQueue.toCycle(index) +
+                    "index sequence=" + queue.rollCycle().toSequenceNumber(index) +
+                    ", index cycle=" + queue.rollCycle().toCycle(index) +
                     ", store=" + store + ", queue=" + queue + '}';
         }
 
@@ -375,7 +366,7 @@ public class SingleChronicleQueueExcerpts {
         public long index() {
             if (this.store == null)
                 throw new IllegalArgumentException("This tailer is not bound to any cycle");
-            return RollingChronicleQueue.index(this.cycle, this.index);
+            return queue.rollCycle().toIndex(this.cycle, this.index);
         }
 
         @Override
@@ -385,11 +376,11 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) throws TimeoutException {
-            return moveToIndex(toCycle(index), toSequenceNumber(index), index);
+            return moveToIndex(queue.rollCycle().toCycle(index), queue.rollCycle().toSequenceNumber(index), index);
         }
 
         boolean moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
-            return moveToIndex(cycle, sequenceNumber, RollingChronicleQueue.index(cycle, sequenceNumber));
+            return moveToIndex(cycle, sequenceNumber, queue.rollCycle().toIndex(cycle, sequenceNumber));
         }
 
         boolean moveToIndex(int cycle, long sequenceNumber, long index) throws TimeoutException {
@@ -435,7 +426,7 @@ public class SingleChronicleQueueExcerpts {
                 // moves to the expected cycle
                 cycle(firstCycle);
             }
-            index = RollingChronicleQueue.index(cycle, 0);
+            index = queue.rollCycle().toIndex(cycle, 0);
             this.wire.bytes().readPosition(0);
             return this;
         }
@@ -486,8 +477,9 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void incrementIndex() {
-            long seq = toSequenceNumber(this.index);
-            this.index = RollingChronicleQueue.index(this.cycle, seq + direction.add());
+            RollCycle rollCycle = queue.rollCycle();
+            long seq = rollCycle.toSequenceNumber(this.index);
+            this.index = rollCycle.toIndex(this.cycle, seq + direction.add());
         }
 
         private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) {
@@ -549,7 +541,7 @@ public class SingleChronicleQueueExcerpts {
         public long lastIndex(int cycle) {
             cycle(cycle);
             long sequenceNumber = store.lastEntryIndexed(wire, queue.timeoutMS);
-            return RollingChronicleQueue.index(this.cycle, sequenceNumber);
+            return queue.rollCycle().toIndex(this.cycle, sequenceNumber);
         }
     }
 }

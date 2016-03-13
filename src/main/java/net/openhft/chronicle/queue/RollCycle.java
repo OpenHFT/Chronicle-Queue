@@ -36,4 +36,8 @@ public interface RollCycle {
     }
 
     long toIndex(int cycle, long sequenceNumber);
+
+    long toSequenceNumber(long index);
+
+    int toCycle(long index);
 }

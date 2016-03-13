@@ -183,7 +183,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (cycle == Integer.MAX_VALUE)
             return Long.MAX_VALUE;
 
-        return RollingChronicleQueue.index(cycle, 0);
+        return rollCycle().toIndex(cycle, 0);
     }
 
     public int firstCycle() {

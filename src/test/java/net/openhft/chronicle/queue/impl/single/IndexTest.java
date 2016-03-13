@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -42,15 +41,15 @@ public class IndexTest extends ChronicleQueueTestBase {
     @Test
     public void test() throws IOException {
 
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build();
 
         final ExcerptAppender appender = queue.createAppender();
-        final long cycle = appender.cycle();
+        final int cycle = appender.cycle();
         for (int i = 0; i < 5; i++) {
             final int n = i;
-            long index0 = RollingChronicleQueue.index(cycle, n);
+            long index0 = queue.rollCycle().toIndex(cycle, n);
             appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             long indexA = appender.lastIndexAppended();
             accessHexEquals(index0, indexA);

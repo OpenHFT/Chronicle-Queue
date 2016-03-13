@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -29,7 +28,7 @@ public class ToEndTest {
         System.out.println(baseDir);
         IOTools.shallowDeleteDirWithFiles(baseDir);
         List<Integer> results = new ArrayList<>();
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
+        RollingChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
                 .wireType(WireType.BINARY)
                 .blockSize(4 << 20)
                 .indexCount(8)
@@ -51,7 +50,7 @@ public class ToEndTest {
         checkOneFile(baseDir);
 
         tailer.toEnd();
-        assertEquals(10, RollingChronicleQueue.toSequenceNumber(tailer.index()));
+        assertEquals(10, queue.rollCycle().toSequenceNumber(tailer.index()));
         checkOneFile(baseDir);
         fillResults(tailer, results);
         checkOneFile(baseDir);

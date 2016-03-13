@@ -75,11 +75,6 @@ public interface ChronicleQueue extends Closeable {
     long firstIndex();
 
     /**
-     * @return the first cycle number found, or Integer.MAX_VALUE is none found.
-     */
-    int firstCycle();
-
-    /**
      * @return the index one more than the highest valid index immediately available. Or Long.MIN_VALUE if none available.
      *
      * The lowest 40bits of the index refer to the sequence number with the cycle, giving a maximum
@@ -89,11 +84,6 @@ public interface ChronicleQueue extends Closeable {
      * maximum  of 16777216 cycles ( aka files )
      */
     long lastIndex();
-
-    /**
-     * @return the lastCycle available or Integer.MIN_VALUE if none is found.
-     */
-    int lastCycle();
 
     /**
      * @return the type of wire used, for example WireTypes.TEXT or WireTypes.BINARY

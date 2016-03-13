@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
@@ -36,7 +37,6 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static net.openhft.chronicle.queue.impl.RollingChronicleQueue.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -69,7 +69,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() throws IOException {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -77,7 +77,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, toSequenceNumber(appender.lastIndexAppended()));
+                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
         }
     }
@@ -116,16 +116,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws IOException, TimeoutException {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
             final ExcerptAppender appender = queue.createAppender();
-            final long cycle = appender.cycle();
+            final int cycle = appender.cycle();
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, toSequenceNumber(appender.lastIndexAppended()));
+                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
             final ExcerptTailer tailer = queue.createTailer();
@@ -134,15 +134,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 assertTrue(tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-                assertEquals(n + 1, toSequenceNumber(tailer.index()));
+                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()));
             }
 
             // Random read
             for (int i = 0; i < 10; i++) {
                 final int n = i;
-                assertTrue("n: " + n, tailer.moveToIndex(index(cycle, n)));
+                assertTrue("n: " + n, tailer.moveToIndex(queue.rollCycle().toIndex(cycle, n)));
                 assertTrue("n: " + n, tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32())));
-                assertEquals(n + 1, toSequenceNumber(tailer.index()));
+                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()));
             }
         }
     }
@@ -196,32 +196,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("TODO Fix")
-    public void testAppendAndReadWithRolling() throws IOException, InterruptedException {
-
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(this.wireType)
-                .rollCycle(RollCycles.SECONDLY)
-                .epoch(1452773025277L)
-                .build()) {
-
-            final ExcerptAppender appender = queue.createAppender();
-            for (int i = 0; i < 5; i++) {
-                final int n = i;
-                Jvm.pause(500);
-                appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-            }
-
-            final ExcerptTailer tailer = queue.createTailer().toStart();
-            for (int i = 0; i < 5; i++) {
-                final int n = i;
-                final boolean condition = tailer.readDocument(r -> assertEquals(n, r.read(TestKey.test).int32()));
-                assertTrue(condition);
-            }
-        }
-    }
-
-    @Test
     public void testAppendAndReadWithRollingB() throws IOException, InterruptedException {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
@@ -252,157 +226,157 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1000\n" +
-                    "# position: 252\n" +
+                    "# position: 250\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885820 bytes remaining\n" +
+                    "# 83885822 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1001\n" +
-                    "# position: 252\n" +
+                    "# position: 250\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885820 bytes remaining\n" +
+                    "# 83885822 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1002\n" +
-                    "# position: 252\n" +
+                    "# position: 250\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885820 bytes remaining\n" +
+                    "# 83885822 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1003\n" +
-                    "# position: 252\n" +
+                    "# position: 250\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885820 bytes remaining\n" +
+                    "# 83885822 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1004\n" +
-                    "# position: 252\n" +
+                    "# position: 250\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885820 bytes remaining\n" +
+                    "# 83885822 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 252,\n" +
+                    "  writePosition: 250,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 239\n" +
+                    "# position: 237\n" +
                     "--- !!data #binary\n" +
                     "test2: !int 1005\n" +
                     "...\n" +
-                    "# 83885824 bytes remaining\n", queue.dump());
+                    "# 83885826 bytes remaining\n", queue.dump());
 
             final ExcerptTailer tailer = queue.createTailer().toStart();
             for (int i = 0; i < 6; i++) {
@@ -421,41 +395,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("TODO Fix")
-    public void testAppendAndReadWithRolling2() throws IOException, InterruptedException {
-        final File dir = getTmpDir();
-
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(dir)
-                .wireType(this.wireType)
-                .rollCycle(RollCycles.SECONDLY)
-                .epoch(1452701442361L)
-                .build()) {
-
-            final ExcerptAppender appender = queue.createAppender();
-            for (int i = 0; i < 10; i++) {
-                final int n = i;
-                appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                Jvm.pause(500);
-            }
-
-            final ExcerptTailer tailer = queue.createTailer().toStart();
-            for (int i = 0; i < 10; i++) {
-                final int n = i;
-                try {
-                    final boolean condition = tailer.readDocument(
-                            r -> assertEquals(n, r.read(TestKey.test).int32()));
-                    assertTrue(condition);
-                } catch (IllegalStateException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-    }
-
-    @Test
     public void testAppendAndReadAtIndex() throws IOException, TimeoutException {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -464,18 +405,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < 5; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, toSequenceNumber(appender.lastIndexAppended()));
+                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < 5; i++) {
-                final long index = index(appender.cycle(), i);
+                final long index = queue.rollCycle().toIndex(appender.cycle(), i);
                 assertTrue(tailer.moveToIndex(index));
 
                 final int n = i;
-                assertTrue(tailer.readDocument(r -> assertEquals(n, toSequenceNumber(r.read(TestKey.test)
+                assertTrue(tailer.readDocument(r -> assertEquals(n, queue.rollCycle().toSequenceNumber(r.read(TestKey.test)
                         .int32()))));
-                assertEquals(n + 1, toSequenceNumber(tailer.index()));
+                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()));
             }
         }
     }
@@ -522,12 +463,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadAtIndex() throws IOException, TimeoutException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .indexCount(8)
                 .indexSpacing(8)
                 .build()) {
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = queue.createAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -536,10 +477,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
             long lastIndex = appender.lastIndexAppended();
 
-            final long cycle = toCycle(lastIndex);
-            assertEquals(chronicle.firstCycle(), cycle);
-            assertEquals(chronicle.lastCycle(), cycle);
-            final ExcerptTailer tailer = chronicle.createTailer();
+            final int cycle = queue.rollCycle().toCycle(lastIndex);
+            assertEquals(queue.firstCycle(), cycle);
+            assertEquals(queue.lastCycle(), cycle);
+            final ExcerptTailer tailer = queue.createTailer();
 
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));
 
@@ -548,7 +489,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i : new int[]{0, 8, 7, 9, 64, 65, 66}) {
                 assertTrue("i: " + i,
                         tailer.moveToIndex(
-                                index(cycle, i)));
+                                queue.rollCycle().toIndex(cycle, i)));
                 tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
                 Assert.assertEquals("value=" + i, sb.toString());
             }
@@ -558,10 +499,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Ignore("long running test")
     @Test
     public void testReadAtIndex4MB() throws IOException, TimeoutException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = queue.createAppender();
 
             System.out.print("Percent written=");
 
@@ -576,16 +517,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
             long lastIndex = appender.lastIndexAppended();
 
-            final long cycle = toCycle(lastIndex);
+            final int cycle = queue.rollCycle().toCycle(lastIndex);
 
-            final ExcerptTailer tailer = chronicle.createTailer();
+            final ExcerptTailer tailer = queue.createTailer();
 
             //   QueueDumpMain.dump(file, new PrintWriter(System.out));
 
             StringBuilder sb = new StringBuilder();
 
             for (long i = 0; i < (4L << 20L); i++) {
-                tailer.moveToIndex(index(cycle, i));
+                tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i));
                 tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
                 Assert.assertEquals("value=" + i, sb.toString());
                 if (i % (TIMES / 20) == 0) {
@@ -597,13 +538,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastWrittenIndexPerAppender() throws IOException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = queue.createAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
-            Assert.assertEquals(0, toSequenceNumber(appender.lastIndexAppended()));
+            Assert.assertEquals(0, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
         }
     }
 
@@ -633,20 +574,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderIndexReadAtIndex() throws IOException, TimeoutException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
-            final long cycle = appender.cycle();
+            final ExcerptAppender appender = queue.createAppender();
+            final int cycle = appender.cycle();
             // create 100 documents
             for (int i = 0; i < 100; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
-            assertTrue(tailer.moveToIndex(index(cycle, 0)));
+            final ExcerptTailer tailer = queue.createTailer();
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 0)));
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
@@ -677,26 +618,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIndex() throws IOException, TimeoutException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
-            long cycle = appender.cycle();
+            final ExcerptAppender appender = queue.createAppender();
+            int cycle = appender.cycle();
 
             // create 100 documents
             for (int i = 0; i < 5; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
                 if (i == 2) {
-                    final long cycle1 = toCycle(appender.lastIndexAppended());
+                    final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
                     Assert.assertEquals(cycle1, cycle);
                 }
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
-            tailer.moveToIndex(index(cycle, 2));
+            final ExcerptTailer tailer = queue.createTailer();
+            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
@@ -712,12 +653,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingDocument() throws IOException {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = queue.createAppender();
             long cycle = appender.cycle();
 
             // create 100 documents
@@ -725,12 +666,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
                 if (i == 2) {
-                    final long cycle1 = toCycle(appender.lastIndexAppended());
+                    final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
                     Assert.assertEquals(cycle1, cycle);
                 }
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
+            final ExcerptTailer tailer = queue.createTailer();
 
             final StringBuilder sb = Wires.acquireStringBuilder();
 
@@ -780,26 +721,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentWithFirstAMove() throws IOException, TimeoutException {
 
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
-            long cycle = appender.cycle();
+            final ExcerptAppender appender = queue.createAppender();
+            int cycle = appender.cycle();
 
             // create 100 documents
             for (int i = 0; i < 5; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
                 if (i == 2) {
-                    final long cycle1 = toCycle(appender.lastIndexAppended());
+                    final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
                     Assert.assertEquals(cycle1, cycle);
                 }
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
-            tailer.moveToIndex(index(cycle, 2));
+            final ExcerptTailer tailer = queue.createTailer();
+            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
 
             final StringBuilder sb = Wires.acquireStringBuilder();
 
@@ -837,27 +778,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Ignore("TODO Fix")
     public void testReadingDocumentWithFirstAMoveWithEpoch() throws IOException, TimeoutException {
 
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
-            long cycle = appender.cycle();
+            final ExcerptAppender appender = queue.createAppender();
+            int cycle = appender.cycle();
 
             // create 100 documents
             for (int i = 0; i < 5; i++) {
                 final int j = i;
                 appender.writeDocument(wire -> wire.write(() -> "key").text("value=" + j));
                 if (i == 2) {
-                    final long cycle1 = toCycle(appender.lastIndexAppended());
+                    final long cycle1 = queue.rollCycle().toCycle(appender.lastIndexAppended());
                     Assert.assertEquals(cycle1, cycle);
                 }
             }
 
-            final ExcerptTailer tailer = chronicle.createTailer();
-            tailer.moveToIndex(index(cycle, 2));
+            final ExcerptTailer tailer = queue.createTailer();
+            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
 
             final StringBuilder sb = Wires.acquireStringBuilder();
 

@@ -16,22 +16,10 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 public interface RollingChronicleQueue extends ChronicleQueue {
-
-    static long toSequenceNumber(long index) {
-        return index & 0xFF_FFFF_FFFFL;
-    }
-
-    static int toCycle(long index) {
-        // the very last possible entry in a cycle is the value just before the next cycle.
-        return (int) (index >>> 40L);
-    }
-
-    static long index(long cycle, long sequenceNumber) {
-        return (cycle << 40L) + toSequenceNumber(sequenceNumber);
-    }
 
     long epoch();
 
@@ -50,7 +38,19 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     void release(@NotNull WireStore store);
 
     /**
+     * @return the first cycle number found, or Integer.MAX_VALUE is none found.
+     */
+    int firstCycle();
+
+    /**
+     * @return the lastCycle available or Integer.MIN_VALUE if none is found.
+     */
+    int lastCycle();
+
+    /**
      * @return the current cycle
      */
     int cycle();
+
+    RollCycle rollCycle();
 }

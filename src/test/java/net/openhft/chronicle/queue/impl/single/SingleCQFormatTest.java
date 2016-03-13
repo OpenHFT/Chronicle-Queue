@@ -274,16 +274,16 @@ public class SingleCQFormatTest {
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 131072,\n" +
+                    "    indexCount: !int 8192,\n" +
                     "    indexSpacing: 64,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 229\n" +
+                    "# position: 227\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello world\n" +
-                    "# position: 250\n" +
+                    "# position: 248\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
             bytes.close();
@@ -985,7 +985,7 @@ public class SingleCQFormatTest {
     }
 
     public void readTwo(ExcerptTailer tailer) {
-        long start = 1L << 40;
+        long start = RollCycles.DAILY.toIndex(1, 0L);
         assertEquals(start, tailer.index());
         expected(tailer, "msg: Hello world\n");
         assertEquals(start + 1, tailer.index());
