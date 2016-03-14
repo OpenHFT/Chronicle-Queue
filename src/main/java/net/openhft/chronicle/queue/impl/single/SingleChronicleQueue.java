@@ -30,10 +30,7 @@ import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -303,7 +300,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
-            Wire wire = wireType.apply(mappedBytes);
+            AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
             wire.pauser(pauserSupplier.get());
             if (wire.writeFirstHeader()) {
                 RollingChronicleQueue queue = this;

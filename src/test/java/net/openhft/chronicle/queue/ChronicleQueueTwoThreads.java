@@ -94,8 +94,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                     while (System.nanoTime() < next)
                         /* busy wait*/ ;
                     long start = next;
-                    bytes.readPosition(0);
-                    bytes.readLimit(BYTES_LENGTH);
+                    bytes.readPositionRemaining(0, BYTES_LENGTH);
                     bytes.writeLong(0L, start);
 
                     appender.writeBytes(bytes);

@@ -48,7 +48,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     private Consumer<BytesRingBufferStats> onRingBufferStats = NoBytesRingBufferStats.NONE;
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
-    private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(128);
+    private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private long timeoutMS = 10_000; // 10 seconds.
     private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
 

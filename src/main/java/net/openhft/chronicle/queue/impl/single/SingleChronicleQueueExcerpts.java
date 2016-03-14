@@ -58,7 +58,7 @@ public class SingleChronicleQueueExcerpts {
         private final SingleChronicleQueue queue;
         private int cycle = Integer.MIN_VALUE;
         private WireStore store;
-        private Wire wire;
+        private AbstractWire wire;
         private long position = -1;
         private boolean metaData = false;
         private volatile Thread appendingThread = null;
@@ -94,7 +94,7 @@ public class SingleChronicleQueueExcerpts {
             if (LOG.isDebugEnabled())
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
-            wire = queue.wireType().apply(mappedBytes);
+            wire = (AbstractWire) queue.wireType().apply(mappedBytes);
             wire.pauser(queue.pauserSupplier.get());
             wire.bytes().writePosition(store.writePosition());
         }
@@ -150,7 +150,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeBytes(@NotNull Bytes bytes) {
-            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
+            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes()
+                    .write(m), bytes);
         }
 
         @Override
@@ -190,6 +191,7 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
+//                    wire.bytes().writePosition(store.writePosition());
                     position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
                     wireWriter.write(writer, wire);
                     wire.updateHeader(length, position, false);
@@ -212,7 +214,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
-            setCycle(queue.cycle());
+            setCycle(Math.max(queue.cycle(), cycle + 1));
             position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
@@ -318,10 +320,11 @@ public class SingleChronicleQueueExcerpts {
             for (; ; ) {
                 roll = Integer.MIN_VALUE;
                 final Wire wire = this.wire;
-                wire.bytes().readLimit(wire.bytes().capacity());
-                while (wire.bytes().readVolatileInt(wire.bytes().readPosition()) != 0) {
-                    long position = wire.bytes().readPosition();
-                    long limit = wire.bytes().readLimit();
+                Bytes<?> bytes = wire.bytes();
+                bytes.readLimit(bytes.capacity());
+                while (bytes.readVolatileInt(bytes.readPosition()) != 0) {
+                    long position = bytes.readPosition();
+                    long limit = bytes.readLimit();
 
                     try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
                         if (!documentContext.isPresent()) return false;
@@ -472,7 +475,7 @@ public class SingleChronicleQueueExcerpts {
                 if (this.store == null) return false;
             }
 
-            if (read0(t, c, timeoutMS)) {
+            if (read0(t, c)) {
                 incrementIndex();
                 return true;
             }
@@ -485,7 +488,7 @@ public class SingleChronicleQueueExcerpts {
             this.index = rollCycle.toIndex(this.cycle, seq + direction.add());
         }
 
-        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) {
+        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
@@ -533,7 +536,7 @@ public class SingleChronicleQueueExcerpts {
                 }
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
-                this.wire = queue.wireType().apply(store.mappedBytes());
+                this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
                 this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
