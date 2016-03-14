@@ -99,7 +99,7 @@ public class SingleChronicleQueueStore implements WireStore {
                                      @NotNull final WireType wireType,
                                      @NotNull MappedBytes mappedBytes,
                                      long rollEpoc, int indexCount, int indexSpacing) {
-        this.roll = new Roll(rollCycle, rollEpoc, wireType);
+        this.roll = new Roll(rollCycle, rollEpoc);
         this.resourceCleaner = null;
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
@@ -697,11 +697,10 @@ public class SingleChronicleQueueStore implements WireStore {
         private Roll(WireIn wire) {
             length = wire.read(RollFields.length).int32();
             format = wire.read(RollFields.format).text();
-
             epoch = wire.read(RollFields.epoch).int64();
         }
 
-        Roll(@NotNull RollCycle rollCycle, long rollEpoch, WireType wireType) {
+        Roll(@NotNull RollCycle rollCycle, long rollEpoch) {
             this.length = rollCycle.length();
             this.format = rollCycle.format();
             this.epoch = rollEpoch;
