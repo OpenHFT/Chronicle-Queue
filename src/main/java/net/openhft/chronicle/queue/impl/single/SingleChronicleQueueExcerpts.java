@@ -471,7 +471,7 @@ public class SingleChronicleQueueExcerpts {
                 if (this.store == null) return false;
             }
 
-            if (read0(t, c, timeoutMS)) {
+            if (read0(t, c)) {
                 incrementIndex();
                 return true;
             }
@@ -484,7 +484,7 @@ public class SingleChronicleQueueExcerpts {
             this.index = rollCycle.toIndex(this.cycle, seq + direction.add());
         }
 
-        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) {
+        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
