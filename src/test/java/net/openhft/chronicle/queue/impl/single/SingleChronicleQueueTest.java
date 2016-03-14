@@ -34,8 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 
@@ -81,6 +80,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
+
+
+    @Test
+    public void testWriteWithDocumentReadBytesDifferentThreads() throws IOException,
+            InterruptedException {
+        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType).build()) {
+
+
+            final String expected = "some long message";
+
+
+            Executors.newSingleThreadExecutor().submit(() -> {
+                final ExcerptAppender appender = queue.createAppender();
+
+                try (final DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().writeEventName(() -> "key").text(expected);
+                }
+
+            });
+
+            BlockingQueue<Bytes> result = new ArrayBlockingQueue<Bytes>(10);
+            Bytes b = Bytes.allocateDirect(128);
+
+            Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+                final ExcerptTailer tailer = queue.createTailer();
+                tailer.readBytes(b);
+                if (b.readRemaining() == 0)
+                    return;
+                b.readPosition(0);
+                result.add(b);
+                throw new RejectedExecutionException();
+            }, 1, 1, TimeUnit.MICROSECONDS);
+
+
+            final Bytes poll = result.poll(10, TimeUnit.SECONDS);
+            final String actual = this.wireType.apply(poll).read(() -> "key")
+                    .text();
+            Assert.assertEquals(expected, actual);
+
+        }
+    }
+
 
     @Test
     public void testReadingLessBytesThanWritten() throws IOException {

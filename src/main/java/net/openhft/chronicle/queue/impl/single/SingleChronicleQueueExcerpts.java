@@ -164,7 +164,8 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException("no messages written");
             try {
                 long sequenceNumber = store.indexForPosition(wire, position, queue.timeoutMS);
-                return queue.rollCycle().toIndex(cycle, sequenceNumber);
+                final long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
+                return index;
             } catch (EOFException | TimeoutException e) {
                 throw new AssertionError(e);
             } finally {
