@@ -15,7 +15,10 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,10 +42,11 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     @SuppressWarnings("unchecked")
     public SingleChronicleQueueBuilder(@NotNull File path) {
         super(path);
+        storeFactory(SingleChronicleQueueBuilder::createStore);
     }
 
     public static void init() {
-        // Call static block.
+        // make sure the static block has been called.
     }
 
     @NotNull
@@ -62,15 +66,23 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     // *************************************************************************
 
     @NotNull
-    public SingleChronicleQueue build() {
-        if (buffered())
-            log.warn("Buffering is only supported in Chronicle Queue Enterprise");
-        return new SingleChronicleQueue(clone());
+    static SingleChronicleQueueStore createStore(RollingChronicleQueue queue, Wire wire) {
+        final SingleChronicleQueueStore wireStore = new
+                SingleChronicleQueueStore(queue.rollCycle(), queue.wireType(), (MappedBytes) wire.bytes(), queue.epoch(), queue.indexCount(), queue.indexSpacing());
+        wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+        return wireStore;
     }
 
     // *************************************************************************
     //
     // *************************************************************************
+
+    @NotNull
+    public SingleChronicleQueue build() {
+        if (buffered())
+            log.warn("Buffering is only supported in Chronicle Queue Enterprise");
+        return new SingleChronicleQueue(this);
+    }
 
     @NotNull
     @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")

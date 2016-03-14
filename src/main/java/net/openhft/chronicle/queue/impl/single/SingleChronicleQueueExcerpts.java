@@ -309,6 +309,8 @@ public class SingleChronicleQueueExcerpts {
         private boolean next() throws TimeoutException {
             if (this.store == null) { // load the first store
                 final long firstIndex = queue.firstIndex();
+                if (firstIndex == Long.MAX_VALUE)
+                    return false;
                 if (!this.moveToIndex(firstIndex)) return false;
             }
             int roll;

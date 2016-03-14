@@ -44,47 +44,50 @@ import java.io.StreamCorruptedException;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
-    public static final int TIMEOUT = 10_000;
-    public static final String MESSAGE = "Timed out waiting for the header record to be ready in ";
     public static final String SUFFIX = ".cq4";
 
     protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
-    private final RollCycle cycle;
+    private final RollCycle rollCycle;
     @NotNull
     private final RollingResourcesCache dateCache;
     @NotNull
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
+    @NotNull
     private final File path;
+    @NotNull
     private final WireType wireType;
     private final long blockSize;
-    private final RollCycle rollCycle;
+    @NotNull
     private final Consumer<BytesRingBufferStats> onRingBufferStats;
     private final EventLoop eventLoop;
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
+    @NotNull
     private final TimeProvider time;
+    @NotNull
+    private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
-        cycle = builder.rollCycle();
+        rollCycle = builder.rollCycle();
         epoch = builder.epoch();
-        dateCache = new RollingResourcesCache(this.cycle, epoch, name -> new File(builder.path(), name + SUFFIX));
+        dateCache = new RollingResourcesCache(this.rollCycle, epoch, name -> new File(builder.path(), name + SUFFIX));
         pool = WireStorePool.withSupplier(this::acquireStore);
         isBuffered = builder.buffered();
         path = builder.path();
         wireType = builder.wireType();
         blockSize = builder.blockSize();
-        rollCycle = builder.rollCycle();
         eventLoop = builder.eventLoop();
         bufferCapacity = builder.bufferCapacity();
         onRingBufferStats = builder.onRingBufferStats();
@@ -93,6 +96,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         time = builder.timeProvider();
         pauserSupplier = builder.pauserSupplier();
         timeoutMS = builder.timeoutMS();
+        storeFactory = builder.storeFactory();
     }
 
     @Override
@@ -115,13 +119,23 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public int indexCount() {
+        return indexCount;
+    }
+
+    @Override
+    public int indexSpacing() {
+        return indexSpacing;
+    }
+
+    @Override
     public long epoch() {
         return epoch;
     }
 
     @NotNull
     public RollCycle rollCycle() {
-        return this.cycle;
+        return this.rollCycle;
     }
 
     /**
@@ -171,7 +185,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public final int cycle() {
-        return this.cycle.current(time, epoch);
+        return this.rollCycle.current(time, epoch);
     }
 
     @Override
@@ -255,7 +269,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     public long blockSize() {
-        throw new UnsupportedOperationException("todo");
+        return this.blockSize;
     }
 
     @NotNull
@@ -292,9 +306,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             Wire wire = wireType.apply(mappedBytes);
             wire.pauser(pauserSupplier.get());
             if (wire.writeFirstHeader()) {
-                final SingleChronicleQueueStore wireStore = new
-                        SingleChronicleQueueStore(rollCycle, wireType, mappedBytes, epoch, indexCount, indexSpacing);
-                wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+                RollingChronicleQueue queue = this;
+                final WireStore wireStore = storeFactory.apply(queue, wire);
                 wireStore.writePosition(wire.bytes().writePosition());
                 wire.updateFirstHeader();
                 return wireStore;
@@ -313,4 +326,5 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             throw Jvm.rethrow(e);
         }
     }
+
 }

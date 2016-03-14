@@ -108,4 +108,8 @@ public interface ChronicleQueue extends Closeable {
      * @return the contents of the Queue as YAML.
      */
     String dump();
+
+    int indexCount();
+
+    int indexSpacing();
 }

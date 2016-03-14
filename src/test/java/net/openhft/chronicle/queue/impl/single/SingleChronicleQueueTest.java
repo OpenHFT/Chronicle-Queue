@@ -775,7 +775,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     // TODO Test fails if you are at Epoch.
     @Test
-    @Ignore("TODO Fix")
     public void testReadingDocumentWithFirstAMoveWithEpoch() throws IOException, TimeoutException {
 
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -881,7 +880,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("Not sure it is useful")
+//    @Ignore("Not sure it is useful")
     public void testReadWrite() throws IOException {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
@@ -895,14 +894,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                      .blockSize(2 << 20)
                      .build()) {
             ExcerptAppender append = chronicle2.createAppender();
-            for (int i = 0; i < 1000000; i++)
+            for (int i = 0; i < 100000; i++)
                 append.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
             ExcerptTailer tailer = chronicle.createTailer();
             ExcerptTailer tailer2 = chronicle.createTailer();
             ExcerptTailer tailer3 = chronicle.createTailer();
             ExcerptTailer tailer4 = chronicle.createTailer();
-            for (int i = 0; i < 1_000_000; i++) {
+            for (int i = 0; i < 100_000; i++) {
                 if (i % 10000 == 0)
                     System.gc();
                 if (i % 2 == 0)
@@ -917,7 +916,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("TODO FIX")
     public void testReadingDocumentForEmptyQueue() throws IOException {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
@@ -932,6 +930,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
                     .wireType(this.wireType)
+                    .rollCycle(RollCycles.HOURLY)
                     .build()) {
                 ExcerptAppender appender = chronicle2.createAppender();
                 appender.writeDocument(w -> w.write(() -> "test - message").text("text"));

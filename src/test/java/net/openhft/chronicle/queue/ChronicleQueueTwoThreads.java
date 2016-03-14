@@ -23,7 +23,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -39,7 +38,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final long INTERVAL_US = 10;
 
     @Test(timeout = 10000)
-    @Ignore("TODO FIX, test is broken but doesn't fail")
     public void testUnbuffered() throws IOException, InterruptedException {
         doTest(false);
     }
@@ -53,7 +51,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            long count = 0;
             try {
                 ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                         .wireType(WireType.FIELDLESS_BINARY)
@@ -73,7 +70,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                 if (rlock != null) {
                     rlock.release();
                 }
-                System.out.printf("Read %,d messages", count);
+                System.out.printf("Read %,d messages", counter.intValue());
             }
         }, "tailer thread");
 
@@ -126,10 +123,6 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         }
 
         assertEquals(runs, counter.get());
-
-//        rqueue.close();
-//        wqueue.close();
-//            eventLoop.close();
 
     }
 }

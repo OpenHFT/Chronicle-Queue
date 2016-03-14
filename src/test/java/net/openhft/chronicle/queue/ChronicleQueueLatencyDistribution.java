@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740
  * 8,000 / 13,890 - 36,700
+ *
+ * Results 14/03/2016 running on E5-2650v2 50/90 99/99.9 99.99 - worst was 0.88 / 1.4  10.0 / 19  72 - 483
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Ignore("long running")

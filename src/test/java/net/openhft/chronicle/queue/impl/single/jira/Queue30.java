@@ -21,18 +21,22 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
  */
 public class Queue30 extends ChronicleQueueTestBase {
 
-    @Ignore
+    @Ignore("Stress test - doesn't finish")
     @Test
     public void testMT() throws IOException, InterruptedException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -40,12 +44,13 @@ public class Queue30 extends ChronicleQueueTestBase {
                 .blockSize(640_000)
                 .build();
 
+        ExecutorService exec = Executors.newCachedThreadPool(new NamedThreadFactory("stress"));
         Throwable[] tref = {null};
         Runnable r = () -> {
             try {
                 final String name = Thread.currentThread().getName();
                 final ExcerptAppender appender = queue.createAppender();
-                for (int count = 0; ; count++) {
+                for (int count = 0; !Thread.currentThread().isInterrupted(); count++) {
                     final int c = count;
                     appender.writeDocument(w ->
                             w.write(() -> "thread").text(name)
@@ -58,23 +63,20 @@ public class Queue30 extends ChronicleQueueTestBase {
                 }
             } catch (Throwable t) {
                 tref[0] = t;
+                exec.shutdown();
             }
         };
+        for (int i = 0; i < 100; i++)
+            exec.submit(r);
+        exec.awaitTermination(10, TimeUnit.MINUTES);
+        exec.shutdownNow();
 
-        Thread t1 = new Thread(r);
-        Thread t2 = new Thread(r);
-
-        t1.start();
-        t2.start();
-
-        t1.join();
-        t2.join();
-        if (tref != null)
+        if (tref[0] != null)
             throw new AssertionError(tref[0]);
 
     }
 
-    @Ignore
+    @Ignore("Stress test - doesn't finish")
     @Test
     public void testST() throws IOException {
         final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
@@ -91,7 +93,7 @@ public class Queue30 extends ChronicleQueueTestBase {
                             .write(() -> "count").int32(c)
             );
 
-            if (count % 10_000 == 0) {
+            if (count % 50_000 == 0) {
                 LOGGER.info(name + "> " + count);
             }
         }

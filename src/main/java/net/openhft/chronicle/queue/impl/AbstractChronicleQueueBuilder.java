@@ -11,6 +11,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -48,6 +50,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(128);
     private long timeoutMS = 10_000; // 10 seconds.
+    private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -274,6 +277,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public long timeoutMS() {
         return timeoutMS;
+    }
+
+    public void storeFactory(BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory) {
+        this.storeFactory = storeFactory;
+    }
+
+    @Override
+    public BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory() {
+        return storeFactory;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

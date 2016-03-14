@@ -103,7 +103,7 @@ public class SingleCQFormatTest {
     }
 
     // TODO add controls on how to wait, for how long and what action to take to fix it.
-    @Test(expected = java.lang.IllegalStateException.class)
+    @Test(expected = TimeoutException.class)
     @Ignore("Long running")
     public void testDeadHeader() throws FileNotFoundException {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());

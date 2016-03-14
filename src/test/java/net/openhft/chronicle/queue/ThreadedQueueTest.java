@@ -3,7 +3,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -15,7 +14,6 @@ import static org.junit.Assert.*;
 /**
  * @author Rob Austin.
  */
-@Ignore("TODO FIX")
 public class ThreadedQueueTest {
 
     public static final int MESSAGE_SIZE = 1024;

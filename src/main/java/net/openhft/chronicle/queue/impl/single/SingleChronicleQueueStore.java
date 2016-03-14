@@ -95,10 +95,10 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param indexCount   the number of entries in each index.
      * @param indexSpacing the spacing between indexed entries.
      */
-    SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
-                              @NotNull final WireType wireType,
-                              @NotNull MappedBytes mappedBytes,
-                              long rollEpoc, int indexCount, int indexSpacing) {
+    public SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
+                                     @NotNull final WireType wireType,
+                                     @NotNull MappedBytes mappedBytes,
+                                     long rollEpoc, int indexCount, int indexSpacing) {
         this.roll = new Roll(rollCycle, rollEpoc, wireType);
         this.resourceCleaner = null;
         this.wireType = wireType;

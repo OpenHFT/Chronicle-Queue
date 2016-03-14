@@ -17,11 +17,15 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -91,4 +95,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extend
 
     int indexSpacing();
 
+    BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory();
 }
