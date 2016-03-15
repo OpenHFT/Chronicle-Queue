@@ -157,13 +157,14 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
             assert checkAppendingThread();
-            Bytes<?> wireBytes = wire.bytes();
             try {
                 int cycle = queue.rollCycle().toCycle(index);
 
                 if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
                     throw new StreamCorruptedException("Unable to move to index " + Long.toHexString(index));
 
+                // only get the bytes after moveToIndex
+                Bytes<?> wireBytes = wire.bytes();
                 try {
 //                    wire.bytes().writePosition(store.writePosition());
                     int length = bytes.length();
@@ -181,6 +182,7 @@ public class SingleChronicleQueueExcerpts {
                 throw Jvm.rethrow(e);
 
             } finally {
+                Bytes<?> wireBytes = wire.bytes();
                 store.writePosition(wireBytes.writePosition());
                 assert resetAppendingThread();
             }

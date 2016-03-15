@@ -537,16 +537,16 @@ public class SingleChronicleQueueStore implements WireStore {
             @NotNull
             final Bytes<?> bytes = wire.bytes();
 
-            bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
+            long end = writePosition.getValue();
+            bytes.readLimit(bytes.capacity()).readPosition(knownAddress);
 
             for (long i = fromKnownIndex; ; i++) {
                 try {
-                    if (bytes.readRemaining() < 4)
-                        return ScanResult.NOT_REACHED;
-
                     if (wire.readDataHeader()) {
                         if (i == toIndex)
                             return ScanResult.FOUND;
+                        if (bytes.readPosition() > end)
+                            return ScanResult.NOT_REACHED;
                         bytes.readSkip(Wires.lengthOf(bytes.readInt()));
                         continue;
                     }
