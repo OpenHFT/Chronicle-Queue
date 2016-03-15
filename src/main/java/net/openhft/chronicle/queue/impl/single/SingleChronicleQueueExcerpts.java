@@ -157,6 +157,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
             assert checkAppendingThread();
+            Bytes<?> wireBytes = wire.bytes();
             try {
                 int cycle = queue.rollCycle().toCycle(index);
 
@@ -167,17 +168,20 @@ public class SingleChronicleQueueExcerpts {
 //                    wire.bytes().writePosition(store.writePosition());
                     int length = bytes.length();
                     position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
-                    wire.bytes().write(bytes);
+                    wireBytes.write(bytes);
                     wire.updateHeader(length, position, false);
 
                 } catch (EOFException theySeeMeRolling) {
-                    throw new StreamCorruptedException(theySeeMeRolling.toString());
+                    if (wireBytes.compareAndSwapInt(wireBytes.writePosition(), Wires.END_OF_DATA, Wires.NOT_READY)) {
+                        wireBytes.write(bytes);
+                        wire.updateHeader(0, position, false);
+                    }
                 }
             } catch (TimeoutException | StreamCorruptedException e) {
                 throw Jvm.rethrow(e);
 
             } finally {
-                store.writePosition(wire.bytes().writePosition());
+                store.writePosition(wireBytes.writePosition());
                 assert resetAppendingThread();
             }
         }
