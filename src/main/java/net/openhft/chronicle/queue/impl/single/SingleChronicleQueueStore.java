@@ -415,6 +415,7 @@ public class SingleChronicleQueueStore implements WireStore {
             if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_READY)) {
                 long pos = newIndex(wire, false, timeoutMS);
                 if (index2Index.compareAndSet(index2, LONG_NOT_READY, pos)) {
+                    index2Index.setMaxUsed(index2 + 1);
                     return pos;
                 }
                 throw new IllegalStateException("Index " + index2 + " in index2index was altered");
@@ -655,6 +656,7 @@ public class SingleChronicleQueueStore implements WireStore {
                         if (scanResult == ScanResult.FOUND) {
                             long nextPosition = bytes.readPosition();
                             array1.setOrderedValueAt(index1, lastKnownAddress = nextPosition);
+                            array1.setMaxUsed(index1 + 1);
 
                             if (nextPosition == position) {
                                 nextEntryToIndex.setMaxValue(nextIndex + 1);

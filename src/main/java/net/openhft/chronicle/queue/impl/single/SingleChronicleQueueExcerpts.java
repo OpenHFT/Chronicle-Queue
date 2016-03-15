@@ -251,7 +251,7 @@ public class SingleChronicleQueueExcerpts {
         private int cycle;
         private long index; // index of the next read.
         private WireStore store;
-        private TailerDirection direction;
+        private TailerDirection direction = TailerDirection.FORWARD;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             super(null);
@@ -416,7 +416,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public final ExcerptTailer toStart() {
-            direction = TailerDirection.FORWARD;
+            assert direction != TailerDirection.BACKWARD;
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
                 return this;
@@ -478,7 +478,16 @@ public class SingleChronicleQueueExcerpts {
         private void incrementIndex() {
             RollCycle rollCycle = queue.rollCycle();
             long seq = rollCycle.toSequenceNumber(this.index);
-            this.index = rollCycle.toIndex(this.cycle, seq + direction.add());
+            seq += direction.add();
+            if (rollCycle.toSequenceNumber(seq) < seq) {
+                cycle(cycle + 1);
+                seq = 0;
+            } else if (seq < 0) {
+                // TODO FIX so we can roll back to the precious cycle.
+                seq = 0;
+            }
+
+            this.index = rollCycle.toIndex(this.cycle, seq);
         }
 
         private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
