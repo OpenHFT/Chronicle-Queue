@@ -65,7 +65,7 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    protected static File getTmpDir() {
+    public static File getTmpDir() {
         try {
             final File tmpDir = Files.createTempDirectory("chronicle" + "-").toFile();
 

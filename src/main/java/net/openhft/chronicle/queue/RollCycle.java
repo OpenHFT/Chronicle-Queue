@@ -28,7 +28,7 @@ public interface RollCycle {
     int defaultIndexSpacing();
 
     /**
-     * @param epoch and EPOCH offset, to all the user to define thier own epoch
+     * @param epoch and EPOCH offset, to all the user to define their own epoch
      * @return the cycle
      */
     default int current(TimeProvider time, long epoch) {
