@@ -155,6 +155,57 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+            assert checkAppendingThread();
+            try {
+                int cycle = queue.rollCycle().toCycle(index);
+
+                if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
+                    throw new StreamCorruptedException("Unable to move to index " + Long.toHexString(index));
+
+                try {
+//                    wire.bytes().writePosition(store.writePosition());
+                    int length = bytes.length();
+                    position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    wire.bytes().write(bytes);
+                    wire.updateHeader(length, position, false);
+
+                } catch (EOFException theySeeMeRolling) {
+                    throw new StreamCorruptedException(theySeeMeRolling.toString());
+                }
+            } catch (TimeoutException | StreamCorruptedException e) {
+                throw Jvm.rethrow(e);
+
+            } finally {
+                store.writePosition(wire.bytes().writePosition());
+                assert resetAppendingThread();
+            }
+        }
+
+        boolean moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+            }
+
+            if (this.cycle != cycle) {
+                if (cycle > this.cycle)
+                    rollCycleTo(cycle);
+                else
+                    setCycle2(cycle);
+            }
+
+            ScanResult scanResult = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
+            Bytes<?> bytes = wire.bytes();
+            if (scanResult == ScanResult.NOT_FOUND) {
+                wire.bytes().writePosition(wire.bytes().readPosition());
+                return true;
+            }
+            bytes.readLimit(bytes.readPosition());
+            return false;
+        }
+
+
+        @Override
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) {
             append(Wires.UNKNOWN_LENGTH, (m, w) -> m.writeMarshallable(w.bytes()), marshallable);
         }
@@ -400,17 +451,6 @@ public class SingleChronicleQueueExcerpts {
             }
             bytes.readLimit(bytes.readPosition());
             return false;
-        }
-
-        private void setPositionAtMessage(Bytes<?> bytes, long position) {
-            int header = bytes.readInt(position);
-            assert Wires.isReady(header);
-            long limit = position + Wires.lengthOf(header) + 4;
-            if (limit > bytes.readLimit()) {
-                bytes.readLimit(limit);
-                store.writePosition(limit);
-            }
-            bytes.readPosition(position);
         }
 
         @NotNull

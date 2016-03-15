@@ -600,6 +600,7 @@ public class SingleChronicleQueueStore implements WireStore {
             if (((Byteable) values).bytesStore() != null)
                 return values;
             final long indexToIndex0 = indexToIndex(wire, timeoutMS);
+            wire.bytes().readLimit(wire.bytes().capacity());
             try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
                 if (!context.isPresent() || !context.isMetaData()) {
                     dumpStore(wire);

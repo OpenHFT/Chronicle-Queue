@@ -21,6 +21,8 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.StreamCorruptedException;
+
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
  *
@@ -44,6 +46,17 @@ public interface ExcerptAppender extends ExcerptCommon {
      * @param bytes to write to excerpt.
      */
     void writeBytes(@NotNull Bytes<?> bytes);
+
+    /**
+     * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
+     *
+     * @param index to write the byte to or fail.
+     * @param bytes to write.
+     * @throws StreamCorruptedException the write failed is was unable to write the data at the given index.
+     */
+    default void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * @return the index last written, this index includes the cycle and the sequence number
