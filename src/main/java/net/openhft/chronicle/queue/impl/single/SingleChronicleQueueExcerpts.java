@@ -288,16 +288,13 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext readingDocument() {
-            boolean next;
             try {
-                next = next();
+                present = next();
             } catch (TimeoutException ignored) {
-                next = false;
+                present = false;
             }
-            if (next) {
-                start();
+            if (present)
                 return this;
-            }
             return NoDocumentContext.INSTANCE;
         }
 
@@ -315,44 +312,40 @@ public class SingleChronicleQueueExcerpts {
                     return false;
                 if (!this.moveToIndex(firstIndex)) return false;
             }
-            int roll;
-            for (; ; ) {
-                roll = Integer.MIN_VALUE;
-                final Wire wire = this.wire;
-                Bytes<?> bytes = wire.bytes();
-                bytes.readLimit(bytes.capacity());
-                while (bytes.readVolatileInt(bytes.readPosition()) != 0) {
-                    long position = bytes.readPosition();
-                    long limit = bytes.readLimit();
-
-                    try (@NotNull final DocumentContext documentContext = wire.readingDocument()) {
-                        if (!documentContext.isPresent()) return false;
-                        if (documentContext.isData()) {
-                            // as we have the document, we have to roll it back to the start
-                            // position in the close() method so that it can be read by the user.
-                            ((ReadDocumentContext) documentContext).closeReadPosition(position);
-                            ((ReadDocumentContext) documentContext).closeReadLimit(limit);
-                            return true;
+            Bytes<?> bytes = wire.bytes();
+            bytes.readLimit(bytes.capacity());
+            for (int i = 0; i < 1000; i++) {
+                try {
+                    if (direction != TailerDirection.FORWARD)
+                        try {
+                            moveToIndex(index);
+                        } catch (TimeoutException notReady) {
+                            return false;
                         }
-                        // In case of meta data, if we are found the "roll" meta, we returns
-                        // the next cycle (negative)
 
-                        final StringBuilder sb = Wires.acquireStringBuilder();
-                        @NotNull final ValueIn vi = wire.readEventName(sb);
-                        if ("roll".contentEquals(sb)) {
-                            roll = vi.int32();
-                            break;
-                        }
+                    if (wire.readDataHeader()) {
+                        closeReadLimit(bytes.capacity());
+                        wire.readAndSetLength(bytes.readPosition());
+                        long end = bytes.readLimit();
+                        closeReadPosition(end);
+                        return true;
                     }
-                }
-
-                // we got to the end of the file and there is no roll information
-                if (roll == Integer.MIN_VALUE) return false; // roll to the next file
-
-                this.moveToIndex(roll, 0);
-                if (this.store == null)
                     return false;
+
+                } catch (EOFException eof) {
+                    if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
+                        try {
+                            if (moveToIndex(cycle + direction.add(), 0)) {
+                                bytes = wire.bytes();
+                                continue;
+                            }
+                        } catch (TimeoutException failed) {
+                            // no more entries yet.
+                        }
+                    return false;
+                }
             }
+            throw new IllegalStateException("Unable to progress to the next cycle");
         }
 
         @Override
