@@ -357,6 +357,19 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public String readText() {
+            StringBuilder sb = Wires.acquireStringBuilder();
+            try {
+                if (read(sb, (t, w) ->
+                        w.bytes().parseUtf8(sb, (int) w.bytes().readRemaining()), queue.timeoutMS))
+                    return sb.toString();
+                return null;
+            } catch (TimeoutException e) {
+                return null;
+            }
+        }
+
+        @Override
         public void close() {
             if (isPresent())
                 incrementIndex();

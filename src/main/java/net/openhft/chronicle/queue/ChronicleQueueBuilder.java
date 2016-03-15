@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +32,16 @@ import java.util.function.Consumer;
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder, Q extends ChronicleQueue> extends Cloneable {
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue> extends Cloneable {
+
+    static SingleChronicleQueueBuilder single(String basePath) {
+        return SingleChronicleQueueBuilder.binary(basePath);
+    }
+
+    static SingleChronicleQueueBuilder singleText(String basePath) {
+        return SingleChronicleQueueBuilder.text(new File(basePath));
+    }
+
     @NotNull
     Q build();
 

@@ -13,22 +13,21 @@ Releases are available on maven central as
  ```xml
 <dependency>
   <groupId>net.openhft</groupId>
-  <artifactId>chronicle</artifactId>
+  <artifactId>chronicle-queue</artifactId>
   <version><!--replace with the latest version, see below--></version>
 </dependency>
 ```
-Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle%22)
+Click here to get the [Latest Version Number](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.openhft%22%20AND%20a%3A%22chronicle-queue%22)
 
-Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle)
+Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle-queue)
 
 
 
 ### Contents
 * [Overview](https://github.com/OpenHFT/Chronicle-Queue#overview)
 * [Building Blocks](https://github.com/OpenHFT/Chronicle-Queue#building-blocks)
-* [Chronicle Queue V3](https://github.com/OpenHFT/Chronicle-Queue#chronicle-queue-v3)
-  * [Indexed Chronicle](https://github.com/OpenHFT/Chronicle-Queue#indexed-chronicle)
-  * [Vanilla Chronicle](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
+* [Chronicle Queue V4](https://github.com/OpenHFT/Chronicle-Queue#chronicle-queue-v3)
+  * [Single Chronicle Queue](https://github.com/OpenHFT/Chronicle-Queue#vanilla-chronicle)
   * [Getting Started](https://github.com/OpenHFT/Chronicle-Queue#getting-started)
   * [Replication](https://github.com/OpenHFT/Chronicle-Queue#replication)
     * [Source](https://github.com/OpenHFT/Chronicle-Queue#source)
@@ -41,75 +40,66 @@ Snapshots are available on [OSS sonatype](https://oss.sonatype.org/content/repos
     * [Write with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#write-with-direct-reference)
     * [Read with Direct Reference](https://github.com/OpenHFT/Chronicle-Queue#read-with-direct-reference)
     * [Ordering fields of DataValueClasses](https://github.com/OpenHFT/Chronicle-Queue#ordering-fields-of-DataValueClasses)
-  * [Reading the Chronicle after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
+  * [Reading the Queue after a shutdown](https://github.com/OpenHFT/Chronicle-Queue#reading-after-a-shutdown)
   * [Non-blocking Remote Client](https://github.com/OpenHFT/Chronicle-Queue#non-blocking-remote-client)
   * [Data Filtering](https://github.com/OpenHFT/Chronicle-Queue#data-filtering)
 * [Support](https://github.com/OpenHFT/Chronicle-Queue#support)
 * [JavaDoc](http://openhft.github.io/Chronicle-Queue/apidocs/)
 
 ## Overview
-Chronicle is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
+Chronicle Queue is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg)
 
 At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
-Using non-heap storage options (RandomAccessFile) Chronicle provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
-Chronicle uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. RandomAccessFiles permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
+Using non-heap storage options (RandomAccessFile) Queue provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Queue uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. RandomAccessFiles permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-30-at-11.24.53.png)
 
+### Use cases
+
+- Log everything logging. (Fast enough to record everything)
+- Event sourcing.
+- Log aggregation.
+- Stream processing
+- Commit log.
+- Metrics
+
 ## Building Blocks
-Chronicle is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
+Chronicle Queue is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
 
 Chronicle has three main concepts:
-  * Tailer (sequential reads)
-  * Excerpt (random reads)
-  * Appender (sequential writes).
+  * Tailer (sequential and random reads, forward and backwards)
+  * Appender (sequential writes, append to the end only).
 
-An Excerpt is the main data container in a Chronicle, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing the Excerpt at the end.
+An Excerpt is the main data container in a Chronicle Queue, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing the Excerpt at the end.
 A Tailer is an Excerpt optimized for sequential reads.
 An Appender is something like Iterator in Chronicle environment. You add data appending the current chronicle.
 
-## Chronicle Queue V3
+## Chronicle Queue V4
 
-Current version of Chronicle-Queue (V3) contains IndexedChronicle and VanillaChronicle implementations.
+Current version of Chronicle-Queue (V4) contains the SingleChronicleQueue implementation.
 
-### IndexedChronicle
-IndexedChronicle is a single writer multiple reader Chronicle.
-
-For each record, IndexedChronicle holds the memory-offset in another index cache for random access. This means IndexedChronicle "knows" where the 3rd object resides in memory. This is why it is named as "Indexed". But this index is just a sequential index, the first object has index 0, the second object has index 1... Indices are not strictly sequential so if there is not enough space in the current chunk, a new chunk is created and the left over space is a padding record with its own index which the Tailer skips.
-
-```
-base-directory /
-    name.index
-    name.data
-```
-
-### VanillaChronicle
-Vanilla Chronicle is a designed for more features rather than just speed. It supports:
+### Single Chronicle Queue
+This queue is a designed to support:
  - rolling files on a daily, weekly or hourly basis.
  - concurrent writers on the same machine.
- - concurrent readers on the same machine or across multiple machines via TCP replication.
+ - concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise).
  - zero copy serialization and deserialization.
- - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4500 laptop)
- - synchronous persistence as required. (commit to disk before continuing)
- - exact length of entries
+ - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4790)
 
 The directory structure is as follows.
 
 ```
 base-directory /
-   {cycle-name} /       - The default format is yyyyMMdd
-        index-{n}       - multiple index files from 0 .. {n}
-        data-{tid}-{m}  - multiple data files for each thread id (matches the process id) from 0 .. {n}
+   {cycle-name}.cq4       - The default format is yyyyMMdd for daily rolling.
 ```
 
-The index file format is an sequence of 8-byte values which consist of a 16-bit {tid} and the offset in bytes of the start of the record.
-The data file format has a 4-byte length of record. The length is the inverted bits of the 4-byte value.
-This is used to avoid seeing regular data as a length and detect corruption.  The length always starts of a 4-byte boundary.
+The format consists of Size Prefixed Bytes which are formatted using BinaryWire or TextWire.  The ChronicleQueue.dump() method can be used to dump the raw contents as a String.
 
 ## Getting Started
 
@@ -119,104 +109,72 @@ To create an instance you have to use the ChronicleQueueBuilder.
 
 ```java
 String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
-Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
+ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build();
 ```
 
 In this example we have created an IndexedChronicle which creates two RandomAccessFiles one for indexes and one for data having names relatively:
 
-${java.io.tmpdir}/getting-started.index
-${java.io.tmpdir}/getting-started.data
+${java.io.tmpdir}/getting-started/{today}.cq4
 
 ### Writing
 ```java
 // Obtain an ExcerptAppender
-ExcerptAppender appender = chronicle.createAppender();
+ExcerptAppender appender = queue.createAppender();
 
-// Configure the appender to write up to 100 bytes
-appender.startExcerpt(100);
+// write - {msg: TestMessage}
+appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 
-// Copy the content of the Object as binary
-appender.writeObject("TestMessage");
-
-// Commit
-appender.finish();
+// write - TestMessage
+appender.writeText("TestMessage");
 ```
 
 ### Reading
 ```java
-// Obtain an ExcerptTailer
-ExcerptTailer reader = chronicle.createTailer();
+ExcerptTailer tailer = queue.createTailer();
 
-// While until there is a new Excerpt to read
-while(!reader.nextIndex());
+tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
 
-// Read the objecy
-Object ret = reader.readObject();
-
-// Make the reader ready for next read
-reader.finish();
+assertEquals("TestMessage", tailer.readText());
 ```
 
 ### Cleanup
 
-Chronicle-Queue stores its data off heap and it is recommended that you call close() once you have finished working with Excerpts and Chronicle-Queue.
+Chronicle Queue stores its data off heap and it is recommended that you call close() 
+once you have finished working with Chronicle-Queue to free resources, however no data will be lost of you dod not do this.
 
 ```java
-appender.close();
-reader.close();
-chronicle.close();
+queue.close();
+```
+
+### Putting it all together
+```java
+try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
+    // Obtain an ExcerptAppender
+    ExcerptAppender appender = queue.createAppender();
+
+    // write - {msg: TestMessage}
+    appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
+
+    // write - TestMessage
+    appender.writeText("TestMessage");
+
+    ExcerptTailer tailer = queue.createTailer();
+
+    tailer.readDocument(w -> System.out.println("msg: " + w.read(()->"msg").text()));
+
+    assertEquals("TestMessage", tailer.readText());
+}
 ```
 
 ## Replication
 
-Chronicle-Queue supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwitdh requirements.
+Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwitdh requirements.
 
 ![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
-### Source
-
-A Chronicle-Queue Source is the master source of data
-```java
-String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-source"
-
-// Create a new Chronicle-Queue source
-Chronicle source = ChronicleQueueBuilder
-    .indexed(basePath + "/new")
-    .source()
-    .bindAddress("localhost", 1234)
-    .build();
-
-// Wrap an existing Chronicle-Queue
-Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/wrap")
-Chronicle source = ChronicleQueueBuilder
-    .source(chronicle)
-    .bindAddress("localhost", 1234)
-    .build();
-```
-
-### Sink
-
-A Chronicle-Queue sink is a Chronicle-Queue client that stores a copy of data locally (replica).
-
-```java
-String basePath = System.getProperty("java.io.tmpdir") + "/getting-started-sink"
-
-// Create a new Chronicle-Queue sink
-Chronicle sink = ChronicleQueueBuilder
-    .indexed(basePath + "/statefull")
-    .sink()
-    .connectAddress("localhost", 1234)
-    .build();
-
-// Wrap an existing Chronicle-Queue
-Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath + "/statefull")
-Chronicle sink = ChronicleQueueBuilder
-    .sink(chronicle)
-    .connectAddress("localhost", 1234)
-    .build();
-```
-
 ### Remote Tailer
+
+TODO Update for use with Chronicle Engine
 
 A Remote Tailer is a stateless Sink (it operates in memory)
 
@@ -228,6 +186,8 @@ Chronicle chronicle = ChronicleQueueBuilder
 ```
 
 ### Remote Appender
+
+TODO Update for use with Chronicle Engine
 
 A Remote Appender is a Chronicle-Queue implementation which supports append excerpt to a Chronicle-Source.
 It is not a full implementation of a Chronicle-Queue as you can only create a single ExcerptAppender.
@@ -258,13 +218,12 @@ Chronicle chronicle = ChronicleQueueBuilder
 
 ### Off-Heap Data Structures
 
-An Exceprt provides all the low-level primitives to read/store data to Chronicle-Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.
+An Excerpt provides all the low-level primitives to read/store data to Chronicle Queue but it is often convenient and faster to think about interfaces/beans and rely on OpenHFT's code generation.
 
 As example, we want to store some events to Chronicle-Queue so we can write an interface like that:
 
 ```java
-public static interface Event extends Byteable {
-    boolean compareAndSwapOwner(int expected, int value);
+public static interface Event extends ReadBytesMarshallable {
     int getOwner();
     void setOwner(int meta);
 

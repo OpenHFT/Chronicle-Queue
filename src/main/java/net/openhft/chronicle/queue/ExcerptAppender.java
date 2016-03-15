@@ -48,6 +48,13 @@ public interface ExcerptAppender extends ExcerptCommon {
     void writeBytes(@NotNull Bytes<?> bytes);
 
     /**
+     * @param text to write a message
+     */
+    default void writeText(CharSequence text) {
+        writeBytes(Bytes.from(text));
+    }
+
+    /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
      *
      * @param index to write the byte to or fail.
