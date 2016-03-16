@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -61,6 +62,36 @@ public class ToEndTest {
         fillResults(tailer, results);
         assertEquals(10, results.size());
         checkOneFile(baseDir);
+    }
+
+    @Test
+    public void toEndBeforeWriteTest() {
+        String baseDir = OS.TARGET + "/toEndBeforeWriteTest";
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+
+        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir).build();
+        checkOneFile(baseDir);
+
+        // if this appender isn't created, the tailer toEnd doesn't cause a roll.
+        ExcerptAppender appender = queue.createAppender();
+        checkOneFile(baseDir);
+
+        ExcerptTailer tailer = queue.createTailer();
+        checkOneFile(baseDir);
+
+        ExcerptTailer tailer2 = queue.createTailer();
+        checkOneFile(baseDir);
+
+        tailer.toEnd();
+        //checkOneFile(baseDir);
+
+        tailer2.toEnd();
+        checkOneFile(baseDir);
+
+        /*for (int i = 0; i < 10; i++) {
+            final int j = i;
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+        }*/
     }
 
     private void checkOneFile(String baseDir) {
