@@ -25,13 +25,13 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.10</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
-    <artifactId>chronicle-queue</artifactId>
+    <artifactId>chronicle-queue-transport-demo</artifactId>
     <version>4.1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>OpenHFT/Chronicle-Queue</name>
+    <name>OpenHFT/Chronicle-Queue/Transport-Demo</name>
 
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
@@ -58,12 +58,7 @@
     <dependencies>
         <dependency>
             <groupId>net.openhft</groupId>
-            <artifactId>chronicle-wire</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-threads</artifactId>
+            <artifactId>chronicle-queue</artifactId>
         </dependency>
 
         <dependency>
@@ -72,18 +67,6 @@
         </dependency>
 
         <!-- for testing -->
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>affinity</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -94,21 +77,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <!-- for benchmarks -->
-
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>1.11</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-generator-annprocess</artifactId>
-            <scope>test</scope>
-            <version>1.11.3</version>
         </dependency>
     </dependencies>
 
