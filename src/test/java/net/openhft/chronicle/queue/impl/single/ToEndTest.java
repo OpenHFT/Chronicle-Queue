@@ -63,6 +63,48 @@ public class ToEndTest {
         checkOneFile(baseDir);
     }
 
+    @Test
+    public void toEndBeforeWriteTest() {
+        String baseDir = OS.TARGET + "/toEndTest";
+        System.out.println(baseDir);
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+        List<Integer> results = new ArrayList<>();
+        RollingChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
+                .wireType(WireType.BINARY)
+                .blockSize(4 << 20)
+                .indexCount(8)
+                .indexSpacing(1)
+                .build();
+
+        checkOneFile(baseDir);
+        ExcerptAppender appender = queue.createAppender();
+        checkOneFile(baseDir);
+
+        ExcerptTailer tailer = queue.createTailer();
+        checkOneFile(baseDir);
+
+        tailer.toEnd();
+
+        for (int i = 0; i < 10; i++) {
+            final int j = i;
+            appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
+        }
+
+        checkOneFile(baseDir);
+
+        assertEquals(10, queue.rollCycle().toSequenceNumber(tailer.index()));
+        checkOneFile(baseDir);
+        fillResults(tailer, results);
+        checkOneFile(baseDir);
+        assertEquals(0, results.size());
+
+        tailer.toStart();
+        checkOneFile(baseDir);
+        fillResults(tailer, results);
+        assertEquals(10, results.size());
+        checkOneFile(baseDir);
+    }
+
     private void checkOneFile(String baseDir) {
         String[] files = new File(baseDir).list();
 
