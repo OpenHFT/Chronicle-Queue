@@ -28,7 +28,7 @@
     </parent>
 
     <artifactId>chronicle-queue</artifactId>
-    <version>4.1.0</version>
+    <version>4.1.1-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>OpenHFT/Chronicle-Queue</name>
 
@@ -191,7 +191,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>chronicle-queue-4.1.0</tag>
+        <tag>master</tag>
     </scm>
 
 </project>
