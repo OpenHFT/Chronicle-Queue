@@ -82,7 +82,7 @@ public class ToEndTest {
         checkOneFile(baseDir);
 
         tailer.toEnd();
-        //checkOneFile(baseDir);
+        checkOneFile(baseDir);
 
         tailer2.toEnd();
         checkOneFile(baseDir);

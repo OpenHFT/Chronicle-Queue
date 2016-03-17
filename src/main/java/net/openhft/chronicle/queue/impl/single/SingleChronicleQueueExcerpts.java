@@ -497,7 +497,8 @@ public class SingleChronicleQueueExcerpts {
             if (index == Long.MIN_VALUE)
                 return this;
             try {
-                if (direction == TailerDirection.FORWARD)
+                if (direction == TailerDirection.FORWARD ||
+                        queue.rollCycle().toSequenceNumber(index + 1) == 0)
                     index++;
                 moveToIndex(index);
             } catch (TimeoutException e) {
@@ -608,7 +609,7 @@ public class SingleChronicleQueueExcerpts {
         public long lastIndex(int cycle) {
             cycle(cycle);
             long sequenceNumber = store.lastEntryIndexed(wire, queue.timeoutMS);
-            return queue.rollCycle().toIndex(this.cycle, sequenceNumber);
+            return queue.rollCycle().toIndex(this.cycle, sequenceNumber + 1) - 1;
         }
     }
 }
