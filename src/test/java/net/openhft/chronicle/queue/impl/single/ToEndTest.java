@@ -6,7 +6,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -25,13 +24,11 @@ import static org.junit.Assert.fail;
 public class ToEndTest {
     @Test
     public void toEndTest() {
-        String baseDir = OS.TARGET + "/toEndTest";
+        String baseDir = OS.TARGET + "/toEndTest-" + System.nanoTime();
         System.out.println(baseDir);
         IOTools.shallowDeleteDirWithFiles(baseDir);
         List<Integer> results = new ArrayList<>();
         RollingChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
-                .wireType(WireType.BINARY)
-                .blockSize(4 << 20)
                 .indexCount(8)
                 .indexSpacing(1)
                 .build();
@@ -62,6 +59,8 @@ public class ToEndTest {
         fillResults(tailer, results);
         assertEquals(10, results.size());
         checkOneFile(baseDir);
+
+        IOTools.shallowDeleteDirWithFiles(baseDir);
     }
 
     @Test
@@ -92,6 +91,7 @@ public class ToEndTest {
             final int j = i;
             appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
         }*/
+        IOTools.shallowDeleteDirWithFiles(baseDir);
     }
 
     private void checkOneFile(String baseDir) {
