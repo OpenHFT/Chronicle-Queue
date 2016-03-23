@@ -57,7 +57,20 @@ public interface ExcerptTailer extends ExcerptCommon {
      */
     DocumentContext readingDocument();
 
+    /**
+     * Read the next message as a String
+     *
+     * @return the String or null if there is none.
+     */
     String readText();
+
+    /**
+     * Read the next message as  string
+     *
+     * @param sb to copy the text into
+     * @return true if there was a message, or false if not.
+     */
+    boolean readText(StringBuilder sb);
 
     /**
      * @return the index just read, this include the cycle and the sequence number from with this

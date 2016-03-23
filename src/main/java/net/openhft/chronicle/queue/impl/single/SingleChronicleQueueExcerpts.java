@@ -24,6 +24,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -359,14 +360,20 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public String readText() {
             StringBuilder sb = Wires.acquireStringBuilder();
+            return readText(sb) ? sb.toString() : null;
+        }
+
+        @Nullable
+        public boolean readText(StringBuilder sb) {
             try {
                 if (read(sb, (t, w) ->
                         w.bytes().parseUtf8(sb, (int) w.bytes().readRemaining()), queue.timeoutMS))
-                    return sb.toString();
-                return null;
+                    return true;
             } catch (TimeoutException e) {
-                return null;
             }
+            sb.setLength(0);
+            sb.append("No message");
+            return false;
         }
 
         @Override
