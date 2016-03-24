@@ -124,4 +124,14 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return this
      */
     ExcerptTailer direction(TailerDirection direction);
+
+    /**
+     * Reads messages from this tails as methods.  It returns a BooleanSupplier which returns
+     *
+     * @param objects
+     * @return
+     */
+    default MethodReader methodReader(Object... objects) {
+        return new MethodReader(this, objects);
+    }
 }
