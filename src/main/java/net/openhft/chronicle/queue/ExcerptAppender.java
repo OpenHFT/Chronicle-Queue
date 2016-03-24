@@ -18,10 +18,15 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
@@ -77,4 +82,37 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     int cycle();
 
+    default <T> T methodWriter(Class<T> tClass, Class... iClasses) {
+        Class[] interfaces;
+        if (iClasses.length == 0) {
+            interfaces = new Class[]{tClass};
+        } else {
+            List<Class> classes = new ArrayList<>();
+            classes.add(tClass);
+            Collections.addAll(classes, iClasses);
+            interfaces = classes.toArray(new Class[0]);
+        }
+
+        //noinspection unchecked
+        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, (proxy, method, args) -> {
+            if (method.getDeclaringClass() == Object.class) {
+                return method.invoke(this, args);
+            }
+            try (DocumentContext context = writingDocument()) {
+                ValueOut valueOut = context.wire().writeEventName(method::getName);
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                switch (parameterTypes.length) {
+                    case 0:
+                        valueOut.text("");
+                        break;
+                    case 1:
+                        valueOut.object((Class) parameterTypes[0], args[0]);
+                        break;
+                    default:
+                        throw new UnsupportedOperationException();
+                }
+            }
+            return (Void) null;
+        });
+    }
 }
