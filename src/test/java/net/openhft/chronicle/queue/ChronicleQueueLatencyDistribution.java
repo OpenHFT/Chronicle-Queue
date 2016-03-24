@@ -33,10 +33,20 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Results 27/10/2015 running on a MBP 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740
- * 8,000 / 13,890 - 36,700
+ * Results 27/10/2015 running on a MBP
+ * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
  *
- * Results 14/03/2016 running on E5-2650v2 50/90 99/99.9 99.99 - worst was 0.88 / 1.4  10.0 / 19  72 - 483
+ * Results 14/03/2016 running on E5-2650v2
+ * 50/90 99/99.9 99.99 - worst was 0.88 / 1.4  10.0 / 19  72 - 483
+ *
+ * Results 23/03/2016 running on E5-2643 Debian Kernel 4.2
+ * 50/90 99/99.9 99.99 - worst was 0.56 / 0.82  5.0 / 12  40 - 258
+ *
+ * Results 23/03/2016 running on Linux VM (i7-4800MQ) Debian Kernel 4.2
+ * 50/90 99/99.9 99.99 - worst was 0.50 / 1.6  21 / 84  573 - 1,410
+ *
+ * Results 23/03/2016 running on E3-1505Mv5 Debian Kernel 4.5
+ * 50/90 99/99.9 99.99 - worst was 0.33 / 0.36  1.6 / 3.0  18 - 160
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     @Ignore("long running")
