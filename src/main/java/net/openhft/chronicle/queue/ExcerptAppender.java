@@ -19,7 +19,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
@@ -84,25 +83,7 @@ public interface ExcerptAppender extends ExcerptCommon {
         Class[] interfaces = ObjectUtils.addAll(tClass, additional);
 
         //noinspection unchecked
-        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, (proxy, method, args) -> {
-            if (method.getDeclaringClass() == Object.class) {
-                return method.invoke(this, args);
-            }
-            try (DocumentContext context = writingDocument()) {
-                ValueOut valueOut = context.wire().writeEventName(method::getName);
-                Class<?>[] parameterTypes = method.getParameterTypes();
-                switch (parameterTypes.length) {
-                    case 0:
-                        valueOut.text("");
-                        break;
-                    case 1:
-                        valueOut.object((Class) parameterTypes[0], args[0]);
-                        break;
-                    default:
-                        throw new UnsupportedOperationException();
-                }
-            }
-            return ObjectUtils.defaultValue(method.getReturnType());
-        });
+        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, new MethodWriterInvocationHandler(this));
     }
+
 }

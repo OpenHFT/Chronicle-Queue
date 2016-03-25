@@ -1031,8 +1031,6 @@ public class SingleCQFormatTest {
                 }
                 break;
         }
-        if ((expectedIndex & 0xff) == 0x08)
-            Thread.yield();
         long index = appender.lastIndexAppended();
         assertHexEquals(expectedIndex, index);
     }
