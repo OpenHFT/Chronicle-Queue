@@ -276,6 +276,7 @@ public class SingleChronicleQueueStore implements WireStore {
          *
          * @param wire a wire
          */
+        @UsedViaReflection
         private Indexing(@NotNull WireIn wire) {
             this(wire.read(IndexingFields.indexCount).int32(),
                     wire.read(IndexingFields.indexSpacing).int32(),
@@ -697,6 +698,7 @@ public class SingleChronicleQueueStore implements WireStore {
          *
          * @param wire a wire
          */
+        @UsedViaReflection
         private Roll(WireIn wire) {
             length = wire.read(RollFields.length).int32();
             format = wire.read(RollFields.format).text();
