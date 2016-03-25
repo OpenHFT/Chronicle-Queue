@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
+import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
 import net.openhft.chronicle.wire.WriteMarshallable;
@@ -24,9 +25,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
@@ -82,16 +80,8 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     int cycle();
 
-    default <T> T methodWriter(Class<T> tClass, Class... iClasses) {
-        Class[] interfaces;
-        if (iClasses.length == 0) {
-            interfaces = new Class[]{tClass};
-        } else {
-            List<Class> classes = new ArrayList<>();
-            classes.add(tClass);
-            Collections.addAll(classes, iClasses);
-            interfaces = classes.toArray(new Class[0]);
-        }
+    default <T> T methodWriter(Class<T> tClass, Class... additional) {
+        Class[] interfaces = ObjectUtils.addAll(tClass, additional);
 
         //noinspection unchecked
         return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, (proxy, method, args) -> {
@@ -112,7 +102,7 @@ public interface ExcerptAppender extends ExcerptCommon {
                         throw new UnsupportedOperationException();
                 }
             }
-            return (Void) null;
+            return ObjectUtils.defaultValue(method.getReturnType());
         });
     }
 }

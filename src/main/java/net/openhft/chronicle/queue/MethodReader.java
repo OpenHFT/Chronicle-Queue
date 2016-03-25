@@ -22,7 +22,8 @@ public class MethodReader {
 
     public MethodReader(ExcerptTailer tailer, Object... objects) {
         this.tailer = tailer;
-        WireParselet defaultParselet = (s, v, $) -> LOGGER.warn("Unknown message " + s + ' ' + v.text());
+        WireParselet defaultParselet = (s, v, $) ->
+                LOGGER.warn("Unknown message " + s + ' ' + v.text());
         if (objects[0] instanceof WireParselet)
             defaultParselet = (WireParselet) objects[0];
         wireParser = WireParser.wireParser(defaultParselet);
@@ -30,8 +31,15 @@ public class MethodReader {
         Set<String> methodsHandled = new HashSet<>();
         for (Object o : objects) {
             for (Method m : o.getClass().getMethods()) {
-                if (m.getDeclaringClass() == Object.class || Modifier.isStatic(m.getModifiers()))
+                if (Modifier.isStatic(m.getModifiers()))
                     continue;
+
+                try {
+                    Object.class.getMethod(m.getName(), m.getParameterTypes());
+                    continue;
+                } catch (NoSuchMethodException e) {
+                    // not an Object method.
+                }
 
                 if (!methodsHandled.add(m.getName()))
                     continue;
