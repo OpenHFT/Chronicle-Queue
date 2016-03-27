@@ -3,6 +3,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ValueOut;
+import net.openhft.chronicle.wire.Wire;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -27,7 +28,9 @@ class MethodWriterInvocationHandler implements InvocationHandler {
             return method.invoke(this, args);
         }
         try (DocumentContext context = appender.writingDocument()) {
-            ValueOut valueOut = context.wire()
+            Wire wire = context.wire();
+
+            ValueOut valueOut = wire
                     .writeEventName(method.getName());
             Class[] parameterTypes = parameterMap.get(method);
             if (parameterTypes == null)

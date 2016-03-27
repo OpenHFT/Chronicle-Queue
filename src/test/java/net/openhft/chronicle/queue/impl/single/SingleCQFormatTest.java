@@ -23,10 +23,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.*;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -34,6 +31,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
@@ -1046,5 +1045,60 @@ public class SingleCQFormatTest {
             assertFalse(dc.isPresent());
         }
         assertEquals(start + 2, tailer.index());
+    }
+
+    @Test
+    public void writeMap() {
+        Map<String, Object> map = new TreeMap<>();
+        map.put("abc", "def");
+        map.put("hello", "world");
+        map.put("number", 1L);
+        map.put("double", 1.28);
+        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeMap(map);
+
+            map.put("abc", "aye-bee-see");
+            appender.writeMap(map);
+
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 355,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: !int 8192,\n" +
+                    "    indexSpacing: 64,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 227\n" +
+                    "--- !!data #binary\n" +
+                    "abc: def\n" +
+                    "double: 1.28\n" +
+                    "hello: world\n" +
+                    "number: 1\n" +
+                    "# position: 287\n" +
+                    "--- !!data #binary\n" +
+                    "abc: aye-bee-see\n" +
+                    "double: 1.28\n" +
+                    "hello: world\n" +
+                    "number: 1\n" +
+                    "...\n" +
+                    "# 83885721 bytes remaining\n", queue.dump());
+
+            ExcerptTailer tailer = queue.createTailer();
+            Map<String, Object> map2 = tailer.readMap();
+            Map<String, Object> map3 = tailer.readMap();
+            assertEquals("{abc=def, double=1.28, hello=world, number=1}", map2.toString());
+            assertEquals("{abc=aye-bee-see, double=1.28, hello=world, number=1}", map3.toString());
+            assertNull(tailer.readMap());
+        }
     }
 }

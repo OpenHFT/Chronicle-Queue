@@ -70,6 +70,12 @@ public class MethodReader {
                 });
             }
         }
+
+        if (wireParser.lookup("history") == null) {
+            wireParser.register(() -> "history", (s, v, $) -> {
+                v.marshallable(ExcerptHistory.get());
+            });
+        }
     }
 
     static void logMessage(CharSequence s, ValueIn v) {
@@ -94,7 +100,9 @@ public class MethodReader {
      * @return true if there was a message, or false if not.
      */
     public boolean readOne() {
+        ExcerptHistory excerptHistory = ExcerptHistory.get();
         for (; ; ) {
+            excerptHistory.reset();
             try (DocumentContext context = tailer.readingDocument()) {
                 if (context.isMetaData())
                     continue;

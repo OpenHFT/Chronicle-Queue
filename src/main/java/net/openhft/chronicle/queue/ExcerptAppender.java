@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
 import java.lang.reflect.Proxy;
+import java.util.Map;
 
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
@@ -79,6 +80,13 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     int cycle();
 
+    /**
+     * Proxy an interface so each message called is written to a file for replay.
+     *
+     * @param tClass     primary interface
+     * @param additional any additional interfaces
+     * @return a proxy which implements the primary interface (additional interfaces have to be cast)
+     */
     default <T> T methodWriter(Class<T> tClass, Class... additional) {
         Class[] interfaces = ObjectUtils.addAll(tClass, additional);
 
@@ -86,4 +94,10 @@ public interface ExcerptAppender extends ExcerptCommon {
         return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, new MethodWriterInvocationHandler(this));
     }
 
+    /**
+     * Write a Map as a marshallable
+     */
+    default void writeMap(Map<String, Object> map) {
+        QueueInternal.writeMap(this, map);
+    }
 }

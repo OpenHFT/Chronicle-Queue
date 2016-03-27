@@ -21,6 +21,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -128,10 +129,19 @@ public interface ExcerptTailer extends ExcerptCommon {
     /**
      * Reads messages from this tails as methods.  It returns a BooleanSupplier which returns
      *
-     * @param objects
-     * @return
+     * @param objects which implement the methods serialized to the file.
+     * @return a reader which will read one Excerpt at a time
      */
     default MethodReader methodReader(Object... objects) {
         return new MethodReader(this, objects);
+    }
+
+    /**
+     * Read a Map&gt;String, Object&gt; from the content.
+     *
+     * @return the Map, or null if no message is waiting.
+     */
+    default Map<String, Object> readMap() {
+        return QueueInternal.readMap(this);
     }
 }
