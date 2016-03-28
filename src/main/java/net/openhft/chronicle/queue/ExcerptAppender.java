@@ -94,6 +94,9 @@ public interface ExcerptAppender extends ExcerptCommon {
         return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, new MethodWriterInvocationHandler(this));
     }
 
+    default <T> MethodWriterBuilder<T> methodWriterBuilder(Class<T> tClass) {
+        return new MethodWriterBuilder<>(this, tClass);
+    }
     /**
      * Write a Map as a marshallable
      */

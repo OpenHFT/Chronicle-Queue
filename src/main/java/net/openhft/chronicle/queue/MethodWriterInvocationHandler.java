@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 class MethodWriterInvocationHandler implements InvocationHandler {
     private final ExcerptAppender appender;
     private final Map<Method, Class[]> parameterMap = new ConcurrentHashMap<>();
+    private boolean recordHistory = false;
 
     MethodWriterInvocationHandler(ExcerptAppender appender) {
         this.appender = appender;
@@ -46,6 +47,9 @@ class MethodWriterInvocationHandler implements InvocationHandler {
         try (DocumentContext context = appender.writingDocument()) {
             Wire wire = context.wire();
 
+            if (recordHistory) {
+                wire.write("history").marshallable(ExcerptHistory.get());
+            }
             ValueOut valueOut = wire
                     .writeEventName(method.getName());
             Class[] parameterTypes = parameterMap.get(method);
@@ -63,5 +67,9 @@ class MethodWriterInvocationHandler implements InvocationHandler {
             }
         }
         return ObjectUtils.defaultValue(method.getReturnType());
+    }
+
+    public void recordHistroy(boolean recordHistory) {
+        this.recordHistory = recordHistory;
     }
 }

@@ -79,6 +79,16 @@ public class SingleChronicleQueueExcerpts {
             setCycle2(cycle);
         }
 
+        @Override
+        public int sourceId() {
+            return queue.sourceId;
+        }
+
+        @Override
+        public long index() {
+            throw new UnsupportedOperationException("TODO");
+        }
+
         private void setCycle(int cycle) {
             if (cycle != this.cycle)
                 setCycle2(cycle);
@@ -102,6 +112,7 @@ public class SingleChronicleQueueExcerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = (AbstractWire) queue.wireType().apply(mappedBytes);
+            wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
             wire.bytes().writePosition(store.writePosition());
         }
@@ -323,6 +334,11 @@ public class SingleChronicleQueueExcerpts {
             this.cycle = Integer.MIN_VALUE;
             this.index = 0;
             toStart();
+        }
+
+        @Override
+        public int sourceId() {
+            return queue.sourceId;
         }
 
         @Override
@@ -612,6 +628,7 @@ public class SingleChronicleQueueExcerpts {
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
+                this.wire.parent(this);
                 this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());

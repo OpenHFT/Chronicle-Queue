@@ -50,6 +50,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public static final String SUFFIX = ".cq4";
 
     protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
+    protected final int sourceId;
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
@@ -94,6 +95,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         pauserSupplier = builder.pauserSupplier();
         timeoutMS = builder.timeoutMS();
         storeFactory = builder.storeFactory();
+        sourceId = builder.sourceId();
     }
 
     @Override

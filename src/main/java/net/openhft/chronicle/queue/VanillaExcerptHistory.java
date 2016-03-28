@@ -17,6 +17,8 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireIn;
 import net.openhft.chronicle.wire.WireOut;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Created by peter on 27/03/16.
  */
-public class VanillaExcerptHistory implements ExcerptHistory {
+public class VanillaExcerptHistory extends AbstractMarshallable implements ExcerptHistory {
     public static final int MESSAGE_HISTORY_LENGTH = 20;
     private static final ThreadLocal<ExcerptHistory> THREAD_LOCAL = ThreadLocal.withInitial(VanillaExcerptHistory::new);
 
@@ -33,6 +35,14 @@ public class VanillaExcerptHistory implements ExcerptHistory {
     private long[] sourceIndexArray = new long[MESSAGE_HISTORY_LENGTH];
     private int timings;
     private long[] timingsArray = new long[MESSAGE_HISTORY_LENGTH * 2];
+
+    static ExcerptHistory getThreadLocal() {
+        return THREAD_LOCAL.get();
+    }
+
+    static void setThreadLocal(ExcerptHistory md) {
+        THREAD_LOCAL.set(md);
+    }
 
     @Override
     public void reset() {
@@ -78,7 +88,11 @@ public class VanillaExcerptHistory implements ExcerptHistory {
                 t.addTiming(in.int64());
             }
         });
-        addSource(wire.sourceId(), wire.sourceIndex());
+        Object o = wire.parent();
+        if (o instanceof DocumentContext) {
+            DocumentContext dc = (DocumentContext) o;
+            addSource(dc.sourceId(), dc.index());
+        }
         addTiming(System.nanoTime());
     }
 
@@ -105,13 +119,5 @@ public class VanillaExcerptHistory implements ExcerptHistory {
             }
             out.int64(System.nanoTime());
         });
-    }
-
-    static ExcerptHistory getThreadLocal() {
-        return THREAD_LOCAL.get();
-    }
-
-    static void setThreadLocal(ExcerptHistory md) {
-        THREAD_LOCAL.set(md);
     }
 }

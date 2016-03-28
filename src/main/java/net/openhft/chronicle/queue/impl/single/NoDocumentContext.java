@@ -52,6 +52,16 @@ public enum NoDocumentContext implements DocumentContext {
     }
 
     @Override
+    public int sourceId() {
+        return -1;
+    }
+
+    @Override
+    public long index() {
+        return 0;
+    }
+
+    @Override
     public void close() {
 
     }

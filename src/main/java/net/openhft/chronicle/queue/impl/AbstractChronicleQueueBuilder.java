@@ -67,6 +67,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private long timeoutMS = 10_000; // 10 seconds.
     private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
+    private int sourceId = 0;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -302,6 +303,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     public BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory() {
         return storeFactory;
+    }
+
+    public B sourceId(int sourceId) {
+        if (sourceId <= 0)
+            throw new IllegalArgumentException("Invalid source Id, must be positive");
+        this.sourceId = sourceId;
+        return (B) this;
+    }
+
+    public int sourceId() {
+        return sourceId;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
