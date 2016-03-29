@@ -22,10 +22,9 @@ import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
@@ -640,6 +639,47 @@ public class SingleChronicleQueueExcerpts {
             cycle(cycle);
             long sequenceNumber = store.lastEntryIndexed(wire, queue.timeoutMS);
             return queue.rollCycle().toIndex(this.cycle, sequenceNumber + 1) - 1;
+        }
+
+        @Override
+        public ExcerptTailer afterLastWritten(ChronicleQueue queue) {
+            ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+            StringBuilder sb = new StringBuilder();
+            VanillaExcerptHistory veh = new VanillaExcerptHistory();
+            int sourceId = queue.sourceId();
+            while (true) {
+                try (DocumentContext context = tailer.readingDocument()) {
+                    if (context.isMetaData())
+                        continue;
+                    if (!context.isData()) {
+                        toStart();
+                        return this;
+                    }
+                    ValueIn valueIn = context.wire().readEventName(sb);
+                    if (!StringUtils.isEqual("history", sb))
+                        continue;
+
+                    Object parent = wire.parent();
+                    try {
+                        wire.parent(null);
+                        valueIn.marshallable(veh);
+                    } finally {
+                        wire.parent(parent);
+                    }
+                    int i = veh.sources() - 1;
+                    // skip the one we just added.
+                    if (i < 0 || veh.sourceId(i) != sourceId)
+                        continue;
+
+                    try {
+                        long sourceIndex = veh.sourceIndex(i);
+                        if (!moveToIndex(sourceIndex))
+                            throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
+                    } catch (TimeoutException e) {
+                        throw new IORuntimeException(e);
+                    }
+                }
+            }
         }
     }
 }

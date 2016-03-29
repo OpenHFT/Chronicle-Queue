@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ReadBytesMarshallable;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
@@ -144,4 +145,13 @@ public interface ExcerptTailer extends ExcerptCommon {
     default Map<String, Object> readMap() {
         return QueueInternal.readMap(this);
     }
+
+    /**
+     * Wind this tailer to after the last entry which wrote an entry to the queue
+     *
+     * @param queue which was written to.
+     * @return this ExcerptTailer
+     * @throws IORuntimeException if the queue couldn't be wound to the last index.
+     */
+    ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
 }

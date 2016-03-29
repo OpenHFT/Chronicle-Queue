@@ -112,4 +112,6 @@ public interface ChronicleQueue extends Closeable {
     int indexCount();
 
     int indexSpacing();
+
+    int sourceId();
 }

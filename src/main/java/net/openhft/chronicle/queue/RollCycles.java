@@ -21,6 +21,7 @@ public enum RollCycles implements RollCycle {
     SECONDLY("yyyyMMdd-HHmmss", 1000, 1 << 10, 16),
     MINUTELY("yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16), // 64 million entries per minute
     HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.
+    TEST_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing
     SMALL_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 4 << 10, 32), // 512 million entries per day
     DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 64), // 4 billion entries per day
     LARGE_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 16 << 10, 128), // 32 billion entries per day
@@ -38,9 +39,9 @@ public enum RollCycles implements RollCycle {
     RollCycles(String format, int length, int indexCount, int indexSpacing) {
         this.format = format;
         this.length = length;
-        this.indexCount = Maths.nextPower2(indexCount, 64);
+        this.indexCount = Maths.nextPower2(indexCount, 8);
         this.indexSpacing = Maths.nextPower2(indexSpacing, 1);
-        cycleShift = Math.min(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
+        cycleShift = Math.max(32, Maths.intLog2(indexCount) * 2 + Maths.intLog2(indexSpacing));
         sequenceMask = (1L << cycleShift) - 1;
     }
 

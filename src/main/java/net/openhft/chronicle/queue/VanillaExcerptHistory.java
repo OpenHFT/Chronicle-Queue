@@ -110,7 +110,7 @@ public class VanillaExcerptHistory extends AbstractMarshallable implements Excer
         wire.write("sources").sequence(this, (t, out) -> {
             for (int i = 0; i < t.sources; i++) {
                 out.uint8(t.sourceIdArray[i]);
-                out.int64(t.sourceIndexArray[i]);
+                out.int64_0x(t.sourceIndexArray[i]);
             }
         });
         wire.write("timings").sequence(this, (t, out) -> {

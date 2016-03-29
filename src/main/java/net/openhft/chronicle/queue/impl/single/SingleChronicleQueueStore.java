@@ -235,6 +235,19 @@ public class SingleChronicleQueueStore implements WireStore {
     // INDEXING
     // *************************************************************************
 
+    @Override
+    public String toString() {
+        return "SingleChronicleQueueStore{" +
+                "indexing=" + indexing +
+                ", wireType=" + wireType +
+                ", roll=" + roll +
+                ", writePosition=" + writePosition +
+                ", mappedFile=" + mappedFile +
+                ", resourceCleaner=" + resourceCleaner +
+                ", refCount=" + refCount +
+                '}';
+    }
+
     enum MetaDataField implements WireKey {
         wireType,
         writePosition,
@@ -252,13 +265,13 @@ public class SingleChronicleQueueStore implements WireStore {
         indexCount, indexSpacing, index2Index, lastIndex
     }
 
-    enum RollFields implements WireKey {
-        cycle, length, format, epoch,
-    }
-
     // *************************************************************************
     // ROLLING
     // *************************************************************************
+
+    enum RollFields implements WireKey {
+        cycle, length, format, epoch,
+    }
 
     static class Indexing implements Demarshallable, WriteMarshallable {
         private final int indexCount, indexCountBits;
@@ -580,7 +593,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
                 if (!found) {
                     if (toPosition == Long.MAX_VALUE)
-                        return i - 1;
+                        return i < 0 ? i : i - 1;
                     throw new EOFException();
                 }
             }

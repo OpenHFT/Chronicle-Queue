@@ -99,6 +99,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public int sourceId() {
+        return sourceId;
+    }
+
+    @Override
     public void clear() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -326,4 +331,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
     }
 
+    @Override
+    public String toString() {
+        return "SingleChronicleQueue{" +
+                "sourceId=" + sourceId +
+                ", path=" + path +
+                '}';
+    }
 }
