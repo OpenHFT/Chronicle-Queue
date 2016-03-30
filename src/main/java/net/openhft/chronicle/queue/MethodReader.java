@@ -116,17 +116,12 @@ public class MethodReader {
      * @return true if there was a message, or false if not.
      */
     public boolean readOne() {
-        ExcerptHistory excerptHistory = ExcerptHistory.get();
-        for (; ; ) {
-            excerptHistory.reset();
-            try (DocumentContext context = tailer.readingDocument()) {
-                if (context.isMetaData())
-                    continue;
-                if (!context.isData())
-                    return false;
-                wireParser.accept(context.wire(), null);
-            }
-            return true;
+        ExcerptHistory.get().reset();
+        try (DocumentContext context = tailer.readingDocument()) {
+            if (!context.isData())
+                return false;
+            wireParser.accept(context.wire(), null);
         }
+        return true;
     }
 }

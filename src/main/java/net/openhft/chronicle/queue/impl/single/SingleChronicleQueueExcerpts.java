@@ -367,15 +367,22 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public DocumentContext readingDocument() {
-            try {
-                present = next();
-            } catch (TimeoutException ignored) {
-                present = false;
+        public DocumentContext readingDocument(boolean includeMetaData) {
+            while (true) {
+                try {
+                    present = next();
+                } catch (TimeoutException ignored) {
+                    present = false;
+                }
+                if (present) {
+                    if (!includeMetaData && isMetaData()) {
+                        close();
+                        continue;
+                    }
+                    return this;
+                }
+                return NoDocumentContext.INSTANCE;
             }
-            if (present)
-                return this;
-            return NoDocumentContext.INSTANCE;
         }
 
         @Override
@@ -649,8 +656,6 @@ public class SingleChronicleQueueExcerpts {
             int sourceId = queue.sourceId();
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
-                    if (context.isMetaData())
-                        continue;
                     if (!context.isData()) {
                         toStart();
                         return this;
@@ -675,6 +680,12 @@ public class SingleChronicleQueueExcerpts {
                         long sourceIndex = veh.sourceIndex(i);
                         if (!moveToIndex(sourceIndex))
                             throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
+                        try (DocumentContext content = readingDocument()) {
+                            if (!content.isPresent())
+                                throw new IORuntimeException("Unable to wind to index: " + (sourceIndex + 1));
+                            // skip this message and go to the next.
+                        }
+                        return this;
                     } catch (TimeoutException e) {
                         throw new IORuntimeException(e);
                     }

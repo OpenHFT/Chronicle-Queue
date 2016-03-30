@@ -57,8 +57,11 @@ public interface ExcerptTailer extends ExcerptCommon {
      *
      * @return the document context
      */
-    DocumentContext readingDocument();
+    default DocumentContext readingDocument() {
+        return readingDocument(false);
+    }
 
+    DocumentContext readingDocument(boolean includeMetaData);
     /**
      * Read the next message as a String
      *
