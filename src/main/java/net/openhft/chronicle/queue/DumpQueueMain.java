@@ -39,6 +39,7 @@ public class DumpQueueMain {
         for (File file : files) {
             if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
                 try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
+                    bytes.readLimit(bytes.realCapacity());
                     System.out.println(Wires.fromSizePrefixedBlobs(bytes));
                 } catch (IOException ioe) {
                     System.err.println("Failed to read " + file + " " + ioe);

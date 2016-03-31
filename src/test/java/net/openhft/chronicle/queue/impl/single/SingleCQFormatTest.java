@@ -376,28 +376,14 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  343,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 343\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  225,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
                     "# 5242441 bytes remaining\n";
@@ -428,14 +414,7 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  343,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 343\n" +
                     "--- !!meta-data #binary\n" +
@@ -443,13 +422,7 @@ public class SingleCQFormatTest {
                     "  # length: 8, used: 2\n" +
                     "  225,\n" +
                     "  435,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 435\n" +
                     "--- !!data #binary\n" +
@@ -484,14 +457,7 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  343,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 343\n" +
                     "--- !!meta-data #binary\n" +
@@ -500,12 +466,7 @@ public class SingleCQFormatTest {
                     "  225,\n" +
                     "  435,\n" +
                     "  463,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 435\n" +
                     "--- !!data #binary\n" +
@@ -562,15 +523,7 @@ public class SingleCQFormatTest {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
                     "# 5242553 bytes remaining\n";
@@ -598,14 +551,7 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  343,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -615,14 +561,7 @@ public class SingleCQFormatTest {
                     "index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  323,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "...\n" +
                     "# 5242441 bytes remaining\n";
@@ -664,12 +603,7 @@ public class SingleCQFormatTest {
                     "  343,\n" +
                     "  675,\n" +
                     "  1015,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -756,11 +690,7 @@ public class SingleCQFormatTest {
                     "  1107,\n" +
                     "  1138,\n" +
                     "  1169,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 1107\n" +
                     "--- !!data #binary\n" +
@@ -795,13 +725,7 @@ public class SingleCQFormatTest {
                     "  # length: 8, used: 2\n" +
                     "  343,\n" +
                     "  892,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -870,13 +794,7 @@ public class SingleCQFormatTest {
                     "  # length: 8, used: 2\n" +
                     "  984,\n" +
                     "  1046,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 984\n" +
                     "--- !!data #binary\n" +
@@ -913,14 +831,7 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  343,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -934,10 +845,7 @@ public class SingleCQFormatTest {
                     "  645,\n" +
                     "  768,\n" +
                     "  892,\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0\n" +
                     "]\n" +
                     "# position: 435\n" +
                     "--- !!data #binary\n" +

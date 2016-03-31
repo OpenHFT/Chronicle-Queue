@@ -483,15 +483,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -523,15 +515,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -563,15 +547,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -603,15 +579,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -643,15 +611,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
@@ -683,15 +643,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 0\n" +
-                    "  # ^ used ^\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0,\n" +
-                    "  0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 323\n" +
                     "--- !!data #binary\n" +
