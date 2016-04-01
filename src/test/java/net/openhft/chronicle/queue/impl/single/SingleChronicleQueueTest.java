@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.*;
 
+import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -235,6 +236,40 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertArrayEquals(new int[]{0, 1}, results);
         }
     }
+
+
+    @Test
+    public void testCheckIndexWithWritingDocuement() throws IOException, InterruptedException {
+        SetTimeProvider stp = new SetTimeProvider();
+        stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
+
+        File tmpDir = getTmpDir();
+        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .timeProvider(stp)
+                .build()) {
+
+            final ExcerptAppender appender = queue.createAppender();
+            ExcerptTailer tailer = queue.createTailer();
+            int cycle = appender.cycle();
+            for (int i = 1; i <= 5; i++) {
+                stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
+                final int n = i;
+
+                try (final DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().writeEventName("").object("" + n);
+                }
+
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    long index = tailer.index();
+                    assertEquals(cycle + i, DAILY.toCycle(index));
+                }
+
+            }
+
+        }
+    }
+
 
     @Test
     public void testAppendAndReadWithRollingB() throws IOException, InterruptedException {
