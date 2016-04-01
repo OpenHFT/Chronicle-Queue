@@ -368,21 +368,12 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
-            while (true) {
-                try {
-                    present = next();
-                } catch (TimeoutException ignored) {
-                    present = false;
-                }
-                if (present) {
-                    if (!includeMetaData && isMetaData()) {
-                        close();
-                        continue;
-                    }
+            try {
+                if (present = next(includeMetaData))
                     return this;
-                }
-                return NoDocumentContext.INSTANCE;
+            } catch (TimeoutException ignored) {
             }
+            return NoDocumentContext.INSTANCE;
         }
 
         @Override
@@ -411,7 +402,7 @@ public class SingleChronicleQueueExcerpts {
             super.close();
         }
 
-        private boolean next() throws TimeoutException {
+        private boolean next(boolean includeMetaData) throws TimeoutException {
             if (this.store == null) { // load the first store
                 final long firstIndex = queue.firstIndex();
                 if (firstIndex == Long.MAX_VALUE)
@@ -429,14 +420,21 @@ public class SingleChronicleQueueExcerpts {
                             return false;
                         }
 
-                    if (wire.readDataHeader()) {
-                        closeReadLimit(bytes.capacity());
-                        wire.readAndSetLength(bytes.readPosition());
-                        long end = bytes.readLimit();
-                        closeReadPosition(end);
-                        return true;
+                    switch (wire.readDataHeader(includeMetaData)) {
+                        case NONE:
+                            return false;
+                        case META_DATA:
+                            metaData(true);
+                            break;
+                        case DATA:
+                            metaData(false);
+                            break;
                     }
-                    return false;
+                    closeReadLimit(bytes.capacity());
+                    wire.readAndSetLength(bytes.readPosition());
+                    long end = bytes.readLimit();
+                    closeReadPosition(end);
+                    return true;
 
                 } catch (EOFException eof) {
                     if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)

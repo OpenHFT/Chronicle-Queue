@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
@@ -1216,6 +1217,55 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     assertTrue(dc.isPresent());
                     dc.wire().read(() -> "test - message").text("text", Assert::assertEquals);
                 }
+            }
+        }
+    }
+
+    @Test
+    public void testMetaData() throws IOException {
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.metaData(true);
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+            }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write(() -> "FirstName").text("Rob");
+            }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.metaData(true);
+                dc.wire().write(() -> "FirstName").text("Steve");
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            StringBuilder event = new StringBuilder();
+            while (true) {
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isMetaData());
+                    ValueIn in = dc.wire().read(event);
+                    if (!StringUtils.isEqual(event, "FirstName"))
+                        continue;
+
+                    in.text("Quartilla", Assert::assertEquals);
+                    break;
+                }
+            }
+
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isData());
+                dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
+            }
+
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertTrue(dc.isMetaData());
+                dc.wire().read(() -> "FirstName").text("Steve", Assert::assertEquals);
             }
         }
     }
