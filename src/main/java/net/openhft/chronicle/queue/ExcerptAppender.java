@@ -33,6 +33,16 @@ import java.util.Map;
  */
 public interface ExcerptAppender extends ExcerptCommon {
 
+    /**
+     * Start a document which is completed when DocumentContext.close() is called. You can use a
+     * <pre>
+     * try(DocumentContext context = appender.writingDocument()) {
+     *      context.wire().write("message").text("Hello World");
+     * }
+     * </pre>
+     *
+     * @return the DocumentContext
+     */
     DocumentContext writingDocument();
 
     /**
