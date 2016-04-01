@@ -64,26 +64,42 @@ public class MethodReader {
                 if (parameterTypes.length != 1)
                     continue;
 
-                m.setAccessible(true); // turn of security check to make a little faster
                 Class msgClass = parameterTypes[0];
-                ReadMarshallable arg;
-                try {
-                    arg = (ReadMarshallable) msgClass.newInstance();
-                } catch (Exception e) {
-                    arg = (ReadMarshallable) OS.memory().allocateInstance(msgClass);
-                }
-                ReadMarshallable[] argArr = {arg};
-                wireParser.register(m::getName, (s, v, $) -> {
-                    try {
-                        if (Jvm.isDebug())
-                            logMessage(s, v);
+                m.setAccessible(true); // turn of security check to make a little faster
+                if (msgClass.isInterface() || !ReadMarshallable.class.isAssignableFrom(msgClass)) {
+                    Object[] argArr = {null};
+                    wireParser.register(m::getName, (s, v, $) -> {
+                        try {
+                            if (Jvm.isDebug())
+                                logMessage(s, v);
 
-                        v.marshallable(argArr[0]);
-                        m.invoke(o, argArr);
-                    } catch (Exception i) {
-                        LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
+                            argArr[0] = v.object(msgClass);
+                            m.invoke(o, argArr);
+                        } catch (Exception i) {
+                            LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
+                        }
+                    });
+
+                } else {
+                    ReadMarshallable arg;
+                    try {
+                        arg = (ReadMarshallable) msgClass.newInstance();
+                    } catch (Exception e) {
+                        arg = (ReadMarshallable) OS.memory().allocateInstance(msgClass);
                     }
-                });
+                    ReadMarshallable[] argArr = {arg};
+                    wireParser.register(m::getName, (s, v, $) -> {
+                        try {
+                            if (Jvm.isDebug())
+                                logMessage(s, v);
+
+                            v.marshallable(argArr[0]);
+                            m.invoke(o, argArr);
+                        } catch (Exception i) {
+                            LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
+                        }
+                    });
+                }
             }
         }
 
