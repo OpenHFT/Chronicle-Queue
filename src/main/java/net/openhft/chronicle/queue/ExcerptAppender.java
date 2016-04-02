@@ -110,7 +110,7 @@ public interface ExcerptAppender extends ExcerptCommon {
     /**
      * Write a Map as a marshallable
      */
-    default void writeMap(Map<String, Object> map) {
+    default void writeMap(Map<String, ?> map) {
         QueueInternal.writeMap(this, map);
     }
 }

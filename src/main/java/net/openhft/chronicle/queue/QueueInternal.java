@@ -47,10 +47,10 @@ enum QueueInternal {
 
     }
 
-    static void writeMap(ExcerptAppender appender, Map<String, Object> map) {
+    static void writeMap(ExcerptAppender appender, Map<String, ?> map) {
         try (DocumentContext context = appender.writingDocument()) {
             Wire wire = context.wire();
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
+            for (Map.Entry<String, ?> entry : map.entrySet()) {
                 wire.writeEventName(entry.getKey()).object(entry.getValue());
             }
         }

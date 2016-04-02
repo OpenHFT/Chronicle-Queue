@@ -37,7 +37,7 @@ import java.util.concurrent.TimeoutException;
 public enum ChronicleReader {
     ;
 
-    public static void main(String... args) throws IOException, InterruptedException {
+    public static void main(String... args) throws IOException {
         if (args.length < 1) {
             System.err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
             System.exit(-1);
@@ -49,7 +49,7 @@ public enum ChronicleReader {
         tailFileFrom(basePath, regex, index, false);
     }
 
-    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) throws IOException {
+    public static void tailFileFrom(String basePath, String regex, long index, boolean stopAtEnd) {
         ChronicleQueue ic = SingleChronicleQueueBuilder.binary(new File(basePath)).build();
         ExcerptTailer tailer = ic.createTailer();
         if (index > 0) {

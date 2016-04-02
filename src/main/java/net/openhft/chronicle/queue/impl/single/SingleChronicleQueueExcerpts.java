@@ -128,7 +128,12 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext writingDocument() {
+            assert checkAppendingThread();
             try {
+                int cycle = queue.cycle();
+                if (this.cycle != cycle)
+                    rollCycleTo(cycle);
+
                 position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
                 metaData = false;
             } catch (TimeoutException e) {
@@ -157,6 +162,8 @@ public class SingleChronicleQueueExcerpts {
                 store.writePosition(position);
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
+            } finally {
+                assert resetAppendingThread();
             }
         }
 
@@ -296,9 +303,13 @@ public class SingleChronicleQueueExcerpts {
 
         private boolean checkAppendingThread() {
             Thread appendingThread = this.appendingThread;
-            if (appendingThread != null)
-                throw new IllegalStateException("Attempting to use Appneder in " + Thread.currentThread() + " while used by " + appendingThread);
-            this.appendingThread = Thread.currentThread();
+            Thread currentThread = Thread.currentThread();
+            if (appendingThread != null) {
+                if (appendingThread == currentThread)
+                    throw new IllegalStateException("Nested blocks of writingDocument() not supported");
+                throw new IllegalStateException("Attempting to use Appender in " + currentThread + " while used by " + appendingThread);
+            }
+            this.appendingThread = currentThread;
             return true;
         }
 
@@ -350,20 +361,12 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean readDocument(@NotNull final ReadMarshallable marshaller) {
-            try {
-                return read(marshaller, ReadMarshallable::readMarshallable, queue.timeoutMS);
-            } catch (TimeoutException e) {
-                return false;
-            }
+            return read(marshaller, ReadMarshallable::readMarshallable);
         }
 
         @Override
         public boolean readBytes(@NotNull final Bytes using) {
-            try {
-                return read(using, (t, w) -> t.write(w.bytes()), queue.timeoutMS);
-            } catch (TimeoutException e) {
-                return false;
-            }
+            return read(using, (t, w) -> t.write(w.bytes()));
         }
 
         @Override
@@ -384,12 +387,9 @@ public class SingleChronicleQueueExcerpts {
 
         @Nullable
         public boolean readText(StringBuilder sb) {
-            try {
-                if (read(sb, (t, w) ->
-                        w.bytes().parseUtf8(sb, (int) w.bytes().readRemaining()), queue.timeoutMS))
-                    return true;
-            } catch (TimeoutException e) {
-            }
+            if (read(sb, (t, w) ->
+                    w.bytes().parseUtf8(sb, (int) w.bytes().readRemaining())))
+                return true;
             sb.setLength(0);
             sb.append("No message");
             return false;
@@ -454,11 +454,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
-            try {
-                return read(using, (t, w) -> t.readMarshallable(w.bytes()), queue.timeoutMS);
-            } catch (TimeoutException e) {
-                return false;
-            }
+            return read(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
         /**
@@ -555,7 +551,7 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c, long timeoutMS) throws TimeoutException {
+        private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             if (this.store == null) {
                 toStart();
                 if (this.store == null) return false;
