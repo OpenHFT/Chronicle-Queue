@@ -188,7 +188,7 @@ public class SingleChronicleQueueExcerpts {
                     int cycle = queue.rollCycle().toCycle(index);
 
                     if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
-                        throw new StreamCorruptedException("Unable to move to index " + Long.toHexString(index));
+                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index));
                 }
 
                 // only get the bytes after moveToIndex

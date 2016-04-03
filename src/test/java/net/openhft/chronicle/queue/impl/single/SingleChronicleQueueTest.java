@@ -511,7 +511,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .indexSpacing(1)
                 .build()) {
 
-            int cycle = queue.rollCycle().current(() -> System.currentTimeMillis(), 0) - 3;
+            int cycle = queue.rollCycle().current(System::currentTimeMillis, 0) - 3;
 
             final ExcerptAppender appender = queue.createAppender();
             Wire wire = new BinaryWire(Bytes.allocateDirect(64));
