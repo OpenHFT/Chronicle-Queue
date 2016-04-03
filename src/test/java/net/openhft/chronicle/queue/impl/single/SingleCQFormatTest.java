@@ -290,8 +290,8 @@ public class SingleCQFormatTest {
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !int 8192,\n" +
-                    "    indexSpacing: 64,\n" +
+                    "    indexCount: !int 16384,\n" +
+                    "    indexSpacing: 16,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +
@@ -978,8 +978,8 @@ public class SingleCQFormatTest {
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !int 8192,\n" +
-                    "    indexSpacing: 64,\n" +
+                    "    indexCount: !int 16384,\n" +
+                    "    indexSpacing: 16,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  }\n" +

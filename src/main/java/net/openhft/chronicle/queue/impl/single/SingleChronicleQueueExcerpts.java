@@ -68,6 +68,7 @@ public class SingleChronicleQueueExcerpts {
         private long position = -1;
         private boolean metaData = false;
         private volatile Thread appendingThread = null;
+        private long lastIndex = Long.MIN_VALUE;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
@@ -128,6 +129,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext writingDocument() {
+            lastIndex = Long.MIN_VALUE;
             assert checkAppendingThread();
             try {
                 int cycle = queue.cycle();
@@ -182,10 +184,12 @@ public class SingleChronicleQueueExcerpts {
         public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
             assert checkAppendingThread();
             try {
-                int cycle = queue.rollCycle().toCycle(index);
+                if (index != lastIndex + 1) {
+                    int cycle = queue.rollCycle().toCycle(index);
 
-                if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
-                    throw new StreamCorruptedException("Unable to move to index " + Long.toHexString(index));
+                    if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
+                        throw new StreamCorruptedException("Unable to move to index " + Long.toHexString(index));
+                }
 
                 // only get the bytes after moveToIndex
                 Bytes<?> wireBytes = wire.bytes();
@@ -202,6 +206,8 @@ public class SingleChronicleQueueExcerpts {
                         wire.updateHeader(0, position, false);
                     }
                 }
+                lastIndex = index;
+
             } catch (TimeoutException | StreamCorruptedException e) {
                 throw Jvm.rethrow(e);
 
@@ -242,6 +248,9 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public long lastIndexAppended() {
+            if (lastIndex != Long.MIN_VALUE)
+                return lastIndex;
+
             if (this.position == -1)
                 throw new IllegalStateException("no messages written");
             try {
@@ -265,6 +274,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> void append(int length, WireWriter<T> wireWriter, T writer) {
+            lastIndex = Long.MIN_VALUE;
             assert checkAppendingThread();
             try {
                 int cycle = queue.cycle();
