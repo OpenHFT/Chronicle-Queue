@@ -837,6 +837,60 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    public void testReadingSecondDocumentNotExist() {
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                String text = dc.wire().read(() -> "FirstName").text();
+                Assert.assertEquals("Quartilla", text);
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
+            }
+        }
+    }
+
+
+    @Test
+    public void testReadingSecondDocumentNotExistInclusingMeta() {
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+            }
+
+            final ExcerptTailer tailer = chronicle.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                String text = dc.wire().read(() -> "FirstName").text();
+                Assert.assertEquals("Quartilla", text);
+            }
+
+            try (DocumentContext dc = tailer.readingDocument(true)) {
+                assertFalse(dc.isPresent());
+            }
+        }
+    }
+
+
+    @Test
     public void testSimpleByteTest() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
