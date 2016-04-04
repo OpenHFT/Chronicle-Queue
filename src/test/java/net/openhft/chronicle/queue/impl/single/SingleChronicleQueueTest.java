@@ -877,13 +877,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             final ExcerptTailer tailer = chronicle.createTailer();
+            StringBuilder event = new StringBuilder();
+            while (true) {
+                try (DocumentContext dc = tailer.readingDocument(true)) {
 
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                String text = dc.wire().read(() -> "FirstName").text();
-                Assert.assertEquals("Quartilla", text);
+                    ValueIn in = dc.wire().read(event);
+                    if (!StringUtils.isEqual(event, "FirstName"))
+                        continue;
+
+                    in.text("Quartilla", Assert::assertEquals);
+                    break;
+                }
             }
 
-            try (DocumentContext dc = tailer.readingDocument(true)) {
+            try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.isPresent());
             }
         }
