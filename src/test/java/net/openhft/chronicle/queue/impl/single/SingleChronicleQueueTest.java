@@ -864,7 +864,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
-    public void testReadingSecondDocumentNotExistInclusingMeta() {
+    public void testReadingSecondDocumentNotExistIncludingMeta() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
