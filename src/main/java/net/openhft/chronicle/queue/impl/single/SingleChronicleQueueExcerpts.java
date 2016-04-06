@@ -72,11 +72,6 @@ public class SingleChronicleQueueExcerpts {
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
-
-            int cycle = this.queue.lastCycle();
-            if (cycle < 0)
-                cycle = queue.cycle();
-            setCycle2(cycle);
         }
 
         @Override
@@ -255,8 +250,8 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException("no messages written");
             try {
                 long sequenceNumber = store.indexForPosition(wire, position, queue.timeoutMS);
-                final long index = queue.rollCycle().toIndex(cycle, sequenceNumber);
-                return index;
+                lastIndex = queue.rollCycle().toIndex(cycle, sequenceNumber);
+                return lastIndex;
             } catch (EOFException | TimeoutException e) {
                 throw new AssertionError(e);
             } finally {
@@ -266,6 +261,12 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public int cycle() {
+            if (cycle == Integer.MIN_VALUE) {
+                int cycle = this.queue.lastCycle();
+                if (cycle < 0)
+                    cycle = queue.cycle();
+                setCycle2(cycle);
+            }
             return cycle;
         }
 
@@ -278,11 +279,10 @@ public class SingleChronicleQueueExcerpts {
             assert checkAppendingThread();
             try {
                 int cycle = queue.cycle();
-                if (this.cycle != cycle)
+                if (this.cycle != cycle || wire == null)
                     rollCycleTo(cycle);
 
                 try {
-//                    wire.bytes().writePosition(store.writePosition());
                     position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
                     wireWriter.write(writer, wire);
                     wire.updateHeader(length, position, false);
@@ -300,6 +300,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void rollCycleTo(int cycle) throws TimeoutException {
+            if (wire != null)
             wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
             setCycle2(cycle);
         }
