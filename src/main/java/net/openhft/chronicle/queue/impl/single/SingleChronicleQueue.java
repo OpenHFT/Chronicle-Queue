@@ -109,7 +109,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @NotNull
-    public File path() {
+    public File file() {
         return path;
     }
 

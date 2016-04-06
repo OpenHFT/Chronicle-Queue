@@ -100,7 +100,7 @@ public interface ChronicleQueue extends Closeable {
      * @return the base path where ChronicleQueue stores its data.
      */
     @NotNull
-    File path();
+    File file();
 
     /**
      * Dump a Queue in YAML format.
