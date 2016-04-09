@@ -63,7 +63,11 @@ class MethodWriterInvocationHandler implements InvocationHandler {
                     valueOut.object(parameterTypes[0], args[0]);
                     break;
                 default:
-                    throw new UnsupportedOperationException();
+                    final Class[] finalParameterTypes = parameterTypes;
+                    valueOut.sequence(v -> {
+                        for (int i = 0; i < finalParameterTypes.length; i++)
+                            v.object(finalParameterTypes[i], args[i]);
+                    });
             }
         }
         return ObjectUtils.defaultValue(method.getReturnType());
