@@ -107,6 +107,7 @@ public class SingleChronicleQueueExcerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = (AbstractWire) queue.wireType().apply(mappedBytes);
+            assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
             wire.bytes().writePosition(store.writePosition());
@@ -639,6 +640,8 @@ public class SingleChronicleQueueExcerpts {
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
+                assert wire.startUse();
+                assert wire.startUse();
                 this.wire.parent(this);
                 this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())

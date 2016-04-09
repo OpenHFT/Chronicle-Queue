@@ -72,6 +72,7 @@ public class SingleChronicleQueueStore implements WireStore {
      */
     @UsedViaReflection
     private SingleChronicleQueueStore(WireIn wire) {
+        assert wire.startUse();
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         assert wireType != null;
 

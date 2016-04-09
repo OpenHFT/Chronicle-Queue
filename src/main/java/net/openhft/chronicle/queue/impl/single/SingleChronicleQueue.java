@@ -308,6 +308,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final MappedBytes mappedBytes = mappedBytes(dateValue.path);
 
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
+            assert wire.startUse();
             wire.pauser(pauserSupplier.get());
             if (wire.writeFirstHeader()) {
                 RollingChronicleQueue queue = this;
