@@ -35,7 +35,6 @@ public enum NoDocumentContext implements DocumentContext {
         throw new UnsupportedOperationException();
     }
 
-
     @Override
     public boolean isPresent() {
         return false;

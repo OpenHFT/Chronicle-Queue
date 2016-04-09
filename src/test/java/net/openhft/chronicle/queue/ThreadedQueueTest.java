@@ -127,7 +127,5 @@ public class ThreadedQueueTest {
         assertTrue(tailer.readBytes(bytes));
         assertEquals("Hello World", bytes.toString());
 
-
     }
-
 }

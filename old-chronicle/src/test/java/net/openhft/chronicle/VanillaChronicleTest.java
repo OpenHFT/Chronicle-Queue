@@ -1111,7 +1111,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
 
-
     @Test
     public void testWithFsWatcher() throws Exception {
         final String baseDir = getTestPath();

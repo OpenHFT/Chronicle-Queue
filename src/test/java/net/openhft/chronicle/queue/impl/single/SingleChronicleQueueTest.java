@@ -83,15 +83,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException {
         try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType).build()) {
 
-
             final String expected = "some long message";
-
 
             Executors.newSingleThreadExecutor().submit(() -> {
                 final ExcerptAppender appender = queue.createAppender();
@@ -115,7 +112,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 throw new RejectedExecutionException();
             }, 1, 1, TimeUnit.MICROSECONDS);
 
-
             final Bytes poll = result.poll(10, TimeUnit.SECONDS);
             final String actual = this.wireType.apply(poll).read(() -> "key")
                     .text();
@@ -123,7 +119,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
     }
-
 
     @Test
     public void testReadingLessBytesThanWritten() {
@@ -525,7 +520,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeBytes(index + 1, wire.bytes());
             }
 
-
             /* Note this means the file has rolled
             --- !!not-ready-meta-data! #binary
             ...
@@ -785,7 +779,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testMetaData() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
@@ -835,7 +828,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testReadingSecondDocumentNotExist() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
@@ -861,7 +853,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
@@ -895,7 +886,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 
     @Test
     public void testSimpleByteTest() {

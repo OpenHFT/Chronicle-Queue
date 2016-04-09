@@ -100,5 +100,4 @@ public class ChronicleQueueReader {
                 + "," + finishTimeTaken
                 + "," + sleepTimeTaken);
     }
-
 }

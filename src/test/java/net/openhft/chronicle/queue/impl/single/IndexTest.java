@@ -75,5 +75,4 @@ public class IndexTest extends ChronicleQueueTestBase {
     public void accessHexEquals(long index0, long indexA) {
         assertEquals(Long.toHexString(index0) + " != " + Long.toHexString(indexA), index0, indexA);
     }
-
 }

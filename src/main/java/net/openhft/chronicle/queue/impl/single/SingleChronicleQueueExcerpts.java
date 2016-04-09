@@ -236,7 +236,6 @@ public class SingleChronicleQueueExcerpts {
             return false;
         }
 
-
         @Override
         public void writeBytes(@NotNull WriteBytesMarshallable marshallable) {
             append(Wires.UNKNOWN_LENGTH, (m, w) -> m.writeMarshallable(w.bytes()), marshallable);
