@@ -384,6 +384,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
+                assert wire == null || wire.startUse();
                 if (present = next(includeMetaData))
                     return this;
             } catch (TimeoutException ignored) {
@@ -640,7 +641,6 @@ public class SingleChronicleQueueExcerpts {
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
-                assert wire.startUse();
                 assert wire.startUse();
                 this.wire.parent(this);
                 this.wire.pauser(queue.pauserSupplier.get());
