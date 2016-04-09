@@ -46,7 +46,7 @@ public class BytesRingBufferTest {
     Bytes<ByteBuffer> out;
     NativeBytesStore outBuffer;
 
-    @Before
+         private ThreadDump threadDump;      @Before     public void threadDump() {         threadDump = new ThreadDump();     }          @After     public void checkThreadDump() {         threadDump.assertNoNewThreads();     } @Before
     public void setup() {
         try {
             outBuffer = NativeBytesStore.nativeStoreWithFixedCapacity(12);

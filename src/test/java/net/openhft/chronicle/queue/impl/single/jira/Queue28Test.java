@@ -34,11 +34,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class Queue28 extends ChronicleQueueTestBase {
+public class Queue28Test extends ChronicleQueueTestBase {
 
     private final WireType wireType;
 
-    public Queue28(WireType wireType) {
+    public Queue28Test(WireType wireType) {
         this.wireType = wireType;
     }
 

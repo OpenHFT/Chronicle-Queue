@@ -16,11 +16,14 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -38,6 +41,7 @@ import static org.junit.Assert.assertEquals;
 public class IndexTest extends ChronicleQueueTestBase {
 
     private final WireType wireType;
+    private ThreadDump threadDump;
 
     /**
      * @param wireType the type of the wire
@@ -52,6 +56,16 @@ public class IndexTest extends ChronicleQueueTestBase {
 //                {WireType.TEXT}, // TODO Add CAS to LongArrayReference.
                 {WireType.BINARY}
         });
+    }
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
     }
 
     @Test

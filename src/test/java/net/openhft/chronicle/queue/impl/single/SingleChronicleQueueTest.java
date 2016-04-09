@@ -17,15 +17,14 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -45,6 +44,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
     private final WireType wireType;
+    // *************************************************************************
+    //
+    // TESTS
+    //
+    // *************************************************************************
+    private ThreadDump threadDump;
 
     /**
      * @param wireType the type of wire
@@ -62,11 +67,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         });
     }
 
-    // *************************************************************************
-    //
-    // TESTS
-    //
-    // *************************************************************************
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
 
     @Test
     public void testAppend() {
@@ -90,7 +99,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final String expected = "some long message";
 
-            Executors.newSingleThreadExecutor().submit(() -> {
+            ExecutorService service1 = Executors.newSingleThreadExecutor();
+            service1.submit(() -> {
                 final ExcerptAppender appender = queue.createAppender();
 
                 try (final DocumentContext dc = appender.writingDocument()) {
@@ -102,7 +112,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
             Bytes b = Bytes.allocateDirect(128);
 
-            Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            ScheduledExecutorService service2 = Executors.newSingleThreadScheduledExecutor();
+            service2.scheduleAtFixedRate(() -> {
                 final ExcerptTailer tailer = queue.createTailer();
                 tailer.readBytes(b);
                 if (b.readRemaining() == 0)
@@ -117,6 +128,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .text();
             Assert.assertEquals(expected, actual);
 
+            service1.shutdown();
+            service2.shutdown();
         }
     }
 

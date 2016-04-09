@@ -81,7 +81,7 @@ public class IndexedChronicleNumberAppendTest extends IndexedChronicleTestBase {
         }
     }
 
-    @Before
+         private ThreadDump threadDump;      @Before     public void threadDump() {         threadDump = new ThreadDump();     }          @After     public void checkThreadDump() {         threadDump.assertNoNewThreads();     } @Before
     public void fillRandoms() {
         Random random = new Random();
         for (int i = 0; i < TOTAL_RECORDS; i++) {

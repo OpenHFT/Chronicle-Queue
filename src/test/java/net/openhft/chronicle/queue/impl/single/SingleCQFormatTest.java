@@ -21,8 +21,10 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.wire.*;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -47,6 +49,7 @@ public class SingleCQFormatTest {
     }
 
     int appendMode;
+    private ThreadDump threadDump;
 
     public static void assertHexEquals(long a, long b) {
         if (a != b)
@@ -910,6 +913,16 @@ public class SingleCQFormatTest {
                     spacing == 2 ? expected2 : expected4;
             checkFileContents(dir.listFiles()[0], expected);
         }
+    }
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
     }
 
     @Before

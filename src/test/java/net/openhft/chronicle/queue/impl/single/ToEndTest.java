@@ -18,11 +18,14 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,6 +41,18 @@ import static org.junit.Assert.fail;
  * Created by daniel on 07/03/2016.
  */
 public class ToEndTest {
+    private ThreadDump threadDump;
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
+
     @Test
     public void toEndTest() {
         String baseDir = OS.TARGET + "/toEndTest-" + System.nanoTime();

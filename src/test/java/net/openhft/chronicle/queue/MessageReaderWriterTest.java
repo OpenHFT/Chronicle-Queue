@@ -19,10 +19,13 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -32,6 +35,17 @@ import static org.junit.Assert.assertTrue;
  * Created by Peter on 25/03/2016.
  */
 public class MessageReaderWriterTest {
+    private ThreadDump threadDump;
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
 
     @Test
     public void testWriteWhileReading() {

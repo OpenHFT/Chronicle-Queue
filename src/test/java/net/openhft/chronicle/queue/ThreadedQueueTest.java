@@ -17,8 +17,11 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -35,6 +38,17 @@ public class ThreadedQueueTest {
     public static final int MESSAGE_SIZE = 1024;
     public static final int REQUIRED_COUNT = 10;
     private static final int BLOCK_SIZE = 256 << 20;
+    private ThreadDump threadDump;
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
 
     @Test(timeout = 10000)
     public void testMultipleThreads() throws java.io.IOException, InterruptedException, ExecutionException, TimeoutException {

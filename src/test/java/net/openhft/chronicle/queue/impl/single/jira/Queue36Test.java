@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-36
  */
-public class Queue36 extends ChronicleQueueTestBase {
+public class Queue36Test extends ChronicleQueueTestBase {
     @Test
     public void testTail() throws IOException {
         File basePath = getTmpDir();

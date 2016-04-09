@@ -16,6 +16,9 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.threads.ThreadDump;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -24,6 +27,18 @@ import static org.junit.Assert.assertEquals;
  * Created by peter on 15/03/16.
  */
 public class ReadmeTest {
+    private ThreadDump threadDump;
+
+    @Before
+    public void threadDump() {
+        threadDump = new ThreadDump();
+    }
+
+    @After
+    public void checkThreadDump() {
+        threadDump.assertNoNewThreads();
+    }
+
     @Test
     public void createAQueue() {
         try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {

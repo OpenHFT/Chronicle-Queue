@@ -20,5 +20,5 @@ import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-33
  */
-public class Queue33  extends ChronicleQueueTestBase {
+public class Queue33Test extends ChronicleQueueTestBase {
 }

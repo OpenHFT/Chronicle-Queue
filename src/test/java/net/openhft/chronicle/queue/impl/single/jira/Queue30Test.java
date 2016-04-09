@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * See https://higherfrequencytrading.atlassian.net/browse/QUEUE-30
  */
-public class Queue30 extends ChronicleQueueTestBase {
+public class Queue30Test extends ChronicleQueueTestBase {
 
     @Ignore("Stress test - doesn't finish")
     @Test
