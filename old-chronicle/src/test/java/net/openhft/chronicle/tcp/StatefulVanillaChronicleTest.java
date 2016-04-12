@@ -358,7 +358,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             appender.append(value).append(' '); //this space is really important.
             appender.finish();
 
-            Thread.sleep(100);
+            Jvm.pause(100);
 
             if(i % 10 ==0) {
                 LOGGER.info(".");
@@ -508,7 +508,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             latch.countDown();
 
                         } else {
-                            Thread.sleep(100);
+                            Jvm.pause(100);
                         }
                     }
 
@@ -541,7 +541,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Thread.sleep(250);
+            Jvm.pause(250);
         }
 
         source1.close();

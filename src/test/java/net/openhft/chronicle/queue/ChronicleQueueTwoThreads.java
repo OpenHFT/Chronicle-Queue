@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
@@ -107,14 +108,14 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         }, "appender thread");
 
         tailerThread.start();
-        Thread.sleep(100);
+        Jvm.pause(100);
 
         appenderThread.start();
         appenderThread.join();
 
         //Pause to allow tailer to catch up (if needed)
         for (int i = 0; i < 10; i++) {
-            Thread.sleep(100);
+            Jvm.pause(100);
             tailerThread.interrupt();
             tailerThread.join(100);
         }

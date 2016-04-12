@@ -46,7 +46,7 @@ enum ChronicleReader {
         //noinspection InfiniteLoopStatement
         while (true) {
             while (!excerpt.index(index))
-                Thread.sleep(50);
+                Jvm.pause(50);
             System.out.print(index + ": ");
             int nullCount = 0;
             while (excerpt.remaining() > 0) {

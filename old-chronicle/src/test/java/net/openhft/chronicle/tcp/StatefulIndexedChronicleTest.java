@@ -483,7 +483,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             latch.countDown();
 
                         } else {
-                            Thread.sleep(100);
+                            Jvm.pause(100);
                         }
                     }
 
@@ -516,7 +516,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Thread.sleep(250);
+            Jvm.pause(250);
         }
 
         source1.close();

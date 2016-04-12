@@ -68,7 +68,7 @@ public class QueueClientMain {
                         appender.startExcerpt();
                         appender.writeLong(END_OF_TEST);
                         appender.finish();
-                        Thread.sleep(1000);
+                        Jvm.pause(500);
                     }
                     appender.startExcerpt();
                     appender.writeLong(END_OF_TESTS);

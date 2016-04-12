@@ -66,7 +66,7 @@ public final class SourceTcpInitiator extends SourceTcp {
                             logger.info("Failed to connect to {}, retrying", builder.connectAddress());
 
                             try {
-                                Thread.sleep(builder.reconnectionIntervalMillis());
+                                Jvm.pause(builder.reconnectionIntervalMillis());
                             } catch (InterruptedException ie) {
                                 Thread.currentThread().interrupt();
                             }

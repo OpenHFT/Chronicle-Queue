@@ -84,6 +84,11 @@ public class SingleChronicleQueueExcerpts {
             throw new UnsupportedOperationException("TODO");
         }
 
+        @Override
+        public boolean isNotComplete() {
+            throw new UnsupportedOperationException();
+        }
+
         private void setCycle(int cycle) {
             if (cycle != this.cycle)
                 setCycle2(cycle);

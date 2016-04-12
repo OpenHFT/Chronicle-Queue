@@ -81,7 +81,7 @@ public class ChronicleQueueReader {
                     readTime = readTime + (readEndTime - readStartTime);
                     counter++;
                 } else {
-                    Thread.sleep(1);
+                    Jvm.pause(1);
                     sleepTime++;
                 }
             }

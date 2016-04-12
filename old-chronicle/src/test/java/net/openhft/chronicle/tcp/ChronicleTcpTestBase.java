@@ -169,7 +169,7 @@ public class ChronicleTcpTestBase {
                         appender.writeLong(i + 1);
                         appender.finish();
 
-                        Thread.sleep(random.nextInt(10));
+                        Jvm.pause(random.nextInt(10));
                     }
 
                     appender.close();

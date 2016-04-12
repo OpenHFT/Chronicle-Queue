@@ -809,7 +809,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 appender.append(value).append(' ');
                 appender.finish();
 //                System.out.println("Sleeping " +i );
-                Thread.sleep(1);
+                Jvm.pause(1);
 
                 assertTrue(tailer.nextIndex());
                 long major = tailer.index() / builder.entriesPerCycle();
@@ -865,7 +865,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                Thread.sleep(2000);
+                Jvm.pause(2000);
             }
 
             for (int i = 0; i < RUNS; i++) {
@@ -957,7 +957,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appendValues(appender, 1, 20);
 
             // Ensure the appender writes in another cycle from the initial writes
-            Thread.sleep(2000L);
+            Jvm.pause(2000L);
             appendValues(appender, 20, 40);
 
             // Verify that all values are read by the tailer
@@ -965,7 +965,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertEquals(createRangeDataSet(1, 40), readAvailableValues(tailer));
 
             // Verify that the tailer reads no new data from a new cycle
-            Thread.sleep(2000L);
+            Jvm.pause(2000L);
             assertTrue(!tailer.nextIndex());
 
             // ### Throws java.lang.NullPointerException
@@ -1014,7 +1014,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appendValues(appender, 1, 5);
 
             // Ensure the appender writes in another cycle from the initial writes
-            Thread.sleep(2000L);
+            Jvm.pause(2000L);
 
             appendValues(appender, 5, 50);
 
@@ -1080,7 +1080,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testGetActiveWorkingDirectory() throws Exception {
+    public void testGetActiveWorkingDirectory()  {
 
         final String baseDir = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
@@ -1112,7 +1112,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
 
     @Test
-    public void testWithFsWatcher() throws Exception {
+    public void testWithFsWatcher()  {
         final String baseDir = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
             .enableFsWatcher(true)

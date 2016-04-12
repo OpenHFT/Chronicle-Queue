@@ -51,7 +51,7 @@ public class GitHub174 {
     }
 
     @Test
-    public void testError() throws Exception {
+    public void testError()  {
         String tmpdir = System.getProperty("java.io.tmpdir");
         String path = tmpdir + "/error_" + this.dataBlockSize;
 

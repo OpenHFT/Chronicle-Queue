@@ -245,7 +245,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
                 });
             }
 
-            Thread.sleep(100);
+            Jvm.pause(100);
 
             final ExcerptAppender appender = source.createAppender();
             for (int i=0; i<items; i++) {
@@ -421,7 +421,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
                             latch.countDown();
 
                         } else {
-                            Thread.sleep(100);
+                            Jvm.pause(100);
                         }
                     }
 
@@ -454,7 +454,7 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Thread.sleep(250);
+            Jvm.pause(250);
         }
 
         source1.close();

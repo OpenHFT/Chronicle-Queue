@@ -209,7 +209,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 });
             }
 
-            Thread.sleep(100);
+            Jvm.pause(100);
 
             final ExcerptAppender appender = source.createAppender();
 
@@ -414,7 +414,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                             latch.countDown();
 
                         } else {
-                            Thread.sleep(100);
+                            Jvm.pause(100);
                         }
                     }
 
@@ -447,7 +447,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Thread.sleep(25);
+            Jvm.pause(25);
         }
 
         source1.close();

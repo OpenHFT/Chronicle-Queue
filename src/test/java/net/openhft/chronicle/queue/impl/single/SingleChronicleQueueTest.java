@@ -232,7 +232,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             //Give the tailer thread enough time to initialise before send
             //the messages
-            Jvm.pause(1000);
+            Jvm.pause(500);
 
             final ExcerptAppender appender = queue.createAppender();
             for (int i = 0; i < 2; i++) {
@@ -240,7 +240,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             }
 
-            Jvm.pause(1000);
+            Jvm.pause(500);
 
             assertArrayEquals(new int[]{0, 1}, results);
         }

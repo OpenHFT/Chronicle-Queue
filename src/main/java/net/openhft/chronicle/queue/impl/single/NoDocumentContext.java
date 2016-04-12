@@ -61,6 +61,11 @@ public enum NoDocumentContext implements DocumentContext {
     }
 
     @Override
+    public boolean isNotComplete() {
+        return false;
+    }
+
+    @Override
     public void close() {
 
     }

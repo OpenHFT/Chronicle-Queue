@@ -44,7 +44,7 @@ public class MappedMemoryTest {
             } finally {
                 tempFile.delete();
             }
-            Thread.sleep(200);
+            Jvm.pause(200);
         }
     }
 
@@ -68,7 +68,7 @@ public class MappedMemoryTest {
             } finally {
                 tempFile.delete();
             }
-            Thread.sleep(200);
+            Jvm.pause(200);
         }
     }
 

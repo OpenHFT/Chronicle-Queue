@@ -74,7 +74,7 @@ public class ChronicleQueueWriter {
             long endTime = System.nanoTime();
             writeToFile(i, startTime, endTime);
             // give the previous test time to write to disk or we are effectively
-            Thread.sleep(noOfRecords / 100000);
+            Jvm.pause(noOfRecords / 100000);
         }
         appender.close();
     }

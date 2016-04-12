@@ -136,7 +136,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
             long magic = bytes.readVolatileLong(MAGIC_OFFSET);
             if (magic == BUILDING) {
                 try {
-                    Thread.sleep(10);
+                    Jvm.pause(10);
                 } catch (InterruptedException e) {
                     throw new IOException("Interrupted waiting for the header to be built");
                 }

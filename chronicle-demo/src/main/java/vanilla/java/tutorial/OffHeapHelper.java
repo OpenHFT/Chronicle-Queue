@@ -76,7 +76,7 @@ public class OffHeapHelper {
                     if(event.getType() == this.type) {
                         if (event.compareAndSwapOwner(0, this.id * 100)) {
                             event.compareAndSwapOwner(this.id * 100, this.id);
-                            Thread.sleep(this.random.nextInt(250));
+                            Jvm.pause(this.random.nextInt(250));
                         }
                     }
 

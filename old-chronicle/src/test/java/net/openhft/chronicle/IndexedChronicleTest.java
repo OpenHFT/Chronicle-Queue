@@ -471,7 +471,7 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         long rate = 2 * runs / size * 10000L / (System.nanoTime() - start);
         System.out.println("Rate = " + rate / 10.0 + " Mmsg/sec");
         chronicle.close();
-        Thread.sleep(200);
+        Jvm.pause(200);
 
         ChronicleTools.deleteOnExit(basePath1);
         ChronicleTools.deleteOnExit(basePath2);

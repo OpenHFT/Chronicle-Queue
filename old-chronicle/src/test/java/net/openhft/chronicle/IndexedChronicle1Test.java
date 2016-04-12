@@ -86,14 +86,14 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
             tailer.close();
 
             //        System.out.println("waiting");
-            //        Thread.sleep(20000);
+            //        Jvm.pause(20000);
             //        System.out.println("waited");
             //        System.gc();
             long time = System.nanoTime() - start;
             System.out.printf("The average time to write and read a BigDecimal was %,d ns%n", time / objects);
             //        tsc = null;
             //        System.gc();
-            //        Thread.sleep(10000);
+            //        Jvm.pause(10000);
         } finally {
             chronicle.close();
             assertClean(basePath);

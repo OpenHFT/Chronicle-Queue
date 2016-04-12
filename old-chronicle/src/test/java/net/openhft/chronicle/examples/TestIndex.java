@@ -63,7 +63,7 @@ public class TestIndex {
                     while (running) {
                         lastIndex = chronicle1.lastIndex();
                         LOG.trace("last index = {}", lastIndex);
-                        Thread.sleep(10);
+                        Jvm.pause(10);
                     }
                 } catch (Exception e) {
                     LOG.error("Error", e);
@@ -73,7 +73,7 @@ public class TestIndex {
         });
         t2.start();
 
-        Thread.sleep(5000);
+        Jvm.pause(5000);
 
         running = false;
 

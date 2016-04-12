@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue.impl.single.jira;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -67,7 +68,7 @@ public class Queue28Test extends ChronicleQueueTestBase {
 
         final ExcerptAppender appender = queue.createAppender();
         appender.writeDocument(w -> w.write(TestKey.test).int32(1));
-        Thread.sleep(100);
+        Jvm.pause(100);
         assertTrue(tailer.readDocument(r -> r.read(TestKey.test).int32()));
     }
 }

@@ -263,7 +263,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
                 if(!openConnection()) {
                     try {
-                        Thread.sleep(builder.reconnectionIntervalMillis());
+                        Jvm.pause(builder.reconnectionIntervalMillis());
                     } catch(InterruptedException ignored) {
                         Thread.currentThread().interrupt();
                     }

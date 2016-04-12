@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
     @Test
-    public void testsCycles() throws Exception {
+    public void testsCycles()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -46,7 +46,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testsEntriesPerCyclesCorrection() throws Exception {
+    public void testsEntriesPerCyclesCorrection()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -61,7 +61,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testsUnknownCycle() throws Exception {
+    public void testsUnknownCycle()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -69,7 +69,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecond() throws Exception {
+    public void testCycleEverySecond()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -91,7 +91,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecondWithOneSubdirectory() throws Exception {
+    public void testCycleEverySecondWithOneSubdirectory()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -120,7 +120,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecondWithTwoSubdirectory() throws Exception {
+    public void testCycleEverySecondWithTwoSubdirectory()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -150,7 +150,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
     @Ignore("Test is taking too much time on CI")
     @Test
-    public void testCycleEveryMinute() throws Exception {
+    public void testCycleEveryMinute()  {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -186,7 +186,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Thread.sleep(cycle.length() / 4);
+                            Jvm.pause(cycle.length() / 4);
                         }
                     }
                 } catch (Exception e) {
@@ -206,7 +206,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
                         appender.writeInt(i);
                         appender.finish();
 
-                        Thread.sleep(cycle.length() / 4);
+                        Jvm.pause(cycle.length() / 4);
                     }
                 } catch (Exception e) {
                     LOGGER.warn("", e);

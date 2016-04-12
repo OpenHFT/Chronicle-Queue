@@ -141,7 +141,7 @@ class GWMain {
                 System.out.print(i + " ");
                 System.out.flush();
                 //noinspection BusyWait
-                Thread.sleep(1000);
+                Jvm.pause(500);
             }
         }
 
@@ -166,7 +166,7 @@ class GWMain {
                 while (reportCount.get() < ORDERS) {
                     while (reportCount.get() < n)
                         try {
-                            Thread.sleep(100);
+                            Jvm.pause(100);
                         } catch (InterruptedException e) {
                             throw new AssertionError(e);
                         }

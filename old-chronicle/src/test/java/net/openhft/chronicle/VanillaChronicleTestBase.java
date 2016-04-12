@@ -71,7 +71,7 @@ public class VanillaChronicleTestBase {
 
     protected void sleep(long timeout) {
         try {
-            Thread.sleep(timeout);
+            Jvm.pause(timeout);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

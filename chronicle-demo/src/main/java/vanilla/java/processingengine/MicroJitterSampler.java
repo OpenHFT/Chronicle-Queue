@@ -77,7 +77,7 @@ class MicroJitterSampler {
                 for (int i = 0; i < 30 * 1000; i += 2) {
                     microJitterSampler.sample(sampleLength);
                     //noinspection BusyWait
-                    Thread.sleep(1);
+                    Jvm.pause(1);
                 }
             }
 

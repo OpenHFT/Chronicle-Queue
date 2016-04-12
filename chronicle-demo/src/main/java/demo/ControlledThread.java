@@ -65,7 +65,7 @@ public abstract class ControlledThread extends Thread {
 
     public void sleepnx(int time) {
         try {
-            Thread.sleep(time);
+            Jvm.pause(time);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

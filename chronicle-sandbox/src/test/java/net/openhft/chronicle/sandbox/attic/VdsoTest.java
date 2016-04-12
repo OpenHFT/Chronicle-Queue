@@ -51,7 +51,7 @@ public class VdsoTest {
         long[] longs = new long[(int) ((end - start) / 8)];
         for (int i = 0; i < longs.length; i++)
             longs[i] = nb.readLong(i * 8);
-        Thread.sleep(1);
+        Jvm.pause(1);
         for (int i = 0; i < longs.length; i++) {
             long l = nb.readLong(i * 8);
             if (l != longs[i])
