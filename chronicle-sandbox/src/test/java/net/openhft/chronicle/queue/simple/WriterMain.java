@@ -47,7 +47,7 @@ public class WriterMain {
     }*/
 /*
     static class FileWriter {
-        static final int NOT_READY = 0x80000000;
+        static final int NOT_COMPLETE = 0x80000000;
         final MappedFile file;
         final LongValue readOffset = DataValueClasses.newDirectReference(LongValue.class);
         long writeOffset;
@@ -75,7 +75,7 @@ public class WriterMain {
 
             // reserve space
             int length = byteArray.length + 4;
-            while (!bytes.compareAndSwapInt(offset2, 0, NOT_READY | length)) {
+            while (!bytes.compareAndSwapInt(offset2, 0, NOT_COMPLETE | length)) {
                 offset2 += bytes.readVolatileInt(offset2);
             }
             bytes.write(offset2 + 4, byteArray);

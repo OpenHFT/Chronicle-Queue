@@ -44,7 +44,7 @@ import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 public class SingleChronicleQueueStore implements WireStore {
-    private static final long LONG_NOT_READY = -1;
+    private static final long LONG_NOT_COMPLETE = -1;
     private static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
 
     static {
@@ -361,7 +361,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 while (System.currentTimeMillis() < start + timeoutMS) {
                     long index2Index = this.index2Index.getVolatileValue();
 
-                    if (index2Index == LONG_NOT_READY) {
+                    if (index2Index == LONG_NOT_COMPLETE) {
                         wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
                         continue;
                     }
@@ -369,7 +369,7 @@ public class SingleChronicleQueueStore implements WireStore {
                     if (index2Index != NOT_INITIALIZED)
                         return index2Index;
 
-                    if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_READY))
+                    if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_COMPLETE))
                         continue;
                     long index = NOT_INITIALIZED;
                     try {
@@ -382,7 +382,7 @@ public class SingleChronicleQueueStore implements WireStore {
             } finally {
                 wire.pauser().reset();
             }
-            throw new IllegalStateException("index2index NOT_READY for too long.");
+            throw new IllegalStateException("index2index NOT_COMPLETE for too long.");
         }
 
         @NotNull
@@ -427,9 +427,9 @@ public class SingleChronicleQueueStore implements WireStore {
         }
 
         long newIndex(Wire wire, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException {
-            if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_READY)) {
+            if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_COMPLETE)) {
                 long pos = newIndex(wire, false, timeoutMS);
-                if (index2Index.compareAndSet(index2, LONG_NOT_READY, pos)) {
+                if (index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, pos)) {
                     index2Index.setMaxUsed(index2 + 1);
                     return pos;
                 }
@@ -437,7 +437,7 @@ public class SingleChronicleQueueStore implements WireStore {
             }
             for (; ; ) {
                 long pos = index2Index.getVolatileValueAt(index2);
-                if (pos == LONG_NOT_READY) {
+                if (pos == LONG_NOT_COMPLETE) {
                     wire.pauser().pause();
                 } else {
                     wire.pauser().reset();

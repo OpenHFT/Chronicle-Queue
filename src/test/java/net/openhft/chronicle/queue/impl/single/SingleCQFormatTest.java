@@ -129,7 +129,7 @@ public class SingleCQFormatTest {
         dir.mkdir();
 
         MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
-        bytes.writeInt(Wires.NOT_READY | Wires.META_DATA | Wires.UNKNOWN_LENGTH);
+        bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA | Wires.UNKNOWN_LENGTH);
         bytes.close();
         SingleChronicleQueue queue = null;
         try {

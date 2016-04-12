@@ -197,7 +197,7 @@ public class SingleChronicleQueueExcerpts {
                     wire.updateHeader(length, position, false);
 
                 } catch (EOFException theySeeMeRolling) {
-                    if (wireBytes.compareAndSwapInt(wireBytes.writePosition(), Wires.END_OF_DATA, Wires.NOT_READY)) {
+                    if (wireBytes.compareAndSwapInt(wireBytes.writePosition(), Wires.END_OF_DATA, Wires.NOT_COMPLETE)) {
                         wireBytes.write(bytes);
                         wire.updateHeader(0, position, false);
                     }
@@ -428,7 +428,7 @@ public class SingleChronicleQueueExcerpts {
                     if (direction != TailerDirection.FORWARD)
                         try {
                             moveToIndex(index);
-                        } catch (TimeoutException notReady) {
+                        } catch (TimeoutException notComplete) {
                             return false;
                         }
 
@@ -599,7 +599,7 @@ public class SingleChronicleQueueExcerpts {
                     if (direction != TailerDirection.FORWARD)
                         try {
                             moveToIndex(index);
-                        } catch (TimeoutException notReady) {
+                        } catch (TimeoutException notComplete) {
                             return false;
                         }
 

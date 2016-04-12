@@ -50,7 +50,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
     static final long UNINITIALISED = 0L;
     static final long BUILDING = BytesUtil.asLong("BUILDING");
     static final long QUEUE_CREATED = BytesUtil.asLong("QUEUE400");
-    static final int NOT_READY = Wires.NOT_READY;
+    static final int NOT_COMPLETE = Wires.NOT_COMPLETE;
     static final int META_DATA = Wires.META_DATA;
     static final int LENGTH_MASK = Wires.LENGTH_MASK;
     static final int MAX_LENGTH = LENGTH_MASK;
@@ -227,13 +227,13 @@ public class SingleChronicleQueue extends AbstractChronicle {
         for (; ; ) {
             long index2Index = header.index2Index().getVolatileValue();
 
-            if (index2Index == NOT_READY)
+            if (index2Index == NOT_COMPLETE)
                 continue;
 
             if (index2Index != UNINITIALISED)
                 return index2Index;
 
-            if (!header.index2Index().compareAndSwapValue(UNINITIALISED, NOT_READY))
+            if (!header.index2Index().compareAndSwapValue(UNINITIALISED, NOT_COMPLETE))
                 continue;
 
             long indexToIndex = newIndex();
@@ -277,7 +277,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         long lastByte = writeByte.getVolatileValue();
 
         for (; ; ) {
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_COMPLETE | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
                 writeByte.setOrderedValue(lastByte2);
@@ -308,7 +308,7 @@ public class SingleChronicleQueue extends AbstractChronicle {
         for (; ; ) {
             long lastByte = writeByte.getVolatileValue();
 
-            if (bytes.compareAndSwapInt(lastByte, 0, NOT_READY | (int) length)) {
+            if (bytes.compareAndSwapInt(lastByte, 0, NOT_COMPLETE | (int) length)) {
                 long lastByte2 = lastByte + 4 + buffer.remaining();
                 bytes.write(lastByte + 4, buffer);
                 long lastIndex = header.lastIndex().addAtomicValue(1);
