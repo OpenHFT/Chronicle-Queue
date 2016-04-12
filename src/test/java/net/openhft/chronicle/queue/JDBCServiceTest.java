@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
@@ -42,24 +43,23 @@ public class JDBCServiceTest {
             try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(path1).build();
                  ChronicleQueue out = SingleChronicleQueueBuilder.binary(path2).build()) {
 
-                JDBCService jdbcService = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""));
+                JDBCService service = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""));
 
-                JDBCStatement service = in.createAppender().methodWriter(JDBCStatement.class);
-
-                service.executeUpdate("CREATE TABLE tableName (\n" +
+                JDBCStatement writer = service.createWriter();
+                writer.executeUpdate("CREATE TABLE tableName (\n" +
                         "name VARCHAR(64) NOT NULL,\n" +
                         "num INT\n" +
                         ")\n");
 
                 for (int i = 1; i < (long) noUpdates; i++)
-                    service.executeUpdate("INSERT INTO tableName (name, num)\n" +
+                    writer.executeUpdate("INSERT INTO tableName (name, num)\n" +
                             "VALUES (?, ?)", "name", i);
-
 
                 written = System.nanoTime() - start;
                 AtomicLong queries = new AtomicLong();
                 AtomicLong updates = new AtomicLong();
-                MethodReader methodReader = out.createTailer().methodReader(new CountingJDBCResult(queries, updates));
+                CountingJDBCResult countingJDBCResult = new CountingJDBCResult(queries, updates);
+                MethodReader methodReader = service.createReader(countingJDBCResult);
                 int counter = 0;
                 while (updates.get() < noUpdates) {
                     if (methodReader.readOne())
@@ -67,7 +67,7 @@ public class JDBCServiceTest {
                     else
                         Thread.yield();
                 }
-                jdbcService.close();
+                Closeable.closeQuietly(service);
 
 //            System.out.println(in.dump());
 //            System.out.println(out.dump());

@@ -83,6 +83,22 @@ public class MethodReader {
         }
     }
 
+    static void logMessage(CharSequence s, ValueIn v) {
+        String name = s.toString();
+        String rest;
+
+        if (v.wireIn() instanceof BinaryWire) {
+            Bytes bytes = Bytes.elasticByteBuffer((int) (v.wireIn().bytes().readRemaining() * 3 / 2 + 64));
+            long pos = v.wireIn().bytes().readPosition();
+            v.wireIn().copyTo(new TextWire(bytes));
+            v.wireIn().bytes().readPosition(pos);
+            rest = bytes.toString();
+        } else {
+            rest = v.toString();
+        }
+        LOGGER.debug("read " + name + " - " + rest);
+    }
+
     public void addParseletForMethod(Object o, Method m, Class<?> parameterType) {
         Class msgClass = parameterType;
         m.setAccessible(true); // turn of security check to make a little faster
@@ -142,42 +158,6 @@ public class MethodReader {
                 LOGGER.error("Failure to dispatch message: " + m.getName() + " " + Arrays.toString(args), i);
             }
             });
-    }
-
-    public void addParseletForMethod(Object o, Method m, Class[] parameterTypes) {
-        m.setAccessible(true); // turn of security check to make a little faster
-        Object[] args = new Object[parameterTypes.length];
-        BiConsumer<Object[], ValueIn> sequenceReader = (a, v) -> {
-            int i = 0;
-            for(Class clazz: parameterTypes) {
-                a[i++] = v.object(clazz);
-            }
-        };
-        wireParser.register(m::getName, (s, v, $) -> {
-            try {
-                if (Jvm.isDebug())
-                    logMessage(s, v);
-
-                v.sequence(args, sequenceReader);
-                m.invoke(o, args);
-            } catch (Exception i) {
-                LOGGER.error("Failure to dispatch message: " + m.getName() + " " + Arrays.toString(args), i);
-            }
-            });
-    }    static void logMessage(CharSequence s, ValueIn v) {
-        String name = s.toString();
-        String rest;
-
-        if (v.wireIn() instanceof BinaryWire) {
-            Bytes bytes = Bytes.elasticByteBuffer((int) (v.wireIn().bytes().readRemaining() * 3 / 2 + 64));
-            long pos = v.wireIn().bytes().readPosition();
-            v.wireIn().copyTo(new TextWire(bytes));
-            v.wireIn().bytes().readPosition(pos);
-            rest = bytes.toString();
-        } else {
-            rest = v.toString();
-        }
-        LOGGER.debug("read " + name + " - " + rest);
     }
 
     /**
