@@ -55,11 +55,15 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * Reverse look up an index for a position.
      *
-     * @param position of the start of the message
+     * @param position  of the start of the message
      * @param timeoutMS
      * @return index in this store.
      */
     long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException;
 
     String dump();
+
+    void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
+
+    long lastAcknowledgedIndexReplicated();
 }

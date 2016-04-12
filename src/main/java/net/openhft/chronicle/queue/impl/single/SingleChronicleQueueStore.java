@@ -43,9 +43,9 @@ import java.util.function.Supplier;
 import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
-public class SingleChronicleQueueStore implements WireStore {
+class SingleChronicleQueueStore implements WireStore {
+
     private static final long LONG_NOT_COMPLETE = -1;
-    private static final long NUMBER_OF_ENTRIES_IN_EACH_INDEX = 1 << 17;
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class, "Indexing");
@@ -61,6 +61,10 @@ public class SingleChronicleQueueStore implements WireStore {
     private final MappedFile mappedFile;
     @NotNull
     private final Indexing indexing;
+
+    @NotNull
+    private LongValue lastAcknowledgedIndexReplicated;
+
     @Nullable
     private Closeable resourceCleaner;
     private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
@@ -75,18 +79,39 @@ public class SingleChronicleQueueStore implements WireStore {
         assert wire.startUse();
         wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         assert wireType != null;
-
         this.writePosition = wire.newLongReference();
         wire.read(MetaDataField.writePosition).int64(writePosition);
-
         this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
-        @NotNull final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
+        @NotNull
+        final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
         this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
         assert indexing != null;
         indexing.writePosition = writePosition;
+        this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
+                .int64ForBinding(wire.newLongReference());
     }
+
+
+    /**
+     * when using replication to another host, this is the last index that has been confirmed to *
+     * have been read by the remote host.
+     */
+    public long lastAcknowledgedIndexReplicated() {
+        return lastAcknowledgedIndexReplicated.getValue();
+    }
+
+    public void lastAcknowledgedIndexReplicated(long newValue) {
+        for (; ; ) {
+            long value = lastAcknowledgedIndexReplicated();
+            if (value > newValue)
+                return;
+            if (lastAcknowledgedIndexReplicated.compareAndSwapValue(value, newValue))
+                return;
+        }
+    }
+
 
     /**
      * @param rollCycle    the current rollCycle
@@ -96,19 +121,23 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param indexCount   the number of entries in each index.
      * @param indexSpacing the spacing between indexed entries.
      */
-    public SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
-                                     @NotNull final WireType wireType,
-                                     @NotNull MappedBytes mappedBytes,
-                                     long rollEpoc, int indexCount, int indexSpacing) {
+    SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
+                              @NotNull final WireType wireType,
+                              @NotNull MappedBytes mappedBytes,
+                              long rollEpoc, int indexCount,
+                              int indexSpacing) {
         this.roll = new Roll(rollCycle, rollEpoc);
         this.resourceCleaner = null;
         this.wireType = wireType;
         this.mappedFile = mappedBytes.mappedFile();
+
         indexCount = Maths.nextPower2(indexCount, 8);
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
         this.indexing = new Indexing(wireType, indexCount, indexSpacing);
         indexing.writePosition =
                 this.writePosition = wireType.newLongReference().get();
+
+        this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
     }
 
     public static void dumpStore(Wire wire) {
@@ -229,7 +258,9 @@ public class SingleChronicleQueueStore implements WireStore {
         wire.write(MetaDataField.wireType).object(wireType)
                 .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
-                .write(MetaDataField.indexing).typedMarshallable(this.indexing);
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing)
+                .write(MetaDataField.lastAcknowledgedIndexReplicated)
+                .int64forBinding(0L, lastAcknowledgedIndexReplicated);
     }
 
     // *************************************************************************
@@ -246,6 +277,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 ", mappedFile=" + mappedFile +
                 ", resourceCleaner=" + resourceCleaner +
                 ", refCount=" + refCount +
+                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
                 '}';
     }
 
@@ -253,7 +285,8 @@ public class SingleChronicleQueueStore implements WireStore {
         wireType,
         writePosition,
         roll,
-        indexing;
+        indexing,
+        lastAcknowledgedIndexReplicated;
 
         @Nullable
         @Override
@@ -326,7 +359,7 @@ public class SingleChronicleQueueStore implements WireStore {
             return maskedShiftedIndex;
         }
 
-        public long toAddress1(long index) {
+        long toAddress1(long index) {
             long siftedIndex = index >> indexSpacingBits;
             long mask = indexCount - 1L;
             // convert to an offset

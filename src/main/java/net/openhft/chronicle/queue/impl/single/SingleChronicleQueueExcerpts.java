@@ -306,7 +306,7 @@ public class SingleChronicleQueueExcerpts {
 
         private void rollCycleTo(int cycle) throws TimeoutException {
             if (wire != null)
-            wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
             setCycle2(cycle);
         }
 
@@ -703,6 +703,11 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
             }
+        }
+
+        public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
+            if (store != null)
+                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
         }
     }
 }
