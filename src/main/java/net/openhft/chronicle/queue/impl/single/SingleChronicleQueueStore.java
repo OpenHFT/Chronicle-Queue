@@ -89,8 +89,11 @@ class SingleChronicleQueueStore implements WireStore {
         this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
         assert indexing != null;
         indexing.writePosition = writePosition;
-        this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
-                .int64ForBinding(wire.newLongReference());
+
+// todo fix
+        //  this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
+        //         .lastAcknowledgedIndexReplicated)
+        //        .int64ForBinding(wire.newLongReference());
     }
 
 
@@ -136,6 +139,7 @@ class SingleChronicleQueueStore implements WireStore {
         this.indexing = new Indexing(wireType, indexCount, indexSpacing);
         indexing.writePosition =
                 this.writePosition = wireType.newLongReference().get();
+
 
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
     }
