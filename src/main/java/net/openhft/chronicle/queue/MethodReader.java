@@ -25,8 +25,10 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  * Created by peter on 24/03/16.
@@ -61,48 +63,19 @@ public class MethodReader {
                     continue;
 
                 Class<?>[] parameterTypes = m.getParameterTypes();
-                if (parameterTypes.length != 1)
-                    continue;
+                switch (parameterTypes.length) {
+                    case 0:
 
-                Class msgClass = parameterTypes[0];
-                m.setAccessible(true); // turn of security check to make a little faster
-                if (msgClass.isInterface() || !ReadMarshallable.class.isAssignableFrom(msgClass)) {
-                    Object[] argArr = {null};
-                    wireParser.register(m::getName, (s, v, $) -> {
-                        try {
-                            if (Jvm.isDebug())
-                                logMessage(s, v);
-
-                            argArr[0] = v.object(msgClass);
-                            m.invoke(o, argArr);
-                        } catch (Exception i) {
-                            LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
-                        }
-                    });
-
-                } else {
-                    ReadMarshallable arg;
-                    try {
-                        arg = (ReadMarshallable) msgClass.newInstance();
-                    } catch (Exception e) {
-                        arg = (ReadMarshallable) OS.memory().allocateInstance(msgClass);
-                    }
-                    ReadMarshallable[] argArr = {arg};
-                    wireParser.register(m::getName, (s, v, $) -> {
-                        try {
-                            if (Jvm.isDebug())
-                                logMessage(s, v);
-
-                            v.marshallable(argArr[0]);
-                            m.invoke(o, argArr);
-                        } catch (Exception i) {
-                            LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
-                        }
-                    });
+                        break;
+                    case 1:
+                        addParseletForMethod(o, m, parameterTypes[0]);
+                        break;
+                    default:
+                        addParseletForMethod(o, m, parameterTypes);
+                        break;
                 }
             }
         }
-
         if (wireParser.lookup("history") == null) {
             wireParser.register(() -> "history", (s, v, $) -> {
                 v.marshallable(ExcerptHistory.get());
@@ -124,6 +97,67 @@ public class MethodReader {
             rest = v.toString();
         }
         LOGGER.debug("read " + name + " - " + rest);
+    }
+
+    public void addParseletForMethod(Object o, Method m, Class<?> parameterType) {
+        Class msgClass = parameterType;
+        m.setAccessible(true); // turn of security check to make a little faster
+        if (msgClass.isInterface() || !ReadMarshallable.class.isAssignableFrom(msgClass)) {
+            Object[] argArr = {null};
+            wireParser.register(m::getName, (s, v, $) -> {
+                try {
+                    if (Jvm.isDebug())
+                        logMessage(s, v);
+
+                    argArr[0] = v.object(msgClass);
+                    m.invoke(o, argArr);
+                } catch (Exception i) {
+                    LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
+                }
+            });
+
+        } else {
+            ReadMarshallable arg;
+            try {
+                arg = (ReadMarshallable) msgClass.newInstance();
+            } catch (Exception e) {
+                arg = (ReadMarshallable) OS.memory().allocateInstance(msgClass);
+            }
+            ReadMarshallable[] argArr = {arg};
+            wireParser.register(m::getName, (s, v, $) -> {
+                try {
+                    if (Jvm.isDebug())
+                        logMessage(s, v);
+
+                    v.marshallable(argArr[0]);
+                    m.invoke(o, argArr);
+                } catch (Exception i) {
+                    LOGGER.error("Failure to dispatch message: " + m.getName() + " " + argArr[0], i);
+                }
+            });
+        }
+    }
+
+    public void addParseletForMethod(Object o, Method m, Class[] parameterTypes) {
+        m.setAccessible(true); // turn of security check to make a little faster
+        Object[] args = new Object[parameterTypes.length];
+        BiConsumer<Object[], ValueIn> sequenceReader = (a, v) -> {
+            int i = 0;
+            for(Class clazz: parameterTypes) {
+                a[i++] = v.object(clazz);
+            }
+        };
+        wireParser.register(m::getName, (s, v, $) -> {
+            try {
+                if (Jvm.isDebug())
+                    logMessage(s, v);
+
+                v.sequence(args, sequenceReader);
+                m.invoke(o, args);
+            } catch (Exception i) {
+                LOGGER.error("Failure to dispatch message: " + m.getName() + " " + Arrays.toString(args), i);
+            }
+            });
     }
 
     /**
