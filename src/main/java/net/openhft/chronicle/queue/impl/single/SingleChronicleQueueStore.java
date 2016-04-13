@@ -90,29 +90,9 @@ class SingleChronicleQueueStore implements WireStore {
         assert indexing != null;
         indexing.writePosition = writePosition;
 
-// todo fix
-        //  this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
-        //         .lastAcknowledgedIndexReplicated)
-        //        .int64ForBinding(wire.newLongReference());
-    }
-
-
-    /**
-     * when using replication to another host, this is the last index that has been confirmed to *
-     * have been read by the remote host.
-     */
-    public long lastAcknowledgedIndexReplicated() {
-        return lastAcknowledgedIndexReplicated.getValue();
-    }
-
-    public void lastAcknowledgedIndexReplicated(long newValue) {
-        for (; ; ) {
-            long value = lastAcknowledgedIndexReplicated();
-            if (value > newValue)
-                return;
-            if (lastAcknowledgedIndexReplicated.compareAndSwapValue(value, newValue))
-                return;
-        }
+          this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
+                 .lastAcknowledgedIndexReplicated)
+                .int64ForBinding(null);
     }
 
 
@@ -148,6 +128,18 @@ class SingleChronicleQueueStore implements WireStore {
         Bytes<?> bytes = wire.bytes();
         bytes.readPosition(0);
         System.out.println(Wires.fromSizePrefixedBlobs(bytes));
+    }
+
+    /**
+     * when using replication to another host, this is the last index that has been confirmed to *
+     * have been read by the remote host.
+     */
+    public long lastAcknowledgedIndexReplicated() {
+        return lastAcknowledgedIndexReplicated.getVolatileValue();
+    }
+
+    public void lastAcknowledgedIndexReplicated(long newValue) {
+        lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
 
     @Override
