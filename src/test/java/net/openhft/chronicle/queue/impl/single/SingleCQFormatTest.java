@@ -164,6 +164,7 @@ public class SingleCQFormatTest {
                 w.write(() -> "writePosition").int64forBinding(0);
                 w.write(() -> "roll").typedMarshallable(new SingleChronicleQueueStore.Roll(RollCycles.DAILY, 0));
                 w.write(() -> "indexing").typedMarshallable(new SingleChronicleQueueStore.Indexing(WireType.BINARY, 32 << 10, 32));
+                w.write(()->"lastAcknowledgedIndexReplicated").int64forBinding(0);
             });
         }
 
@@ -181,7 +182,8 @@ public class SingleCQFormatTest {
                 "    indexSpacing: 32,\n" +
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
-                "  }\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: 0\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.close();
 
