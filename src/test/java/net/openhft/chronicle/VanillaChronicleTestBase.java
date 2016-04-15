@@ -18,7 +18,7 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.core.Jvm;
+
 import net.openhft.lang.io.IOTools;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
@@ -71,7 +71,12 @@ public class VanillaChronicleTestBase {
     }
 
     protected void sleep(long timeout) {
-        Jvm.pause(timeout);
+        //Jvm.pause(timeout);
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void lsof(final String pid) throws IOException {
