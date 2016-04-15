@@ -21,6 +21,7 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
+import net.openhft.chronicle.core.Jvm;
 import org.junit.Test;
 
 import java.io.File;

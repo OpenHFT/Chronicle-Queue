@@ -17,12 +17,14 @@
  */
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.io.IOTools;
 import org.junit.Assert;
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,7 +71,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecond()  {
+    public void testCycleEverySecond() throws InterruptedException, IOException {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -91,7 +93,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecondWithOneSubdirectory()  {
+    public void testCycleEverySecondWithOneSubdirectory() throws IOException, InterruptedException {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -120,7 +122,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testCycleEverySecondWithTwoSubdirectory()  {
+    public void testCycleEverySecondWithTwoSubdirectory() throws IOException, InterruptedException {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -150,7 +152,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
     @Ignore("Test is taking too much time on CI")
     @Test
-    public void testCycleEveryMinute()  {
+    public void testCycleEveryMinute() throws IOException, InterruptedException {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 

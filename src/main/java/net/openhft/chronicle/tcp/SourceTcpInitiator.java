@@ -18,6 +18,7 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.core.Jvm;
 
 import java.io.IOException;
 import java.net.NetworkInterface;
@@ -31,14 +32,14 @@ public final class SourceTcpInitiator extends SourceTcp {
 
     public SourceTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         super(
-            "source-acceptor",
-            builder,
-            new ThreadPoolExecutor(
-                1,
-                1,
-                0L,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>())
+                "source-acceptor",
+                builder,
+                new ThreadPoolExecutor(
+                        1,
+                        1,
+                        0L,
+                        TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>())
         );
 
         this.socketChannel = null;
@@ -64,13 +65,7 @@ public final class SourceTcpInitiator extends SourceTcp {
                             logger.info("Connected to {} from {}", socketChannel.getRemoteAddress(), socketChannel.getLocalAddress());
                         } catch (IOException e) {
                             logger.info("Failed to connect to {}, retrying", builder.connectAddress());
-
-                            try {
-                                Jvm.pause(builder.reconnectionIntervalMillis());
-                            } catch (InterruptedException ie) {
-                                Thread.currentThread().interrupt();
-                            }
-
+                            Jvm.pause(builder.reconnectionIntervalMillis());
                             socketChannel = null;
                         }
                     }
@@ -85,7 +80,7 @@ public final class SourceTcpInitiator extends SourceTcp {
 
     @Override
     public boolean isLocalhost() {
-        if(builder.connectAddress().getAddress().isLoopbackAddress()) {
+        if (builder.connectAddress().getAddress().isLoopbackAddress()) {
             return true;
         }
 

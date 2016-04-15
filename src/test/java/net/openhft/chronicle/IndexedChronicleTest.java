@@ -18,6 +18,7 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.tools.ChronicleIndexReader;
 import net.openhft.chronicle.tools.ChronicleTools;
 import net.openhft.lang.io.StopCharTesters;

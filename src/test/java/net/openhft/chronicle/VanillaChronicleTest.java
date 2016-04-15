@@ -18,27 +18,19 @@
 
 package net.openhft.chronicle;
 
+import net.openhft.chronicle.core.Jvm;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static final int N_THREADS = 4;
@@ -1080,7 +1072,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testGetActiveWorkingDirectory()  {
+    public void testGetActiveWorkingDirectory() throws IOException {
 
         final String baseDir = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
@@ -1112,7 +1104,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
 
     @Test
-    public void testWithFsWatcher()  {
+    public void testWithFsWatcher() throws IOException {
         final String baseDir = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
             .enableFsWatcher(true)
