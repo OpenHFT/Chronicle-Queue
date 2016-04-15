@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.io.IOTools;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -33,13 +32,13 @@ import java.util.concurrent.TimeUnit;
 public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
     @Test
-    public void testsCycles()  {
+    public void testsCycles() {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
         ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(basePath);
 
-        for(VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
+        for (VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
             builder.cycle(cycle);
             Assert.assertEquals(cycle.entries(), builder.entriesPerCycle());
             Assert.assertEquals(cycle.format(), builder.cycleFormat());
@@ -48,22 +47,22 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testsEntriesPerCyclesCorrection()  {
+    public void testsEntriesPerCyclesCorrection() {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
         ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(basePath);
 
-        for(VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
+        for (VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
             Assert.assertEquals(
-                cycle.entries(),
-                builder.cycleLength(cycle.length(), false).entriesPerCycle()
+                    cycle.entries(),
+                    builder.cycleLength(cycle.length(), false).entriesPerCycle()
             );
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testsUnknownCycle()  {
+    public void testsUnknownCycle() {
         final String basePath = getTestPath();
         IOTools.deleteDir(basePath);
 
@@ -103,16 +102,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
-            createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
-                cycle,
-                iterations)
+                createWriter(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                        cycle,
+                        iterations)
         );
         svc.execute(
-            createReader(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
-                cycle,
-                latch)
+                createReader(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                        cycle,
+                        latch)
         );
 
         svc.shutdown();
@@ -132,16 +131,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
-            createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
-                cycle,
-                iterations)
+                createWriter(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                        cycle,
+                        iterations)
         );
         svc.execute(
-            createReader(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
-                cycle,
-                latch)
+                createReader(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                        cycle,
+                        latch)
         );
 
         svc.shutdown();
@@ -181,14 +180,14 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         return new Runnable() {
             @Override
             public void run() {
-                try(ExcerptTailer tailer = chron.createTailer()) {
-                    while(latch.getCount() != 0) {
-                        if(tailer.nextIndex()) {
+                try (ExcerptTailer tailer = chron.createTailer()) {
+                    while (latch.getCount() != 0) {
+                        if (tailer.nextIndex()) {
                             tailer.readInt();
                             tailer.finish();
                             latch.countDown();
                         } else {
-                            Jvm.pause(cycle.length() / 4);
+                            Thread.sleep(cycle.length() / 4);
                         }
                     }
                 } catch (Exception e) {
@@ -202,13 +201,13 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         return new Runnable() {
             @Override
             public void run() {
-                try(ExcerptAppender appender = chron.createAppender()) {
+                try (ExcerptAppender appender = chron.createAppender()) {
                     for (int i = 0; i < loops; i++) {
                         appender.startExcerpt(4);
                         appender.writeInt(i);
                         appender.finish();
 
-                        Jvm.pause(cycle.length() / 4);
+                        Thread.sleep(cycle.length() / 4);
                     }
                 } catch (Exception e) {
                     LOGGER.warn("", e);
