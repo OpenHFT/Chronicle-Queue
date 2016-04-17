@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -1460,6 +1461,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertTrue(dc.isMetaData());
                 dc.wire().read(() -> "FirstName").text("Steve", Assert::assertEquals);
             }
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void dontPassQueueToReader() {
+        String dirname = OS.TARGET + "/dontPassQueueToReader-" + System.nanoTime();
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dirname).build()) {
+            queue.createTailer().afterLastWritten(queue).methodReader();
         }
     }
 }

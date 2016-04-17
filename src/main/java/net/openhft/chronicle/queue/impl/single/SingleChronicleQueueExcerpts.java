@@ -662,6 +662,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public ExcerptTailer afterLastWritten(ChronicleQueue queue) {
+            if (queue == this.queue)
+                throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
             StringBuilder sb = new StringBuilder();
             VanillaExcerptHistory veh = new VanillaExcerptHistory();
