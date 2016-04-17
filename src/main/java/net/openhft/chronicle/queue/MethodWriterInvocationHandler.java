@@ -32,10 +32,11 @@ import java.util.concurrent.ConcurrentHashMap;
 class MethodWriterInvocationHandler implements InvocationHandler {
     private final ExcerptAppender appender;
     private final Map<Method, Class[]> parameterMap = new ConcurrentHashMap<>();
-    private boolean recordHistory = false;
+    private boolean recordHistory;
 
     MethodWriterInvocationHandler(ExcerptAppender appender) {
         this.appender = appender;
+        recordHistory = appender.sourceId() != 0;
     }
 
     // Note the Object[] passed in creates an object on every call.

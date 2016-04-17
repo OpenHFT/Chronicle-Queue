@@ -79,8 +79,12 @@ public class MessageReaderWriterTest {
                 assertFalse(reader2.readOne());
             }
         } finally {
-            IOTools.shallowDeleteDirWithFiles(path + "1");
-            IOTools.shallowDeleteDirWithFiles(path + "2");
+            try {
+                IOTools.shallowDeleteDirWithFiles(path + "1");
+                IOTools.shallowDeleteDirWithFiles(path + "2");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

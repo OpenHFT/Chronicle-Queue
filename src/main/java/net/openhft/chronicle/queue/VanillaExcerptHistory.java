@@ -28,13 +28,19 @@ import org.jetbrains.annotations.NotNull;
  */
 public class VanillaExcerptHistory extends AbstractMarshallable implements ExcerptHistory {
     public static final int MESSAGE_HISTORY_LENGTH = 20;
-    private static final ThreadLocal<ExcerptHistory> THREAD_LOCAL = ThreadLocal.withInitial(VanillaExcerptHistory::new);
+    private static final ThreadLocal<ExcerptHistory> THREAD_LOCAL =
+            ThreadLocal.withInitial((java.util.function.Supplier<ExcerptHistory>) () -> {
+                VanillaExcerptHistory veh = new VanillaExcerptHistory();
+                veh.addSourceDetails(true);
+                return veh;
+            });
 
     private int sources;
     private byte[] sourceIdArray = new byte[MESSAGE_HISTORY_LENGTH];
     private long[] sourceIndexArray = new long[MESSAGE_HISTORY_LENGTH];
     private int timings;
     private long[] timingsArray = new long[MESSAGE_HISTORY_LENGTH * 2];
+    private boolean addSourceDetails = false;
 
     static ExcerptHistory getThreadLocal() {
         return THREAD_LOCAL.get();
@@ -42,6 +48,10 @@ public class VanillaExcerptHistory extends AbstractMarshallable implements Excer
 
     static void setThreadLocal(ExcerptHistory md) {
         THREAD_LOCAL.set(md);
+    }
+
+    public void addSourceDetails(boolean addSourceDetails) {
+        this.addSourceDetails = addSourceDetails;
     }
 
     @Override
@@ -88,12 +98,15 @@ public class VanillaExcerptHistory extends AbstractMarshallable implements Excer
                 t.addTiming(in.int64());
             }
         });
-        Object o = wire.parent();
-        if (o instanceof DocumentContext) {
-            DocumentContext dc = (DocumentContext) o;
-            addSource(dc.sourceId(), dc.index());
+        if (addSourceDetails) {
+            Object o = wire.parent();
+            if (o instanceof DocumentContext) {
+                DocumentContext dc = (DocumentContext) o;
+                addSource(dc.sourceId(), dc.index());
+            }
+
+            addTiming(System.nanoTime());
         }
-        addTiming(System.nanoTime());
     }
 
     private void addSource(int id, long index) {

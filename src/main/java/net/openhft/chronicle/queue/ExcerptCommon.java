@@ -20,4 +20,8 @@ package net.openhft.chronicle.queue;
  */
 public interface ExcerptCommon {
 
+    /**
+     * @return the sourceId for the queue which created this.
+     */
+    int sourceId();
 }

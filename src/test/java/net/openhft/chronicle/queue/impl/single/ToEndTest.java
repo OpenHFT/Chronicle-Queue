@@ -91,7 +91,11 @@ public class ToEndTest {
         assertEquals(10, results.size());
         checkOneFile(baseDir);
 
-        IOTools.shallowDeleteDirWithFiles(baseDir);
+        try {
+            IOTools.shallowDeleteDirWithFiles(baseDir);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test

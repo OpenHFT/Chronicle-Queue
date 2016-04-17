@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
@@ -589,8 +590,12 @@ public class SingleChronicleQueueExcerpts {
                 cycle(cycle + 1);
                 seq = 0;
             } else if (seq < 0) {
-                // TODO FIX so we can roll back to the precious cycle.
-                seq = 0;
+                if (seq == -1) {
+                    cycle(cycle - 1);
+                } else {
+                    // TODO FIX so we can roll back to the precious cycle.
+                    throw new IllegalStateException("Winding to the previous day not supported");
+                }
             }
 
             this.index = rollCycle.toIndex(this.cycle, seq);
@@ -667,7 +672,7 @@ public class SingleChronicleQueueExcerpts {
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
             StringBuilder sb = new StringBuilder();
             VanillaExcerptHistory veh = new VanillaExcerptHistory();
-            int sourceId = queue.sourceId();
+            veh.addSourceDetails(false);
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {
                     if (!context.isData()) {
@@ -687,7 +692,7 @@ public class SingleChronicleQueueExcerpts {
                     }
                     int i = veh.sources() - 1;
                     // skip the one we just added.
-                    if (i < 0 || veh.sourceId(i) != sourceId)
+                    if (i < 0)
                         continue;
 
                     try {
@@ -707,6 +712,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+        @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
             if (store != null)
                 store.lastAcknowledgedIndexReplicated(acknowledgeIndex);

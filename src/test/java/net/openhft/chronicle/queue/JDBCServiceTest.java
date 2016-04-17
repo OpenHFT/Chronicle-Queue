@@ -77,8 +77,12 @@ public class JDBCServiceTest {
                         written / noUpdates / 1e3,
                         time / noUpdates / 1e3);
             } finally {
-                IOTools.deleteDirWithFiles(path1, 2);
-                IOTools.deleteDirWithFiles(path2, 2);
+                try {
+                    IOTools.deleteDirWithFiles(path1, 2);
+                    IOTools.deleteDirWithFiles(path2, 2);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

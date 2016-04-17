@@ -101,7 +101,11 @@ public class SingleCQFormatTest {
                     e.toString());
         }
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -118,7 +122,11 @@ public class SingleCQFormatTest {
 
         testQueue(queue);
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // TODO add controls on how to wait, for how long and what action to take to fix it.
@@ -193,7 +201,11 @@ public class SingleCQFormatTest {
         testQueue(queue);
 
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -234,7 +246,11 @@ public class SingleCQFormatTest {
         testQueue(queue);
         assertEquals(2, queue.firstCycle());
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -263,7 +279,11 @@ public class SingleCQFormatTest {
                     e.toString());
         }
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -336,11 +356,14 @@ public class SingleCQFormatTest {
         expected(tailer, "msg: Also hello world\n");
         assertEquals(start, tailer.index());
         expected(tailer, "msg: Hello world\n");
-        // TODO stuck for now as we cannot roll back further.
-        assertEquals(start, tailer.index());
+        assertEquals(start-1, tailer.index());
 
         queue.close();
-        IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        try {
+            IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
