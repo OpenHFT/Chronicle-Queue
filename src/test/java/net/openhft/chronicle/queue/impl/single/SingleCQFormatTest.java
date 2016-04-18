@@ -300,10 +300,10 @@ public class SingleCQFormatTest {
                         new SingleChronicleQueueStore(cycle, WireType.BINARY, bytes, 0, cycle.defaultIndexCount(), cycle.defaultIndexSpacing()));
             }
             try (DocumentContext dc = wire.writingDocument(false)) {
-                dc.wire().writeEventName(() -> "msg").text("Hello world");
+                dc.wire().writeEventName("msg").text("Hello world");
             }
             try (DocumentContext dc = wire.writingDocument(false)) {
-                dc.wire().writeEventName(() -> "msg").text("Also hello world");
+                dc.wire().writeEventName("msg").text("Also hello world");
             }
 
             assertEquals("--- !!meta-data #binary\n" +

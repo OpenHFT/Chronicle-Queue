@@ -1,0 +1,206 @@
+= Frequently Asked Questions about Chronicle
+
+=== SingleChronicleQueue
+
+Single Chronicle Queue is designed to be easier to work with compared with
+the previous Vanilla and Indexed Chronicles.
+
+It supports
+
+- concurrent readers in different JVMs.
+- concurrent writers in different JVMs.
+- Writing raw Bytes or use a Wire format to make schema changes and dumping the data easier.
+- rolling files, weekly, daily or more often.
+- the header stores key information so there is no longer the requirement that the writers and reads be configured the same.
+- you don't need to know how big the message is.
+
+=== Performance
+
+While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+
+=== With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
+
+Two approaches for reducing CPU usage are;
+
+ - combine tasks into the same thread. EventGroup in chronicle-threads helps to this dynamically.
+ - use a Pauser such as a LongPauser to control how a thread backs off if there is nothing to do.  Note: There is a PauseMonitor to allow you to print how busy each thread is periodically.
+
+=== What is Chronicle designed for?
+
+Chronicle is design to be a record everything of interest logger and persisted IPC.
+A key requirement of low latency systems is transparency and you should be able to record enough information
+that a monitoring system can recreate the state of the system monitored.  This allows downstream systems to record any information
+they need and perform queries without needed to touch the critical system as they can record anything they might need later.
+
+Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
+
+=== What was the library originally designed for?
+
+The original design was for a low latency trading system which required persistence of everything in and out for a complete record of
+what happened, when and for deterministic testing. The target round trip time for persisting the request, processing and persisting the response was a micro-second.
+
+Key principles are; ultra-low GC (less than one object per event), lock-less, cache friendly data structures.
+
+=== What was not in the originally design?
+
+The marshalling, de-marshalling and handling of thread safe off heap memory has been added more recently and moving into the Java-Lang module.
+
+This library now supports low latency/GC-less writing and reading/parsing or text as well as binary.
+
+===  How fast is fast?
+
+Chronicle is design to persist messages and replay them in micro-second time.  Simple messages are as low as 0.4 micro-seconds.
+Complex messages might take 10 micro-seconds to write and read.
+
+Chronicle is designed to sustain millions of inserts and updates per second. For burst of up to 10% of your main memory, you can sustain rates of 1 - 3 GB/second written.
+e.g. A laptop with 8 GB of memory might handle bursts of 800 MB at a rate of 1 GB per second.
+A server with 64 GB of memory might handle a burst of 6.5 GB at a rate of 3 GB per second.
+
+If your key system is not measuring latency in micro-seconds and throughput in thousands per second, it is not that fast.  It may well be fast enough however. ;)
+
+=== How does it scale?
+
+It scales vertically.  Many distributed systems can scale by adding more boxes.  They are designed to handle between 100 and 1000 transactions per second per node.
+Chronicle is design to handle more transaction per node, in the order of 100K to 1M transactions per second.  This means you need far less nodes, between 10 and 100 times less.
+
+Vertical scalability is essential for low latency as having more nodes usually increases latency.
+
+Having one node which can handle the load of data centre also save money and power consumption.
+
+=== What if I have a slow consumer?
+
+Chronicle has an advantage over other queuing systems that the consumer can be any amount behind the producer (up to the free space on your disk)
+Chronicle has been tested where the consumer was more than main memory behind the producer.  This reduced the maximum throughput by about half.
+Most systems, in Java, where the queue exceed the main memory cause the machine to become unusable.
+
+Note: the Consumer can stop, restart and continue with minimal impact to the producer, if the data is still in main memory.
+
+Having a faster disk sub-system helps in extreme conditions like these.
+Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card which sustained write speed of 900 MB/s.
+
+=== What types of Excerpt are there?
+
+Chronicle has three types of excerpt optimised for different purposes.
+
+    ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath).build();
+    ExcerptAppender appender = queue.createAppender(); // sequential writes.
+    ExcerptTailer tailer = queue.createTailer();       // sequential reads ideally, but random reads/write also possible.
+
+=== How does writing work?
+
+You can write using a try-with-resource block
+
+[source,java]
+----
+try (DocumentContext dc = wire.writingDocument(false)) {
+    dc.wire().writeEventName("msg").text("Hello world");
+}
+----
+
+You can write using a lambda which describes the message
+
+[source,java]
+----
+appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve")
+                                   .write(() -> "Surname").text("Jobs"));
+----
+
+=== How does reading work?
+
+When you read an excerpt, it first checks that index entry is there (the last thing written)
+
+[source,java]
+----
+try (DocumentContext context = tailer.readingDocument()) {
+    if (context.isPresent()) {
+        Type t = tailer.read(() -> "message").object(Type.class);
+        process(t);
+    }
+}
+----
+
+=== How is disk space managed?
+A key assumption is that disk space is cheap, or at least it should be.  Some organizations have amazing unrealistic (almost unprofessional) internal charging rates,
+but you should be able to get 100 GB for about one hour of your time.  This assumes retail costs for disk compares with minimum wage.
+The organizational cost of disk is often 10-100x the real cost, but so is your cost to the business.
+
+In essence, disk should be cheap and you can record a week to a month of continuous data on one cheap drive.
+
+Never the less, there is less maintenance overhead if the chronicle logs rotate themselves and there is work being done to implement this for Chronicle 2.1.
+ Initially, chronicle files will be rotated when they reach a specific number of entries.
+
+=== I want to use Chronicle as an off heap cache.  What do I do?
+
+Chronicle Queue is designed for replay.  While it can, and has been used as an off heap persisted cache, it doesn't do this very easily.
+Chronicle Map is likely to be a better choice as a Cache.
+
+== Thread safety
+
+=== Can I have multiple readers?
+
+A given Chronicle can safely have many readers, both inside and outside of the process creating it.
+
+To have multiple readers of a Chronicle, you should generally create a new Chronicle per reader pointing at the same underlying Journal. On each of these Chronicles, you will call createTailer and get a new tailer that can be used to read it. These Tailers should never be shared.
+A less performant option to this is to share a single Chronicle and Tailer and lock access with synchronized or ReentrantLock. Only one Tailer should ever be active at the same time.
+
+=== Can I have multiple writers?
+
+You can have any number of writers.  You may get higher throughput if you have only one writer at a time. Having multiple writers increases contention, but works as you might expect.
+
+== Replication
+
+=== Does Chronicle Queue support replication?
+
+Replication have been moved to Chronicle Queue Enterprise.  This supports
+
+- replication of a single master to multiple slave nodes.
+- writers can wait for replication to be acknowledged.
+- readers can wait to only read acknowledged messages.
+- replication support throttling and traffic shaping.
+
+=== Does Chronicle Queue support UDP replication?
+
+No, Chronicle Queue is designed to be both reliable and deterministic.  UDP is not designed for this.  A hybrid UDP/TCP system is possible is the future.
+
+=== How do I know the consumer is up to date?
+
+For the tailer, either replicated or not, you can assume you are up to date when either `isPresent()` is `false` or your read method returns `false`
+
+== Infrequently Asked Questions
+
+=== Can records be updated?
+
+They can be updated at any time, but you lose any event driven notification to readers at this point.
+It might be practical to have multiple chronicles, one which stores large updated records, and another for small notifications.
+
+=== I want to store large messages, what is the limit.
+
+The limit is about 1 GB as Chronicle 4.x.
+The practical limit without tuning the configuration is about 16 MB.
+At this point you get significant inefficiencies unless you increase the data allocation chunk size.
+
+=== I get an Exception writing an excerpt. What does this mean?
+
+The message will be lost and it is truncated.
+
+=== I get an Exception attempting to read an Excerpt. What does this mean?
+
+Most likely your read code doesn't match your write code. Using Wire measn it can handle changed to fields and data types transparently.
+
+=== How does the byte order work with replication?
+
+The byte order doesn't change in replication.  This means it will work best in a byte endian homogeneous systems. e.g. Windows/Linux x86/x64/ARM.
+Chronicle may support changing the byte order in future.
+
+=== Does chronicle support other serialization libraries?
+
+Chronicle Queue supports CharSequence, Appendable, OutputStream and InputStream APIs.  It also has a fast copy to/from a byte[] and ByteBuffer.
+
+Chronicle Queue is designed to be faster with persistence than other serialization libraries are without persistence. Chronicle Queue supports YAML, JSON, Binary YAML and CSV.
+To date, I haven't found a faster library for serialization without a standardized format. e.g. Chronicle doesn't support XML yet.
+
+Where XML is needed down stream, I suggest writing in binary format and have the reader incur the overhead of the conversion rather than slow the producer.
+
+=== Does Chronicle support a synchronous mode?
+
+Chronicle Queue v4.x doesn't at the moment.  The best approach is to wait for a replicationed message to be acknowledged.
