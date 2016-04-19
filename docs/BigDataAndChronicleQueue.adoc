@@ -257,9 +257,13 @@ newOrder: !Order {
 
 === How do we reduce garbage?
 
-Whe have a number of strategies, the key one being that we translate directly from on heap to off heap
-and visa versa without the need to create any objects.
+For the most latency sensitive systems, you might want to keep your allocation rate to below 300 KB/s.
+At this rate you will produce less than 24 GB of garbage a day and
+if your Eden space is larger than this, you can run all day without a minor collection.  A GC is something you can do as an overnight maintainence task.
+Reduce your garbage per day to less than 5 GB and you might be able to run all week without a GC.
+
+We have a number of strategies to minimise garbage, the key one being that we translate directly between on heap and native memory without intermediate temporary objects.
 We use object pools where appropriate, and we support reading into mutable objects.
-For text we support both a `String` pool and reading to/from `StringBuilder`
+For text data we support both a `String` pool and reading to/from `StringBuilder`
 
 
