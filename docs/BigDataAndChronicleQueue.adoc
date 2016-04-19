@@ -1,0 +1,249 @@
+= Big Data and Chronicle Queue
+Peter Lawrey
+
+== The Big Question
+
+How is Chronicle Queue being used for Big Data solutions in Java and how does it work under the covers to support this?
+
+== What is Chronicle Queue?
+
+Chronicle Queue (CQ) is a persisted journal of messages.
+CQ support concurrent writers and readers even across multiple JVMs on the same machine.
+The pattern os use is that every reader sees every message and a reader can join at any time and still see every message.
+These are not consumers as such and messages don't disappear after reading them.
+
+This retaining of every message has some advantages
+
+- a message can be replayed any many times as is needed.
+- a day of production messages can be replayed in testing months later.
+- this reduces the requirement for logging almost entirely, speeding up your application.
+- greater transparency leads to optimisations you might have missed without a detailed record of every event your process.
+
+One of our clients, first implemented their trading system without CQ, and achieved an average latency of 35 micro-seconds tick to trade,
+however after using CQ the latency was reduced to 23 micro-seconds.
+
+=== What makes Chronicle Queue different from similar solutions
+
+==== Speed
+CQ is designed to support hundred of thousands of messages per second comfortably.
+It can also handle multi-second bursts into the millions of messages per second.
+One of our clients reported they are handling bursts of 24 million messages per second with a cluster of 6 servers.
+
+==== Without Flow Control
+CQ is an unbounded queue without flow control between the producer and the consumer.
+Replication supports flow control but this is not used by default.
+A lack of flow control is what we call a "producer centric" solution.
+
+==== Consumer Centric solution
+To put that in context, most messaging solutions have flow control.  They are what we call a "consumer centric" solution.
+Consumer centric solutions make sense in many application esp between servers and client GUIs.
+Any data you send to a client GUI is for display to a human.
+Desktop applications can be run on a variety of machines, over a variety of networks, and a human can only see a limited rate of data.
+Any faster than about 20 times a second and it is just appears as just a blur and counter productive.
+
+It makes a lot sense for a desktop application to only receive as much data as it can handle, as much data as the person having to view it and to push back on the server when it cannot handle this data rate.
+http://www.reactive-streams.org/[Reactive Stream] are an excellent way to model such client centric solutions.
+
+==== Producer Centric solution
+CQ doesn't have flow control deliberately, as flow control isn't always possible, or even desirable.
+
+Some examples of systems where CQ is often used are
+
+- Market Data gateways, you can't slow down an exchange because you are not keeping up.
+- Compliance systems, you have to feed information to them but you never want to be slowed down by them.
+- Core trading systems, as these feed from Market Data gateways as you want to be as fast as possible all the time.
+
+In a Producer Centric solution, the producer isn't slowed down by a slow consumer and that consumer more than main memory behind the producer. The consumer might be an overnight batch job and be a whole day or week behind.
+
+This has some advantages
+
+- You can reproduce a bug even if it only occurs one in a million messages, by replaying all the messages which led to that bug triggering, but more importantly you can have confidence *the* bug, rather than *a* bug has been fixed.
+- You can test every micro-service independently as there is no flow control interaction between them. If you have flow control, say 20 services, any one of those services could slow down any producer, and its producer etc until your entire system locks up.  This means the only real performance test is a complete system.
+- You can test a micro-service replaying from the same input file repeatedly without the producer or down stream consumers running.
+- You can restart and upgrade a service by replaying its *outputs* to ensure it is committed to the decisions/outcomes it has produced in the past.  This allows you to change your service and know that even those your new version might have made different decision, it can honour those already made.
+- Flow control is designed to smooth out burst and jitter in the system, but can also hide such jitter as result.
+
+The main disadvantage is that this assumes disk space is cheap.  If you look at retail prices for Enteprise grade disks you can get TBs of disk for a few hundred dollars.
+Many Investment Banks, don't take this approach and internal charge rates for managed storage can be orders of magnitude higher.
+I have worked on systems which has more free memory than free disk space.
+
+== What technology does Chronicle Queue using?
+
+What might be surprising is that CQ is written entirely in pure Java.
+It can outperform many data storage solutions written in C.
+You might be wondering, how is this possible given that well written C is usually faster than Java.
+
+You need a degree of protection between your application and your data storage to minimise the risk of corruption.
+As Java uses a JVM, it already has an abstraction layer and a degree of protection,a dn if an appication throws an exception this doesn't mean the data structure is corrupted.
+To get a degree of isolation in C, many data storage solutions use TCP.
+The overhead of using TCP, even over loopback can exceed the benefit of using C,
+and the throughput/latencies of CQ can be 10x greater by being able to use the data in process.
+CQ supports sharing of the data structure in memory for multiple JVMs avoiding the need to use TCP to shared data.
+
+=== What does the data structure look like?
+
+One of our key objective is transparency, and we have worked hard to make sure you can see exactly what has been written to this data structure.
+
+We use YAML as this is a format which is design to be readable.
+JSON and XML we see as a subset of Javascript and SGML, and not as readable. We support JSON for messaging with browsers.
+For performance reasons we use a binary form of YAML, which can be automatically translated to YAML for viewing.
+
+.Order class extends AbstractMarshallable for helper methods
+[source, java]
+----
+public class Order extends AbstractMarshallable {
+    String symbol;
+    Side side;
+    double limitPrice, quantity;
+
+    public Order(String symbol, Side side, double limitPrice, double quantity) {
+        this.symbol = symbol;
+        this.side = side;
+        this.limitPrice = limitPrice;
+        this.quantity = quantity;
+    }
+}
+----
+
+`AbstractMarshallable` provides efficient, generic `toString`, `equals` and `hashCode` as well as  `readMarshallable` and `writeMarshallable` for Serialization.  If you can't extend this class you can implement the `Marshallable` interface.
+
+.Dump of a queue in a unit test
+[source, java]
+----
+File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
+    ExcerptAppender appender = queue.createAppender();
+    appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>
+    appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
+    System.out.print(queue.dump());
+}
+----
+<1> written as keys and values.
+<2> written as a command message with a typed payload.
+
+In a real unit test we would do an `assertEquals(expectedString, queue.dump());`
+
+.Dump of the queue as YAML
+[source, yaml]
+----
+--- !!meta-data #binary
+header: !SCQStore {
+  wireType: !WireType BINARY,
+  writePosition: 413,
+  roll: !SCQSRoll {
+    length: 86400000,
+    format: yyyyMMdd,
+    epoch: 0
+  },
+  indexing: !SCQSIndexing {
+    indexCount: !int 16384,
+    indexSpacing: 16,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: 0
+}
+# position: 268
+--- !!data #binary
+symbol: Symbol
+side: Buy
+limitPrice: 1.2345
+quantity: 1000000.0
+# position: 329
+--- !!data #binary
+newOrder: !Order {
+  symbol: Symbol2,
+  side: Sell,
+  limitPrice: 2.999,
+  quantity: 10000000.0
+}
+...
+# 83885663 bytes remaining
+----
+
+You will note that YAML supports; typed data, enumerated values, comments, and messages start and end markers.
+
+=== Append only data structure
+
+CQ is design for sequential writes and reads.  It also supports random access and updates in place although you cannot change the size of an existing entry. You can pad an entry for future use.
+ This append only structure is more efficient for passing data between threads via the CPU L2 cache coherence bus and it can be faster than attempting to pass an object between threads as it avoid random access which can be common in Java objects where there can be a lof of reference chasing.
+
+ It is also more efficient for persistence to disk as HDD and SSD are much efficient when accessed sequentially.  The append only structure makes replication much simpler as well.
+
+=== Unbounded memory mapped files
+
+CQ is built on a class called MappedBytes in Chronicle-Bytes.
+This visualises the file to act as an unbounded array of bytes mapped to a file.
+As you append data it will add memory mappings transparently.
+The file grows as you write more data.
+
+The key benefit of using memory mapped files, is you are no longer limited by the size of your JVM,
+or even the size of your main memory.  You are only limit by the amount of disk space you have.
+If you want to load 100 TB into a JVM for replay the OS does all the heavy lifting for you.
+
+A benefit of using a memory mapped file is the ability to bind to a portion of memory to an object.
+The key attributes in the header, are bound when first loading and after that whey work like a normal object, updating off heap memory and the file in a thread safe manner.
+You can perform operations like compareAndSet, atomic add or set max value (a set which only ever increases the value).
+As the data access is thread safe, it can be shared between threads, or processes as fast as the time it takes for an L2 cache miss, up to 25 nano-seconds.
+
+=== The data structure in more detail
+
+Each record is a "Size Prefixed Blob" where the first four bytes contain a 30 bit length of the message. The top two bits are used to record;
+
+ - whether this message is user data or meta-data required to support the queue itself and
+ - a bit to flag whether the message is complete or not.
+
+ When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages, attempt to write after it.
+ Say Thread1 is in the middle of writing a message, but it know how long it will be, it can write 4 bytes which indicate the length.
+ Thread2 can see that there will be a message and skip over it looking for a place to write.  This way multiple threads can be writing to the queue concurrently.
+ Any message which is detected as bad e.g. the thread died, can be marked as meta data and skipped by the reader.
+
+ There is a special value which is a "poison pill" value, which indicates the file has been rolled.
+ This ensures all writers and readers roll at the same point in a timely manner.
+
+In the example above you can see the header
+
+[source, yaml]
+----
+--- !!meta-data #binary # <1>
+header: !SCQStore { # <2>
+  wireType: !WireType BINARY,
+  writePosition: 413, # <3>
+  roll: !SCQSRoll { # <4>
+    length: 86400000,
+    format: yyyyMMdd,
+    epoch: 0
+  },
+  indexing: !SCQSIndexing { # <5>
+    indexCount: !int 16384,
+    indexSpacing: 16,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: 0 # <6>
+}
+----
+<1> the first message is meta data written in binary
+<2> the type of header is aliased as the name SCQStore.
+<3> the `writePosition` is the first bound value. It is the highest known byte which has been written to and is updated atomically.
+<4> the roll cycle is daily.
+<5> this class control how it will be indexed on demand.  This adds meta data entries for indexed lookup.
+<6> this is the highest message index which was acknowledged by a replica.
+
+For us a key feature of CQ is not just how the data structure is arranged,
+but also how transparently this binary data structure can be inspected.
+
+If we look at the last message, you can see the message type, the type of the payload and the value of all the fields.
+
+[source, java]
+----
+--- !!data #binary
+newOrder: !Order {
+  symbol: Symbol2,
+  side: Sell,
+  limitPrice: 2.999,
+  quantity: 10000000.0
+}
+----
+
+

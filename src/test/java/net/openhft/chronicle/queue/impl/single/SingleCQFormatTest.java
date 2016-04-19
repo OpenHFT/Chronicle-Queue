@@ -21,8 +21,11 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.micros.Order;
+import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
 import org.junit.After;
 import org.junit.Before;
@@ -172,7 +175,7 @@ public class SingleCQFormatTest {
                 w.write(() -> "writePosition").int64forBinding(0);
                 w.write(() -> "roll").typedMarshallable(new SingleChronicleQueueStore.Roll(RollCycles.DAILY, 0));
                 w.write(() -> "indexing").typedMarshallable(new SingleChronicleQueueStore.Indexing(WireType.BINARY, 32 << 10, 32));
-                w.write(()->"lastAcknowledgedIndexReplicated").int64forBinding(0);
+                w.write(() -> "lastAcknowledgedIndexReplicated").int64forBinding(0);
             });
         }
 
@@ -352,11 +355,11 @@ public class SingleCQFormatTest {
 
         tailer.direction(TailerDirection.BACKWARD).toEnd();
 
-        assertEquals(start+1, tailer.index());
+        assertEquals(start + 1, tailer.index());
         expected(tailer, "msg: Also hello world\n");
         assertEquals(start, tailer.index());
         expected(tailer, "msg: Hello world\n");
-        assertEquals(start-1, tailer.index());
+        assertEquals(start - 1, tailer.index());
 
         queue.close();
         try {
@@ -1054,6 +1057,18 @@ public class SingleCQFormatTest {
             assertEquals("{abc=def, double=1.28, hello=world, number=1}", map2.toString());
             assertEquals("{abc=aye-bee-see, double=1.28, hello=world, number=1}", map3.toString());
             assertNull(tailer.readMap());
+        }
+    }
+
+    @Test
+    public void writeMarshallable() {
+        ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
+        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
+            ExcerptAppender appender = queue.createAppender();
+            appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
+            appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
+            System.out.print(queue.dump());
         }
     }
 }
