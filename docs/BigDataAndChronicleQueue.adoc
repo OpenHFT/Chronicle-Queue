@@ -173,9 +173,9 @@ You will note that YAML supports; typed data, enumerated values, comments, and m
 === Append only data structure
 
 CQ is design for sequential writes and reads.  It also supports random access and updates in place although you cannot change the size of an existing entry. You can pad an entry for future use.
- This append only structure is more efficient for passing data between threads via the CPU L2 cache coherence bus and it can be faster than attempting to pass an object between threads as it avoid random access which can be common in Java objects where there can be a lof of reference chasing.
+This append only structure is more efficient for passing data between threads via the CPU L2 cache coherence bus and it can be faster than attempting to pass an object between threads as it avoid random access which can be common in Java objects where there can be a lof of reference chasing.
 
- It is also more efficient for persistence to disk as HDD and SSD are much efficient when accessed sequentially.  The append only structure makes replication much simpler as well.
+It is also more efficient for persistence to disk as HDD and SSD are much efficient when accessed sequentially.  The append only structure makes replication much simpler as well.
 
 === Unbounded memory mapped files
 
