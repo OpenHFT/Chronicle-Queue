@@ -252,4 +252,11 @@ newOrder: !Order {
 }
 ----
 
+=== How do we reduce garbage?
+
+Whe have a number of strategies, the key one being that we translate directly from on heap to off heap
+and visa versa without the need to create any objects.
+We use object pools where appropriate, and we support reading into mutable objects.
+For text we support both a `String` pool and reading to/from `StringBuilder`
+
 
