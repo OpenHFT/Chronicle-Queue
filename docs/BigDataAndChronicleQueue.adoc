@@ -25,16 +25,19 @@ however after using CQ the latency was reduced to 23 micro-seconds.
 === What makes Chronicle Queue different from similar solutions
 
 ==== Speed
+
 CQ is designed to support hundred of thousands of messages per second comfortably.
 It can also handle multi-second bursts into the millions of messages per second.
 One of our clients reported they are handling bursts of 24 million messages per second with a cluster of 6 servers.
 
 ==== Without Flow Control
+
 CQ is an unbounded queue without flow control between the producer and the consumer.
 Replication supports flow control but this is not used by default.
 A lack of flow control is what we call a "producer centric" solution.
 
 ==== Consumer Centric solution
+
 To put that in context, most messaging solutions have flow control.  They are what we call a "consumer centric" solution.
 Consumer centric solutions make sense in many application esp between servers and client GUIs.
 Any data you send to a client GUI is for display to a human.
@@ -45,6 +48,7 @@ It makes a lot sense for a desktop application to only receive as much data as i
 http://www.reactive-streams.org/[Reactive Stream] are an excellent way to model such client centric solutions.
 
 ==== Producer Centric solution
+
 CQ doesn't have flow control deliberately, as flow control isn't always possible, or even desirable.
 
 Some examples of systems where CQ is often used are
@@ -193,13 +197,13 @@ Each record is a "Size Prefixed Blob" where the first four bytes contain a 30 bi
  - whether this message is user data or meta-data required to support the queue itself and
  - a bit to flag whether the message is complete or not.
 
- When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages, attempt to write after it.
- Say Thread1 is in the middle of writing a message, but it know how long it will be, it can write 4 bytes which indicate the length.
- Thread2 can see that there will be a message and skip over it looking for a place to write.  This way multiple threads can be writing to the queue concurrently.
- Any message which is detected as bad e.g. the thread died, can be marked as meta data and skipped by the reader.
+When the message is not complete, it cannot be read.  However, if the length is known, a writer can skip such messages, attempt to write after it.
+Say Thread1 is in the middle of writing a message, but it know how long it will be, it can write 4 bytes which indicate the length.
+Thread2 can see that there will be a message and skip over it looking for a place to write.  This way multiple threads can be writing to the queue concurrently.
+Any message which is detected as bad e.g. the thread died, can be marked as meta data and skipped by the reader.
 
- There is a special value which is a "poison pill" value, which indicates the file has been rolled.
- This ensures all writers and readers roll at the same point in a timely manner.
+There is a special value which is a "poison pill" value, which indicates the file has been rolled.
+This ensures all writers and readers roll at the same point in a timely manner.
 
 In the example above you can see the header
 
@@ -232,6 +236,8 @@ header: !SCQStore { # <2>
 
 For us a key feature of CQ is not just how the data structure is arranged,
 but also how transparently this binary data structure can be inspected.
+
+NOTE: The `SCQStore` "bootstraps" the queue itself.  If you provided another, custom implementation the queue could behave as you wish, provided it support the same interface.  The Rolling and Indexing strategies can also be customized.
 
 If we look at the last message, you can see the message type, the type of the payload and the value of all the fields.
 
