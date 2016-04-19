@@ -9,10 +9,11 @@ How is Chronicle Queue being used for Big Data solutions in Java and how does it
 
 Chronicle Queue (CQ) is a persisted journal of messages.
 CQ support concurrent writers and readers even across multiple JVMs on the same machine.
-The pattern os use is that every reader sees every message and a reader can join at any time and still see every message.
+Every reader sees every message and a reader can join at any time and still see every message.
+We assume you can read/scan through messages fast enough that even if you are not interested in most messages it will still be fast enough.
 These are not consumers as such and messages don't disappear after reading them.
 
-This retaining of every message has some advantages
+This retaining every message has some advantages
 
 - a message can be replayed any many times as is needed.
 - a day of production messages can be replayed in testing months later.
