@@ -389,7 +389,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
-                assert wire == null || wire.startUse();
+             //   assert wire == null; //|| wire.startUse();
                 if (present = next(includeMetaData))
                     return this;
             } catch (TimeoutException ignored) {
