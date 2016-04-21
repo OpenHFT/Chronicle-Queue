@@ -823,31 +823,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             Assert.assertEquals(index, appender.lastIndexAppended());
-
         }
     }
-
 
     @Test
     public void testReadingWritingMarshableDocument() {
 
-        class MyMarshable extends AbstractMarshallable {
-
-            String name;
-
-            @UsedViaReflection
-            public MyMarshable(@NotNull WireIn wire) {
-                readMarshallable(wire);
-            }
-
-            public MyMarshable() {
-            }
-        }
-
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-
 
             MyMarshable myMarshable = new MyMarshable();
 
@@ -866,7 +850,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
     }
-
 
     @Test
     public void testMetaData() {
@@ -1532,6 +1515,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String dirname = OS.TARGET + "/dontPassQueueToReader-" + System.nanoTime();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dirname).build()) {
             queue.createTailer().afterLastWritten(queue).methodReader();
+        }
+    }
+
+    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
+
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
         }
     }
 }
