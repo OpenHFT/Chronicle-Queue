@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -822,6 +823,46 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             Assert.assertEquals(index, appender.lastIndexAppended());
+
+        }
+    }
+
+
+    @Test
+    public void testReadingWritingMarshableDocument() {
+
+        class MyMarshable extends AbstractMarshallable {
+
+            String name;
+
+            @UsedViaReflection
+            public MyMarshable(@NotNull WireIn wire) {
+                readMarshallable(wire);
+            }
+
+            public MyMarshable() {
+            }
+        }
+
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+
+            MyMarshable myMarshable = new MyMarshable();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("myMarshable").typedMarshallable(myMarshable);
+            }
+
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+
+                Assert.assertEquals(myMarshable, dc.wire().read(() -> "myMarshable").typedMarshallable());
+            }
 
         }
     }
