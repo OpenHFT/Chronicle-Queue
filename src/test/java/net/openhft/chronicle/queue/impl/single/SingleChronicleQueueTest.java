@@ -828,26 +828,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
+    static class MyMarshable extends AbstractMarshallable {
+
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
+        }
+    }
+
     @Test
     public void testReadingWritingMarshableDocument() {
 
-        class MyMarshable extends AbstractMarshallable implements Demarshallable {
-
-            String name;
-
-            @UsedViaReflection
-            public MyMarshable(@NotNull WireIn wire) {
-                readMarshallable(wire);
-            }
-
-            public MyMarshable() {
-            }
-        }
 
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-
 
             MyMarshable myMarshable = new MyMarshable();
 
