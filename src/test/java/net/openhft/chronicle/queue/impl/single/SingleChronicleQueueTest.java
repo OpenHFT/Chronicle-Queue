@@ -805,6 +805,28 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testIndexWrittingDocument() {
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            long index;
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.metaData(true);
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+                index = dc.index();
+            }
+
+            Assert.assertEquals(index, appender.lastIndexAppended());
+
+        }
+    }
+
+
     @Test
     public void testMetaData() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
