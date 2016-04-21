@@ -831,7 +831,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingMarshableDocument() {
 
-        class MyMarshable extends AbstractMarshallable {
+        class MyMarshable extends AbstractMarshallable implements Demarshallable {
 
             String name;
 
