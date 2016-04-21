@@ -807,7 +807,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
-    public void testIndexWrittingDocument() {
+    public void testIndexWritingDocument() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
