@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -805,6 +806,52 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    @Ignore("TODO FIX")
+    public void testIndexWritingDocument() {
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            long index;
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.metaData(true);
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+                index = dc.index();
+            }
+
+            Assert.assertEquals(index, appender.lastIndexAppended());
+        }
+    }
+
+    @Test
+    public void testReadingWritingMarshallableDocument() {
+
+        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            MyMarshable myMarshable = new MyMarshable();
+
+            final ExcerptAppender appender = chronicle.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("myMarshable").typedMarshallable(myMarshable);
+            }
+
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+
+                Assert.assertEquals(myMarshable, dc.wire().read(() -> "myMarshable").typedMarshallable());
+            }
+
+        }
+    }
+
     @Test
     public void testMetaData() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
@@ -925,10 +972,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
             tailer.readBytes(bytes);
-            bytes.append8bit(" ");
+            Assert.assertEquals("Steve", bytes.toString());
             tailer.readBytes(bytes);
-
-            Assert.assertEquals("Steve Jobs", bytes.toString());
+            Assert.assertEquals("Jobs", bytes.toString());
         }
     }
 
@@ -1469,6 +1515,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String dirname = OS.TARGET + "/dontPassQueueToReader-" + System.nanoTime();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dirname).build()) {
             queue.createTailer().afterLastWritten(queue).methodReader();
+        }
+    }
+
+    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
+
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
         }
     }
 }

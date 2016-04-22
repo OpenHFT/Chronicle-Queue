@@ -6,6 +6,7 @@ import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.Marshallable;
+import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Ignore;
 import org.junit.Test;
 

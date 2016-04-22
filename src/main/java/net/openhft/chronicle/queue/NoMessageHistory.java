@@ -16,10 +16,12 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.wire.MessageHistory;
+
 /**
  * Created by peter on 27/03/16.
  */
-public enum NoExcerptHistory implements ExcerptHistory {
+public enum NoMessageHistory implements MessageHistory {
     INSTANCE;
 
     @Override

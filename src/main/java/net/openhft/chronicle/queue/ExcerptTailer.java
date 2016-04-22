@@ -15,14 +15,12 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.ReadMarshallable;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -30,24 +28,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon {
-    /**
-     * @param reader user to read the document
-     * @return {@code true} if successful
-     */
-    boolean readDocument(@NotNull ReadMarshallable reader);
-
-    /**
-     * @param marshallable used to read the document
-     * @return {@code true} if successful
-     */
-    boolean readBytes(@NotNull ReadBytesMarshallable marshallable);
-
-    /**
-     * @param using used to read the document
-     * @return {@code true} if successful
-     */
-    boolean readBytes(@NotNull Bytes using);
+public interface ExcerptTailer extends ExcerptCommon, MarshallableIn {
 
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
@@ -62,20 +43,6 @@ public interface ExcerptTailer extends ExcerptCommon {
     }
 
     DocumentContext readingDocument(boolean includeMetaData);
-    /**
-     * Read the next message as a String
-     *
-     * @return the String or null if there is none.
-     */
-    String readText();
-
-    /**
-     * Read the next message as  string
-     *
-     * @param sb to copy the text into
-     * @return true if there was a message, or false if not.
-     */
-    boolean readText(StringBuilder sb);
 
     /**
      * @return the index just read, this include the cycle and the sequence number from with this
@@ -129,25 +96,6 @@ public interface ExcerptTailer extends ExcerptCommon {
      * @return this
      */
     ExcerptTailer direction(TailerDirection direction);
-
-    /**
-     * Reads messages from this tails as methods.  It returns a BooleanSupplier which returns
-     *
-     * @param objects which implement the methods serialized to the file.
-     * @return a reader which will read one Excerpt at a time
-     */
-    default MethodReader methodReader(Object... objects) {
-        return new MethodReader(this, objects);
-    }
-
-    /**
-     * Read a Map&gt;String, Object&gt; from the content.
-     *
-     * @return the Map, or null if no message is waiting.
-     */
-    default Map<String, Object> readMap() {
-        return QueueInternal.readMap(this);
-    }
 
     /**
      * Wind this tailer to after the last entry which wrote an entry to the queue
