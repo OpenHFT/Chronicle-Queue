@@ -651,10 +651,14 @@ public class SingleChronicleQueueExcerpts {
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
                 assert wire.startUse();
-                this.wire.parent(this);
-                this.wire.pauser(queue.pauserSupplier.get());
+                try {
+                    this.wire.parent(this);
+                    this.wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
+                } finally {
+                    assert wire.endUse();
+                }
             }
             return this;
         }
