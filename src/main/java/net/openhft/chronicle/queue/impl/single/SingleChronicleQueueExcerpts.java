@@ -18,8 +18,6 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.ReadBytesMarshallable;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -30,7 +28,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +70,11 @@ public class SingleChronicleQueueExcerpts {
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
+        }
+
+        @Override
+        public boolean recordHistory() {
+            return sourceId() != 0;
         }
 
         @Override
@@ -172,12 +174,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeDocument(@NotNull WriteMarshallable writer) {
-            append(Wires.UNKNOWN_LENGTH, WriteMarshallable::writeMarshallable, writer);
-        }
-
-        @Override
         public void writeBytes(@NotNull Bytes bytes) {
+            // still uses append as it has a known length.
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes()
                     .write(m), bytes);
         }
@@ -240,11 +238,6 @@ public class SingleChronicleQueueExcerpts {
             }
             bytes.readLimit(bytes.readPosition());
             return false;
-        }
-
-        @Override
-        public void writeBytes(@NotNull WriteBytesMarshallable marshallable) {
-            append(Wires.UNKNOWN_LENGTH, (m, w) -> m.writeMarshallable(w.bytes()), marshallable);
         }
 
         @Override
@@ -377,16 +370,6 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public boolean readDocument(@NotNull final ReadMarshallable marshaller) {
-            return read(marshaller, ReadMarshallable::readMarshallable);
-        }
-
-        @Override
-        public boolean readBytes(@NotNull final Bytes using) {
-            return read(using, (t, w) -> t.write(w.bytes()));
-        }
-
-        @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
                 assert wire == null || wire.startUse();
@@ -395,22 +378,6 @@ public class SingleChronicleQueueExcerpts {
             } catch (TimeoutException ignored) {
             }
             return NoDocumentContext.INSTANCE;
-        }
-
-        @Override
-        public String readText() {
-            StringBuilder sb = Wires.acquireStringBuilder();
-            return readText(sb) ? sb.toString() : null;
-        }
-
-        @Nullable
-        public boolean readText(StringBuilder sb) {
-            if (read(sb, (t, w) ->
-                    w.bytes().parseUtf8(sb, (int) w.bytes().readRemaining())))
-                return true;
-            sb.setLength(0);
-            sb.append("No message");
-            return false;
         }
 
         @Override
@@ -468,11 +435,6 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
             throw new IllegalStateException("Unable to progress to the next cycle");
-        }
-
-        @Override
-        public boolean readBytes(@NotNull final ReadBytesMarshallable using) {
-            return read(using, (t, w) -> t.readMarshallable(w.bytes()));
         }
 
         /**
@@ -675,7 +637,7 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
             ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
             StringBuilder sb = new StringBuilder();
-            VanillaExcerptHistory veh = new VanillaExcerptHistory();
+            VanillaMessageHistory veh = new VanillaMessageHistory();
             veh.addSourceDetails(false);
             while (true) {
                 try (DocumentContext context = tailer.readingDocument()) {

@@ -16,56 +16,22 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.WriteBytesMarshallable;
-import net.openhft.chronicle.core.util.ObjectUtils;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.MarshallableOut;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
-import java.lang.reflect.Proxy;
-import java.util.Map;
 
 /**
  * The component that facilitates sequentially writing data to a {@link ChronicleQueue}.
  *
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends ExcerptCommon {
-
-    /**
-     * Start a document which is completed when DocumentContext.close() is called. You can use a
-     * <pre>
-     * try(DocumentContext context = appender.writingDocument()) {
-     *      context.wire().write("message").text("Hello World");
-     * }
-     * </pre>
-     *
-     * @return the DocumentContext
-     */
-    DocumentContext writingDocument();
-
-    /**
-     * @param writer to write to excerpt.
-     */
-    void writeDocument(@NotNull WriteMarshallable writer);
-
-    /**
-     * @param marshallable to write to excerpt.
-     */
-    void writeBytes(@NotNull WriteBytesMarshallable marshallable);
+public interface ExcerptAppender extends ExcerptCommon, MarshallableOut {
 
     /**
      * @param bytes to write to excerpt.
      */
     void writeBytes(@NotNull Bytes<?> bytes);
-
-    /**
-     * @param text to write a message
-     */
-    default void writeText(CharSequence text) {
-        writeBytes(Bytes.from(text));
-    }
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
@@ -90,27 +56,4 @@ public interface ExcerptAppender extends ExcerptCommon {
      */
     int cycle();
 
-    /**
-     * Proxy an interface so each message called is written to a file for replay.
-     *
-     * @param tClass     primary interface
-     * @param additional any additional interfaces
-     * @return a proxy which implements the primary interface (additional interfaces have to be cast)
-     */
-    default <T> T methodWriter(Class<T> tClass, Class... additional) {
-        Class[] interfaces = ObjectUtils.addAll(tClass, additional);
-
-        //noinspection unchecked
-        return (T) Proxy.newProxyInstance(tClass.getClassLoader(), interfaces, new MethodWriterInvocationHandler(this));
-    }
-
-    default <T> MethodWriterBuilder<T> methodWriterBuilder(Class<T> tClass) {
-        return new MethodWriterBuilder<>(this, tClass);
-    }
-    /**
-     * Write a Map as a marshallable
-     */
-    default void writeMap(Map<String, ?> map) {
-        QueueInternal.writeMap(this, map);
-    }
 }

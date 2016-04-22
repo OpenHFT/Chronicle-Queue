@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.AbstractMarshallable;
+import net.openhft.chronicle.wire.MethodReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

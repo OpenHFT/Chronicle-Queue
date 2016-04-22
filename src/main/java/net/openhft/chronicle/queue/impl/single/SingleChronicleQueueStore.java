@@ -62,7 +62,7 @@ class SingleChronicleQueueStore implements WireStore {
     @NotNull
     private final Indexing indexing;
 
-    @NotNull
+    @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
 
     @Nullable
@@ -90,9 +90,13 @@ class SingleChronicleQueueStore implements WireStore {
         assert indexing != null;
         indexing.writePosition = writePosition;
 
-          this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
-                 .lastAcknowledgedIndexReplicated)
-                .int64ForBinding(null);
+        if (wire.bytes().readRemaining() > 0) {
+            this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
+                    .lastAcknowledgedIndexReplicated)
+                    .int64ForBinding(null);
+        } else {
+            this.lastAcknowledgedIndexReplicated = null; // disabled.
+        }
     }
 
 
@@ -135,11 +139,12 @@ class SingleChronicleQueueStore implements WireStore {
      * have been read by the remote host.
      */
     public long lastAcknowledgedIndexReplicated() {
-        return lastAcknowledgedIndexReplicated.getVolatileValue();
+        return lastAcknowledgedIndexReplicated == null ? -1 : lastAcknowledgedIndexReplicated.getVolatileValue();
     }
 
     public void lastAcknowledgedIndexReplicated(long newValue) {
-        lastAcknowledgedIndexReplicated.setMaxValue(newValue);
+        if (lastAcknowledgedIndexReplicated != null)
+            lastAcknowledgedIndexReplicated.setMaxValue(newValue);
     }
 
     @Override
@@ -251,6 +256,8 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
+        if (lastAcknowledgedIndexReplicated == null)
+            lastAcknowledgedIndexReplicated = wire.newLongReference();
         wire.write(MetaDataField.wireType).object(wireType)
                 .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)

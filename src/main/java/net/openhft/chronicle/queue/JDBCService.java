@@ -5,6 +5,7 @@ import net.openhft.chronicle.core.util.ThrowingSupplier;
 import net.openhft.chronicle.threads.LongPauser;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.wire.MethodReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

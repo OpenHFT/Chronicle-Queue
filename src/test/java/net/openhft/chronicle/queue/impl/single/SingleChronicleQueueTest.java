@@ -972,10 +972,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
             tailer.readBytes(bytes);
-            bytes.append8bit(" ");
+            Assert.assertEquals("Steve", bytes.toString());
             tailer.readBytes(bytes);
-
-            Assert.assertEquals("Steve Jobs", bytes.toString());
+            Assert.assertEquals("Jobs", bytes.toString());
         }
     }
 
