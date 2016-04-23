@@ -44,7 +44,7 @@ import java.util.function.Supplier;
  */
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue>
         implements ChronicleQueueBuilder<B, Q> {
-    protected final Logger log = LoggerFactory.getLogger(getClass().getName());
+
     protected final File path;
     protected long blockSize;
     @NotNull
@@ -68,7 +68,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private long timeoutMS = 10_000; // 10 seconds.
     private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private int sourceId = 0;
-
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
         this.blockSize = 64L << 20;
@@ -78,6 +77,10 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         bufferCapacity = 2 << 20;
         indexSpacing = -1;
         indexCount = -1;
+    }
+
+    protected Logger getLogger() {
+        return LoggerFactory.getLogger(getClass().getName());
     }
 
     /**
@@ -306,7 +309,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     public B sourceId(int sourceId) {
-        if (sourceId <= 0)
+        if (sourceId < 0)
             throw new IllegalArgumentException("Invalid source Id, must be positive");
         this.sourceId = sourceId;
         return (B) this;

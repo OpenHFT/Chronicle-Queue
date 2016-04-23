@@ -85,7 +85,7 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     @NotNull
     public SingleChronicleQueue build() {
         if (buffered())
-            log.warn("Buffering is only supported in Chronicle Queue Enterprise");
+            getLogger().warn("Buffering is only supported in Chronicle Queue Enterprise");
         return new SingleChronicleQueue(this);
     }
 
