@@ -24,7 +24,7 @@ public class JDBCServiceTest {
 
     @Test
     public void testCreateTable() throws SQLException, IOException {
-        doCreateTable(4, 20000);
+        doCreateTable(4, 10000);
     }
 
     @Test

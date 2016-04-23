@@ -97,7 +97,7 @@ public class OrderManagerTest {
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath).build()) {
                 OrderIdeaListener orderManager = out.createAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
-                        .additionalInterfaces(MarketDataListener.class)
+                        .addInterface(MarketDataListener.class)
                         .recordHistory(true)
                         .get();
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
