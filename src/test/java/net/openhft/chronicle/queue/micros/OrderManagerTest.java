@@ -84,7 +84,6 @@ public class OrderManagerTest {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -149,7 +148,6 @@ public class OrderManagerTest {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -206,7 +204,6 @@ public class OrderManagerTest {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
