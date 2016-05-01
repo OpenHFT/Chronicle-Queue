@@ -140,6 +140,7 @@ public class SingleChronicleQueueExcerpts {
                 if (this.cycle != cycle)
                     rollCycleTo(cycle);
 
+                assert wire != null;
                 position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
                 metaData = false;
             } catch (TimeoutException e) {

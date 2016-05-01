@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.service;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Test;
@@ -60,8 +61,12 @@ public class HelloWorldTest {
             System.out.println(helloWorldService.outputQueue().dump());
             verify(replier);
         } finally {
-            IOTools.deleteDirWithFiles(new File(input), 2);
-            IOTools.deleteDirWithFiles(new File(output), 2);
+            try {
+                IOTools.deleteDirWithFiles(new File(input), 2);
+                IOTools.deleteDirWithFiles(new File(output), 2);
+            } catch (IORuntimeException e) {
+                e.printStackTrace();
+            }
         }
     }
 
