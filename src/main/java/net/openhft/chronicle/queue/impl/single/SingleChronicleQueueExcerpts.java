@@ -102,7 +102,6 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
 
-            this.cycle = cycle;
             SingleChronicleQueue queue = this.queue;
 
             if (this.store != null) {
@@ -115,6 +114,9 @@ public class SingleChronicleQueueExcerpts {
                 LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
             wire = (AbstractWire) queue.wireType().apply(mappedBytes);
+            // only set the cycle after the wire is set.
+            this.cycle = cycle;
+
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
@@ -136,13 +138,19 @@ public class SingleChronicleQueueExcerpts {
             lastIndex = Long.MIN_VALUE;
             assert checkAppendingThread();
             try {
-                int cycle = queue.cycle();
-                if (this.cycle != cycle)
-                    rollCycleTo(cycle);
+                try {
+                    int cycle = queue.cycle();
+                    if (this.cycle != cycle || wire == null)
+                        rollCycleTo(cycle);
 
-                assert wire != null;
-                position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
-                metaData = false;
+                    assert wire != null;
+                    position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    metaData = false;
+
+                } catch (Exception e) {
+                    assert resetAppendingThread();
+                    throw e;
+                }
             } catch (TimeoutException e) {
                 throw new IllegalStateException(e);
             } catch (EOFException e) {
@@ -300,6 +308,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void rollCycleTo(int cycle) throws TimeoutException {
+            if (this.cycle == cycle)
+                throw new AssertionError();
             if (wire != null)
                 wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
             setCycle2(cycle);
