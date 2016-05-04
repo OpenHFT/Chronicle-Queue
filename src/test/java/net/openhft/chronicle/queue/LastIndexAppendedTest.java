@@ -28,9 +28,9 @@ public class LastIndexAppendedTest {
 
             try (DocumentContext documentContext = appender.writingDocument()) {
                 documentContext.wire().write().text("hello world");
-//                expectedIndex = documentContext.index();
+                expectedIndex = documentContext.index();
             }
-            expectedIndex = appender.lastIndexAppended();
+            Assert.assertEquals(expectedIndex, appender.lastIndexAppended());
 
         }
 
