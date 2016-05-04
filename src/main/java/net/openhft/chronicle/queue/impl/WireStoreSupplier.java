@@ -18,5 +18,5 @@ package net.openhft.chronicle.queue.impl;
 import java.util.function.BiFunction;
 
 @FunctionalInterface
-public interface WireStoreSupplier extends BiFunction<Long, Long, WireStore> {
+public interface WireStoreSupplier extends BiFunction<Integer, Long, WireStore> {
 }

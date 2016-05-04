@@ -40,7 +40,7 @@ public class WireStorePool {
         // todo
     }
 
-    public synchronized WireStore acquire(long cycle, final long epoch) {
+    public synchronized WireStore acquire(int cycle, final long epoch) {
         @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {

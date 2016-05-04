@@ -84,7 +84,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public long index() {
-            throw new UnsupportedOperationException("TODO");
+            return wire.headerNumber();
         }
 
         @Override
@@ -135,16 +135,17 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext writingDocument() {
-            lastIndex = Long.MIN_VALUE;
             assert checkAppendingThread();
             try {
                 try {
                     int cycle = queue.cycle();
-                    if (this.cycle != cycle || wire == null)
+                    if (this.cycle != cycle || wire == null) {
                         rollCycleTo(cycle);
+                    }
 
                     assert wire != null;
                     position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    lastIndex = wire.headerNumber();
                     metaData = false;
 
                 } catch (Exception e) {
@@ -224,7 +225,7 @@ public class SingleChronicleQueueExcerpts {
                 }
                 lastIndex = index;
 
-            } catch (TimeoutException | StreamCorruptedException e) {
+            } catch (TimeoutException | StreamCorruptedException | EOFException e) {
                 throw Jvm.rethrow(e);
 
             } finally {
@@ -234,7 +235,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) throws TimeoutException, EOFException {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -300,6 +301,7 @@ public class SingleChronicleQueueExcerpts {
                 try {
                     position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
                     wireWriter.write(writer, wire);
+                    lastIndex = wire.headerNumber();
                     wire.updateHeader(length, position, false);
 
                 } catch (EOFException theySeeMeRolling) {
@@ -314,12 +316,17 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        private void rollCycleTo(int cycle) throws TimeoutException {
+        private void rollCycleTo(int cycle) throws TimeoutException, EOFException {
             if (this.cycle == cycle)
                 throw new AssertionError();
             if (wire != null)
                 wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
             setCycle2(cycle);
+            long position = wire.bytes().writePosition();
+            long sequenceNumber = store.indexForPosition(wire, position, 0);
+            wire.bytes().writePosition(position);
+            sequenceNumber++;
+            wire.headerNumber(queue.rollCycle().toIndex(cycle, sequenceNumber));
         }
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
@@ -643,17 +650,13 @@ public class SingleChronicleQueueExcerpts {
             return this;
         }
 
-        public long lastIndex(int cycle) {
-            cycle(cycle);
-            long sequenceNumber = store.lastEntryIndexed(wire, queue.timeoutMS);
-            return queue.rollCycle().toIndex(this.cycle, sequenceNumber + 1) - 1;
-        }
-
         @Override
         public ExcerptTailer afterLastWritten(ChronicleQueue queue) {
             if (queue == this.queue)
                 throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
-            ExcerptTailer tailer = queue.createTailer().direction(TailerDirection.BACKWARD).toEnd();
+            ExcerptTailer tailer = queue.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd();
             StringBuilder sb = new StringBuilder();
             VanillaMessageHistory veh = new VanillaMessageHistory();
             veh.addSourceDetails(false);

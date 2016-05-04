@@ -175,20 +175,6 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * @return the last index available on the file system
-     */
-    @Override
-    public long lastEntryIndexed(Wire wire, long timeoutMS) {
-        return this.indexing.lastEntryIndexed(wire, timeoutMS);
-    }
-
-    @Override
-    public boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException {
-        wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS);
-        return true;
-    }
-
-    /**
      * Moves the position to the index
      *
      * @param wire      the data structure we are navigating
@@ -394,7 +380,7 @@ class SingleChronicleQueueStore implements WireStore {
         long acquireIndex2Index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             long start = System.currentTimeMillis();
             try {
-                while (System.currentTimeMillis() < start + timeoutMS) {
+                do {
                     long index2Index = this.index2Index.getVolatileValue();
 
                     if (index2Index == LONG_NOT_COMPLETE) {
@@ -414,7 +400,7 @@ class SingleChronicleQueueStore implements WireStore {
                         this.index2Index.setOrderedValue(index);
                     }
                     return index;
-                }
+                } while (System.currentTimeMillis() < start + timeoutMS);
             } finally {
                 wire.pauser().reset();
             }
@@ -617,23 +603,28 @@ class SingleChronicleQueueStore implements WireStore {
 
             bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
 
-            for (long i = fromKnownIndex; ; i++) {
+            for (long i = fromKnownIndex; bytes.readPosition() <= toPosition; ) {
+                WireIn.HeaderType headerType = wire.readDataHeader(true);
 
-                boolean found = wire.readDataHeader();
+                int header = bytes.readInt();
+                bytes.readSkip(Wires.lengthOf(header));
+
+                switch (headerType) {
+                    case NONE:
+                        if (toPosition == Long.MAX_VALUE)
+                            return i < 0 ? i : i - 1;
+                        throw new EOFException();
+                    case META_DATA:
+                        break;
+                    case DATA:
+                        i++;
+                        break;
+                }
 
                 if (bytes.readPosition() == toPosition)
                     return i;
-
-                bytes.readSkip(Wires.lengthOf(bytes.readInt()));
-                if (bytes.readPosition() > toPosition)
-                    return i;
-
-                if (!found) {
-                    if (toPosition == Long.MAX_VALUE)
-                        return i < 0 ? i : i - 1;
-                    throw new EOFException();
-                }
             }
+            throw new IllegalArgumentException("position not the start of a message");
         }
 
         public long lastEntryIndexed(Wire wire, long timeoutMS) {
@@ -648,7 +639,7 @@ class SingleChronicleQueueStore implements WireStore {
 
         public LongArrayValues getIndex2index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             LongArrayValues values = index2indexArray.get();
-            if (((Byteable) values).bytesStore() != null)
+            if (((Byteable) values).bytesStore() != null || timeoutMS == 0)
                 return values;
             final long indexToIndex0 = indexToIndex(wire, timeoutMS);
             wire.bytes().readLimit(wire.bytes().capacity());
@@ -665,9 +656,11 @@ class SingleChronicleQueueStore implements WireStore {
         public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
             // find the index2index
             final LongArrayValues index2indexArr = getIndex2index(wire, timeoutMS);
-            final LongArrayValues indexArr = indexArray.get();
             long lastKnownAddress = 0;
             long lastKnownIndex = -1;
+            if (((Byteable) index2indexArr).bytesStore() == null)
+                return linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+            final LongArrayValues indexArr = indexArray.get();
             Bytes<?> bytes = wire.bytes();
             for (int index2 = 0; index2 < indexCount; index2++) {
                 long secondaryAddress = index2indexArr.getValueAt(index2);

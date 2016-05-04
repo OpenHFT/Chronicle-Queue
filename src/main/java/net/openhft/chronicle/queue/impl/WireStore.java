@@ -40,13 +40,6 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      */
     long writePosition();
 
-    /**
-     * @return the sequence number with the cycle
-     */
-    long lastEntryIndexed(Wire wire, long timeoutMS);
-
-    boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException;
-
     ScanResult moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
 
     @NotNull

@@ -34,10 +34,7 @@ import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.StreamCorruptedException;
+import java.io.*;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -173,7 +170,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     @Override
-    public final WireStore storeForCycle(long cycle, final long epoch) {
+    public final WireStore storeForCycle(int cycle, final long epoch) {
         return this.pool.acquire(cycle, epoch);
     }
 
@@ -232,14 +229,26 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long lastIndex() {
-        final int lastCycle = lastCycle();
-        if (lastCycle == Integer.MIN_VALUE)
-            return Long.MIN_VALUE;
+        for (int i = 0; i < 100; i++) {
+            try {
 
-        ExcerptTailer tailer = createTailer();
-        if (tailer instanceof SingleChronicleQueueExcerpts.StoreTailer)
-            return ((SingleChronicleQueueExcerpts.StoreTailer) tailer).lastIndex(lastCycle);
-        throw new UnsupportedOperationException();
+                final int lastCycle = lastCycle();
+                if (lastCycle == Integer.MIN_VALUE)
+                    return Long.MIN_VALUE;
+
+                WireStore store = storeForCycle(lastCycle, epoch);
+                Wire wire = wireType().apply(store.mappedBytes());
+                long sequenceNumber = store.indexForPosition(wire, store.writePosition(), 0);
+                if (sequenceNumber == -1)
+                    sequenceNumber++;
+                return rollCycle.toIndex(lastCycle, sequenceNumber);
+            } catch (EOFException theySeeMeRolling) {
+                // continue;
+            } catch (TimeoutException e) {
+                throw new AssertionError(e);
+            }
+        }
+        throw new IllegalStateException();
     }
 
     public int lastCycle() {
@@ -298,7 +307,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @NotNull
-    private WireStore acquireStore(final long cycle, final long epoch) {
+    private WireStore acquireStore(final int cycle, final long epoch) {
         @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
         try {
             final File parentFile = dateValue.path.getParentFile();
@@ -310,6 +319,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
             assert wire.startUse();
             wire.pauser(pauserSupplier.get());
+            wire.headerNumber(rollCycle.toIndex(cycle, 0));
             if (wire.writeFirstHeader()) {
                 RollingChronicleQueue queue = this;
                 final WireStore wireStore = storeFactory.apply(queue, wire);

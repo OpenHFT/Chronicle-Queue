@@ -769,7 +769,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < 5; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
-                assertEquals(n, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
+                assertEquals(i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
             final ExcerptTailer tailer = queue.createTailer();
@@ -808,7 +808,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
-    @Ignore("TODO FIX")
     public void testIndexWritingDocument() {
         try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
                 .wireType(this.wireType)

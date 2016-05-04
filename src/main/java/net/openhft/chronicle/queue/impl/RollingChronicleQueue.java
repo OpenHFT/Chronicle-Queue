@@ -30,7 +30,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @return the {@code WireStore} associated with this {@code cycle}
      */
     @NotNull
-    WireStore storeForCycle(long cycle, final long epoch);
+    WireStore storeForCycle(int cycle, final long epoch);
 
     /**
      * @param store the {@code store} to release

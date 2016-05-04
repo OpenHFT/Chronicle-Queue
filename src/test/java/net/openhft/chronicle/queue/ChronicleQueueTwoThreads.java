@@ -50,11 +50,10 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            try {
-                ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
-                        .wireType(WireType.FIELDLESS_BINARY)
-                        .blockSize(BLOCK_SIZE)
-                        .build();
+            try (ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
+                    .wireType(WireType.FIELDLESS_BINARY)
+                    .blockSize(BLOCK_SIZE)
+                    .build()) {
 
                 ExcerptTailer tailer = rqueue.createTailer();
 
@@ -64,7 +63,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                         counter.incrementAndGet();
                     }
                 }
-                rqueue.close();
+
             } finally {
                 if (rlock != null) {
                     rlock.release();
@@ -73,7 +72,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
             }
         }, "tailer thread");
 
-        long runs = 20_000;
+        long runs = 50_000;
 
         Thread appenderThread = new Thread(() -> {
             AffinityLock wlock = AffinityLock.acquireLock();
@@ -115,7 +114,11 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
 
         //Pause to allow tailer to catch up (if needed)
         for (int i = 0; i < 10; i++) {
-            Jvm.pause(100);
+            if (runs != counter.get())
+                Jvm.pause(100);
+        }
+
+        for (int i = 0; i < 10; i++) {
             tailerThread.interrupt();
             tailerThread.join(100);
         }
