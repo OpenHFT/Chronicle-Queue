@@ -28,10 +28,9 @@ public class LastIndexAppendedTest {
 
             try (DocumentContext documentContext = appender.writingDocument()) {
                 documentContext.wire().write().text("hello world");
-                expectedIndex = documentContext.index();
+//                expectedIndex = documentContext.index();
             }
-
-            Assert.assertEquals(expectedIndex, appender.lastIndexAppended());
+            expectedIndex = appender.lastIndexAppended();
 
         }
 
@@ -40,8 +39,7 @@ public class LastIndexAppendedTest {
             SingleChronicleQueueBuilder builder = ChronicleQueueBuilder.single(path);
             SingleChronicleQueue queue = builder.build();
 
-            ExcerptAppender appender = queue.createAppender();
-            Assert.assertEquals(expectedIndex, appender.lastIndexAppended());
+            Assert.assertEquals(expectedIndex, queue.lastIndex());
 
         }
 
