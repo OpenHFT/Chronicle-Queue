@@ -196,8 +196,15 @@ public class SingleChronicleQueueExcerpts {
                 if (index != lastIndex + 1) {
                     int cycle = queue.rollCycle().toCycle(index);
 
-                    if (!moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index)))
-                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index));
+                    ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
+                    switch (scanResult) {
+                        case FOUND:
+                            throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " as the index already exists");
+                        case NOT_REACHED:
+                            throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                        case NOT_FOUND:
+                            break;
+                    }
                 }
 
                 // only get the bytes after moveToIndex
@@ -227,7 +234,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        boolean moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -243,10 +250,10 @@ public class SingleChronicleQueueExcerpts {
             Bytes<?> bytes = wire.bytes();
             if (scanResult == ScanResult.NOT_FOUND) {
                 wire.bytes().writePosition(wire.bytes().readPosition());
-                return true;
+                return scanResult;
             }
             bytes.readLimit(bytes.readPosition());
-            return false;
+            return scanResult;
         }
 
         @Override
