@@ -6,7 +6,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static java.lang.System.getProperty;
+import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 
 /**
  * @author Rob Austin.
@@ -17,7 +17,9 @@ public class LastIndexAppendedTest {
     public void testLastIndexAppendedAcrossRestarts() throws Exception {
 
         long expectedIndex;
-        String path = getProperty("java.io.tmpdir");
+
+        String path = getTmpDir() + "/" + System.nanoTime() + "/deleteme.q";
+
         {
             SingleChronicleQueueBuilder builder = ChronicleQueueBuilder.single(path);
             SingleChronicleQueue queue = builder.build();
