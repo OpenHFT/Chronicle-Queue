@@ -160,7 +160,7 @@ Chronicle Queue Enterprise supports TCP replication with optional filtering so o
 ![](http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png)
 
 ##  Support
-* [Chronicle FAQ](https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.md)
+* [Chronicle FAQ](https://github.com/OpenHFT/Chronicle-Queue/blob/master/docs/FAQ.adoc)
 * [Chronicle support on StackOverflow](http://stackoverflow.com/tags/chronicle/info)
 * [Chronicle support on Google Groups](https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle)
 * [Development Tasks - JIRA] (https://higherfrequencytrading.atlassian.net/browse/CHRON)
