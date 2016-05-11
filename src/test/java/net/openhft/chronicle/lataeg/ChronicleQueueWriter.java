@@ -3,7 +3,6 @@ package net.openhft.chronicle.lataeg;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.model.DataValueClasses;
 
 public class ChronicleQueueWriter {
@@ -75,7 +74,11 @@ public class ChronicleQueueWriter {
             long endTime = System.nanoTime();
             writeToFile(i, startTime, endTime);
             // give the previous test time to write to disk or we are effectively
-            Jvm.pause(noOfRecords / 100000);
+            try {
+                Thread.sleep((long) (noOfRecords / 100000));
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
         }
         appender.close();
     }

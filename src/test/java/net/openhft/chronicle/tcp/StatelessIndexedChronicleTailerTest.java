@@ -22,7 +22,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -244,7 +243,11 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
                 });
             }
 
-            Jvm.pause(100);
+            try {
+                Thread.sleep((long) 100);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
 
             final ExcerptAppender appender = source.createAppender();
             for (int i=0; i<items; i++) {
@@ -420,7 +423,11 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
                             latch.countDown();
 
                         } else {
-                            Jvm.pause(100);
+                            try {
+                                Thread.sleep((long) 100);
+                            } catch (InterruptedException e) {
+                                throw new AssertionError(e);
+                            }
                         }
                     }
 
@@ -453,7 +460,11 @@ public class StatelessIndexedChronicleTailerTest extends StatelessChronicleTestB
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Jvm.pause(250);
+            try {
+                Thread.sleep((long) 250);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
         }
 
         source1.close();

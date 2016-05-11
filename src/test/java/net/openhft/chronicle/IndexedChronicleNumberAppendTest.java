@@ -18,9 +18,7 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.lang.model.constraints.NotNull;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import sun.misc.Unsafe;
@@ -81,18 +79,6 @@ public class IndexedChronicleNumberAppendTest extends IndexedChronicleTestBase {
             chronicle.close();
             assertClean(basePath);
         }
-    }
-
-    private ThreadDump threadDump;
-
-    @Before
-    public void threadDump() {
-        threadDump = new ThreadDump();
-    }
-
-    @After
-    public void checkThreadDump() {
-        threadDump.assertNoNewThreads();
     }
 
     @Before

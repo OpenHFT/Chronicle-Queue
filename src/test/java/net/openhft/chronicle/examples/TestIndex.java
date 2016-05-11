@@ -21,7 +21,6 @@ package net.openhft.chronicle.examples;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.core.Jvm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +63,11 @@ public class TestIndex {
                     while (running) {
                         lastIndex = chronicle1.lastIndex();
                         LOG.trace("last index = {}", lastIndex);
-                        Jvm.pause(10);
+                        try {
+                            Thread.sleep((long) 10);
+                        } catch (InterruptedException e) {
+                            throw new AssertionError(e);
+                        }
                     }
                 } catch (Exception e) {
                     LOG.error("Error", e);
@@ -74,7 +77,11 @@ public class TestIndex {
         });
         t2.start();
 
-        Jvm.pause(5000);
+        try {
+            Thread.sleep((long) 5000);
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
 
         running = false;
 

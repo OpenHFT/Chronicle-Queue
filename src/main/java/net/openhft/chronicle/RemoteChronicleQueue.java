@@ -18,7 +18,6 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.tcp.ChronicleTcp;
 import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.WrappedChronicle;
@@ -259,15 +258,19 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         private boolean waitForConnection() {
-            for (int i = builder.reconnectionAttempts(); !connection.isOpen() && i > 0; i--) {
-                openConnection();
+            try {
+                for (int i = builder.reconnectionAttempts(); !connection.isOpen() && i > 0; i--) {
+                    openConnection();
 
-                if (!openConnection())
-                    Jvm.pause(builder.reconnectionIntervalMillis());
+                    if (!openConnection())
+                        Thread.sleep(builder.reconnectionIntervalMillis());
 
+                }
+
+                return connection.isOpen();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
             }
-
-            return connection.isOpen();
         }
     }
 

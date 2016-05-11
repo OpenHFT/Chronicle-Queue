@@ -23,7 +23,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.io.StopCharTesters;
 import net.openhft.lang.model.constraints.NotNull;
 import org.junit.Test;
@@ -45,6 +44,10 @@ import static org.junit.Assert.assertEquals;
  * @author peter.lawrey
  */
 public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
+
+    static final int RATE = Integer.getInteger("rate", 100000);
+    static final int COUNT = Integer.getInteger("count", RATE * 2);
+    static final int WARMUP = Integer.getInteger("warmup", RATE);
 
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
@@ -172,6 +175,13 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         assertIndexedClean(basePathSource);
         assertIndexedClean(basePathSink);
     }
+
+    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
+    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
@@ -306,12 +316,261 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 
-    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
-    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira77() throws IOException {
+        Chronicle chronicleSrc = indexed(getIndexedTestPath("source")).build();
+        chronicleSrc.clear();
+
+        Chronicle chronicleTarget = indexed(getIndexedTestPath("target")).build();
+        chronicleTarget.clear();
+
+        testJira77(
+            chronicleSrc,
+            chronicleTarget
+        );
+    }
 
     // *************************************************************************
     //
     // *************************************************************************
+
+    /**
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testIndexedJira80() throws IOException {
+        testJira80(
+            indexed(getIndexedTestPath("master")),
+            indexed(getIndexedTestPath("slave"))
+        );
+    }
+
+    /*
+     * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
+     */
+    @Test
+    public void testIndexedClientReconnection() throws IOException, InterruptedException {
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
+        final PortSupplier portSupplier = new PortSupplier();
+        final int items = 20;
+        final CountDownLatch latch = new CountDownLatch(items);
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final Chronicle sink = indexed(basePathSink)
+                            .sink()
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
+
+                    ExcerptTailer tailer = sink.createTailer();
+                    while(latch.getCount() > 0) {
+                        if(tailer.nextIndex()) {
+                            assertEquals(items - latch.getCount(), tailer.readLong());
+                            tailer.finish();
+                            latch.countDown();
+
+                        } else {
+                            try {
+                                Thread.sleep((long) 100);
+                            } catch (InterruptedException e) {
+                                throw new AssertionError(e);
+                            }
+                        }
+                    }
+
+                    tailer.clear();
+                    sink.close();
+                    sink.clear();
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                    errorCollector.addError(e);
+                }
+            }
+        });
+
+        t.start();
+
+        // Source 1
+        Chronicle source1 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender1 = source1.createAppender();
+        for(long i=0; i < items / 2 ; i++) {
+            appender1.startExcerpt(8);
+            appender1.writeLong(i);
+            appender1.finish();
+        }
+
+        appender1.close();
+
+        while(latch.getCount() > 10) {
+            try {
+                Thread.sleep((long) 250);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+        }
+
+        source1.close();
+
+        portSupplier.reset();
+
+        // Source 2
+        Chronicle source2 = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
+
+        ExcerptAppender appender2 = source2.createAppender();
+        for(long i=items / 2; i < items; i++) {
+            appender2.startExcerpt(8);
+            appender2.writeLong(i);
+            appender2.finish();
+        }
+
+        appender2.close();
+
+        latch.await(5, TimeUnit.SECONDS);
+        assertEquals(0, latch.getCount());
+
+        source2.close();
+        source2.clear();
+    }
+
+    @Test
+    public void testReplicationLatencyPerf() throws IOException, InterruptedException {
+
+        final Chronicle source = ChronicleQueueBuilder
+                .indexed(getIndexedTestPath("latencysource"))
+                .source()
+                .bindAddress(54321)
+                .build();
+
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                AffinityLock lock = AffinityLock.acquireLock();
+                try {
+                    ExcerptAppender appender = source.createAppender();
+                    long spacing = 1000000000 / RATE;
+                    long now = System.nanoTime();
+                    for (int i = -WARMUP; i < COUNT; i++) {
+                        while (now > System.nanoTime()) {
+                            // busy waiting.
+                        }
+                        appender.startExcerpt();
+                        appender.writeLong(now);
+                        appender.finish();
+                        now += spacing;
+                    }
+                    appender.startExcerpt();
+                    appender.writeLong(-1);
+                    appender.finish();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    lock.release();
+                }
+            }
+        });
+        t.start();
+
+        Chronicle sink = ChronicleQueueBuilder
+                .indexed(getIndexedTestPath("latencysink"))
+                .sink()
+                .connectAddress("localhost", 54321)
+                .build();
+
+        AffinityLock lock = AffinityLock.acquireLock();
+        try {
+            ExcerptTailer tailer = sink.createTailer();
+            long[] times = new long[COUNT];
+            int count = -WARMUP;
+            while (true) {
+                if (tailer.nextIndex()) {
+                    long timestamp = tailer.readLong();
+                    if (timestamp < 0)
+                        break;
+                    if (++count > 0 && count < times.length) {
+                        times[count] = System.nanoTime() - timestamp;
+                    }
+//                if ((count & 1023) == 0)
+//                    System.out.println(count);
+                    tailer.finish();
+                }
+            }
+            assertEquals(COUNT, count);
+            Arrays.sort(times);
+            System.out.printf("Latencies 50 90/99 99.9/99.99 %%tile %,d %,d/%,d %,d/%,d us%n",
+                    times[times.length - times.length / 2] / 1000,
+                    times[times.length - times.length / 10] / 1000,
+                    times[times.length - times.length / 100] / 1000,
+                    times[times.length - times.length / 1000 - 1] / 1000,
+                    times[times.length - times.length / 10000 - 1] / 1000
+            );
+        } finally {
+            lock.release();
+        }
+        t.join(10000);
+
+        source.close();
+        sink.close();
+
+        assertIndexedClean(source.name());
+        assertIndexedClean(sink.name());
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
+    @Test
+    public void testIndexedNonBlockingClient() throws IOException, InterruptedException {
+        final String basePathSource = getIndexedTestPath("source");
+        final String basePathSink = getIndexedTestPath("sink");
+        final PortSupplier portSupplier = new PortSupplier();
+
+        final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier);
+
+        final Chronicle source = sourceBuilder.build();
+
+        final ReplicaChronicleQueueBuilder sinkBuilder = indexed(basePathSink)
+                .sink()
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .readSpinCount(5);
+
+        final Chronicle sink = sinkBuilder.build();
+
+        testNonBlockingClient(
+                source,
+                sink,
+                sinkBuilder.heartbeatIntervalMillis()
+        );
+    }
 
     interface PriceListener {
         void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);
@@ -411,257 +670,5 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             ap = in.readDouble();
             aq = in.readInt();
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    /**
-     * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
-     *
-     * @throws IOException
-     */
-    @Test
-    public void testIndexedJira77() throws IOException {
-        Chronicle chronicleSrc = indexed(getIndexedTestPath("source")).build();
-        chronicleSrc.clear();
-
-        Chronicle chronicleTarget = indexed(getIndexedTestPath("target")).build();
-        chronicleTarget.clear();
-
-        testJira77(
-            chronicleSrc,
-            chronicleTarget
-        );
-    }
-
-    /**
-     * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
-     *
-     * @throws IOException
-     */
-    @Test
-    public void testIndexedJira80() throws IOException {
-        testJira80(
-            indexed(getIndexedTestPath("master")),
-            indexed(getIndexedTestPath("slave"))
-        );
-    }
-
-    /*
-     * https://higherfrequencytrading.atlassian.net/browse/CHRON-104
-     */
-    @Test
-    public void testIndexedClientReconnection() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("source");
-        final String basePathSink = getIndexedTestPath("sink");
-        final PortSupplier portSupplier = new PortSupplier();
-        final int items = 20;
-        final CountDownLatch latch = new CountDownLatch(items);
-
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final Chronicle sink = indexed(basePathSink)
-                            .sink()
-                            .connectAddressProvider(new AddressProvider() {
-                                @Override
-                                public InetSocketAddress get() {
-                                    return new InetSocketAddress(
-                                            "localhost",
-                                            portSupplier.getAndAssertOnError());
-                                }
-                            })
-                            .build();
-
-                    ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
-                            assertEquals(items - latch.getCount(), tailer.readLong());
-                            tailer.finish();
-                            latch.countDown();
-
-                        } else {
-                            Jvm.pause(100);
-                        }
-                    }
-
-                    tailer.clear();
-                    sink.close();
-                    sink.clear();
-                } catch (Exception e) {
-                    LOGGER.warn("", e);
-                    errorCollector.addError(e);
-                }
-            }
-        });
-
-        t.start();
-
-        // Source 1
-        Chronicle source1 = indexed(basePathSource)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier)
-                .build();
-
-        ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
-            appender1.startExcerpt(8);
-            appender1.writeLong(i);
-            appender1.finish();
-        }
-
-        appender1.close();
-
-        while(latch.getCount() > 10) {
-            Jvm.pause(250);
-        }
-
-        source1.close();
-
-        portSupplier.reset();
-
-        // Source 2
-        Chronicle source2 = indexed(basePathSource)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier)
-                .build();
-
-        ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
-            appender2.startExcerpt(8);
-            appender2.writeLong(i);
-            appender2.finish();
-        }
-
-        appender2.close();
-
-        latch.await(5, TimeUnit.SECONDS);
-        assertEquals(0, latch.getCount());
-
-        source2.close();
-        source2.clear();
-    }
-    
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    static final int RATE = Integer.getInteger("rate", 100000);
-    static final int COUNT = Integer.getInteger("count", RATE * 2);
-    static final int WARMUP = Integer.getInteger("warmup", RATE);
-
-    @Test
-    public void testReplicationLatencyPerf() throws IOException, InterruptedException {
-
-        final Chronicle source = ChronicleQueueBuilder
-                .indexed(getIndexedTestPath("latencysource"))
-                .source()
-                .bindAddress(54321)
-                .build();
-
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                AffinityLock lock = AffinityLock.acquireLock();
-                try {
-                    ExcerptAppender appender = source.createAppender();
-                    long spacing = 1000000000 / RATE;
-                    long now = System.nanoTime();
-                    for (int i = -WARMUP; i < COUNT; i++) {
-                        while (now > System.nanoTime()) {
-                            // busy waiting.
-                        }
-                        appender.startExcerpt();
-                        appender.writeLong(now);
-                        appender.finish();
-                        now += spacing;
-                    }
-                    appender.startExcerpt();
-                    appender.writeLong(-1);
-                    appender.finish();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    lock.release();
-                }
-            }
-        });
-        t.start();
-
-        Chronicle sink = ChronicleQueueBuilder
-                .indexed(getIndexedTestPath("latencysink"))
-                .sink()
-                .connectAddress("localhost", 54321)
-                .build();
-
-        AffinityLock lock = AffinityLock.acquireLock();
-        try {
-            ExcerptTailer tailer = sink.createTailer();
-            long[] times = new long[COUNT];
-            int count = -WARMUP;
-            while (true) {
-                if (tailer.nextIndex()) {
-                    long timestamp = tailer.readLong();
-                    if (timestamp < 0)
-                        break;
-                    if (++count > 0 && count < times.length) {
-                        times[count] = System.nanoTime() - timestamp;
-                    }
-//                if ((count & 1023) == 0)
-//                    System.out.println(count);
-                    tailer.finish();
-                }
-            }
-            assertEquals(COUNT, count);
-            Arrays.sort(times);
-            System.out.printf("Latencies 50 90/99 99.9/99.99 %%tile %,d %,d/%,d %,d/%,d us%n",
-                    times[times.length - times.length / 2] / 1000,
-                    times[times.length - times.length / 10] / 1000,
-                    times[times.length - times.length / 100] / 1000,
-                    times[times.length - times.length / 1000 - 1] / 1000,
-                    times[times.length - times.length / 10000 - 1] / 1000
-            );
-        } finally {
-            lock.release();
-        }
-        t.join(10000);
-
-        source.close();
-        sink.close();
-
-        assertIndexedClean(source.name());
-        assertIndexedClean(sink.name());
-    }
-
-    @Test
-    public void testIndexedNonBlockingClient() throws IOException, InterruptedException {
-        final String basePathSource = getIndexedTestPath("source");
-        final String basePathSink = getIndexedTestPath("sink");
-        final PortSupplier portSupplier = new PortSupplier();
-
-        final ChronicleQueueBuilder sourceBuilder = indexed(basePathSource)
-                .source()
-                .bindAddress(0)
-                .connectionListener(portSupplier);
-
-        final Chronicle source = sourceBuilder.build();
-
-        final ReplicaChronicleQueueBuilder sinkBuilder = indexed(basePathSink)
-                .sink()
-                .connectAddress("localhost", portSupplier.getAndAssertOnError())
-                .readSpinCount(5);
-
-        final Chronicle sink = sinkBuilder.build();
-
-        testNonBlockingClient(
-                source,
-                sink,
-                sinkBuilder.heartbeatIntervalMillis()
-        );
     }
 }

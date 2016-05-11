@@ -3,7 +3,6 @@ package net.openhft.chronicle.lataeg;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.model.DataValueClasses;
 
 public class ChronicleQueueReader {
@@ -82,7 +81,11 @@ public class ChronicleQueueReader {
                     readTime = readTime + (readEndTime - readStartTime);
                     counter++;
                 } else {
-                    Jvm.pause(1);
+                    try {
+                        Thread.sleep((long) 1);
+                    } catch (InterruptedException e) {
+                        throw new AssertionError(e);
+                    }
                     sleepTime++;
                 }
             }

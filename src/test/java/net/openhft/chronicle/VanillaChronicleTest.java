@@ -18,7 +18,6 @@
 
 package net.openhft.chronicle;
 
-import net.openhft.chronicle.core.Jvm;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -102,20 +101,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             Arrays.toString(startEnd));
     }
 
-    static class MyExcerptComparator implements ExcerptComparator {
-        int lo, hi;
-
-        @Override
-        public int compare(Excerpt excerpt) {
-            final int x = excerpt.readInt();
-            return x < lo ? -1 : x > hi ? +1 : 0;
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     @Test
     public void testAppend() throws IOException {
         final int RUNS = 1000;
@@ -151,6 +136,10 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertFalse(new File(baseDir).exists());
         }
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     // for 0.5m Throughput was 2940 per milli-second
     // for 100m Throughput was 4364 per milli-second
@@ -801,7 +790,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 appender.append(value).append(' ');
                 appender.finish();
 //                System.out.println("Sleeping " +i );
-                Jvm.pause(1);
+                try {
+                    Thread.sleep((long) 1);
+                } catch (InterruptedException e) {
+                    throw new AssertionError(e);
+                }
 
                 assertTrue(tailer.nextIndex());
                 long major = tailer.index() / builder.entriesPerCycle();
@@ -857,7 +850,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                 int value = 1000000000 + i;
                 appender.append(value).append(' ');
                 appender.finish();
-                Jvm.pause(2000);
+                try {
+                    Thread.sleep((long) 2000);
+                } catch (InterruptedException e) {
+                    throw new AssertionError(e);
+                }
             }
 
             for (int i = 0; i < RUNS; i++) {
@@ -949,7 +946,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appendValues(appender, 1, 20);
 
             // Ensure the appender writes in another cycle from the initial writes
-            Jvm.pause(2000L);
+            try {
+                Thread.sleep(2000L);
+            } catch (InterruptedException e1) {
+                throw new AssertionError(e1);
+            }
             appendValues(appender, 20, 40);
 
             // Verify that all values are read by the tailer
@@ -957,7 +958,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertEquals(createRangeDataSet(1, 40), readAvailableValues(tailer));
 
             // Verify that the tailer reads no new data from a new cycle
-            Jvm.pause(2000L);
+            try {
+                Thread.sleep(2000L);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
             assertTrue(!tailer.nextIndex());
 
             // ### Throws java.lang.NullPointerException
@@ -1006,7 +1011,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appendValues(appender, 1, 5);
 
             // Ensure the appender writes in another cycle from the initial writes
-            Jvm.pause(2000L);
+            try {
+                Thread.sleep(2000L);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
 
             appendValues(appender, 5, 50);
 
@@ -1102,8 +1111,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
-
     @Test
+    @Ignore("TODO FIX")
     public void testWithFsWatcher() throws IOException {
         final String baseDir = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
@@ -1140,6 +1149,16 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         } finally {
             chronicle.close();
             chronicle.clear();
+        }
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
         }
     }
 }

@@ -15,7 +15,8 @@
   ~     along with this program.  If not, see <http://www.gnu.org/licenses />.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -26,7 +27,7 @@
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.6.1.9-SNAPSHOT</version>
+    <version>3.6.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
@@ -45,7 +46,7 @@
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>chronicle-bom</artifactId>
-                <version>1.12.11</version>
+                <version>1.12.16</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -54,11 +55,6 @@
     </dependencyManagement>
 
     <dependencies>
-        <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>chronicle-core</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
@@ -146,8 +142,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <compilerArgument>-Xlint:deprecation</compilerArgument>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

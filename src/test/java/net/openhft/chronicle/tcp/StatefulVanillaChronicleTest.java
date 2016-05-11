@@ -23,7 +23,6 @@ import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Test;
 
@@ -359,7 +358,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
             appender.append(value).append(' '); //this space is really important.
             appender.finish();
 
-            Jvm.pause(100);
+            try {
+                Thread.sleep((long) 100);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
 
             if(i % 10 ==0) {
                 LOGGER.info(".");
@@ -509,7 +512,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             latch.countDown();
 
                         } else {
-                            Jvm.pause(100);
+                            try {
+                                Thread.sleep((long) 100);
+                            } catch (InterruptedException e) {
+                                throw new AssertionError(e);
+                            }
                         }
                     }
 
@@ -542,7 +549,11 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         appender1.close();
 
         while(latch.getCount() > 10) {
-            Jvm.pause(250);
+            try {
+                Thread.sleep((long) 250);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
         }
 
         source1.close();

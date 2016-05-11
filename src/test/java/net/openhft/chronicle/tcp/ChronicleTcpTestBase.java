@@ -21,7 +21,6 @@ import net.openhft.affinity.AffinityLock;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -170,7 +169,11 @@ public class ChronicleTcpTestBase {
                         appender.writeLong(i + 1);
                         appender.finish();
 
-                        Jvm.pause(random.nextInt(10));
+                        try {
+                            Thread.sleep((long) random.nextInt(10));
+                        } catch (InterruptedException e) {
+                            throw new AssertionError(e);
+                        }
                     }
 
                     appender.close();

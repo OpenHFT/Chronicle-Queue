@@ -18,7 +18,6 @@
 package net.openhft.chronicle.tcp;
 
 import net.openhft.chronicle.ChronicleQueueBuilder;
-import net.openhft.chronicle.core.Jvm;
 
 import java.io.IOException;
 import java.net.NetworkInterface;
@@ -65,7 +64,11 @@ public final class SourceTcpInitiator extends SourceTcp {
                             logger.info("Connected to {} from {}", socketChannel.getRemoteAddress(), socketChannel.getLocalAddress());
                         } catch (IOException e) {
                             logger.info("Failed to connect to {}, retrying", builder.connectAddress());
-                            Jvm.pause(builder.reconnectionIntervalMillis());
+                            try {
+                                Thread.sleep(builder.reconnectionIntervalMillis());
+                            } catch (InterruptedException e1) {
+                                throw new AssertionError(e1);
+                            }
                             socketChannel = null;
                         }
                     }

@@ -21,7 +21,6 @@ package net.openhft.chronicle.tools;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptTailer;
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.IOException;
@@ -47,7 +46,11 @@ enum ChronicleReader {
         //noinspection InfiniteLoopStatement
         while (true) {
             while (!excerpt.index(index))
-                Jvm.pause(50);
+                try {
+                    Thread.sleep((long) 50);
+                } catch (InterruptedException e) {
+                    throw new AssertionError(e);
+                }
             System.out.print(index + ": ");
             int nullCount = 0;
             while (excerpt.remaining() > 0) {
