@@ -433,7 +433,8 @@ class SingleChronicleQueueStore implements WireStore {
         long newIndex(@NotNull Wire wire, boolean index2index, long timeoutMS) throws EOFException {
             long writePosition = this.writePosition.getValue();
             wire.bytes().writePosition(writePosition);
-            long position = 0;
+
+            long position;
             try {
                 position = wire.writeHeader(timeoutMS, TimeUnit.MILLISECONDS);
                 WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
