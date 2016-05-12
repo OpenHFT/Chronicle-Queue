@@ -65,7 +65,6 @@ public class CreateAtIndexTest {
         }
     }
 
-
     @Test
     public void testTailerReadingDocumentTest() throws Exception {
         String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
@@ -80,9 +79,6 @@ public class CreateAtIndexTest {
             }
 
             Assert.assertEquals(queueIndex, tailer.index());
-
         }
-
     }
-
 }

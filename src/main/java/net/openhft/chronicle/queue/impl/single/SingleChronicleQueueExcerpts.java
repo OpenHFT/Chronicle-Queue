@@ -483,7 +483,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public long index() {
             if (this.store == null)
-                throw new IllegalArgumentException("This tailer is not bound to any cycle");
+                return Long.MIN_VALUE;
             return queue.rollCycle().toIndex(this.cycle, this.index);
         }
 
