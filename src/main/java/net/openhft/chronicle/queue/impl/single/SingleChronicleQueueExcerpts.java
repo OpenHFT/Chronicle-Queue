@@ -57,14 +57,14 @@ public class SingleChronicleQueueExcerpts {
     /**
      * StoreAppender
      */
-    public static class StoreAppender implements ExcerptAppender, DocumentContext {
+    public static class StoreAppender implements ExcerptAppender {
         @NotNull
         private final SingleChronicleQueue queue;
+        private final StoreAppenderContext context = new StoreAppenderContext();
         private int cycle = Integer.MIN_VALUE;
         private WireStore store;
         private AbstractWire wire;
         private long position = -1;
-        private boolean metaData = false;
         private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
 
@@ -75,21 +75,6 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean recordHistory() {
             return sourceId() != 0;
-        }
-
-        @Override
-        public int sourceId() {
-            return queue.sourceId;
-        }
-
-        @Override
-        public long index() {
-            return wire.headerNumber();
-        }
-
-        @Override
-        public boolean isNotComplete() {
-            throw new UnsupportedOperationException();
         }
 
         private void setCycle(int cycle) {
@@ -124,29 +109,32 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public boolean isPresent() {
-            return false;
-        }
-
-        @Override
-        public Wire wire() {
-            return wire;
-        }
-
-        @Override
         public DocumentContext writingDocument() {
             assert checkAppendingThread();
             try {
                 try {
-                    int cycle = queue.cycle();
-                    if (this.cycle != cycle || wire == null) {
-                        rollCycleTo(cycle);
-                    }
+                    for (int i = 0; i < 100; i++) {
+                        try {
 
-                    assert wire != null;
-                    position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
-                    lastIndex = wire.headerNumber();
-                    metaData = false;
+                            int cycle = queue.cycle();
+                            if (this.cycle != cycle || wire == null) {
+                                rollCycleTo(cycle);
+                                wire.bytes().writePosition(store.writePosition());
+                            }
+
+                            assert wire != null;
+                            if (wire.bytes().writePosition() >= wire.bytes().writeLimit()) {
+                                System.out.println("Reset write position");
+                                wire.bytes().writePosition(store.writePosition());
+                            }
+                            position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                            lastIndex = wire.headerNumber();
+                            context.metaData = false;
+                            break;
+                        } catch (EOFException theySeeMeRolling) {
+                            // retry.
+                        }
+                    }
 
                 } catch (Exception e) {
                     assert resetAppendingThread();
@@ -154,33 +142,14 @@ public class SingleChronicleQueueExcerpts {
                 }
             } catch (TimeoutException e) {
                 throw new IllegalStateException(e);
-            } catch (EOFException e) {
-                throw new UnsupportedOperationException("Must roll to the next cycle");
             }
-            return this;
+            return context;
         }
 
-        @Override
-        public boolean isMetaData() {
-            return metaData;
-        }
 
         @Override
-        public void metaData(boolean metaData) {
-            this.metaData = metaData;
-        }
-
-        @Override
-        public void close() {
-            try {
-                wire.updateHeader(position, metaData);
-                long position = wire.bytes().writePosition();
-                store.writePosition(position);
-            } catch (StreamCorruptedException e) {
-                throw new IllegalStateException(e);
-            } finally {
-                assert resetAppendingThread();
-            }
+        public int sourceId() {
+            return queue.sourceId;
         }
 
         @Override
@@ -354,6 +323,59 @@ public class SingleChronicleQueueExcerpts {
             this.appendingThread = null;
             return true;
         }
+
+        class StoreAppenderContext implements DocumentContext {
+
+            private boolean metaData = false;
+
+            @Override
+            public int sourceId() {
+                return StoreAppender.this.sourceId();
+            }
+
+            @Override
+            public boolean isPresent() {
+                return false;
+            }
+
+            @Override
+            public Wire wire() {
+                return wire;
+            }
+
+            @Override
+            public boolean isMetaData() {
+                return metaData;
+            }
+
+            @Override
+            public void metaData(boolean metaData) {
+                this.metaData = metaData;
+            }
+
+            @Override
+            public void close() {
+                try {
+                    wire.updateHeader(position, metaData);
+                    long position = wire.bytes().writePosition();
+                    store.writePosition(position);
+                } catch (StreamCorruptedException e) {
+                    throw new IllegalStateException(e);
+                } finally {
+                    assert resetAppendingThread();
+                }
+            }
+
+            @Override
+            public long index() {
+                return wire.headerNumber();
+            }
+
+            @Override
+            public boolean isNotComplete() {
+                throw new UnsupportedOperationException();
+            }
+        }
     }
 
     // *************************************************************************
@@ -365,16 +387,16 @@ public class SingleChronicleQueueExcerpts {
     /**
      * Tailer
      */
-    public static class StoreTailer extends ReadDocumentContext implements ExcerptTailer {
+    public static class StoreTailer implements ExcerptTailer {
         @NotNull
         private final SingleChronicleQueue queue;
+        private final StoreTailerContext context = new StoreTailerContext();
         private int cycle;
         private long index; // index of the next read.
         private WireStore store;
         private TailerDirection direction = TailerDirection.FORWARD;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
-            super(null);
             this.queue = queue;
             this.cycle = Integer.MIN_VALUE;
             this.index = 0;
@@ -397,19 +419,12 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext readingDocument(boolean includeMetaData) {
             try {
-                assert wire == null || wire.startUse();
-                if (present = next(includeMetaData))
-                    return this;
+                assert context.wire() == null || context.wire().startUse();
+                if (context.present(next(includeMetaData)))
+                    return context;
             } catch (TimeoutException ignored) {
             }
             return NoDocumentContext.INSTANCE;
-        }
-
-        @Override
-        public void close() {
-            if (isPresent())
-                incrementIndex();
-            super.close();
         }
 
         private boolean next(boolean includeMetaData) throws TimeoutException {
@@ -419,7 +434,7 @@ public class SingleChronicleQueueExcerpts {
                     return false;
                 if (!this.moveToIndex(firstIndex)) return false;
             }
-            Bytes<?> bytes = wire.bytes();
+            Bytes<?> bytes = context.wire().bytes();
             bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
                 try {
@@ -430,27 +445,27 @@ public class SingleChronicleQueueExcerpts {
                             return false;
                         }
 
-                    switch (wire.readDataHeader(includeMetaData)) {
+                    switch (context.wire().readDataHeader(includeMetaData)) {
                         case NONE:
                             return false;
                         case META_DATA:
-                            metaData(true);
+                            context.metaData(true);
                             break;
                         case DATA:
-                            metaData(false);
+                            context.metaData(false);
                             break;
                     }
-                    closeReadLimit(bytes.capacity());
-                    wire.readAndSetLength(bytes.readPosition());
+                    context.closeReadLimit(bytes.capacity());
+                    context.wire().readAndSetLength(bytes.readPosition());
                     long end = bytes.readLimit();
-                    closeReadPosition(end);
+                    context.closeReadPosition(end);
                     return true;
 
                 } catch (EOFException eof) {
                     if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
                         try {
                             if (moveToIndex(cycle + direction.add(), 0)) {
-                                bytes = wire.bytes();
+                                bytes = context.wire().bytes();
                                 continue;
                             }
                         } catch (TimeoutException failed) {
@@ -497,8 +512,8 @@ public class SingleChronicleQueueExcerpts {
             }
             this.index = index;
 
-            ScanResult scanResult = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
-            Bytes<?> bytes = wire.bytes();
+            ScanResult scanResult = this.store.moveToIndex(context.wire(), sequenceNumber, queue.timeoutMS);
+            Bytes<?> bytes = context.wire().bytes();
             if (scanResult == ScanResult.FOUND) {
                 return true;
             }
@@ -519,7 +534,7 @@ public class SingleChronicleQueueExcerpts {
                 cycle(firstCycle);
             }
             index = queue.rollCycle().toIndex(cycle, 0);
-            this.wire.bytes().readPosition(0);
+            context.wire().bytes().readPosition(0);
             return this;
         }
 
@@ -589,6 +604,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
+            final Wire wire = context.wire();
             Bytes<?> bytes = wire.bytes();
             bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
@@ -636,11 +652,12 @@ public class SingleChronicleQueueExcerpts {
                 }
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
-                this.wire = (AbstractWire) queue.wireType().apply(store.mappedBytes());
+                context.wire((AbstractWire) queue.wireType().apply(store.mappedBytes()));
+                final Wire wire = context.wire();
                 assert wire.startUse();
                 try {
-                    this.wire.parent(this);
-                    this.wire.pauser(queue.pauserSupplier.get());
+                    wire.parent(this);
+                    wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
 //                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
                 } finally {
@@ -669,7 +686,7 @@ public class SingleChronicleQueueExcerpts {
                     ValueIn valueIn = context.wire().readEventName(sb);
                     if (!StringUtils.isEqual("history", sb))
                         continue;
-
+                    final Wire wire = context.wire();
                     Object parent = wire.parent();
                     try {
                         wire.parent(null);
@@ -703,6 +720,27 @@ public class SingleChronicleQueueExcerpts {
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
             if (store != null)
                 store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+        }
+
+        class StoreTailerContext extends ReadDocumentContext {
+            public StoreTailerContext() {
+                super(null);
+            }
+
+            @Override
+            public void close() {
+                if (isPresent())
+                    incrementIndex();
+                super.close();
+            }
+
+            public boolean present(boolean present) {
+                return this.present = present;
+            }
+
+            public void wire(AbstractWire wire) {
+                this.wire = wire;
+            }
         }
     }
 }
