@@ -5,6 +5,8 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.wire.DocumentContext;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -62,4 +64,25 @@ public class CreateAtIndexTest {
         } catch (IORuntimeException ignored) {
         }
     }
+
+
+    @Test
+    public void testTailerReadingDocumentTest() throws Exception {
+        String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+            long queueIndex = queue.lastIndex();
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                long tailerIndex = dc.index();
+                Assert.assertEquals(queueIndex, tailerIndex);
+            }
+
+            Assert.assertEquals(queueIndex, tailer.index());
+
+        }
+
+    }
+
 }
