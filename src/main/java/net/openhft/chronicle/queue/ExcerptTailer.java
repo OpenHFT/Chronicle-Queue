@@ -19,6 +19,7 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeoutException;
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon, MarshallableIn {
+public interface ExcerptTailer extends ExcerptCommon, MarshallableIn, SourceContext {
 
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a

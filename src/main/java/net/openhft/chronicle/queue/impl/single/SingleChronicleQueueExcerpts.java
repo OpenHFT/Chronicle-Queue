@@ -387,7 +387,7 @@ public class SingleChronicleQueueExcerpts {
     /**
      * Tailer
      */
-    public static class StoreTailer implements ExcerptTailer {
+    public static class StoreTailer implements ExcerptTailer, SourceContext {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
