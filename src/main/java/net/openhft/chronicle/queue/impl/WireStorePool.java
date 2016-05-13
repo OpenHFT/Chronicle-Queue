@@ -15,10 +15,11 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import net.openhft.chronicle.queue.RollDetails;
+import org.jetbrains.annotations.NotNull;
 
 public class WireStorePool {
     @NotNull
@@ -37,14 +38,15 @@ public class WireStorePool {
     }
 
     public void close() {
-        // todo
+        stores.entrySet().forEach(e -> e.getValue().close());
     }
 
-    public synchronized WireStore acquire(int cycle, final long epoch) {
-        @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
+    public synchronized WireStore acquire(final int cycle, final long epoch) {
+        RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {
-            stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));
+            store = this.supplier.apply(cycle, epoch);
+            stores.put(rollDetails, store);
         } else {
             store.reserve();
         }
@@ -54,35 +56,12 @@ public class WireStorePool {
     public synchronized void release(@NotNull WireStore store) {
         store.release();
         if (store.refCount() <= 0) {
-            for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet())
-                if (entry.getValue() == store)
+            for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
+                if (entry.getValue() == store) {
                     stores.remove(entry.getKey());
-        }
-    }
-
-    private class RollDetails {
-
-        private final long cycle;
-        private final long epoch;
-
-        public RollDetails(long cycle, long epoch) {
-            this.cycle = cycle;
-            this.epoch = epoch;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof RollDetails)) return false;
-            @NotNull RollDetails rollDetails = (RollDetails) o;
-            return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (cycle ^ (cycle >>> 32));
-            result = 31 * result + (int) (epoch ^ (epoch >>> 32));
-            return result;
+                    break;
+                }
+            }
         }
     }
 }

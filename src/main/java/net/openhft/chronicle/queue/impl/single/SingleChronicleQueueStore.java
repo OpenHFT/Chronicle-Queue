@@ -15,6 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import java.io.EOFException;
+import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -22,29 +28,34 @@ import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Demarshallable;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireIn;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.Closeable;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.StreamCorruptedException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 class SingleChronicleQueueStore implements WireStore {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueStore.class);
     private static final long LONG_NOT_COMPLETE = -1;
 
     static {
@@ -58,16 +69,15 @@ class SingleChronicleQueueStore implements WireStore {
     private final Roll roll;
     @NotNull
     private final LongValue writePosition;
+    private final MappedBytes mappedBytes;
     private final MappedFile mappedFile;
     @NotNull
     private final Indexing indexing;
+    @NotNull
+    private final ReferenceCounter refCount;
 
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
-
-    @Nullable
-    private Closeable resourceCleaner;
-    private final ReferenceCounter refCount = ReferenceCounter.onReleased(this::performRelease);
 
     /**
      * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -83,55 +93,54 @@ class SingleChronicleQueueStore implements WireStore {
         wire.read(MetaDataField.writePosition).int64(writePosition);
         this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
-        @NotNull
-        final MappedBytes mappedBytes = (MappedBytes) (wire.bytes());
+        this.mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
+        this.refCount = ReferenceCounter.onReleased(mappedBytes::release);
         this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
         assert indexing != null;
-        indexing.writePosition = writePosition;
+        this.indexing.writePosition = writePosition;
 
         if (wire.bytes().readRemaining() > 0) {
-            this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField
-                    .lastAcknowledgedIndexReplicated)
+            this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
                     .int64ForBinding(null);
         } else {
             this.lastAcknowledgedIndexReplicated = null; // disabled.
         }
     }
 
-
     /**
      * @param rollCycle    the current rollCycle
      * @param wireType     the wire type that is being used
      * @param mappedBytes  used to mapped the data store file
-     * @param rollEpoc     sets an epoch offset as the number of number of milliseconds since
+     * @param epoch        sets an epoch offset as the number of number of milliseconds since
      * @param indexCount   the number of entries in each index.
      * @param indexSpacing the spacing between indexed entries.
      */
     SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                               @NotNull final WireType wireType,
                               @NotNull MappedBytes mappedBytes,
-                              long rollEpoc, int indexCount,
+                              long epoch,
+                              int indexCount,
                               int indexSpacing) {
-        this.roll = new Roll(rollCycle, rollEpoc);
-        this.resourceCleaner = null;
+
+        this.roll = new Roll(rollCycle, epoch);
         this.wireType = wireType;
+        this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
+        this.refCount = ReferenceCounter.onReleased(mappedBytes::release);
 
         indexCount = Maths.nextPower2(indexCount, 8);
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
+
         this.indexing = new Indexing(wireType, indexCount, indexSpacing);
-        indexing.writePosition =
-                this.writePosition = wireType.newLongReference().get();
-
-
+        this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
     }
 
     public static void dumpStore(Wire wire) {
         Bytes<?> bytes = wire.bytes();
         bytes.readPosition(0);
-        System.out.println(Wires.fromSizePrefixedBlobs(bytes));
+        LOG.debug(Wires.fromSizePrefixedBlobs(bytes));
     }
 
     /**
@@ -197,28 +206,25 @@ class SingleChronicleQueueStore implements WireStore {
         this.refCount.release();
     }
 
-    // *************************************************************************
-    // BOOTSTRAP
-    // *************************************************************************
-
     @Override
     public long refCount() {
         return this.refCount.get();
     }
 
+    @Override
+    public void close() {
+        this.refCount.releaseAll();
+    }
+
     /**
-     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
-     * can be at different locations.
+     * @return creates a new instance of mapped bytes, because, for example the
+     * tailer and appender can be at different locations.
      */
     @NotNull
     @Override
-    public MappedBytes mappedBytes() {
+    public Bytes<Void> bytes() {
         return MappedBytes.mappedBytes(mappedFile);
     }
-
-    // *************************************************************************
-    // Utilities
-    // *************************************************************************
 
     @Override
     public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
@@ -229,27 +235,17 @@ class SingleChronicleQueueStore implements WireStore {
     // MARSHALLABLE
     // *************************************************************************
 
-    private synchronized void performRelease() {
-        //TODO: implement
-        try {
-            if (this.resourceCleaner != null) {
-                this.resourceCleaner.close();
-            }
-        } catch (IOException e) {
-            //TODO
-        }
-    }
-
     @Override
     public void writeMarshallable(@NotNull WireOut wire) {
         if (lastAcknowledgedIndexReplicated == null)
             lastAcknowledgedIndexReplicated = wire.newLongReference();
+
         wire.write(MetaDataField.wireType).object(wireType)
-                .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
-                .write(MetaDataField.roll).typedMarshallable(this.roll)
-                .write(MetaDataField.indexing).typedMarshallable(this.indexing)
-                .write(MetaDataField.lastAcknowledgedIndexReplicated)
-                .int64forBinding(0L, lastAcknowledgedIndexReplicated);
+            .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
+            .write(MetaDataField.roll).typedMarshallable(this.roll)
+            .write(MetaDataField.indexing).typedMarshallable(this.indexing)
+            .write(MetaDataField.lastAcknowledgedIndexReplicated)
+            .int64forBinding(0L, lastAcknowledgedIndexReplicated);
     }
 
     // *************************************************************************
@@ -264,7 +260,6 @@ class SingleChronicleQueueStore implements WireStore {
                 ", roll=" + roll +
                 ", writePosition=" + writePosition +
                 ", mappedFile=" + mappedFile +
-                ", resourceCleaner=" + resourceCleaner +
                 ", refCount=" + refCount +
                 ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
                 '}';
@@ -284,19 +279,15 @@ class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    // *************************************************************************
+    // Indexing
+    // *************************************************************************
+
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index, lastIndex
     }
 
-    // *************************************************************************
-    // ROLLING
-    // *************************************************************************
-
-    enum RollFields implements WireKey {
-        cycle, length, format, epoch,
-    }
-
-    static class Indexing implements Demarshallable, WriteMarshallable {
+    static class Indexing implements Demarshallable, WriteMarshallable, Closeable {
         private final int indexCount, indexCountBits;
         private final int indexSpacing, indexSpacingBits;
         private final LongValue index2Index;
@@ -315,10 +306,10 @@ class SingleChronicleQueueStore implements WireStore {
         @UsedViaReflection
         private Indexing(@NotNull WireIn wire) {
             this(wire.read(IndexingFields.indexCount).int32(),
-                    wire.read(IndexingFields.indexSpacing).int32(),
-                    wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
-                    wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
-                    wire::newLongArrayReference);
+                wire.read(IndexingFields.indexSpacing).int32(),
+                wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
+                wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
+                wire::newLongArrayReference);
         }
 
         Indexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
@@ -327,17 +318,15 @@ class SingleChronicleQueueStore implements WireStore {
 
         public Indexing(int indexCount, int indexSpacing, LongValue index2Index, LongValue nextEntryToIndex, Supplier<LongArrayValues> longArraySupplier) {
             this.indexCount = indexCount;
-            indexCountBits = Maths.intLog2(indexCount);
+            this.indexCountBits = Maths.intLog2(indexCount);
             this.indexSpacing = indexSpacing;
-            indexSpacingBits = Maths.intLog2(indexSpacing);
+            this.indexSpacingBits = Maths.intLog2(indexSpacing);
             this.index2Index = index2Index;
             this.nextEntryToIndex = nextEntryToIndex;
             this.index2indexArray = withInitial(longArraySupplier);
             this.indexArray = withInitial(longArraySupplier);
-            index2IndexTemplate = w -> w.writeEventName(() -> "index2index")
-                    .int64array(indexCount);
-            indexTemplate = w -> w.writeEventName(() -> "index")
-                    .int64array(indexCount);
+            this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount);
+            this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount);
         }
 
         public long toAddress0(long index) {
@@ -356,11 +345,15 @@ class SingleChronicleQueueStore implements WireStore {
         }
 
         @Override
+        public void close() {
+        }
+
+        @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(IndexingFields.indexCount).int64(indexCount)
-                    .write(IndexingFields.indexSpacing).int64(indexSpacing)
-                    .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
-                    .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToIndex);
+                .write(IndexingFields.indexSpacing).int64(indexSpacing)
+                .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
+                .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToIndex);
         }
 
         /**
@@ -731,11 +724,19 @@ class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    // *************************************************************************
+    // Rolling
+    // *************************************************************************
+
+    enum RollFields implements WireKey {
+        length, format, epoch,
+    }
+
     static class Roll implements Demarshallable, WriteMarshallable {
-        private final long epoch;
         private final int length;
         @Nullable
         private final String format;
+        private final long epoch;
 
         /**
          * used by {@link net.openhft.chronicle.wire.Demarshallable}
@@ -749,17 +750,17 @@ class SingleChronicleQueueStore implements WireStore {
             epoch = wire.read(RollFields.epoch).int64();
         }
 
-        Roll(@NotNull RollCycle rollCycle, long rollEpoch) {
+        Roll(@NotNull RollCycle rollCycle, long epoch) {
             this.length = rollCycle.length();
             this.format = rollCycle.format();
-            this.epoch = rollEpoch;
+            this.epoch = epoch;
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(RollFields.length).int32(length)
-                    .write(RollFields.format).text(format)
-                    .write(RollFields.epoch).int64(epoch);
+                .write(RollFields.format).text(format)
+                .write(RollFields.epoch).int64(epoch);
         }
 
         /**
