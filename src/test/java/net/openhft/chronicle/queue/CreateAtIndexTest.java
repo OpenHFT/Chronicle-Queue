@@ -81,4 +81,36 @@ public class CreateAtIndexTest {
             Assert.assertEquals(queueIndex, tailer.index());
         }
     }
+
+    @Test
+    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExceprt() throws Exception {
+        String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
+
+        long expected = 0;
+
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+
+            ExcerptAppender appender = queue.createAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+
+                dc.wire().writeDocument(true, w -> w.write().text("some-data"));
+
+                long index = dc.index();
+                Assert.assertTrue(index > 0);
+
+            }
+
+            ExcerptTailer tailer = queue.createTailer();
+            try (DocumentContext dc = tailer.readingDocument()) {
+
+                long actualIndex = dc.index();
+                Assert.assertTrue(actualIndex > 0);
+
+                Assert.assertEquals(expected, actualIndex);
+
+            }
+
+        }
+    }
 }
