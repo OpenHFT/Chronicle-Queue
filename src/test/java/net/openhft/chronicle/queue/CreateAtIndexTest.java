@@ -83,7 +83,7 @@ public class CreateAtIndexTest {
     }
 
     @Test
-    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExceprt() throws Exception {
+    public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
         String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
 
         long expected = 0;
