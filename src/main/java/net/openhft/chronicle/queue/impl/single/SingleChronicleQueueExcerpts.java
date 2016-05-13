@@ -728,6 +728,16 @@ public class SingleChronicleQueueExcerpts {
             }
 
             @Override
+            public long index() {
+                return StoreTailer.this.index();
+            }
+
+            @Override
+            public int sourceId() {
+                return StoreTailer.this.sourceId();
+            }
+
+            @Override
             public void close() {
                 if (isPresent())
                     incrementIndex();
