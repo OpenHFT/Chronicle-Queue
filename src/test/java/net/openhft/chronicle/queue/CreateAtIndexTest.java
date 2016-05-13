@@ -94,21 +94,34 @@ public class CreateAtIndexTest {
 
             try (DocumentContext dc = appender.writingDocument()) {
 
-                dc.wire().writeDocument(true, w -> w.write().text("some-data"));
+                dc.wire().write().text("some-data");
 
-                long index = dc.index();
-                Assert.assertTrue(index > 0);
+                expected = dc.index();
+                Assert.assertTrue(expected > 0);
 
             }
+
+            appender.lastIndexAppended();
 
             ExcerptTailer tailer = queue.createTailer();
             try (DocumentContext dc = tailer.readingDocument()) {
 
-                long actualIndex = dc.index();
-                Assert.assertTrue(actualIndex > 0);
+                String text = dc.wire().read().text();
 
-                Assert.assertEquals(expected, actualIndex);
 
+                {
+                    long actualIndex = dc.index();
+                    Assert.assertTrue(actualIndex > 0);
+
+                    Assert.assertEquals(expected, actualIndex);
+                }
+
+                {
+                    long actualIndex = tailer.index();
+                    Assert.assertTrue(actualIndex > 0);
+
+                    Assert.assertEquals(expected, actualIndex);
+                }
             }
 
         }
