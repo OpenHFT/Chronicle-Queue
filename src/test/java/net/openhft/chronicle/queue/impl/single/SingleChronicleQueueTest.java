@@ -556,10 +556,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Wire wire = new BinaryWire(Bytes.allocateDirect(64));
             for (int i = 0; i < 6; i++) {
                 long index = queue.rollCycle().toIndex(cycle + i, 0);
-                wire.bytes().clear();
+                wire.clear();
                 wire.write(TestKey.test).int32(i);
                 appender.writeBytes(index, wire.bytes());
-                wire.bytes().clear();
+                wire.clear();
                 wire.write(TestKey.test2).int32(i + 1000);
                 appender.writeBytes(index + 1, wire.bytes());
             }
