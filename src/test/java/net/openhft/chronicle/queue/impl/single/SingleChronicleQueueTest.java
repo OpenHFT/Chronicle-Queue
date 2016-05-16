@@ -1552,4 +1552,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         public MyMarshable() {
         }
     }
+
+    @Test
+    public void testForwardFollowedBackBackwardTailer() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.createAppender();
+
+            appender.writeDocument(w -> w.writeEventName("hello").text("world1"));
+            appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
+            appender.writeDocument(w -> w.writeEventName("hello").text("world3"));
+
+            ExcerptTailer forwardTailer = chronicle.createTailer();
+
+            for (int i = 1; i <= 3; i++) {
+
+                try (DocumentContext documentContext = forwardTailer.readingDocument(false)) {
+                    Assert.assertTrue(documentContext.isPresent());
+                    StringBuilder sb = Wires.acquireStringBuilder();
+                    ValueIn valueIn = documentContext.wire().readEventName(sb);
+                    Assert.assertTrue("hello".contentEquals(sb));
+                    String actual = valueIn.text();
+                    Assert.assertEquals("world" + i, actual);
+                }
+
+            }
+
+            ExcerptTailer backwardTailer = chronicle.createTailer().direction(TailerDirection.BACKWARD);
+
+            for (int i = 3; i >= 1; i--) {
+
+                try (DocumentContext documentContext = backwardTailer.readingDocument(false)) {
+                    Assert.assertTrue(documentContext.isPresent());
+                    StringBuilder sb = Wires.acquireStringBuilder();
+                    ValueIn valueIn = documentContext.wire().readEventName(sb);
+                    Assert.assertTrue("hello".contentEquals(sb));
+                    String actual = valueIn.text();
+                    Assert.assertEquals("world" + i, actual);
+                }
+
+            }
+        }
+    }
 }
