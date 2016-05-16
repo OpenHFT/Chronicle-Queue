@@ -1540,19 +1540,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
-
-        String name;
-
-        @UsedViaReflection
-        public MyMarshable(@NotNull WireIn wire) {
-            readMarshallable(wire);
-        }
-
-        public MyMarshable() {
-        }
-    }
-
     @Test
     public void testForwardFollowedBackBackwardTailer() {
         File tmpDir = getTmpDir();
@@ -1566,7 +1553,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
             appender.writeDocument(w -> w.writeEventName("hello").text("world3"));
 
-            ExcerptTailer forwardTailer = chronicle.createTailer();
+            ExcerptTailer forwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.FORWARD)
+                    .toStart();
 
             for (int i = 1; i <= 3; i++) {
 
@@ -1581,7 +1570,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
 
-            ExcerptTailer backwardTailer = chronicle.createTailer().direction(TailerDirection.BACKWARD);
+            ExcerptTailer backwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd();
 
             for (int i = 3; i >= 1; i--) {
 
@@ -1595,6 +1586,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
             }
+        }
+    }
+
+    static class MyMarshable extends AbstractMarshallable implements Demarshallable {
+
+        String name;
+
+        @UsedViaReflection
+        public MyMarshable(@NotNull WireIn wire) {
+            readMarshallable(wire);
+        }
+
+        public MyMarshable() {
         }
     }
 }
