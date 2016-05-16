@@ -64,6 +64,8 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @NotNull
+    private final WireIn wire;
+    @NotNull
     private final WireType wireType;
     @NotNull
     private final Roll roll;
@@ -87,10 +89,12 @@ class SingleChronicleQueueStore implements WireStore {
     @UsedViaReflection
     private SingleChronicleQueueStore(WireIn wire) {
         assert wire.startUse();
-        wireType = wire.read(MetaDataField.wireType).object(WireType.class);
+
+        this.wire = wire;
+        this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
         assert wireType != null;
         this.writePosition = wire.newLongReference();
-        wire.read(MetaDataField.writePosition).int64(writePosition);
+        this.wire.read(MetaDataField.writePosition).int64(writePosition);
         this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
         this.mappedBytes = (MappedBytes) (wire.bytes());
@@ -122,8 +126,8 @@ class SingleChronicleQueueStore implements WireStore {
                               long epoch,
                               int indexCount,
                               int indexSpacing) {
-
         this.roll = new Roll(rollCycle, epoch);
+        this.wire = null;
         this.wireType = wireType;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
@@ -245,7 +249,11 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     private void onCleanup() {
-        //mappedBytes.release();
+        if (wire != null) {
+            assert wire.endUse();
+        }
+
+        mappedBytes.release();
     }
 
     // *************************************************************************
