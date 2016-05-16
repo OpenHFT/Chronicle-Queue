@@ -15,29 +15,14 @@
  */
 package net.openhft.chronicle.queue;
 
-import org.jetbrains.annotations.NotNull;
+import net.openhft.chronicle.wire.AbstractMarshallable;
 
-public class RollDetails {
-    private final long cycle;
-    private final long epoch;
+public class RollDetails extends AbstractMarshallable {
+    final long cycle;
+    final long epoch;
 
     public RollDetails(long cycle, long epoch) {
         this.cycle = cycle;
         this.epoch = epoch;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof RollDetails)) return false;
-        @NotNull RollDetails rollDetails = (RollDetails) o;
-        return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = (int) (cycle ^ (cycle >>> 32));
-        result = 31 * result + (int) (epoch ^ (epoch >>> 32));
-        return result;
     }
 }
