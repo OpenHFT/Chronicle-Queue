@@ -95,7 +95,7 @@ class SingleChronicleQueueStore implements WireStore {
 
         this.mappedBytes = (MappedBytes) (wire.bytes());
         this.mappedFile = mappedBytes.mappedFile();
-        this.refCount = ReferenceCounter.onReleased(mappedBytes::release);
+        this.refCount = ReferenceCounter.onReleased(this::onCleanup);
         this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
         assert indexing != null;
         this.indexing.writePosition = writePosition;
@@ -127,7 +127,7 @@ class SingleChronicleQueueStore implements WireStore {
         this.wireType = wireType;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
-        this.refCount = ReferenceCounter.onReleased(mappedBytes::release);
+        this.refCount = ReferenceCounter.onReleased(this::onCleanup);
 
         indexCount = Maths.nextPower2(indexCount, 8);
         indexSpacing = Maths.nextPower2(indexSpacing, 1);
@@ -231,8 +231,25 @@ class SingleChronicleQueueStore implements WireStore {
         return indexing.indexForPosition(wire, position, timeoutMS);
     }
 
+    @Override
+    public String toString() {
+        return "SingleChronicleQueueStore{" +
+                "indexing=" + indexing +
+                ", wireType=" + wireType +
+                ", roll=" + roll +
+                ", writePosition=" + writePosition +
+                ", mappedFile=" + mappedFile +
+                ", refCount=" + refCount +
+                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
+                '}';
+    }
+
+    private void onCleanup() {
+        //mappedBytes.release();
+    }
+
     // *************************************************************************
-    // MARSHALLABLE
+    // Marshalling
     // *************************************************************************
 
     @Override
@@ -246,23 +263,6 @@ class SingleChronicleQueueStore implements WireStore {
             .write(MetaDataField.indexing).typedMarshallable(this.indexing)
             .write(MetaDataField.lastAcknowledgedIndexReplicated)
             .int64forBinding(0L, lastAcknowledgedIndexReplicated);
-    }
-
-    // *************************************************************************
-    // INDEXING
-    // *************************************************************************
-
-    @Override
-    public String toString() {
-        return "SingleChronicleQueueStore{" +
-                "indexing=" + indexing +
-                ", wireType=" + wireType +
-                ", roll=" + roll +
-                ", writePosition=" + writePosition +
-                ", mappedFile=" + mappedFile +
-                ", refCount=" + refCount +
-                ", lastAcknowledgedIndexReplicated=" + lastAcknowledgedIndexReplicated +
-                '}';
     }
 
     enum MetaDataField implements WireKey {
