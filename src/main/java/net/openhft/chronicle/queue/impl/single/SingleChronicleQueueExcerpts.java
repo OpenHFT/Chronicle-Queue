@@ -16,36 +16,46 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.core.annotation.UsedViaReflection;
-import net.openhft.chronicle.core.io.IORuntimeException;
-import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.*;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.*;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
-public class SingleChronicleQueueExcerpts {
+import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.core.Jvm;
+import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.io.IORuntimeException;
+import net.openhft.chronicle.core.util.StringUtils;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ReadDocumentContext;
+import net.openhft.chronicle.wire.SourceContext;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.VanillaMessageHistory;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireOut;
+import net.openhft.chronicle.wire.Wires;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
     @FunctionalInterface
     public interface WireWriter<T> {
         void write(
-                T message,
-                WireOut wireOut);
+            T message,
+            WireOut wireOut);
     }
 
     // *************************************************************************
@@ -94,11 +104,8 @@ public class SingleChronicleQueueExcerpts {
             }
             this.store = queue.storeForCycle(cycle, queue.epoch());
 
-            @NotNull final MappedBytes mappedBytes = store.mappedBytes();
-            if (LOG.isDebugEnabled())
-                LOG.debug("appender file=" + mappedBytes.mappedFile().file().getAbsolutePath());
 
-            wire = (AbstractWire) queue.wireType().apply(mappedBytes);
+            wire = (AbstractWire) queue.wireType().apply(store.bytes());
             // only set the cycle after the wire is set.
             this.cycle = cycle;
 
@@ -124,7 +131,7 @@ public class SingleChronicleQueueExcerpts {
 
                             assert wire != null;
                             if (wire.bytes().writePosition() >= wire.bytes().writeLimit()) {
-                                System.out.println("Reset write position");
+                                LOG.debug("Reset write position");
                                 wire.bytes().writePosition(store.writePosition());
                             }
                             position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
@@ -155,8 +162,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeBytes(@NotNull Bytes bytes) {
             // still uses append as it has a known length.
-            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes()
-                    .write(m), bytes);
+            append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
 
         @Override
@@ -652,7 +658,7 @@ public class SingleChronicleQueueExcerpts {
                 }
                 this.cycle = cycle;
                 this.store = this.queue.storeForCycle(cycle, queue.epoch());
-                context.wire((AbstractWire) queue.wireType().apply(store.mappedBytes()));
+                context.wire((AbstractWire) queue.wireType().apply(store.bytes()));
                 final Wire wire = context.wire();
                 assert wire.startUse();
                 try {

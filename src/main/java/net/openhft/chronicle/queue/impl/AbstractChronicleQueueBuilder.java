@@ -16,6 +16,11 @@
 
 package net.openhft.chronicle.queue.impl;
 
+import java.io.File;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -33,11 +38,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * Created by peter on 05/03/2016.
@@ -66,7 +66,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private long timeoutMS = 10_000; // 10 seconds.
-    private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
+    private WireStoreFactory storeFactory;
     private int sourceId = 0;
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -74,9 +74,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.path = path;
         this.wireType = WireType.BINARY;
         this.epoch = 0;
-        bufferCapacity = 2 << 20;
-        indexSpacing = -1;
-        indexCount = -1;
+        this.bufferCapacity = 2 << 20;
+        this.indexSpacing = -1;
+        this.indexCount = -1;
     }
 
     protected Logger getLogger() {
@@ -299,12 +299,12 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return timeoutMS;
     }
 
-    public void storeFactory(BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory) {
+    public void storeFactory(WireStoreFactory storeFactory) {
         this.storeFactory = storeFactory;
     }
 
     @Override
-    public BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory() {
+    public WireStoreFactory storeFactory() {
         return storeFactory;
     }
 

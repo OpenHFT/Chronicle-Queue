@@ -15,19 +15,16 @@
  */
 package net.openhft.chronicle.queue;
 
+import java.io.File;
+import java.util.function.Consumer;
+
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.File;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 /**
  * @author Rob Austin.
@@ -105,5 +102,5 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
 
     int indexSpacing();
 
-    BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory();
+    WireStoreFactory storeFactory();
 }

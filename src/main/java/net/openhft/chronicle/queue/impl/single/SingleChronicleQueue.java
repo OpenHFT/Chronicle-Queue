@@ -15,6 +15,18 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.StreamCorruptedException;
+import java.text.ParseException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
@@ -30,17 +42,13 @@ import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.AbstractWire;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.*;
-import java.text.ParseException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
@@ -237,7 +245,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     return Long.MIN_VALUE;
 
                 WireStore store = storeForCycle(lastCycle, epoch);
-                Wire wire = wireType().apply(store.mappedBytes());
+                Wire wire = wireType().apply(store.bytes());
                 long sequenceNumber = store.indexForPosition(wire, store.writePosition(), 0);
                 if (sequenceNumber == -1)
                     sequenceNumber++;
@@ -299,8 +307,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     //
     // *************************************************************************
 
-    private MappedBytes mappedBytes(File cycleFile)
-            throws FileNotFoundException {
+    private MappedBytes mappedBytes(File cycleFile) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
@@ -315,27 +322,30 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 parentFile.mkdirs();
 
             final MappedBytes mappedBytes = mappedBytes(dateValue.path);
-
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
             assert wire.startUse();
             wire.pauser(pauserSupplier.get());
             wire.headerNumber(rollCycle.toIndex(cycle, 0));
+
+            WireStore wireStore;
             if (wire.writeFirstHeader()) {
-                RollingChronicleQueue queue = this;
-                final WireStore wireStore = storeFactory.apply(queue, wire);
+                wireStore = storeFactory.apply(this, wire);
                 wireStore.writePosition(wire.bytes().writePosition());
                 wire.updateFirstHeader();
-                return wireStore;
+            } else {
+                wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+
+                StringBuilder name = Wires.acquireStringBuilder();
+                ValueIn valueIn = wire.readEventName(name);
+                if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                    wireStore = valueIn.typedMarshallable();
+                } else {
+                    //noinspection unchecked
+                    throw new StreamCorruptedException("The first message should be the header, was " + name);
+                }
             }
 
-            wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
-
-            StringBuilder name = Wires.acquireStringBuilder();
-            ValueIn valueIn = wire.readEventName(name);
-            if (StringUtils.isEqual(name, MetaDataKeys.header.name()))
-                return valueIn.typedMarshallable();
-            //noinspection unchecked
-            throw new StreamCorruptedException("The first message should be the header, was " + name);
+            return wireStore;
 
         } catch (TimeoutException | IOException e) {
             throw Jvm.rethrow(e);
