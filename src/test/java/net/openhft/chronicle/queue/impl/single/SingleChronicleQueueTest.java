@@ -1557,8 +1557,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .direction(TailerDirection.FORWARD)
                     .toStart();
 
-            for (int i = 0; i < 3; i++) {
-
+            {
+                int i = 0 ;
                 try (DocumentContext documentContext = forwardTailer.readingDocument(false)) {
                     Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
@@ -1575,7 +1575,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .direction(TailerDirection.BACKWARD)
                     .toEnd();
 
-            for (int i = 3 - 1; i > 0; i--) {
+            for (int i = 3 - 1; i >= 0; i--) {
                 try (DocumentContext documentContext = backwardTailer.readingDocument(false)) {
                     Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
@@ -1589,8 +1589,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
 
-            ExcerptTailer forwardTailer1 = chronicle.createTailer()
-                    .direction(TailerDirection.FORWARD)
+            ExcerptTailer forwardTailer1 = chronicle.createTailer().direction(TailerDirection.FORWARD)
                     .toStart();
 
             for (int i = 0; i < 3; i++) {
