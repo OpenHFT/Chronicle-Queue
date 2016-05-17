@@ -1570,13 +1570,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
 
-            ExcerptTailer backwardTailer = chronicle.createTailer()
-                    .toEnd().direction(TailerDirection.BACKWARD);
+            ExcerptTailer backwardTailer = chronicle.createTailer().toEnd()
+                    .direction(TailerDirection.BACKWARD);
 
 
             for (int i = 3; i >= 1; i--) {
 
                 try (DocumentContext documentContext = backwardTailer.readingDocument(false)) {
+                    Assert.assertTrue(documentContext.isPresent());
+                    StringBuilder sb = Wires.acquireStringBuilder();
+                    ValueIn valueIn = documentContext.wire().readEventName(sb);
+                    Assert.assertTrue("hello".contentEquals(sb));
+                    String actual = valueIn.text();
+                    Assert.assertEquals("world" + i, actual);
+                }
+
+            }
+
+
+            ExcerptTailer forwardTailer1 = chronicle.createTailer()
+                    .direction(TailerDirection.FORWARD)
+                    .toStart();
+
+            for (int i = 1; i <= 3; i++) {
+
+                try (DocumentContext documentContext = forwardTailer1.readingDocument(false)) {
                     Assert.assertTrue(documentContext.isPresent());
                     StringBuilder sb = Wires.acquireStringBuilder();
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
