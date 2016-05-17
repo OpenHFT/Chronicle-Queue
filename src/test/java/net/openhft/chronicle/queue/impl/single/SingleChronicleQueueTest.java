@@ -1558,7 +1558,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .toStart();
 
             {
-                int i = 0 ;
+                int i = 0;
                 try (DocumentContext documentContext = forwardTailer.readingDocument(false)) {
                     Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
@@ -1603,6 +1603,24 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
             }
+        }
+    }
+
+    @Test
+    public void testLastIndexAppended() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.createAppender();
+            appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
+            appender.writeDocument(w -> {
+                return;
+            } );
+
+            Assert.assertEquals(chronicle.lastIndex(),appender.lastIndexAppended());
+
         }
     }
 

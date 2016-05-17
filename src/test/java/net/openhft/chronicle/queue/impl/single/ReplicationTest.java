@@ -37,7 +37,7 @@ import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
  */
 public class ReplicationTest {
 
-    public static final int TIMES = 0x1289000;
+    private static final int TIMES = 0x1289000;
 
     @Ignore
     @Test
