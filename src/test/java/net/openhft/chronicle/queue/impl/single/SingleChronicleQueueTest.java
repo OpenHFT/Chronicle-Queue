@@ -1549,17 +1549,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.createAppender();
 
+            appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             appender.writeDocument(w -> w.writeEventName("hello").text("world1"));
             appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
-            appender.writeDocument(w -> w.writeEventName("hello").text("world3"));
 
             ExcerptTailer forwardTailer = chronicle.createTailer()
                     .direction(TailerDirection.FORWARD)
                     .toStart();
 
-            for (int i = 1; i <= 3; i++) {
+            for (int i = 0; i < 3; i++) {
 
                 try (DocumentContext documentContext = forwardTailer.readingDocument(false)) {
+                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
                     StringBuilder sb = Wires.acquireStringBuilder();
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
@@ -1570,13 +1571,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
 
-            ExcerptTailer backwardTailer = chronicle.createTailer().toEnd()
-                    .direction(TailerDirection.BACKWARD);
+            ExcerptTailer backwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd();
 
-
-            for (int i = 3; i >= 1; i--) {
-
+            for (int i = 3 - 1; i > 0; i--) {
                 try (DocumentContext documentContext = backwardTailer.readingDocument(false)) {
+                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
                     StringBuilder sb = Wires.acquireStringBuilder();
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
@@ -1584,17 +1585,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     String actual = valueIn.text();
                     Assert.assertEquals("world" + i, actual);
                 }
-
             }
-
 
             ExcerptTailer forwardTailer1 = chronicle.createTailer()
                     .direction(TailerDirection.FORWARD)
                     .toStart();
 
-            for (int i = 1; i <= 3; i++) {
+            for (int i = 0; i < 3; i++) {
 
                 try (DocumentContext documentContext = forwardTailer1.readingDocument(false)) {
+                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
                     Assert.assertTrue(documentContext.isPresent());
                     StringBuilder sb = Wires.acquireStringBuilder();
                     ValueIn valueIn = documentContext.wire().readEventName(sb);
