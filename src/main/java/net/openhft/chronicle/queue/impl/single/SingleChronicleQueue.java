@@ -15,18 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.StreamCorruptedException;
-import java.text.ParseException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
@@ -42,13 +30,17 @@ import net.openhft.chronicle.queue.impl.RollingResourcesCache;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.queue.impl.WireStorePool;
 import net.openhft.chronicle.threads.Pauser;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.*;
+import java.text.ParseException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
@@ -122,7 +114,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public String dump() {
         StringBuilder sb = new StringBuilder();
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
-            sb.append(storeForCycle(i, epoch).dump());
+            WireStore wireStore = storeForCycle(i, epoch, false);
+            if (wireStore != null) {
+//                sb.append("# ").append(wireStore.bytes().mappedFile().file()).append("\n");
+                sb.append(wireStore.dump());
+            }
         }
         return sb.toString();
     }
@@ -176,10 +172,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return new SingleChronicleQueueExcerpts.StoreTailer(this);
     }
 
-    @NotNull
+    @Nullable
     @Override
-    public final WireStore storeForCycle(int cycle, final long epoch) {
-        return this.pool.acquire(cycle, epoch);
+    public final WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent) {
+        return this.pool.acquire(cycle, epoch, createIfAbsent);
     }
 
     @Override
@@ -244,7 +240,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (lastCycle == Integer.MIN_VALUE)
                     return Long.MIN_VALUE;
 
-                WireStore store = storeForCycle(lastCycle, epoch);
+                WireStore store = storeForCycle(lastCycle, epoch, false);
+                if (store == null)
+                    return Long.MIN_VALUE;
+
                 Wire wire = wireType().apply(store.bytes());
                 long sequenceNumber = store.indexForPosition(wire, store.writePosition(), 0);
                 if (sequenceNumber == -1)
@@ -313,15 +312,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
     }
 
-    @NotNull
-    private WireStore acquireStore(final int cycle, final long epoch) {
+    @net.openhft.chronicle.core.annotation.Nullable
+    private WireStore acquireStore(final int cycle, final long epoch, boolean createIfAbsent) {
         @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
         try {
-            final File parentFile = dateValue.path.getParentFile();
+            File path = dateValue.path;
+            final File parentFile = path.getParentFile();
             if (parentFile != null && !parentFile.exists())
                 parentFile.mkdirs();
 
-            final MappedBytes mappedBytes = mappedBytes(dateValue.path);
+            if (!path.exists() && !createIfAbsent)
+                return null;
+
+            final MappedBytes mappedBytes = mappedBytes(path);
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
             assert wire.startUse();
             wire.pauser(pauserSupplier.get());

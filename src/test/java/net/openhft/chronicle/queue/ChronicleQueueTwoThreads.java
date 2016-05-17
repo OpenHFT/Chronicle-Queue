@@ -36,7 +36,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
-    @Test(timeout = 10000)
+    @Test(timeout = 60000)
     public void testUnbuffered() throws IOException, InterruptedException {
         doTest(false);
     }
@@ -115,7 +115,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         //Pause to allow tailer to catch up (if needed)
         for (int i = 0; i < 10; i++) {
             if (runs != counter.get())
-                Jvm.pause(100);
+                Jvm.pause(Jvm.isDebug() ? 10000 : 100);
         }
 
         for (int i = 0; i < 10; i++) {

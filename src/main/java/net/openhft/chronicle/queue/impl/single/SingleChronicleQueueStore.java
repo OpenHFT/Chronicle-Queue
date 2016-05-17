@@ -15,12 +15,6 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import java.io.EOFException;
-import java.io.StreamCorruptedException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
-
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -35,20 +29,17 @@ import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireIn;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.EOFException;
+import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
@@ -228,7 +219,7 @@ class SingleChronicleQueueStore implements WireStore {
      */
     @NotNull
     @Override
-    public Bytes<Void> bytes() {
+    public MappedBytes bytes() {
         return MappedBytes.mappedBytes(mappedFile);
     }
 
@@ -296,6 +287,14 @@ class SingleChronicleQueueStore implements WireStore {
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index, lastIndex
     }
+
+    enum RollFields implements WireKey {
+        length, format, epoch,
+    }
+
+    // *************************************************************************
+    // Rolling
+    // *************************************************************************
 
     static class Indexing implements Demarshallable, WriteMarshallable, Closeable {
         private final int indexCount, indexCountBits;
@@ -732,14 +731,6 @@ class SingleChronicleQueueStore implements WireStore {
                 return ScanResult.NOT_FOUND;
             }
         }
-    }
-
-    // *************************************************************************
-    // Rolling
-    // *************************************************************************
-
-    enum RollFields implements WireKey {
-        length, format, epoch,
     }
 
     static class Roll implements Demarshallable, WriteMarshallable {

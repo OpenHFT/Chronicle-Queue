@@ -16,37 +16,25 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import java.io.EOFException;
-import java.io.StreamCorruptedException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
-
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
-import net.openhft.chronicle.queue.ChronicleQueue;
-import net.openhft.chronicle.queue.ExcerptAppender;
-import net.openhft.chronicle.queue.ExcerptTailer;
-import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.wire.AbstractWire;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ReadDocumentContext;
-import net.openhft.chronicle.wire.SourceContext;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.VanillaMessageHistory;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireOut;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.EOFException;
+import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -54,8 +42,8 @@ public class SingleChronicleQueueExcerpts {
     @FunctionalInterface
     public interface WireWriter<T> {
         void write(
-            T message,
-            WireOut wireOut);
+                T message,
+                WireOut wireOut);
     }
 
     // *************************************************************************
@@ -87,12 +75,12 @@ public class SingleChronicleQueueExcerpts {
             return sourceId() != 0;
         }
 
-        private void setCycle(int cycle) {
+        private void setCycle(int cycle, boolean createIfAbsent) {
             if (cycle != this.cycle)
-                setCycle2(cycle);
+                setCycle2(cycle, createIfAbsent);
         }
 
-        private void setCycle2(int cycle) {
+        private void setCycle2(int cycle, boolean createIfAbsent) {
             if (cycle < 0)
                 throw new IllegalArgumentException("You can not have a cycle that starts " +
                         "before Epoch. cycle=" + cycle);
@@ -102,8 +90,12 @@ public class SingleChronicleQueueExcerpts {
             if (this.store != null) {
                 queue.release(this.store);
             }
-            this.store = queue.storeForCycle(cycle, queue.epoch());
-
+            this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            if (store == null) {
+                wire = null;
+                return;
+            }
+            this.cycle = cycle;
 
             wire = (AbstractWire) queue.wireType().apply(store.bytes());
             // only set the cycle after the wire is set.
@@ -219,7 +211,7 @@ public class SingleChronicleQueueExcerpts {
                 if (cycle > this.cycle)
                     rollCycleTo(cycle);
                 else
-                    setCycle2(cycle);
+                    setCycle2(cycle, true);
             }
 
             ScanResult scanResult = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
@@ -256,7 +248,7 @@ public class SingleChronicleQueueExcerpts {
                 int cycle = this.queue.lastCycle();
                 if (cycle < 0)
                     cycle = queue.cycle();
-                setCycle2(cycle);
+                setCycle2(cycle, true);
             }
             return cycle;
         }
@@ -296,7 +288,7 @@ public class SingleChronicleQueueExcerpts {
                 throw new AssertionError();
             if (wire != null)
                 wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
-            setCycle2(cycle);
+            setCycle2(cycle, true);
             long position = wire.bytes().writePosition();
             long sequenceNumber = store.indexForPosition(wire, position, 0);
             wire.bytes().writePosition(position);
@@ -305,7 +297,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
-            setCycle(Math.max(queue.cycle(), cycle + 1));
+            setCycle(Math.max(queue.cycle(), cycle + 1), true);
             position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
@@ -514,10 +506,11 @@ public class SingleChronicleQueueExcerpts {
 
             if (cycle != this.cycle) {
                 // moves to the expected cycle
-                cycle(cycle);
+                cycle(cycle, false);
             }
             this.index = index;
-
+            if (store == null)
+                return false;
             ScanResult scanResult = this.store.moveToIndex(context.wire(), sequenceNumber, queue.timeoutMS);
             Bytes<?> bytes = context.wire().bytes();
             if (scanResult == ScanResult.FOUND) {
@@ -537,10 +530,11 @@ public class SingleChronicleQueueExcerpts {
             }
             if (firstCycle != this.cycle) {
                 // moves to the expected cycle
-                cycle(firstCycle);
+                cycle(firstCycle, false);
             }
             index = queue.rollCycle().toIndex(cycle, 0);
-            context.wire().bytes().readPosition(0);
+            if (context.wire() != null)
+                context.wire().bytes().readPosition(0);
             return this;
         }
 
@@ -595,11 +589,11 @@ public class SingleChronicleQueueExcerpts {
             long seq = rollCycle.toSequenceNumber(this.index);
             seq += direction.add();
             if (rollCycle.toSequenceNumber(seq) < seq) {
-                cycle(cycle + 1);
+                cycle(cycle + 1, false);
                 seq = 0;
             } else if (seq < 0) {
                 if (seq == -1) {
-                    cycle(cycle - 1);
+                    cycle(cycle - 1, false);
                 } else {
                     // TODO FIX so we can roll back to the precious cycle.
                     throw new IllegalStateException("Winding to the previous day not supported");
@@ -651,13 +645,18 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @NotNull
-        private StoreTailer cycle(final int cycle) {
+        private StoreTailer cycle(final int cycle, boolean createIfAbsent) {
             if (this.cycle != cycle) {
                 if (this.store != null) {
                     this.queue.release(this.store);
                 }
+                this.store = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+                if (store == null) {
+                    context.wire(null);
+
+                    return this;
+                }
                 this.cycle = cycle;
-                this.store = this.queue.storeForCycle(cycle, queue.epoch());
                 context.wire((AbstractWire) queue.wireType().apply(store.bytes()));
                 final Wire wire = context.wire();
                 assert wire.startUse();

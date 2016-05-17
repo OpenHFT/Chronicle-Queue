@@ -76,11 +76,12 @@ public class IndexTest extends ChronicleQueueTestBase {
                 .build();
 
         final ExcerptAppender appender = queue.createAppender();
-        final int cycle = appender.cycle();
         for (int i = 0; i < 5; i++) {
             final int n = i;
+            appender.writeDocument(
+                    w -> w.write(TestKey.test).int32(n));
+            final int cycle = queue.lastCycle();
             long index0 = queue.rollCycle().toIndex(cycle, n);
-            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             long indexA = appender.lastIndexAppended();
             accessHexEquals(index0, indexA);
         }

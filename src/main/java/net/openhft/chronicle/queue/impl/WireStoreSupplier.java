@@ -15,8 +15,10 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import java.util.function.BiFunction;
+import net.openhft.chronicle.core.annotation.Nullable;
 
 @FunctionalInterface
-public interface WireStoreSupplier extends BiFunction<Integer, Long, WireStore> {
+public interface WireStoreSupplier {
+    @Nullable
+    WireStore acquire(int cycle, long epoch, boolean createIfAbsent);
 }

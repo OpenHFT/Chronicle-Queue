@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
@@ -27,10 +28,11 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * @param cycle the cycle
      * @param epoch an epoch offset as the number of number of milliseconds since January 1, 1970,
      *              00:00:00 GMT
-     * @return the {@code WireStore} associated with this {@code cycle}
+     *              @param createIfAbsent create missing stores if true, or return null if missing
+     * @return the {@code WireStore} associated with this {@code cycle}, or null if !createIfAbsent is false and absent
      */
-    @NotNull
-    WireStore storeForCycle(int cycle, final long epoch);
+    @Nullable
+    WireStore storeForCycle(int cycle, final long epoch, boolean createIfAbsent);
 
     /**
      * @param store the {@code store} to release

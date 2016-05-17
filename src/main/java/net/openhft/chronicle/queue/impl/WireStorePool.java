@@ -15,11 +15,12 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
+import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
     @NotNull
@@ -41,12 +42,14 @@ public class WireStorePool {
         stores.entrySet().forEach(e -> e.getValue().close());
     }
 
-    public synchronized WireStore acquire(final int cycle, final long epoch) {
+    @Nullable
+    public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
         if (store == null) {
-            store = this.supplier.apply(cycle, epoch);
-            stores.put(rollDetails, store);
+            store = this.supplier.acquire(cycle, epoch, createIfAbsent);
+            if (store != null)
+                stores.put(rollDetails, store);
         } else {
             store.reserve();
         }

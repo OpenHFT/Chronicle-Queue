@@ -1568,7 +1568,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     String actual = valueIn.text();
                     Assert.assertEquals("world" + i, actual);
                 }
-
             }
 
             ExcerptTailer backwardTailer = chronicle.createTailer()
@@ -1585,7 +1584,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     String actual = valueIn.text();
                     Assert.assertEquals("world" + i, actual);
                 }
-
             }
 
 
