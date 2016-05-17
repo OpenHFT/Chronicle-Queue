@@ -1570,9 +1570,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
 
-            ExcerptTailer backwardTailer = chronicle.createTailer().toEnd()
-                    .direction(TailerDirection.BACKWARD);
-
+            ExcerptTailer backwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.BACKWARD).toEnd();
 
             for (int i = 3; i >= 1; i--) {
 
