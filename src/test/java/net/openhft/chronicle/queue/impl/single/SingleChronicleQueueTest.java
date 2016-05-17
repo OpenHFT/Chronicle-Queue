@@ -1585,7 +1585,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     String actual = valueIn.text();
                     Assert.assertEquals("world" + i, actual);
                 }
+
             }
+
 
             ExcerptTailer forwardTailer1 = chronicle.createTailer()
                     .direction(TailerDirection.FORWARD)
