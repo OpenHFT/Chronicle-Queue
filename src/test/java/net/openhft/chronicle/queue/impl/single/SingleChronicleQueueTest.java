@@ -1656,7 +1656,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 ExcerptTailer tailer = chronicle.createTailer();
 
-
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     sync.writeBytes(documentContext.index(), documentContext.wire().bytes());
                 }
