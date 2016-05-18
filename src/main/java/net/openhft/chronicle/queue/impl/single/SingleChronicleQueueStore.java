@@ -616,6 +616,9 @@ class SingleChronicleQueueStore implements WireStore {
                     case NONE:
                         if (toPosition == Long.MAX_VALUE)
                             return i < 0 ? i : i - 1;
+                        long pos = bytes.readPosition();
+                        if (toPosition == pos)
+                            return i;
                         throw new EOFException();
                     case META_DATA:
                         break;

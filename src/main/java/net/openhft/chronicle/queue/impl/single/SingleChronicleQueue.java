@@ -249,8 +249,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (sequenceNumber == -1)
                     sequenceNumber++;
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
-            } catch (EOFException theySeeMeRolling) {
-                // continue;
+
+            } catch (EOFException fileTruncated) {
+                throw new IllegalStateException(fileTruncated);
+
             } catch (TimeoutException e) {
                 throw new AssertionError(e);
             }
