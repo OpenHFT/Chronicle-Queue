@@ -24,7 +24,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.*;
@@ -35,9 +35,8 @@ import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 
 public class ReplicationTest {
 
-    private static final int TIMES = 0x1289000;
+    private static final int TIMES = 100;
 
-    @Ignore("Long running")
     @Test
     public void testAppendAndRead() throws TimeoutException, ExecutionException, InterruptedException {
 
@@ -91,37 +90,36 @@ public class ReplicationTest {
                 }
             });
 
-        }
 
+            try (final RollingChronicleQueue queue2 = new SingleChronicleQueueBuilder(getTmpDir())
+                    .wireType(WireType.BINARY)
+                    .build()) {
 
-        try (final RollingChronicleQueue queue2 = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(WireType.BINARY)
-                .build()) {
+                final ExcerptAppender syncAppender = queue2.createAppender();
 
-            final ExcerptAppender appender = queue2.createAppender();
-
-            ExecutorService sync = Executors.newSingleThreadExecutor(new NamedThreadFactory("sync", true));
-            Future f = sync.submit(()
-                    -> {
-                for (long i = 0; i < TIMES; ) {
-                    Data poll = q.poll();
-                    if (poll == null) {
-                        Jvm.pause(1);
-                        continue;
+                ExecutorService sync = Executors.newSingleThreadExecutor(new NamedThreadFactory("sync", true));
+                Future f = sync.submit(()
+                        -> {
+                    for (long i = 0; i < TIMES; ) {
+                        Data poll = q.poll();
+                        if (poll == null) {
+                            Jvm.pause(1);
+                            continue;
+                        }
+                        syncAppender.writeBytes(poll.index, poll.bytes().bytesForRead());
+                        if (i % 1_000_000 == 0)
+                            System.out.println("sync=" + i);
+                        i++;
                     }
-                    appender.writeBytes(poll.index, poll.bytes().bytesForRead());
-                    if (i % 1_000_000 == 0)
-                        System.out.println("sync=" + i);
-                    i++;
-                }
-                return null;
+                    return null;
 
-            });
-            f.get();
+                });
+                f.get();
 
-            //   System.out.println(queue2.dump());
+                Assert.assertEquals(queue.dump(), queue2.dump());
+                System.out.println(queue2.dump());
+            }
         }
-
     }
 
 }
