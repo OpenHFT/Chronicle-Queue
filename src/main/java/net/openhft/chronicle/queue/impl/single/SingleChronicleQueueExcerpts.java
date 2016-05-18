@@ -159,6 +159,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+            if (bytes.isEmpty())
+                throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
             try {
                 if (index != lastIndex + 1) {
