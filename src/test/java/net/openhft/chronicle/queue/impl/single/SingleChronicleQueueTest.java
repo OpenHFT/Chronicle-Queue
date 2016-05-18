@@ -1631,11 +1631,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(w -> {
-                return;
-            });
-
-            Assert.assertEquals(chronicle.lastIndex(), appender.lastIndexAppended());
-
             });
             System.out.println(chronicle.dump());
         }
