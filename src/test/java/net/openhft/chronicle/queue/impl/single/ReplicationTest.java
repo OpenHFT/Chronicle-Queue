@@ -39,7 +39,7 @@ public class ReplicationTest {
 
     private static final int TIMES = 0x1289000;
 
-    @Ignore
+    @Ignore("Long running")
     @Test
     public void testAppendAndRead() throws TimeoutException, ExecutionException, InterruptedException {
 
