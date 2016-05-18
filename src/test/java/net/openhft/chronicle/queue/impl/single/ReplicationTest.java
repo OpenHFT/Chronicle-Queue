@@ -32,9 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 
-/**
- * Created by daniel on 07/03/2016.
- */
+
 public class ReplicationTest {
 
     private static final int TIMES = 0x1289000;
