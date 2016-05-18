@@ -20,6 +20,10 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * <em>Chronicle</em> (in a generic sense) is a Java project focused on building a persisted low
@@ -108,6 +112,19 @@ public interface ChronicleQueue extends Closeable {
      * @return the contents of the Queue as YAML.
      */
     String dump();
+
+    /**
+     * Dump a range of entries to a Writer
+     *
+     * @param writer    to write to
+     * @param fromIndex first index to include
+     * @param toIndex   last index to include.
+     */
+    void dump(Writer writer, long fromIndex, long toIndex);
+
+    default void dump(OutputStream stream, long fromIndex, long toIndex) {
+        dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
+    }
 
     int indexCount();
 

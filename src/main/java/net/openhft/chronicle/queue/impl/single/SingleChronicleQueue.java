@@ -15,6 +15,7 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
@@ -121,6 +122,50 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
         return sb.toString();
+    }
+
+    @Override
+    public void dump(Writer writer, long fromIndex, long toIndex) {
+        try {
+            long firstIndex = firstIndex();
+            writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
+            writer.append("# lastIndex: ").append(Long.toHexString(lastIndex())).append("\n");
+            ExcerptTailer tailer = createTailer();
+            if (!tailer.moveToIndex(fromIndex)) {
+                if (firstIndex > fromIndex) {
+                    tailer.toStart();
+                } else {
+                    return;
+                }
+            }
+            Bytes bytes = Wires.acquireBytes();
+            TextWire text = new TextWire(bytes);
+            while (true) {
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    if (!dc.isPresent()) {
+                        writer.append("# no more messages at ").append(Long.toHexString(dc.index())).append("\n");
+                        return;
+                    }
+                    if (dc.index() > toIndex)
+                        return;
+                    writer.append("# index: ").append(Long.toHexString(dc.index())).append("\n");
+                    Wire wire = dc.wire();
+                    long start = wire.bytes().readPosition();
+                    try {
+                        text.clear();
+                        wire.copyTo(text);
+                        writer.append(bytes.toString());
+
+                    } catch (Exception e) {
+                        wire.bytes().readPosition(start);
+                        writer.append(wire.bytes()).append("\n");
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace(new PrintWriter(writer));
+        }
     }
 
     @Override
