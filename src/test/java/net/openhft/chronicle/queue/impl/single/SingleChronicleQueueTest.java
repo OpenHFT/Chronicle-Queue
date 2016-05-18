@@ -1617,12 +1617,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             appender.writeDocument(w -> {
                 return;
-            } );
+            });
 
-            Assert.assertEquals(chronicle.lastIndex(),appender.lastIndexAppended());
+            Assert.assertEquals(chronicle.lastIndex(), appender.lastIndexAppended());
 
         }
     }
+
+
+    @Test
+    public void testMoveToWithAppender() throws TimeoutException, StreamCorruptedException {
+        try (ChronicleQueue syncQ = new SingleChronicleQueueBuilder(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender sync = syncQ.createAppender();
+
+            try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+                    .wireType(this.wireType)
+                    .build()) {
+
+                ExcerptAppender appender = chronicle.createAppender();
+                appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
+                appender.writeDocument(w -> w.writeEventName("hello").text("world1"));
+                appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
+
+                ExcerptTailer tailer = chronicle.createTailer();
+
+
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    sync.writeBytes(documentContext.index(), documentContext.wire().bytes());
+                }
+
+                tailer.moveToIndex(syncQ.lastIndex());
+
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    String text = documentContext.wire().readEventName(new StringBuilder()).text();
+                    Assert.assertEquals("world1", text);
+                }
+            }
+
+        }
+    }
+
 
     static class MyMarshable extends AbstractMarshallable implements Demarshallable {
 
