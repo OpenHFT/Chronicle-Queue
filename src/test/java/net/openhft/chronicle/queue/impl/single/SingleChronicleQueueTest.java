@@ -1615,12 +1615,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
+            appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
+            System.out.println(chronicle.dump());
+            Assert.assertEquals(chronicle.lastIndex(),
+                    appender.lastIndexAppended());
+        }
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testZeroLengthMessage() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(w -> {
                 return;
             });
 
             Assert.assertEquals(chronicle.lastIndex(), appender.lastIndexAppended());
 
+            });
+            System.out.println(chronicle.dump());
         }
     }
 
@@ -1662,7 +1679,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     static class MyMarshable extends AbstractMarshallable implements Demarshallable {
-
+        @UsedViaReflection
         String name;
 
         @UsedViaReflection

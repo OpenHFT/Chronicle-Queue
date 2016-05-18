@@ -19,7 +19,7 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWriteBytesWithIndex() throws Exception {
-        String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
             ExcerptAppender appender = queue.createAppender();
 
@@ -67,7 +67,7 @@ public class CreateAtIndexTest {
 
     @Test
     public void testTailerReadingDocumentTest() throws Exception {
-        String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
             long queueIndex = queue.lastIndex();
 
@@ -84,7 +84,7 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
-        String tmp = OS.TMP + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
 
         long expected = 0;
 
