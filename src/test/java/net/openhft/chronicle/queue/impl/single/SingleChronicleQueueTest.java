@@ -327,6 +327,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
+                    System.out.println(i + " index: " + Long.toHexString(index));
                     assertEquals(cycle + i, DAILY.toCycle(index));
                 }
                 stp.currentTimeMillis(stp.currentTimeMillis() + 86400_000L);
@@ -1106,8 +1107,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = chronicle.createAppender();
 
+            final long nextWrite = chronicle.nextIndexToWrite();
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
-            Assert.assertEquals(appender.lastIndexAppended(), chronicle.lastIndex());
+            Assert.assertEquals(appender.lastIndexAppended(), nextWrite);
         }
     }
 
@@ -1541,68 +1543,92 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testToEndBeforeWrite() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .rollCycle(RollCycles.TEST2_DAILY)
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            int entries = chronicle.rollcycle().defaultIndexSpacing() * 2 + 2;
+
+            for (int i = 0; i < entries; i++) {
+                tailer.toEnd();
+                int finalI = i;
+                appender.writeDocument(w -> w.writeEventName("hello").text("world" + finalI));
+                tailer.readDocument(w -> w.read().text("world" + finalI, Assert::assertEquals));
+            }
+        }
+    }
+
+    @Test
     public void testForwardFollowedBackBackwardTailer() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+                .rollCycle(RollCycles.TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
 
             ExcerptAppender appender = chronicle.createAppender();
 
-            appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
-            appender.writeDocument(w -> w.writeEventName("hello").text("world1"));
-            appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
+            int entries = chronicle.rollcycle().defaultIndexSpacing() + 2;
 
-            ExcerptTailer forwardTailer = chronicle.createTailer()
-                    .direction(TailerDirection.FORWARD)
-                    .toStart();
-
-            {
-                int i = 0;
-                try (DocumentContext documentContext = forwardTailer.readingDocument(false)) {
-                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
-                    Assert.assertTrue(documentContext.isPresent());
-                    StringBuilder sb = Wires.acquireStringBuilder();
-                    ValueIn valueIn = documentContext.wire().readEventName(sb);
-                    Assert.assertTrue("hello".contentEquals(sb));
-                    String actual = valueIn.text();
-                    Assert.assertEquals("world" + i, actual);
-                }
+            for (int i = 0; i < entries; i++) {
+                int finalI = i;
+                appender.writeDocument(w -> w.writeEventName("hello").text("world" + finalI));
             }
-
-            ExcerptTailer backwardTailer = chronicle.createTailer()
-                    .direction(TailerDirection.BACKWARD)
-                    .toEnd();
-
-            for (int i = 3 - 1; i >= 0; i--) {
-                try (DocumentContext documentContext = backwardTailer.readingDocument(false)) {
-                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
-                    Assert.assertTrue(documentContext.isPresent());
-                    StringBuilder sb = Wires.acquireStringBuilder();
-                    ValueIn valueIn = documentContext.wire().readEventName(sb);
-                    Assert.assertTrue("hello".contentEquals(sb));
-                    String actual = valueIn.text();
-                    Assert.assertEquals("world" + i, actual);
-                }
-            }
-
-
-            ExcerptTailer forwardTailer1 = chronicle.createTailer().direction(TailerDirection.FORWARD)
-                    .toStart();
-
             for (int i = 0; i < 3; i++) {
-
-                try (DocumentContext documentContext = forwardTailer1.readingDocument(false)) {
-                    Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
-                    Assert.assertTrue(documentContext.isPresent());
-                    StringBuilder sb = Wires.acquireStringBuilder();
-                    ValueIn valueIn = documentContext.wire().readEventName(sb);
-                    Assert.assertTrue("hello".contentEquals(sb));
-                    String actual = valueIn.text();
-                    Assert.assertEquals("world" + i, actual);
-                }
-
+                readForward(chronicle, entries);
+                readBackward(chronicle, entries);
             }
+        }
+    }
+
+    void readForward(ChronicleQueue chronicle, int entries) {
+        ExcerptTailer forwardTailer = chronicle.createTailer()
+                .direction(TailerDirection.FORWARD)
+                .toStart();
+
+        for (int i = 0; i < entries; i++) {
+            try (DocumentContext documentContext = forwardTailer.readingDocument()) {
+                Assert.assertTrue(documentContext.isPresent());
+                Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(documentContext.index()));
+                StringBuilder sb = Wires.acquireStringBuilder();
+                ValueIn valueIn = documentContext.wire().readEventName(sb);
+                Assert.assertTrue("hello".contentEquals(sb));
+                String actual = valueIn.text();
+                Assert.assertEquals("world" + i, actual);
+            }
+        }
+        try (DocumentContext documentContext = forwardTailer.readingDocument()) {
+            Assert.assertFalse(documentContext.isPresent());
+        }
+    }
+
+    void readBackward(ChronicleQueue chronicle, int entries) {
+        ExcerptTailer backwardTailer = chronicle.createTailer()
+                .direction(TailerDirection.BACKWARD)
+                .toEnd();
+
+        for (int i = entries - 1; i >= 0; i--) {
+            try (DocumentContext documentContext = backwardTailer.readingDocument()) {
+                assertTrue(documentContext.isPresent());
+                final long index = documentContext.index();
+                assertTrue("index: " + index, index > 0);
+                Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(index));
+                Assert.assertTrue(documentContext.isPresent());
+                StringBuilder sb = Wires.acquireStringBuilder();
+                ValueIn valueIn = documentContext.wire().readEventName(sb);
+                Assert.assertTrue("hello".contentEquals(sb));
+                String actual = valueIn.text();
+                Assert.assertEquals("world" + i, actual);
+            }
+        }
+        try (DocumentContext documentContext = backwardTailer.readingDocument()) {
+            assertFalse(documentContext.isPresent());
         }
     }
 
@@ -1615,9 +1641,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.createAppender();
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
+            final long nextIndexToWrite = chronicle.nextIndexToWrite();
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
             System.out.println(chronicle.dump());
-            Assert.assertEquals(chronicle.lastIndex(),
+            Assert.assertEquals(nextIndexToWrite,
                     appender.lastIndexAppended());
         }
     }
@@ -1660,10 +1687,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     sync.writeBytes(documentContext.index(), documentContext.wire().bytes());
                 }
 
-                tailer.moveToIndex(syncQ.lastIndex());
+                final long index = syncQ.nextIndexToWrite();
+                tailer.moveToIndex(index);
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
-                    String text = documentContext.wire().readEventName(new StringBuilder()).text();
+                    String text = documentContext.wire().read().text();
                     Assert.assertEquals("world1", text);
                 }
             }

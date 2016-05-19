@@ -69,16 +69,23 @@ public class CreateAtIndexTest {
     public void testTailerReadingDocumentTest() throws Exception {
         String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            long queueIndex = queue.lastIndex();
+            long queueIndex = queue.nextIndexToWrite();
 
             ExcerptTailer tailer = queue.createTailer();
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 long tailerIndex = dc.index();
-                Assert.assertEquals(queueIndex, tailerIndex);
+                Assert.assertEquals(Long.MIN_VALUE, tailerIndex);
             }
 
-            Assert.assertEquals(queueIndex, tailer.index());
+            queue.createAppender().writeBytes(Bytes.wrapForRead(new byte[1]));
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                long tailerIndex = dc.index();
+                Assert.assertEquals(queueIndex, tailerIndex);
+            }
+            // after the read, the index moves on
+            Assert.assertEquals(queueIndex + 1, tailer.index());
         }
     }
 

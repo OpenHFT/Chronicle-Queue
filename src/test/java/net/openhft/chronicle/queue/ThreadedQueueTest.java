@@ -118,7 +118,6 @@ public class ThreadedQueueTest {
 
         new File(path).deleteOnExit();
 
-        final AtomicInteger counter = new AtomicInteger();
         final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)

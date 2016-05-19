@@ -76,7 +76,8 @@ public class SingleCQFormatTest {
         assertEquals(Integer.MAX_VALUE, queue.firstCycle());
         assertEquals(Long.MAX_VALUE, queue.firstIndex());
         assertEquals(Integer.MIN_VALUE, queue.lastCycle());
-        assertEquals(Long.MIN_VALUE, queue.lastIndex());
+        final long firstOfDay = RollCycles.DAILY.toIndex(RollCycles.DAILY.current(System::currentTimeMillis, 0), 0L);
+        assertEquals(firstOfDay, queue.nextIndexToWrite());
         queue.close();
 
         IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());

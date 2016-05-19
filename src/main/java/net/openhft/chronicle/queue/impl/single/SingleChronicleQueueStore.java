@@ -208,7 +208,7 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void close() {
-        while(refCount.get() > 0 ) {
+        while (refCount.get() > 0) {
             refCount.release();
         }
     }
@@ -259,11 +259,30 @@ class SingleChronicleQueueStore implements WireStore {
             lastAcknowledgedIndexReplicated = wire.newLongReference();
 
         wire.write(MetaDataField.wireType).object(wireType)
-            .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
-            .write(MetaDataField.roll).typedMarshallable(this.roll)
-            .write(MetaDataField.indexing).typedMarshallable(this.indexing)
-            .write(MetaDataField.lastAcknowledgedIndexReplicated)
-            .int64forBinding(0L, lastAcknowledgedIndexReplicated);
+                .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
+                .write(MetaDataField.roll).typedMarshallable(this.roll)
+                .write(MetaDataField.indexing).typedMarshallable(this.indexing)
+                .write(MetaDataField.lastAcknowledgedIndexReplicated)
+                .int64forBinding(0L, lastAcknowledgedIndexReplicated);
+    }
+
+    @Override
+    public void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) {
+        final Bytes<?> bytes = wire.bytes();
+        if (position < 0 || position > bytes.capacity())
+            throw new IllegalArgumentException("position: " + position);
+
+        final long readPosition = bytes.readPosition();
+        final long readRemaining = bytes.readRemaining();
+        try {
+            indexing.setPositionForIndex(wire, index, position, timeoutMS);
+        } catch (TimeoutException e) {
+            throw new AssertionError(e);
+        } catch (EOFException ignored) {
+            // todo unable to add an index to a rolled store.
+        } finally {
+            bytes.readPositionRemaining(readPosition, readRemaining);
+        }
     }
 
     enum MetaDataField implements WireKey {
@@ -315,10 +334,10 @@ class SingleChronicleQueueStore implements WireStore {
         @UsedViaReflection
         private Indexing(@NotNull WireIn wire) {
             this(wire.read(IndexingFields.indexCount).int32(),
-                wire.read(IndexingFields.indexSpacing).int32(),
-                wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
-                wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
-                wire::newLongArrayReference);
+                    wire.read(IndexingFields.indexSpacing).int32(),
+                    wire.read(IndexingFields.index2Index).int64ForBinding(wire.newLongReference()),
+                    wire.read(IndexingFields.lastIndex).int64ForBinding(wire.newLongReference()),
+                    wire::newLongArrayReference);
         }
 
         Indexing(@NotNull WireType wireType, int indexCount, int indexSpacing) {
@@ -360,9 +379,9 @@ class SingleChronicleQueueStore implements WireStore {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(IndexingFields.indexCount).int64(indexCount)
-                .write(IndexingFields.indexSpacing).int64(indexSpacing)
-                .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
-                .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToIndex);
+                    .write(IndexingFields.indexSpacing).int64(indexSpacing)
+                    .write(IndexingFields.index2Index).int64forBinding(0L, index2Index)
+                    .write(IndexingFields.lastIndex).int64forBinding(0L, nextEntryToIndex);
         }
 
         /**
@@ -451,23 +470,31 @@ class SingleChronicleQueueStore implements WireStore {
             return position;
         }
 
-        long newIndex(Wire wire, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException {
-            if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_COMPLETE)) {
-                long pos = newIndex(wire, false, timeoutMS);
-                if (index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, pos)) {
-                    index2Index.setMaxUsed(index2 + 1);
-                    return pos;
+        long newIndex(Wire wire, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException, TimeoutException {
+            try {
+                if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_COMPLETE)) {
+                    long pos = newIndex(wire, false, timeoutMS);
+                    if (pos < 0)
+                        throw new IllegalStateException("pos: " + pos);
+                    if (index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, pos)) {
+                        index2Index.setMaxUsed(index2 + 1);
+                        return pos;
+                    }
+                    throw new IllegalStateException("Index " + index2 + " in index2index was altered");
                 }
-                throw new IllegalStateException("Index " + index2 + " in index2index was altered");
-            }
-            for (; ; ) {
-                long pos = index2Index.getVolatileValueAt(index2);
-                if (pos == LONG_NOT_COMPLETE) {
-                    wire.pauser().pause();
-                } else {
-                    wire.pauser().reset();
-                    return pos;
+                for (; ; ) {
+                    long pos = index2Index.getVolatileValueAt(index2);
+                    if (pos == LONG_NOT_COMPLETE) {
+                        wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
+                    } else {
+                        wire.pauser().reset();
+                        return pos;
+                    }
                 }
+            } catch (Exception e) {
+                // reset the index as failed to add it.
+                index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, NOT_INITIALIZED);
+                throw e;
             }
         }
 
@@ -623,7 +650,7 @@ class SingleChronicleQueueStore implements WireStore {
                     case META_DATA:
                         break;
                     case DATA:
-                        i++;
+                        ++i;
                         break;
                 }
 
@@ -663,15 +690,13 @@ class SingleChronicleQueueStore implements WireStore {
             // find the index2index
             final LongArrayValues index2indexArr = getIndex2index(wire, timeoutMS);
             long lastKnownAddress = 0;
-            long lastKnownIndex = -1;
+            long lastKnownIndex = 0;
             if (((Byteable) index2indexArr).bytesStore() == null)
                 return linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
             final LongArrayValues indexArr = indexArray.get();
             Bytes<?> bytes = wire.bytes();
             for (int index2 = 0; index2 < indexCount; index2++) {
-                long secondaryAddress = index2indexArr.getValueAt(index2);
-                if (secondaryAddress == 0)
-                    secondaryAddress = newIndex(wire, index2indexArr, index2, timeoutMS);
+                long secondaryAddress = getSecondaryAddress(wire, timeoutMS, index2indexArr, index2);
 
                 bytes.readLimit(bytes.capacity());
                 try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
@@ -725,6 +750,43 @@ class SingleChronicleQueueStore implements WireStore {
             throw new AssertionError();
         }
 
+        long getSecondaryAddress(Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, TimeoutException {
+            long secondaryAddress = index2indexArr.getValueAt(index2);
+            if (secondaryAddress == 0) {
+                secondaryAddress = newIndex(wire, index2indexArr, index2, timeoutMS);
+                if (secondaryAddress > wire.bytes().capacity())
+                    throw new IllegalStateException("sa: " + secondaryAddress);
+                long sa = index2indexArr.getValueAt(index2);
+                if (sa != secondaryAddress)
+                    throw new AssertionError();
+
+            } else if (secondaryAddress == LONG_NOT_COMPLETE) {
+                secondaryAddress = getSecondaryAddress0(wire, timeoutMS, index2indexArr, index2);
+
+            } else if (secondaryAddress > wire.bytes().capacity()) {
+                throw new IllegalStateException("sa: " + secondaryAddress);
+            }
+
+            return secondaryAddress;
+        }
+
+        private long getSecondaryAddress0(Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws TimeoutException {
+            long secondaryAddress;
+            while (true) {
+                secondaryAddress = index2indexArr.getVolatileValueAt(index2);
+                if (secondaryAddress == LONG_NOT_COMPLETE) {
+                    wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
+                } else {
+                    if (secondaryAddress > wire.bytes().capacity())
+                        throw new IllegalStateException("sa0: " + secondaryAddress);
+                    wire.pauser().reset();
+                    break;
+                }
+            }
+            return secondaryAddress;
+        }
+
+
         @NotNull
         private ScanResult firstScan(Wire wire) {
             try {
@@ -732,6 +794,48 @@ class SingleChronicleQueueStore implements WireStore {
                 return wire.readDataHeader() ? ScanResult.FOUND : ScanResult.NOT_REACHED;
             } catch (EOFException e) {
                 return ScanResult.NOT_FOUND;
+            }
+        }
+
+        public void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) throws EOFException, TimeoutException {
+            if ((index & indexSpacingBits) != 0) {
+                assert false;
+                return;
+            }
+            if (position > wire.bytes().capacity())
+                throw new IllegalArgumentException("pos: " + position);
+
+            // find the index2index
+            final LongArrayValues index2indexArr = getIndex2index(wire, timeoutMS);
+            if (((Byteable) index2indexArr).bytesStore() == null) {
+                assert false;
+                return;
+            }
+
+            final LongArrayValues indexArr = indexArray.get();
+            Bytes<?> bytes = wire.bytes();
+            int index2 = (int) (index >>> (indexCountBits + indexSpacingBits));
+            if (index2 >= indexCount) {
+                throw new IllegalStateException("Unable to index " + index);
+            }
+            long secondaryAddress = getSecondaryAddress(wire, timeoutMS, index2indexArr, index2);
+            if (secondaryAddress > bytes.capacity())
+                throw new IllegalStateException("sa2: " + secondaryAddress);
+            bytes.readLimit(bytes.capacity());
+            try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                if (!context.isPresent() || !context.isMetaData())
+                    throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
+
+                @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
+                int index3 = (int) ((index >>> indexSpacingBits) & (indexCount - 1));
+
+                // check the last one first.
+                long posN = array1.getValueAt(index3);
+                if (posN == 0) {
+                    array1.setValueAt(index3, position);
+                } else {
+                    assert posN == position;
+                }
             }
         }
     }
@@ -763,8 +867,8 @@ class SingleChronicleQueueStore implements WireStore {
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
             wire.write(RollFields.length).int32(length)
-                .write(RollFields.format).text(format)
-                .write(RollFields.epoch).int64(epoch);
+                    .write(RollFields.format).text(format)
+                    .write(RollFields.epoch).int64(epoch);
         }
 
         /**

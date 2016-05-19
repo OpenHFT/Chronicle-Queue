@@ -26,7 +26,7 @@ import java.io.StreamCorruptedException;
  *
  * @author peter.lawrey
  */
-public interface ExcerptAppender extends ExcerptCommon, MarshallableOut {
+public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, MarshallableOut {
 
     /**
      * @param bytes to write to excerpt.

@@ -29,7 +29,7 @@ import java.util.concurrent.TimeoutException;
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon, MarshallableIn, SourceContext {
+public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a

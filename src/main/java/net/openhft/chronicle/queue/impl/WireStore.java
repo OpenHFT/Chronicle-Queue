@@ -59,4 +59,6 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
     long lastAcknowledgedIndexReplicated();
+
+    void setPositionForIndex(Wire wire, long index, long position, long timeoutMS);
 }

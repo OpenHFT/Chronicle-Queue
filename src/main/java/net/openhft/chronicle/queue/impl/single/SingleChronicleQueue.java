@@ -102,6 +102,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public RollCycle rollcycle() {
+        return rollCycle;
+    }
+
+    @Override
     public void clear() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -129,7 +134,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            writer.append("# lastIndex: ").append(Long.toHexString(lastIndex())).append("\n");
+            writer.append("# nextToWrite: ").append(Long.toHexString(nextIndexToWrite())).append("\n");
             ExcerptTailer tailer = createTailer();
             if (!tailer.moveToIndex(fromIndex)) {
                 if (firstIndex > fromIndex) {
@@ -257,10 +262,23 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return rollCycle().toIndex(cycle, 0);
     }
 
+//    long lastPathListTime = 0;
+//    String[] lastPathList = null;
+
+    String[] getList() {
+//        final long now = time.currentTimeMillis();
+//        if (lastPathListTime + 10 > now) {
+//            return lastPathList;
+//        }
+//        lastPathListTime = now;
+//        return lastPathList = path.list();
+        return path.list();
+    }
+
     public int firstCycle() {
         int firstCycle = Integer.MAX_VALUE;
 
-        @Nullable final String[] files = path.list();
+        @Nullable final String[] files = getList();
 
         if (files == null)
             return Integer.MAX_VALUE;
@@ -284,22 +302,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public long lastIndex() {
+    public long nextIndexToWrite() {
         for (int i = 0; i < 100; i++) {
             try {
 
                 final int lastCycle = lastCycle();
                 if (lastCycle == Integer.MIN_VALUE)
-                    return Long.MIN_VALUE;
+                    return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
 
                 WireStore store = storeForCycle(lastCycle, epoch, false);
                 if (store == null)
                     return Long.MIN_VALUE;
 
                 Wire wire = wireType().apply(store.bytes());
-                long sequenceNumber = store.indexForPosition(wire, store.writePosition(), 0);
-                if (sequenceNumber == -1)
-                    sequenceNumber++;
+                final long position = store.writePosition();
+                long sequenceNumber = store.indexForPosition(wire, position, 0);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
             } catch (EOFException fileTruncated) {
@@ -315,7 +332,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public int lastCycle() {
         int lastCycle = Integer.MIN_VALUE;
 
-        @Nullable final String[] files = path.list();
+        @Nullable final String[] files = getList();
 
         if (files == null)
             return Integer.MIN_VALUE;

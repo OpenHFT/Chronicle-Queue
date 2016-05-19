@@ -65,9 +65,21 @@ public class SingleChronicleQueueExcerpts {
         private long position = -1;
         private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
+        private boolean lazyIndexing = false;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
+        }
+
+        @Override
+        public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
+            this.lazyIndexing = lazyIndexing;
+            return this;
+        }
+
+        @Override
+        public boolean lazyIndexing() {
+            return lazyIndexing;
         }
 
         @Override
@@ -294,7 +306,6 @@ public class SingleChronicleQueueExcerpts {
             long position = wire.bytes().writePosition();
             long sequenceNumber = store.indexForPosition(wire, position, 0);
             wire.bytes().writePosition(position);
-            sequenceNumber++;
             wire.headerNumber(queue.rollCycle().toIndex(cycle, sequenceNumber));
         }
 
@@ -395,12 +406,26 @@ public class SingleChronicleQueueExcerpts {
         private long index; // index of the next read.
         private WireStore store;
         private TailerDirection direction = TailerDirection.FORWARD;
+        private boolean lazyIndexing = false;
+        private int indexSpacingMask;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
             this.cycle = Integer.MIN_VALUE;
             this.index = 0;
+            indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             toStart();
+        }
+
+        @Override
+        public ExcerptTailer lazyIndexing(boolean lazyIndexing) {
+            this.lazyIndexing = lazyIndexing;
+            return this;
+        }
+
+        @Override
+        public boolean lazyIndexing() {
+            return lazyIndexing;
         }
 
         @Override
@@ -455,6 +480,9 @@ public class SingleChronicleQueueExcerpts {
                             context.metaData(false);
                             break;
                     }
+
+                    if (!lazyIndexing && direction == TailerDirection.FORWARD && (index & indexSpacingMask) == 0)
+                        store.setPositionForIndex(context.wire(), queue.rollCycle().toSequenceNumber(index), bytes.readPosition(), queue.timeoutMS);
                     context.closeReadLimit(bytes.capacity());
                     context.wire().readAndSetLength(bytes.readPosition());
                     long end = bytes.readLimit();
@@ -494,7 +522,9 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) throws TimeoutException {
-            return moveToIndex(queue.rollCycle().toCycle(index), queue.rollCycle().toSequenceNumber(index), index);
+            final int cycle = queue.rollCycle().toCycle(index);
+            final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
+            return moveToIndex(cycle, sequenceNumber, index);
         }
 
         boolean moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
@@ -543,14 +573,14 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            // this is the last written index so the end is 1 + last written index
-            long index = queue.lastIndex();
+            long index = queue.nextIndexToWrite();
             if (index == Long.MIN_VALUE)
                 return this;
             try {
-                if (direction == TailerDirection.FORWARD ||
-                        queue.rollCycle().toSequenceNumber(index + 1) == 0)
-                    index++;
+                if (direction != TailerDirection.FORWARD &&
+                        queue.rollCycle().toSequenceNumber(index + 1) != 0) {
+                    index--;
+                }
                 moveToIndex(index);
             } catch (TimeoutException e) {
                 throw new AssertionError(e);
