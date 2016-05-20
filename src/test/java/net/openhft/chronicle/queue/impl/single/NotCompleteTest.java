@@ -59,10 +59,13 @@ public class NotCompleteTest {
             Thread.sleep(100);
 
 
+            System.out.println(queue.dump());
         }
 
         // this is what will corrupt the queue
         BinaryLongReference.forceAllToNotCompleteState();
+
+
 
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
                 .wireType(WireType.BINARY)
