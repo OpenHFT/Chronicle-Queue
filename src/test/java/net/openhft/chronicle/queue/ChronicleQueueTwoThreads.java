@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static net.openhft.chronicle.queue.RollCycles.SMALL_DAILY;
 import static org.junit.Assert.assertEquals;
 
 public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
@@ -79,6 +80,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
             try {
                 ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                         .wireType(WireType.FIELDLESS_BINARY)
+                        .rollCycle(SMALL_DAILY)
                         .blockSize(BLOCK_SIZE)
                         .buffered(buffered)
                         .build();

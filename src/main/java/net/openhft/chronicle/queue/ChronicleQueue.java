@@ -59,6 +59,8 @@ import java.nio.charset.StandardCharsets;
  * @author peter.lawrey
  */
 public interface ChronicleQueue extends Closeable {
+    int TEST_BLOCK_SIZE = 256 * 1024; // smallest safe block size for Windows.
+
     /**
      * @return a new ExcerptTailer to read sequentially.
      */

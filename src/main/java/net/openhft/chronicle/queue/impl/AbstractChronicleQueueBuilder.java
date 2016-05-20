@@ -16,11 +16,6 @@
 
 package net.openhft.chronicle.queue.impl;
 
-import java.io.File;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
@@ -32,12 +27,17 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
 /**
  * Created by peter on 05/03/2016.
@@ -110,7 +110,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     @NotNull
     public B blockSize(int blockSize) {
-        this.blockSize = blockSize;
+        this.blockSize = Math.max(TEST_BLOCK_SIZE, blockSize);
         return (B) this;
     }
 

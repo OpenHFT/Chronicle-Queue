@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import org.junit.After;
 import org.junit.Before;
@@ -41,13 +42,16 @@ public class ReadmeTest {
 
     @Test
     public void createAQueue() {
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
+        final String basePath = OS.TARGET + "/createAQueue-" + System.nanoTime();
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
+                .rollCycle(RollCycles.TEST_DAILY).build()) {
             // Obtain an ExcerptAppender
             ExcerptAppender appender = queue.createAppender();
 
             // write - {msg: TestMessage}
             appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 
+            System.out.println(queue.dump());
             // write - TestMessage
             appender.writeText("TestMessage");
 

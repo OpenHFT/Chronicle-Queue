@@ -225,7 +225,14 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException {
-        return indexing.indexForPosition(wire, position, timeoutMS);
+        final Bytes<?> bytes = wire.bytes();
+        long position0 = bytes.readPosition();
+        long remaining0 = bytes.readRemaining();
+        try {
+            return indexing.indexForPosition(wire, position, timeoutMS);
+        } finally {
+            bytes.readPositionRemaining(position0, remaining0);
+        }
     }
 
     @Override
@@ -632,8 +639,8 @@ class SingleChronicleQueueStore implements WireStore {
             final Bytes<?> bytes = wire.bytes();
 
             bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
-
-            for (long i = fromKnownIndex; bytes.readPosition() <= toPosition; ) {
+            long i = fromKnownIndex;
+            while (bytes.readPosition() < toPosition) {
                 WireIn.HeaderType headerType = wire.readDataHeader(true);
 
                 int header = bytes.readInt();
@@ -653,24 +660,14 @@ class SingleChronicleQueueStore implements WireStore {
                         ++i;
                         break;
                 }
-
-                if (bytes.readPosition() == toPosition)
-                    return i;
             }
+            if (bytes.readPosition() == toPosition)
+                return i;
+
             throw new IllegalArgumentException("position not the start of a message");
         }
 
-        public long lastEntryIndexed(Wire wire, long timeoutMS) {
-            try {
-                indexForPosition(wire, Long.MAX_VALUE, timeoutMS);
-            } catch (Exception e) {
-                // ignore.
-            }
-
-            return nextEntryToIndex.getValue() - 1;
-        }
-
-        public LongArrayValues getIndex2index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
+        LongArrayValues getIndex2index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             LongArrayValues values = index2indexArray.get();
             if (((Byteable) values).bytesStore() != null || timeoutMS == 0)
                 return values;
@@ -834,7 +831,9 @@ class SingleChronicleQueueStore implements WireStore {
                 if (posN == 0) {
                     array1.setValueAt(index3, position);
                 } else {
-                    assert posN == position;
+                    if (posN != position)
+                        System.out.println("posN: " + posN + " position: " + position);
+//                    assert posN == position;
                 }
             }
         }

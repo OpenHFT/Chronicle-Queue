@@ -44,7 +44,6 @@ import static org.junit.Assert.*;
  * Created by Peter on 05/03/2016.
  */
 public class SingleCQFormatTest {
-    private static final int TEST_CHUNK_SIZE = 4 << 20; // 4 MB
 
     static {
         // init class
@@ -88,11 +87,11 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
         assertEquals(1, queue.firstCycle());
         assertEquals(1, queue.lastCycle());
@@ -117,11 +116,11 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
 
         bytes.close();
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
 
         testQueue(queue);
@@ -140,13 +139,13 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA | Wires.UNKNOWN_LENGTH);
         bytes.close();
         SingleChronicleQueue queue = null;
         try {
             queue = SingleChronicleQueueBuilder.binary(dir)
-                    .blockSize(TEST_CHUNK_SIZE)
+                    .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .build();
 
             testQueue(queue);
@@ -168,7 +167,7 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
@@ -200,7 +199,7 @@ public class SingleCQFormatTest {
         bytes.close();
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
         testQueue(queue);
 
@@ -217,7 +216,7 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -244,7 +243,7 @@ public class SingleCQFormatTest {
         bytes.close();
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .rollCycle(RollCycles.HOURLY)
                 .build();
         testQueue(queue);
@@ -262,7 +261,7 @@ public class SingleCQFormatTest {
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
@@ -272,7 +271,7 @@ public class SingleCQFormatTest {
 
         bytes.close();
         try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
             testQueue(queue);
             fail();
@@ -316,7 +315,7 @@ public class SingleCQFormatTest {
         RollCycles cycle = RollCycles.DAILY;
 
         {
-            MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
+            MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
             Wire wire = new BinaryWire(mappedBytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -357,7 +356,7 @@ public class SingleCQFormatTest {
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .rollCycle(cycle)
-                .blockSize(TEST_CHUNK_SIZE)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
         ExcerptTailer tailer = queue.createTailer();
         readTwo(tailer);
@@ -402,7 +401,7 @@ public class SingleCQFormatTest {
             dir.mkdir();
 
             SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                    .blockSize(TEST_CHUNK_SIZE)
+                    .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .indexCount(8)
                     .indexSpacing(1)
                     .build();
@@ -412,7 +411,7 @@ public class SingleCQFormatTest {
             String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 308,\n" +
+                    "  writePosition: 508,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -421,23 +420,36 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 0\n" +
+                    "  488, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
                     "...\n" +
-                    "# 5242568 bytes remaining\n";
+                    "# 327168 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], expected1);
 
             appendMessage(queue, start + 1, "Another Hello World");
             String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 336,\n" +
+                    "  writePosition: 536,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -446,19 +458,34 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  488,\n" +
+                    "  508,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
-                    "# position: 308\n" +
+                    "# position: 508\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World\n" +
                     "...\n" +
-                    "# 5242540 bytes remaining\n";
+                    "# 327140 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], expected2);
 
             appendMessage(queue, start + 2, "Bye for now");
@@ -466,7 +493,7 @@ public class SingleCQFormatTest {
             String expected = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 356,\n" +
+                    "  writePosition: 556,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -475,28 +502,44 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 3\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 3\n" +
+                    "  488,\n" +
+                    "  508,\n" +
+                    "  536,\n" +
+                    "  0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
-                    "# position: 308\n" +
+                    "# position: 508\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World\n" +
-                    "# position: 336\n" +
+                    "# position: 536\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 5242520 bytes remaining\n";
+                    "# 327120 bytes remaining\n";
             checkFileContents(dir.listFiles()[0], expected);
         }
     }
 
     public void checkFileContents(File file, String expected) throws FileNotFoundException {
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, TEST_CHUNK_SIZE)) {
+        try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE)) {
             bytes.readLimit(bytes.realCapacity());
             assertEquals(expected, Wires.fromSizePrefixedBlobs(bytes));
         }
@@ -509,7 +552,7 @@ public class SingleCQFormatTest {
             dir.mkdir();
 
             SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
-                    .blockSize(TEST_CHUNK_SIZE)
+                    .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     // only do this for testing
                     .indexCount(8)
                     .indexSpacing(spacing)
@@ -524,7 +567,7 @@ public class SingleCQFormatTest {
             String expected00 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 308,\n" +
+                    "  writePosition: 508,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -533,16 +576,29 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 0\n" +
+                    "  488, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello World\n" +
                     "...\n" +
-                    "# 5242568 bytes remaining\n";
+                    "# 327168 bytes remaining\n";
             checkFileContents(dir.listFiles()[0],
                     expected00.replace("indexSpacing: 1", "indexSpacing: " + spacing));
 
@@ -550,6 +606,7 @@ public class SingleCQFormatTest {
             for (int i = 1; i < 19; i++) {
                 assertFalse(tailer.moveToIndex(start + i));
                 appendMessage(queue, start + i, "Another Hello World " + (i + 1));
+                System.out.println(queue.dump());
                 assertTrue(tailer.moveToIndex(start + i));
 //                System.out.println(queue.dump());
             }
@@ -561,7 +618,7 @@ public class SingleCQFormatTest {
             String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 978,\n" +
+                    "  writePosition: 1266,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -570,83 +627,122 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 308,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 20\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Hello World\n" +
-                    "# position: 308\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 3\n" +
+                    "  392,\n" +
+                    "  748,\n" +
+                    "  1088,\n" +
+                    "  0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 408\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 8\n" +
+                    "  488,\n" +
+                    "  508,\n" +
+                    "  538,\n" +
+                    "  568,\n" +
+                    "  598,\n" +
+                    "  628,\n" +
+                    "  658,\n" +
+                    "  688\n" +
+                    "]\n" +
+                    "# position: 488\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 508\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 2\n" +
-                    "# position: 438\n" +
+                    "# position: 538\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 3\n" +
-                    "# position: 468\n" +
+                    "# position: 568\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 4\n" +
-                    "# position: 498\n" +
+                    "# position: 598\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 5\n" +
-                    "# position: 528\n" +
+                    "# position: 628\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 6\n" +
-                    "# position: 558\n" +
+                    "# position: 658\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 7\n" +
-                    "# position: 588\n" +
+                    "# position: 688\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 8\n" +
-                    "# position: 618\n" +
+                    "# position: 718\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 9\n" +
-                    "# position: 648\n" +
+                    "# position: 748\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 8\n" +
+                    "  718,\n" +
+                    "  840,\n" +
+                    "  871,\n" +
+                    "  902,\n" +
+                    "  933,\n" +
+                    "  964,\n" +
+                    "  995,\n" +
+                    "  1026\n" +
+                    "]\n" +
+                    "# position: 840\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 10\n" +
-                    "# position: 679\n" +
+                    "# position: 871\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 11\n" +
-                    "# position: 710\n" +
+                    "# position: 902\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 12\n" +
-                    "# position: 741\n" +
+                    "# position: 933\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 13\n" +
-                    "# position: 772\n" +
+                    "# position: 964\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 14\n" +
-                    "# position: 803\n" +
+                    "# position: 995\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 834\n" +
+                    "# position: 1026\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 865\n" +
+                    "# position: 1057\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 896\n" +
+                    "# position: 1088\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 4\n" +
+                    "  1057,\n" +
+                    "  1184,\n" +
+                    "  1215,\n" +
+                    "  1246,\n" +
+                    "  0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 1184\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 927\n" +
+                    "# position: 1215\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 958\n" +
+                    "# position: 1246\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 5241898 bytes remaining\n";
+                    "# 326410 bytes remaining\n";
             String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 978,\n" +
+                    "  writePosition: 1177,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -655,83 +751,106 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 2,\n" +
-                    "    index2Index: 308,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 20\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Hello World\n" +
-                    "# position: 308\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  392,\n" +
+                    "  965,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 408\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 8\n" +
+                    "  488,\n" +
+                    "  538,\n" +
+                    "  598,\n" +
+                    "  658,\n" +
+                    "  718,\n" +
+                    "  779,\n" +
+                    "  841,\n" +
+                    "  903\n" +
+                    "]\n" +
+                    "# position: 488\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 508\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 2\n" +
-                    "# position: 438\n" +
+                    "# position: 538\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 3\n" +
-                    "# position: 468\n" +
+                    "# position: 568\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 4\n" +
-                    "# position: 498\n" +
+                    "# position: 598\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 5\n" +
-                    "# position: 528\n" +
+                    "# position: 628\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 6\n" +
-                    "# position: 558\n" +
+                    "# position: 658\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 7\n" +
-                    "# position: 588\n" +
+                    "# position: 688\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 8\n" +
-                    "# position: 618\n" +
+                    "# position: 718\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 9\n" +
-                    "# position: 648\n" +
+                    "# position: 748\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 10\n" +
-                    "# position: 679\n" +
+                    "# position: 779\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 11\n" +
-                    "# position: 710\n" +
+                    "# position: 810\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 12\n" +
-                    "# position: 741\n" +
+                    "# position: 841\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 13\n" +
-                    "# position: 772\n" +
+                    "# position: 872\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 14\n" +
-                    "# position: 803\n" +
+                    "# position: 903\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 834\n" +
+                    "# position: 934\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 865\n" +
+                    "# position: 965\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  1064,\n" +
+                    "  1126,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 1064\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 896\n" +
+                    "# position: 1095\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 927\n" +
+                    "# position: 1126\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 958\n" +
+                    "# position: 1157\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 5241898 bytes remaining\n";
+                    "# 326499 bytes remaining\n";
             String expected4 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 978,\n" +
+                    "  writePosition: 1078,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -740,79 +859,91 @@ public class SingleCQFormatTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 4,\n" +
-                    "    index2Index: 308,\n" +
-                    "    lastIndex: 0\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 20\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0\n" +
                     "}\n" +
                     "# position: 288\n" +
-                    "--- !!data #binary\n" +
-                    "msg: Hello World\n" +
-                    "# position: 308\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 408\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 5\n" +
+                    "  488,\n" +
+                    "  598,\n" +
+                    "  718,\n" +
+                    "  841,\n" +
+                    "  965,\n" +
+                    "  0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
+                    "--- !!data #binary\n" +
+                    "msg: Hello World\n" +
+                    "# position: 508\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 2\n" +
-                    "# position: 438\n" +
+                    "# position: 538\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 3\n" +
-                    "# position: 468\n" +
+                    "# position: 568\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 4\n" +
-                    "# position: 498\n" +
+                    "# position: 598\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 5\n" +
-                    "# position: 528\n" +
+                    "# position: 628\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 6\n" +
-                    "# position: 558\n" +
+                    "# position: 658\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 7\n" +
-                    "# position: 588\n" +
+                    "# position: 688\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 8\n" +
-                    "# position: 618\n" +
+                    "# position: 718\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 9\n" +
-                    "# position: 648\n" +
+                    "# position: 748\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 10\n" +
-                    "# position: 679\n" +
+                    "# position: 779\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 11\n" +
-                    "# position: 710\n" +
+                    "# position: 810\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 12\n" +
-                    "# position: 741\n" +
+                    "# position: 841\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 13\n" +
-                    "# position: 772\n" +
+                    "# position: 872\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 14\n" +
-                    "# position: 803\n" +
+                    "# position: 903\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 834\n" +
+                    "# position: 934\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 865\n" +
+                    "# position: 965\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 896\n" +
+                    "# position: 996\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 927\n" +
+                    "# position: 1027\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 958\n" +
+                    "# position: 1058\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 5241898 bytes remaining\n";
+                    "# 326598 bytes remaining\n";
             String expected = spacing == 1 ? expected1 :
                     spacing == 2 ? expected2 : expected4;
             checkFileContents(dir.listFiles()[0], expected);
@@ -879,7 +1010,7 @@ public class SingleCQFormatTest {
         map.put("double", 1.28);
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.createAppender().lazyIndexing(true);
             appender.writeMap(map);
 
             map.put("abc", "aye-bee-see");
@@ -935,6 +1066,167 @@ public class SingleCQFormatTest {
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
             System.out.print(queue.dump());
+        }
+    }
+
+    @Test
+    public void testWritingIndex() {
+        String dir = OS.TARGET + "/testWritingIndex-" + System.nanoTime();
+        try (ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
+                .rollCycle(RollCycles.TEST_DAILY)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .build()) {
+            final ExcerptAppender appender = queue.createAppender();
+            appender.writeText("msg-1");
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 497,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 1\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: 0\n" +
+                    "}\n" +
+                    "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  392,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 0\n" +
+                    "  488, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 488\n" +
+                    "--- !!data\n" +
+                    "msg-1\n" +
+                    "...\n" +
+                    "# 327179 bytes remaining\n", queue.dump());
+            for (int i = 1; i <= 16; i++)
+                appender.writeText("msg-" + i);
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY,\n" +
+                    "  writePosition: 840,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 288,\n" +
+                    "    lastIndex: 17\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: 0\n" +
+                    "}\n" +
+                    "# position: 288\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 3\n" +
+                    "  392,\n" +
+                    "  569,\n" +
+                    "  743,\n" +
+                    "  0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 392\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 8\n" +
+                    "  488,\n" +
+                    "  497,\n" +
+                    "  506,\n" +
+                    "  515,\n" +
+                    "  524,\n" +
+                    "  533,\n" +
+                    "  542,\n" +
+                    "  551\n" +
+                    "]\n" +
+                    "# position: 488\n" +
+                    "--- !!data\n" +
+                    "msg-1\n" +
+                    "# position: 497\n" +
+                    "--- !!data\n" +
+                    "msg-1\n" +
+                    "# position: 506\n" +
+                    "--- !!data\n" +
+                    "msg-2\n" +
+                    "# position: 515\n" +
+                    "--- !!data\n" +
+                    "msg-3\n" +
+                    "# position: 524\n" +
+                    "--- !!data\n" +
+                    "msg-4\n" +
+                    "# position: 533\n" +
+                    "--- !!data\n" +
+                    "msg-5\n" +
+                    "# position: 542\n" +
+                    "--- !!data\n" +
+                    "msg-6\n" +
+                    "# position: 551\n" +
+                    "--- !!data\n" +
+                    "msg-7\n" +
+                    "# position: 560\n" +
+                    "--- !!data\n" +
+                    "msg-8\n" +
+                    "# position: 569\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 8\n" +
+                    "  560,\n" +
+                    "  664,\n" +
+                    "  673,\n" +
+                    "  683,\n" +
+                    "  693,\n" +
+                    "  703,\n" +
+                    "  713,\n" +
+                    "  723\n" +
+                    "]\n" +
+                    "# position: 664\n" +
+                    "--- !!data\n" +
+                    "msg-9\n" +
+                    "# position: 673\n" +
+                    "--- !!data\n" +
+                    "msg-10\n" +
+                    "# position: 683\n" +
+                    "--- !!data\n" +
+                    "msg-11\n" +
+                    "# position: 693\n" +
+                    "--- !!data\n" +
+                    "msg-12\n" +
+                    "# position: 703\n" +
+                    "--- !!data\n" +
+                    "msg-13\n" +
+                    "# position: 713\n" +
+                    "--- !!data\n" +
+                    "msg-14\n" +
+                    "# position: 723\n" +
+                    "--- !!data\n" +
+                    "msg-15\n" +
+                    "# position: 733\n" +
+                    "--- !!data\n" +
+                    "msg-16\n" +
+                    "# position: 743\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  733,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "...\n" +
+                    "# 326836 bytes remaining\n", queue.dump());
         }
     }
 

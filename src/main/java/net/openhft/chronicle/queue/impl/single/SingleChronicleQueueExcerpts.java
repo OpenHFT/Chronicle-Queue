@@ -58,7 +58,8 @@ public class SingleChronicleQueueExcerpts {
     public static class StoreAppender implements ExcerptAppender {
         @NotNull
         private final SingleChronicleQueue queue;
-        private final StoreAppenderContext context = new StoreAppenderContext();
+        private final StoreAppenderContext context;
+        private final int indexSpacingMask;
         private int cycle = Integer.MIN_VALUE;
         private WireStore store;
         private AbstractWire wire;
@@ -69,11 +70,14 @@ public class SingleChronicleQueueExcerpts {
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
+            indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
+            context = new StoreAppenderContext();
         }
 
         @Override
         public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
             this.lazyIndexing = lazyIndexing;
+            resetPosition();
             return this;
         }
 
@@ -116,7 +120,22 @@ public class SingleChronicleQueueExcerpts {
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
-            wire.bytes().writePosition(store.writePosition());
+            resetPosition();
+        }
+
+        private void resetPosition() {
+            if (store == null || wire == null)
+                return;
+            final long position = store.writePosition();
+            wire.bytes().writePosition(position);
+            if (lazyIndexing)
+                return;
+            try {
+                final long headerNumber = store.indexForPosition(wire, position, queue.timeoutMS);
+                wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber));
+            } catch (EOFException | TimeoutException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         @Override
@@ -156,7 +175,6 @@ public class SingleChronicleQueueExcerpts {
             }
             return context;
         }
-
 
         @Override
         public int sourceId() {
@@ -246,7 +264,8 @@ public class SingleChronicleQueueExcerpts {
             if (this.position == -1)
                 throw new IllegalStateException("no messages written");
             try {
-                long sequenceNumber = store.indexForPosition(wire, position, queue.timeoutMS);
+                final long timeoutMS = lazyIndexing ? 0 : queue.timeoutMS;
+                long sequenceNumber = store.indexForPosition(wire, position, timeoutMS);
                 lastIndex = queue.rollCycle().toIndex(cycle, sequenceNumber);
                 return lastIndex;
             } catch (EOFException | TimeoutException e) {
@@ -284,6 +303,7 @@ public class SingleChronicleQueueExcerpts {
                     wireWriter.write(writer, wire);
                     lastIndex = wire.headerNumber();
                     wire.updateHeader(length, position, false);
+                    writeIndexForPosition(lastIndex, position, queue.timeoutMS);
 
                 } catch (EOFException theySeeMeRolling) {
                     append2(length, wireWriter, writer);
@@ -303,10 +323,7 @@ public class SingleChronicleQueueExcerpts {
             if (wire != null)
                 wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
             setCycle2(cycle, true);
-            long position = wire.bytes().writePosition();
-            long sequenceNumber = store.indexForPosition(wire, position, 0);
-            wire.bytes().writePosition(position);
-            wire.headerNumber(queue.rollCycle().toIndex(cycle, sequenceNumber));
+            resetPosition();
         }
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
@@ -332,6 +349,27 @@ public class SingleChronicleQueueExcerpts {
             if (this.appendingThread == null)
                 throw new IllegalStateException("Attempting to release Appender in " + Thread.currentThread() + " but already released");
             this.appendingThread = null;
+            return true;
+        }
+
+        void writeIndexForPosition(long index, long position, long timeoutMS) {
+            assert lazyIndexing || checkIndex(index, position, timeoutMS);
+
+            if (!lazyIndexing && (index & indexSpacingMask) == 0) {
+                store.setPositionForIndex(context.wire(),
+                        queue.rollCycle().toSequenceNumber(index),
+                        position, timeoutMS);
+            }
+        }
+
+        boolean checkIndex(long index, long position, long timeoutMS) {
+            try {
+                final long seq1 = queue.rollCycle().toSequenceNumber(index);
+                final long seq2 = store.indexForPosition(wire, position, timeoutMS);
+                assert seq1 == seq2;
+            } catch (EOFException | TimeoutException e) {
+                throw new AssertionError(e);
+            }
             return true;
         }
 
@@ -367,9 +405,14 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public void close() {
                 try {
+                    final long timeoutMS = queue.timeoutMS;
                     wire.updateHeader(position, metaData);
-                    long position = wire.bytes().writePosition();
-                    store.writePosition(position);
+                    long index = wire.headerNumber() - 1;
+                    long position2 = wire.bytes().writePosition();
+                    store.writePosition(position2);
+                    if (!metaData)
+                        writeIndexForPosition(index, position, timeoutMS);
+
                 } catch (StreamCorruptedException e) {
                     throw new IllegalStateException(e);
                 } finally {
