@@ -44,6 +44,7 @@ public class NotCompleteTest {
     public void testUsingANotCompleteQueue() throws TimeoutException, ExecutionException,
             InterruptedException {
 
+        BinaryLongReference.startCollecting();
 
         File tmpDir = getTmpDir();
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
@@ -58,28 +59,23 @@ public class NotCompleteTest {
 
             Thread.sleep(100);
 
-
             System.out.println(queue.dump());
         }
 
         // this is what will corrupt the queue
         BinaryLongReference.forceAllToNotCompleteState();
 
-
-
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
                 .wireType(WireType.BINARY)
+                .timeoutMS(500)
                 .build()) {
+            System.out.println(queue.dump());
+
             ExcerptTailer tailer = queue.createTailer();
 
             try (DocumentContext documentContext = tailer.readingDocument()) {
                 Assert.assertEquals("data", documentContext.wire().read(() -> "some").text());
             }
-
-
         }
-
-
     }
-
 }

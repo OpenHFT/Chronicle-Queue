@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -47,7 +48,6 @@ import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 class SingleChronicleQueueStore implements WireStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueStore.class);
-    private static final long LONG_NOT_COMPLETE = -1;
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(Indexing.class, "Indexing");
@@ -406,12 +406,22 @@ class SingleChronicleQueueStore implements WireStore {
         }
 
         long acquireIndex2Index(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
+            try {
+                return acquireIndex2Index0(wire, timeoutMS);
+            } catch (TimeoutException te) {
+                LOG.warn("Rebuilding the index2index after " + te);
+                this.index2Index.setValue(0);
+                return acquireIndex2Index0(wire, timeoutMS);
+            }
+        }
+
+        long acquireIndex2Index0(Wire wire, long timeoutMS) throws EOFException, TimeoutException {
             long start = System.currentTimeMillis();
             try {
                 do {
                     long index2Index = this.index2Index.getVolatileValue();
 
-                    if (index2Index == LONG_NOT_COMPLETE) {
+                    if (index2Index == BinaryLongReference.LONG_NOT_COMPLETE) {
                         wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
                         continue;
                     }
@@ -419,7 +429,7 @@ class SingleChronicleQueueStore implements WireStore {
                     if (index2Index != NOT_INITIALIZED)
                         return index2Index;
 
-                    if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, LONG_NOT_COMPLETE))
+                    if (!this.index2Index.compareAndSwapValue(NOT_INITIALIZED, BinaryLongReference.LONG_NOT_COMPLETE))
                         continue;
                     long index = NOT_INITIALIZED;
                     try {
@@ -432,7 +442,7 @@ class SingleChronicleQueueStore implements WireStore {
             } finally {
                 wire.pauser().reset();
             }
-            throw new IllegalStateException("index2index NOT_COMPLETE for too long.");
+            throw new TimeoutException("index2index NOT_COMPLETE for too long.");
         }
 
         @NotNull
@@ -479,11 +489,11 @@ class SingleChronicleQueueStore implements WireStore {
 
         long newIndex(Wire wire, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException, TimeoutException {
             try {
-                if (index2Index.compareAndSet(index2, NOT_INITIALIZED, LONG_NOT_COMPLETE)) {
+                if (index2Index.compareAndSet(index2, NOT_INITIALIZED, BinaryLongReference.LONG_NOT_COMPLETE)) {
                     long pos = newIndex(wire, false, timeoutMS);
                     if (pos < 0)
                         throw new IllegalStateException("pos: " + pos);
-                    if (index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, pos)) {
+                    if (index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, pos)) {
                         index2Index.setMaxUsed(index2 + 1);
                         return pos;
                     }
@@ -491,7 +501,7 @@ class SingleChronicleQueueStore implements WireStore {
                 }
                 for (; ; ) {
                     long pos = index2Index.getVolatileValueAt(index2);
-                    if (pos == LONG_NOT_COMPLETE) {
+                    if (pos == BinaryLongReference.LONG_NOT_COMPLETE) {
                         wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
                     } else {
                         wire.pauser().reset();
@@ -500,7 +510,7 @@ class SingleChronicleQueueStore implements WireStore {
                 }
             } catch (Exception e) {
                 // reset the index as failed to add it.
-                index2Index.compareAndSet(index2, LONG_NOT_COMPLETE, NOT_INITIALIZED);
+                index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, NOT_INITIALIZED);
                 throw e;
             }
         }
@@ -757,7 +767,7 @@ class SingleChronicleQueueStore implements WireStore {
                 if (sa != secondaryAddress)
                     throw new AssertionError();
 
-            } else if (secondaryAddress == LONG_NOT_COMPLETE) {
+            } else if (secondaryAddress == BinaryLongReference.LONG_NOT_COMPLETE) {
                 secondaryAddress = getSecondaryAddress0(wire, timeoutMS, index2indexArr, index2);
 
             } else if (secondaryAddress > wire.bytes().capacity()) {
@@ -771,7 +781,7 @@ class SingleChronicleQueueStore implements WireStore {
             long secondaryAddress;
             while (true) {
                 secondaryAddress = index2indexArr.getVolatileValueAt(index2);
-                if (secondaryAddress == LONG_NOT_COMPLETE) {
+                if (secondaryAddress == BinaryLongReference.LONG_NOT_COMPLETE) {
                     wire.pauser().pause(timeoutMS, TimeUnit.MILLISECONDS);
                 } else {
                     if (secondaryAddress > wire.bytes().capacity())
