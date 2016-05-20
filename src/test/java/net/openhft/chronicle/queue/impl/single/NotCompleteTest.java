@@ -205,6 +205,9 @@ public class NotCompleteTest {
             // this should simulate another document being written by another process and left in
             // a  not ready state
             bytes.writeInt(Wires.NOT_READY);
+
+            System.out.println(queue.dump().toString());
+
         }
 
 
@@ -220,6 +223,8 @@ public class NotCompleteTest {
             try (DocumentContext documentContext = appender.writingDocument()) {
                 documentContext.wire().write("some-more").text("more-data");
             }
+
+
         }
 
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
