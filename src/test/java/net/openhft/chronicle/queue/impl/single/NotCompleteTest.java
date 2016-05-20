@@ -16,9 +16,11 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
@@ -49,6 +51,7 @@ public class NotCompleteTest {
         File tmpDir = getTmpDir();
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
                 .wireType(WireType.BINARY)
+                .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
             ExcerptAppender appender = queue.createAppender();
@@ -64,6 +67,46 @@ public class NotCompleteTest {
 
         // this is what will corrupt the queue
         BinaryLongReference.forceAllToNotCompleteState();
+
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(WireType.BINARY)
+                .timeoutMS(500)
+                .build()) {
+            System.out.println(queue.dump());
+
+            ExcerptTailer tailer = queue.createTailer();
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                Assert.assertEquals("data", documentContext.wire().read(() -> "some").text());
+            }
+        }
+    }
+
+    @Test
+    public void testUsingANotCompleteArrayQueue() throws TimeoutException, ExecutionException,
+            InterruptedException {
+
+        BinaryLongArrayReference.startCollecting();
+
+        File tmpDir = getTmpDir();
+        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+                .wireType(WireType.BINARY)
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
+
+            ExcerptAppender appender = queue.createAppender();
+
+            try (DocumentContext documentContext = appender.writingDocument()) {
+                documentContext.wire().write("some").text("data");
+            }
+
+            Thread.sleep(100);
+
+            System.out.println(queue.dump());
+        }
+
+        // this is what will corrupt the queue
+        BinaryLongArrayReference.forceAllToNotCompleteState();
 
         try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
                 .wireType(WireType.BINARY)
