@@ -758,6 +758,16 @@ class SingleChronicleQueueStore implements WireStore {
         }
 
         long getSecondaryAddress(Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, TimeoutException {
+            try {
+                return getSecondaryAddress1(wire, timeoutMS, index2indexArr, index2);
+            } catch (TimeoutException e) {
+                LOG.warn("Timed out trying to get index2index[" + index2 + "] after " + e);
+                index2indexArr.setValueAt(index2, 0L);
+                return getSecondaryAddress1(wire, timeoutMS, index2indexArr, index2);
+            }
+        }
+
+        long getSecondaryAddress1(Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, TimeoutException {
             long secondaryAddress = index2indexArr.getValueAt(index2);
             if (secondaryAddress == 0) {
                 secondaryAddress = newIndex(wire, index2indexArr, index2, timeoutMS);
