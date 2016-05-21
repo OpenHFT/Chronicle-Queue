@@ -22,7 +22,7 @@ public enum RollCycles implements RollCycle {
     MINUTELY("yyyyMMdd-HHmm", 60 * 1000, 2 << 10, 16), // 64 million entries per minute
     HOURLY("yyyyMMdd-HH", 60 * 60 * 1000, 4 << 10, 16), // 256 million entries per hour.
     TEST_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8, 1), // Only good for testing
-    TEST2_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8, 2), // Only good for testing
+    TEST2_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 16, 2), // Only good for testing
     SMALL_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 8 << 10, 8), // 512 million entries per day
     DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 16 << 10, 16), // 4 billion entries per day
     LARGE_DAILY("yyyyMMdd", 24 * 60 * 60 * 1000, 32 << 10, 32), // 32 billion entries per day
