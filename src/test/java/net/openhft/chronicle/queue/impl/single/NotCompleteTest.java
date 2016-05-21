@@ -16,17 +16,13 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongArrayReference;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
+import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -34,32 +30,30 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
-
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class NotCompleteTest {
-
-    private static final int TIMES = 100;
-
 
     /**
      * tests that when flags are set to not complete we are able to recover
      */
     @Test
-    public void testUsingANotCompleteQueue() throws TimeoutException, ExecutionException,
-            InterruptedException {
+    public void testUsingANotCompleteQueue()
+            throws TimeoutException, ExecutionException, InterruptedException {
 
         BinaryLongReference.startCollecting();
 
         File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
+        try (final ChronicleQueue queue = binary(tmpDir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
             ExcerptAppender appender = queue.createAppender();
 
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                documentContext.wire().write("some").text("data");
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("some").text("data");
             }
 
             Thread.sleep(100);
@@ -70,36 +64,34 @@ public class NotCompleteTest {
         // this is what will corrupt the queue
         BinaryLongReference.forceAllToNotCompleteState();
 
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
+        try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {
             System.out.println(queue.dump());
 
             ExcerptTailer tailer = queue.createTailer();
 
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertEquals("data", documentContext.wire().read(() -> "some").text());
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertEquals("data", dc.wire().read(() -> "some").text());
             }
         }
     }
 
     @Test
-    public void testUsingANotCompleteArrayQueue() throws TimeoutException, ExecutionException,
-            InterruptedException {
+    public void testUsingANotCompleteArrayQueue()
+            throws TimeoutException, ExecutionException, InterruptedException {
 
         BinaryLongArrayReference.startCollecting();
 
         File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
+        try (final ChronicleQueue queue = binary(tmpDir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
             ExcerptAppender appender = queue.createAppender();
 
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                documentContext.wire().write("some").text("data");
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("some").text("data");
             }
 
             Thread.sleep(100);
@@ -110,182 +102,59 @@ public class NotCompleteTest {
         // this is what will corrupt the queue
         BinaryLongArrayReference.forceAllToNotCompleteState();
 
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
+        try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {
             System.out.println(queue.dump());
 
             ExcerptTailer tailer = queue.createTailer();
 
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertEquals("data", documentContext.wire().read(() -> "some").text());
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertEquals("data", dc.wire().read(() -> "some").text());
             }
         }
     }
 
-
     @Test
-    public void testDocumentLeftInNotRead() throws TimeoutException, ExecutionException,
-            InterruptedException {
-
+    public void testMessageLeftNotComplete()
+            throws TimeoutException, ExecutionException, InterruptedException {
 
         File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-
+        try (final ChronicleQueue queue = binary(tmpDir).rollCycle(RollCycles.TEST_DAILY).build()) {
             ExcerptAppender appender = queue.createAppender();
 
+            // start a message which was not completed.
+            DocumentContext dc = appender.writingDocument();
+            dc.wire().write("some").text("data");
+            // didn't call dc.close();
 
-            long start;
-            Bytes<?> bytes;
-
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                bytes = documentContext.wire().bytes();
-                documentContext.wire().write("some").text("data");
-            }
-
-            // this should simulate another document being written by another process and left in
-            // a  not ready state
-            bytes.writeInt(Wires.NOT_READY);
+            System.out.println(queue.dump());
         }
 
-
-        // this should write it should not time out !
-
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-
-            ExcerptAppender appender = queue.createAppender();
-
-            // the above should time out and only the some-more more data should be written
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                documentContext.wire().write("some-more").text("more-data");
-            }
-        }
-
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
+        try (final ChronicleQueue queue = binary(tmpDir).build()) {
             ExcerptTailer tailer = queue.createTailer();
 
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertEquals("some", documentContext.wire().read(() -> "data").text());
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.isPresent());
             }
-
-
         }
 
-
-    }
-
-
-    @Test
-    public void testMessageOfUnknownLengthLeftNotComplete() throws TimeoutException, ExecutionException,
-            InterruptedException {
-
-
-        File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-
+        try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {
             ExcerptAppender appender = queue.createAppender();
 
-
-            Bytes<?> bytes;
-
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                bytes = documentContext.wire().bytes();
-                documentContext.wire().write("some").text("data");
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write("some").text("data");
             }
 
-            // this should simulate another document being written by another process and left in
-            // a  not ready state
-            bytes.writeInt(Wires.NOT_READY);
-
-            System.out.println(queue.dump().toString());
-
+            System.out.println(queue.dump());
         }
 
-
-        // this should write it should not time out !
-
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-
-            ExcerptAppender appender = queue.createAppender();
-
-            // the above should time out and only the some-more more data should be written
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                documentContext.wire().write("some-more").text("more-data");
-            }
-
-
-        }
-
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
+        try (final ChronicleQueue queue = binary(tmpDir).build()) {
             ExcerptTailer tailer = queue.createTailer();
 
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertEquals("some", documentContext.wire().read(() -> "data").text());
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertEquals("data", dc.wire().read(() -> "some").text());
             }
-
-
         }
-
-
-    }
-
-
-    @Test
-    public void testMessageOfKnownLengthLeftNotComplete() throws TimeoutException,
-            ExecutionException,
-            InterruptedException {
-
-
-        File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-
-            ExcerptAppender appender = queue.createAppender();
-
-
-            long start;
-            Bytes<?> bytes;
-
-            try (DocumentContext documentContext = appender.writingDocument()) {
-                bytes = documentContext.wire().bytes();
-                start = bytes.writePosition() - 4;
-                documentContext.wire().write("some").text("data");
-            }
-
-            // leave the document in a not read state - not sure about the index ?
-            bytes.writePosition(start).writeInt(bytes.readInt(start) | Wires.NOT_READY);
-
-
-            System.out.println(queue.dump().toString());
-        }
-
-
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
-                .wireType(WireType.BINARY)
-                .build()) {
-            ExcerptTailer tailer = queue.createTailer().lazyIndexing(true);
-
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                Assert.assertEquals("some", documentContext.wire().read(() -> "data").text());
-            }
-
-
-        }
-
-
     }
 }
