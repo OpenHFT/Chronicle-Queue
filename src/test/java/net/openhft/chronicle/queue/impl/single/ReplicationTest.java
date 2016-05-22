@@ -58,7 +58,7 @@ public class ReplicationTest {
 
         ConcurrentLinkedQueue<Data> q = new ConcurrentLinkedQueue<>();
 
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(WireType.BINARY)
                 .build()) {
 
@@ -93,7 +93,7 @@ public class ReplicationTest {
             });
 
 
-            try (final RollingChronicleQueue queue2 = new SingleChronicleQueueBuilder(getTmpDir())
+            try (final RollingChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(WireType.BINARY)
                     .build()) {
 

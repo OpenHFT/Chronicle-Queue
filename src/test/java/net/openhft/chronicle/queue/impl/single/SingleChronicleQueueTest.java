@@ -81,7 +81,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -96,7 +96,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType).build()) {
 
             final String expected = "some long message";
@@ -137,7 +137,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingLessBytesThanWritten() {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -169,7 +169,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -202,7 +202,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadAndAppend() {
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -312,7 +312,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .timeProvider(stp)
                 .build()) {
@@ -342,7 +342,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
 
         File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .rollCycle(RollCycles.TEST_DAILY)
@@ -655,7 +655,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testAppendAndReadWithRollingR() throws StreamCorruptedException {
 
         File tmpDir = getTmpDir();
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(tmpDir)
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .indexCount(8)
@@ -955,7 +955,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -982,7 +982,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSimpleWire() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1004,7 +1004,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIndexWritingDocument() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1024,7 +1024,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingMarshallableDocument() {
 
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1048,7 +1048,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMetaData() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1097,7 +1097,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingSecondDocumentNotExist() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1123,7 +1123,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1156,7 +1156,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSimpleByteTest() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1174,7 +1174,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .indexCount(8)
                 .indexSpacing(8)
@@ -1210,7 +1210,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Ignore("long running test")
     @Test
     public void testReadAtIndex4MB() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = queue.createAppender();
@@ -1249,7 +1249,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastWrittenIndexPerAppender() {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = queue.createAppender();
@@ -1261,7 +1261,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void testLastWrittenIndexPerAppenderNoData() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = chronicle.createAppender();
@@ -1272,7 +1272,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastIndexPerChronicle() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1286,7 +1286,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderIndexReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1315,7 +1315,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      */
     @Test
     public void testEPOC() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .epoch(System.currentTimeMillis())
                 .rollCycle(RollCycles.HOURLY)
@@ -1330,7 +1330,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1365,7 +1365,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingDocument() {
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1433,7 +1433,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentWithFirstAMove() throws TimeoutException {
 
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1489,7 +1489,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentWithFirstAMoveWithEpoch() throws TimeoutException {
 
-        try (final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
@@ -1545,7 +1545,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEnd() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1554,7 +1554,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // move to the end even though it doesn't exist yet.
             tailer.toEnd();
 
-            try (ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
+            try (ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
                     .wireType(this.wireType)
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
@@ -1570,10 +1570,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEnd2() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .build();
-             ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
+             ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
                      .wireType(this.wireType)
                      .build()) {
 
@@ -1595,12 +1595,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 //    @Ignore("Not sure it is useful")
     public void testReadWrite() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .blockSize(2 << 20)
                 .build();
-             ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
+             ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
                      .wireType(this.wireType)
                      .rollCycle(RollCycles.HOURLY)
                      .blockSize(2 << 20)
@@ -1630,7 +1630,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentForEmptyQueue() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1640,7 +1640,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertFalse(dc.isPresent());
             }
 
-            try (ChronicleQueue chronicle2 = new SingleChronicleQueueBuilder(tmpDir)
+            try (ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
                     .wireType(this.wireType)
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
@@ -1658,7 +1658,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMetaData6() {
-        try (final ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1716,7 +1716,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEndBeforeWrite() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .rollCycle(RollCycles.TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1738,7 +1738,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testForwardFollowedBackBackwardTailer() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .rollCycle(RollCycles.TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1806,7 +1806,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLastIndexAppended() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1823,7 +1823,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = UnsupportedOperationException.class)
     public void testZeroLengthMessage() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(tmpDir)
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1837,13 +1837,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMoveToWithAppender() throws TimeoutException, StreamCorruptedException {
-        try (ChronicleQueue syncQ = new SingleChronicleQueueBuilder(getTmpDir())
+        try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
             ExcerptAppender sync = syncQ.createAppender();
 
-            try (ChronicleQueue chronicle = new SingleChronicleQueueBuilder(getTmpDir())
+            try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .build()) {
 

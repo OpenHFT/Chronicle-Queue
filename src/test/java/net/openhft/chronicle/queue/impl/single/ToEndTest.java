@@ -59,7 +59,7 @@ public class ToEndTest {
         System.out.println(baseDir);
         IOTools.shallowDeleteDirWithFiles(baseDir);
         List<Integer> results = new ArrayList<>();
-        RollingChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
+        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .indexCount(8)
                 .indexSpacing(1)
                 .build();
@@ -103,7 +103,7 @@ public class ToEndTest {
         String baseDir = OS.TARGET + "/toEndBeforeWriteTest";
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir).build();
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir).build();
         checkOneFile(baseDir);
 
         // if this appender isn't created, the tailer toEnd doesn't cause a roll.

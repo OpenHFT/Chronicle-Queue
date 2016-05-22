@@ -36,11 +36,13 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     }
 
     @SuppressWarnings("unchecked")
+    @Deprecated
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
     @SuppressWarnings("unchecked")
+    @Deprecated
     public SingleChronicleQueueBuilder(@NotNull File path) {
         super(path);
         storeFactory(SingleChronicleQueueBuilder::createStore);

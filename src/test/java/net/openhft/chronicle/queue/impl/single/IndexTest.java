@@ -71,7 +71,7 @@ public class IndexTest extends ChronicleQueueTestBase {
     @Test
     public void test() throws IOException {
 
-        final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build();
 
