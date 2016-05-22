@@ -74,6 +74,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
+    private final StoreRecoveryFactory recoverySupplier;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -94,6 +95,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         timeoutMS = builder.timeoutMS();
         storeFactory = builder.storeFactory();
         sourceId = builder.sourceId();
+        recoverySupplier = builder.recoverySupplier();
     }
 
     @Override
@@ -198,6 +200,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
+    }
+
+    @Override
+    public StoreRecoveryFactory recoverySupplier() {
+        return recoverySupplier;
     }
 
     /**

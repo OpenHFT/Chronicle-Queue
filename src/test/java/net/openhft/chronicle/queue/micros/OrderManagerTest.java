@@ -76,7 +76,7 @@ public class OrderManagerTest {
                     assertTrue(reader.readOne());
 
                 assertFalse(reader.readOne());
-                System.out.println(queue.dump());
+//                System.out.println(queue.dump());
             }
 
             verify(listener);
@@ -128,7 +128,7 @@ public class OrderManagerTest {
                     assertTrue(reader.readOne());
 
                 assertFalse(reader.readOne());
-                System.out.println(out.dump());
+//                System.out.println(out.dump());
             }
 
             try (SingleChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath2).sourceId(2).build()) {

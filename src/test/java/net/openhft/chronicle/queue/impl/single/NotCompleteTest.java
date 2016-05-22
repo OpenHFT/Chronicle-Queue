@@ -58,7 +58,7 @@ public class NotCompleteTest {
 
             Thread.sleep(100);
 
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
         }
 
         // this is what will corrupt the queue
@@ -67,7 +67,7 @@ public class NotCompleteTest {
         try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
 
             ExcerptTailer tailer = queue.createTailer();
 
@@ -96,7 +96,7 @@ public class NotCompleteTest {
 
             Thread.sleep(100);
 
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
         }
 
         // this is what will corrupt the queue
@@ -105,7 +105,7 @@ public class NotCompleteTest {
         try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
 
             ExcerptTailer tailer = queue.createTailer();
 
@@ -128,7 +128,7 @@ public class NotCompleteTest {
             dc.wire().write("some").text("data");
             // didn't call dc.close();
 
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).build()) {
@@ -146,7 +146,7 @@ public class NotCompleteTest {
                 dc.wire().write("some").text("data");
             }
 
-            System.out.println(queue.dump());
+//            System.out.println(queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).build()) {

@@ -25,6 +25,8 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
+import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
 import net.openhft.chronicle.wire.WireType;
@@ -68,6 +70,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private long timeoutMS = 10_000; // 10 seconds.
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
+    private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
+
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
         this.blockSize = 64L << 20;
@@ -317,6 +321,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public int sourceId() {
         return sourceId;
+    }
+
+    public StoreRecoveryFactory recoverySupplier() {
+        return recoverySupplier;
+    }
+
+    public B recoverySupplier(StoreRecoveryFactory recoverySupplier) {
+        this.recoverySupplier = recoverySupplier;
+        return (B) this;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

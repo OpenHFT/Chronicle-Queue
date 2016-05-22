@@ -119,7 +119,7 @@ public class ReplicationTest {
                 f.get();
 
                 Assert.assertEquals(queue.dump(), queue2.dump());
-                System.out.println(queue2.dump());
+//                System.out.println(queue2.dump());
             }
         }
     }

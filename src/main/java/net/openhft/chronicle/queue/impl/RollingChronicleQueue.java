@@ -18,7 +18,11 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.impl.single.StoreRecovery;
+import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.function.Function;
 
 public interface RollingChronicleQueue extends ChronicleQueue {
 
@@ -55,4 +59,6 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int cycle();
 
     RollCycle rollCycle();
+
+    Function<WireType, StoreRecovery> recoverySupplier();
 }

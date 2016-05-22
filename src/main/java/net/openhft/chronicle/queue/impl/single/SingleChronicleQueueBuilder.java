@@ -15,14 +15,14 @@
  */
 package net.openhft.chronicle.queue.impl.single;
 
-import java.io.File;
-
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 
@@ -32,6 +32,7 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Roll.class, "SCQSRoll");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Indexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
+        CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
 
     @SuppressWarnings("unchecked")
@@ -78,7 +79,8 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
             (MappedBytes) wire.bytes(),
             queue.epoch(),
             queue.indexCount(),
-            queue.indexSpacing());
+                queue.indexSpacing(),
+                queue.recoverySupplier().apply(queue.wireType()));
 
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
 

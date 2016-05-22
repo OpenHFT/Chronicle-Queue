@@ -490,7 +490,8 @@ public class SingleChronicleQueueExcerpts {
                 assert context.wire() == null || context.wire().startUse();
                 if (context.present(next(includeMetaData)))
                     return context;
-            } catch (TimeoutException ignored) {
+            } catch (TimeoutException notComplete) {
+                // so treat as empty.
             }
             return NoDocumentContext.INSTANCE;
         }
