@@ -310,30 +310,24 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long nextIndexToWrite() {
-        for (int i = 0; i < 100; i++) {
-            try {
+        try {
 
-                final int lastCycle = lastCycle();
-                if (lastCycle == Integer.MIN_VALUE)
-                    return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
+            final int lastCycle = lastCycle();
+            if (lastCycle == Integer.MIN_VALUE)
+                return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
 
-                WireStore store = storeForCycle(lastCycle, epoch, false);
-                if (store == null)
-                    return Long.MIN_VALUE;
+            WireStore store = storeForCycle(lastCycle, epoch, false);
+            if (store == null)
+                return Long.MIN_VALUE;
 
-                Wire wire = wireType().apply(store.bytes());
-                final long position = store.writePosition();
-                long sequenceNumber = store.indexForPosition(wire, position, 0);
-                return rollCycle.toIndex(lastCycle, sequenceNumber);
+            Wire wire = wireType().apply(store.bytes());
+            final long position = store.writePosition();
+            long sequenceNumber = store.indexForPosition(wire, position, 0);
+            return rollCycle.toIndex(lastCycle, sequenceNumber);
 
-            } catch (EOFException fileTruncated) {
-                throw new IllegalStateException(fileTruncated);
-
-            } catch (TimeoutException e) {
-                throw new AssertionError(e);
-            }
+        } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {
+            throw new IllegalStateException(e);
         }
-        throw new IllegalStateException();
     }
 
     public int lastCycle() {

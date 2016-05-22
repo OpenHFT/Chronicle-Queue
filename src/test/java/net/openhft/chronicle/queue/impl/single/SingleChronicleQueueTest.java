@@ -1237,7 +1237,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             StringBuilder sb = new StringBuilder();
 
             for (long i = 0; i < (4L << 20L); i++) {
-                tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i));
+                assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, i)));
                 tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
                 Assert.assertEquals("value=" + i, sb.toString());
                 if (i % (TIMES / 20) == 0) {
@@ -1349,7 +1349,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             final ExcerptTailer tailer = queue.createTailer();
-            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)));
 
             StringBuilder sb = new StringBuilder();
             tailer.readDocument(wire -> wire.read(() -> "key").text(sb));
@@ -1452,7 +1452,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             final ExcerptTailer tailer = queue.createTailer();
-            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)));
 
             final StringBuilder sb = Wires.acquireStringBuilder();
 
@@ -1509,7 +1509,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             final ExcerptTailer tailer = queue.createTailer();
-            tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2));
+            assertTrue(tailer.moveToIndex(queue.rollCycle().toIndex(cycle, 2)));
 
             final StringBuilder sb = Wires.acquireStringBuilder();
 
@@ -1859,7 +1859,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
                 final long index = syncQ.nextIndexToWrite();
-                tailer.moveToIndex(index);
+                assertTrue(tailer.moveToIndex(index));
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     String text = documentContext.wire().read().text();

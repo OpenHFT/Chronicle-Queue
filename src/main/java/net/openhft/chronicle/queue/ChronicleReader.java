@@ -27,7 +27,6 @@ import net.openhft.chronicle.wire.TextWire;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Display records in a Chronicle in a text form.
@@ -55,12 +54,9 @@ public enum ChronicleReader {
         if (index > 0) {
             System.out.println("Waiting for index " + index);
             for (; ; ) {
-                try {
-                    if (tailer.moveToIndex(index))
-                        break;
-                } catch (TimeoutException e) {
-                    Jvm.pause(500);
-                }
+                if (tailer.moveToIndex(index))
+                    break;
+                Jvm.pause(100);
             }
         }
 

@@ -22,8 +22,6 @@ import net.openhft.chronicle.wire.ReadMarshallable;
 import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.TimeoutException;
-
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
  *
@@ -64,7 +62,7 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      *              with this cycle
      * @return true if this is a valid entries.
      */
-    boolean moveToIndex(long index) throws TimeoutException;
+    boolean moveToIndex(long index);
 
     /**
      * Replay from the first entry in the first cycle.

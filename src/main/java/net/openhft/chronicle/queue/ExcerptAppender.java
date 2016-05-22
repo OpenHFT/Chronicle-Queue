@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.MarshallableOut;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.StreamCorruptedException;
@@ -31,7 +32,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     /**
      * @param bytes to write to excerpt.
      */
-    void writeBytes(@NotNull Bytes<?> bytes);
+    void writeBytes(@NotNull Bytes<?> bytes) throws UnrecoverableTimeoutException;
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.

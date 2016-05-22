@@ -29,8 +29,8 @@ import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> {
     static {
         CLASS_ALIASES.addAlias(WireType.class);
-        CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Roll.class, "SCQSRoll");
-        CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Indexing.class, "SCQSIndexing");
+        CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
+        CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
         CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }

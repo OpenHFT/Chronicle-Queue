@@ -18,13 +18,11 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
-import java.util.concurrent.TimeoutException;
+import java.io.StreamCorruptedException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
     WireStore writePosition(long position);
@@ -40,7 +38,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      */
     long writePosition();
 
-    ScanResult moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
+    ScanResult moveToIndexForRead(@NotNull Wire wire, long index, long timeoutMS);
 
     @NotNull
     MappedBytes bytes();
@@ -52,7 +50,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * @param timeoutMS
      * @return index in this store.
      */
-    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException;
+    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 
@@ -60,5 +58,9 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long lastAcknowledgedIndexReplicated();
 
-    void setPositionForIndex(Wire wire, long index, long position, long timeoutMS);
+    void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException;
+
+    long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+
+    void writeEOF(AbstractWire wire, long timeoutMS) throws UnrecoverableTimeoutException;
 }

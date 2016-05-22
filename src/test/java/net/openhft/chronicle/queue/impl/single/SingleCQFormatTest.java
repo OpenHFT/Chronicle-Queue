@@ -174,8 +174,8 @@ public class SingleCQFormatTest {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                 w.write(() -> "wireType").object(WireType.BINARY);
                 w.write(() -> "writePosition").int64forBinding(0);
-                w.write(() -> "roll").typedMarshallable(new SingleChronicleQueueStore.Roll(RollCycles.DAILY, 0));
-                w.write(() -> "indexing").typedMarshallable(new SingleChronicleQueueStore.Indexing(WireType.BINARY, 32 << 10, 32));
+                w.write(() -> "roll").typedMarshallable(new SCQRoll(RollCycles.DAILY, 0));
+                w.write(() -> "indexing").typedMarshallable(new SCQIndexing(WireType.BINARY, 32 << 10, 32));
                 w.write(() -> "lastAcknowledgedIndexReplicated").int64forBinding(0);
             });
         }

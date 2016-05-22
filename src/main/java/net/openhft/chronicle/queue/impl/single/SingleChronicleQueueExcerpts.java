@@ -32,8 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.nio.BufferOverflowException;
 import java.util.function.BiConsumer;
 
 public class SingleChronicleQueueExcerpts {
@@ -77,7 +76,9 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
             this.lazyIndexing = lazyIndexing;
+
             resetPosition();
+
             return this;
         }
 
@@ -124,54 +125,57 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void resetPosition() {
-            if (store == null || wire == null)
-                return;
-            final long position = store.writePosition();
-            wire.bytes().writePosition(position);
-            if (lazyIndexing)
-                return;
             try {
+                if (store == null || wire == null)
+                    return;
+                final long position = store.writePosition();
+                wire.bytes().writePosition(position);
+                if (lazyIndexing)
+                    return;
+
                 final long headerNumber = store.indexForPosition(wire, position, queue.timeoutMS);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber));
-            } catch (EOFException | TimeoutException e) {
-                throw new IllegalStateException(e);
+            } catch (BufferOverflowException e) {
+                throw new AssertionError(e);
+            } catch (EOFException e) {
+                throw new AssertionError(e);
+            } catch (UnrecoverableTimeoutException e) {
+                throw new AssertionError(e);
+            } catch (StreamCorruptedException e) {
+                throw new AssertionError(e);
             }
         }
 
         @Override
-        public DocumentContext writingDocument() {
+        public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
             try {
-                try {
-                    for (int i = 0; i < 100; i++) {
-                        try {
+                for (int i = 0; i < 100; i++) {
+                    try {
 
-                            int cycle = queue.cycle();
-                            if (this.cycle != cycle || wire == null) {
-                                rollCycleTo(cycle);
-                                wire.bytes().writePosition(store.writePosition());
-                            }
-
-                            assert wire != null;
-                            if (wire.bytes().writePosition() >= wire.bytes().writeLimit()) {
-                                LOG.debug("Reset write position");
-                                wire.bytes().writePosition(store.writePosition());
-                            }
-                            position = wire.writeHeader(queue.timeoutMS, TimeUnit.MILLISECONDS);
-                            lastIndex = wire.headerNumber();
-                            context.metaData = false;
-                            break;
-                        } catch (EOFException theySeeMeRolling) {
-                            // retry.
+                        int cycle = queue.cycle();
+                        if (this.cycle != cycle || wire == null) {
+                            rollCycleTo(cycle);
+                            wire.bytes().writePosition(store.writePosition());
                         }
-                    }
 
-                } catch (Exception e) {
-                    assert resetAppendingThread();
-                    throw e;
+                        assert wire != null;
+                        if (wire.bytes().writePosition() >= wire.bytes().writeLimit()) {
+                            LOG.debug("Reset write position");
+                            wire.bytes().writePosition(store.writePosition());
+                        }
+                        position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
+                        lastIndex = wire.headerNumber();
+                        context.metaData = false;
+                        break;
+                    } catch (EOFException theySeeMeRolling) {
+                        // retry.
+                    }
                 }
-            } catch (TimeoutException e) {
-                throw new IllegalStateException(e);
+
+            } catch (Exception e) {
+                assert resetAppendingThread();
+                throw e;
             }
             return context;
         }
@@ -182,7 +186,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(@NotNull Bytes bytes) {
+        public void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
             // still uses append as it has a known length.
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
@@ -212,7 +216,7 @@ public class SingleChronicleQueueExcerpts {
                 try {
 //                    wire.bytes().writePosition(store.writePosition());
                     int length = bytes.length();
-                    position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    position = store.writeHeader(wire, length, queue.timeoutMS);
                     wireBytes.write(bytes);
                     wire.updateHeader(length, position, false);
 
@@ -224,7 +228,7 @@ public class SingleChronicleQueueExcerpts {
                 }
                 lastIndex = index;
 
-            } catch (TimeoutException | StreamCorruptedException | EOFException e) {
+            } catch (UnrecoverableTimeoutException | StreamCorruptedException | EOFException e) {
                 throw Jvm.rethrow(e);
 
             } finally {
@@ -234,7 +238,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws TimeoutException, EOFException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException, EOFException {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -246,7 +250,7 @@ public class SingleChronicleQueueExcerpts {
                     setCycle2(cycle, true);
             }
 
-            ScanResult scanResult = this.store.moveToIndex(wire, sequenceNumber, queue.timeoutMS);
+            ScanResult scanResult = this.store.moveToIndexForRead(wire, sequenceNumber, queue.timeoutMS);
             Bytes<?> bytes = wire.bytes();
             if (scanResult == ScanResult.NOT_FOUND) {
                 wire.bytes().writePosition(wire.bytes().readPosition());
@@ -268,7 +272,8 @@ public class SingleChronicleQueueExcerpts {
                 long sequenceNumber = store.indexForPosition(wire, position, timeoutMS);
                 lastIndex = queue.rollCycle().toIndex(cycle, sequenceNumber);
                 return lastIndex;
-            } catch (EOFException | TimeoutException e) {
+
+            } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             } finally {
                 wire.bytes().writePosition(store.writePosition());
@@ -290,7 +295,7 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        private <T> void append(int length, WireWriter<T> wireWriter, T writer) {
+        private <T> void append(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException {
             lastIndex = Long.MIN_VALUE;
             assert checkAppendingThread();
             try {
@@ -299,17 +304,22 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
-                    position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+                    position = store.writeHeader(wire, length, queue.timeoutMS);
                     wireWriter.write(writer, wire);
                     lastIndex = wire.headerNumber();
                     wire.updateHeader(length, position, false);
                     writeIndexForPosition(lastIndex, position, queue.timeoutMS);
 
                 } catch (EOFException theySeeMeRolling) {
-                    append2(length, wireWriter, writer);
+                    try {
+                        append2(length, wireWriter, writer);
+                    } catch (EOFException e) {
+                        throw new AssertionError(e);
+                    }
                 }
-            } catch (TimeoutException | EOFException | StreamCorruptedException e) {
-                throw Jvm.rethrow(e);
+
+            } catch (StreamCorruptedException e) {
+                throw new AssertionError(e);
 
             } finally {
                 store.writePosition(wire.bytes().writePosition());
@@ -317,18 +327,18 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        private void rollCycleTo(int cycle) throws TimeoutException, EOFException {
+        private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
             if (this.cycle == cycle)
                 throw new AssertionError();
             if (wire != null)
-                wire.writeEndOfWire(queue.timeoutMS, TimeUnit.MILLISECONDS);
+                store.writeEOF(wire, queue.timeoutMS);
             setCycle2(cycle, true);
             resetPosition();
         }
 
-        private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws TimeoutException, EOFException, StreamCorruptedException {
+        private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1), true);
-            position = wire.writeHeader(length, queue.timeoutMS, TimeUnit.MILLISECONDS);
+            position = store.writeHeader(wire, length, queue.timeoutMS);
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
         }
@@ -352,7 +362,7 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        void writeIndexForPosition(long index, long position, long timeoutMS) {
+        void writeIndexForPosition(long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
             assert lazyIndexing || checkIndex(index, position, timeoutMS);
 
             if (!lazyIndexing && (index & indexSpacingMask) == 0) {
@@ -367,7 +377,7 @@ public class SingleChronicleQueueExcerpts {
                 final long seq1 = queue.rollCycle().toSequenceNumber(index);
                 final long seq2 = store.indexForPosition(wire, position, timeoutMS);
                 assert seq1 == seq2;
-            } catch (EOFException | TimeoutException e) {
+            } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
             return true;
@@ -414,6 +424,8 @@ public class SingleChronicleQueueExcerpts {
                         writeIndexForPosition(index, position, timeoutMS);
 
                 } catch (StreamCorruptedException e) {
+                    throw new IllegalStateException(e);
+                } catch (UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
                     assert resetAppendingThread();
@@ -490,29 +502,29 @@ public class SingleChronicleQueueExcerpts {
                 assert context.wire() == null || context.wire().startUse();
                 if (context.present(next(includeMetaData)))
                     return context;
-            } catch (TimeoutException notComplete) {
+            } catch (StreamCorruptedException e) {
+                throw new IllegalStateException(e);
+            } catch (UnrecoverableTimeoutException notComplete) {
                 // so treat as empty.
             }
             return NoDocumentContext.INSTANCE;
         }
 
-        private boolean next(boolean includeMetaData) throws TimeoutException {
+        private boolean next(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
             if (this.store == null) { // load the first store
                 final long firstIndex = queue.firstIndex();
                 if (firstIndex == Long.MAX_VALUE)
                     return false;
-                if (!this.moveToIndex(firstIndex)) return false;
+                if (!moveToIndex(firstIndex))
+                    return false;
             }
             Bytes<?> bytes = context.wire().bytes();
             bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
                 try {
                     if (direction != TailerDirection.FORWARD)
-                        try {
-                            moveToIndex(index);
-                        } catch (TimeoutException notComplete) {
+                        if (!moveToIndex(index))
                             return false;
-                        }
 
                     switch (context.wire().readDataHeader(includeMetaData)) {
                         case NONE:
@@ -535,13 +547,9 @@ public class SingleChronicleQueueExcerpts {
 
                 } catch (EOFException eof) {
                     if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
-                        try {
-                            if (moveToIndex(cycle + direction.add(), 0)) {
-                                bytes = context.wire().bytes();
-                                continue;
-                            }
-                        } catch (TimeoutException failed) {
-                            // no more entries yet.
+                        if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
+                            bytes = context.wire().bytes();
+                            continue;
                         }
                     return false;
                 }
@@ -565,17 +573,22 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public boolean moveToIndex(final long index) throws TimeoutException {
+        public boolean moveToIndex(final long index) {
+            final ScanResult scanResult = moveToIndexResult(index);
+            return scanResult == ScanResult.FOUND;
+        }
+
+        ScanResult moveToIndexResult(long index) {
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
             return moveToIndex(cycle, sequenceNumber, index);
         }
 
-        boolean moveToIndex(int cycle, long sequenceNumber) throws TimeoutException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) {
             return moveToIndex(cycle, sequenceNumber, queue.rollCycle().toIndex(cycle, sequenceNumber));
         }
 
-        boolean moveToIndex(int cycle, long sequenceNumber, long index) throws TimeoutException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber, long index) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -586,14 +599,14 @@ public class SingleChronicleQueueExcerpts {
             }
             this.index = index;
             if (store == null)
-                return false;
-            ScanResult scanResult = this.store.moveToIndex(context.wire(), sequenceNumber, queue.timeoutMS);
+                return ScanResult.NOT_REACHED;
+            ScanResult scanResult = this.store.moveToIndexForRead(context.wire(), sequenceNumber, queue.timeoutMS);
             Bytes<?> bytes = context.wire().bytes();
             if (scanResult == ScanResult.FOUND) {
-                return true;
+                return scanResult;
             }
             bytes.readLimit(bytes.readPosition());
-            return false;
+            return scanResult;
         }
 
         @NotNull
@@ -620,14 +633,15 @@ public class SingleChronicleQueueExcerpts {
             long index = queue.nextIndexToWrite();
             if (index == Long.MIN_VALUE)
                 return this;
-            try {
-                if (direction != TailerDirection.FORWARD &&
-                        queue.rollCycle().toSequenceNumber(index + 1) != 0) {
-                    index--;
-                }
-                moveToIndex(index);
-            } catch (TimeoutException e) {
-                throw new AssertionError(e);
+
+            if (direction != TailerDirection.FORWARD &&
+                    queue.rollCycle().toSequenceNumber(index + 1) != 0) {
+                index--;
+            }
+            if (moveToIndexResult(index) == ScanResult.NOT_REACHED) {
+                LOG.warn("Failed to moveToIndex(" + Long.toHexString(index) + " for toEnd()");
+                if (moveToIndexResult(index - 1) == ScanResult.NOT_REACHED)
+                    LOG.error("Failed to moveToIndex(" + Long.toHexString(index - 1) + " for toEnd()");
             }
             return this;
         }
@@ -647,7 +661,7 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        private <T> boolean read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
+        private <T> boolean __read(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
             if (this.store == null) {
                 toStart();
                 if (this.store == null) return false;
@@ -686,11 +700,8 @@ public class SingleChronicleQueueExcerpts {
             for (int i = 0; i < 1000; i++) {
                 try {
                     if (direction != TailerDirection.FORWARD)
-                        try {
-                            moveToIndex(index);
-                        } catch (TimeoutException notComplete) {
+                        if (!moveToIndex(index))
                             return false;
-                        }
 
                     if (wire.readDataHeader()) {
                         wire.readAndSetLength(bytes.readPosition());
@@ -706,13 +717,9 @@ public class SingleChronicleQueueExcerpts {
 
                 } catch (EOFException eof) {
                     if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
-                        try {
-                            if (moveToIndex(cycle + direction.add(), 0)) {
-                                bytes = wire.bytes();
-                                continue;
-                            }
-                        } catch (TimeoutException failed) {
-                            // no more entries yet.
+                        if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
+                            bytes = wire.bytes();
+                            continue;
                         }
                     return false;
                 }
@@ -780,19 +787,15 @@ public class SingleChronicleQueueExcerpts {
                     if (i < 0)
                         continue;
 
-                    try {
-                        long sourceIndex = veh.sourceIndex(i);
-                        if (!moveToIndex(sourceIndex))
-                            throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
-                        try (DocumentContext content = readingDocument()) {
-                            if (!content.isPresent())
-                                throw new IORuntimeException("Unable to wind to index: " + (sourceIndex + 1));
-                            // skip this message and go to the next.
-                        }
-                        return this;
-                    } catch (TimeoutException e) {
-                        throw new IORuntimeException(e);
+                    long sourceIndex = veh.sourceIndex(i);
+                    if (!moveToIndex(sourceIndex))
+                        throw new IORuntimeException("Unable to wind to index: " + sourceIndex);
+                    try (DocumentContext content = readingDocument()) {
+                        if (!content.isPresent())
+                            throw new IORuntimeException("Unable to wind to index: " + (sourceIndex + 1));
+                        // skip this message and go to the next.
                     }
+                    return this;
                 }
             }
         }
