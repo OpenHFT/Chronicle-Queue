@@ -100,6 +100,7 @@ class SingleChronicleQueueStore implements WireStore {
         } else {
             this.recovery = new SimpleStoreRecovery(); // disabled.
         }
+
     }
 
     /**
@@ -222,8 +223,8 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     /**
-     * @return creates a new instance of mapped bytes, because, for example the
-     * tailer and appender can be at different locations.
+     * @return creates a new instance of mapped bytes, because, for example the tailer and appender
+     * can be at different locations.
      */
     @NotNull
     @Override
