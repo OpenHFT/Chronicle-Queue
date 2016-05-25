@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 
 public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> {
     static {
@@ -58,10 +59,24 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     }
 
     @NotNull
+    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull String basePath) {
+        DEFAULT_ZERO_BINARY.licenceCheck();
+        return defaultZeroBinary(new File(basePath));
+    }
+
+    @NotNull
     public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
         return new SingleChronicleQueueBuilder(basePathFile)
                 .wireType(WireType.BINARY);
     }
+
+    @NotNull
+    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
+        DEFAULT_ZERO_BINARY.licenceCheck();
+        return new SingleChronicleQueueBuilder(basePathFile)
+                .wireType(DEFAULT_ZERO_BINARY);
+    }
+
 
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
@@ -76,11 +91,11 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     @NotNull
     static SingleChronicleQueueStore createStore(RollingChronicleQueue queue, Wire wire) {
         final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
-            queue.rollCycle(),
-            queue.wireType(),
-            (MappedBytes) wire.bytes(),
-            queue.epoch(),
-            queue.indexCount(),
+                queue.rollCycle(),
+                queue.wireType(),
+                (MappedBytes) wire.bytes(),
+                queue.epoch(),
+                queue.indexCount(),
                 queue.indexSpacing(),
                 queue.recoverySupplier().apply(queue.wireType()));
 
