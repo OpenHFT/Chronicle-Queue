@@ -73,32 +73,35 @@ class SingleChronicleQueueStore implements WireStore {
     @UsedViaReflection
     private SingleChronicleQueueStore(WireIn wire) {
         assert wire.startUse();
+        try {
+            this.wire = wire;
+            this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
+            assert wireType != null;
+            this.writePosition = wire.newLongReference();
+            this.wire.read(MetaDataField.writePosition).int64(writePosition);
+            this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
-        this.wire = wire;
-        this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
-        assert wireType != null;
-        this.writePosition = wire.newLongReference();
-        this.wire.read(MetaDataField.writePosition).int64(writePosition);
-        this.roll = wire.read(MetaDataField.roll).typedMarshallable();
+            this.mappedBytes = (MappedBytes) (wire.bytes());
+            this.mappedFile = mappedBytes.mappedFile();
+            this.refCount = ReferenceCounter.onReleased(this::onCleanup);
+            this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
+            assert indexing != null;
+            this.indexing.writePosition = writePosition;
 
-        this.mappedBytes = (MappedBytes) (wire.bytes());
-        this.mappedFile = mappedBytes.mappedFile();
-        this.refCount = ReferenceCounter.onReleased(this::onCleanup);
-        this.indexing = wire.read(MetaDataField.indexing).typedMarshallable();
-        assert indexing != null;
-        this.indexing.writePosition = writePosition;
-
-        if (wire.bytes().readRemaining() > 0) {
-            this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
-                    .int64ForBinding(null);
-        } else {
-            this.lastAcknowledgedIndexReplicated = null; // disabled.
-        }
-        if (wire.bytes().readRemaining() > 0) {
-            this.recovery = wire.read(MetaDataField.recovery)
-                    .typedMarshallable();
-        } else {
-            this.recovery = new SimpleStoreRecovery(); // disabled.
+            if (wire.bytes().readRemaining() > 0) {
+                this.lastAcknowledgedIndexReplicated = wire.read(MetaDataField.lastAcknowledgedIndexReplicated)
+                        .int64ForBinding(null);
+            } else {
+                this.lastAcknowledgedIndexReplicated = null; // disabled.
+            }
+            if (wire.bytes().readRemaining() > 0) {
+                this.recovery = wire.read(MetaDataField.recovery)
+                        .typedMarshallable();
+            } else {
+                this.recovery = new SimpleStoreRecovery(); // disabled.
+            }
+        } finally {
+            assert wire.endUse();
         }
 
     }
