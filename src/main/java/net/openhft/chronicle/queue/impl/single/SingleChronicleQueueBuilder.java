@@ -60,7 +60,6 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
 
     @NotNull
     public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull String basePath) {
-        DEFAULT_ZERO_BINARY.licenceCheck();
         return defaultZeroBinary(new File(basePath));
     }
 
@@ -72,7 +71,6 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
 
     @NotNull
     public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
-        DEFAULT_ZERO_BINARY.licenceCheck();
         return new SingleChronicleQueueBuilder(basePathFile)
                 .wireType(DEFAULT_ZERO_BINARY);
     }
