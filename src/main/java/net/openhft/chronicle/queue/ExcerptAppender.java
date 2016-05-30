@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +43,17 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the given index.
      */
     default void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
+     *
+     * @param index to write the byte to or fail.
+     * @return DocumentContext to write to.
+     * @throws StreamCorruptedException the write failed is was unable to write the data at the given index.
+     */
+    default DocumentContext writeDocument(int index) {
         throw new UnsupportedOperationException();
     }
 

@@ -18,7 +18,10 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
-import net.openhft.chronicle.wire.*;
+import net.openhft.chronicle.wire.Demarshallable;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
+import net.openhft.chronicle.wire.Wire;
+import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
@@ -62,5 +65,5 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
-    void writeEOF(AbstractWire wire, long timeoutMS) throws UnrecoverableTimeoutException;
+    void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
 }

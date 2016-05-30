@@ -61,7 +61,8 @@ public class SingleChronicleQueueExcerpts {
         private final int indexSpacingMask;
         private int cycle = Integer.MIN_VALUE;
         private WireStore store;
-        private AbstractWire wire;
+        private Wire wire;
+        private Wire bufferWire;
         private long position = -1;
         private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
@@ -114,7 +115,8 @@ public class SingleChronicleQueueExcerpts {
             }
             this.cycle = cycle;
 
-            wire = (AbstractWire) queue.wireType().apply(store.bytes());
+            wire = queue.wireType().apply(store.bytes());
+
             // only set the cycle after the wire is set.
             this.cycle = cycle;
 
@@ -167,7 +169,9 @@ public class SingleChronicleQueueExcerpts {
                         position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
                         lastIndex = wire.headerNumber();
                         context.metaData = false;
+                        context.wire = wire;
                         break;
+
                     } catch (EOFException theySeeMeRolling) {
                         // retry.
                     }
@@ -177,6 +181,13 @@ public class SingleChronicleQueueExcerpts {
                 assert resetAppendingThread();
                 throw e;
             }
+            return context;
+        }
+
+        @Override
+        public DocumentContext writeDocument(int index) {
+            context.wire = acquireBufferWire();
+            context.wire.headerNumber(index);
             return context;
         }
 
@@ -191,25 +202,22 @@ public class SingleChronicleQueueExcerpts {
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
 
+        Wire acquireBufferWire() {
+            if (bufferWire == null) {
+                bufferWire = queue.wireType().apply(Bytes.elasticByteBuffer());
+            } else {
+                bufferWire.clear();
+            }
+            return bufferWire;
+        }
+
         @Override
         public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
             try {
-                if (index != lastIndex + 1) {
-                    int cycle = queue.rollCycle().toCycle(index);
-
-                    ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
-                    switch (scanResult) {
-                        case FOUND:
-                            throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " as the index already exists");
-                        case NOT_REACHED:
-                            throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
-                        case NOT_FOUND:
-                            break;
-                    }
-                }
+                moveToIndexForWrite(index);
 
                 // only get the bytes after moveToIndex
                 Bytes<?> wireBytes = wire.bytes();
@@ -235,6 +243,22 @@ public class SingleChronicleQueueExcerpts {
                 Bytes<?> wireBytes = wire.bytes();
                 store.writePosition(wireBytes.writePosition());
                 assert resetAppendingThread();
+            }
+        }
+
+        void moveToIndexForWrite(long index) throws EOFException {
+            if (index != lastIndex + 1) {
+                int cycle = queue.rollCycle().toCycle(index);
+
+                ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
+                switch (scanResult) {
+                    case FOUND:
+                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " as the index already exists");
+                    case NOT_REACHED:
+                        throw new IllegalStateException("Unable to move to index " + Long.toHexString(index) + " beyond the end of the queue");
+                    case NOT_FOUND:
+                        break;
+                }
             }
         }
 
@@ -366,7 +390,7 @@ public class SingleChronicleQueueExcerpts {
             assert lazyIndexing || checkIndex(index, position, timeoutMS);
 
             if (!lazyIndexing && (index & indexSpacingMask) == 0) {
-                store.setPositionForIndex(context.wire(),
+                store.setPositionForIndex(wire,
                         queue.rollCycle().toSequenceNumber(index),
                         position, timeoutMS);
             }
@@ -386,6 +410,7 @@ public class SingleChronicleQueueExcerpts {
         class StoreAppenderContext implements DocumentContext {
 
             private boolean metaData = false;
+            private Wire wire;
 
             @Override
             public int sourceId() {
@@ -415,17 +440,20 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public void close() {
                 try {
-                    final long timeoutMS = queue.timeoutMS;
-                    wire.updateHeader(position, metaData);
-                    long index = wire.headerNumber() - 1;
-                    long position2 = wire.bytes().writePosition();
-                    store.writePosition(position2);
-                    if (!metaData)
-                        writeIndexForPosition(index, position, timeoutMS);
+                    if (wire == StoreAppender.this.wire) {
+                        final long timeoutMS = queue.timeoutMS;
+                        wire.updateHeader(position, metaData);
+                        long index = wire.headerNumber() - 1;
+                        long position2 = wire.bytes().writePosition();
+                        store.writePosition(position2);
+                        if (!metaData)
+                            writeIndexForPosition(index, position, timeoutMS);
 
-                } catch (StreamCorruptedException e) {
-                    throw new IllegalStateException(e);
-                } catch (UnrecoverableTimeoutException e) {
+                    } else {
+                        writeBytes(wire.headerNumber(), wire.bytes());
+                    }
+
+                } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
                     assert resetAppendingThread();
