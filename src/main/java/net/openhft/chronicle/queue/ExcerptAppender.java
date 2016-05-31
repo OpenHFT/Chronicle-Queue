@@ -55,7 +55,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the
      *                                  given index.
      */
-    default DocumentContext writeDocument(int index) {
+    default DocumentContext writingDocument(long index) {
         throw new UnsupportedOperationException();
     }
 

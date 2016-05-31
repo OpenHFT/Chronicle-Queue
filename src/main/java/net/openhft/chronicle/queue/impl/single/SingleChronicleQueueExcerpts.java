@@ -185,7 +185,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public DocumentContext writeDocument(int index) {
+        public DocumentContext writingDocument(long index) {
             context.wire = acquireBufferWire();
             context.wire.headerNumber(index);
             return context;
