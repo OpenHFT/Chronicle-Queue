@@ -40,7 +40,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      *
      * @param index to write the byte to or fail.
      * @param bytes to write.
-     * @throws StreamCorruptedException the write failed is was unable to write the data at the given index.
+     * @throws StreamCorruptedException the write failed is was unable to write the data at the
+     *                                  given index.
      */
     default void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
         throw new UnsupportedOperationException();
@@ -51,7 +52,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      *
      * @param index to write the byte to or fail.
      * @return DocumentContext to write to.
-     * @throws StreamCorruptedException the write failed is was unable to write the data at the given index.
+     * @throws StreamCorruptedException the write failed is was unable to write the data at the
+     *                                  given index.
      */
     default DocumentContext writeDocument(int index) {
         throw new UnsupportedOperationException();
