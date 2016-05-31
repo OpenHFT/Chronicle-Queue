@@ -186,6 +186,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext writingDocument(long index) {
+            assert checkAppendingThread();
             context.wire = acquireBufferWire();
             context.wire.headerNumber(index);
             return context;
@@ -439,6 +440,7 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public void close() {
+                boolean isClosed = false;
                 try {
                     if (wire == StoreAppender.this.wire) {
                         final long timeoutMS = queue.timeoutMS;
@@ -450,13 +452,15 @@ public class SingleChronicleQueueExcerpts {
                             writeIndexForPosition(index, position, timeoutMS);
 
                     } else {
+                        isClosed = true;
+                        assert resetAppendingThread();
                         writeBytes(wire.headerNumber(), wire.bytes());
                     }
 
                 } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
-                    assert resetAppendingThread();
+                    assert isClosed || resetAppendingThread();
                 }
             }
 
