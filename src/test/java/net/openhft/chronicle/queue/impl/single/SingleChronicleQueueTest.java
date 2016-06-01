@@ -35,6 +35,7 @@ import java.io.StreamCorruptedException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
@@ -1864,6 +1865,41 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     String text = documentContext.wire().read().text();
                     Assert.assertEquals("world1", text);
+                }
+            }
+
+        }
+    }
+
+
+    static class MapWrapper extends AbstractMarshallable {
+        Map<CharSequence, Double> map = new HashMap<>();
+    }
+
+
+    @Test
+    public void testMapWrapper() throws TimeoutException, StreamCorruptedException {
+        try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+
+            try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(this.wireType)
+                    .build()) {
+
+                ExcerptAppender appender = chronicle.createAppender();
+
+                MapWrapper myMap = new MapWrapper();
+                myMap.map.put("hello", 1.2);
+
+                appender.writeDocument(w -> w.write().object(myMap));
+
+                ExcerptTailer tailer = chronicle.createTailer();
+
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    MapWrapper object = documentContext.wire().read().object(MapWrapper.class);
+                    Assert.assertEquals(1.2, (double) object.map.get("hello"), 0.0);
                 }
             }
 
