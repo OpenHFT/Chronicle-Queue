@@ -47,6 +47,8 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @NotNull
+    final SCQIndexing indexing;
+    @NotNull
     private final WireIn wire;
     @NotNull
     private final WireType wireType;
@@ -56,8 +58,6 @@ class SingleChronicleQueueStore implements WireStore {
     private final LongValue writePosition;
     private final MappedBytes mappedBytes;
     private final MappedFile mappedFile;
-    @NotNull
-    private final SCQIndexing indexing;
     @NotNull
     private final ReferenceCounter refCount;
     private final StoreRecovery recovery;

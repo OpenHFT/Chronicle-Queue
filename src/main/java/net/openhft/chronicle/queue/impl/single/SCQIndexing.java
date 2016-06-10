@@ -337,10 +337,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    private long linearScanByPosition(@NotNull final Wire wire,
-                                      final long toPosition,
-                                      final long fromKnownIndex,
-                                      final long knownAddress) throws EOFException {
+    long linearScanByPosition(@NotNull final Wire wire,
+                              final long toPosition,
+                              final long fromKnownIndex,
+                              final long knownAddress) throws EOFException {
         @NotNull
         final Bytes<?> bytes = wire.bytes();
 
@@ -349,7 +349,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         while (bytes.readPosition() < toPosition) {
             WireIn.HeaderType headerType = wire.readDataHeader(true);
 
-            int header = bytes.readInt();
+            int header = bytes.readVolatileInt();
             bytes.readSkip(Wires.lengthOf(header));
 
             switch (headerType) {
@@ -366,7 +366,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     ++i;
                     break;
             }
-        }
+            }
         if (bytes.readPosition() == toPosition)
             return i;
 
@@ -418,7 +418,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 // otherwise we need to scan the current entries.
                 for (int index1 = 0; index1 < indexCount; index1++) {
                     long pos = array1.getValueAt(index1);
-                    if (pos != 0) {
+                    if (pos != 0 && pos <= position) {
                         lastKnownAddress = pos;
                         lastKnownIndex = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
                         continue;
@@ -434,19 +434,17 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     }
                     if (scanResult == ScanResult.FOUND) {
                         long nextPosition = bytes.readPosition();
-                        array1.setOrderedValueAt(index1, lastKnownAddress = nextPosition);
+                        array1.setOrderedValueAt(index1, nextPosition);
                         array1.setMaxUsed(index1 + 1);
 
                         if (nextPosition == position) {
                             nextEntryToIndex.setMaxValue(nextIndex + 1);
                             return nextIndex;
                         }
-                        lastKnownIndex = nextIndex;
-                    } else {
-                        long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
-                        nextEntryToIndex.setMaxValue(ret + 1);
-                        return ret;
                     }
+                    long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+                    nextEntryToIndex.setMaxValue(ret + 1);
+                    return ret;
                 }
             }
         }
@@ -509,7 +507,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    public void setPositionForIndex(StoreRecovery recovery, Wire wire, long index, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    void setPositionForIndex(StoreRecovery recovery, Wire wire, long index, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+//        assert index == linearScanByPosition(wire, position, 0, 0);
+//        System.out.println("index: " + index + " position: " + position);
+
         if ((index & indexSpacingBits) != 0) {
             assert false;
             return;

@@ -28,4 +28,6 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> {
     E lazyIndexing(boolean lazyIndexing);
 
     boolean lazyIndexing();
+
+    ChronicleQueue queue();
 }

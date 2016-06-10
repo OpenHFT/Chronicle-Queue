@@ -401,6 +401,11 @@ public class SingleChronicleQueueExcerpts {
             try {
                 final long seq1 = queue.rollCycle().toSequenceNumber(index);
                 final long seq2 = store.indexForPosition(wire, position, timeoutMS);
+                if (seq1 != seq2) {
+                    final long seq3 = ((SingleChronicleQueueStore) store).indexing.linearScanByPosition(wire, position, 0, 0);
+                    System.out.println(seq1 + " - " + seq2 + " - " + seq3);
+                    store.indexForPosition(wire, position, timeoutMS);
+                }
                 assert seq1 == seq2;
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);

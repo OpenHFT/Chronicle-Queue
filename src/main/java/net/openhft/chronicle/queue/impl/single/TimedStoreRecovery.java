@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by peter on 21/05/16.
@@ -96,7 +98,16 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
     @Override
     public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS) throws UnrecoverableTimeoutException {
-        throw new UnsupportedOperationException();
+        while (true) {
+            LOG.warn("Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + wire.bytes().writePosition());
+            try {
+                return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                System.out.println(e);
+            } catch (EOFException e) {
+                throw new AssertionError(e);
+            }
+        }
     }
 
     @Override
