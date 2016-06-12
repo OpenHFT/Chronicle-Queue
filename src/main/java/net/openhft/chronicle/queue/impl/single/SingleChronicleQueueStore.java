@@ -196,9 +196,7 @@ class SingleChronicleQueueStore implements WireStore {
     public ScanResult moveToIndexForRead(@NotNull Wire wire, long index, long timeoutMS) {
         try {
             return indexing.moveToIndex(recovery, wire, index, timeoutMS);
-        } catch (UnrecoverableTimeoutException e) {
-            return ScanResult.NOT_REACHED;
-        } catch (StreamCorruptedException e) {
+        } catch (UnrecoverableTimeoutException | StreamCorruptedException e) {
             return ScanResult.NOT_REACHED;
         }
     }

@@ -89,7 +89,6 @@ public class JDBCServiceTest {
         }
     }
 
-
     private static class CountingJDBCResult implements JDBCResult {
         private final AtomicLong queries;
         private final AtomicLong updates;

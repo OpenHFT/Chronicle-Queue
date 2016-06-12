@@ -110,7 +110,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     long acquireIndex2Index(StoreRecovery recovery, Wire wire, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         try {
             return acquireIndex2Index0(recovery, wire, timeoutMS);
-        } catch (TimeoutException te) {
+        } catch (TimeoutException fallback) {
             return recovery.recoverIndex2Index(this.index2Index, () -> acquireIndex2Index0(recovery, wire, timeoutMS), timeoutMS);
         }
     }
@@ -177,7 +177,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         writer.writeMarshallable(wire);
         wire.updateHeader(position, true);
 
-
         this.writePosition.setMaxValue(wire.bytes().writePosition());
         return position;
     }
@@ -230,7 +229,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             ScanResult scanResult = moveToIndex0(recovery, wire, index, timeoutMS);
             if (scanResult != null)
                 return scanResult;
-        } catch (EOFException e) {
+        } catch (EOFException fallback) {
             // scan from the start.
         }
         return moveToIndexFromTheStart(wire, index);
@@ -241,7 +240,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             wire.bytes().readPosition(0);
             if (wire.readDataHeader())
                 return linearScan(wire, index, 0, wire.bytes().readPosition());
-        } catch (EOFException e) {
+        } catch (EOFException fallback) {
         }
         return ScanResult.NOT_FOUND;
     }
@@ -330,7 +329,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     bytes.readSkip(Wires.lengthOf(bytes.readInt()));
                     continue;
                 }
-            } catch (EOFException e) {
+            } catch (EOFException fallback) {
                 // reached the end of the file.
             }
             return i == toIndex ? ScanResult.NOT_FOUND : ScanResult.NOT_REACHED;
@@ -454,7 +453,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     long getSecondaryAddress(StoreRecovery recovery, Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         try {
             return getSecondaryAddress1(recovery, wire, timeoutMS, index2indexArr, index2);
-        } catch (TimeoutException e) {
+        } catch (TimeoutException fallback) {
             wire.pauser().reset();
             return recovery.recoverSecondaryAddress(index2indexArr, index2, () -> getSecondaryAddress1(recovery, wire, timeoutMS, index2indexArr, index2), timeoutMS);
         }
@@ -496,13 +495,12 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return secondaryAddress;
     }
 
-
     @NotNull
     private ScanResult firstScan(Wire wire) {
         try {
             wire.bytes().readPosition(0);
             return wire.readDataHeader() ? ScanResult.FOUND : ScanResult.NOT_REACHED;
-        } catch (EOFException e) {
+        } catch (EOFException fallback) {
             return ScanResult.NOT_FOUND;
         }
     }

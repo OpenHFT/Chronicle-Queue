@@ -619,7 +619,6 @@ public class SingleCQFormatTest {
                     .indexSpacing(spacing)
                     .build();
 
-
             long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.moveToIndex(start));

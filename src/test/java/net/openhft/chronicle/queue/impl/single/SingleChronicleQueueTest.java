@@ -1002,7 +1002,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testIndexWritingDocument() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -1835,7 +1834,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testMoveToWithAppender() throws TimeoutException, StreamCorruptedException {
         try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -1871,18 +1869,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
-    static class MapWrapper extends AbstractMarshallable {
-        Map<CharSequence, Double> map = new HashMap<>();
-    }
-
-
     @Test
     public void testMapWrapper() throws TimeoutException, StreamCorruptedException {
         try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-
 
             try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
@@ -1906,6 +1897,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    static class MapWrapper extends AbstractMarshallable {
+        Map<CharSequence, Double> map = new HashMap<>();
+    }
 
     static class MyMarshable extends AbstractMarshallable implements Demarshallable {
         @UsedViaReflection

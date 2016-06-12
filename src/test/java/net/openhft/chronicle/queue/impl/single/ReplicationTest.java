@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 
-
 public class ReplicationTest {
 
     private static final int TIMES = 100;
@@ -92,7 +91,6 @@ public class ReplicationTest {
                 }
             });
 
-
             try (final RollingChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(WireType.BINARY)
                     .build()) {
@@ -123,5 +121,5 @@ public class ReplicationTest {
             }
         }
     }
-
 }
+

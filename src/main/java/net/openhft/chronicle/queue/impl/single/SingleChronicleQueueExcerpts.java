@@ -126,7 +126,7 @@ public class SingleChronicleQueueExcerpts {
             resetPosition();
         }
 
-        private void resetPosition() {
+        private void resetPosition() throws UnrecoverableTimeoutException {
             try {
                 if (store == null || wire == null)
                     return;
@@ -137,13 +137,7 @@ public class SingleChronicleQueueExcerpts {
 
                 final long headerNumber = store.indexForPosition(wire, position, queue.timeoutMS);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber));
-            } catch (BufferOverflowException e) {
-                throw new AssertionError(e);
-            } catch (EOFException e) {
-                throw new AssertionError(e);
-            } catch (UnrecoverableTimeoutException e) {
-                throw new AssertionError(e);
-            } catch (StreamCorruptedException e) {
+            } catch (BufferOverflowException | EOFException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
         }
@@ -151,6 +145,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
+            boolean ok = false;
             try {
                 for (int i = 0; i < 100; i++) {
                     try {
@@ -176,10 +171,11 @@ public class SingleChronicleQueueExcerpts {
                         // retry.
                     }
                 }
+                ok = true;
 
-            } catch (Exception e) {
-                assert resetAppendingThread();
-                throw e;
+            } finally {
+                if (!ok)
+                    assert resetAppendingThread();
             }
             return context;
         }
@@ -300,6 +296,7 @@ public class SingleChronicleQueueExcerpts {
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
+
             } finally {
                 wire.bytes().writePosition(store.writePosition());
             }

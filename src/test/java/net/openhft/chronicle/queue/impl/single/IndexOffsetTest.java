@@ -61,5 +61,4 @@ public class IndexOffsetTest {
         Assert.assertEquals(16, indexing2.toAddress1(129));
         Assert.assertEquals(17, indexing2.toAddress1(128 + 8));
     }
-
 }

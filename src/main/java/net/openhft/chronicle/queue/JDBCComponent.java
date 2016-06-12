@@ -69,6 +69,7 @@ public class JDBCComponent implements JDBCStatement {
                     };
                 }
             }, query, args);
+
         } catch (Throwable t) {
             result.queryThrown(t, query, args);
         }

@@ -34,6 +34,7 @@ import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.text.ParseException;
@@ -172,11 +173,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         } catch (Exception e) {
             e.printStackTrace(new PrintWriter(writer));
+
         } finally {
             try {
                 writer.flush();
-            } catch (IOException ignore) {
-
+            } catch (IOException e) {
+                LoggerFactory.getLogger(SingleChronicleQueue.class).debug("", e);
             }
         }
 
@@ -301,7 +303,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (firstCycle > fileCycle)
                     firstCycle = fileCycle;
 
-            } catch (ParseException ignored) {
+            } catch (ParseException fallback) {
                 // ignored
             }
         }
@@ -349,7 +351,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (lastCycle < fileCycle)
                     lastCycle = fileCycle;
 
-            } catch (ParseException ignored) {
+            } catch (ParseException fallback) {
                 // ignored
             }
         }

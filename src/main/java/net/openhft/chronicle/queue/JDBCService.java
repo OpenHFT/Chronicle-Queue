@@ -53,7 +53,7 @@ public class JDBCService implements Closeable {
                     pauser.pause();
             }
         } catch (Throwable t) {
-            LOGGER.error("Run loop exited", t);
+            LOGGER.warn("Run loop exited", t);
         }
     }
 

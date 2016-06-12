@@ -70,5 +70,4 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * own unique data file to store the excerpt
      */
     int cycle();
-
 }

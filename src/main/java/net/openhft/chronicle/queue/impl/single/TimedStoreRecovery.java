@@ -103,7 +103,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             try {
                 return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                System.out.println(e);
+                LOG.warn("", e);
             } catch (EOFException e) {
                 throw new AssertionError(e);
             }

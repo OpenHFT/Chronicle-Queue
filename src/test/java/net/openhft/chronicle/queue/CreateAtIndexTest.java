@@ -115,7 +115,6 @@ public class CreateAtIndexTest {
 
                 String text = dc.wire().read().text();
 
-
                 {
                     long actualIndex = dc.index();
                     Assert.assertTrue(actualIndex > 0);
