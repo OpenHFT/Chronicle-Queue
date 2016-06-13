@@ -158,7 +158,7 @@ public class SingleChronicleQueueExcerpts {
 
                         assert wire != null;
                         if (wire.bytes().writePosition() >= wire.bytes().writeLimit()) {
-                            LOG.debug("Reset write position");
+                            Jvm.debug().on(getClass(), "Reset write position");
                             wire.bytes().writePosition(store.writePosition());
                         }
                         position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
@@ -261,7 +261,7 @@ public class SingleChronicleQueueExcerpts {
 
         ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException, EOFException {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+                Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
 
             if (this.cycle != cycle) {
@@ -624,7 +624,7 @@ public class SingleChronicleQueueExcerpts {
 
         ScanResult moveToIndex(int cycle, long sequenceNumber, long index) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
+                Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
 
             if (cycle != this.cycle) {
@@ -673,7 +673,7 @@ public class SingleChronicleQueueExcerpts {
                 index--;
             }
             if (moveToIndexResult(index) == ScanResult.NOT_REACHED) {
-                LOG.warn("Failed to moveToIndex(" + Long.toHexString(index) + " for toEnd()");
+                Jvm.warn().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index) + " for toEnd()");
                 if (moveToIndexResult(index - 1) == ScanResult.NOT_REACHED)
                     LOG.error("Failed to moveToIndex(" + Long.toHexString(index - 1) + " for toEnd()");
             }
@@ -781,7 +781,7 @@ public class SingleChronicleQueueExcerpts {
                     wire.parent(this);
                     wire.pauser(queue.pauserSupplier.get());
 //                if (LOG.isDebugEnabled())
-//                    LOG.debug("tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
+//                    Jvm.debug().on(getClass(), "tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
                 } finally {
                     assert wire.endUse();
                 }

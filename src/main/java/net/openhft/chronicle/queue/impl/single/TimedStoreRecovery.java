@@ -63,10 +63,10 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2Index.getValue() == BinaryLongReference.LONG_NOT_COMPLETE) {
-            LOG.warn("Rebuilding the index2index, resetting to 0");
+            Jvm.warn().on(getClass(), "Rebuilding the index2index, resetting to 0");
             index2Index.setValue(0);
         } else {
-            LOG.warn("The index2index value has changed, assuming it was recovered");
+            Jvm.warn().on(getClass(), "The index2index value has changed, assuming it was recovered");
         }
         try {
             return action.call();
@@ -81,10 +81,10 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
         long tsEnd = acquireLock(timeoutMS);
         if (index2indexArr.getValueAt(index2) == BinaryLongReference.LONG_NOT_COMPLETE) {
-            LOG.warn("Rebuilding the index2index[" + index2 + "], resetting to 0");
+            Jvm.warn().on(getClass(), "Rebuilding the index2index[" + index2 + "], resetting to 0");
             index2indexArr.setValueAt(index2, 0L);
         } else {
-            LOG.warn("The index2index[" + index2 + "] value has changed, assuming it was recovered");
+            Jvm.warn().on(getClass(), "The index2index[" + index2 + "] value has changed, assuming it was recovered");
         }
 
         try {
@@ -99,11 +99,11 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     @Override
     public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS) throws UnrecoverableTimeoutException {
         while (true) {
-            LOG.warn("Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + wire.bytes().writePosition());
+            Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + wire.bytes().writePosition());
             try {
                 return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                LOG.warn("", e);
+                Jvm.warn().on(getClass(), e);
             } catch (EOFException e) {
                 throw new AssertionError(e);
             }

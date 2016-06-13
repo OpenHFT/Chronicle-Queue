@@ -23,7 +23,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
 
     @Override
     public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
-        LOG.warn("Rebuilding the index2index");
+        Jvm.warn().on(getClass(), "Rebuilding the index2index");
         index2Index.setValue(0);
         try {
             return action.call();
@@ -34,7 +34,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
 
     @Override
     public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
-        LOG.warn("Timed out trying to get index2index[" + index2 + "]");
+        Jvm.warn().on(getClass(), "Timed out trying to get index2index[" + index2 + "]");
         index2indexArr.setValueAt(index2, 0L);
         try {
             return action.call();
@@ -49,7 +49,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
 
     @Override
     public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS) throws UnrecoverableTimeoutException {
-        LOG.warn("Clearing an incomplete header so a header can be written");
+        Jvm.warn().on(getClass(), "Clearing an incomplete header so a header can be written");
         wire.bytes().writeInt(0);
         wire.pauser().reset();
         try {
@@ -61,7 +61,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
 
     @Override
     public void writeEndOfWire(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException {
-        LOG.warn("Overwriting an incomplete header with an EOF header to the end store");
+        Jvm.warn().on(getClass(), "Overwriting an incomplete header with an EOF header to the end store");
         wire.bytes().writeInt(Wires.END_OF_DATA);
     }
 }

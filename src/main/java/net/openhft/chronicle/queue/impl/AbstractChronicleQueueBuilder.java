@@ -55,7 +55,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected RollCycle rollCycle;
     protected long epoch; // default is 1970-01-01 00:00:00.000 UTC
     protected boolean isBuffered;
-    protected Consumer<Throwable> onThrowable = Throwable::printStackTrace;
     @Nullable
     protected EventLoop eventLoop;
     private long bufferCapacity;
@@ -189,19 +188,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
-    }
-
-    /**
-     * use this to trap exceptions  that came from the other threads
-     *
-     * @param onThrowable your exception handler
-     * @return this
-     */
-    @Override
-    @NotNull
-    public B onThrowable(@NotNull Consumer<Throwable> onThrowable) {
-        this.onThrowable = onThrowable;
-        return (B) this;
     }
 
     /**

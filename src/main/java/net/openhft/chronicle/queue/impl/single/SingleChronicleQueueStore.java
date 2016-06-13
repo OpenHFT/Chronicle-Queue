@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -141,7 +142,7 @@ class SingleChronicleQueueStore implements WireStore {
     public static void dumpStore(Wire wire) {
         Bytes<?> bytes = wire.bytes();
         bytes.readPosition(0);
-        LOG.debug(Wires.fromSizePrefixedBlobs(bytes));
+        Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(bytes));
     }
 
     /**
