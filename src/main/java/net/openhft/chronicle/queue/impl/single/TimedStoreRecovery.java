@@ -46,7 +46,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
             if (ts < now && timeStamp.compareAndSwapValue(ts, tsEnd))
                 return tsEnd;
             if (now >= start + timeoutMS) {
-                LOG.error("Unable to obtain the global lock in time, retrying");
+                Jvm.warn().on(getClass(), "Unable to obtain the global lock in time, retrying");
                 start = now;
             }
             Jvm.pause(1);
@@ -56,7 +56,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     void releaseLock(long tsEnd) {
         if (timeStamp.compareAndSwapValue(tsEnd, 0L))
             return;
-        LOG.error("Another thread obtained the lock ??");
+        Jvm.warn().on(getClass(), "Another thread obtained the lock ??");
     }
 
     @Override

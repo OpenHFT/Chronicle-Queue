@@ -675,7 +675,7 @@ public class SingleChronicleQueueExcerpts {
             if (moveToIndexResult(index) == ScanResult.NOT_REACHED) {
                 Jvm.warn().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index) + " for toEnd()");
                 if (moveToIndexResult(index - 1) == ScanResult.NOT_REACHED)
-                    LOG.error("Failed to moveToIndex(" + Long.toHexString(index - 1) + " for toEnd()");
+                    Jvm.warn().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index - 1) + " for toEnd()");
             }
             return this;
         }
