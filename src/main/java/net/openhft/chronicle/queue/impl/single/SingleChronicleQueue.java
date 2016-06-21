@@ -324,7 +324,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             Wire wire = wireType().apply(store.bytes());
             final long position = store.writePosition();
-            long sequenceNumber = store.indexForPosition(wire, position, 0);
+            long sequenceNumber = store.sequenceForPosition(wire, position, 0);
             return rollCycle.toIndex(lastCycle, sequenceNumber);
 
         } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {

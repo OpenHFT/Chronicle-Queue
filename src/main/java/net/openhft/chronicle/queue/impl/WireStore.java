@@ -53,7 +53,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * @param timeoutMS
      * @return index in this store.
      */
-    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 

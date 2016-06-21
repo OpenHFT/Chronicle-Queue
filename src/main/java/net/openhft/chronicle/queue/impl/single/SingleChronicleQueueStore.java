@@ -235,7 +235,7 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    public long sequenceForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         final Bytes<?> bytes = wire.bytes();
         long position0 = bytes.readPosition();
         long remaining0 = bytes.readRemaining();

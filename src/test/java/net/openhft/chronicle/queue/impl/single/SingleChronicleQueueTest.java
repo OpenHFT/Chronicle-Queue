@@ -1916,10 +1916,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptAppender appender2 = q.createAppender();
             int indexCount = 100;
 
-            try (DocumentContext dc = appender2.writingDocument()) {
-                dc.wire().write("key").text("some data " + indexCount);
-                Assert.assertEquals(indexCount, q.rollcycle().toSequenceNumber(dc.index()));
-            }
 
             for (int i = 0; i < indexCount; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
@@ -1939,6 +1935,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    @Ignore
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
             InterruptedException {
 
