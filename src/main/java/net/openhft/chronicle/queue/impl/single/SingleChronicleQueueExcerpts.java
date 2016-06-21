@@ -163,7 +163,11 @@ public class SingleChronicleQueueExcerpts {
                         }
 
                         if (wire.headerNumber() == Long.MIN_VALUE)
-                            wire.headerNumber(queue.nextIndexToWrite());
+
+                            if (position == -1)
+                                wire.headerNumber(queue.nextIndexToWrite());
+                            else
+                                wire.headerNumber(queue.indexFromPosition(cycle, store, position));
 
                         position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
                         lastIndex = wire.headerNumber();
