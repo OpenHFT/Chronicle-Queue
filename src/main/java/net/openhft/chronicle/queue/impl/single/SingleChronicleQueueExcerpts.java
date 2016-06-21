@@ -162,9 +162,8 @@ public class SingleChronicleQueueExcerpts {
                             wire.bytes().writePosition(store.writePosition());
                         }
 
-                        if (wire.headerNumber() == Long.MIN_VALUE) {
+                        if (wire.headerNumber() == Long.MIN_VALUE)
                             wire.headerNumber(queue.nextIndexToWrite());
-                        }
 
                         position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
                         lastIndex = wire.headerNumber();
@@ -448,12 +447,13 @@ public class SingleChronicleQueueExcerpts {
                 this.metaData = metaData;
             }
 
+
             @Override
             public void close() {
                 boolean isClosed = false;
                 try {
                     if (wire.headerNumber() == Long.MIN_VALUE)
-                        wire.headerNumber(queue.nextIndexToWrite());
+                        wire.headerNumber(queue.indexFromPosition(cycle, store, position));
 
                     if (wire == StoreAppender.this.wire) {
                         final long timeoutMS = queue.timeoutMS;

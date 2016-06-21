@@ -312,24 +312,31 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long nextIndexToWrite() {
+
+        final int lastCycle = lastCycle();
+        if (lastCycle == Integer.MIN_VALUE)
+            return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
+
+        WireStore store = storeForCycle(lastCycle, epoch, false);
+        if (store == null)
+            return Long.MIN_VALUE;
+
+        final long position = store.writePosition();
+        return indexFromPosition(lastCycle, store, position);
+    }
+
+    @Override
+    public long indexFromPosition(int cycle, WireStore store, long position) {
+
+        final Wire wire = wireType().apply(store.bytes());
+        long sequenceNumber = 0;
         try {
-
-            final int lastCycle = lastCycle();
-            if (lastCycle == Integer.MIN_VALUE)
-                return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
-
-            WireStore store = storeForCycle(lastCycle, epoch, false);
-            if (store == null)
-                return Long.MIN_VALUE;
-
-            Wire wire = wireType().apply(store.bytes());
-            final long position = store.writePosition();
-            long sequenceNumber = store.sequenceForPosition(wire, position, 0);
-            return rollCycle.toIndex(lastCycle, sequenceNumber);
-
-        } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {
-            throw new IllegalStateException(e);
+            sequenceNumber = store.sequenceForPosition(wire, position, 0);
+        } catch (EOFException | StreamCorruptedException e) {
+            throw new AssertionError(e);
         }
+
+        return rollCycle.toIndex(cycle, sequenceNumber);
     }
 
     public int lastCycle() {
@@ -400,7 +407,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             final MappedBytes mappedBytes = mappedBytes(path);
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
-           assert wire.startUse();
+            assert wire.startUse();
             wire.pauser(pauserSupplier.get());
             wire.headerNumber(rollCycle.toIndex(cycle, 0));
 
