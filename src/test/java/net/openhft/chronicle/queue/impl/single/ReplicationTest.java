@@ -25,7 +25,6 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.*;
@@ -38,7 +37,7 @@ public class ReplicationTest {
     private static final int TIMES = 100;
 
     @Test
-    @Ignore("TODO FIX Indexes are not in the same place")
+    // @Ignore("TODO FIX Indexes are not in the same place")
     public void testAppendAndRead() throws TimeoutException, ExecutionException, InterruptedException {
 
         class Data {
