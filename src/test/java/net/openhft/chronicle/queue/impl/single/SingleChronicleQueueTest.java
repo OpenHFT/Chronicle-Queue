@@ -1820,10 +1820,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testZeroLengthMessage() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+                .rollCycle(RollCycles.TEST_DAILY)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1831,6 +1832,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> {
             });
             System.out.println(chronicle.dump());
+            ExcerptTailer tailer = chronicle.createTailer();
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertFalse(dc.wire().hasMore());
+            }
         }
     }
 

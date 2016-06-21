@@ -1,13 +1,10 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
-import net.openhft.chronicle.wire.Marshallable;
-import net.openhft.chronicle.wire.WireOut;
-import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by peter on 12/04/16.
@@ -35,40 +32,26 @@ public class JDBCComponent implements JDBCStatement {
     }
 
     @Override
-    public void executeQuery(String query, Class<? extends Marshallable> resultType, Object... args) {
+    public void executeQuery(String query, Object... args) {
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             for (int i = 0; i < args.length; i++)
                 ps.setObject(i + 1, args[i]);
             ResultSet resultSet = ps.executeQuery();
             ResultSetMetaData metaData = resultSet.getMetaData();
             int columnCount = metaData.getColumnCount();
-            result.queryResult(new Iterator<Marshallable>() {
-                @Override
-                public boolean hasNext() {
-                    try {
-                        return resultSet.next();
-                    } catch (SQLException e) {
-                        throw Jvm.rethrow(e);
-                    }
-                }
+            List<String> headings = new ArrayList<>(columnCount);
+            for (int i = 1; i <= columnCount; i++)
+                headings.add(metaData.getColumnName(i));
 
-                @Override
-                public Marshallable next() {
-                    return new Marshallable() {
-                        @Override
-                        public void writeMarshallable(@NotNull WireOut wire) {
-                            try {
-                                for (int i = 1; i <= columnCount; i++) {
-                                    wire.writeEventName(metaData.getCatalogName(i))
-                                            .object(resultSet.getObject(i));
-                                }
-                            } catch (SQLException e) {
-                                throw Jvm.rethrow(e);
-                            }
-                        }
-                    };
+            List<List<Object>> rows = new ArrayList<>();
+            while (resultSet.next()) {
+                List<Object> row = new ArrayList<>(columnCount);
+                for (int i = 1; i <= columnCount; i++) {
+                    row.add(resultSet.getObject(i));
                 }
-            }, query, args);
+                rows.add(row);
+            }
+            result.queryResult(headings, rows, query, args);
 
         } catch (Throwable t) {
             result.queryThrown(t, query, args);
