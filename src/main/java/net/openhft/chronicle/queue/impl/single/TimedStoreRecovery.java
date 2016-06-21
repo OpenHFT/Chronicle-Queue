@@ -97,7 +97,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException {
         while (true) {
             long offset = wire.bytes().writePosition();
             int num = wire.bytes().readInt(offset);
@@ -107,7 +107,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
                 Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " unable to reset.");
             }
             try {
-                return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS);
+                return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
             } catch (TimeoutException e) {
                 Jvm.warn().on(getClass(), e);
             } catch (EOFException e) {

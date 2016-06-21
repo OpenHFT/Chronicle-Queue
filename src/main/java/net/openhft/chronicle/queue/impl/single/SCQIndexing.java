@@ -172,7 +172,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long writePosition = this.writePosition.getValue();
         wire.bytes().writePosition(writePosition);
 
-        long position = recovery.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS);
+        long position = recovery.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS,
+                this.writePosition);
         WriteMarshallable writer = index2index ? index2IndexTemplate : indexTemplate;
         writer.writeMarshallable(wire);
         wire.updateHeader(position, true);
