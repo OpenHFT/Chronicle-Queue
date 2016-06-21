@@ -37,6 +37,7 @@ public class ReplicationTest {
     private static final int TIMES = 100;
 
     @Test
+    // todo rob to change this to check the data
     // @Ignore("TODO FIX Indexes are not in the same place")
     public void testAppendAndRead() throws TimeoutException, ExecutionException, InterruptedException {
 

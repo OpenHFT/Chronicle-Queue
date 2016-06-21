@@ -1915,6 +1915,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptAppender appender = q.createAppender();
             ExcerptAppender appender2 = q.createAppender();
             int indexCount = 100;
+
+            try (DocumentContext dc = appender2.writingDocument()) {
+                dc.wire().write("key").text("some data " + indexCount);
+                Assert.assertEquals(indexCount, q.rollcycle().toSequenceNumber(dc.index()));
+            }
+
             for (int i = 0; i < indexCount; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("key").text("some more " + 1);
@@ -1959,7 +1965,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     throw Jvm.rethrow(e);
                 }
             });
-
 
             ExcerptTailer tailer = q.createTailer();
             for (int i = 0; i < size; i++) {
