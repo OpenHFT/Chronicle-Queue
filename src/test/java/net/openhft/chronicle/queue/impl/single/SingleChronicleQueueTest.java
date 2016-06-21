@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -32,10 +33,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.StreamCorruptedException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
@@ -1899,6 +1897,88 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
+        }
+    }
+
+
+    /**
+     * if one appender if much further ahead than the other, then the new append should jump
+     * straight to the end rather than attempting to write a positions that are already occupied
+     */
+    @Test
+    public void testAppendedSkipToEnd() throws TimeoutException, ExecutionException, InterruptedException {
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = q.createAppender();
+            ExcerptAppender appender2 = q.createAppender();
+            int indexCount = 100;
+            for (int i = 0; i < indexCount; i++) {
+                try (DocumentContext dc = appender.writingDocument()) {
+                    dc.wire().write("key").text("some more " + 1);
+                    Assert.assertEquals(i, q.rollcycle().toSequenceNumber(dc.index()));
+                }
+
+            }
+
+            try (DocumentContext dc = appender2.writingDocument()) {
+                dc.wire().write("key").text("some data " + indexCount);
+                Assert.assertEquals(indexCount, q.rollcycle().toSequenceNumber(dc.index()));
+            }
+
+        }
+    }
+
+
+    @Test
+    public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
+            InterruptedException {
+
+        final ExecutorService executorService = Executors.newFixedThreadPool(2, new
+                NamedThreadFactory("testAppendedSkipToEndMultiThreaded:appender", true));
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.createAppender());
+
+            int size = 1000;
+            final Queue<Future> futures = new ArrayBlockingQueue<>(size);
+
+            for (int i = 0; i < size; i++) {
+                futures.add(executorService.submit(() -> writeTestDocument(tl)));
+            }
+
+            // wait till all the data has been written
+            futures.forEach(f -> {
+                try {
+                    f.get();
+                } catch (Exception e) {
+                    throw Jvm.rethrow(e);
+                }
+            });
+
+
+            ExcerptTailer tailer = q.createTailer();
+            for (int i = 0; i < size; i++) {
+                try (DocumentContext dc = tailer.readingDocument(false)) {
+                    Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+                }
+            }
+
+        } finally {
+            executorService.shutdownNow();
+            executorService.awaitTermination(100, TimeUnit.MILLISECONDS);
+        }
+
+
+    }
+
+    private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
+        try (DocumentContext dc = tl.get().writingDocument()) {
+            dc.wire().write("key").int64(dc.index());
         }
     }
 

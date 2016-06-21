@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by peter on 08/04/16.
  */
-@Ignore("TODO Fix handling of Throwable")
 public class JDBCServiceTest {
     @Test
     public void testCreateTable() throws SQLException, IOException {

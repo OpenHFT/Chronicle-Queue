@@ -4,7 +4,6 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ChronicleRollingIssueTest {
 
     @Test
-    @Ignore("TODO FIX")
     public void test() throws Exception {
         int threads = Runtime.getRuntime().availableProcessors() - 1;
         int messages = 50;
