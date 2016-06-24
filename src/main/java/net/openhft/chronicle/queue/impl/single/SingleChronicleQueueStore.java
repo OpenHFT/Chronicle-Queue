@@ -260,10 +260,6 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     private void onCleanup() {
-        if (wire != null) {
-            assert wire.endUse();
-        }
-
         mappedBytes.release();
     }
 
