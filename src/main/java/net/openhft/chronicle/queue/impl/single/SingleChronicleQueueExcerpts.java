@@ -414,8 +414,8 @@ public class SingleChronicleQueueExcerpts {
         boolean checkIndex(long index, long position, long timeoutMS) {
             try {
                 final long seq1 = queue.rollCycle().toSequenceNumber(index);
-
                 final long seq2 = store.sequenceForPosition(wire, position, timeoutMS);
+
                 if (seq1 != seq2) {
                     final long seq3 = ((SingleChronicleQueueStore) store).indexing.linearScanByPosition(wire, position, 0, 0);
                     System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
@@ -476,7 +476,6 @@ public class SingleChronicleQueueExcerpts {
                         wire.updateHeader(position, metaData);
                         long index = wire.headerNumber() - 1;
                         long position = wire.bytes().writePosition();
-                        assert position < 50_299_466 : "position is strangely large";
                         store.writePosition(position);
                         if (!metaData)
                             writeIndexForPosition(index, StoreAppender.this.position, timeoutMS);
