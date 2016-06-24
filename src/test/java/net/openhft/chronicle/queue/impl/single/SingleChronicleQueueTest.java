@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -1936,12 +1937,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    AtomicLong lastPosition = new AtomicLong();
+    AtomicLong lastIndex = new AtomicLong();
 
     @Test
-    @Ignore
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
             InterruptedException {
-
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
@@ -1949,10 +1950,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
 
-            int size = 1000;
+            int size = 100_000;
 
             IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
-
             ExcerptTailer tailer = q.createTailer();
             for (int i = 0; i < size; i++) {
                 try (DocumentContext dc = tailer.readingDocument(false)) {
@@ -1961,18 +1961,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
         }
-
-
     }
 
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
             long index = dc.index();
-
-            System.out.println("" + index);
             dc.wire().write("key").int64(index);
+            lastPosition.set(dc.wire().bytes().writePosition());
+            lastIndex.set(dc.index());
         }
+
     }
 
     static class MapWrapper extends AbstractMarshallable {

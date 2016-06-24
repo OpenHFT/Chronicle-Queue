@@ -94,9 +94,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     /**
      * atomically gets or creates the address of the first index the index is create and another
-     * except into the queue, however this except is treated as meta data and does not increment
-     * the last index, in otherword it is not possible to access this except by calling index(),
-     * it effectively invisible to the end-user
+     * except into the queue, however this except is treated as meta data and does not increment the
+     * last index, in otherword it is not possible to access this except by calling index(), it
+     * effectively invisible to the end-user
      *
      * @param recovery
      * @param wire     the current wire
@@ -159,11 +159,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     /**
-     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This
-     * method is used for creating both the primary and secondary indexes. Chronicle Queue uses
-     * a root primary index ( each entry in the primary index points to a unique a secondary
-     * index. The secondary index only records the address of every 64th except, the except are
-     * linearly scanned from there on.  )
+     * Creates a new Excerpt containing and index which will be 1L << 17L bytes long, This method is
+     * used for creating both the primary and secondary indexes. Chronicle Queue uses a root primary
+     * index ( each entry in the primary index points to a unique a secondary index. The secondary
+     * index only records the address of every 64th except, the except are linearly scanned from
+     * there on.  )
      *
      * @param wire the current wire
      * @return the address of the Excerpt containing the usable index, just after the header
@@ -211,14 +211,14 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     /**
-     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so
-     * the index2index tells chronicle where ( in other words the address of where ) the root
-     * first level targetIndex is stored. The indexing works like a tree, but only 2 levels
-     * deep, the root of the tree is at index2index ( this first level targetIndex is 1MB in
-     * size and there is only one of them, it only holds the addresses of the second level
-     * indexes, there will be many second level indexes ( created on demand ), each is about 1MB
-     * in size  (this second level targetIndex only stores the position of every 64th excerpt),
-     * so from every 64th excerpt a linear scan occurs.
+     * Moves the position to the {@code index} <p> The indexes are stored in many excerpts, so the
+     * index2index tells chronicle where ( in other words the address of where ) the root first
+     * level targetIndex is stored. The indexing works like a tree, but only 2 levels deep, the root
+     * of the tree is at index2index ( this first level targetIndex is 1MB in size and there is only
+     * one of them, it only holds the addresses of the second level indexes, there will be many
+     * second level indexes ( created on demand ), each is about 1MB in size  (this second level
+     * targetIndex only stores the position of every 64th excerpt), so from every 64th excerpt a
+     * linear scan occurs.
      *
      * @param recovery
      * @param wire     the data structure we are navigating
@@ -299,11 +299,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     /**
      * moves the context to the index of {@code toIndex} by doing a linear scans form a {@code
-     * fromKnownIndex} at  {@code knownAddress} <p/> note meta data is skipped and does not
-     * count to the indexes
+     * fromKnownIndex} at  {@code knownAddress} <p/> note meta data is skipped and does not count to
+     * the indexes
      *
-     * @param wire           if successful, moves the context to an address relating to the
-     *                       index {@code toIndex }
+     * @param wire           if successful, moves the context to an address relating to the index
+     *                       {@code toIndex }
      * @param toIndex        the index that we wish to move the context to
      * @param fromKnownIndex a know index ( used as a starting point )
      * @param knownAddress   a know address ( used as a starting point )
@@ -359,14 +359,14 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     long pos = bytes.readPosition();
                     if (toPosition == pos)
                         return i;
-                    throw new EOFException();
+                    throw new EOFException("toPosition=" + toPosition + ",pos=" + pos);
                 case META_DATA:
                     break;
                 case DATA:
                     ++i;
                     break;
             }
-            }
+        }
         if (bytes.readPosition() == toPosition)
             return i;
 
@@ -389,7 +389,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    public long sequenceForPosition(StoreRecovery recovery, Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    public long sequenceForPosition(StoreRecovery recovery, Wire wire, final long position, long
+            timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         // find the index2index
         final LongArrayValues index2indexArr = getIndex2index(recovery, wire, timeoutMS);
         long lastKnownAddress = 0;

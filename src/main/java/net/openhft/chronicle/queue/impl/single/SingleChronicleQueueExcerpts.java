@@ -169,7 +169,9 @@ public class SingleChronicleQueueExcerpts {
                             else
                                 wire.headerNumber(queue.indexFromPosition(cycle, store, position));
 
-                        position = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue.timeoutMS);
+                        position(store.writeHeader(wire, Wires.UNKNOWN_LENGTH, queue
+                                .timeoutMS));
+
                         lastIndex = wire.headerNumber();
                         context.metaData = false;
                         context.wire = wire;
@@ -229,7 +231,7 @@ public class SingleChronicleQueueExcerpts {
                 try {
 //                    wire.bytes().writePosition(store.writePosition());
                     int length = bytes.length();
-                    position = store.writeHeader(wire, length, queue.timeoutMS);
+                    position(store.writeHeader(wire, length, queue.timeoutMS));
                     wireBytes.write(bytes);
                     wire.updateHeader(length, position, false);
 
@@ -249,6 +251,11 @@ public class SingleChronicleQueueExcerpts {
                 store.writePosition(wireBytes.writePosition());
                 assert resetAppendingThread();
             }
+        }
+
+        private void position(long position) {
+            this.position = position;
+
         }
 
         void moveToIndexForWrite(long index) throws EOFException {
@@ -334,7 +341,8 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
-                    position = store.writeHeader(wire, length, queue.timeoutMS);
+                    position(store.writeHeader(wire, length, queue.timeoutMS));
+
                     wireWriter.write(writer, wire);
                     lastIndex = wire.headerNumber();
                     wire.updateHeader(length, position, false);
@@ -368,7 +376,8 @@ public class SingleChronicleQueueExcerpts {
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1), true);
-            position = store.writeHeader(wire, length, queue.timeoutMS);
+            position(store.writeHeader(wire, length, queue.timeoutMS));
+
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
         }
@@ -412,6 +421,9 @@ public class SingleChronicleQueueExcerpts {
                     System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
                             " - " + Long.toHexString(seq3));
                     store.sequenceForPosition(wire, position, timeoutMS);
+
+                    if (seq1 != seq3)
+                        System.out.println("");
                     assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                 }
 
@@ -463,10 +475,11 @@ public class SingleChronicleQueueExcerpts {
                         final long timeoutMS = queue.timeoutMS;
                         wire.updateHeader(position, metaData);
                         long index = wire.headerNumber() - 1;
-                        long position2 = wire.bytes().writePosition();
-                        store.writePosition(position2);
+                        long position = wire.bytes().writePosition();
+                        assert position < 50_299_466 : "position is strangely large";
+                        store.writePosition(position);
                         if (!metaData)
-                            writeIndexForPosition(index, position, timeoutMS);
+                            writeIndexForPosition(index, StoreAppender.this.position, timeoutMS);
 
                     } else {
                         isClosed = true;
