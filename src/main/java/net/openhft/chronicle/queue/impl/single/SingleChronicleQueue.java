@@ -326,7 +326,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public long indexFromPosition(int cycle, WireStore store, long position) {
+    public long indexFromPosition(int cycle, WireStore store, final long position) {
 
         final Wire wire = wireType().apply(store.bytes());
         long sequenceNumber = 0;
