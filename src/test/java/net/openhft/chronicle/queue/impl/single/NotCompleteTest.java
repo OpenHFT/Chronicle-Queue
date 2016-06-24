@@ -50,7 +50,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -88,7 +88,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -121,7 +121,7 @@ public class NotCompleteTest {
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = binary(tmpDir).rollCycle(RollCycles.TEST_DAILY).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             // start a message which was not completed.
             DocumentContext dc = appender.writingDocument();
@@ -140,7 +140,7 @@ public class NotCompleteTest {
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");

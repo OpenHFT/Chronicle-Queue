@@ -21,14 +21,14 @@ public class CreateAtIndexTest {
     public void testWriteBytesWithIndex() throws Exception {
         String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
             appender.writeBytes(0x421d00000001L, Bytes.from("hello world"));
         }
         // try again and fail.
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try {
                 appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
@@ -41,7 +41,7 @@ public class CreateAtIndexTest {
 
         // try too far
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try {
                 appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
@@ -53,7 +53,7 @@ public class CreateAtIndexTest {
         }
 
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeBytes(0x421d00000002L, Bytes.from("hello world"));
             appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
@@ -78,7 +78,7 @@ public class CreateAtIndexTest {
                 Assert.assertEquals(Long.MIN_VALUE, tailerIndex);
             }
 
-            queue.createAppender().writeBytes(Bytes.wrapForRead(new byte[1]));
+            queue.acquireAppender().writeBytes(Bytes.wrapForRead(new byte[1]));
 
             try (DocumentContext dc = tailer.readingDocument()) {
                 long tailerIndex = dc.index();
@@ -97,7 +97,7 @@ public class CreateAtIndexTest {
 
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
 

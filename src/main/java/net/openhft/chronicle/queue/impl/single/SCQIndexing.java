@@ -389,7 +389,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    public long indexForPosition(StoreRecovery recovery, Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    public long sequenceForPosition(StoreRecovery recovery, Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         // find the index2index
         final LongArrayValues index2indexArr = getIndex2index(recovery, wire, timeoutMS);
         long lastKnownAddress = 0;

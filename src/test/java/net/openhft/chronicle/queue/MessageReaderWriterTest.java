@@ -58,10 +58,10 @@ public class MessageReaderWriterTest {
         try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path + "1").build();
              SingleChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(path + "2").build()) {
             MethodReader reader2 = queue1.createTailer().methodReader(ObjectUtils.printAll(MessageListener.class));
-            MessageListener writer2 = queue2.createAppender().methodWriter(MessageListener.class);
+            MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);
             MethodReader reader1 = queue1.createTailer().methodReader(processor);
-            MessageListener writer1 = queue1.createAppender().methodWriter(MessageListener.class);
+            MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
 
             for (int i = 0; i < 3; i++) {
                 // write a message

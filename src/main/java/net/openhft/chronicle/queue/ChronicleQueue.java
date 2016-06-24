@@ -74,7 +74,15 @@ public interface ChronicleQueue extends Closeable {
      * @return A thread local Appender for writing new entries to the end.
      */
     @NotNull
-    ExcerptAppender createAppender();
+    ExcerptAppender acquireAppender();
+
+    /**
+     * @deprecated to be remove in version 4.6 or later use {@link ChronicleQueue#acquireAppender()}
+     */
+    @Deprecated
+    default ExcerptAppender createAppender() {
+        return acquireAppender();
+    }
 
     /**
      * @return the lowest valid index available, or Long.MAX_VALUE if none are found

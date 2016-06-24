@@ -46,7 +46,7 @@ public class ReadmeTest {
         try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
                 .rollCycle(RollCycles.TEST_DAILY).build()) {
             // Obtain an ExcerptAppender
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             // write - {msg: TestMessage}
             appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));

@@ -16,22 +16,20 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
+
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
 public class SkipAppendToEndTest {
 
 
-    /**
-     * if one appender if much further ahead than the other, then the new append should jump
-     * straight to the end rather than attempting to write a positions that are already occupied
-     */
-    @Test
-    public void testAppendedSkipToEnd() throws TimeoutException, ExecutionException, InterruptedException {
 
-
-    }
 }
 

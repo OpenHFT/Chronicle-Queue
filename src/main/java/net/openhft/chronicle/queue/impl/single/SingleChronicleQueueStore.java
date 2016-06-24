@@ -240,7 +240,7 @@ class SingleChronicleQueueStore implements WireStore {
         long position0 = bytes.readPosition();
         long remaining0 = bytes.readRemaining();
         try {
-            return indexing.indexForPosition(recovery, wire, position, timeoutMS);
+            return indexing.sequenceForPosition(recovery, wire, position, timeoutMS);
         } finally {
             bytes.readPositionRemaining(position0, remaining0);
         }

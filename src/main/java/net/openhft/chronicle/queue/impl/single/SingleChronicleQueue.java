@@ -228,7 +228,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @NotNull
     @Override
-    public ExcerptAppender createAppender() {
+    public ExcerptAppender acquireAppender() {
         return excerptAppenderThreadLocal.get();
     }
 

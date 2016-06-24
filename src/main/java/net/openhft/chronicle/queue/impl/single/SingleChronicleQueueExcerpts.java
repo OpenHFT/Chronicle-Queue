@@ -412,7 +412,7 @@ public class SingleChronicleQueueExcerpts {
                     System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
                             " - " + Long.toHexString(seq3));
                     store.sequenceForPosition(wire, position, timeoutMS);
-//                    assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq2;
+                    assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                 }
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {

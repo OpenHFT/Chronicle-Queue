@@ -88,7 +88,7 @@ public class ThreadedQueueTest {
                         .blockSize(BLOCK_SIZE)
                         .build();
 
-                final ExcerptAppender appender = wqueue.createAppender();
+                final ExcerptAppender appender = wqueue.acquireAppender();
 
                 final Bytes message = Bytes.elasticByteBuffer();
                 for (int i = 0; i < REQUIRED_COUNT; i++) {
@@ -133,7 +133,7 @@ public class ThreadedQueueTest {
         Bytes bytes = Bytes.elasticByteBuffer();
         assertFalse(tailer.readBytes(bytes));
 
-        final ExcerptAppender appender = wqueue.createAppender();
+        final ExcerptAppender appender = wqueue.acquireAppender();
         appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes()));
 
         bytes.clear();

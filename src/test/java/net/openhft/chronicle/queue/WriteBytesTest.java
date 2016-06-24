@@ -22,7 +22,7 @@ public class WriteBytesTest {
         try {
             ChronicleQueue queue = new SingleChronicleQueueBuilder(dir).build();
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
 
             outgoingMsgBytes[0] = 'A';

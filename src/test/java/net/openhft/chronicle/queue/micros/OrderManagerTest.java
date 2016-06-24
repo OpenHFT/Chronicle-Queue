@@ -49,7 +49,7 @@ public class OrderManagerTest {
         File queuePath = new File(OS.TARGET, "testWithQueue-" + System.nanoTime());
         try {
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build()) {
-                OrderIdeaListener orderManager = queue.createAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
+                OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
 
                 // events in
@@ -94,7 +94,7 @@ public class OrderManagerTest {
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
         try {
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath).build()) {
-                OrderIdeaListener orderManager = out.createAppender()
+                OrderIdeaListener orderManager = out.acquireAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
                         .recordHistory(true)
@@ -117,7 +117,7 @@ public class OrderManagerTest {
                     .build();
                  SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath2).build()) {
 
-                OrderListener listener = out.createAppender()
+                OrderListener listener = out.acquireAppender()
                         .methodWriterBuilder(OrderListener.class)
                         .recordHistory(true)
                         .get();
@@ -161,7 +161,7 @@ public class OrderManagerTest {
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath)
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
-                SidedMarketDataListener combiner = out.createAppender()
+                SidedMarketDataListener combiner = out.acquireAppender()
                         .methodWriterBuilder(SidedMarketDataListener.class)
                         .recordHistory(true)
                         .get();
@@ -184,7 +184,7 @@ public class OrderManagerTest {
                              .rollCycle(RollCycles.TEST_DAILY)
                              .build()) {
 
-                    MarketDataListener mdListener = out.createAppender()
+                    MarketDataListener mdListener = out.acquireAppender()
                             .methodWriterBuilder(MarketDataListener.class)
                             .recordHistory(true)
                             .get();

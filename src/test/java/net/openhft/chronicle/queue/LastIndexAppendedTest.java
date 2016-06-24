@@ -21,7 +21,7 @@ public class LastIndexAppendedTest {
         long expectedIndex = 0;
         for (int i = 0; i < 5; i++) {
             try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(path).build()) {
-                ExcerptAppender appender = queue.createAppender();
+                ExcerptAppender appender = queue.acquireAppender();
 
                 try (DocumentContext documentContext = appender.writingDocument()) {
                     long expectedIndex2 = documentContext.index();

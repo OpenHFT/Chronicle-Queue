@@ -75,7 +75,7 @@ public class IndexTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build();
 
-        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptAppender appender = queue.acquireAppender();
         for (int i = 0; i < 5; i++) {
             final int n = i;
             appender.writeDocument(

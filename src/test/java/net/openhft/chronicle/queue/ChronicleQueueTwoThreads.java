@@ -85,7 +85,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                         .buffered(buffered)
                         .build();
 
-                ExcerptAppender appender = wqueue.createAppender();
+                ExcerptAppender appender = wqueue.acquireAppender();
 
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 

@@ -31,7 +31,7 @@ public class ChronicleRollingIssueTest {
                     if (millis > 1 && millis < 999) {
                         Jvm.pause(999 - millis);
                     }
-                    ExcerptAppender appender = writeQueue.createAppender();
+                    ExcerptAppender appender = writeQueue.acquireAppender();
                     Map<String, Object> map = new HashMap<>();
                     map.put("key", Thread.currentThread().getName() + " - " + i);
                     appender.writeMap(map);

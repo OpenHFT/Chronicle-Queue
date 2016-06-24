@@ -299,7 +299,7 @@ public class SingleCQFormatTest {
         try (SingleChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
                 MyData name = new MyData("name", 12345, 1.2, 111);
                 System.out.println(name);
@@ -1037,7 +1037,7 @@ public class SingleCQFormatTest {
     }
 
     public void appendMessage(SingleChronicleQueue queue, long expectedIndex, String msg) {
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         switch (appendMode) {
             case 1:
                 appender.writeDocument(w -> w.write(() -> "msg").text(msg));
@@ -1081,7 +1081,7 @@ public class SingleCQFormatTest {
         map.put("double", 1.28);
         File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         try (ChronicleQueue queue = binary(dir).blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
-            ExcerptAppender appender = queue.createAppender().lazyIndexing(true);
+            ExcerptAppender appender = queue.acquireAppender().lazyIndexing(true);
             appender.writeMap(map);
 
             map.put("abc", "aye-bee-see");
@@ -1139,7 +1139,7 @@ public class SingleCQFormatTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
             assertEquals("--- !!meta-data #binary\n" +
@@ -1203,7 +1203,7 @@ public class SingleCQFormatTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("msg-1");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -1376,4 +1376,6 @@ public class SingleCQFormatTest {
             this.counter = counter;
         }
     }
+
+
 }

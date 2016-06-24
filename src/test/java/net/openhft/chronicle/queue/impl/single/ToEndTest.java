@@ -65,7 +65,7 @@ public class ToEndTest {
                 .build();
 
         checkOneFile(baseDir);
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         checkOneFile(baseDir);
 
         for (int i = 0; i < 10; i++) {
@@ -107,7 +107,7 @@ public class ToEndTest {
         checkOneFile(baseDir);
 
         // if this appender isn't created, the tailer toEnd doesn't cause a roll.
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         checkOneFile(baseDir);
 
         ExcerptTailer tailer = queue.createTailer();

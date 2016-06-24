@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -33,9 +32,13 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.StreamCorruptedException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.stream.IntStream;
 
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.*;
@@ -84,7 +87,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 10; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
@@ -102,7 +105,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExecutorService service1 = Executors.newSingleThreadExecutor();
             service1.submit(() -> {
-                final ExcerptAppender appender = queue.createAppender();
+                final ExcerptAppender appender = queue.acquireAppender();
 
                 try (final DocumentContext dc = appender.writingDocument()) {
                     dc.wire().writeEventName(() -> "key").text(expected);
@@ -140,7 +143,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
 
             final Bytes<byte[]> expected = Bytes.wrapForRead("some long message".getBytes());
             for (int i = 0; i < 10; i++) {
@@ -172,7 +175,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             final int cycle = appender.cycle();
             for (int i = 0; i < 10; i++) {
                 final int n = i;
@@ -235,7 +238,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             //the messages
             Jvm.pause(500);
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 2; i++) {
                 final int n = i;
                 appender.writeDocument(w -> w.write(TestKey.test).int32(n));
@@ -316,7 +319,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .timeProvider(stp)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
             int cycle = appender.cycle();
             for (int i = 0; i <= 5; i++) {
@@ -348,7 +351,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .timeProvider(stp)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(0));
             appender.writeDocument(w -> w.write(TestKey.test2).int32(1000));
             int cycle = appender.cycle();
@@ -663,7 +666,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             int cycle = queue.rollCycle().current(System::currentTimeMillis, 0) - 3;
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             Wire wire = new BinaryWire(Bytes.allocateDirect(64));
             for (int i = 0; i < 6; i++) {
                 long index = queue.rollCycle().toIndex(cycle + i, 0);
@@ -958,7 +961,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             appender.cycle();
             for (int i = 0; i < 5; i++) {
                 final int n = i;
@@ -985,7 +988,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
             appender.writeDocument(wire -> wire.write(() -> "Surname").text("Jobs"));
 
@@ -1006,7 +1009,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             long index;
             try (DocumentContext dc = appender.writingDocument()) {
@@ -1028,7 +1031,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             MyMarshable myMarshable = new MyMarshable();
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("myMarshable").typedMarshallable(myMarshable);
@@ -1050,7 +1053,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.metaData(true);
@@ -1099,7 +1102,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
 
@@ -1125,7 +1128,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
 
@@ -1158,7 +1161,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
             appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
             final ExcerptTailer tailer = chronicle.createTailer();
@@ -1177,7 +1180,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .indexCount(8)
                 .indexSpacing(8)
                 .build()) {
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -1211,7 +1214,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
 
             System.out.print("Percent written=");
 
@@ -1250,7 +1253,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
             Assert.assertEquals(0, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
@@ -1262,7 +1265,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.lastIndexAppended();
             Assert.fail();
         }
@@ -1274,7 +1277,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             final long nextWrite = chronicle.nextIndexToWrite();
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
@@ -1288,7 +1291,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             final int cycle = appender.cycle();
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -1319,7 +1322,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
             Assert.assertTrue(appender.cycle() == 0);
         }
@@ -1333,7 +1336,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             int cycle = appender.cycle();
 
             // create 100 documents
@@ -1368,7 +1371,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             long cycle = appender.cycle();
 
             // create 100 documents
@@ -1436,7 +1439,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             int cycle = appender.cycle();
 
             // create 100 documents
@@ -1493,7 +1496,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
                 .build()) {
 
-            final ExcerptAppender appender = queue.createAppender();
+            final ExcerptAppender appender = queue.acquireAppender();
             int cycle = appender.cycle();
 
             // create 100 documents
@@ -1557,7 +1560,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
 
-                ExcerptAppender append = chronicle2.createAppender();
+                ExcerptAppender append = chronicle2.acquireAppender();
                 append.writeDocument(w -> w.write(() -> "test").text("text"));
 
             }
@@ -1575,7 +1578,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                      .wireType(this.wireType)
                      .build()) {
 
-            ExcerptAppender append = chronicle2.createAppender();
+            ExcerptAppender append = chronicle2.acquireAppender();
             append.writeDocument(w -> w.write(() -> "test").text("before text"));
 
             ExcerptTailer tailer = chronicle.createTailer();
@@ -1603,7 +1606,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                      .rollCycle(RollCycles.HOURLY)
                      .blockSize(2 << 20)
                      .build()) {
-            ExcerptAppender append = chronicle2.createAppender();
+            ExcerptAppender append = chronicle2.acquireAppender();
             for (int i = 0; i < 100000; i++)
                 append.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
@@ -1642,7 +1645,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .wireType(this.wireType)
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
-                ExcerptAppender appender = chronicle2.createAppender();
+                ExcerptAppender appender = chronicle2.acquireAppender();
                 appender.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
                 // DocumentContext should not be empty as we know what the wire type will be.
@@ -1660,7 +1663,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.metaData(true);
@@ -1719,7 +1722,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
             ExcerptTailer tailer = chronicle.createTailer();
 
             int entries = chronicle.rollcycle().defaultIndexSpacing() * 2 + 2;
@@ -1741,7 +1744,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
 
             int entries = chronicle.rollcycle().defaultIndexSpacing() + 2;
 
@@ -1808,7 +1811,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             final long nextIndexToWrite = chronicle.nextIndexToWrite();
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
@@ -1826,7 +1829,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(w -> {
             });
             System.out.println(chronicle.dump());
@@ -1843,13 +1846,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender sync = syncQ.createAppender();
+            ExcerptAppender sync = syncQ.acquireAppender();
 
             try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .build()) {
 
-                ExcerptAppender appender = chronicle.createAppender();
+                ExcerptAppender appender = chronicle.acquireAppender();
                 appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
                 appender.writeDocument(w -> w.writeEventName("hello").text("world1"));
                 appender.writeDocument(w -> w.writeEventName("hello").text("world2"));
@@ -1882,7 +1885,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .wireType(this.wireType)
                     .build()) {
 
-                ExcerptAppender appender = chronicle.createAppender();
+                ExcerptAppender appender = chronicle.acquireAppender();
 
                 MapWrapper myMap = new MapWrapper();
                 myMap.map.put("hello", 1.2);
@@ -1912,8 +1915,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender appender = q.createAppender();
-            ExcerptAppender appender2 = q.createAppender();
+            ExcerptAppender appender = q.acquireAppender();
+            ExcerptAppender appender2 = q.acquireAppender();
             int indexCount = 100;
 
 
@@ -1939,29 +1942,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
             InterruptedException {
 
-        final ExecutorService executorService = Executors.newFixedThreadPool(2, new
-                NamedThreadFactory("testAppendedSkipToEndMultiThreaded:appender", true));
+
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
-            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.createAppender());
+            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
 
             int size = 1000;
-            final Queue<Future> futures = new ArrayBlockingQueue<>(size);
 
-            for (int i = 0; i < size; i++) {
-                futures.add(executorService.submit(() -> writeTestDocument(tl)));
-            }
-
-            // wait till all the data has been written
-            futures.forEach(f -> {
-                try {
-                    f.get();
-                } catch (Exception e) {
-                    throw Jvm.rethrow(e);
-                }
-            });
+            IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
 
             ExcerptTailer tailer = q.createTailer();
             for (int i = 0; i < size; i++) {
@@ -1970,17 +1960,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
 
-        } finally {
-            executorService.shutdownNow();
-            executorService.awaitTermination(100, TimeUnit.MILLISECONDS);
         }
 
 
     }
 
+
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
-            dc.wire().write("key").int64(dc.index());
+            long index = dc.index();
+
+            System.out.println("" + index);
+            dc.wire().write("key").int64(index);
         }
     }
 
