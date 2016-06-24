@@ -374,7 +374,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -409,7 +409,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 0\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1000\n" +
+                    "test2: !short 1000\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -419,7 +419,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -454,7 +454,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 1\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1001\n" +
+                    "test2: !short 1001\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -464,7 +464,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -499,7 +499,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 2\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1002\n" +
+                    "test2: !short 1002\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -509,7 +509,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -544,7 +544,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 3\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1003\n" +
+                    "test2: !short 1003\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -554,7 +554,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -589,7 +589,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 4\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1004\n" +
+                    "test2: !short 1004\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -599,7 +599,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -634,7 +634,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 5\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1005\n" +
+                    "test2: !short 1005\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n", queue.dump());
 
@@ -688,7 +688,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -721,7 +721,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 0\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1000\n" +
+                    "test2: !short 1000\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -731,7 +731,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -764,7 +764,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 1\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1001\n" +
+                    "test2: !short 1001\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -774,7 +774,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -807,7 +807,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 2\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1002\n" +
+                    "test2: !short 1002\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -817,7 +817,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -850,7 +850,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 3\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1003\n" +
+                    "test2: !short 1003\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -860,7 +860,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -893,7 +893,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 4\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1004\n" +
+                    "test2: !short 1004\n" +
                     "# position: 567\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
@@ -903,7 +903,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 567,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -936,7 +936,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "test: 5\n" +
                     "# position: 554\n" +
                     "--- !!data #binary\n" +
-                    "test2: !int 1005\n" +
+                    "test2: !short 1005\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n", queue.dump());
 

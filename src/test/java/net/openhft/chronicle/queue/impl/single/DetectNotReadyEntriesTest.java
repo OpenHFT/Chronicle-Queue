@@ -53,7 +53,7 @@ public class DetectNotReadyEntriesTest {
                 "  wireType: !WireType BINARY,\n" +
                 "  writePosition: 309,\n" +
                 "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
+                "    length: !int 86400000,\n" +
                 "    format: yyyyMMdd,\n" +
                 "    epoch: 0\n" +
                 "  },\n" +
