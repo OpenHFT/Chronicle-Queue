@@ -483,6 +483,9 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public long index() {
+                if (wire.headerNumber() == Long.MIN_VALUE)
+                    wire.headerNumber(queue.indexFromPosition(cycle, store, position));
+
                 return wire.headerNumber();
             }
 
