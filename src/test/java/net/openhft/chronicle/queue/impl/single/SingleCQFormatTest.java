@@ -185,7 +185,7 @@ public class SingleCQFormatTest {
                 "  wireType: !WireType BINARY,\n" +
                 "  writePosition: 0,\n" +
                 "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
+                "    length: !int 86400000,\n" +
                 "    format: yyyyMMdd,\n" +
                 "    epoch: 0\n" +
                 "  },\n" +
@@ -229,12 +229,12 @@ public class SingleCQFormatTest {
                 "  wireType: !WireType BINARY,\n" +
                 "  writePosition: 0,\n" +
                 "  roll: !SCQSRoll {\n" +
-                "    length: 3600000,\n" +
+                "    length: !int 3600000,\n" +
                 "    format: yyyyMMdd-HH,\n" +
-                "    epoch: 3600000\n" +
+                "    epoch: !int 3600000\n" +
                 "  },\n" +
                 "  indexing: !SCQSIndexing {\n" +
-                "    indexCount: !int 4096,\n" +
+                "    indexCount: !short 4096,\n" +
                 "    indexSpacing: 4,\n" +
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
@@ -314,7 +314,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 623,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -345,11 +345,11 @@ public class SingleCQFormatTest {
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
                     "name: name\n" +
-                    "num: !int 12345\n" +
+                    "num: !short 12345\n" +
                     "d: 1.2\n" +
                     "counter: 111\n" +
                     "name: name2\n" +
-                    "num: !int 12346\n" +
+                    "num: !short 12346\n" +
                     "d: 1.3\n" +
                     "counter: 112\n" +
                     "...\n" +
@@ -382,12 +382,12 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 0,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !int 16384,\n" +
+                    "    indexCount: !short 16384,\n" +
                     "    indexSpacing: 16,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
@@ -465,7 +465,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 564,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -506,7 +506,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 592,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -553,7 +553,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 612,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -629,7 +629,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 564,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -682,7 +682,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 1322,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -809,7 +809,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 1233,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -920,7 +920,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 1134,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -1092,12 +1092,12 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 472,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !int 16384,\n" +
+                    "    indexCount: !short 16384,\n" +
                     "    indexSpacing: 16,\n" +
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
@@ -1147,7 +1147,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 689,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -1210,7 +1210,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 553,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
@@ -1250,7 +1250,7 @@ public class SingleCQFormatTest {
                     "  wireType: !WireType BINARY,\n" +
                     "  writePosition: 896,\n" +
                     "  roll: !SCQSRoll {\n" +
-                    "    length: 86400000,\n" +
+                    "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +

@@ -138,12 +138,12 @@ header: !SCQStore {
   wireType: !WireType BINARY,
   writePosition: 413,
   roll: !SCQSRoll {
-    length: 86400000,
+    length: !int 86400000,
     format: yyyyMMdd,
     epoch: 0
   },
   indexing: !SCQSIndexing {
-    indexCount: !int 16384,
+    indexCount: !short 16384,
     indexSpacing: 16,
     index2Index: 0,
     lastIndex: 0
@@ -217,12 +217,12 @@ header: !SCQStore { # <2>
   wireType: !WireType BINARY,
   writePosition: 413, # <3>
   roll: !SCQSRoll { # <4>
-    length: 86400000,
+    length: !int 86400000,
     format: yyyyMMdd,
     epoch: 0
   },
   indexing: !SCQSIndexing { # <5>
-    indexCount: !int 16384,
+    indexCount: !short 16384,
     indexSpacing: 16,
     index2Index: 0,
     lastIndex: 0
