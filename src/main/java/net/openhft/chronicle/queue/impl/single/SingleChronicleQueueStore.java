@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.StreamCorruptedException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -143,6 +144,11 @@ class SingleChronicleQueueStore implements WireStore {
         Bytes<?> bytes = wire.bytes();
         bytes.readPosition(0);
         Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(bytes));
+    }
+
+    @Override
+    public File file() {
+        return mappedFile == null ? null : mappedFile.file();
     }
 
     /**

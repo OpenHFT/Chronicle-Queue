@@ -28,14 +28,17 @@ public class WireStorePool {
     @NotNull
     private final Map<RollDetails, WireStore> stores;
 
-    private WireStorePool(@NotNull WireStoreSupplier supplier) {
+    private final StoreFileListener storeFileListener;
+
+    private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
+        this.storeFileListener = storeFileListener;
         this.stores = new ConcurrentHashMap<>();
     }
 
     @NotNull
-    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
-        return new WireStorePool(supplier);
+    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
+        return new WireStorePool(supplier, storeFileListener);
     }
 
     public void close() {
@@ -48,8 +51,10 @@ public class WireStorePool {
         WireStore store = stores.get(rollDetails);
         if (store == null) {
             store = this.supplier.acquire(cycle, epoch, createIfAbsent);
-            if (store != null)
+            if (store != null) {
                 stores.put(rollDetails, store);
+                storeFileListener.onAcquired(cycle, store.file());
+            }
         } else {
             store.reserve();
         }
@@ -62,6 +67,7 @@ public class WireStorePool {
             for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
                 if (entry.getValue() == store) {
                     stores.remove(entry.getKey());
+                    storeFileListener.onReleased(entry.getKey().cycle(), store.file());
                     break;
                 }
             }

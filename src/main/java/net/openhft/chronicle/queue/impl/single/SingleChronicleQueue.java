@@ -81,7 +81,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         rollCycle = builder.rollCycle();
         epoch = builder.epoch();
         dateCache = new RollingResourcesCache(this.rollCycle, epoch, name -> new File(builder.path(), name + SUFFIX));
-        pool = WireStorePool.withSupplier(this::acquireStore);
+        pool = WireStorePool.withSupplier(this::acquireStore, builder.storeFileListener());
         isBuffered = builder.buffered();
         path = builder.path();
         wireType = builder.wireType();

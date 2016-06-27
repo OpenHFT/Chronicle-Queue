@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
@@ -70,6 +71,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
+    private StoreFileListener storeFileListener = (cycle, file) -> {
+        Jvm.debug().on(getClass(), "File released " + file);
+    };
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -296,6 +300,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     public WireStoreFactory storeFactory() {
         return storeFactory;
+    }
+
+    @Override
+    public B storeFileListener(StoreFileListener storeFileListener) {
+        this.storeFileListener = storeFileListener;
+        return (B) this;
+    }
+
+    @Override
+    public StoreFileListener storeFileListener() {
+        return storeFileListener;
     }
 
     public B sourceId(int sourceId) {

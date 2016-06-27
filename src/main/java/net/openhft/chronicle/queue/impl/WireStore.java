@@ -25,9 +25,15 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.StreamCorruptedException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+    /**
+     * @return the file associated with this store.
+     */
+    File file();
+
     WireStore writePosition(long position);
 
     /**
