@@ -28,6 +28,7 @@ import java.io.File;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static org.junit.Assert.*;
 
 /**
@@ -134,7 +135,7 @@ public class ThreadedQueueTest {
         assertFalse(tailer.readBytes(bytes));
 
         final ExcerptAppender appender = wqueue.acquireAppender();
-        appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes()));
+        appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes(ISO_8859_1)));
 
         bytes.clear();
         assertTrue(tailer.readBytes(bytes));

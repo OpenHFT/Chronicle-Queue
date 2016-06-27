@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static org.junit.Assert.*;
 
@@ -49,6 +50,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
     private final WireType wireType;
+    AtomicLong lastPosition = new AtomicLong();
+    AtomicLong lastIndex = new AtomicLong();
     // *************************************************************************
     //
     // TESTS
@@ -146,7 +149,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = queue.acquireAppender();
 
-            final Bytes<byte[]> expected = Bytes.wrapForRead("some long message".getBytes());
+            final Bytes<byte[]> expected = Bytes.wrapForRead("some long message".getBytes(ISO_8859_1));
             for (int i = 0; i < 10; i++) {
 
                 appender.writeBytes(expected);
@@ -1163,8 +1166,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
-            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
+            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes(ISO_8859_1)));
+            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes(ISO_8859_1)));
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
             tailer.readBytes(bytes);
@@ -1904,7 +1907,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     /**
      * if one appender if much further ahead than the other, then the new append should jump
      * straight to the end rather than attempting to write a positions that are already occupied
@@ -1936,9 +1938,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
     }
-
-    AtomicLong lastPosition = new AtomicLong();
-    AtomicLong lastIndex = new AtomicLong();
 
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
