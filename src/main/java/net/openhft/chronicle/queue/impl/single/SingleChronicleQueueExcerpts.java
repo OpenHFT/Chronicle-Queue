@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -219,7 +220,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+        public void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
