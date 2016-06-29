@@ -49,14 +49,13 @@ public class WireStorePool {
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
-        if (store == null) {
-            store = this.supplier.acquire(cycle, epoch, createIfAbsent);
-            if (store != null) {
-                stores.put(rollDetails, store);
-                storeFileListener.onAcquired(cycle, store.file());
-            }
-        } else {
-            store.reserve();
+        if (store != null && store.tryReserve())
+            return store;
+
+        store = this.supplier.acquire(cycle, epoch, createIfAbsent);
+        if (store != null) {
+            stores.put(rollDetails, store);
+            storeFileListener.onAcquired(cycle, store.file());
         }
         return store;
     }
