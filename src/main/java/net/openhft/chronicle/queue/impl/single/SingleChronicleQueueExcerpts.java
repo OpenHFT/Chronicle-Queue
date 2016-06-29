@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.util.function.BiConsumer;
 
 public class SingleChronicleQueueExcerpts {
@@ -486,7 +487,9 @@ public class SingleChronicleQueueExcerpts {
                         assert resetAppendingThread();
                         writeBytes(wire.headerNumber(), wire.bytes());
                     }
-
+                } catch (BufferUnderflowException bue) {
+                    if (!wire.bytes().isClosed())
+                        throw bue;
                 } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
