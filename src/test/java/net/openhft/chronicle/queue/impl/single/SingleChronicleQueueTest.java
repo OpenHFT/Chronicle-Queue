@@ -1932,11 +1932,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore
+
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
-        for (; ; ) {
+        for (int j = 0; j < 50; j++) {
+
+
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType) //.rollCycle(TEST_DAILY)
                     .build()) {
@@ -1949,10 +1951,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 ExcerptTailer tailer = q.createTailer();
                 for (int i = 0; i < size; i++) {
                     try (DocumentContext dc = tailer.readingDocument(false)) {
-
-                        long index = dc.index();
-                        long actual = dc.wire().read(() -> "key").int64(index);
-                        Assert.assertEquals(index, actual);
+                        Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
                     }
                 }
 
@@ -1967,13 +1966,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
-
             long index = dc.index();
             dc.wire().write("key").int64(index);
-
-            lastPosition.set(dc.wire().bytes().writePosition());
-
-            lastIndex.set(dc.index());
         }
 
     }

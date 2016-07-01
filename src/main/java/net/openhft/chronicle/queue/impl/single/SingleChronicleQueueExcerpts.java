@@ -504,6 +504,7 @@ public class SingleChronicleQueueExcerpts {
                 if (wire.headerNumber() == Long.MIN_VALUE)
                     try {
                         long headerNumber = store.sequenceForPosition(wire, position, 0);
+
                         wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber));
                     } catch (Exception e) {
                         Jvm.rethrow(e);
@@ -514,7 +515,18 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public long index() {
-                return isMetaData() ? headerNumber() : headerNumber() + 1;
+                if (wire.headerNumber() == Long.MIN_VALUE) {
+                    try {
+                        long headerNumber0 = queue.rollCycle().toIndex(cycle, store
+                                .sequenceForPosition(wire, position, 0));
+                        assert (((AbstractWire) wire).isInsideHeader());
+                        wire.headerNumber(headerNumber0 - 1);
+                    } catch (Exception e) {
+                        Jvm.rethrow(e);
+                    }
+                }
+
+                return isMetaData() ? wire.headerNumber() : wire.headerNumber() + 1;
             }
 
             @Override
