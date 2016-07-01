@@ -481,6 +481,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                             }
 
                             long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+
                             nextEntryToIndex.setMaxValue(ret);
                             return ret;
                         }

@@ -640,7 +640,7 @@ public class SingleCQFormatTest {
             String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 1322,\n" +
+                    "  writePosition: 1226,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -660,11 +660,10 @@ public class SingleCQFormatTest {
                     "# position: 344\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
-                    "  # length: 8, used: 3\n" +
+                    "  # length: 8, used: 2\n" +
                     "  448,\n" +
                     "  804,\n" +
-                    "  1144,\n" +
-                    "  0, 0, 0, 0, 0\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
@@ -709,15 +708,9 @@ public class SingleCQFormatTest {
                     "# position: 804\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 8\n" +
+                    "  # length: 8, used: 1\n" +
                     "  774,\n" +
-                    "  896,\n" +
-                    "  927,\n" +
-                    "  958,\n" +
-                    "  989,\n" +
-                    "  1020,\n" +
-                    "  1051,\n" +
-                    "  1082\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 896\n" +
                     "--- !!data #binary\n" +
@@ -744,26 +737,16 @@ public class SingleCQFormatTest {
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
                     "# position: 1144\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 4\n" +
-                    "  1113,\n" +
-                    "  1240,\n" +
-                    "  1271,\n" +
-                    "  1302,\n" +
-                    "  0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 1240\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 1271\n" +
+                    "# position: 1175\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 1302\n" +
+                    "# position: 1206\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326354 bytes remaining\n";
+                    "# 326450 bytes remaining\n";
             String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
@@ -856,10 +839,8 @@ public class SingleCQFormatTest {
                     "# position: 1021\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  1120,\n" +
-                    "  1182,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 1120\n" +
                     "--- !!data #binary\n" +
@@ -1210,7 +1191,7 @@ public class SingleCQFormatTest {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 896,\n" +
+                    "  writePosition: 799,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1220,7 +1201,7 @@ public class SingleCQFormatTest {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 16\n" +
+                    "    lastIndex: 8\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -1230,11 +1211,10 @@ public class SingleCQFormatTest {
                     "# position: 344\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
-                    "  # length: 8, used: 3\n" +
+                    "  # length: 8, used: 2\n" +
                     "  448,\n" +
                     "  625,\n" +
-                    "  799,\n" +
-                    "  0, 0, 0, 0, 0\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
@@ -1279,15 +1259,9 @@ public class SingleCQFormatTest {
                     "# position: 625\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 8\n" +
+                    "  # length: 8, used: 1\n" +
                     "  616,\n" +
-                    "  720,\n" +
-                    "  729,\n" +
-                    "  739,\n" +
-                    "  749,\n" +
-                    "  759,\n" +
-                    "  769,\n" +
-                    "  779\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 720\n" +
                     "--- !!data\n" +
@@ -1313,15 +1287,8 @@ public class SingleCQFormatTest {
                     "# position: 789\n" +
                     "--- !!data\n" +
                     "msg-16\n" +
-                    "# position: 799\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  789,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
                     "...\n" +
-                    "# 326780 bytes remaining\n", queue.dump());
+                    "# 326877 bytes remaining\n", queue.dump());
         }
     }
 
