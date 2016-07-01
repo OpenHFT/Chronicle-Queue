@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -157,7 +158,7 @@ public class OrderManagerTest {
         File queuePath = new File(OS.TARGET, "testRestartingAService-" + System.nanoTime());
         File queuePath2 = new File(OS.TARGET, "testRestartingAService-down-" + System.nanoTime());
         try {
-            long start;
+
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath)
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
@@ -166,7 +167,7 @@ public class OrderManagerTest {
                         .recordHistory(true)
                         .get();
 
-                start = out.nextIndexToWrite();
+
                 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
                 combiner.onSidedPrice(new SidedPrice("EURUSD2", 123456789100L, Side.Buy, 1.1160, 2e6));
 
@@ -184,14 +185,15 @@ public class OrderManagerTest {
                              .rollCycle(RollCycles.TEST_DAILY)
                              .build()) {
 
-                    MarketDataListener mdListener = out.acquireAppender()
+                    ExcerptAppender excerptAppender = out.acquireAppender();
+                    MarketDataListener mdListener = excerptAppender
                             .methodWriterBuilder(MarketDataListener.class)
                             .recordHistory(true)
                             .get();
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer()
                             .afterLastWritten(out);
-                    assertEquals(start + i, tailer.index());
+                    assertEquals(i, in.rollcycle().toSequenceNumber(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 

@@ -42,7 +42,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static net.openhft.chronicle.queue.RollCycles.DAILY;
+import static net.openhft.chronicle.queue.RollCycles.*;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -50,8 +50,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
     private final WireType wireType;
-    AtomicLong lastPosition = new AtomicLong();
-    AtomicLong lastIndex = new AtomicLong();
+    private final AtomicLong lastPosition = new AtomicLong();
+    private final AtomicLong lastIndex = new AtomicLong();
     // *************************************************************************
     //
     // TESTS
@@ -118,10 +118,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             });
 
             BlockingQueue<Bytes> result = new ArrayBlockingQueue<>(10);
-            Bytes b = Bytes.allocateDirect(128);
 
             ScheduledExecutorService service2 = Executors.newSingleThreadScheduledExecutor();
             service2.scheduleAtFixedRate(() -> {
+                Bytes b = Bytes.allocateDirect(128);
                 final ExcerptTailer tailer = queue.createTailer();
                 tailer.readBytes(b);
                 if (b.readRemaining() == 0)
@@ -351,7 +351,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .timeProvider(stp)
                 .build()) {
 
@@ -385,7 +385,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -430,7 +430,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -475,7 +475,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -520,7 +520,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -565,7 +565,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -610,7 +610,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 2\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -699,7 +699,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -742,7 +742,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -785,7 +785,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -828,7 +828,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -871,7 +871,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -914,7 +914,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 0\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -1166,8 +1166,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes(ISO_8859_1)));
-            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes(ISO_8859_1)));
+            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
+            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
             tailer.readBytes(bytes);
@@ -1275,17 +1275,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test
-    public void testLastIndexPerChronicle() {
+    @Test(expected = java.lang.IllegalStateException.class) //: no messages written
+    public void testNoMessagesWritten() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-
-            final long nextWrite = chronicle.nextIndexToWrite();
-            appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
-            Assert.assertEquals(appender.lastIndexAppended(), nextWrite);
+            appender.lastIndexAppended();
         }
     }
 
@@ -1722,7 +1719,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testToEndBeforeWrite() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
-                .rollCycle(RollCycles.TEST2_DAILY)
+                .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1744,7 +1741,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testForwardFollowedBackBackwardTailer() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
-                .rollCycle(RollCycles.TEST2_DAILY)
+                .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1817,7 +1814,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
-            final long nextIndexToWrite = chronicle.nextIndexToWrite();
+            final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
 //            System.out.println(chronicle.dump());
             Assert.assertEquals(nextIndexToWrite,
@@ -1829,7 +1826,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testZeroLengthMessage() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
-                .rollCycle(RollCycles.TEST_DAILY)
+                .rollCycle(TEST_DAILY)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1866,10 +1863,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     sync.writeBytes(documentContext.index(), documentContext.wire().bytes());
                 }
-
-                final long index = syncQ.nextIndexToWrite();
-                assertTrue(tailer.moveToIndex(index));
-
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     String text = documentContext.wire().read().text();
                     Assert.assertEquals("world1", text);
@@ -1939,24 +1932,33 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @Ignore
     @Test
-    public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException,
-            InterruptedException {
+    public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .build()) {
+        for (; ; ) {
+            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(this.wireType) //.rollCycle(TEST_DAILY)
+                    .build()) {
 
-            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
 
-            int size = 100_000;
+                int size = 100;
 
-            IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
-            ExcerptTailer tailer = q.createTailer();
-            for (int i = 0; i < size; i++) {
-                try (DocumentContext dc = tailer.readingDocument(false)) {
-                    Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+                IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
+                ExcerptTailer tailer = q.createTailer();
+                for (int i = 0; i < size; i++) {
+                    try (DocumentContext dc = tailer.readingDocument(false)) {
+
+                        long index = dc.index();
+                        long actual = dc.wire().read(() -> "key").int64(index);
+                        Assert.assertEquals(index, actual);
+                    }
                 }
+
+                System.out.println(".");
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
         }
@@ -1965,9 +1967,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
+
             long index = dc.index();
             dc.wire().write("key").int64(index);
+
             lastPosition.set(dc.wire().bytes().writePosition());
+
             lastIndex.set(dc.index());
         }
 

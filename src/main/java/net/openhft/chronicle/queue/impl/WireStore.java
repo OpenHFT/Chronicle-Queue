@@ -55,6 +55,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * Reverse look up an index for a position.
      *
+     * @param wire the wire of the bytes, to work with
      * @param position  of the start of the message
      * @param timeoutMS
      * @return index in this store.
@@ -67,7 +68,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long lastAcknowledgedIndexReplicated();
 
-    void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException;
+    void setPositionForSequenceNumber(final Wire wire, long sequenceNumber, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 

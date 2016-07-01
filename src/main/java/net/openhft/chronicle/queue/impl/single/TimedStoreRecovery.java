@@ -25,7 +25,7 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
     @UsedViaReflection
     public TimedStoreRecovery(WireIn in) {
-        timeStamp = in.read(() -> "timeStamp").int64ForBinding(null);
+        timeStamp = in.read(() -> "timeStamp").int64ForBinding(in.newLongReference());
     }
 
     public TimedStoreRecovery(WireType wireType) {

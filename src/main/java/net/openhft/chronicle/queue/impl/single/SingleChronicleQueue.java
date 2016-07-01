@@ -137,7 +137,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             long firstIndex = firstIndex();
             writer.append("# firstIndex: ").append(Long.toHexString(firstIndex)).append("\n");
-            writer.append("# nextToWrite: ").append(Long.toHexString(nextIndexToWrite())).append("\n");
             ExcerptTailer tailer = createTailer();
             if (!tailer.moveToIndex(fromIndex)) {
                 if (firstIndex > fromIndex) {
@@ -311,34 +310,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public long nextIndexToWrite() {
-
-        final int lastCycle = lastCycle();
-        if (lastCycle == Integer.MIN_VALUE)
-            return rollCycle.toIndex(rollCycle.current(time, epoch), 0L);
-
-        WireStore store = storeForCycle(lastCycle, epoch, false);
-        if (store == null)
-            return Long.MIN_VALUE;
-
-        final long position = store.writePosition();
-        return indexFromPosition(lastCycle, store, position);
-    }
-
-    @Override
-    public long indexFromPosition(int cycle, WireStore store, final long position) {
-
-        final Wire wire = wireType().apply(store.bytes());
-        long sequenceNumber = 0;
-        try {
-            sequenceNumber = store.sequenceForPosition(wire, position, 0);
-        } catch (EOFException | StreamCorruptedException e) {
-            throw new AssertionError(e);
-        }
-
-        return rollCycle.toIndex(cycle, sequenceNumber);
-    }
-
     public int lastCycle() {
         int lastCycle = Integer.MIN_VALUE;
 
@@ -409,7 +380,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
             assert wire.startUse();
             wire.pauser(pauserSupplier.get());
-            wire.headerNumber(rollCycle.toIndex(cycle, 0));
+            wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
             WireStore wireStore;
             if (wire.writeFirstHeader()) {

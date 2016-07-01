@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
@@ -88,20 +87,6 @@ public interface ChronicleQueue extends Closeable {
      * @return the lowest valid index available, or Long.MAX_VALUE if none are found
      */
     long firstIndex();
-
-    /**
-     * @return the index of next index to be written if roll doesn't occur. Or Long.MIN_VALUE if
-     * none available.
-     *
-     * The lowest 40bits of the index refers to the sequence number with the cycle, giving a maximum
-     * of 1099511627776 excerpt per cycle. Each cycle has its own file. Each file holds its own
-     * index. You can discard the old files ( if they are no longer used ). The other highest 24
-     * bits  of the index are used for the cycle number (this equates to the filename), giving a
-     * maximum  of 16777216 cycles ( aka files )
-     */
-    long nextIndexToWrite();
-
-    long indexFromPosition(int cycle, WireStore store, long position);
 
     /**
      * @return the type of wire used, for example WireTypes.TEXT or WireTypes.BINARY

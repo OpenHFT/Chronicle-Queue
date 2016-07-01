@@ -33,8 +33,6 @@ public class LastIndexAppendedTest {
 
                     documentContext.wire().write().text("hello world");
                 }
-                final long lastIndex = queue.nextIndexToWrite();
-                assertEquals(expectedIndex + 1, lastIndex);
 
                 assertEquals(expectedIndex, appender.lastIndexAppended());
             }

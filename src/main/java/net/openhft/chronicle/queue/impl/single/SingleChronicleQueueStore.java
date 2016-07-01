@@ -30,8 +30,6 @@ import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.File;
@@ -41,7 +39,6 @@ import java.util.concurrent.TimeoutException;
 
 class SingleChronicleQueueStore implements WireStore {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueStore.class);
 
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
@@ -50,8 +47,6 @@ class SingleChronicleQueueStore implements WireStore {
 
     @NotNull
     final SCQIndexing indexing;
-    @NotNull
-    private final WireIn wire;
     @NotNull
     private final WireType wireType;
     @NotNull
@@ -76,11 +71,10 @@ class SingleChronicleQueueStore implements WireStore {
     private SingleChronicleQueueStore(WireIn wire) {
         assert wire.startUse();
         try {
-            this.wire = wire;
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
             assert wireType != null;
             this.writePosition = wire.newLongReference();
-            this.wire.read(MetaDataField.writePosition).int64(writePosition);
+            wire.read(MetaDataField.writePosition).int64(writePosition);
             this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
             this.mappedBytes = (MappedBytes) (wire.bytes());
@@ -126,7 +120,6 @@ class SingleChronicleQueueStore implements WireStore {
                               StoreRecovery recovery) {
         this.recovery = recovery;
         this.roll = new SCQRoll(rollCycle, epoch);
-        this.wire = null;
         this.wireType = wireType;
         this.mappedBytes = mappedBytes;
         this.mappedFile = mappedBytes.mappedFile();
@@ -241,17 +234,11 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long sequenceForPosition(Wire wire, final long position, long timeoutMS) throws
+    public long sequenceForPosition(final Wire wire, final long position, long timeoutMS) throws
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-        final Bytes<?> bytes = wire.bytes();
-        long position0 = bytes.readPosition();
-        long remaining0 = bytes.readRemaining();
-        try {
-            return indexing.sequenceForPosition(recovery, wire, position, timeoutMS);
-        } finally {
-            bytes.readPositionRemaining(position0, remaining0);
-        }
+        return indexing.sequenceForPosition(recovery, wire, position, timeoutMS);
     }
+
 
     @Override
     public String toString() {
@@ -289,7 +276,8 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    public void setPositionForSequenceNumber(final Wire wire, long sequenceNumber,
+                                             long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
         final Bytes<?> bytes = wire.bytes();
         if (position < 0 || position > bytes.capacity())
             throw new IllegalArgumentException("position: " + position);
@@ -297,7 +285,9 @@ class SingleChronicleQueueStore implements WireStore {
         final long readPosition = bytes.readPosition();
         final long readRemaining = bytes.readRemaining();
         try {
-            indexing.setPositionForIndex(recovery, wire, index, position, timeoutMS);
+
+            indexing.setPositionForSequenceNumber(recovery, wire, sequenceNumber, position,
+                    timeoutMS);
 
         } catch (EOFException ignored) {
             // todo unable to add an index to a rolled store.

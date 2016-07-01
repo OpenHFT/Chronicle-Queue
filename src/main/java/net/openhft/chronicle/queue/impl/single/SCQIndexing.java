@@ -1,3 +1,4 @@
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Byteable;
@@ -327,7 +328,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                         return ScanResult.FOUND;
                     if (bytes.readPosition() > end)
                         return ScanResult.NOT_REACHED;
-                    bytes.readSkip(Wires.lengthOf(bytes.readInt()));
+                    int header = bytes.readInt();
+                    if (Wires.isNotComplete(header))
+                        return ScanResult.NOT_REACHED;
+                    bytes.readSkip(Wires.lengthOf(header));
                     continue;
                 }
             } catch (EOFException fallback) {
@@ -341,115 +345,257 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                               final long toPosition,
                               final long fromKnownIndex,
                               final long knownAddress) throws EOFException {
-        @NotNull
-        final Bytes<?> bytes = wire.bytes();
+        assert toPosition >= 0;
+        long rl = wire.bytes().readLimit();
+        long wl = wire.bytes().writeLimit();
+        wire.bytes()
+                .writeLimit(wire.bytes().capacity())
+                .readLimit(wire.bytes().capacity());
 
-        bytes.readLimit(writePosition.getValue()).readPosition(knownAddress);
-        long i = fromKnownIndex;
-        while (bytes.readPosition() < toPosition) {
-            WireIn.HeaderType headerType = wire.readDataHeader(true);
+        try {
+            @NotNull
+            final Bytes<?> bytes = wire.bytes();
 
-            int header = bytes.readVolatileInt();
-            bytes.readSkip(Wires.lengthOf(header));
+            bytes.readPosition(knownAddress);
+            long i = fromKnownIndex;
+            while (bytes.readPosition() < toPosition) {
+                WireIn.HeaderType headerType = wire.readDataHeader(true);
 
-            switch (headerType) {
-                case NONE:
-                    if (toPosition == Long.MAX_VALUE)
-                        return i < 0 ? i : i - 1;
-                    long pos = bytes.readPosition();
-                    if (toPosition == pos)
-                        return i;
-                    throw new EOFException("toPosition=" + toPosition + ",pos=" + pos);
-                case META_DATA:
-                    break;
-                case DATA:
-                    ++i;
-                    break;
+                switch (headerType) {
+                    case NONE:
+                        if (toPosition == Long.MAX_VALUE)
+                            return i < 0 ? i : i - 1;
+                        long pos = bytes.readPosition();
+                        if (toPosition == pos)
+                            return i;
+                        throw new EOFException("toPosition=" + toPosition + ",pos=" + pos);
+                    case META_DATA:
+                        break;
+                    case DATA:
+                        ++i;
+                        break;
+                }
+
+                int header = bytes.readVolatileInt();
+                int len = Wires.lengthOf(header);
+                assert Wires.isReady(header);
+                bytes.readSkip(len);
             }
-        }
-        if (bytes.readPosition() == toPosition)
-            return i;
 
-        throw new IllegalArgumentException("position not the start of a message");
+            if (bytes.readPosition() == toPosition)
+                return i;
+
+            throw new IllegalArgumentException("position not the start of a message, bytes" +
+                    ".readPosition()=" + bytes.readPosition() + ",toPosition=" + toPosition);
+        } finally {
+            wire.bytes().writeLimit(wl).readLimit(rl);
+        }
     }
 
-    LongArrayValues getIndex2index(StoreRecovery recovery, Wire wire, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+
+    LongArrayValues getIndex2index(StoreRecovery recovery, Wire wire, long timeoutMS) throws
+            EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+
+
         LongArrayValues values = index2indexArray.get();
         if (((Byteable) values).bytesStore() != null || timeoutMS == 0)
             return values;
         final long indexToIndex0 = indexToIndex(recovery, wire, timeoutMS);
-        wire.bytes().readLimit(wire.bytes().capacity());
-        try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
-            if (!context.isPresent() || !context.isMetaData()) {
-                SingleChronicleQueueStore.dumpStore(wire);
-                throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
-            }
 
-            return array(wire, values, true);
-        }
-    }
-
-    public long sequenceForPosition(StoreRecovery recovery, Wire wire, final long position, long
-            timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-        // find the index2index
-        final LongArrayValues index2indexArr = getIndex2index(recovery, wire, timeoutMS);
-        long lastKnownAddress = 0;
-        long lastKnownIndex = 0;
-        if (((Byteable) index2indexArr).bytesStore() == null)
-            return linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
-        final LongArrayValues indexArr = indexArray.get();
-        Bytes<?> bytes = wire.bytes();
-        for (int index2 = 0; index2 < indexCount; index2++) {
-            long secondaryAddress = getSecondaryAddress(recovery, wire, timeoutMS, index2indexArr, index2);
-
-            bytes.readLimit(bytes.capacity());
-            try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
-                if (!context.isPresent() || !context.isMetaData())
-                    throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
-
-                @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
-                // check the last one first.
-                long posN = array1.getValueAt(indexCount - 1);
-                if (posN > 0 && posN < position) {
-                    lastKnownAddress = posN;
-                    lastKnownIndex = ((index2 + 1L << indexCountBits) - 1) << indexSpacingBits;
+        for (; ; ) {
+            long rl = wire.bytes().readLimit();
+            long wl = wire.bytes().writeLimit();
+            wire.bytes().writeLimit(wire.bytes().capacity()).readLimit(wire.bytes()
+                    .capacity());
+            try (DocumentContext context = wire.readingDocument(indexToIndex0)) {
+                if (!context.isPresent() || !context.isMetaData()) {
+                    wire.pauser().pause();
                     continue;
                 }
 
-                // otherwise we need to scan the current entries.
-                for (int index1 = 0; index1 < indexCount; index1++) {
-                    long pos = array1.getValueAt(index1);
-                    if (pos != 0 && pos <= position) {
-                        lastKnownAddress = pos;
-                        lastKnownIndex = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
-                        continue;
-                    }
-                    ScanResult scanResult;
-                    long nextIndex;
-                    if (lastKnownIndex < 0) {
-                        scanResult = firstScan(wire);
-                        nextIndex = 0;
-                    } else {
-                        nextIndex = lastKnownIndex + indexSpacing;
-                        scanResult = linearScan(wire, nextIndex, lastKnownIndex, lastKnownAddress);
-                    }
-                    if (scanResult == ScanResult.FOUND) {
-                        long nextPosition = bytes.readPosition();
-                        array1.setOrderedValueAt(index1, nextPosition);
-                        array1.setMaxUsed(index1 + 1);
-
-                        if (nextPosition == position) {
-                            nextEntryToIndex.setMaxValue(nextIndex + 1);
-                            return nextIndex;
-                        }
-                    }
-                    long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
-                    nextEntryToIndex.setMaxValue(ret + 1);
-                    return ret;
-                }
+                return array(wire, values, true);
+            } finally {
+                wire.bytes().writeLimit(wl).readLimit(rl);
             }
         }
-        throw new AssertionError();
+    }
+
+    private long sequenceForPositionCreateIndex(@NotNull StoreRecovery recovery,
+                                                @NotNull Wire wire,
+                                                final long position,
+                                                final long timeoutMS) throws EOFException,
+            UnrecoverableTimeoutException, StreamCorruptedException {
+        // synchronized (lock) {
+        // find the index2index
+
+        long rl = wire.bytes().readLimit();
+        long wl = wire.bytes().writeLimit();
+        wire.bytes().writeLimit(wire.bytes().capacity()).readLimit(wire.bytes()
+                .capacity());
+
+        try {
+            final LongArrayValues index2indexArr = getIndex2index(recovery, wire, timeoutMS);
+            long lastKnownAddress = 0;
+            long lastKnownIndex = 0;
+            if (((Byteable) index2indexArr).bytesStore() == null)
+                return linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+            final LongArrayValues indexArr = indexArray.get();
+
+
+            Outer:
+            for (int index2 = 0; index2 < indexCount; index2++) {
+                long secondaryAddress = getSecondaryAddress(recovery, wire, timeoutMS, index2indexArr, index2);
+
+                for (; ; ) {
+
+                    long rl0 = wire.bytes().readLimit();
+                    long wl0 = wire.bytes().writeLimit();
+                    wire.bytes().writeLimit(wire.bytes().capacity()).readLimit(wire.bytes()
+                            .capacity());
+                    try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                        if (!context.isPresent() || !context.isMetaData()) {
+                            wire.pauser().pause();
+                            continue;
+                        }
+
+                        @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
+                        // check the last one first.
+                        long posN = array1.getValueAt(indexCount - 1);
+                        if (posN > 0 && posN < position) {
+                            lastKnownAddress = posN;
+                            lastKnownIndex = ((index2 + 1L << indexCountBits) - 1) << indexSpacingBits;
+                            continue Outer;
+                        }
+
+                        // otherwise we need to scan the current entries.
+                        for (int index1 = 0; index1 < indexCount; index1++) {
+                            long pos = array1.getValueAt(index1);
+                            if (pos != 0 && pos <= position) {
+                                lastKnownAddress = pos;
+                                lastKnownIndex = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
+
+                                if (lastKnownAddress == position)
+                                    return lastKnownIndex;
+                                else
+                                    continue;
+                            }
+
+                            long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+                            nextEntryToIndex.setMaxValue(ret);
+                            return ret;
+                        }
+                    } finally {
+                        wire.bytes().writeLimit(wl0).readLimit(rl0);
+                    }
+                    continue Outer;
+                }
+            }
+
+
+            throw new AssertionError("position=" + position);
+        } finally {
+            wire.bytes().writeLimit(wl).readLimit(rl);
+        }
+    }
+
+    long sequenceForPosition(@NotNull StoreRecovery recovery,
+                             @NotNull Wire wire,
+                             final long position,
+                             final long timeoutMS) throws EOFException, StreamCorruptedException {
+
+        if (((AbstractWire) wire).isInsideHeader())
+            return sequenceForPositionDontCreateIndex(recovery, wire, position, timeoutMS);
+
+        return sequenceForPositionCreateIndex(recovery, wire, position, timeoutMS);
+
+    }
+
+
+    private long sequenceForPositionDontCreateIndex(@NotNull StoreRecovery recovery,
+                                                    @NotNull Wire wire,
+                                                    final long position,
+                                                    final long timeoutMS) throws EOFException,
+            UnrecoverableTimeoutException, StreamCorruptedException {
+
+        long rl = wire.bytes().readLimit();
+        long wl = wire.bytes().writeLimit();
+        wire.bytes().writeLimit(wire.bytes().capacity()).readLimit(wire.bytes()
+                .capacity());
+
+        try {
+
+            if (((Byteable) this.index2Index).bytesStore() == null)
+                return linearScanByPosition(wire, position, 0, 0);
+
+            long volatileValue = this.index2Index.getVolatileValue();
+            if (volatileValue == NOT_INITIALIZED)
+                return linearScanByPosition(wire, position, 0, 0);
+
+            final LongArrayValues index2indexArr = getIndex2index(recovery, wire, timeoutMS);
+
+
+            long lastKnownAddress = 0;
+            long lastKnownIndex = 0;
+            if (((Byteable) index2indexArr).bytesStore() == null)
+                return linearScanByPosition(wire, position, 0, 0);
+
+            final LongArrayValues indexArr = indexArray.get();
+
+
+            Outer:
+            for (int index2 = 0; index2 < indexCount; index2++) {
+                long secondaryAddress = index2indexArr.getValueAt(index2);
+                if (secondaryAddress == NOT_INITIALIZED || secondaryAddress == -1)
+                    return linearScanByPosition(wire, position, 0, 0);
+
+                for (; ; ) {
+
+                    long rl0 = wire.bytes().readLimit();
+                    long wl0 = wire.bytes().writeLimit();
+                    wire.bytes().writeLimit(wire.bytes().capacity()).readLimit(wire.bytes()
+                            .capacity());
+                    try (DocumentContext context = wire.readingDocument(secondaryAddress)) {
+                        if (!context.isPresent() || !context.isMetaData()) {
+                            wire.pauser().pause();
+                            continue;
+                        }
+
+                        @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
+                        // check the last one first.
+                        long posN = array1.getValueAt(indexCount - 1);
+                        if (posN > 0 && posN < position) {
+                            lastKnownAddress = posN;
+                            lastKnownIndex = ((index2 + 1L << indexCountBits) - 1) << indexSpacingBits;
+                            continue Outer;
+                        }
+
+                        // otherwise we need to scan the current entries.
+                        for (int index1 = 0; index1 < indexCount; index1++) {
+                            long pos = array1.getValueAt(index1);
+                            if (pos != 0 && pos <= position) {
+                                lastKnownAddress = pos;
+                                lastKnownIndex = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
+
+                                if (lastKnownAddress == position)
+                                    return lastKnownIndex;
+                                else
+                                    continue;
+                            }
+
+                            long ret = linearScanByPosition(wire, position, lastKnownIndex, lastKnownAddress);
+                            nextEntryToIndex.setMaxValue(ret);
+                            return ret;
+                        }
+                    } finally {
+                        wire.bytes().writeLimit(wl0).readLimit(rl0);
+                    }
+                    continue Outer;
+                }
+            }
+            throw new AssertionError("position=" + position);
+        } finally {
+            wire.bytes().writeLimit(wl).readLimit(rl);
+        }
     }
 
     long getSecondaryAddress(StoreRecovery recovery, Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
@@ -497,24 +643,29 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return secondaryAddress;
     }
 
-    @NotNull
-    private ScanResult firstScan(Wire wire) {
-        try {
-            wire.bytes().readPosition(0);
-            return wire.readDataHeader() ? ScanResult.FOUND : ScanResult.NOT_REACHED;
-        } catch (EOFException fallback) {
-            return ScanResult.NOT_FOUND;
-        }
-    }
 
-    void setPositionForIndex(StoreRecovery recovery, Wire wire, long index, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-//        assert index == linearScanByPosition(wire, position, 0, 0);
-//        System.out.println("index: " + index + " position: " + position);
+    /**
+     * add an entry to the sequenceNumber, so stores the position of an sequenceNumber
+     *
+     * @param recovery       the store
+     * @param wire           the wire that used to store the data
+     * @param sequenceNumber the sequenceNumber that the data will be stored to
+     * @param position       the position the data is at
+     * @param timeoutMS      how to to try to store the data for, before throwing a timeout
+     *                       exception
+     * @throws EOFException
+     * @throws UnrecoverableTimeoutException
+     * @throws StreamCorruptedException
+     */
+    void setPositionForSequenceNumber(StoreRecovery recovery,
+                                      Wire wire,
+                                      long sequenceNumber,
+                                      long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
-        if ((index & indexSpacingBits) != 0) {
-            assert false;
+        // only say for example index every 0,15,31st entry
+        if ((sequenceNumber & (indexSpacing - 1)) != 0)
             return;
-        }
+
         if (position > wire.bytes().capacity())
             throw new IllegalArgumentException("pos: " + position);
 
@@ -527,9 +678,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
         final LongArrayValues indexArr = indexArray.get();
         Bytes<?> bytes = wire.bytes();
-        int index2 = (int) (index >>> (indexCountBits + indexSpacingBits));
+        int index2 = (int) ((sequenceNumber) >>> (indexCountBits + indexSpacingBits));
         if (index2 >= indexCount) {
-            throw new IllegalStateException("Unable to index " + index);
+            throw new IllegalStateException("Unable to index " + sequenceNumber);
         }
         long secondaryAddress = getSecondaryAddress(recovery, wire, timeoutMS, index2indexArr, index2);
         if (secondaryAddress > bytes.capacity())
@@ -540,16 +691,15 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 throw new IllegalStateException("document present=" + context.isPresent() + ", metaData=" + context.isMetaData());
 
             @NotNull final LongArrayValues array1 = array(wire, indexArr, false);
-            int index3 = (int) ((index >>> indexSpacingBits) & (indexCount - 1));
+            int index3 = (int) ((sequenceNumber >>> indexSpacingBits) & (indexCount - 1));
 
             // check the last one first.
             long posN = array1.getValueAt(index3);
             if (posN == 0) {
                 array1.setValueAt(index3, position);
+                array1.setMaxUsed(index3 + 1);
             } else {
-                if (posN != position)
-                    System.out.println("posN: " + posN + " position: " + position);
-//                    assert posN == position;
+                assert posN == position;
             }
         }
     }

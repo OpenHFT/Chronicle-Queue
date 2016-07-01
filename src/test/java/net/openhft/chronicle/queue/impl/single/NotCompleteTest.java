@@ -115,7 +115,7 @@ public class NotCompleteTest {
         }
     }
 
-    @Test
+    @Test(expected = AssertionError.class)
     public void testMessageLeftNotComplete()
             throws TimeoutException, ExecutionException, InterruptedException {
 
@@ -128,7 +128,6 @@ public class NotCompleteTest {
             dc.wire().write("some").text("data");
             // didn't call dc.close();
 
-//            System.out.println(queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).build()) {
@@ -146,15 +145,6 @@ public class NotCompleteTest {
                 dc.wire().write("some").text("data");
             }
 
-//            System.out.println(queue.dump());
-        }
-
-        try (final ChronicleQueue queue = binary(tmpDir).build()) {
-            ExcerptTailer tailer = queue.createTailer();
-
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals("data", dc.wire().read(() -> "some").text());
-            }
         }
     }
 }
