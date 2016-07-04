@@ -471,6 +471,7 @@ public class SingleChronicleQueueExcerpts {
             public void close() {
                 boolean isClosed = false;
                 try {
+
                     assert wire.bytes().writePosition() >= position;
 
                     if (wire == StoreAppender.this.wire) {
