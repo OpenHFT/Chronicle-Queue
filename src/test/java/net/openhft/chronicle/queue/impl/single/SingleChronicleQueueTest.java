@@ -32,10 +32,9 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.StreamCorruptedException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
@@ -1961,6 +1960,54 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
         }
+    }
+
+
+    @Test
+    public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle);
+        final RollingChronicleQueue queue = builder.build();
+        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptTailer tailer = queue.createTailer();
+
+        final List<String> stringsToPut = Arrays.asList("one", "two", "three");
+
+
+        // writes two strings immediately and one string with 2 seconds delay
+        {
+            try (DocumentContext writingContext = appender.writingDocument()) {
+                writingContext.wire()
+                        .write().bytes(stringsToPut.get(0).getBytes());
+            }
+            try (DocumentContext writingContext = appender.writingDocument()) {
+                writingContext.wire()
+                        .write().bytes(stringsToPut.get(1).getBytes());
+            }
+            Thread.sleep(2000);
+            try (DocumentContext writingContext = appender.writingDocument()) {
+                writingContext.wire().write().bytes(stringsToPut.get(2).getBytes());
+            }
+        }
+
+        System.out.println(queue.dump());
+
+        for (String expected : stringsToPut) {
+            try (DocumentContext readingContext = tailer.readingDocument()) {
+                if (!readingContext.isPresent())
+                    Assert.fail();
+                String text = readingContext.wire().read().text();
+                System.out.println("read=" + text);
+                Assert.assertEquals(expected, text);
+
+            }
+        }
+
+
     }
 
 
