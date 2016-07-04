@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -500,30 +501,18 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
 
-            private long headerNumber() {
-                if (wire.headerNumber() == Long.MIN_VALUE)
-                    try {
-                        long headerNumber = store.sequenceForPosition(wire, position, 0);
-
-                        wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber));
-                    } catch (Exception e) {
-                        Jvm.rethrow(e);
-                    }
-
-                return wire.headerNumber();
-            }
-
             @Override
-            public long index() {
+            public long index() throws IORuntimeException {
                 if (wire.headerNumber() == Long.MIN_VALUE) {
                     try {
                         long headerNumber0 = queue.rollCycle().toIndex(cycle, store
                                 .sequenceForPosition(wire, position, 0));
                         assert (((AbstractWire) wire).isInsideHeader());
                         wire.headerNumber(headerNumber0 - 1);
-                    } catch (Exception e) {
-                        Jvm.rethrow(e);
+                    } catch (IOException e) {
+                        throw new IORuntimeException(e);
                     }
+
                 }
 
                 return isMetaData() ? wire.headerNumber() : wire.headerNumber() + 1;
@@ -759,14 +748,16 @@ public class SingleChronicleQueueExcerpts {
                 return this;
 
             if (direction != TailerDirection.FORWARD &&
-                    queue.rollCycle().toSequenceNumber(index + 1) != 0) {
+                    queue.rollCycle().toSequenceNumber(index) != 0) {
                 index--;
             }
             if (moveToIndexResult(index) == ScanResult.NOT_REACHED) {
-                Jvm.warn().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index) + " for toEnd()");
+
                 if (moveToIndexResult(index - 1) == ScanResult.NOT_REACHED)
-                    Jvm.warn().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index - 1) + " for toEnd()");
+                    Jvm.debug().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index - 1)
+                            + " for toEnd()");
             }
+
             return this;
         }
 
