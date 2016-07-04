@@ -48,13 +48,13 @@ import java.nio.charset.StandardCharsets;
  * portion of memory and then put/fetch/update records using the {@link ChronicleQueue}
  * interface.</p>
  *
- * <p>{@link Excerpt} is the main data container in a {@link ChronicleQueue}, each Chronicle is
+ * <p>{@link ExcerptCommon} is the main data container in a {@link ChronicleQueue}, each Chronicle is
  * composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into it
  * and finishing the Excerpt at the upper.</p>
  *
- * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
+ * <p>While {@link ExcerptCommon} is a generic purpose container allowing for remote access, it also has
  * more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
- * net.openhft.chronicle.queue.ExcerptAppender}</p>
+ * ExcerptAppender}</p>
  *
  * @author peter.lawrey
  */
@@ -131,5 +131,5 @@ public interface ChronicleQueue extends Closeable {
 
     int sourceId();
 
-    RollCycle rollcycle();
+    RollCycle rollCycle();
 }

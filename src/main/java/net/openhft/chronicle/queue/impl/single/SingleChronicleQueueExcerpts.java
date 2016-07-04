@@ -78,6 +78,12 @@ public class SingleChronicleQueueExcerpts {
             context = new StoreAppenderContext();
         }
 
+        void lastIndex(long index) {
+            if (index == Long.MIN_VALUE)
+                Thread.yield();
+            this.lastIndex = index;
+        }
+
         @Override
         public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
             this.lazyIndexing = lazyIndexing;
@@ -152,7 +158,6 @@ public class SingleChronicleQueueExcerpts {
             try {
                 for (int i = 0; i < 100; i++) {
                     try {
-
                         int cycle = queue.cycle();
                         if (this.cycle != cycle || wire == null) {
                             rollCycleTo(cycle);
@@ -210,6 +215,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
+            if (index < 0)
+                throw new IllegalArgumentException("index: " + index);
             if (bytes.isEmpty())
                 throw new UnsupportedOperationException("Cannot append a zero length message");
             assert checkAppendingThread();
@@ -221,11 +228,15 @@ public class SingleChronicleQueueExcerpts {
                 try {
 //                    wire.bytes().writePosition(store.writePosition());
                     int length = bytes.length();
+                    // sets the position
+                    wire.headerNumber(index);
                     position(store.writeHeader(wire, length, queue.timeoutMS));
                     wireBytes.write(bytes);
                     wire.updateHeader(length, position, false);
 
-                    lastIndex = wire.headerNumber();
+                    writeIndexForPosition(index, position, queue.timeoutMS);
+
+                    lastIndex(index);
                     lastPosition = position;
                     lastCycle = cycle;
                 } catch (EOFException theySeeMeRolling) {
@@ -234,7 +245,6 @@ public class SingleChronicleQueueExcerpts {
                         wire.updateHeader(0, position, false);
                     }
                 }
-
 
             } catch (UnrecoverableTimeoutException | StreamCorruptedException | EOFException e) {
                 throw Jvm.rethrow(e);
@@ -252,7 +262,10 @@ public class SingleChronicleQueueExcerpts {
             this.position = position;
         }
 
-        void moveToIndexForWrite(long index) throws EOFException {
+        // only called for writeBytes(long index, BytesStore)
+        private void moveToIndexForWrite(long index) throws EOFException {
+            if (wire != null && wire.headerNumber() == index)
+                return;
             int cycle = queue.rollCycle().toCycle(index);
 
             ScanResult scanResult = moveToIndex(cycle, queue.rollCycle().toSequenceNumber(index));
@@ -264,7 +277,6 @@ public class SingleChronicleQueueExcerpts {
                 case NOT_FOUND:
                     break;
             }
-
         }
 
         ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException, EOFException {
@@ -282,9 +294,11 @@ public class SingleChronicleQueueExcerpts {
             ScanResult scanResult = this.store.moveToIndexForRead(wire, sequenceNumber, queue.timeoutMS);
             Bytes<?> bytes = wire.bytes();
             if (scanResult == ScanResult.NOT_FOUND) {
-                wire.bytes().writePosition(wire.bytes().readPosition());
+                // so you won't read any if it ran out of data.
+                bytes.writePosition(bytes.readPosition());
                 return scanResult;
             }
+
             bytes.readLimit(bytes.readPosition());
             return scanResult;
         }
@@ -295,16 +309,19 @@ public class SingleChronicleQueueExcerpts {
             if (lastIndex != Long.MIN_VALUE)
                 return lastIndex;
 
-            if (lastPosition != Long.MIN_VALUE && wire != null) {
+            if (lastPosition == Long.MIN_VALUE || wire == null) {
 
-                try {
-                    return lastIndex = queue.rollCycle().toIndex(lastCycle, store.sequenceForPosition(wire, lastPosition, 0));
-                } catch (Exception e) {
-                    throw Jvm.rethrow(e);
-                }
+                throw new IllegalStateException("nothing has been appended, so there is no last index");
             }
 
-            throw new IllegalStateException("nothing has been appended, so there is no last index");
+            try {
+                long sequenceNumber = store.sequenceForPosition(wire, lastPosition, 0);
+                long index = queue.rollCycle().toIndex(lastCycle, sequenceNumber);
+                lastIndex(index);
+                return index;
+            } catch (Exception e) {
+                throw Jvm.rethrow(e);
+            }
         }
 
         @Override
@@ -334,7 +351,7 @@ public class SingleChronicleQueueExcerpts {
                     position(store.writeHeader(wire, length, queue.timeoutMS));
                     wireWriter.write(writer, wire);
                     wire.updateHeader(length, position, false);
-                    lastIndex = wire.headerNumber();
+                    lastIndex(wire.headerNumber());
                     lastPosition = position;
                     lastCycle = cycle;
                     store.writePosition(wire.bytes().writePosition());
@@ -479,7 +496,7 @@ public class SingleChronicleQueueExcerpts {
                         wire.updateHeader(position, metaData);
                         assert !((AbstractWire) wire).isInsideHeader();
 
-                        lastIndex = wire.headerNumber();
+                        lastIndex(wire.headerNumber());
                         lastPosition = position;
                         lastCycle = cycle;
 
@@ -487,10 +504,12 @@ public class SingleChronicleQueueExcerpts {
                             writeIndexForPosition(lastIndex, position, queue.timeoutMS);
 
                         store.writePosition(wire.bytes().writePosition());
+
                     } else {
                         isClosed = true;
                         assert resetAppendingThread();
                         writeBytes(wire.headerNumber(), wire.bytes());
+                        wire = StoreAppender.this.wire;
                     }
                 } catch (BufferUnderflowException bue) {
                     if (!wire.bytes().isClosed())
@@ -513,7 +532,6 @@ public class SingleChronicleQueueExcerpts {
                     } catch (IOException e) {
                         throw new IORuntimeException(e);
                     }
-
                 }
 
                 return isMetaData() ? wire.headerNumber() : wire.headerNumber() + 1;

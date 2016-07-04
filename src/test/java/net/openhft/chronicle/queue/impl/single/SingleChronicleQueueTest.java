@@ -698,7 +698,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -715,8 +715,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -741,7 +743,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -758,8 +760,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -784,7 +788,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -801,8 +805,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -827,7 +833,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -844,8 +850,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -870,7 +878,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -887,8 +895,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -913,7 +923,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 0\n" +
+                    "    lastIndex: 1\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -930,8 +940,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 448\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
-                    "  # length: 8, used: 0\n" +
-                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  544,\n" +
+                    "  554,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 544\n" +
                     "--- !!data #binary\n" +
@@ -1725,7 +1737,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptAppender appender = chronicle.acquireAppender();
             ExcerptTailer tailer = chronicle.createTailer();
 
-            int entries = chronicle.rollcycle().defaultIndexSpacing() * 2 + 2;
+            int entries = chronicle.rollCycle().defaultIndexSpacing() * 2 + 2;
 
             for (int i = 0; i < entries; i++) {
                 tailer.toEnd();
@@ -1746,7 +1758,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             ExcerptAppender appender = chronicle.acquireAppender();
 
-            int entries = chronicle.rollcycle().defaultIndexSpacing() + 2;
+            int entries = chronicle.rollCycle().defaultIndexSpacing() + 2;
 
             for (int i = 0; i < entries; i++) {
                 int finalI = i;
@@ -1918,14 +1930,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             for (int i = 0; i < indexCount; i++) {
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write("key").text("some more " + 1);
-                    Assert.assertEquals(i, q.rollcycle().toSequenceNumber(dc.index()));
+                    Assert.assertEquals(i, q.rollCycle().toSequenceNumber(dc.index()));
                 }
 
             }
 
             try (DocumentContext dc = appender2.writingDocument()) {
                 dc.wire().write("key").text("some data " + indexCount);
-                Assert.assertEquals(indexCount, q.rollcycle().toSequenceNumber(dc.index()));
+                Assert.assertEquals(indexCount, q.rollCycle().toSequenceNumber(dc.index()));
             }
 
         }

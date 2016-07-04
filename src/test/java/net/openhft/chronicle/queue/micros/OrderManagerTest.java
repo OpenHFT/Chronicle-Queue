@@ -193,7 +193,7 @@ public class OrderManagerTest {
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer()
                             .afterLastWritten(out);
-                    assertEquals(i, in.rollcycle().toSequenceNumber(tailer.index()));
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 

@@ -105,11 +105,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public RollCycle rollcycle() {
-        return rollCycle;
-    }
-
-    @Override
     public void clear() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
