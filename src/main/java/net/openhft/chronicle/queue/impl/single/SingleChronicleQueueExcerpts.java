@@ -742,11 +742,13 @@ public class SingleChronicleQueueExcerpts {
                 if (lastCycle == Integer.MIN_VALUE)
                     return rollCycle.toIndex(queue.cycle(), 0L);
 
-                this.store = queue.storeForCycle(lastCycle, queue.epoch(), false);
-
-                Wire wire = queue.wireType().apply(store.bytes());
+                WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                if (this.store != wireStore) {
+                    this.store = wireStore;
+                    this.context.wire((AbstractWire) queue.wireType().apply(store.bytes()));
+                }
                 final long position = store.writePosition();
-                long sequenceNumber = store.sequenceForPosition(wire, position, 0);
+                long sequenceNumber = store.sequenceForPosition(this.context.wire(), position, 0);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
             } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {
@@ -757,7 +759,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            this.index = approximateLastIndex();
+            long index = approximateLastIndex();
             if (direction == BACKWARD)
                 index--;
             moveToIndex(index);
