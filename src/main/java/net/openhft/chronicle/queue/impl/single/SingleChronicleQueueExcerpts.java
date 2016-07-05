@@ -38,6 +38,8 @@ import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.util.function.BiConsumer;
 
+import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
+
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
@@ -79,8 +81,6 @@ public class SingleChronicleQueueExcerpts {
         }
 
         void lastIndex(long index) {
-            if (index == Long.MIN_VALUE)
-                Thread.yield();
             this.lastIndex = index;
         }
 
@@ -490,7 +490,6 @@ public class SingleChronicleQueueExcerpts {
                 try {
 
 
-
                     if (wire == StoreAppender.this.wire) {
                         assert wire.bytes().writePosition() >= position;
                         wire.updateHeader(position, metaData);
@@ -666,9 +665,6 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public long index() {
             return index;
-         /*   if (this.store == null)
-                return Long.MIN_VALUE;*/
-            //return queue.rollCycle().toIndex(this.cycle, this.index);
         }
 
         @Override
@@ -716,7 +712,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public final ExcerptTailer toStart() {
-            assert direction != TailerDirection.BACKWARD;
+            assert direction != BACKWARD;
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
                 return this;
@@ -746,9 +742,7 @@ public class SingleChronicleQueueExcerpts {
                 if (lastCycle == Integer.MIN_VALUE)
                     return rollCycle.toIndex(queue.cycle(), 0L);
 
-                WireStore store = queue.storeForCycle(lastCycle, queue.epoch(), false);
-                if (store == null)
-                    return Long.MIN_VALUE;
+                this.store = queue.storeForCycle(lastCycle, queue.epoch(), false);
 
                 Wire wire = queue.wireType().apply(store.bytes());
                 final long position = store.writePosition();
@@ -764,6 +758,9 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptTailer toEnd() {
             this.index = approximateLastIndex();
+            if (direction == BACKWARD)
+                index--;
+            moveToIndex(index);
             return this;
         }
 
@@ -881,7 +878,7 @@ public class SingleChronicleQueueExcerpts {
             if (queue == this.queue)
                 throw new IllegalArgumentException("You must pass the queue written to, not the queue read");
             ExcerptTailer tailer = queue.createTailer()
-                    .direction(TailerDirection.BACKWARD)
+                    .direction(BACKWARD)
                     .toEnd();
             StringBuilder sb = new StringBuilder();
             VanillaMessageHistory veh = new VanillaMessageHistory();
