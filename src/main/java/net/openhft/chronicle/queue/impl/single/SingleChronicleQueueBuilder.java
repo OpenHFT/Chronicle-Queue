@@ -75,6 +75,7 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
                 .wireType(DEFAULT_ZERO_BINARY);
     }
 
+    @Deprecated
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
         return new SingleChronicleQueueBuilder(name)
