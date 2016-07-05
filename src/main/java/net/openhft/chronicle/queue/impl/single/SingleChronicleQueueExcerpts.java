@@ -489,10 +489,10 @@ public class SingleChronicleQueueExcerpts {
                 boolean isClosed = false;
                 try {
 
-                    assert wire.bytes().writePosition() >= position;
+
 
                     if (wire == StoreAppender.this.wire) {
-
+                        assert wire.bytes().writePosition() >= position;
                         wire.updateHeader(position, metaData);
                         assert !((AbstractWire) wire).isInsideHeader();
 
@@ -665,9 +665,10 @@ public class SingleChronicleQueueExcerpts {
          */
         @Override
         public long index() {
-            if (this.store == null)
-                return Long.MIN_VALUE;
-            return queue.rollCycle().toIndex(this.cycle, this.index);
+            return index;
+         /*   if (this.store == null)
+                return Long.MIN_VALUE;*/
+            //return queue.rollCycle().toIndex(this.cycle, this.index);
         }
 
         @Override
@@ -762,21 +763,7 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            long index = approximateLastIndex();
-            if (index == Long.MIN_VALUE)
-                return this;
-
-            if (direction != TailerDirection.FORWARD &&
-                    queue.rollCycle().toSequenceNumber(index) != 0) {
-                index--;
-            }
-            if (moveToIndexResult(index) == ScanResult.NOT_REACHED) {
-
-                if (moveToIndexResult(index - 1) == ScanResult.NOT_REACHED)
-                    Jvm.debug().on(getClass(), "Failed to moveToIndex(" + Long.toHexString(index - 1)
-                            + " for toEnd()");
-            }
-
+            this.index = approximateLastIndex();
             return this;
         }
 
