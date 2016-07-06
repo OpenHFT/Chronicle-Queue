@@ -742,7 +742,9 @@ public class SingleChronicleQueueExcerpts {
                 if (lastCycle == Integer.MIN_VALUE)
                     return rollCycle.toIndex(queue.cycle(), 0L);
 
-                WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                assert wireStore != null;
+
                 if (this.store != wireStore) {
                     this.store = wireStore;
                     this.context.wire((AbstractWire) queue.wireType().apply(store.bytes()));
@@ -760,9 +762,10 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public ExcerptTailer toEnd() {
             long index = approximateLastIndex();
-            if (direction == BACKWARD)
+            if (direction != TailerDirection.FORWARD)
                 index--;
-            moveToIndex(index);
+            if (index != Long.MIN_VALUE)
+                moveToIndex(index);
             return this;
         }
 

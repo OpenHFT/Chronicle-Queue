@@ -136,7 +136,7 @@ class SingleChronicleQueueStore implements WireStore {
     public static void dumpStore(Wire wire) {
         Bytes<?> bytes = wire.bytes();
         bytes.readPosition(0);
-        Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(bytes));
+        Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(wire));
     }
 
     @Override
