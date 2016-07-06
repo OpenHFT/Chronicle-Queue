@@ -479,10 +479,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     continue;
 
                 for (int index1 = used - 1; index1 >= 0; index1--) {
-                    long pos = indexValues.getValueAt(index1);
-                    assert pos > 0;
-
-                    if (pos > position) {
+                    long pos = indexValues.getVolatileValueAt(index1);
+                    // TODO pos shouldn't be 0, but holes in the index appear..
+                    if (pos == 0 || pos > position) {
                         continue;
                     }
                     lastKnownAddress = pos;
@@ -512,7 +511,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     long getSecondaryAddress1(StoreRecovery recovery, Wire wire, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, TimeoutException, UnrecoverableTimeoutException, StreamCorruptedException {
-        long secondaryAddress = index2indexArr.getValueAt(index2);
+        long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
             if (timeoutMS == 0)
                 return 0;
