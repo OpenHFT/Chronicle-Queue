@@ -38,8 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 class SingleChronicleQueueStore implements WireStore {
-
-
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQRoll.class, "Roll");
@@ -278,20 +276,27 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public void setPositionForSequenceNumber(final Wire wire, long sequenceNumber,
                                              long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
+        long nextSequence = indexing.nextEntryToBeIndexed();
+        if (nextSequence > sequenceNumber)
+            return;
+
+        assert !((AbstractWire) wire).isInsideHeader();
         final Bytes<?> bytes = wire.bytes();
         if (position < 0 || position > bytes.capacity())
             throw new IllegalArgumentException("position: " + position);
 
         final long readPosition = bytes.readPosition();
         final long readRemaining = bytes.readRemaining();
+        final long headerNumber = wire.headerNumber();
         try {
 
-            indexing.setPositionForSequenceNumber(recovery, wire, sequenceNumber, position,
-                    timeoutMS);
+            indexing.setPositionForSequenceNumber(recovery, wire,
+                    sequenceNumber, position, timeoutMS);
 
         } catch (EOFException ignored) {
             // todo unable to add an index to a rolled store.
         } finally {
+            wire.headerNumber(headerNumber);
             bytes.readPositionRemaining(readPosition, readRemaining);
         }
     }

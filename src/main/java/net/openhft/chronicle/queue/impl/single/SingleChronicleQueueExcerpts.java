@@ -145,7 +145,7 @@ public class SingleChronicleQueueExcerpts {
                     return;
 
                 final long headerNumber = store.sequenceForPosition(wire, position, queue.timeoutMS);
-                wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber) - 1);
+                wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
             } catch (BufferOverflowException | EOFException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
@@ -420,8 +420,6 @@ public class SingleChronicleQueueExcerpts {
         }
 
         void writeIndexForPosition(long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
-
-
             assert lazyIndexing || checkIndex(index, position, timeoutMS);
 
             if (!lazyIndexing) {
@@ -429,8 +427,6 @@ public class SingleChronicleQueueExcerpts {
                         queue.rollCycle().toSequenceNumber(index),
                         position, timeoutMS);
             }
-
-
         }
 
         boolean checkIndex(long index, long position, long timeoutMS) {
@@ -440,11 +436,12 @@ public class SingleChronicleQueueExcerpts {
 
                 if (seq1 != seq2) {
                     final long seq3 = ((SingleChronicleQueueStore) store).indexing.linearScanByPosition(wire, position, 0, 0);
+                    store.sequenceForPosition(wire, position, timeoutMS);
                     System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
                             " - " + Long.toHexString(seq3));
-                    store.sequenceForPosition(wire, position, timeoutMS);
 
                     assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
+                    assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
                 }
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
@@ -488,8 +485,6 @@ public class SingleChronicleQueueExcerpts {
             public void close() {
                 boolean isClosed = false;
                 try {
-
-
                     if (wire == StoreAppender.this.wire) {
                         assert wire.bytes().writePosition() >= position;
                         wire.updateHeader(position, metaData);
@@ -636,11 +631,13 @@ public class SingleChronicleQueueExcerpts {
                             break;
                     }
 
-                    if (!lazyIndexing && direction == TailerDirection.FORWARD && (index &
-                            indexSpacingMask) == 0 && !context.isMetaData())
-                        store.setPositionForSequenceNumber(context.wire(), queue.rollCycle()
-                                .toSequenceNumber(index), bytes
-                                .readPosition(), queue.timeoutMS);
+                    if (!lazyIndexing
+                            && direction == TailerDirection.FORWARD
+                            && (index & indexSpacingMask) == 0
+                            && !context.isMetaData())
+                        store.setPositionForSequenceNumber(context.wire(),
+                                queue.rollCycle().toSequenceNumber(index), bytes
+                                        .readPosition(), queue.timeoutMS);
                     context.closeReadLimit(bytes.capacity());
                     context.wire().readAndSetLength(bytes.readPosition());
                     long end = bytes.readLimit();
@@ -747,8 +744,9 @@ public class SingleChronicleQueueExcerpts {
                     this.store = wireStore;
                     this.context.wire((AbstractWire) queue.wireType().apply(store.bytes()));
                 }
-                final long position = store.writePosition();
-                long sequenceNumber = store.sequenceForPosition(this.context.wire(), position, 0);
+                // give the position of the last entry and
+                // flag we want to count it even though we don't know if it will be meta data or not.
+                long sequenceNumber = store.sequenceForPosition(this.context.wire(), Long.MAX_VALUE, 0);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
             } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {

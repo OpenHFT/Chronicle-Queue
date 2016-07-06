@@ -391,7 +391,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -436,7 +436,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -481,7 +481,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -526,7 +526,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -571,7 +571,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -616,7 +616,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -705,7 +705,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -750,7 +750,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -795,7 +795,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -840,7 +840,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -885,7 +885,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -930,7 +930,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
                     "    index2Index: 344,\n" +
-                    "    lastIndex: 1\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: 0,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -1111,9 +1111,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
             }
 
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isMetaData());
-                dc.wire().read(() -> "FirstName").text("Steve", Assert::assertEquals);
+            while (true) {
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isMetaData());
+                    ValueIn in = dc.wire().read(event);
+                    if (!StringUtils.isEqual(event, "FirstName"))
+                        continue;
+
+                    in.text("Steve", Assert::assertEquals);
+                    break;
+                }
             }
         }
     }
@@ -1715,12 +1722,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isData());
+                assertTrue(dc.isPresent());
                 dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
             }
 
-            try (DocumentContext dc = tailer.readingDocument(true)) {
-                assertTrue(dc.isMetaData());
-                dc.wire().read(() -> "FirstName").text("Steve", Assert::assertEquals);
+            while (true) {
+                try (DocumentContext dc = tailer.readingDocument(true)) {
+                    assertTrue(dc.isMetaData());
+                    ValueIn in = dc.wire().read(event);
+                    if (!StringUtils.isEqual(event, "FirstName"))
+                        continue;
+
+                    in.text("Steve", Assert::assertEquals);
+                    break;
+                }
             }
         }
     }
@@ -1751,6 +1766,30 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 int finalI = i;
                 appender.writeDocument(w -> w.writeEventName("hello").text("world" + finalI));
                 tailer.readDocument(w -> w.read().text("world" + finalI, Assert::assertEquals));
+            }
+        }
+    }
+
+    @Test
+    public void testSomeMessages() {
+        File tmpDir = getTmpDir();
+        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+                .rollCycle(TEST2_DAILY)
+                .wireType(this.wireType)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.acquireAppender();
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            int entries = chronicle.rollCycle().defaultIndexSpacing() * 2 + 2;
+
+            for (long i = 0; i < entries; i++) {
+                long finalI = i;
+                appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
+                long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
+                assertEquals(i, seq);
+                System.out.println(chronicle.dump());
+                tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> Assert.assertEquals((long) a, b)));
             }
         }
     }
@@ -1998,7 +2037,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
 
-                int size = 2_000_000;
+                int size = 2_00_000;
 
                 IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
