@@ -19,6 +19,7 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -57,6 +58,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     //
     // *************************************************************************
     private ThreadDump threadDump;
+    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     /**
      * @param wireType the type of wire
@@ -75,13 +77,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Before
-    public void threadDump() {
+    public void before() {
         threadDump = new ThreadDump();
+        exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
     @After
-    public void checkThreadDump() {
+    public void after() {
         threadDump.assertNoNewThreads();
+
+        Jvm.dumpException(exceptionKeyIntegerMap);
+        Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
+        Jvm.resetExceptionHandlers();
     }
 
     @Test
@@ -1956,15 +1963,44 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
 
+
                 int size = 100;
 
                 IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
+
                 ExcerptTailer tailer = q.createTailer();
                 for (int i = 0; i < size; i++) {
                     try (DocumentContext dc = tailer.readingDocument(false)) {
                         Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
                     }
                 }
+
+                System.out.println(".");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+
+    @Test
+    public void testRandomConcurrentReadWrite() throws TimeoutException, ExecutionException,
+            InterruptedException {
+
+        for (int j = 0; j < 2; j++) {
+
+            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(this.wireType)
+                    .rollCycle(TEST_SECONDLY)
+                    .build()) {
+
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
+                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
+
+                int size = 2_000_000;
+
+                IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
                 System.out.println(".");
             } catch (Exception e) {
@@ -2023,6 +2059,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
+
+    private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt) {
+        if (Math.random() > 0.5)
+            writeTestDocument(tla);
+        else
+            readDocument(tlt);
+
+    }
+
+    private void readDocument(ThreadLocal<ExcerptTailer> tlt) {
+        try (DocumentContext dc = tlt.get().readingDocument()) {
+            if (!dc.isPresent())
+                return;
+            Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+        }
+    }
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
