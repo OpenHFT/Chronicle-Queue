@@ -146,6 +146,7 @@ public class SingleChronicleQueueExcerpts {
 
                 final long headerNumber = store.sequenceForPosition(wire, position, queue.timeoutMS);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
+                checkIndex(wire.headerNumber(), wire.bytes().writePosition(), 0);
             } catch (BufferOverflowException | EOFException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
@@ -431,7 +432,7 @@ public class SingleChronicleQueueExcerpts {
 
         boolean checkIndex(long index, long position, long timeoutMS) {
             try {
-                final long seq1 = queue.rollCycle().toSequenceNumber(index);
+                final long seq1 = queue.rollCycle().toSequenceNumber(index + 1) - 1;
                 final long seq2 = store.sequenceForPosition(wire, position, timeoutMS);
 
                 if (seq1 != seq2) {
@@ -440,9 +441,18 @@ public class SingleChronicleQueueExcerpts {
                     System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
                             " - " + Long.toHexString(seq3));
 
+                    System.out.println(store.dump());
+
+                    if (seq1 != seq3) {
+                        System.out.println("");
+                        store.sequenceForPosition(wire, position, timeoutMS);
+                    }
                     assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                     assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
-                }
+
+                } else
+                    System.out.println("checked Thread=" + Thread.currentThread().getName() + " " +
+                            "upto seq1=" + seq1);
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
@@ -496,6 +506,8 @@ public class SingleChronicleQueueExcerpts {
 
                         if (!metaData && lastIndex != Long.MIN_VALUE)
                             writeIndexForPosition(lastIndex, position, queue.timeoutMS);
+                        else
+                            assert lazyIndexing || checkIndex(lastIndex, position, 0);
 
                         store.writePosition(wire.bytes().writePosition());
 
@@ -538,11 +550,11 @@ public class SingleChronicleQueueExcerpts {
         }
     }
 
-    // *************************************************************************
-    //
-    // TAILERS
-    //
-    // *************************************************************************
+// *************************************************************************
+//
+// TAILERS
+//
+// *************************************************************************
 
     /**
      * Tailer

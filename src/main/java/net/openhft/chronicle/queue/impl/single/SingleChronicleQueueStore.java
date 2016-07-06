@@ -285,9 +285,9 @@ class SingleChronicleQueueStore implements WireStore {
         if (position < 0 || position > bytes.capacity())
             throw new IllegalArgumentException("position: " + position);
 
+        final long headerNumber = wire.headerNumber();
         final long readPosition = bytes.readPosition();
         final long readRemaining = bytes.readRemaining();
-        final long headerNumber = wire.headerNumber();
         try {
 
             indexing.setPositionForSequenceNumber(recovery, wire,
@@ -296,8 +296,8 @@ class SingleChronicleQueueStore implements WireStore {
         } catch (EOFException ignored) {
             // todo unable to add an index to a rolled store.
         } finally {
-            wire.headerNumber(headerNumber);
             bytes.readPositionRemaining(readPosition, readRemaining);
+            wire.headerNumber(headerNumber);
         }
     }
 
