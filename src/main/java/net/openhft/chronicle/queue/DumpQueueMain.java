@@ -31,19 +31,28 @@ public class DumpQueueMain {
         dump(args[0]);
     }
 
-    public static void dump(String dir) {
-        File[] files = new File(dir).listFiles();
-        if (files == null) {
-            System.err.println("Directory not found " + dir);
+    public static void dump(String path) {
+        File path2 = new File(path);
+        if (path2.isDirectory()) {
+            File[] files = path2.listFiles();
+            if (files == null)
+                System.err.println("Directory not found " + path);
+
+            for (File file : files)
+                dumpFile(file);
+
+        } else {
+            dumpFile(path2);
         }
-        for (File file : files) {
-            if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
-                try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
-                    bytes.readLimit(bytes.realCapacity());
-                    System.out.println(Wires.fromSizePrefixedBlobs(bytes));
-                } catch (IOException ioe) {
-                    System.err.println("Failed to read " + file + " " + ioe);
-                }
+    }
+
+    private static void dumpFile(File file) {
+        if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
+            try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
+                bytes.readLimit(bytes.realCapacity());
+                System.out.println(Wires.fromSizePrefixedBlobs(bytes));
+            } catch (IOException ioe) {
+                System.err.println("Failed to read " + file + " " + ioe);
             }
         }
     }
