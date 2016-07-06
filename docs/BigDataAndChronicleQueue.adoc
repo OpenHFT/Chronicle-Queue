@@ -119,7 +119,7 @@ public class Order extends AbstractMarshallable {
 ----
 File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
-    ExcerptAppender appender = queue.createAppender();
+    ExcerptAppender appender = queue.acquireAppender();
     appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6)); // <1>
     appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
     System.out.print(queue.dump());

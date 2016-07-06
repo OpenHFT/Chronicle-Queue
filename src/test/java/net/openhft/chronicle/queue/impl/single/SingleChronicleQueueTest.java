@@ -2037,7 +2037,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
 
-                int size = 2_00_000;
+                int size = 200_000;
 
                 IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
@@ -2060,7 +2060,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .single(dir.toString())
                 .rollCycle(rollCycle);
         final RollingChronicleQueue queue = builder.build();
-        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptAppender appender = queue.acquireAppender();
         final ExcerptTailer tailer = queue.createTailer();
 
         final List<String> stringsToPut = Arrays.asList("one", "two", "three");
