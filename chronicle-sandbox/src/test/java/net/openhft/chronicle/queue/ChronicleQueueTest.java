@@ -94,7 +94,7 @@ public class ChronicleQueueTest {
     }
 
     private void writeSome(ChronicleQueue chronicle) throws IOException {
-        ExcerptAppender appender = chronicle.createAppender();
+        ExcerptAppender appender = chronicle.acquireAppender();
         for (int i = 0; i < RUNS; i++) {
             appender.writeDocument(wire -> wire.write(TestKey.test).text("Hello World23456789012345678901234567890"));
         }

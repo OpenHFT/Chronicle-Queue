@@ -106,7 +106,7 @@ ${java.io.tmpdir}/getting-started/{today}.cq4
 ### Writing
 ```java
 // Obtain an ExcerptAppender
-ExcerptAppender appender = queue.createAppender();
+ExcerptAppender appender = queue.acquireAppender();
 
 // write - {msg: TestMessage}
 appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
@@ -137,7 +137,7 @@ queue.close();
 ```java
 try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
     // Obtain an ExcerptAppender
-    ExcerptAppender appender = queue.createAppender();
+    ExcerptAppender appender = queue.acquireAppender();
 
     // write - {msg: TestMessage}
     appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
