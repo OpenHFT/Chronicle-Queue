@@ -398,14 +398,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -413,13 +413,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -443,14 +443,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -458,13 +458,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -488,14 +488,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -503,13 +503,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -533,14 +533,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -548,13 +548,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -578,14 +578,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -593,13 +593,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -623,14 +623,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -638,10 +638,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
@@ -712,14 +712,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -727,13 +727,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -757,14 +757,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -772,13 +772,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -802,14 +802,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -817,13 +817,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -847,14 +847,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -862,13 +862,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -892,14 +892,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -907,13 +907,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 567\n" +
+                    "# position: 567, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327109 bytes remaining\n" +
@@ -937,14 +937,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    timeStamp: 0\n" +
                     "  }\n" +
                     "}\n" +
-                    "# position: 344\n" +
+                    "# position: 344, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
                     "  448,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 448\n" +
+                    "# position: 448, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
@@ -952,10 +952,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  554,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 544\n" +
+                    "# position: 544, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 554\n" +
+                    "# position: 554, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
