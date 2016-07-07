@@ -98,7 +98,6 @@ class SingleChronicleQueueStore implements WireStore {
         } finally {
             assert wire.endUse();
         }
-
     }
 
     /**
@@ -241,7 +240,6 @@ class SingleChronicleQueueStore implements WireStore {
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         return indexing.sequenceForPosition(recovery, ec, position);
     }
-
 
     @Override
     public String toString() {

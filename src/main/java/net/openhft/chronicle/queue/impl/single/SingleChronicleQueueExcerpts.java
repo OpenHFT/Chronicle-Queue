@@ -443,7 +443,6 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-
         private long headerNumber() {
             if (wire.headerNumber() == Long.MIN_VALUE)
                 try {
@@ -560,7 +559,6 @@ public class SingleChronicleQueueExcerpts {
             public void metaData(boolean metaData) {
                 this.metaData = metaData;
             }
-
 
             @Override
             public void close() {
@@ -822,7 +820,6 @@ public class SingleChronicleQueueExcerpts {
                 wire().bytes().readPosition(0);
             return this;
         }
-
 
         /**
          * gives approximately the last index, can not be relied on as the last index may have

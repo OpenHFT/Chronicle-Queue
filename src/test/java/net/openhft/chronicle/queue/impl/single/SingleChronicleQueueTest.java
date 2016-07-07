@@ -1065,7 +1065,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 Assert.assertEquals(myMarshable, dc.wire().read(() -> "myMarshable").typedMarshallable());
             }
-
         }
     }
 
@@ -1352,7 +1351,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
             Assert.assertTrue(appender.cycle() == 0);
         }
-
     }
 
     @Test
@@ -1925,7 +1923,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     Assert.assertEquals("world1", text);
                 }
             }
-
         }
     }
 
@@ -1953,7 +1950,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     Assert.assertEquals(1.2, (double) object.map.get("hello"), 0.0);
                 }
             }
-
         }
     }
 
@@ -1977,31 +1973,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     dc.wire().write("key").text("some more " + 1);
                     Assert.assertEquals(i, q.rollCycle().toSequenceNumber(dc.index()));
                 }
-
             }
 
             try (DocumentContext dc = appender2.writingDocument()) {
                 dc.wire().write("key").text("some data " + indexCount);
                 Assert.assertEquals(indexCount, q.rollCycle().toSequenceNumber(dc.index()));
             }
-
         }
     }
-
 
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
         for (int j = 0; j < 10; j++) {
-
-
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .rollCycle(TEST_DAILY)
                     .build()) {
 
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
-
 
                 int size = 20;
 
@@ -2013,17 +2003,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
                     }
                 }
-
-                System.out.println(".");
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-
-            System.out.println("\n\n");
-            System.err.println("\n=======================\n");
         }
     }
-
 
     @Test
     public void testRandomConcurrentReadWrite() throws TimeoutException, ExecutionException,
@@ -2064,7 +2046,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = queue.createTailer();
 
         final List<String> stringsToPut = Arrays.asList("one", "two", "three");
-
 
         // writes two strings immediately and one string with 2 seconds delay
         {
@@ -2114,9 +2095,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
         try (DocumentContext dc = tl.get().writingDocument()) {
             long index = dc.index();
-            dc.wire().write("key").text(Thread.currentThread().getName() + " @ " + (int) index);
+            dc.wire().write("key").int64(index);
         }
-
     }
 
     @Test

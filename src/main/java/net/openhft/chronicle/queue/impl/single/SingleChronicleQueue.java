@@ -175,7 +175,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 LoggerFactory.getLogger(SingleChronicleQueue.class).debug("", e);
             }
         }
-
     }
 
     @Override

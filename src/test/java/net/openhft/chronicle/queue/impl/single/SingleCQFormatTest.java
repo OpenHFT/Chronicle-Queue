@@ -1341,5 +1341,4 @@ public class SingleCQFormatTest {
         }
     }
 
-
 }

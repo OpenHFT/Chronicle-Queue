@@ -167,7 +167,6 @@ public class OrderManagerTest {
                         .recordHistory(true)
                         .get();
 
-
                 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
                 combiner.onSidedPrice(new SidedPrice("EURUSD2", 123456789100L, Side.Buy, 1.1160, 2e6));
 

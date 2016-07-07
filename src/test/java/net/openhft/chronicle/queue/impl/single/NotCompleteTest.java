@@ -144,7 +144,6 @@ public class NotCompleteTest {
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
             }
-
         }
     }
 }
