@@ -26,6 +26,7 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
+import net.openhft.chronicle.queue.impl.ExcerptContext;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -133,7 +134,7 @@ class SingleChronicleQueueStore implements WireStore {
 
     public static void dumpStore(Wire wire) {
         Bytes<?> bytes = wire.bytes();
-        bytes.readPosition(0);
+        bytes.readPositionUnlimited(0);
         Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(wire));
     }
 
@@ -185,15 +186,14 @@ class SingleChronicleQueueStore implements WireStore {
     /**
      * Moves the position to the index
      *
-     * @param wire      the data structure we are navigating
+     * @param ec      the data structure we are navigating
      * @param index     the index we wish to move to
-     * @param timeoutMS
      * @return whether the index was found for reading.
      */
     @Override
-    public ScanResult moveToIndexForRead(@NotNull Wire wire, long index, long timeoutMS) {
+    public ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index) {
         try {
-            return indexing.moveToIndex(recovery, wire, index, timeoutMS);
+            return indexing.moveToIndex(recovery, ec, index);
         } catch (UnrecoverableTimeoutException | StreamCorruptedException e) {
             return ScanResult.NOT_REACHED;
         }
@@ -232,9 +232,9 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long sequenceForPosition(final Wire wire, final long position, long timeoutMS) throws
+    public long sequenceForPosition(final ExcerptContext ec, final long position) throws
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-        return indexing.sequenceForPosition(recovery, wire, position, timeoutMS);
+        return indexing.sequenceForPosition(recovery, ec, position);
     }
 
 
@@ -274,30 +274,19 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void setPositionForSequenceNumber(final Wire wire, long sequenceNumber,
-                                             long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    public void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber,
+                                             long position)
+            throws UnrecoverableTimeoutException, StreamCorruptedException {
         long nextSequence = indexing.nextEntryToBeIndexed();
         if (nextSequence > sequenceNumber)
             return;
 
-        assert !((AbstractWire) wire).isInsideHeader();
-        final Bytes<?> bytes = wire.bytes();
-        if (position < 0 || position > bytes.capacity())
-            throw new IllegalArgumentException("position: " + position);
-
-        final long headerNumber = wire.headerNumber();
-        final long readPosition = bytes.readPosition();
-        final long readRemaining = bytes.readRemaining();
         try {
-
-            indexing.setPositionForSequenceNumber(recovery, wire,
-                    sequenceNumber, position, timeoutMS);
+            indexing.setPositionForSequenceNumber(recovery, ec,
+                    sequenceNumber, position);
 
         } catch (EOFException ignored) {
             // todo unable to add an index to a rolled store.
-        } finally {
-            bytes.readPositionRemaining(readPosition, readRemaining);
-            wire.headerNumber(headerNumber);
         }
     }
 

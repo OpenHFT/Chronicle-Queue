@@ -194,7 +194,7 @@ public class SingleCQFormatTest {
                 "    lastIndex: 0\n" +
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
-                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPositionUnlimited(0)));
         bytes.close();
 
         SingleChronicleQueue queue = binary(dir)
@@ -241,7 +241,7 @@ public class SingleCQFormatTest {
                 "  recovery: !TimedStoreRecovery {\n" +
                 "    timeStamp: 0\n" +
                 "  }\n" +
-                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
+                "}\n", Wires.fromSizePrefixedBlobs(bytes.readPositionUnlimited(0)));
         bytes.close();
 
         SingleChronicleQueue queue = binary(dir)

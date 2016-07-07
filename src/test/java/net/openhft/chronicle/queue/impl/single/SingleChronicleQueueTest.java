@@ -1847,7 +1847,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext documentContext = backwardTailer.readingDocument()) {
                 assertTrue(documentContext.isPresent());
                 final long index = documentContext.index();
-                assertTrue("index: " + index, index > 0);
+                assertEquals("index: " + index, i, (int) index);
                 Assert.assertEquals(i, RollCycles.DAILY.toSequenceNumber(index));
                 Assert.assertTrue(documentContext.isPresent());
                 StringBuilder sb = Wires.acquireStringBuilder();

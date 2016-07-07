@@ -47,7 +47,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      */
     long writePosition();
 
-    ScanResult moveToIndexForRead(@NotNull Wire wire, long index, long timeoutMS);
+    ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
     @NotNull
     MappedBytes bytes();
@@ -55,12 +55,11 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * Reverse look up an index for a position.
      *
-     * @param wire the wire of the bytes, to work with
+     * @param ec the wire of the bytes, to work with
      * @param position  of the start of the message
-     * @param timeoutMS
      * @return index in this store.
      */
-    long sequenceForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(ExcerptContext ec, long position) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 
@@ -68,7 +67,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long lastAcknowledgedIndexReplicated();
 
-    void setPositionForSequenceNumber(final Wire wire, long sequenceNumber, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException;
+    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
