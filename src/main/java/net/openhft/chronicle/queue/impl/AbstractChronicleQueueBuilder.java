@@ -79,7 +79,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.rollCycle = RollCycles.DAILY;
         this.blockSize = 64L << 20;
         this.path = path;
-        this.wireType = WireType.BINARY;
+        this.wireType = WireType.BINARY_LIGHT;
         this.epoch = 0;
         this.bufferCapacity = 2 << 20;
         this.indexSpacing = -1;
