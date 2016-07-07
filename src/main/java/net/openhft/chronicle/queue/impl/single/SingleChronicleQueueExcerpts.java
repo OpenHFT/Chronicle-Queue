@@ -313,7 +313,13 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
 
-            } catch (UnrecoverableTimeoutException | StreamCorruptedException | EOFException e) {
+            } catch (IllegalStateException ise) {
+                if (!ise.getMessage().contains("index already exists")) {
+                    Jvm.warn().on(getClass(), "Ignoring duplicate", ise);
+                    throw ise;
+                }
+
+            } catch (StreamCorruptedException | EOFException e) {
                 throw Jvm.rethrow(e);
 
             } finally {
