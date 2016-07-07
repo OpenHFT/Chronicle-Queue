@@ -211,7 +211,6 @@ public class SingleChronicleQueueExcerpts {
                 if (!ok)
                     assert resetAppendingThread();
             }
-            assert checkWritePositionHeaderNumber();
             return context;
         }
 
