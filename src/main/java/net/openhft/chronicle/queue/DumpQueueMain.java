@@ -23,6 +23,9 @@ import net.openhft.chronicle.wire.Wires;
 import java.io.File;
 import java.io.IOException;
 
+import static java.lang.System.err;
+import static java.lang.System.out;
+
 /**
  * Created by Peter on 07/03/2016.
  */
@@ -36,7 +39,7 @@ public class DumpQueueMain {
         if (path2.isDirectory()) {
             File[] files = path2.listFiles();
             if (files == null)
-                System.err.println("Directory not found " + path);
+                err.println("Directory not found " + path);
 
             for (File file : files)
                 dumpFile(file);
@@ -50,9 +53,9 @@ public class DumpQueueMain {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
                 bytes.readLimit(bytes.realCapacity());
-                System.out.println(Wires.fromSizePrefixedBlobs(bytes));
+                out.println(Wires.fromSizePrefixedBlobs(bytes));
             } catch (IOException ioe) {
-                System.err.println("Failed to read " + file + " " + ioe);
+                err.println("Failed to read " + file + " " + ioe);
             }
         }
     }

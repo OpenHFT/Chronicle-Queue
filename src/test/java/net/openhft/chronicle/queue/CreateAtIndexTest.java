@@ -9,6 +9,7 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -20,7 +21,8 @@ public class CreateAtIndexTest {
     @Test
     public void testWriteBytesWithIndex() throws Exception {
         String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .rollCycle(TEST_DAILY).build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
             appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));

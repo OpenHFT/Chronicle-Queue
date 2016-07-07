@@ -70,7 +70,7 @@ public class SingleChronicleQueueExcerpts {
         private Wire wire;
         private Wire bufferWire; // if you have a buffered write.
         private Wire wireForIndex;
-        private long position = -1;
+        private long position = 0;
         private volatile Thread appendingThread = null;
         private long lastIndex = Long.MIN_VALUE;
         private boolean lazyIndexing = false;
@@ -156,34 +156,46 @@ public class SingleChronicleQueueExcerpts {
             try {
                 if (store == null || wire == null)
                     return;
-                final long position = store.writePosition();
-                wire.bytes().writePosition(position);
-                if (lazyIndexing)
+                position = store.writePosition();
+                Bytes<?> bytes = wire.bytes();
+                int header = bytes.readInt(position);
+                if (Wires.isReadyData(header))
+                    bytes.writePosition(position + 4 + Wires.lengthOf(header));
+                if (lazyIndexing) {
+                    wire.headerNumber(Long.MIN_VALUE);
                     return;
+                }
 
                 final long headerNumber = store.sequenceForPosition(this, position);
+                Thread.yield();
+                long headerNumber2 = store.sequenceForPosition(this, position);
+                assert headerNumber == headerNumber2;
+//                System.err.println("==== " + Thread.currentThread().getName()+" pos: "+position+" hdr: "+headerNumber);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
-                checkIndex(wire.headerNumber(), wire.bytes().writePosition());
+                assert lazyIndexing || checkIndex(wire.headerNumber(), position);
             } catch (BufferOverflowException | EOFException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
+            assert checkWritePositionHeaderNumber();
         }
 
         @Override
         public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
+            assert checkWritePositionHeaderNumber();
             boolean ok = false;
             try {
                 for (int i = 0; i < 100; i++) {
                     try {
+                        int cycle0 = this.cycle;
                         int cycle = queue.cycle();
                         if (this.cycle != cycle || wire == null) {
                             rollCycleTo(cycle);
                         }
                         assert wire != null;
 
-                        position(
-                                store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS()));
+                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
+                        position(pos);
 
                         context.metaData = false;
                         context.wire = wire;
@@ -199,7 +211,44 @@ public class SingleChronicleQueueExcerpts {
                 if (!ok)
                     assert resetAppendingThread();
             }
+            assert checkWritePositionHeaderNumber();
             return context;
+        }
+
+        boolean checkWritePositionHeaderNumber() {
+            if (wire == null || wire.headerNumber() == Long.MIN_VALUE) return true;
+            try {
+                long pos1 = position;
+         /*
+                long posMax = store.writePosition();
+                if (pos1 > posMax+4) {
+                    System.out.println(queue.dump());
+                    String message = "########### " +
+                            "thread: " + Thread.currentThread().getName() +
+                            "  pos1: " + pos1 +
+                            " posMax: " + posMax;
+                    System.err.println(message);
+                    throw new AssertionError(message);
+                }*/
+                long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
+                long seq2 = store.sequenceForPosition(this, pos1);
+                if (seq1 != seq2) {
+                    System.out.println(queue.dump());
+                    String message = "~~~~~~~~~~~~~~ " +
+                            "thread: " + Thread.currentThread().getName() +
+                            "  pos1: " + pos1 +
+                            " seq1: " + seq1 +
+                            " seq2: " + seq2;
+                    System.err.println(message);
+                    throw new AssertionError(message);
+                }
+            } catch (EOFException e) {
+
+            } catch (IOException e) {
+                Jvm.fatal().on(getClass(), e);
+                throw Jvm.rethrow(e);
+            }
+            return true;
         }
 
         @Override
@@ -256,6 +305,8 @@ public class SingleChronicleQueueExcerpts {
                     lastIndex(index);
                     lastPosition = position;
                     lastCycle = cycle;
+                    store.writePosition(position);
+
                 } catch (EOFException theySeeMeRolling) {
                     if (wireBytes.compareAndSwapInt(wireBytes.writePosition(), Wires.END_OF_DATA, Wires.NOT_COMPLETE)) {
                         wireBytes.write(bytes);
@@ -269,13 +320,13 @@ public class SingleChronicleQueueExcerpts {
             } finally {
                 if (wire != null) {
                     Bytes<?> wireBytes = wire.bytes();
-                    store.writePosition(wireBytes.writePosition());
                     assert resetAppendingThread();
                 }
             }
         }
 
         private void position(long position) {
+//            System.err.println("----- "+Thread.currentThread().getName()+" pos: "+position);
             this.position = position;
         }
 
@@ -371,7 +422,7 @@ public class SingleChronicleQueueExcerpts {
                     lastIndex(wire.headerNumber());
                     lastPosition = position;
                     lastCycle = cycle;
-                    store.writePosition(wire.bytes().writePosition());
+                    store.writePosition(position);
                     writeIndexForPosition(lastIndex, position);
                 } catch (EOFException theySeeMeRolling) {
                     try {
@@ -407,6 +458,7 @@ public class SingleChronicleQueueExcerpts {
                 store.writeEOF(wire, timeoutMS());
             setCycle2(cycle, true);
             resetPosition();
+
         }
 
         private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
@@ -437,7 +489,6 @@ public class SingleChronicleQueueExcerpts {
         }
 
         void writeIndexForPosition(long index, long position) throws UnrecoverableTimeoutException, StreamCorruptedException {
-            assert lazyIndexing || checkIndex(index, position);
 
             if (!lazyIndexing) {
                 long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
@@ -464,9 +515,9 @@ public class SingleChronicleQueueExcerpts {
                     assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
                 } else {
-                    System.out.println("checked Thread=" + Thread.currentThread().getName() +
+              /*      System.out.println("checked Thread=" + Thread.currentThread().getName() +
                             " pos: " + position +
-                            " seq1: " + seq1);
+                            " seq1: " + seq1);*/
                 }
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
@@ -511,9 +562,8 @@ public class SingleChronicleQueueExcerpts {
                 boolean isClosed = false;
                 try {
                     if (wire == StoreAppender.this.wire) {
-                        assert wire.bytes().writePosition() >= position;
+
                         wire.updateHeader(position, metaData);
-                        assert !((AbstractWire) wire).isInsideHeader();
 
                         lastIndex(wire.headerNumber());
                         lastPosition = position;
@@ -523,8 +573,8 @@ public class SingleChronicleQueueExcerpts {
                             writeIndexForPosition(lastIndex, position);
                         else
                             assert lazyIndexing || checkIndex(lastIndex, position);
-
-                        store.writePosition(wire.bytes().writePosition());
+                        if (!metaData)
+                            store.writePosition(position);
 
                     } else {
                         isClosed = true;
@@ -540,6 +590,7 @@ public class SingleChronicleQueueExcerpts {
                 } finally {
                     assert isClosed || resetAppendingThread();
                 }
+                assert checkWritePositionHeaderNumber();
             }
 
             @Override

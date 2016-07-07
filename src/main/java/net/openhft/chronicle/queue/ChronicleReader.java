@@ -28,6 +28,8 @@ import net.openhft.chronicle.wire.TextWire;
 import java.io.File;
 import java.io.IOException;
 
+import static java.lang.System.*;
+
 /**
  * Display records in a Chronicle in a text form.
  *
@@ -38,8 +40,8 @@ public enum ChronicleReader {
 
     public static void main(String... args) throws IOException {
         if (args.length < 1) {
-            System.err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
-            System.exit(-1);
+            err.println("Usage: java " + ChronicleReader.class.getName() + " {chronicle-base-path} {regex} [from-index]");
+            exit(-1);
         }
 
         String basePath = args[0];
@@ -52,7 +54,7 @@ public enum ChronicleReader {
         ChronicleQueue ic = SingleChronicleQueueBuilder.binary(new File(basePath)).build();
         ExcerptTailer tailer = ic.createTailer();
         if (index > 0) {
-            System.out.println("Waiting for index " + index);
+            out.println("Waiting for index " + index);
             for (; ; ) {
                 if (tailer.moveToIndex(index))
                     break;
@@ -81,8 +83,8 @@ public enum ChronicleReader {
                     text = bytes.toString();
                 }
                 if (regex.isEmpty() || text.matches(regex)) {
-                    System.out.print("0x" + Long.toHexString(tailer.index()) + ": ");
-                    System.out.println(text);
+                    out.print("0x" + Long.toHexString(tailer.index()) + ": ");
+                    out.println(text);
                 }
             }
         }

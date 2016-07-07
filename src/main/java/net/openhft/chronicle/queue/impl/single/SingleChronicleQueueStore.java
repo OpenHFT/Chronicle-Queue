@@ -170,7 +170,12 @@ class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public WireStore writePosition(long position) {
-        writePosition.setMaxValue(position);
+
+        int header = mappedBytes.readVolatileInt(position);
+        if (Wires.isReadyData(header))
+            writePosition.setMaxValue(position);
+        else
+            throw new AssertionError();
         return this;
     }
 
@@ -186,8 +191,8 @@ class SingleChronicleQueueStore implements WireStore {
     /**
      * Moves the position to the index
      *
-     * @param ec      the data structure we are navigating
-     * @param index     the index we wish to move to
+     * @param ec    the data structure we are navigating
+     * @param index the index we wish to move to
      * @return whether the index was found for reading.
      */
     @Override

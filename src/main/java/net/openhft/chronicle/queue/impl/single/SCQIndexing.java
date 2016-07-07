@@ -194,7 +194,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         writer.writeMarshallable(wire);
         wire.updateHeader(position, true);
 
-        this.writePosition.setMaxValue(wire.bytes().writePosition());
         return position;
     }
 
@@ -368,10 +367,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 case NONE:
                     if (toPosition == Long.MAX_VALUE)
                         return i + 1;
-                    long pos = bytes.readPosition();
-                    if (toPosition == pos)
-                        return i;
-                    throw new EOFException("toPosition=" + toPosition + ",pos=" + pos);
+                    throw new IllegalArgumentException("You can't know the index for an entry which hasn't been written. pos: " + toPosition);
                 case META_DATA:
                     break;
                 case DATA:
@@ -430,7 +426,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 continue;
 
             long posN = indexValues.getValueAt(0);
-            assert posN > 0;
+            assert posN >= 0;
             if (posN > position)
                 continue;
 
@@ -539,6 +535,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         if ((sequenceNumber & (indexSpacing - 1)) != 0)
             return;
 
+//        System.err.println(Thread.currentThread().getName()+": "+sequenceNumber+" "+position);
         Wire wire = ec.wireForIndex();
         Bytes<?> bytes = wire.bytes();
         if (position > bytes.capacity())

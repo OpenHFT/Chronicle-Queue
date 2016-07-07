@@ -65,7 +65,7 @@ public class DetectNotReadyEntriesTest {
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
                 "}\n" +
-                "# position: 288, header: 0\n" +
+                "# position: 288, header: -1 or 0\n" +
                 "--- !!not-ready-data! #binary\n" +
                 "test: Hello World\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
 

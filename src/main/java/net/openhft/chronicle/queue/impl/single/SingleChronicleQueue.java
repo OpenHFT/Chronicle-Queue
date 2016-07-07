@@ -380,7 +380,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             WireStore wireStore;
             if (wire.writeFirstHeader()) {
                 wireStore = storeFactory.apply(this, wire);
-                wireStore.writePosition(wire.bytes().writePosition());
                 wire.updateFirstHeader();
             } else {
                 wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
@@ -409,4 +408,5 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 ", path=" + path +
                 '}';
     }
+
 }

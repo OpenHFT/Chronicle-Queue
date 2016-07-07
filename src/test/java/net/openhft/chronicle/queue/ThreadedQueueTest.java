@@ -29,6 +29,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 /**
@@ -119,9 +120,10 @@ public class ThreadedQueueTest {
 
         new File(path).deleteOnExit();
 
-        final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
+        final ChronicleQueue rqueue = ChronicleQueueBuilder.single(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .rollCycle(TEST_DAILY)
                 .build();
 
         final ExcerptTailer tailer = rqueue.createTailer();
@@ -129,6 +131,7 @@ public class ThreadedQueueTest {
         final ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .rollCycle(TEST_DAILY)
                 .build();
 
         Bytes bytes = Bytes.elasticByteBuffer();
