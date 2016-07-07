@@ -452,20 +452,22 @@ public class SingleChronicleQueueExcerpts {
 
                 if (seq1 != seq2) {
                     final long seq3 = ((SingleChronicleQueueStore) store).indexing.linearScanByPosition(wireForIndex(), position, 0, 0);
-                    System.out.println(Long.toHexString(seq1) + " - " + Long.toHexString(seq2) +
-                            " - " + Long.toHexString(seq3));
+                    System.out.println("Thread=" + Thread.currentThread().getName() +
+                            " pos: " + position +
+                            " seq1: " + Long.toHexString(seq1) +
+                            " seq2: " + Long.toHexString(seq2) +
+                            " seq3: " + Long.toHexString(seq3));
 
                     System.out.println(store.dump());
 
-                    if (seq1 != seq3) {
-                        store.sequenceForPosition(this, position);
-                    }
                     assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
                     assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
-                } else
-                    System.out.println("checked Thread=" + Thread.currentThread().getName() + " " +
-                            "upto seq1=" + seq1);
+                } else {
+                    System.out.println("checked Thread=" + Thread.currentThread().getName() +
+                            " pos: " + position +
+                            " seq1: " + seq1);
+                }
 
             } catch (EOFException | UnrecoverableTimeoutException | StreamCorruptedException e) {
                 throw new AssertionError(e);
