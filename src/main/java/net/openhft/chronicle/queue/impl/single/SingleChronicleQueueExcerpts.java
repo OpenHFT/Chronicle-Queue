@@ -18,8 +18,10 @@ package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
+import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -61,6 +63,7 @@ public class SingleChronicleQueueExcerpts {
      * StoreAppender
      */
     public static class StoreAppender implements ExcerptAppender, ExcerptContext {
+        public static final int HEAD_ROOM = 1 << 20;
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreAppenderContext context;
@@ -76,10 +79,36 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
+        private long lastTouchedPage = -1;
+        private long lastTouchedPos = 0;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
             context = new StoreAppenderContext();
+        }
+
+        @Override
+        public void pretouch() {
+            setCycle(queue.cycle(), true);
+            long pos = store.writePosition();
+            MappedBytes bytes = (MappedBytes) wire.bytes();
+
+            if (lastTouchedPage < 0) {
+                lastTouchedPage = pos - pos % OS.pageSize();
+                lastTouchedPos = pos;
+                String message = "Reset lastTouched to " + lastTouchedPage;
+                Jvm.debug().on(getClass(), message);
+            } else {
+                long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 10); // for the next 10 tcisk.
+                long last = pos + headroom;
+                for (; lastTouchedPage < last; lastTouchedPage += OS.pageSize()) {
+                    bytes.compareAndSwapInt(lastTouchedPage, 0, 0);
+                }
+                long pos2 = store.writePosition();
+                String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
+                lastTouchedPos = pos;
+                Jvm.debug().on(getClass(), message);
+            }
         }
 
         @Override
@@ -154,6 +183,8 @@ public class SingleChronicleQueueExcerpts {
 
         private void resetPosition() throws UnrecoverableTimeoutException {
             try {
+                lastTouchedPage = -1;
+
                 if (store == null || wire == null)
                     return;
                 position = store.writePosition();

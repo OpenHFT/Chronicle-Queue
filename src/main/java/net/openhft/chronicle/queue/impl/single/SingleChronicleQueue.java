@@ -407,5 +407,4 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 ", path=" + path +
                 '}';
     }
-
 }
