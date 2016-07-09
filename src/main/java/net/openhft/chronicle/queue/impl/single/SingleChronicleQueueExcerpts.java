@@ -99,15 +99,17 @@ public class SingleChronicleQueueExcerpts {
                 String message = "Reset lastTouched to " + lastTouchedPage;
                 Jvm.debug().on(getClass(), message);
             } else {
-                long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 10); // for the next 10 tcisk.
+                long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 4); // for the next 4 ticks.
                 long last = pos + headroom;
                 for (; lastTouchedPage < last; lastTouchedPage += OS.pageSize()) {
                     bytes.compareAndSwapInt(lastTouchedPage, 0, 0);
                 }
                 long pos2 = store.writePosition();
-                String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
+                if (Jvm.isDebugEnabled(getClass())) {
+                    String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
+                    Jvm.debug().on(getClass(), message);
+                }
                 lastTouchedPos = pos;
-                Jvm.debug().on(getClass(), message);
             }
         }
 

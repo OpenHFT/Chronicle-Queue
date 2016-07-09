@@ -18,7 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.wire.Wires;
+import net.openhft.chronicle.wire.WireDumper;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +53,16 @@ public class DumpQueueMain {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
                 bytes.readLimit(bytes.realCapacity());
-                out.println(Wires.fromSizePrefixedBlobs(bytes));
+                StringBuilder sb = new StringBuilder();
+                WireDumper dumper = WireDumper.of(bytes);
+                while (bytes.readRemaining() >= 4) {
+                    sb.setLength(0);
+
+                    boolean last = dumper.dumpOne(sb);
+                    out.println(sb);
+                    if (last)
+                        break;
+                }
             } catch (IOException ioe) {
                 err.println("Failed to read " + file + " " + ioe);
             }
