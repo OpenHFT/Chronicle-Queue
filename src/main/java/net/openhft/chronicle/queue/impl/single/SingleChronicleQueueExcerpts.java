@@ -101,7 +101,10 @@ public class SingleChronicleQueueExcerpts {
             } else {
                 long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 4); // for the next 4 ticks.
                 long last = pos + headroom;
+                Thread thread = Thread.currentThread();
                 for (; lastTouchedPage < last; lastTouchedPage += OS.pageSize()) {
+                    if (thread.isInterrupted())
+                        break;
                     bytes.compareAndSwapInt(lastTouchedPage, 0, 0);
                 }
                 long pos2 = store.writePosition();
@@ -218,10 +221,9 @@ public class SingleChronicleQueueExcerpts {
             assert checkWritePositionHeaderNumber();
             boolean ok = false;
             try {
-                for (int i = 0; i < 100; i++) {
+                int cycle = queue.cycle();
+                for (int i = 0; i <= 100; i++) {
                     try {
-                        int cycle0 = this.cycle;
-                        int cycle = queue.cycle();
                         if (this.cycle != cycle || wire == null) {
                             rollCycleTo(cycle);
                         }
@@ -235,8 +237,12 @@ public class SingleChronicleQueueExcerpts {
                         break;
 
                     } catch (EOFException theySeeMeRolling) {
+                        assert !((AbstractWire) wire).isInsideHeader();
                         // retry.
                     }
+                    if (i == 100)
+                        throw new IllegalStateException("Unable to roll to the current cycle");
+                    cycle++;
                 }
                 ok = true;
 
@@ -612,7 +618,7 @@ public class SingleChronicleQueueExcerpts {
                         if (!metaData)
                             store.writePosition(position);
 
-                    } else {
+                    } else if (wire != null) {
                         isClosed = true;
                         assert resetAppendingThread();
                         writeBytes(wire.headerNumber(), wire.bytes());
