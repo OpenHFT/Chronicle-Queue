@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -98,10 +99,11 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
 
     @Override
     public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException {
+        Bytes<?> bytes = wire.bytes();
         while (true) {
-            long offset = wire.bytes().writePosition();
-            int num = wire.bytes().readInt(offset);
-            if (Wires.isNotComplete(num) && wire.bytes().compareAndSwapInt(offset, num, 0)) {
+            long offset = bytes.writePosition();
+            int num = bytes.readInt(offset);
+            if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
                 Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
             } else {
                 Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " unable to reset.");

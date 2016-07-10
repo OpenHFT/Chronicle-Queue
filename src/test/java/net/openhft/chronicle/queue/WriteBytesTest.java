@@ -21,7 +21,7 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytes() {
-        String dir = OS.TARGET + "/WriteBytesTest";
+        String dir = OS.TARGET + "/WriteBytesTest-" + System.nanoTime();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
