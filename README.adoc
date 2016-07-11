@@ -85,11 +85,103 @@ image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-
 
 https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
 
+=== High level interface
+
+Chronicle v4.4+ supports the use of proxies to send and consume messages.  You start by defining an asynchronous `interface` where all methods have;
+
+- arguments which are only inputs.
+- no return value or exceptions expected.
+
+.A simple asynchronous interface
+[source, Java]
+----
+interface MessageListener {
+    void method1(Message1 message);
+
+    void method2(Message2 message);
+}
+
+static class Message1 extends AbstractMarshallable {
+    String text;
+
+    public Message1(String text) {
+        this.text = text;
+    }
+}
+
+static class Message2 extends AbstractMarshallable {
+    long number;
+
+    public Message2(long number) {
+        this.number = number;
+    }
+}
+----
+
+To write to the queue you can call a proxy which implements this interface
+
+[source, Java]
+----
+SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path).build();
+
+MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
+
+// call method on the interface to send messages
+writer1.method1(new Message1("hello"));
+writer1.method2(new Message2(234));
+-----
+
+These call produce message which can be dumped as
+
+[source, YAML]
+----
+# position: 262568, header: 0
+--- !!data #binary
+method1: {
+  text: hello
+}
+# position: 262597, header: 1
+--- !!data #binary
+method2: {
+  number: !int 234
+}
+----
+
+To read the messages you can provide a reader which calls you implementation with the same calls you made.
+
+[source, Java]
+----
+// a proxy which print each method called on it
+MessageListener processor = ObjectUtils.printAll(MessageListener.class)
+// a queue reader which turns messages into method calls.
+MethodReader reader2 = queue1.createTailer().methodReader(processor);
+
+assertTrue(reader1.readOne());
+assertTrue(reader1.readOne());
+assertFalse(reader1.readOne());
+----
+
+Running this example prints
+
+[source]
+----
+method1 [!Message1 {
+  text: hello
+}
+]
+method2 [!Message2 {
+  number: 234
+}
+]
+-----
+
+For more details https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and
 === Building Blocks
 
 Chronicle Queue is the main interface for management and can be seen as the Collection class of Chronicle environment. You will reserve a portion of memory and then put/fetch/update records using the Chronicle interface.
 
 Chronicle has three main concepts:
+
   * Tailer (sequential and random reads, forward and backwards)
   * Appender (sequential writes, append to the end only).
 
