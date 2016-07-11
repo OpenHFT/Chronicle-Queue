@@ -1,6 +1,8 @@
 = Readme
 Peter Lawrey, Rob Austin
-:toc: left
+:toc: manual
+:css-signature: demo
+:toc-placement: preamble
 
 *We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - mailto:sales@chronicle.software[Contact Us]*
 
