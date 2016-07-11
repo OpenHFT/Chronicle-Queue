@@ -66,10 +66,13 @@ image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-
 
 - Log everything logging. (Fast enough to record everything)
 - Event sourcing.
+- Microservices transport
 - Log aggregation.
 - Stream processing
 - Commit log.
 - Metrics
+
+https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
 
 === Building Blocks
 
