@@ -129,7 +129,7 @@ MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.
 // call method on the interface to send messages
 writer1.method1(new Message1("hello"));
 writer1.method2(new Message2(234));
------
+----
 
 These call produce message which can be dumped as
 
