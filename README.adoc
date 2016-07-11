@@ -18,6 +18,7 @@ Publishing 40 bytes messages, we achieve under 1 micro-seconds latencies a high 
 The 99%ile latency is the worst 1 in 100, and the 99.9%ile is the worst 1 in 1000 latency.
 
 .Latency to send/receive on the same machine.
+[width="60%",options="header"]
 |=======
 | Batch Size | 10 million events per minute | 60 million events per minute | 100 million events per minute
 | 99%ile | 0.78 &micro;s | 0.78 &micro;s | 1.2 &micro;s
@@ -25,6 +26,7 @@ The 99%ile latency is the worst 1 in 100, and the 99.9%ile is the worst 1 in 100
 |=======
 
 .Latency to send/receive on a second machine.
+[width="60%",options="header"]
 |=======
 | Batch Size | 10 million events per minute | 60 million events per minute | 100 million events per minute
 | 99%ile | 20 &micro;s | 28 &micro;s | 176 &micro;s
