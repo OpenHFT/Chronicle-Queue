@@ -14,7 +14,19 @@ Inter Process Communication ( IPC ) with sub micro-second latency and able to st
 
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
-toc::[]
+Publishing 40 bytes messages, we achieve under 1 micro-seconds latencies a high percentage of the time.
+The 99%ile latency is the worst 1 in 100, and the 99.9%ile is the worst 1 in 1000 latency.
+
+.Latency to publish
+|=======
+| Batch Size | 10 million events per minute | 60 million events per minute | 100 million events per minute
+| 99%ile | 0.78 &micro;s | 0.78 &micro;s | 1.2 &micro;s
+| 99.9%ile | 1.2 &micro;s | 1.3 &micro;s | 1.5 &micro;s
+|=======
+
+==== More benchmarks
+
+https://vanilla-java.github.io/2016/07/09/Batching-and-Low-Latency.html[Batching and Queue Latency]
 
 === Downloading  Chronicle Queue
 
@@ -36,6 +48,7 @@ Snapshots are available on https://oss.sonatype.org/content/repositories/snapsho
 https://github.com/OpenHFT/Chronicle-Queue/blob/master/RELEASE-NOTES.adoc[Chronicle Queue Release Notes]
 
 === Overview
+
 Chronicle Queue is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[]
