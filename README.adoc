@@ -12,9 +12,13 @@ Inter Process Communication ( IPC ) with sub micro-second latency and able to st
 
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
+toc::[]
+
+=== Downloading  Chronicle Queue
+
 Releases are available on maven central as
 
- [source, xml]
+[source, xml]
 ----
 <dependency>
   <groupId>net.openhft</groupId>
@@ -117,7 +121,7 @@ appender.writeDocument(w -> w.write(() -> "msg").text("TestMessage"));
 appender.writeText("TestMessage");
 ----
 
-====Reading
+==== Reading
 
 [source, Java]
 ----
@@ -131,7 +135,9 @@ assertEquals("TestMessage", tailer.readText());
 ==== Cleanup
 
 Chronicle Queue stores its data off heap and it is recommended that you call close() 
-once you have finished working with Chronicle-Queue to free resources, however no data will be lost of you dod not do this.
+once you have finished working with Chronicle-Queue to free resources,
+
+NOTE: no data will be lost of you don't do this, this is only to clean resources used.
 
 [source, Java]
 ----
