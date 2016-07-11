@@ -288,6 +288,60 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 }
 ----
 
+=== FAQ
+
+==== Do we have to use Wire, can we use Bytes?
+
+You can access the Bytes in wire as follows
+
+.Writing to Bytes
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    Wire wire = dc.wire();
+    Bytes bytes = wire.bytes();
+    // write to bytes
+}
+----
+
+.Reading from Bytes
+[source, Java]
+----
+try (DocumentContext dc = tailer.readingDocument()) {
+    Wire wire = dc.wire();
+    Bytes bytes = wire.bytes();
+    // read from the bytes
+}
+----
+
+==== Is there a lower level interface?
+
+You can access native memory
+
+.Writing to native memory
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    Wire wire = dc.wire();
+    Bytes bytes = wire.bytes();
+    long address = bytes.address(bytes.readPosition());
+    // write to native memory
+    bytes.writeSkip(lengthActuallyWritten);
+}
+----
+
+.Reading from native memory
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    Wire wire = dc.wire();
+    Bytes bytes = wire.bytes();
+    long address = bytes.address(bytes.readPosition());
+    long length = bytes.readRemaining();
+    // read from native memory
+}
+----
+
 === Replication
 
 Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwitdh requirements.
