@@ -133,7 +133,7 @@ writer1.method2(new Message2(234));
 
 These call produce message which can be dumped as
 
-[source, YAML]
+[source, yaml]
 ----
 # position: 262568, header: 0
 --- !!data #binary
