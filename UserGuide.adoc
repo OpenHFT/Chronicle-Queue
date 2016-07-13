@@ -1,0 +1,142 @@
+= User Guide
+Peter Lawrey
+:toc: manual
+:toc-placement: preamble
+
+Chronicle Queue is a distributed unbounded persisted queue. 
+It supports asycnhronous RMI and Publish/Subscribe interfaces with sub-milli-second latencies. 
+In optimised examples a message can passed between JVM in under a micro-second.
+Chronicle Queue provides stable real latencies into the millions of messages per second.
+
+=== Terminology
+
+Basic terminology.
+
+- messages are grouped by *topics* A topic can contain any number of *sub-topics* which are logically stores together in that topic.
+- an *appender* is the source of messages.
+- a *tailer* is a receiver of messages.
+- *Chronicle Queue* in brokerless by default. You can use *Chronicle Engine* to act as a broker for remote access.
+
+NOTE: We deliberately avoid the term *consumer* as messages are not consumed/destroyed by reading.
+
+At a high level, *appenders* append to a queue and, *tailers* keep readin from the next available message.
+
+By using Chronicle Engine, you can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*
+
+=== Topics and Queue files.
+
+Each topic is a directory of queues.  There is a file for each roll cycle. If you have topics call `mytopic` the layout could look like this
+
+[source]
+----
+mytopic/
+    20160710.cq4
+    20160711.cq4
+    20160712.cq4
+    20160713.cq4
+----
+
+=== File Retension
+
+You can add a notifier when file are rotated as a `StoreFileListener` and this can be used to delete files after a period of time, however files are retained forever by default.  Our biggest users have over 100 TB retained.
+
+The only thing each tailer retains is an index which is composed as a cycle number e.g. days since epoch and a sequence number within that cycle.
+In the case of `DAILY` cycle, the sequence number is 32 bit and the `index = ((long) cycle << 32) | sequenceNumber` so printing the index in hexadecimal is common in our libraries.
+
+An appender and tailer is very cheap as they don't even require a TCP connection. They are just a few Java objects.
+
+Rather than partition the queue files across servers, we support each server supporting as much data as you have disk space. 
+This is much more scalable than being limited to the amount of memory space you have.
+You can buy a redundant pair of 6 TB of enterprise disks for $700 (retail) at the time of writing (July 2016) and that is much cheaper than 6 TB memory.
+
+=== Restrictions on topics and messages.
+
+Topics are limited to being strings which can be used as directory names.  
+Within a topic you can have sub-topics which be anything data type which can be serialized.
+Messages can be anything which can be serialized.
+
+Chronicle Queue supports;
+
+- `Serializable` objects, though this is to be avoided as it is not efficient
+- `Externalizable`
+- byte[] and String
+- `Marshallable` which is a self describing message which can be written as YAML, Binary YAML or JSON.
+- `BytesMarshallable` which is low level binary or text encoding.
+
+=== Tailer see every message.
+
+Every tailer sees every message. An abstraction can be added to filter messages or assign messages to just one message processor, 
+however in general you only need one main consumer for a topic and possibly some supporting tailers for monitoring etc.
+
+As Chronicle Queue doesn't partition it's topics, you get total ordering of all messages within that topic.  
+Across topics there is no guarentee of ordering and if you want to replay deterministically from a system which consumes from multiple topics we suggest replaying from that systems output.
+
+=== Replaying from the output, not the input.
+
+It is common practice to replay a state machine from it's inputs.  This has two flaws;
+
+- you have either one input, or you can always determine the order the inputs were consumed.
+- you have not changed the software (or all the software is stored in the queue)
+
+If you want to be able to upgrade your system you want o replay for the output.
+
+Replaying from the output means;
+
+- you have a record of the order of the inputs you processed.
+- you have a record of all the decisions your new system is commited to, even if the new code would have made different decisions.
+
+=== Guarentees
+
+Chronicle Queue provides the following guarentees
+
+- for each appender, messages are written in the order the appnder wrote them. Messages by different appenders are interleaved.
+- for each tailer, it will see every message for a topic in the same order as every other tailer.
+- when replicated, every replica has a copy of every message.
+
+Replication has three levels of gaurentees
+
+- replication happens soon but eventually (< 1ms in as much as 99.9% of cases)
+- or, a tailer will only see messages which have been replicated.
+- or, an appender doesn't return until a replica has acknowledged it has been received.
+
+=== Use Cases
+
+Chronicle Queue is most often use for "Producer Centric" systems where you need to retain a lot of data for days or years.
+
+==== What is a Producer Centric system?
+
+Most messaging systems are "Consumer Centric", a common example is a user GUI.  
+You can have multiple users on different machines, different quality of networks, doing a variety of other things for the user at different times.
+In particaulr, a user can only take in som much data. For this reason it makes sense for the client consumer to tell the producer when and when not to give them more data. 
+It should detemine how flow control works.
+
+Chronicle Queue is a "Producer Centric" solution and does everything possible to never push back on the producer or tell it to slow down.
+As such it is a power tool as a big buffer between your system and an upstream producer you have little or not control over.
+
+=== Market Data
+
+When your receive market data from a publisher you don't have the option to push back on the producer for long if at all. 
+A few of our users consume data from CME OPRA. This produces peaks of 10 million events per second and these are sent as UDP packets 
+without any retry. If you miss or drop a packet it is lost.  You have to consume and record those packets as fast they come to you
+with very little buffering in the network adapter to save you.
+
+For market data in particular real time means around *1 micro-second*, it doesn't mean intra-day.
+
+Chronicle Queue is fast and efficient enough it has been used to increase the speed that data is passed between threads, 
+even though it also keep a record of every message passed.
+
+=== Compilance Systems
+
+Complicate Systems are required by more and more systems these days.  Everyone has to have them but no one wants to be slowed down by them.
+By using Chronicle Queue to buffer data between monitored system and the compliance system, you don't need to worry about the impact 
+of complicate recording for your monitored systems.
+
+Again, Chronicle Queue can support millions of events per second per server and access data which has been retained for years.
+
+
+
+
+
+
+
+
