@@ -269,9 +269,14 @@ public class SingleChronicleQueueExcerpts {
                     throw new AssertionError(message);
                 }*/
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
-                long seq2 = store.sequenceForPosition(this, pos1);
+                long seq2;
+                try {
+                    seq2 = store.sequenceForPosition(this, pos1);
+                } catch (RuntimeException e) {
+                    throw new IllegalStateException("While checking the seq of " + pos1, e);
+                }
                 if (seq1 != seq2) {
-                    System.out.println(queue.dump());
+//                    System.out.println(queue.dump());
                     String message = "~~~~~~~~~~~~~~ " +
                             "thread: " + Thread.currentThread().getName() +
                             "  pos1: " + pos1 +
