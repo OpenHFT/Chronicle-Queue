@@ -21,35 +21,44 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.WireDumper;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import static java.lang.System.err;
-import static java.lang.System.out;
 
 /**
  * Created by Peter on 07/03/2016.
  */
 public class DumpQueueMain {
-    public static void main(String[] args) {
+    static final String FILE = System.getProperty("file");
+
+    public static void main(String[] args) throws FileNotFoundException {
         dump(args[0]);
     }
 
-    public static void dump(String path) {
+    public static void dump(String path) throws FileNotFoundException {
         File path2 = new File(path);
-        if (path2.isDirectory()) {
-            File[] files = path2.listFiles();
+        PrintStream out = FILE == null ? System.out : new PrintStream(new File(FILE));
+        long upperLimit = Long.MAX_VALUE;
+        dump(path2, out, upperLimit);
+    }
+
+    public static void dump(File path, PrintStream out, long upperLimit) {
+        if (path.isDirectory()) {
+            File[] files = path.listFiles();
             if (files == null)
                 err.println("Directory not found " + path);
 
             for (File file : files)
-                dumpFile(file);
+                dumpFile(file, out, upperLimit);
 
         } else {
-            dumpFile(path2);
+            dumpFile(path, out, upperLimit);
         }
     }
 
-    private static void dumpFile(File file) {
+    public static void dumpFile(File file, PrintStream out, long upperLimit) {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
                 bytes.readLimit(bytes.realCapacity());
@@ -62,6 +71,10 @@ public class DumpQueueMain {
                     out.println(sb);
                     if (last)
                         break;
+                    if (bytes.readPosition() > upperLimit) {
+                        out.println("# limit reached.");
+                        return;
+                    }
                 }
             } catch (IOException ioe) {
                 err.println("Failed to read " + file + " " + ioe);

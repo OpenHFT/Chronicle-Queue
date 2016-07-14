@@ -59,7 +59,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * @param position  of the start of the message
      * @return index in this store.
      */
-    long sequenceForPosition(ExcerptContext ec, long position) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 

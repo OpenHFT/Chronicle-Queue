@@ -354,7 +354,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     long linearScanByPosition(@NotNull final Wire wire,
                               final long toPosition,
                               final long indexOfNext,
-                              final long startAddress) throws EOFException {
+                              final long startAddress,
+                              boolean inclusive) throws EOFException {
         assert toPosition >= 0;
         Bytes<?> bytes = wire.bytes();
 
@@ -363,11 +364,21 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         while (bytes.readPosition() <= toPosition) {
             WireIn.HeaderType headerType = wire.readDataHeader(true);
 
+            if (!inclusive && toPosition == bytes.readPosition())
+                return i;
+
             switch (headerType) {
                 case NONE:
                     if (toPosition == Long.MAX_VALUE)
                         return i + 1;
-                    throw new IllegalArgumentException("You can't know the index for an entry which hasn't been written. pos: " + toPosition);
+
+                    int header = bytes.readVolatileInt(bytes.readPosition());
+                    throw new IllegalArgumentException(
+                            "You can't know the index for an entry which hasn't been written. " +
+                                    "start: " + startAddress +
+                                    ", at: " + bytes.readPosition() +
+                                    ", header: " + Integer.toHexString(header) +
+                                    ", toPos: " + toPosition);
                 case META_DATA:
                     break;
                 case DATA:
@@ -394,7 +405,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     long sequenceForPosition(@NotNull StoreRecovery recovery,
                              @NotNull ExcerptContext ec,
-                             final long position)
+                             final long position,
+                             boolean inclusive)
             throws EOFException, StreamCorruptedException {
 
         long timeoutMS = ((AbstractWire) ec.wire()).isInsideHeader() ? 0 : ec.timeoutMS();
@@ -403,7 +415,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
         if (((Byteable) index2indexArr).bytesStore() == null)
-            return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress);
+            return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
 
         int used2 = Maths.toUInt31(index2indexArr.getUsed());
         if (used2 == 0) {
@@ -446,7 +458,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             }
         }
 
-        return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress);
+        return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
 
     }
 
@@ -521,7 +533,6 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @param ec             the wire that used to store the data
      * @param sequenceNumber the sequenceNumber that the data will be stored to
      * @param position       the position the data is at
-
      * @throws EOFException
      * @throws UnrecoverableTimeoutException
      * @throws StreamCorruptedException

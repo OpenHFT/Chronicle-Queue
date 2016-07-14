@@ -53,6 +53,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
+    final File path;
+    @NotNull
     private final RollCycle rollCycle;
     @NotNull
     private final RollingResourcesCache dateCache;
@@ -60,8 +62,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final WireStorePool pool;
     private final long epoch;
     private final boolean isBuffered;
-    @NotNull
-    private final File path;
     @NotNull
     private final WireType wireType;
     private final long blockSize;

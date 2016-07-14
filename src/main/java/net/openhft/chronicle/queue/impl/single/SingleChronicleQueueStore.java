@@ -170,6 +170,7 @@ class SingleChronicleQueueStore implements WireStore {
     @Override
     public WireStore writePosition(long position) {
 
+        assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header))
             writePosition.setMaxValue(position);
@@ -236,9 +237,9 @@ class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public long sequenceForPosition(final ExcerptContext ec, final long position) throws
+    public long sequenceForPosition(final ExcerptContext ec, final long position, boolean inclusive) throws
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-        return indexing.sequenceForPosition(recovery, ec, position);
+        return indexing.sequenceForPosition(recovery, ec, position, inclusive);
     }
 
     @Override
