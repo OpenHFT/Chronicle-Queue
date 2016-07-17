@@ -8,7 +8,7 @@ It supports asycnhronous RMI and Publish/Subscribe interfaces with sub-milli-sec
 In optimised examples a message can passed between JVM in under a micro-second.
 Chronicle Queue provides stable real latencies into the millions of messages per second.
 
-=== Terminology
+== Terminology
 
 Basic terminology.
 
@@ -22,6 +22,8 @@ NOTE: We deliberately avoid the term *consumer* as messages are not consumed/des
 At a high level, *appenders* append to a queue and, *tailers* keep readin from the next available message.
 
 By using Chronicle Engine, you can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*
+
+== How does Chronicle QUeue v4 work
 
 === Topics and Queue files.
 
@@ -99,11 +101,11 @@ Replication has three levels of gaurentees
 - or, a tailer will only see messages which have been replicated.
 - or, an appender doesn't return until a replica has acknowledged it has been received.
 
-=== Use Cases
+== Use Cases
 
 Chronicle Queue is most often use for "Producer Centric" systems where you need to retain a lot of data for days or years.
 
-==== What is a Producer Centric system?
+=== What is a Producer Centric system?
 
 Most messaging systems are "Consumer Centric", a common example is a user GUI.  
 You can have multiple users on different machines, different quality of networks, doing a variety of other things for the user at different times.
@@ -171,8 +173,6 @@ Once you start writing to a queue, you have a choice of high level interfaces, t
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
    final ExcerptAppender appender = queue.acquireAppender();
 ----
-
-==== Calling a custom interface
 
 This the highest level API which hides the fact you are writing to messaging at all. The benefit is; you can swap calls to the interface with a real component or an interface to a different protocol.
 
