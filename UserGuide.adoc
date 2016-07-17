@@ -377,7 +377,48 @@ assertTrue(tailer.readBytes(b -> {
 }));
 ----
 
+== Changes from Queue v3
 
+Queue v4 attempts to solve a number of issues with Queue v3.
+
+- without self describing messages, users had to create their own for dumping messages and long term storage of data.  They can still do so, but don't have to.
+- Vanilla Chronicle Queue would create a file per thread. This is fine if the number of threads is controlled however many applications have little or not control over how many threads are used and this caused usability problems.
+- The configruation for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
+- There was no way for the producer to know how much data had been replicated to the consumer. The only work around was to replicate data back to the producers.
+- You needed to specify the size of data to reserve before you started the message.
+- You needed to do your own locking for appender in Indexed Chronicle.
+
+=== Can I use Chronicle v3 and v4.
+
+Yes. they use different packages. Queue v4 is a complete re-write so there is no problem using it at the same time as v3.
+
+=== Migrating from Queue v2 and v3.
+
+In Queue v3, everything was in terms of Bytes, not wire.  There is two ways to use byte in Queue v4.  You can use the `writeBytes` and `readBytes` methods, or you can get the `bytes()` from the wire e.g.
+
+.Writing and reading bytes using a lambda
+[source, Java]
+----
+appender.writeBytes(b -> b.writeInt(1234).writeDouble(1.111));
+
+boolean present = tailer.readBytes(b -> process(b.readInt(), b.readDouble()));
+----
+
+.Writing to a queue without using a lambda
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    Bytes bytes = dc.wire().bytes();
+    // write to bytes
+}
+
+try (DocumentContext dc = tailer.readingDocument()) {
+    if (dc.isPresent()) {
+        Bytes bytes = dc.wire().bytes();
+        // read from bytes
+    }
+}
+----
 
 
 
