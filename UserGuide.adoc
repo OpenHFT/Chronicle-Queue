@@ -285,9 +285,98 @@ Hello World
 # position: 262859, header: 4
 --- !!data #binary
 000402c0                                               12                 ·
-000402d0 78 56 34 00 00 90 99 00  90 99 00 00 48 65 6C 6C xV4····· ····Hell
-000402e0 6F 20 57 6F 72 6C 64                             o World          
+000402d0 78 56 34 00 00 90 99 00  90 99 00 00 0B 48 65 6C xV4····· ·····Hel
+000402e0 6C 6F 20 57 6F 72 6C 64                          lo World         
 ----
+
+=== Reading from a Queue
+
+Reading the queue follows the same pattern except there is a possability there is not message when you attempt to read it.
+
+.Start Reading
+[source, Java]
+----
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+   final ExcerptTailer tailer = queue.createTailer();
+----
+
+You can turn each message into a method call based on the content of the message
+
+[source, Java]
+----
+// reading using method calls
+RiskMonitor monitor = System.out::println;
+MethodReader reader = tailer.methodReader(monitor);
+// read one message
+assertTrue(reader.readOne());
+----
+
+You can decode the message yourself. Note: the names, type and order of the fields doesn't have to match.
+
+[source, Java]
+----
+assertTrue(tailer.readDocument(w -> w.read("trade").marshallable(
+        m -> {
+            LocalDateTime timestamp = m.read("timestamp").dateTime();
+            String symbol = m.read("symbol").text();
+            double price = m.read("price").float64();
+            double quantity = m.read("quantity").float64();
+            Side side = m.read("side").object(Side.class);
+            String trader = m.read("trader").text();
+            // do something with values.
+        })));
+----
+
+You can read self-describing data values. This will check the types are right and convert as required.
+
+[source, Java]
+----
+assertTrue(tailer.readDocument(w -> {
+    ValueIn in = w.getValueIn();
+    int num = in.int32();
+    long num2 = in.int64();
+    String text = in.text();
+    // do something with values
+}));
+----
+
+You can read raw data as primitives and Strings
+
+[source, Java]
+----
+assertTrue(tailer.readBytes(in -> {
+    int code = in.readByte();
+    int num = in.readInt();
+    long num2 = in.readLong();
+    String text = in.readUtf8();
+    assertEquals("Hello World", text);
+    // do something with values
+}));
+----
+
+Or you can get the underlying memory address and access the native memory.
+
+[source, Java]
+----
+assertTrue(tailer.readBytes(b -> {
+    long address = b.address(b.readPosition());
+    Unsafe unsafe = UnsafeMemory.UNSAFE;
+    int code = unsafe.getByte(address);
+    address++;
+    int num = unsafe.getInt(address);
+    address += 4;
+    long num2 = unsafe.getLong(address);
+    address += 8;
+    int length = unsafe.getByte(address);
+    address++;
+    byte[] bytes = new byte[length];
+    unsafe.copyMemory(null, address, bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET, bytes.length);
+    String text = new String(bytes, StandardCharsets.UTF_8);
+    assertEquals("Hello World", text);
+    // do something with values
+}));
+----
+
 
 
 
