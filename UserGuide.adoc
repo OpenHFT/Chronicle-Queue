@@ -36,7 +36,7 @@ mytopic/
     20160713.cq4
 ----
 
-=== File Retension
+=== File Retention
 
 You can add a notifier when file are rotated as a `StoreFileListener` and this can be used to delete files after a period of time, however files are retained forever by default.  Our biggest users have over 100 TB retained.
 
@@ -125,7 +125,7 @@ For market data in particular real time means around *1 micro-second*, it doesn'
 Chronicle Queue is fast and efficient enough it has been used to increase the speed that data is passed between threads, 
 even though it also keep a record of every message passed.
 
-=== Compilance Systems
+=== Compliance Systems
 
 Complicate Systems are required by more and more systems these days.  Everyone has to have them but no one wants to be slowed down by them.
 By using Chronicle Queue to buffer data between monitored system and the compliance system, you don't need to worry about the impact 
@@ -133,10 +133,36 @@ of complicate recording for your monitored systems.
 
 Again, Chronicle Queue can support millions of events per second per server and access data which has been retained for years.
 
+=== Messaging
 
+Chronicle Queue support low latency IPC between JVMs on the same machine ~ 1 micro-second, and between machines with a typical latency of 10 micro-seconds for
+modest throughputs of a few hundred thousand.  Chronicle Queue support throughputs over a millions of events per second with stable micro-seconds latencies.
 
+=== Metrics
 
+Chronicle Queue can be monitored to obtain latency, through put and activity metrics in real time.
 
+=== Log Replacement
+
+As Chronicle Queue can be used to build state machines, all the information about the state of those components
+ can be reproduced externally without direct access to the the components or their state.  This significantly reduces the need for additional logging.
+  However any logging you do need can be recorded in great detail.  This makes enabling DEBUG logging in production practical as the cost of logging is very low, in the single digit micro-seconds.
+  Logs can be replicated centrally for log consolidation.
+
+Chronicle Queue is being used to store 100+ TB of data which can be replayed from any point in time.
+
+=== Lambda Stream Processing
+
+Streaming components are highly performant, deterministic and have reproducable.
+You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
+
+This makes using Stream Processing attractive for systems which need a high degree of quality outcomes.
+
+== Using Chronicle Queue
+
+Chronicle Queue is designed to be driven from code.  You can easily add an interface which suits you needs.
+
+=== Starting a Queue
 
 
 

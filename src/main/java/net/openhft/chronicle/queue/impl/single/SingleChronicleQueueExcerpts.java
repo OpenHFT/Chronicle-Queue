@@ -62,8 +62,8 @@ public class SingleChronicleQueueExcerpts {
     /**
      * StoreAppender
      */
-    public static class StoreAppender implements ExcerptAppender, ExcerptContext {
-        public static final int HEAD_ROOM = 1 << 20;
+    static class StoreAppender implements ExcerptAppender, ExcerptContext {
+        static final int HEAD_ROOM = 1 << 20;
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreAppenderContext context;
@@ -81,10 +81,21 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         private long lastTouchedPage = -1;
         private long lastTouchedPos = 0;
+        private boolean padToCacheAlign;
 
         public StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
             context = new StoreAppenderContext();
+        }
+
+        @Override
+        public void padToCacheAlign(boolean padToCacheAlign) {
+            this.padToCacheAlign = padToCacheAlign;
+        }
+
+        @Override
+        public boolean padToCacheAlign() {
+            return padToCacheAlign;
         }
 
         @Override
@@ -596,7 +607,8 @@ public class SingleChronicleQueueExcerpts {
                 boolean isClosed = false;
                 try {
                     if (wire == StoreAppender.this.wire) {
-
+                        if (padToCacheAlign)
+                            wire.padToCacheAlign();
                         wire.updateHeader(position, metaData);
 
                         lastIndex(wire.headerNumber());

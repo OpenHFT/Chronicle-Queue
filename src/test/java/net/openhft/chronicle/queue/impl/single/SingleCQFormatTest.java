@@ -1009,11 +1009,13 @@ public class SingleCQFormatTest {
                 Bytes bytes = Bytes.elasticByteBuffer();
                 new BinaryWire(bytes).write(() -> "msg").text(msg);
                 appender.writeBytes(bytes);
+
                 break;
 
             default:
                 try (DocumentContext dc = appender.writingDocument()) {
-                    dc.wire().write(() -> "msg").text(msg);
+                    Wire wire = dc.wire();
+                    wire.write(() -> "msg").text(msg);
                 }
                 break;
         }

@@ -77,4 +77,8 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      */
     default void pretouch() {
     }
+
+    void padToCacheAlign(boolean padToCacheAlign);
+
+    boolean padToCacheAlign();
 }
