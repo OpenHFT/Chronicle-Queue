@@ -23,7 +23,7 @@ At a high level, *appenders* append to a queue and, *tailers* keep readin from t
 
 By using Chronicle Engine, you can publish to a *queue* to act as a *remote appender*, and you *subscribe* to a queue to act as a *remote tailer*
 
-== How does Chronicle QUeue v4 work
+== How does Chronicle Queue v4 work
 
 === Topics and Queue files.
 
@@ -37,6 +37,8 @@ mytopic/
     20160712.cq4
     20160713.cq4
 ----
+
+To copy all the data for a single day (or cycle) you can copy the file for that day on to your development machine for replay testing.
 
 === File Retention
 
@@ -420,5 +422,108 @@ try (DocumentContext dc = tailer.readingDocument()) {
 }
 ----
 
+== Broker configuration
 
+Chronicle Queue doesn't use a broker. If youw ant remote access to a queue either and a producer or subscriber you cna use Chronicle Queue.  Chronicle Engine Enterprise has a C# client as well.
+
+== Design
+
+=== Motivation
+
+Chronicle Queue is designed to be a record everything store which can read in micro-second latency real time.  This supports even the most demeanding High Frequency Trading systems, however it can be used in any application where the recording of information is a concern.
+
+Chronicle Queue Enterprise is design to support reliable replication with notifcation to either the appender or a tailer than a message has been successfully replicated.
+
+=== Persistence
+
+Chronicle Queue assume disk space is cheap (compared with memory). Enterprise SSD costs have come down. One GB of disk space is worth less than 1 minute of your time on minimum wage (in the UK at time or writing July 2016) Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.  If you use spinning HDD, you can store many TB of disk space for little cost.
+
+The only piece of software Chronicle Queue needs to run is the Operating System. It doesn't have a broker, instead it uses your Operating System to do all the work. If you application dies, but the OS keeps running for seconds longer, no data need be lost even without replication. 
+
+As Chronicle Queue stores all saved data in memory mapped files, this has a trivial on heap overhead event if you have over 100 TB of data.
+
+=== Efficiency
+
+We put significant effort into worring about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the chose of OS and disk subsystem.
+
+=== Compression
+
+Replication for Chronicle Queue support Chronicle Wire Enterprise. This supports a real time compression which calcuates the deltas for individual objects as they are written. This can reduce the size of messages bto 1/10th or better without the need for batching i.e without introducing significnat latency.
+
+Queue also supports LZW, Snappy and GZIP compression however these add non-trival latency.  These are only useful if you have have strick limitations on network bandwidth.
+
+=== Delivery Mode Semantics
+
+Chronicle Queue supports a number symantics.
+
+- every message are replayed on restart
+- only new messages are played on restart.
+- restart from any known point using the index of the entry.
+- replay only message you have missed. This is supported directly using the methodReader/methodWriter builders.
+
+=== Detailed tracing of timings.
+
+Chronicle Queue supprot explicit or implicit nano-second resolution timing for messages as they pass end to end over across you system. We support using nanotime across machine without the need for specialist hardware.
+
+.Enabling high resolution timings
+[source, Java]
+----
+SidedMarketDataListener combiner = out.acquireAppender()
+        .methodWriterBuilder(SidedMarketDataListener.class)
+        .recordHistory(true)
+        .get();
+        
+combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
+----
+
+A timestamp is added for each read and write as it passes from service to service.
+
+.Downstream message triggered by the event above
+[source, Yaml]
+----
+--- !!data #binary
+history: {
+  sources: [
+    1,
+    0x426700000000 # <4>
+  ]
+  timings: [
+    1394278797664704, # <1>
+    1394278822632044, # <2>
+    1394278824073475  # <3>
+  ]
+}
+onTopOfBookPrice: {
+  symbol: EURUSD1,
+  timestamp: 123456789000,
+  buyPrice: NaN,
+  buyQuantity: 0,
+  sellPrice: 1.1172,
+  sellQuantity: 2000000.0
+}
+----
+<1> First write
+<2> First read
+<3> Write of the result of the read.
+<4> What triggered this event.
+
+=== Using high resolution timings across machines.
+
+On most systems `System.nanoTime()` is roughly the number of nano-second since the system last reboot (although different JVMs may behave differently)  This is the same across JVM on the same amchine, but wildly different between machines.  The absolute difference machines is meaningless, however the information can be used to detect outliners. i.e. you can't determine what the best latency is, but you can determine how far off the best latencies you are.  This is useful if you are focussing on the 99%ile latencies for example.  We have a class called `RunningMinimum` to obtain timings from different machines while compensating for a drift in the nanoTime between machines. The more often you take measurements the more accurate this running minimum is.
+
+=== Compacting logs
+
+Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` which will notify you when a file is added and when it is no longer retained.  You can move, compress or delete all the message for a day at once.
+
+== Chronicle Queue vs Kafka
+
+Chronicle Queue is designed to support over an order of magnitude the throughput with an order of magnitude lower latency of Kafka.  While Karfa is faster than many of the alternatives it doesn't support both throughputs over million events per second and low latency e.g. 1 - 20 micro-seconds at the same time.
+
+Chronicle Queue attempts to handle more volume from a single thread, to a single partition and thus avoid the need for the complexity and downsides of having partitions.  Note: Chronicle Engine supports partitioning of queues across machines, though not the partitioning of a queue.
+
+Unlike Karfa which uses a broker which uses the operating system's file system and cache.  Chronicle Queue relies entirely on the file system and cache.
+
+=== Similar product guides
+
+http://kafka.apache.org/documentation.html[Kafka Documentation]
 
