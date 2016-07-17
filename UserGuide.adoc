@@ -4,8 +4,8 @@ Peter Lawrey
 :toc-placement: preamble
 
 Chronicle Queue is a distributed unbounded persisted queue. 
-It supports asycnhronous RMI and Publish/Subscribe interfaces with sub-milli-second latencies. 
-In optimised examples a message can passed between JVM in under a micro-second.
+It supports asycnhronous RMI and Publish/Subscribe interfaces with micro-second latencies. 
+In optimised examples a message can passed between JVM in under a micro-second, and passed between JVM on different machines via replication in under 10 micro-seconds.
 Chronicle Queue provides stable real latencies into the millions of messages per second.
 
 == How does Chronicle Queue v4 work
