@@ -162,7 +162,133 @@ This makes using Stream Processing attractive for systems which need a high degr
 
 Chronicle Queue is designed to be driven from code.  You can easily add an interface which suits you needs.
 
-=== Starting a Queue
+=== Writing to a Queue
+
+Once you start writing to a queue, you have a choice of high level interfaces, to lower level API down to raw memory access.
+
+[source, Java]
+----
+try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
+   final ExcerptAppender appender = queue.acquireAppender();
+----
+
+==== Calling a custom interface
+
+This the highest level API which hides the fact you are writing to messaging at all. The benefit is; you can swap calls to the interface with a real component or an interface to a different protocol.
+
+[source, Java]
+----
+// using the method writer interface.
+RiskMonitor riskMonitor = appender.methodWriter(RiskMonitor.class);
+final LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+riskMonitor.trade(new TradeDetails(now, "GBPUSD", 1.3095, 10e6, Side.Buy, "peter"));
+----
+
+You can write a self describing message.  Such messages can support schema changes. They are also easier to understand when debugging or diagnosing problems.
+
+[source, Java]
+----
+// writing a self describing message
+appender.writeDocument(w -> w.write("trade").marshallable(
+        m -> m.write("timestamp").dateTime(now)
+                .write("symbol").text("EURUSD")
+                .write("price").float64(1.1101)
+                .write("quantity").float64(15e6)
+                .write("side").object(Side.class, Side.Sell)
+                .write("trader").text("peter")));
+----
+
+You can write raw data which is self describing (the types will always be correct, position is the only indication as to the meaning of those values)
+
+[source, Java]
+----
+// writing just data
+appender.writeDocument(w -> w
+        .getValueOut().int32(0x123456)
+        .getValueOut().int64(0x999000999000L)
+        .getValueOut().text("Hello World"));
+----
+
+You can write raw data which is not delf describing. Your reader must know what this data means and the types which were used.
+
+[source, Java]
+----
+// writing raw data
+appender.writeBytes(b -> b
+        .writeByte((byte) 0x12)
+        .writeInt(0x345678)
+        .writeLong(0x999000999000L)
+        .writeUtf8("Hello World"));
+----
+
+This is the lowest level way to write data.  You get an address to raw memory and you can write what you want.
+
+[source, Java]
+----
+// Unsafe low level
+appender.writeBytes(b -> {
+    long address = b.address(b.writePosition());
+    Unsafe unsafe = UnsafeMemory.UNSAFE;
+    unsafe.putByte(address, (byte) 0x12);
+    address += 1;
+    unsafe.putInt(address, 0x345678);
+    address += 4;
+    unsafe.putLong(address, 0x999000999000L);
+    address += 8;
+    byte[] bytes = "Hello World".getBytes(StandardCharsets.ISO_8859_1);
+    unsafe.copyMemory(bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET, null, address, bytes.length);
+    b.writeSkip(1 + 4 + 8 + bytes.length);
+});
+----
+
+You can print the contents of the queue. You can see the first two and last two messages store the same data.
+
+[source, Java]
+----
+// dump the content of the queue
+System.out.println(queue.dump());
+----
+
+Prints
+
+[source, Yaml]
+----
+# position: 262568, header: 0
+--- !!data #binary
+trade: {
+  timestamp: 2016-07-17T15:18:41.141,
+  symbol: GBPUSD,
+  price: 1.3095,
+  quantity: 10000000.0,
+  side: Buy,
+  trader: peter
+}
+# position: 262684, header: 1
+--- !!data #binary
+trade: {
+  timestamp: 2016-07-17T15:18:41.141,
+  symbol: EURUSD,
+  price: 1.1101,
+  quantity: 15000000.0,
+  side: Sell,
+  trader: peter
+}
+# position: 262800, header: 2
+--- !!data #binary
+!int 1193046
+168843764404224
+Hello World
+# position: 262830, header: 3
+--- !!data #binary
+000402b0       12 78 56 34 00 00  90 99 00 90 99 00 00 0B   ·xV4·· ········
+000402c0 48 65 6C 6C 6F 20 57 6F  72 6C 64                Hello Wo rld     
+# position: 262859, header: 4
+--- !!data #binary
+000402c0                                               12                 ·
+000402d0 78 56 34 00 00 90 99 00  90 99 00 00 48 65 6C 6C xV4····· ····Hell
+000402e0 6F 20 57 6F 72 6C 64                             o World          
+----
+
 
 
 
