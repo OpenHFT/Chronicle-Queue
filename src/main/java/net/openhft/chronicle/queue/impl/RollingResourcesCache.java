@@ -28,9 +28,10 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.util.Comparator;
 import java.util.function.Function;
 
-public class RollingResourcesCache {
+public class RollingResourcesCache implements Comparator<File> {
     private static final int SIZE = 32;
 
     @NotNull
@@ -41,18 +42,27 @@ public class RollingResourcesCache {
     private final Resource[] values;
     private final int length;
 
-    public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch, @NotNull Function<String, File> fileFactory) {
-        this(cycle.length(), cycle.format(), epoch, fileFactory);
+    @NotNull
+    private final Function<File, String> fileToName;
+
+    public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
+                                 @NotNull Function<String, File> nameToFile,
+                                 @NotNull Function<File, String> fileToName) {
+        this(cycle.length(), cycle.format(), epoch, nameToFile, fileToName);
     }
 
-    private RollingResourcesCache(final int length, @NotNull String format, long epoch, @NotNull Function<String, File> fileFactory) {
+    private RollingResourcesCache(final int length,
+                                  @NotNull String format, long epoch,
+                                  @NotNull Function<String, File> nameToFile,
+                                  @NotNull Function<File, String> fileToName) {
         this.length = length;
+        this.fileToName = fileToName;
         this.values = new Resource[SIZE];
         long millis = ((epoch + 43200000) % 86400000) - 43200000;
         ZoneOffset zoneOffset = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
         ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffset);
         this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
-        this.fileFactory = fileFactory;
+        this.fileFactory = nameToFile;
     }
 
     /**
@@ -79,6 +89,13 @@ public class RollingResourcesCache {
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
             epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
         return Maths.toInt32(epochDay / (length / 1000));
+    }
+
+    @Override
+    public int compare(File file1, File file2) {
+        long x = Instant.from(formatter.parse(fileToName.apply(file1))).toEpochMilli();
+        long y = Instant.from(formatter.parse(fileToName.apply(file2))).toEpochMilli();
+        return Long.compare(x, y);
     }
 
     public static class Resource {

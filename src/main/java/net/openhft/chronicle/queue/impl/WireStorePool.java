@@ -17,8 +17,10 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.annotation.Nullable;
 import net.openhft.chronicle.queue.RollDetails;
+import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
 
+import java.text.ParseException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,12 +54,16 @@ public class WireStorePool {
         if (store != null && store.tryReserve())
             return store;
 
-        store = this.supplier.acquire(cycle, epoch, createIfAbsent);
+        store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
             stores.put(rollDetails, store);
             storeFileListener.onAcquired(cycle, store.file());
         }
         return store;
+    }
+
+    public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
+        return supplier.nextCycle(currentCycle, direction);
     }
 
     public synchronized void release(@NotNull WireStore store) {

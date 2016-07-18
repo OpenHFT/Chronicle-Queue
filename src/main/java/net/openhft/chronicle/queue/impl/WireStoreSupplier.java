@@ -15,10 +15,16 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.annotation.Nullable;
 
-@FunctionalInterface
+import net.openhft.chronicle.queue.TailerDirection;
+import org.jetbrains.annotations.Nullable;
+
+import java.text.ParseException;
+
+
 public interface WireStoreSupplier {
     @Nullable
-    WireStore acquire(int cycle, long epoch, boolean createIfAbsent);
+    WireStore acquire(int cycle, boolean createIfAbsent);
+
+    int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
 }
