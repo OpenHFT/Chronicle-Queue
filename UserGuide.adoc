@@ -14,7 +14,7 @@ Chronicle Queue provides stable real latencies into the millions of messages per
 
 Basic terminology.
 
-- messages are grouped by *topics* A topic can contain any number of *sub-topics* which are logically stores together in that topic.
+- messages are grouped by *topics* A topic can contain any number of *sub-topics* which are logically stored together in that topic.
 - an *appender* is the source of messages.
 - a *tailer* is a receiver of messages.
 - *Chronicle Queue* in brokerless by default. You can use *Chronicle Engine* to act as a broker for remote access.
