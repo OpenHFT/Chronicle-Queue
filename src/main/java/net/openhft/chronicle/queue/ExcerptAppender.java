@@ -78,6 +78,9 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     default void pretouch() {
     }
 
+    /**
+     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will not split a cache line.
+     */
     void padToCacheAlign(boolean padToCacheAlign);
 
     boolean padToCacheAlign();
