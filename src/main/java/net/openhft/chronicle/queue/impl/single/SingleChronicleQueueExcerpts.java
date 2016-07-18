@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
+import java.text.ParseException;
 import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
@@ -786,11 +787,27 @@ public class SingleChronicleQueueExcerpts {
                     return true;
 
                 } catch (EOFException eof) {
-                    if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
+                    if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE) {
+
+                        // assume the the next cycle is at the next cycle index, ie not cycles
+                        // skipped
                         if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
                             bytes = wire().bytes();
                             continue;
                         }
+
+                        try {
+                            int cycle = queue.nextCycle(this.cycle, direction);
+                            if (cycle == -1)
+                                return false;
+                            if (moveToIndex(cycle, 0) == ScanResult.FOUND) {
+                                bytes = wire().bytes();
+                                continue;
+                            }
+                        } catch (ParseException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    }
                     return false;
                 }
             }

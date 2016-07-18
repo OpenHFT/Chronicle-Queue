@@ -26,10 +26,8 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycle;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.RollingResourcesCache;
-import net.openhft.chronicle.queue.impl.WireStore;
-import net.openhft.chronicle.queue.impl.WireStorePool;
+import net.openhft.chronicle.queue.TailerDirection;
+import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
@@ -38,11 +36,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.text.ParseException;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static java.util.Collections.addAll;
+import static net.openhft.chronicle.queue.TailerDirection.NONE;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
@@ -80,8 +84,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
         epoch = builder.epoch();
-        dateCache = new RollingResourcesCache(this.rollCycle, epoch, name -> new File(builder.path(), name + SUFFIX));
-        pool = WireStorePool.withSupplier(this::acquireStore, builder.storeFileListener());
+        dateCache = new RollingResourcesCache(this.rollCycle, epoch, textToFile(builder),
+                fileToText());
+        pool = WireStorePool.withSupplier(new StoreSupplier(), builder.storeFileListener());
         isBuffered = builder.buffered();
         path = builder.path();
         wireType = builder.wireType();
@@ -97,6 +102,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         storeFactory = builder.storeFactory();
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
+    }
+
+    @NotNull
+    private Function<String, File> textToFile(@NotNull SingleChronicleQueueBuilder builder) {
+        return name -> new File(builder.path(), name + SUFFIX);
+    }
+
+    @NotNull
+    private Function<File, String> fileToText() {
+        return file -> {
+            String name = file.getName();
+            return name.substring(0, name.length() - SUFFIX.length());
+        };
     }
 
     @Override
@@ -238,6 +256,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public int nextCycle(int cycle, @NotNull TailerDirection direction) throws ParseException {
+        return pool.nextCycle(cycle, direction);
+    }
+
+    @Override
     public void close() {
         this.pool.close();
     }
@@ -358,46 +381,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
     }
 
-    @net.openhft.chronicle.core.annotation.Nullable
-    private WireStore acquireStore(final int cycle, final long epoch, boolean createIfAbsent) {
-        @NotNull final RollingResourcesCache.Resource dateValue = this.dateCache.resourceFor(cycle);
-        try {
-            File path = dateValue.path;
-            final File parentFile = path.getParentFile();
-            if (parentFile != null && !parentFile.exists())
-                parentFile.mkdirs();
-
-            if (!path.exists() && !createIfAbsent)
-                return null;
-
-            final MappedBytes mappedBytes = mappedBytes(path);
-            AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
-            assert wire.startUse();
-            wire.pauser(pauserSupplier.get());
-            wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
-
-            WireStore wireStore;
-            if (wire.writeFirstHeader()) {
-                wireStore = storeFactory.apply(this, wire);
-                wire.updateFirstHeader();
-            } else {
-                wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
-
-                StringBuilder name = Wires.acquireStringBuilder();
-                ValueIn valueIn = wire.readEventName(name);
-                if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
-                    wireStore = valueIn.typedMarshallable();
-                } else {
-                    //noinspection unchecked
-                    throw new StreamCorruptedException("The first message should be the header, was " + name);
-                }
-            }
-
-            return wireStore;
-
-        } catch (TimeoutException | IOException e) {
-            throw Jvm.rethrow(e);
-        }
+    private int toCycle(File lower) throws ParseException {
+        if (lower == null)
+            return -1;
+        return dateCache.parseCount(fileToText().apply(lower));
     }
 
     @Override
@@ -406,5 +393,91 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 "sourceId=" + sourceId +
                 ", path=" + path +
                 '}';
+    }
+
+    private class StoreSupplier implements WireStoreSupplier {
+
+        @Override
+        public WireStore acquire(int cycle, boolean createIfAbsent) {
+
+            SingleChronicleQueue that = SingleChronicleQueue.this;
+            @NotNull final RollingResourcesCache.Resource dateValue = that
+                    .dateCache.resourceFor(cycle);
+            try {
+                File path = dateValue.path;
+                final File parentFile = path.getParentFile();
+                if (parentFile != null && !parentFile.exists())
+                    parentFile.mkdirs();
+
+                if (!path.exists() && !createIfAbsent)
+                    return null;
+
+                final MappedBytes mappedBytes = mappedBytes(path);
+                AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
+                assert wire.startUse();
+                wire.pauser(pauserSupplier.get());
+                wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
+
+                WireStore wireStore;
+                if (wire.writeFirstHeader()) {
+                    wireStore = storeFactory.apply(that, wire);
+                    wire.updateFirstHeader();
+                } else {
+                    wire.readFirstHeader(timeoutMS, TimeUnit.MILLISECONDS);
+
+                    StringBuilder name = Wires.acquireStringBuilder();
+                    ValueIn valueIn = wire.readEventName(name);
+                    if (StringUtils.isEqual(name, MetaDataKeys.header.name())) {
+                        wireStore = valueIn.typedMarshallable();
+                    } else {
+                        //noinspection unchecked
+                        throw new StreamCorruptedException("The first message should be the header, was " + name);
+                    }
+                }
+
+                return wireStore;
+
+            } catch (TimeoutException | IOException e) {
+                throw Jvm.rethrow(e);
+            }
+        }
+
+        @Override
+        public int nextCycle(int currentCycle, TailerDirection direction) throws ParseException {
+
+            if (direction == NONE)
+                throw new AssertionError("direction is NONE");
+
+            final File parentFile = path;
+
+            if (parentFile == null)
+                throw new AssertionError("parentFile=null");
+
+            if (!parentFile.exists())
+                throw new AssertionError("parentFile=" + parentFile.getName() + " does not exist");
+
+            final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
+            final NavigableSet<File> tree = new TreeSet<>(dateCache);
+            final File[] files = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
+            addAll(tree, files);
+
+            final RollingResourcesCache.Resource dateValue = dateCache.resourceFor(currentCycle);
+            final File currentCycleFile = dateValue.path;
+
+            if (!currentCycleFile.exists())
+                throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
+
+            if (!tree.contains(currentCycleFile))
+                throw new AssertionError("missing currentCycle, file=" + currentCycleFile);
+
+            switch (direction) {
+                case FORWARD:
+                    return toCycle(tree.higher(currentCycleFile));
+                case BACKWARD:
+                    return toCycle(tree.lower(currentCycleFile));
+                default:
+                    throw new UnsupportedOperationException("Unsupported Direction");
+            }
+        }
     }
 }
