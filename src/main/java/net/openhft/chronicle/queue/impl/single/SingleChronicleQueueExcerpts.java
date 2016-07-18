@@ -610,6 +610,7 @@ public class SingleChronicleQueueExcerpts {
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
                             wire.padToCacheAlign();
+
                         wire.updateHeader(position, metaData);
 
                         lastIndex(wire.headerNumber());
@@ -623,7 +624,7 @@ public class SingleChronicleQueueExcerpts {
                             else
                                 assert lazyIndexing || checkIndex(lastIndex, position);
                         }
-
+                        assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
                         isClosed = true;
                         assert resetAppendingThread();
@@ -638,7 +639,6 @@ public class SingleChronicleQueueExcerpts {
                 } finally {
                     assert isClosed || resetAppendingThread();
                 }
-                assert checkWritePositionHeaderNumber();
             }
 
             @Override
