@@ -12,7 +12,7 @@ These are the steps which were taken to migrate Chornicle Logger from using Chro
             <groupId>net.openhft</groupId>
             <artifactId>chronicle</artifactId>
       </dependency>
------
+----
 
 to the following artifactId.
 
@@ -23,7 +23,7 @@ to the following artifactId.
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-queue</artifactId>
       </dependency>
------
+----
 
 NOTE: As Chronicle Queue v3 and v4 use different packages you can use both versions at the same time.
 
