@@ -74,7 +74,9 @@ public class DetectNotReadyEntriesTest {
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .blockSize(TEST_CHUNK_SIZE)
                 .build();
-// TODO Fix the last entry.
+
+        queue.acquireAppender().writeText("Bye for now");
+
         queue.close();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());

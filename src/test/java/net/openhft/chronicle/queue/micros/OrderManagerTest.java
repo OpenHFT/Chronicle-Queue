@@ -170,12 +170,14 @@ public class OrderManagerTest {
                 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
                 combiner.onSidedPrice(new SidedPrice("EURUSD2", 123456789100L, Side.Buy, 1.1160, 2e6));
 
-                combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
-                combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
+                for (int i = 2; i < 10; i += 2) {
+                    combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
+                    combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
+                }
             }
 
             // TODO FIx for more.
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 10; i++) {
                 // read one message at a time
                 try (SingleChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath)
                         .sourceId(1)
@@ -196,9 +198,9 @@ public class OrderManagerTest {
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
-                    assertTrue(reader.readOne());
 //                    System.out.println("#### IN\n" + in.dump());
 //                    System.out.println("#### OUT:\n" + out.dump());
+                    assertTrue("i: " + i, reader.readOne());
                 }
             }
         } finally {
