@@ -1749,7 +1749,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEndBeforeWrite() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1771,7 +1771,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testSomeMessages() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1795,7 +1795,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testForwardFollowedBackBackwardTailer() {
         File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1960,7 +1960,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendedSkipToEnd() throws TimeoutException, ExecutionException, InterruptedException {
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (RollingChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build()) {
 

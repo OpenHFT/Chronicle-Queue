@@ -125,11 +125,5 @@ public interface ChronicleQueue extends Closeable {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
 
-    int indexCount();
-
-    int indexSpacing();
-
     int sourceId();
-
-    RollCycle rollCycle();
 }

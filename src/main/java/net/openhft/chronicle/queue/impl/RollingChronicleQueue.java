@@ -71,6 +71,16 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int cycle();
 
+    /**
+     * @return the number of entries in an index meta data entry
+     */
+    int indexCount();
+
+    /**
+     * @return the spacing between indexed entries. If 1 then every entry is indexed.
+     */
+    int indexSpacing();
+
     RollCycle rollCycle();
 
     Function<WireType, StoreRecovery> recoverySupplier();
