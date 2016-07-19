@@ -53,7 +53,7 @@ public class RollingCycleTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -110,7 +110,7 @@ public class RollingCycleTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -166,7 +166,7 @@ public class RollingCycleTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +

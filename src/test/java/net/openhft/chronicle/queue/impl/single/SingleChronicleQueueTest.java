@@ -393,7 +393,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -438,7 +438,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -483,7 +483,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -528,7 +528,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -573,7 +573,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -618,7 +618,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -707,7 +707,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -752,7 +752,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -797,7 +797,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -842,7 +842,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -887,7 +887,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -932,7 +932,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -2134,7 +2134,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "    index2Index: 344,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +

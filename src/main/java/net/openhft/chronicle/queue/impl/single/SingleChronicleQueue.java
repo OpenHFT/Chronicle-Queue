@@ -80,6 +80,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
+    long firstAndLastCycleTime = 0;
+    int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -270,6 +272,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.pool.release(store);
     }
 
+//    long lastPathListTime = 0;
+//    String[] lastPathList = null;
+
     @Override
     public final int cycle() {
         return this.rollCycle.current(time, epoch);
@@ -287,9 +292,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return rollCycle().toIndex(cycle, 0);
     }
 
-//    long lastPathListTime = 0;
-//    String[] lastPathList = null;
-
     String[] getList() {
 //        final long now = time.currentTimeMillis();
 //        if (lastPathListTime + 10 > now) {
@@ -300,13 +302,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return path.list();
     }
 
-    public int firstCycle() {
-        int firstCycle = Integer.MAX_VALUE;
+    private void setFirstAndLastCycle() {
+        long now = time.currentTimeMillis();
+        if (now == firstAndLastCycleTime)
+            return;
+
+        firstCycle = Integer.MAX_VALUE;
+        lastCycle = Integer.MIN_VALUE;
 
         @Nullable final String[] files = getList();
 
-        if (files == null)
-            return Integer.MAX_VALUE;
+        if (files == null) {
+            return;
+        }
 
         for (String file : files) {
             try {
@@ -318,31 +326,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 int fileCycle = dateCache.parseCount(file);
                 if (firstCycle > fileCycle)
                     firstCycle = fileCycle;
-
-            } catch (ParseException fallback) {
-                // ignored
-            }
-        }
-        return firstCycle;
-    }
-
-    @Override
-    public int lastCycle() {
-        int lastCycle = Integer.MIN_VALUE;
-
-        @Nullable final String[] files = getList();
-
-        if (files == null)
-            return Integer.MIN_VALUE;
-
-        for (String file : files) {
-            try {
-                if (!file.endsWith(SUFFIX))
-                    continue;
-
-                file = file.substring(0, file.length() - SUFFIX.length());
-
-                int fileCycle = dateCache.parseCount(file);
                 if (lastCycle < fileCycle)
                     lastCycle = fileCycle;
 
@@ -350,6 +333,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 // ignored
             }
         }
+    }
+
+    public int firstCycle() {
+        setFirstAndLastCycle();
+        return firstCycle;
+    }
+
+    @Override
+    public int lastCycle() {
+        setFirstAndLastCycle();
         return lastCycle;
     }
 
