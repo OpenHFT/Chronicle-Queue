@@ -151,7 +151,7 @@ public class NotCompleteTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -197,7 +197,7 @@ public class NotCompleteTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +

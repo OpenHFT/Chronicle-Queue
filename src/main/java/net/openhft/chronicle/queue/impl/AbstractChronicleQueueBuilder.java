@@ -123,7 +123,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public long blockSize() {
-        return this.blockSize;
+        // can add an index2index & an index in one go.
+        long minSize = Math.max(TEST_BLOCK_SIZE, 32L * indexCount());
+        return Math.max(minSize, this.blockSize);
     }
 
     @Override

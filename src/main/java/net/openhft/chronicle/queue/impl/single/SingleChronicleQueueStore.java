@@ -273,7 +273,7 @@ class SingleChronicleQueueStore implements WireStore {
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
                 .write(MetaDataField.lastAcknowledgedIndexReplicated)
-                .int64forBinding(0L, lastAcknowledgedIndexReplicated);
+                .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
     }
 

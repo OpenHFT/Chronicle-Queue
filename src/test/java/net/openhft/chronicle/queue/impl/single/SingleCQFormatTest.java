@@ -237,7 +237,7 @@ public class SingleCQFormatTest {
                 "    index2Index: 0,\n" +
                 "    lastIndex: 0\n" +
                 "  },\n" +
-                "  lastAcknowledgedIndexReplicated: 0,\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
                 "  recovery: !TimedStoreRecovery {\n" +
                 "    timeStamp: 0\n" +
                 "  }\n" +
@@ -351,7 +351,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -434,7 +434,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -476,7 +476,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -523,7 +523,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 3\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -599,7 +599,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -654,7 +654,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 20\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -781,7 +781,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 20\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -892,7 +892,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 20\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -1067,7 +1067,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 0,\n" +
                     "    lastIndex: 0\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -1085,7 +1085,7 @@ public class SingleCQFormatTest {
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n" +
-                    "# 327196 bytes remaining\n", queue.dump());
+                    "# 654876 bytes remaining\n", queue.dump());
 
             ExcerptTailer tailer = queue.createTailer();
             Map<String, Object> map2 = tailer.readMap();
@@ -1122,7 +1122,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -1185,7 +1185,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 1\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +
@@ -1226,7 +1226,7 @@ public class SingleCQFormatTest {
                     "    index2Index: 352,\n" +
                     "    lastIndex: 17\n" +
                     "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: 0,\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  }\n" +

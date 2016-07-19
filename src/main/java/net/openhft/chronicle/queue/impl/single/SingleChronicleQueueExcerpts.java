@@ -40,7 +40,6 @@ import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.text.ParseException;
-import java.util.function.BiConsumer;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 
@@ -684,6 +683,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private int indexSpacingMask;
         private Wire wireForIndex;
+        private boolean readAfterReplicaAcknowledged;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -754,14 +754,20 @@ public class SingleChronicleQueueExcerpts {
                 if (!moveToIndex(firstIndex))
                     return false;
             }
-            Bytes<?> bytes = wire().bytes();
-            bytes.readLimit(bytes.capacity());
             for (int i = 0; i < 1000; i++) {
+                Bytes<?> bytes = wire().bytes();
+                bytes.readLimit(bytes.capacity());
                 try {
+                    if (readAfterReplicaAcknowledged) {
+                        long lastSequenceAck = store.lastAcknowledgedIndexReplicated();
+                        long seq = queue.rollCycle().toSequenceNumber(index);
+                        if (seq > lastSequenceAck)
+                            return false;
+                    }
+
                     if (direction != TailerDirection.FORWARD)
                         if (!moveToIndex(index))
                             return false;
-
                     switch (wire().readDataHeader(includeMetaData)) {
                         case NONE:
                             return false;
@@ -792,7 +798,6 @@ public class SingleChronicleQueueExcerpts {
                         // assume the the next cycle is at the next cycle index, ie not cycles
                         // skipped
                         if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
-                            bytes = wire().bytes();
                             continue;
                         }
 
@@ -801,7 +806,6 @@ public class SingleChronicleQueueExcerpts {
                             if (cycle == -1)
                                 return false;
                             if (moveToIndex(cycle, 0) == ScanResult.FOUND) {
-                                bytes = wire().bytes();
                                 continue;
                             }
                         } catch (ParseException e) {
@@ -971,40 +975,6 @@ public class SingleChronicleQueueExcerpts {
             this.index = rollCycle.toIndex(this.cycle, seq);
         }
 
-        private <T> boolean read0(@NotNull final T t, @NotNull final BiConsumer<T, Wire> c) {
-            final Wire wire = wire();
-            Bytes<?> bytes = wire.bytes();
-            bytes.readLimit(bytes.capacity());
-            for (int i = 0; i < 1000; i++) {
-                try {
-                    if (direction != TailerDirection.FORWARD)
-                        if (!moveToIndex(index))
-                            return false;
-
-                    if (wire.readDataHeader()) {
-                        wire.readAndSetLength(bytes.readPosition());
-                        long end = bytes.readLimit();
-                        try {
-                            c.accept(t, wire);
-                            return true;
-                        } finally {
-                            bytes.readPositionUnlimited(end);
-                        }
-                    }
-                    return false;
-
-                } catch (EOFException eof) {
-                    if (cycle <= queue.lastCycle() && direction != TailerDirection.NONE)
-                        if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
-                            bytes = wire.bytes();
-                            continue;
-                        }
-                    return false;
-                }
-            }
-            throw new IllegalStateException("Unable to progress to the next cycle");
-        }
-
         @NotNull
         private StoreTailer cycle(final int cycle, boolean createIfAbsent) {
             if (this.cycle != cycle) {
@@ -1031,6 +1001,16 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
             return this;
+        }
+
+        @Override
+        public void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
+            this.readAfterReplicaAcknowledged = readAfterReplicaAcknowledged;
+        }
+
+        @Override
+        public boolean readAfterReplicaAcknowledged() {
+            return readAfterReplicaAcknowledged;
         }
 
         @Override
@@ -1080,8 +1060,14 @@ public class SingleChronicleQueueExcerpts {
 
         @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
-            if (store != null)
-                store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
+            if (store == null) {
+                return;
+            }
+            RollCycle rollCycle = queue.rollCycle();
+            int cycle0 = rollCycle.toCycle(acknowledgeIndex);
+            if (cycle0 != cycle)
+                cycle(cycle0, false);
+            store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
         }
 
         class StoreTailerContext extends ReadDocumentContext {

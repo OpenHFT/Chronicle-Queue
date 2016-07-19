@@ -104,4 +104,12 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
      * @throws IORuntimeException if the queue couldn't be wound to the last index.
      */
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
+
+    default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
+
+    }
+
+    default boolean readAfterReplicaAcknowledged() {
+        return false;
+    }
 }
