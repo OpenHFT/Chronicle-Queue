@@ -36,8 +36,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.text.ParseException;
-import java.util.NavigableSet;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
@@ -45,7 +46,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static java.util.Collections.addAll;
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
@@ -381,10 +381,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
     }
 
-    private int toCycle(File lower) throws ParseException {
-        if (lower == null)
+    private int toCycle(Map.Entry<Long, File> entry) throws ParseException {
+        if (entry == null || entry.getValue() == null)
             return -1;
-        return dateCache.parseCount(fileToText().apply(lower));
+        return dateCache.parseCount(fileToText().apply(entry.getValue()));
     }
 
     @Override
@@ -450,16 +450,17 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             final File parentFile = path;
 
-            if (parentFile == null)
-                throw new AssertionError("parentFile=null");
-
             if (!parentFile.exists())
                 throw new AssertionError("parentFile=" + parentFile.getName() + " does not exist");
 
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
-            final NavigableSet<File> tree = new TreeSet<>(dateCache);
+            final NavigableMap<Long, File> tree = new TreeMap<>();
+
             final File[] files = parentFile.listFiles((File file) -> file.getName().endsWith(SUFFIX));
-            addAll(tree, files);
+
+            for (File file : files) {
+                tree.put(dateCache.toLong(file), file);
+            }
 
             final RollingResourcesCache.Resource dateValue = dateCache.resourceFor(currentCycle);
             final File currentCycleFile = dateValue.path;
@@ -467,14 +468,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             if (!currentCycleFile.exists())
                 throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
 
-            if (!tree.contains(currentCycleFile))
+            Long key = dateCache.toLong(currentCycleFile);
+            File file = tree.get(key);
+            if (file == null)
                 throw new AssertionError("missing currentCycle, file=" + currentCycleFile);
 
             switch (direction) {
                 case FORWARD:
-                    return toCycle(tree.higher(currentCycleFile));
+                    return toCycle(tree.higherEntry(key));
                 case BACKWARD:
-                    return toCycle(tree.lower(currentCycleFile));
+                    return toCycle(tree.lowerEntry(key));
                 default:
                     throw new UnsupportedOperationException("Unsupported Direction");
             }

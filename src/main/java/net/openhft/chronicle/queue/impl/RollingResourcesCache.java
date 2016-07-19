@@ -28,10 +28,9 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
-import java.util.Comparator;
 import java.util.function.Function;
 
-public class RollingResourcesCache implements Comparator<File> {
+public class RollingResourcesCache {
     private static final int SIZE = 32;
 
     @NotNull
@@ -91,11 +90,8 @@ public class RollingResourcesCache implements Comparator<File> {
         return Maths.toInt32(epochDay / (length / 1000));
     }
 
-    @Override
-    public int compare(File file1, File file2) {
-        long x = Instant.from(formatter.parse(fileToName.apply(file1))).toEpochMilli();
-        long y = Instant.from(formatter.parse(fileToName.apply(file2))).toEpochMilli();
-        return Long.compare(x, y);
+    public Long toLong(File file) {
+        return Instant.from(formatter.parse(fileToName.apply(file))).toEpochMilli();
     }
 
     public static class Resource {

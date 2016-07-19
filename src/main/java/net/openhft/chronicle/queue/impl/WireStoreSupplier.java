@@ -26,5 +26,13 @@ public interface WireStoreSupplier {
     @Nullable
     WireStore acquire(int cycle, boolean createIfAbsent);
 
+    /**
+     * the next available cycle, not cycle will be created by this method, typically used by a
+     * tailer.
+     *
+     * @param currentCycle the current cycle
+     * @param direction    the direction
+     * @return the next available cycle from the current cycle, or -1 if there is not a next cycle
+     */
     int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
 }
