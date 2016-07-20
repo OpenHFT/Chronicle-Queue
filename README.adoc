@@ -143,7 +143,7 @@ Every tailer sees every message. An abstraction can be added to filter messages 
 however in general you only need one main tailer for a topic and possibly some supporting tailers for monitoring etc.
 
 As Chronicle Queue doesn't partition it's topics, you get total ordering of all messages within that topic.
-Across topics there is no guarentee of ordering and if you want to replay deterministically from a system which consumes from multiple topics we suggest replaying from that system's output.
+Across topics there is no guarantee of ordering and if you want to replay deterministically from a system which consumes from multiple topics we suggest replaying from that system's output.
 
 === Replaying from the output, not the input.
 
@@ -157,7 +157,7 @@ If you want to be able to upgrade your system you want to replay from the output
 Replaying from the output means;
 
 - you have a record of the order of the inputs you processed.
-- you have a record of all the decisions your new system is commited to, even if the new code would have made different decisions.
+- you have a record of all the decisions your new system is committed to, even if the new code would have made different decisions.
 
 === Guarantees
 
@@ -180,7 +180,7 @@ Chronicle Queue is most often used for "Producer Centric" systems where you need
 
 === What is a Producer Centric System?
 
-Most messaging systems are "Consumer Centric". Flow control is implemented to avoid the consumer ver getting overloaded, even momentarily.
+Most messaging systems are "Consumer Centric". Flow control is implemented to avoid the consumer ever getting overloaded, even momentarily.
 
 A common example is a server support multiple GUI users.
 Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.   For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
@@ -217,7 +217,7 @@ https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronic
 
 === Metrics
 
-Chronicle Queue can be monitored to obtain latency, through put and activity metrics in real time (within micro-seconds of the event triggering it).
+Chronicle Queue can be monitored to obtain latency, throughput and activity metrics in real time (within micro-seconds of the event triggering it).
 
 === Log Replacement
 
@@ -229,7 +229,7 @@ Chronicle Queue is being used to store 100+ TB of data which can be replayed fro
 
 === Lambda Stream Processing
 
-Non batching streaming components are highly performant, deterministic and reproducable.
+Non batching streaming components are highly performant, deterministic and reproducible.
 You can reproduce bugs which only show up after a million events played in a particular order, with accelerated realistic timings.
 
 This makes using Stream Processing attractive for systems which need a high degree of quality outcomes.
@@ -365,7 +365,7 @@ Hello World
 
 === Reading from a Queue
 
-Reading the queue follows the same pattern except there is a possability there is not a message when you attempt to read it.
+Reading the queue follows the same pattern except there is a possibility there is not a message when you attempt to read it.
 
 .Start Reading
 [source, Java]
@@ -752,13 +752,13 @@ try (DocumentContext dc = appender.writingDocument()) {
 
 === Motivation
 
-Chronicle Queue is designed to be a "record everything store" which can read with micro-second real time latency.  This supports even the most demeanding High Frequency Trading systems, however it can be used in any application where the recording of information is a concern.
+Chronicle Queue is designed to be a "record everything store" which can read with micro-second real time latency.  This supports even the most demanding High Frequency Trading systems, however it can be used in any application where the recording of information is a concern.
 
-Chronicle Queue Enterprise is design to support reliable replication with notifcation to either the appender or a tailer when a message has been successfully replicated.
+Chronicle Queue Enterprise is design to support reliable replication with notification to either the appender or a tailer when a message has been successfully replicated.
 
 === Persistence
 
-Chronicle Queue assumes disk space is cheap (compared with memory). Enterprise SSD costs have come down. One GB of disk space is worth less than 1 minute of your time on minimum wage (in the UK at time or writing July 2016) Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.  If you use spinning HDD, you can store many TB of disk space for little cost.
+Chronicle Queue assumes disk space is cheap (compared with memory). Enterprise SSD costs have come down. One GB of disk space is worth less than 1 minute of your time on minimum wage (in the UK at time of writing; July 2016) Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.  If you use spinning HDD, you can store many TB of disk space for little cost.
 
 The only piece of software Chronicle Queue needs to run is the Operating System. It doesn't have a broker, instead it uses your Operating System to do all the work. If you application dies, the OS keeps running for seconds longer, so no data is lost, even without replication.
 
@@ -766,17 +766,17 @@ As Chronicle Queue stores all saved data in memory mapped files, this has a triv
 
 === Efficiency
 
-We put significant effort into worrying about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the chose of OS and disk subsystem.
+We put significant effort into worrying about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the choice of OS and disk subsystem.
 
 === Compression
 
-Replication for Chronicle Queue supports Chronicle Wire Enterprise. This supports a real time compression which calcuates the deltas for individual objects as they are written. This can reduce the size of messages bto 1/10th or better without the need for batching i.e without introducing significant latency.
+Replication for Chronicle Queue supports Chronicle Wire Enterprise. This supports a real time compression which calculates the deltas for individual objects as they are written. This can reduce the size of messages bto 1/10th or better without the need for batching i.e without introducing significant latency.
 
-Queue also supports LZW, Snappy and GZIP compression however these add non-triviallatency.  These are only useful if you have have strick limitations on network bandwidth.
+Queue also supports LZW, Snappy and GZIP compression however these add non-triviallatency.  These are only useful if you have to have strict limitations on network bandwidth.
 
 === Delivery Mode Semantics
 
-Chronicle Queue supports a number of symantics.
+Chronicle Queue supports a number of semantics.
 
 - every message is replayed on restart
 - only new messages are played on restart.
@@ -831,7 +831,7 @@ onTopOfBookPrice: {
 
 === Using high resolution timings across machines.
 
-On most systems `System.nanoTime()` is roughly the number of nano-second since the system last rebooted (although different JVMs may behave differently)  This is the same across JVM on the same machine, but wildly different between machines.  The absolute difference machines is meaningless, however the information can be used to detect outliners. i.e. you can't determine what the best latency is, but you can determine how far off the best latencies you are.  This is useful if you are focusing on the 99%ile latencies for example.  We have a class called `RunningMinimum` to obtain timings from different machines while compensating for a drift in the nanoTime between machines. The more often you take measurements the more accurate this running minimum is.
+On most systems `System.nanoTime()` is roughly the number of nano-second since the system last rebooted (although different JVMs may behave differently).  This is the same across JVM on the same machine, but wildly different between machines.  The absolute difference when it comes to machines is meaningless, however the information can be used to detect outliers. i.e. you can't determine what the best latency is, but you can determine how far off the best latencies you are.  This is useful if you are focusing on the 99%ile latencies for example.  We have a class called `RunningMinimum` to obtain timings from different machines while compensating for a drift in the nanoTime between machines. The more often you take measurements the more accurate this running minimum is.
 
 === Compacting logs
 
@@ -851,7 +851,7 @@ http://kafka.apache.org/documentation.html[Kafka Documentation]
 
 === Replication
 
-Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwitdh requirements.
+Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwidth requirements.
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png[]
 
