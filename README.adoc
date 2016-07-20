@@ -4,7 +4,7 @@ Peter Lawrey, Rob Austin
 :css-signature: demo
 :toc-placement: preamble
 
-*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - mailto:sales@chronicle.software[Contact Us]*
+*We can help you get Chronicle up and running in your organisation, we suggest you invite us in for consultancy, charged on an ad-hoc basis, we can discuss the best options tailored to your individual requirements. - email: sales@chronicle.software[Contact Us]*
 
 *Or you may already be using Chronicle and just want some help - http://chronicle.software/support/[find out more..]*
 
@@ -12,13 +12,13 @@ Peter Lawrey, Rob Austin
 
 Chronicle Queue is a distributed unbounded persisted queue.
 It supports asynchronous RMI and Publish/Subscribe interfaces with micro-second latencies.
-In optimised examples a message can passed between JVMs in under a micro-second, and passed between JVMs on different machines via replication in under 10 micro-seconds.
-Chronicle Queue provides stable, soft real time latencies into the millions of messages per second for a single thread to one queue with total ordering of every event.
+In optimised examples, a message can be passed between JVMs in under a micro-second, and passed between JVMs on different machines via replication in under 10 micro-seconds.
+Chronicle Queue provides stable, soft, real time latencies into the millions of messages per second for a single thread to one queue with total ordering of every event.
 
 image::http://chronicle.software/wp-content/uploads/2014/07/ChronicleQueue_200px.png[]
 
-Publishing 40 bytes messages, we achieve under 1 micro-seconds latencies a high percentage of the time.
-The 99%ile latency is the worst 1 in 100, and the 99.9%ile is the worst 1 in 1000 latency.
+When publishing 40 byte messages, a high percentage of the time we achieve latencies under 1 micro-second.
+The 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is the worst 1 in 1000 latency.
 
 .Latency to send/receive on the same machine.
 [width="60%",options="header"]
@@ -65,13 +65,16 @@ https://github.com/OpenHFT/Chronicle-Queue/blob/master/RELEASE-NOTES.adoc[Chroni
 
 === Overview
 
-Chronicle Queue is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.
+*Chronicle Queue is a Java project focused on building a persisted low latency messaging framework for high performance and critical applications.*
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_005.jpg[]
 
 At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
-Using non-heap storage options (RandomAccessFile) Queue provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+Using *non-heap storage options* (RandomAccessFile) Queue provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. 
+
+Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays, off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
+
 Queue uses RandomAccessFiles while managing memory and this choice brings lots of possibilities. RandomAccessFiles permit non-sequential, or random, access to a file's contents. To access a file randomly, you open the file, seek a particular location, and read from or write to that file. RandomAccessFiles can be seen as "large" C-type byte arrays that you can access at any random index "directly" using pointers. File portions can be used as ByteBuffers if the portion is mapped into memory.
 
 This memory mapped file is also used for exceptionally fast interprocess communication (IPC) without affecting your system performance. There is no Garbage Collection (GC) as everything is done off heap.
@@ -82,11 +85,9 @@ image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2014-09-
 
 === Terminology
 
-Basic terminology.
-
-- messages are grouped by *topics* A topic can contain any number of *sub-topics* which are logically stored together under the queue/topic.
-- an *appender* is the source of messages.
-- a *tailer* is a receiver of messages.
+- Messages are grouped by *topics*. A topic can contain any number of *sub-topics* which are logically stored together under the queue/topic.
+- An *appender* is the source of messages.
+- A *tailer* is a receiver of messages.
 - *Chronicle Queue* is broker-less by default. You can use *Chronicle Engine* to act as a broker for remote access.
 
 NOTE: We deliberately avoid the term *consumer* as messages are not consumed/destroyed by reading.
@@ -97,7 +98,7 @@ By using Chronicle Engine, a Java or C# client can publish to a *queue* to act a
 
 === Topics and Queue files.
 
-Each topic is a directory of queues.  There is a file for each roll cycle. If you have topics call `mytopic` the layout could look like this
+Each topic is a directory of queues.  There is a file for each roll cycle. If you have a topic called `mytopic` the layout could look like this
 
 [source]
 ----
@@ -112,66 +113,66 @@ To copy all the data for a single day (or cycle) you can copy the file for that 
 
 === File Retention
 
-You can add a `StoreFileListener` to notify you when a file is added or no longer used. This can be used to delete files after a period of time, however files are retained forever by default.  Our biggest users have over 100 TB of data stored in queues.
+You can add a `StoreFileListener` to notify you when a file is added or no longer used. This can be used to delete files after a period of time, however, files are retained forever by default.  Our biggest users have over 100 TB of data stored in queues.
 
 The only thing each tailer retains is an index which is composed from a cycle number e.g. days since epoch, and a sequence number within that cycle.
-In the case of a `DAILY` cycle, the sequence number is 32 bit and the `index = ((long) cycle << 32) | sequenceNumber` Printing the index in hexadecimal is common in our libraries to make it easier to see these two components.
+In the case of a `DAILY` cycle, the sequence number is 32 bit and the `index = ((long) cycle << 32) | sequenceNumber`. Printing the index in hexadecimal is common in our libraries to make it easier to see these two components.
 
 Appenders and tailers are cheap as they don't even require a TCP connection. They are just a few Java objects.
 
-Rather than partition the queue files across servers, we support each server storing as much data as you have disk space.
+Rather than partition the queue files across servers, we support each server, storing as much data as you have disk space.
 This is much more scalable than being limited to the amount of memory space you have.
 You can buy a redundant pair of 6 TB of enterprise disks for $700 (retail) at the time of writing (July 2016) and that is much cheaper than 6 TB of memory.
 
 === Restrictions on topics and messages.
 
 Topics are limited to being strings which can be used as directory names.
-Within a topic you can have sub-topics which can be any data type which can be serialized.
+Within a topic you can have sub-topics which can be any data type that can be serialized.
 Messages can be any serializable data.
 
-Chronicle Queue supports;
+Chronicle Queue supports:
 
 - `Serializable` objects, though this is to be avoided as it is not efficient
-- `Externalizable` objects as preferred if you wish to use standard Java APIs.
+- `Externalizable` objects is preferred if you wish to use standard Java APIs.
 - byte[] and String
-- `Marshallable` which is a self describing message which can be written as YAML, Binary YAML or JSON.
+- `Marshallable`; a self describing message which can be written as YAML, Binary YAML or JSON.
 - `BytesMarshallable` which is low level binary or text encoding.
 
 === Every Tailer sees every message.
 
-Every tailer sees every message. An abstraction can be added to filter messages or assign messages to just one message processor,
-however in general you only need one main tailer for a topic and possibly some supporting tailers for monitoring etc.
+An abstraction can be added to filter messages or assign messages to just one message processor.
+However, in general you only need one main tailer for a topic and possibly some supporting tailers for monitoring etc.
 
 As Chronicle Queue doesn't partition it's topics, you get total ordering of all messages within that topic.
-Across topics there is no guarantee of ordering and if you want to replay deterministically from a system which consumes from multiple topics we suggest replaying from that system's output.
+Across topics there is no guarantee of ordering, and if you want to replay deterministically from a system which consumes from multiple topics, we suggest replaying from that system's output.
 
 === Replaying from the output, not the input.
 
 It is common practice to replay a state machine from it's inputs.  To do this, there is two assumptions you have to make which are difficult to implement;
 
-- you have either one input, or you can always determine the order the inputs were consumed.
-- you have not changed the software (or all the software is stored in the queue)
+- you have either one input, or you can always determine the order the inputs were consumed,
+- you have not changed the software (or all the software is stored in the queue).
 
-If you want to be able to upgrade your system you want to replay from the output.
+If you want to be able to upgrade your system, then you'll want to replay from the output.
 
 Replaying from the output means;
 
-- you have a record of the order of the inputs you processed.
+- you have a record of the order of the inputs you processed,
 - you have a record of all the decisions your new system is committed to, even if the new code would have made different decisions.
 
 === Guarantees
 
-Chronicle Queue provides the following guarantees
+Chronicle Queue provides the following guarantees;
 
-- for each appender, messages are written in the order the appender wrote them. Messages by different appenders are interleaved.
-- for each tailer, it will see every message for a topic in the same order as every other tailer.
+- for each appender, messages are written in the order the appender wrote them. Messages by different appenders are interleaved,
+- for each tailer, it will see every message for a topic in the same order as every other tailer,
 - when replicated, every replica has a copy of every message.
 
-Replication has three modes of operation.
+Replication has three modes of operation;
 
-- replication happens typically soon after writing but eventually produced the source is running (< 1ms in as much as 99.9% of cases)
-- or, a tailer will only see messages which have been replicated.
-- or, an appender doesn't return until a replica has acknowledged it has been received.
+- replicates as soon as possible (< 1ms in as many as 99.9% of cases),
+- a tailer will only see messages which have been replicated,
+- an appender doesn't return until a replica has acknowledged it has been received.
 
 == Use Cases
 
@@ -182,7 +183,7 @@ Chronicle Queue is most often used for "Producer Centric" systems where you need
 
 Most messaging systems are "Consumer Centric". Flow control is implemented to avoid the consumer ever getting overloaded, even momentarily.
 
-A common example is a server support multiple GUI users.
+A common example is a server supporting multiple GUI users.
 Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.   For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
 
 Chronicle Queue is a "Producer Centric" solution and does everything possible to never push back on the producer or tell it to slow down.
@@ -831,7 +832,7 @@ onTopOfBookPrice: {
 
 === Using high resolution timings across machines.
 
-On most systems `System.nanoTime()` is roughly the number of nano-second since the system last rebooted (although different JVMs may behave differently).  This is the same across JVM on the same machine, but wildly different between machines.  The absolute difference when it comes to machines is meaningless, however the information can be used to detect outliers. i.e. you can't determine what the best latency is, but you can determine how far off the best latencies you are.  This is useful if you are focusing on the 99%ile latencies for example.  We have a class called `RunningMinimum` to obtain timings from different machines while compensating for a drift in the nanoTime between machines. The more often you take measurements the more accurate this running minimum is.
+On most systems `System.nanoTime()` is roughly the number of nano-seconds since the system last rebooted (although different JVMs may behave differently).  This is the same across JVM on the same machine, but wildly different between machines.  The absolute difference when it comes to machines is meaningless, however the information can be used to detect outliers. i.e. you can't determine what the best latency is, but you can determine how far off the best latencies you are.  This is useful if you are focusing on the 99th percentile latencies for example.  We have a class called `RunningMinimum` to obtain timings from different machines while compensating for a drift in the nanoTime between machines. The more often you take measurements the more accurate this running minimum is.
 
 === Compacting logs
 
