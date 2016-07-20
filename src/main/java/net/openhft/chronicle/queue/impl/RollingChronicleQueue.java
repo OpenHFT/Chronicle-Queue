@@ -77,9 +77,9 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      * regularly in latency sensitive systems.
      *
      * @param index1 from index, the index provided must exist.  To improve performance no checking
-     *               is  carried out to validate if and excerpt exists at this index.
+     *               is  carried out to validate if an excerpt exists at this index.
      * @param index2 to index, the index provided must exist. To improve performance no checking is
-     *               carried out to validate if and excerpt exists at this index.
+     *               carried out to validate if an excerpt exists at this index.
      * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
      * exclusive.
      * @throws java.lang.IllegalStateException if the cycle of {@code index1} or {@code index2} can
