@@ -348,21 +348,21 @@ public class WriteBytesTest {
                     "# # EndOfFile\n" +
                     "# position: 1416, header: 40\n" +
                     "--- !!data #binary\n" +
-                    "!byte -89\n" +
+                    "!int 167\n" +
                     "# # INT64\n" +
                     "# # INT64\n" +
                     "# # INT64\n" +
                     "# position: 1428, header: 41\n" +
                     "--- !!data #binary\n" +
-                    "!short -22360\n" +
-                    "!byte -88\n" +
-                    "!byte -88\n" +
-                    "!byte 0\n" +
+                    "!int 43176\n" +
+                    "!int 168\n" +
+                    "!int 168\n" +
+                    "!int -1\n" +
                     "# position: 1440, header: 42\n" +
                     "--- !!data #binary\n" +
-                    "# # PLUS_INT16\n" +
-                    "!short -22103\n" +
-                    "!short -22103\n" +
+                    "# # SET_LOW_INT16\n" +
+                    "!int 43433\n" +
+                    "!int 43433\n" +
                     "# position: 1452, header: 43\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0xAA\n" +
