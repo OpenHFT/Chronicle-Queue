@@ -57,12 +57,12 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int lastCycle();
 
     /**
-     * the next available cycle, not cycle will be created by this method, typically used by a
-     * tailer.
+     * the next available cycle, no cycle will be created by this method, this method is typically
+     * used by a tailer to jump to the next cycle when the cycles are not adjacent.
      *
      * @param currentCycle the current cycle
      * @param direction    the direction
-     * @return the next available cycle from the current cycle, or -1 if there is not next cycle
+     * @return the next available cycle from the current cycle, or -1 if there is no next cycle
      */
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
