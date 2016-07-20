@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WireStorePool {
@@ -77,5 +78,17 @@ public class WireStorePool {
                 }
             }
         }
+    }
+
+
+    /**
+     * list cycles between ( inclusive )
+     *
+     * @param lowerCycle the lower cycle
+     * @param upperCycle the upper cycle
+     * @return an array including these cycles and all the intermediate cycles
+     */
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+        return supplier.cycles(lowerCycle, upperCycle);
     }
 }

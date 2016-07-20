@@ -38,6 +38,7 @@ import java.io.*;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -82,6 +83,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final StoreRecoveryFactory recoverySupplier;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
+    private ThreadLocal<ExcerptContext> tlTailer;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -104,6 +106,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         storeFactory = builder.storeFactory();
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
+        tlTailer = ThreadLocal.withInitial(() -> new SingleChronicleQueueExcerpts.StoreTailer(this));
     }
 
     @NotNull
@@ -260,6 +263,94 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @Override
     public int nextCycle(int cycle, @NotNull TailerDirection direction) throws ParseException {
         return pool.nextCycle(cycle, direction);
+    }
+
+
+    private long exceptsPerCycle(long cycle) {
+        WireStore wireStore = storeForCycle((int) cycle, epoch, false);
+        try {
+            return wireStore.sequenceForPosition(tlTailer.get(), wireStore.writePosition(),
+                    true) + 1;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+
+
+    }
+
+    @Override
+    public long countExcerpts(long lowerIndex, long upperIndex) throws IllegalStateException {
+        if (lowerIndex > upperIndex) {
+            long temp = lowerIndex;
+            lowerIndex = upperIndex;
+            upperIndex = temp;
+        }
+
+        // if the are the same
+        if (lowerIndex == upperIndex)
+            return 0;
+
+        long result = 0;
+
+        // some of the sequences maybe at -1 so we will add 1 to the cycle and update the result
+        // accordingly
+        long sequenceNotSet = rollCycle().toSequenceNumber(-1);
+
+        if (rollCycle().toSequenceNumber(lowerIndex) == sequenceNotSet) {
+            result++;
+            lowerIndex++;
+        }
+
+        if (rollCycle().toSequenceNumber(upperIndex) == sequenceNotSet) {
+            result--;
+            upperIndex++;
+        }
+
+        int lowerCycle = rollCycle().toCycle(lowerIndex);
+        int upperCycle = rollCycle().toCycle(upperIndex);
+
+        if (lowerCycle == upperCycle)
+            return upperIndex - lowerIndex;
+
+        long upperSeqNum = rollCycle().toSequenceNumber(upperIndex);
+        long lowerSeqNum = rollCycle().toSequenceNumber(lowerIndex);
+
+        if (lowerCycle + 1 == upperCycle) {
+            long l = exceptsPerCycle(lowerCycle);
+            result += (l - lowerSeqNum) + upperSeqNum;
+            return result;
+        }
+
+        NavigableSet<Long> cycles;
+        try {
+            cycles = pool.listCyclesBetween(lowerCycle, upperCycle);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+
+        if (cycles.first() == lowerCycle) {
+            // because we are inclusive, for example  if we were at the end, then this
+            // is 1 except rather than zero
+            long l = exceptsPerCycle(lowerCycle);
+            result += (l - lowerSeqNum);
+        } else
+            throw new IllegalStateException("Cycle not found, lower-cycle=" + Long.toHexString(lowerCycle));
+
+        if (cycles.last() == upperCycle) {
+            result += upperSeqNum;
+        } else
+            throw new IllegalStateException("Cycle not found,  upper-cycle=" + Long.toHexString(upperCycle));
+
+        if (cycles.size() == 2)
+            return result;
+
+        final Long[] array = cycles.toArray(new Long[cycles.size()]);
+        for (int i = 1; i < array.length - 1; i++) {
+            long x = exceptsPerCycle(array[i]);
+            result += x;
+        }
+
+        return result;
     }
 
     @Override
@@ -435,11 +526,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-        @Override
-        public int nextCycle(int currentCycle, TailerDirection direction) throws ParseException {
 
-            if (direction == NONE)
-                throw new AssertionError("direction is NONE");
+        /**
+         * @return cycleTree for the current directory / parentFile
+         * @throws ParseException
+         */
+        private NavigableMap<Long, File> cycleTree() throws ParseException {
 
             final File parentFile = path;
 
@@ -455,8 +547,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 tree.put(dateCache.toLong(file), file);
             }
 
-            final RollingResourcesCache.Resource dateValue = dateCache.resourceFor(currentCycle);
-            final File currentCycleFile = dateValue.path;
+            return tree;
+
+        }
+
+        @Override
+        public int nextCycle(int currentCycle, TailerDirection direction) throws ParseException {
+
+            if (direction == NONE)
+                throw new AssertionError("direction is NONE");
+
+            final NavigableMap<Long, File> tree = cycleTree();
+            final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
             if (!currentCycleFile.exists())
                 throw new IllegalStateException("file not exists, currentCycle, " + "file=" + currentCycleFile);
@@ -474,6 +576,31 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 default:
                     throw new UnsupportedOperationException("Unsupported Direction");
             }
+        }
+
+        /**
+         * the cycles between a range, inclusive
+         *
+         * @param lowerCycle the lower cycle inclusive
+         * @param upperCycle the uper cycle inclusive
+         * @return the cycles between a range, inclusive
+         * @throws ParseException
+         */
+        @Override
+        public NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException {
+            final NavigableMap<Long, File> tree = cycleTree();
+            final Long lowerKey = toKey(lowerCycle, "lowerCycle");
+            final Long upperKey = toKey(upperCycle, "upperCycle");
+            assert lowerKey != null;
+            assert upperKey != null;
+            return tree.subMap(lowerKey, true, upperKey, true).navigableKeySet();
+        }
+
+        private Long toKey(int cyle, String m) {
+            final File file = dateCache.resourceFor(cyle).path;
+            if (!file.exists())
+                throw new IllegalStateException("'file not found' for the " + m + ", file=" + file);
+            return dateCache.toLong(file);
         }
     }
 }

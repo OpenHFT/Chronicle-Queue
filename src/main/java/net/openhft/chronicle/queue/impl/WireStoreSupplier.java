@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
+import java.util.NavigableSet;
 
 
 public interface WireStoreSupplier {
@@ -35,4 +36,14 @@ public interface WireStoreSupplier {
      * @return the next available cycle from the current cycle, or -1 if there is not a next cycle
      */
     int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
+
+    /**
+     * the cycles between a range, inclusive
+     *
+     * @param lowerCycle the lower cycle inclusive
+     * @param upperCycle the uper cycle inclusive
+     * @return the cycles between a range, inclusive
+     * @throws ParseException
+     */
+    NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException;
 }

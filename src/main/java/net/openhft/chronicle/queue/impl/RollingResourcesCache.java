@@ -91,7 +91,7 @@ public class RollingResourcesCache {
     }
 
     public Long toLong(File file) {
-        return Instant.from(formatter.parse(fileToName.apply(file))).toEpochMilli();
+        return Instant.from(formatter.parse(fileToName.apply(file))).toEpochMilli() / length;
     }
 
     public static class Resource {

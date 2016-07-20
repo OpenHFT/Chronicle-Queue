@@ -34,6 +34,10 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      */
     File file();
 
+    /**
+     * @param position the start of the last written excerpt to this cycle/store
+     * @return this store
+     */
     WireStore writePosition(long position);
 
     /**
@@ -43,7 +47,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     long epoch();
 
     /**
-     * @return the next writable position, Will be or-ed with ROLLED_BIT if it has rolled.
+     * @return the start of the last written excerpt to this cycle/store
      */
     long writePosition();
 
@@ -55,8 +59,8 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * Reverse look up an index for a position.
      *
-     * @param ec the wire of the bytes, to work with
-     * @param position  of the start of the message
+     * @param ec       the wire of the bytes, to work with
+     * @param position of the start of the message
      * @return index in this store.
      */
     long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;

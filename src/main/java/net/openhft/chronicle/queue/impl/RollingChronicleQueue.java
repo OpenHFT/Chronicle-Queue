@@ -57,14 +57,35 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int lastCycle();
 
     /**
-     * the next available cycle, not cycle will be created by this method, typically used by a
-     * tailer.
+     * the next available cycle, no cycle will be created by this method, this method is typically
+     * used by a tailer to jump to the next cycle when the cycles are not adjacent.
      *
      * @param currentCycle the current cycle
      * @param direction    the direction
-     * @return the next available cycle from the current cycle, or -1 if there is not next cycle
+     * @return the next available cycle from the current cycle, or -1 if there is no next cycle
      */
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
+
+
+    /**
+     * The number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
+     * exclusive.
+     *
+     * When {@code index1} and {@code index2} are in different cycles which are not adjacent, this
+     * operation can be expensive, as the index count for each intermediate cycle has to be found
+     * and calculated. As such, and in this situation, it's not recommended to call this method
+     * regularly in latency sensitive systems.
+     *
+     * @param index1 from index, the index provided must exist.  To improve performance no checking
+     *               is  carried out to validate if an excerpt exists at this index.
+     * @param index2 to index, the index provided must exist. To improve performance no checking is
+     *               carried out to validate if an excerpt exists at this index.
+     * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
+     * exclusive.
+     * @throws java.lang.IllegalStateException if the cycle of {@code index1} or {@code index2} can
+     *                                         not be ascertained
+     */
+    long countExcerpts(long index1, long index2) throws java.lang.IllegalStateException;
 
     /**
      * @return the current cycle
@@ -84,4 +105,5 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     RollCycle rollCycle();
 
     Function<WireType, StoreRecovery> recoverySupplier();
+
 }
