@@ -2188,9 +2188,74 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "...\n" +
                     "# 83885412 bytes remaining\n", syncQ.dump());
         }
+
     }
 
-    static class MapWrapper extends AbstractMarshallable {
+    @Test
+    public void testCountExceptsBetweenCycles() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle);
+        final RollingChronicleQueue queue = builder.build();
+        final ExcerptAppender appender = queue.createAppender();
+
+        long[] indexs = new long[10];
+        for (int i = 0; i < indexs.length; i++) {
+            System.out.println(".");
+            try (DocumentContext writingContext = appender.writingDocument()) {
+                writingContext.wire().write().text("some-text-" + i);
+                indexs[i] = writingContext.index();
+            }
+
+            // we add the pause times to vary the test, to ensure it can handle when cycles are
+            // skipped
+            if ((i + 1) % 5 == 0)
+                Thread.sleep(2000);
+            else if ((i + 1) % 3 == 0)
+                Thread.sleep(1000);
+        }
+
+
+        for (int lower = 0; lower < indexs.length; lower++) {
+            for (int upper = lower; upper < indexs.length; upper++) {
+                System.out.println("lower=" + lower + ",upper=" + upper);
+                Assert.assertEquals(upper - lower, queue.countExcerpts(indexs[lower],
+                        indexs[upper]));
+            }
+        }
+
+        // check the base line of the test below
+        Assert.assertEquals(6, queue.countExcerpts(indexs[0], indexs[6]));
+
+        /// check for the case when the last index has a sequence number of -1
+        Assert.assertEquals(queue.rollCycle().toSequenceNumber(indexs[6]), 0);
+        Assert.assertEquals(5, queue.countExcerpts(indexs[0],
+                indexs[6] - 1));
+
+        /// check for the case when the first index has a sequence number of -1
+        Assert.assertEquals(7, queue.countExcerpts(indexs[0] - 1,
+                indexs[6]));
+
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testCountExceptsWithRubbishData() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle);
+        final RollingChronicleQueue queue = builder.build();
+
+        // rubbish data
+        queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
+    }
+
+    private static class MapWrapper extends AbstractMarshallable {
         Map<CharSequence, Double> map = new HashMap<>();
     }
 

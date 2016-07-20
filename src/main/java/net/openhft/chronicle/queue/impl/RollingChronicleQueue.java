@@ -66,6 +66,27 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
+
+    /**
+     * The number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
+     * exclusive.
+     *
+     * When {@code index1} and {@code index2} are in different cycles which are not adjacent, this
+     * operation can be expensive, as the index count for each intermediate cycle has to be found
+     * and calculated. As such, and in this situation, it's not recommended to call this method
+     * regularly in latency sensitive systems.
+     *
+     * @param index1 from index, the index provided must exist.  To improve performance no checking
+     *               is  carried out to validate if and excerpt exists at this index.
+     * @param index2 to index, the index provided must exist. To improve performance no checking is
+     *               carried out to validate if and excerpt exists at this index.
+     * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
+     * exclusive.
+     * @throws java.lang.IllegalStateException if the cycle of {@code index1} or {@code index2} can
+     *                                         not be ascertained
+     */
+    long countExcerpts(long index1, long index2) throws java.lang.IllegalStateException;
+
     /**
      * @return the current cycle
      */
@@ -84,4 +105,5 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     RollCycle rollCycle();
 
     Function<WireType, StoreRecovery> recoverySupplier();
+
 }
