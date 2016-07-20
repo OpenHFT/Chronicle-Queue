@@ -187,32 +187,29 @@ A common example is a server supporting multiple GUI users.
 Those users might be on different machines (OS and hardware), different qualities of network (latency and bandwidth), doing a variety of other things at different times.   For this reason it makes sense for the client consumer to tell the producer when to back off, delaying any data until the consumer is ready to take more data.
 
 Chronicle Queue is a "Producer Centric" solution and does everything possible to never push back on the producer or tell it to slow down.
-This makes it a powerful tool providing a big buffer between your system and an upstream producer you have little or no control over.
+This makes it a powerful tool, providing a big buffer between your system and an upstream producer you have little or no control over.
 
 === Market Data
 
 Market data publishers don't give you the option to push back on the producer for long, if at all.
 A few of our users consume data from CME OPRA. This produces peaks of 10 million events per second, sent as UDP packets
-without any retry. If you miss or drop a packet it is lost.  You have to consume and record those packets as fast as they come to you
-with very little buffering in the network adapter.
+without any retry. If you miss or drop a packet, then it is lost.  You have to consume and record those packets as fast as they come to you, with very little buffering in the network adapter.
 
-For market data in particular real time means in a *few micro-second*, it doesn't mean intra-day (during the day).
+For market data in particular, real time means in a *few micro-seconds*, it doesn't mean intra-day (during the day).
 
-Chronicle Queue is fast and efficient enough it has been used to increase the speed that data is passed between threads,
-in addition, it also keeps a record of every message passed allowing you to significant reduce the amount of logging you need to do.
+Chronicle Queue is fast and efficient enough, and has been used to increase the speed that data is passed between threads.
+In addition, it also keeps a record of every message passed allowing you to significantly reduce the amount of logging you need to do.
 
 === Compliance Systems
 
 Compliance Systems are required by more and more systems these days.  Everyone has to have them but no one wants to be slowed down by them.
-By using Chronicle Queue to buffer data between monitored system and the compliance system, you don't need to worry about the impact
-of compliance recording for your monitored systems.
+By using Chronicle Queue to buffer data between monitored systems and the compliance system, you don't need to worry about the impact of compliance recording for your monitored systems.
 
 Again, Chronicle Queue can support millions of events per second per server and access data which has been retained for years.
 
 === Latency Sensitive Micro-services
 
-Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine ~ 1 micro-second, and between machines with a typical latency of 10 micro-seconds for
-modest throughputs of a few hundred thousands. Chronicle Queue supports throughputs over a millions of events per second with stable micro-seconds latencies.
+Chronicle Queue supports low latency IPC (Inter Process Communication) between JVMs on the same machine ~ 1 micro-second, as well as between machines with a typical latency of 10 micro-seconds for modest throughputs of a few hundred thousands. Chronicle Queue supports throughputs over millions of events per second with stable micro-second latencies.
 
 https://vanilla-java.github.io/tag/Microservices/[Articles on the use of Chronicle Queue in Microservices]
 
@@ -222,9 +219,9 @@ Chronicle Queue can be monitored to obtain latency, throughput and activity metr
 
 === Log Replacement
 
-As Chronicle Queue can be used to build state machines, all the information about the state of those components can be reproduced externally without direct access to the the components or their state.  This significantly reduces the need for additional logging.
+As Chronicle Queue can be used to build state machines, all the information about the state of those components can be reproduced externally without direct access to the components or their state.  This significantly reduces the need for additional logging.
 
-However any logging you do need can be recorded in great detail.  This makes enabling DEBUG logging in production practical as the cost of logging is very low, in the single digit micro-seconds. Logs can be replicated centrally for log consolidation.
+However, any logging you do need can be recorded in great detail.  This makes enabling DEBUG logging in production practical, as the cost of logging is very low in the single digit micro-seconds. Logs can be replicated centrally for log consolidation.
 
 Chronicle Queue is being used to store 100+ TB of data which can be replayed from any point in time.
 
@@ -273,7 +270,7 @@ appender.writeDocument(w -> w.write("trade").marshallable(
                 .write("trader").text("peter")));
 ----
 
-You can write "raw data" which is self describing (the types will always be correct, position is the only indication as to the meaning of those values)
+You can write "raw data" which is self-describing (the types will always be correct, position is the only indication as to the meaning of those values).
 
 [source, Java]
 ----
@@ -284,7 +281,7 @@ appender.writeDocument(w -> w
         .getValueOut().text("Hello World"));
 ----
 
-You can write "raw data" which is not delf describing. Your reader must know what this data means and the types which were used.
+You can write "raw data" which is not self-describing. Your reader must know what this data means and the types which were used.
 
 [source, Java]
 ----
@@ -366,7 +363,7 @@ Hello World
 
 === Reading from a Queue
 
-Reading the queue follows the same pattern except there is a possibility there is not a message when you attempt to read it.
+Reading the queue follows the same pattern, except there is a possibility there is not a message when you attempt to read it.
 
 .Start Reading
 [source, Java]
@@ -375,7 +372,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades")
    final ExcerptTailer tailer = queue.createTailer();
 ----
 
-You can turn each message into a method call based on the content of the message
+You can turn each message into a method call based on the content of the message.
 
 [source, Java]
 ----
@@ -386,7 +383,9 @@ MethodReader reader = tailer.methodReader(monitor);
 assertTrue(reader.readOne());
 ----
 
-You can decode the message yourself. Note: the names, type and order of the fields doesn't have to match.
+You can decode the message yourself. 
+
+NOTE: the names, type and order of the fields doesn't have to match.
 
 [source, Java]
 ----
@@ -415,7 +414,7 @@ assertTrue(tailer.readDocument(w -> {
 }));
 ----
 
-You can read raw data as primitives and Strings
+You can read raw data as primitives and Strings.
 
 [source, Java]
 ----
@@ -454,9 +453,9 @@ assertTrue(tailer.readBytes(b -> {
 
 === High level interface
 
-Chronicle v4.4+ supports the use of proxies to send and consume messages.  You start by defining an asynchronous `interface` where all methods have;
+Chronicle v4.4+ supports the use of proxies to send and consume messages.  You start by defining an asynchronous `interface`, where all methods have;
 
-- arguments which are only inputs.
+- arguments which are only inputs,
 - no return value or exceptions expected.
 
 .A simple asynchronous interface
@@ -485,7 +484,7 @@ static class Message2 extends AbstractMarshallable {
 }
 ----
 
-To write to the queue you can call a proxy which implements this interface
+To write to the queue you can call a proxy which implements this interface.
 
 [source, Java]
 ----
@@ -498,7 +497,7 @@ writer1.method1(new Message1("hello"));
 writer1.method2(new Message2(234));
 ----
 
-These call produce message which can be dumped as
+These call produce message which can be dumped as follows.
 
 [source, yaml]
 ----
@@ -514,7 +513,7 @@ method2: {
 }
 ----
 
-To read the messages you can provide a reader which calls you implementation with the same calls you made.
+To read the messages, you can provide a reader which calls your implementation with the same calls you made.
 
 [source, Java]
 ----
@@ -528,7 +527,7 @@ assertTrue(reader1.readOne());
 assertFalse(reader1.readOne());
 ----
 
-Running this example prints
+Running this example prints:
 
 [source]
 ----
@@ -542,7 +541,8 @@ method2 [!Message2 {
 ]
 ----
 
-For more details https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
+
+* For more details https://vanilla-java.github.io/2016/03/24/Microservices-in-the-Chronicle-world-Part-2.html[Using Method Reader/Writers] and https://github.com/OpenHFT/Chronicle-Queue/blob/master/src/test/java/net/openhft/chronicle/queue/MessageReaderWriterTest.java[MessageReaderWriterTest]
 
 === Building Blocks
 
@@ -550,8 +550,8 @@ Chronicle Queue is the main interface for management and can be seen as the Coll
 
 Chronicle has three main concepts:
 
-  * Tailer (sequential and random reads, forward and backwards)
-  * Appender (sequential writes, append to the end only).
+  - Tailer (sequential and random reads, forward and backwards)
+  - Appender (sequential writes, append to the end only).
 
 An Excerpt is the main data container in a Chronicle Queue, each Chronicle is composed of Excerpts. Putting data to a chronicle means starting a new Excerpt, writing data into it and finishing the Excerpt at the end.
 A Tailer is an Excerpt optimized for sequential reads.
