@@ -4,7 +4,7 @@ Peter Lawrey
 :toc-placement: preamble
 
 Chronicle Queue is a distributed unbounded persisted queue. 
-It supports asycnhronous RMI and Publish/Subscribe interfaces with micro-second latencies. 
+It supports asynchronous RMI and Publish/Subscribe interfaces with micro-second latencies.
 In optimised examples a message can passed between JVM in under a micro-second, and passed between JVM on different machines via replication in under 10 micro-seconds.
 Chronicle Queue provides stable real latencies into the millions of messages per second for a single thread to one queue with total ordering of every event.
 
@@ -17,7 +17,7 @@ Basic terminology.
 - messages are grouped by *topics* A topic can contain any number of *sub-topics* which are logically stored together in that topic.
 - an *appender* is the source of messages.
 - a *tailer* is a receiver of messages.
-- *Chronicle Queue* in brokerless by default. You can use *Chronicle Engine* to act as a broker for remote access.
+- *Chronicle Queue* in broker-less by default. You can use *Chronicle Engine* to act as a broker for remote access.
 
 NOTE: We deliberately avoid the term *consumer* as messages are not consumed/destroyed by reading.
 
@@ -89,15 +89,15 @@ Replaying from the output means;
 - you have a record of the order of the inputs you processed.
 - you have a record of all the decisions your new system is commited to, even if the new code would have made different decisions.
 
-=== Guarentees
+=== Guarantees
 
-Chronicle Queue provides the following guarentees
+Chronicle Queue provides the following guarantees
 
 - for each appender, messages are written in the order the appnder wrote them. Messages by different appenders are interleaved.
 - for each tailer, it will see every message for a topic in the same order as every other tailer.
 - when replicated, every replica has a copy of every message.
 
-Replication has three levels of gaurentees
+Replication has three levels of gaurantees
 
 - replication happens soon but eventually (< 1ms in as much as 99.9% of cases)
 - or, a tailer will only see messages which have been replicated.
@@ -111,8 +111,8 @@ Chronicle Queue is most often use for "Producer Centric" systems where you need 
 
 Most messaging systems are "Consumer Centric", a common example is a user GUI.  
 You can have multiple users on different machines, different quality of networks, doing a variety of other things for the user at different times.
-In particaulr, a user can only take in som much data. For this reason it makes sense for the client consumer to tell the producer when and when not to give them more data. 
-It should detemine how flow control works.
+In particular, a user can only take in som much data. For this reason it makes sense for the client consumer to tell the producer when and when not to give them more data.
+It should determine how flow control works.
 
 Chronicle Queue is a "Producer Centric" solution and does everything possible to never push back on the producer or tell it to slow down.
 As such it is a power tool as a big buffer between your system and an upstream producer you have little or no control over.
@@ -385,7 +385,7 @@ Queue v4 (Q4) attempts to solve a number of issues that existed in Queue v3 (Q3)
 
 - without self describing messages, users had to create their own functionality for dumping messages and long term storage of data.  With Q4 you dont have to do this but is you wish you can still do so.
 - Vanilla Chronicle Queue would create a file per thread. This is fine if the number of threads is controlled however many applications have little or no control over how many threads are used and this caused usability problems.
-- The configruation for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
+- The configuration for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
 - There was no way for the producer to know how much data had been replicated to the consumer. The only work around was to replicate data back to the producers.
 - You needed to specify the size of data to reserve, before you started to write your message.
 - You needed to do your own locking for the appender when using Indexed Chronicle.
@@ -444,7 +444,7 @@ As Chronicle Queue stores all saved data in memory mapped files, this has a triv
 
 === Efficiency
 
-We put significant effort into worring about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the chose of OS and disk subsystem.
+We put significant effort into worrying about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the chose of OS and disk subsystem.
 
 === Compression
 
@@ -521,7 +521,7 @@ Chronicle Queue is designed to support over an order of magnitude of throughput 
 
 Chronicle Queue attempts to handle more volume from a single thread, to a single partition and thus avoid the need for the complexity and downsides of having partitions.  Note: Chronicle Engine supports partitioning of queues across machines, though not the partitioning of a queue.
 
-Unlike Karfka which uses a broker which uses the operating system's file system and cache.  Chronicle Queue relies entirely on the file system and cache.
+Unlike Kafka which uses a broker which uses the operating system's file system and cache.  Chronicle Queue relies entirely on the file system and cache.
 
 === Similar product guides
 
