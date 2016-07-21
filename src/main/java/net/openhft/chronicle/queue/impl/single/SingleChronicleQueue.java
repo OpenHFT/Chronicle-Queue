@@ -32,9 +32,12 @@ import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -52,7 +55,7 @@ import static net.openhft.chronicle.queue.TailerDirection.NONE;
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
-
+    private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
     protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
     protected final int sourceId;
     final Supplier<Pauser> pauserSupplier;
@@ -496,6 +499,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (!path.exists() && !createIfAbsent)
                     return null;
 
+                if (createIfAbsent)
+                    checkDiskSpace(path);
+
                 final MappedBytes mappedBytes = mappedBytes(path);
                 AbstractWire wire = (AbstractWire) wireType.apply(mappedBytes);
                 assert wire.startUse();
@@ -524,6 +530,22 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             } catch (TimeoutException | IOException e) {
                 throw Jvm.rethrow(e);
             }
+        }
+
+
+        private void checkDiskSpace(final File path) throws IOException {
+
+            final Path root = path.getParentFile().toPath().getRoot();
+
+            // The returned number of unallocated bytes is a hint, but not a guarantee
+            long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
+            long totalSpace = Files.getFileStore(root).getTotalSpace();
+
+            if (unallocatedBytes < totalSpace * .05)
+                LOG.warn("your disk is 95% full, warning: chronicle-queue may crash if it runs out of space.");
+
+            if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
         }
 
 
