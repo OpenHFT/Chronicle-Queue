@@ -561,16 +561,16 @@ An Appender is something like Iterator in Chronicle environment. You add data ap
 
 Queue v4 (Q4) attempts to solve a number of issues that existed in Queue v3 (Q3).
 
-- without self describing messages, users had to create their own functionality for dumping messages and long term storage of data.  With Q4 you don;t have to do this but you can if you wish to.
-- Vanilla Chronicle Queue would create a file per thread. This is fine if the number of threads is controlled however many applications have little or no control over how many threads are used and this caused usability problems.
+- Without self-describing messages, users had to create their own functionality for dumping messages and long term storage of data.  With Q4 you don't have to do this, but you can if you wish to.
+- Vanilla Chronicle Queue would create a file per thread. This is fine if the number of threads is controlled, however, many applications have little or no control over how many threads are used and this caused usability problems.
 - The configuration for Indexed and Vanilla Chronicle was entirely in code so the reader had to have the same configuration as the writers and it wasn't always clear what that was.
 - There was no way for the producer to know how much data had been replicated to the a second machine. The only work around was to replicate data back to the producers.
-- You needed to specify the size of data to reserve, before you started to write your message.
+- You needed to specify the size of data to reserve before you started to write your message.
 - You needed to do your own locking for the appender when using Indexed Chronicle.
 
 === Can I use Chronicle v3 and v4.
 
-Yes. they use different packages. Queue v4 is a complete re-write so there is no problem using it at the same time as v3. But the format of how the data is stored is slightly different, so they are are not interoperable on the same queue data file.
+Yes. They use different packages. Queue v4 is a complete re-write so there is no problem using it at the same time as v3. But the format of how the data is stored is slightly different, so they are are not interoperable on the same queue data file.
 
 === Migrating from Queue v2 and v3.
 
@@ -604,13 +604,13 @@ try (DocumentContext dc = tailer.readingDocument()) {
 === Single Chronicle Queue
 
 This queue is a designed to support:
- - rolling files on a daily, weekly or hourly basis.
- - concurrent writers on the same machine.
- - concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise).
- - zero copy serialization and deserialization.
- - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4790)
+ - rolling files on a daily, weekly or hourly basis,
+ - concurrent writers on the same machine,
+ - concurrent readers on the same machine or across multiple machines via TCP replication (With Chronicle Queue Enterprise),
+ - zero copy serialization and deserialization,
+ - millions of writes/reads per second on commodity hardware. <br/>(~5 M messages / second for 96 byte messages on a i7-4790).
 
-The directory structure is as follows.
+The directory structure is as follows:
 
 [source]
 ----
@@ -618,7 +618,7 @@ base-directory /
    {cycle-name}.cq4       - The default format is yyyyMMdd for daily rolling.
 ----
 
-The format consists of Size Prefixed Bytes which are formatted using BinaryWire or TextWire.  The ChronicleQueue.dump() method can be used to dump the raw contents as a String.
+The format consists of Size Prefixed Bytes which are formatted using BinaryWire or TextWire.  The `ChronicleQueue.dump()` method can be used to dump the raw contents as a String.
 
 === Getting Started
 
@@ -632,7 +632,7 @@ String basePath = System.getProperty("java.io.tmpdir") + "/getting-started"
 ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build();
 ----
 
-In this example we have created an IndexedChronicle which creates two RandomAccessFiles one for indexes and one for data having names relatively:
+In this example we have created an IndexedChronicle which creates two RandomAccessFiles; one for indexes and one for data having names relatively:
 
 ${java.io.tmpdir}/getting-started/{today}.cq4
 
@@ -663,10 +663,10 @@ assertEquals("TestMessage", tailer.readText());
 
 ==== Cleanup
 
-Chronicle Queue stores its data off heap and it is recommended that you call close() 
+Chronicle Queue stores its data off heap, and it is recommended that you call `close()` 
 once you have finished working with Chronicle-Queue to free resources,
 
-NOTE: no data will be lost of you don't do this, this is only to clean resources used.
+NOTE: no data will be lost if you don't do this, this is only to clean resources used.
 
 [source, Java]
 ----
@@ -699,7 +699,7 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 
 ==== Do we have to use Wire, can we use Bytes?
 
-You can access the Bytes in wire as follows
+You can access the Bytes in wire as follows:
 
 .Writing to Bytes
 [source, Java]
@@ -723,7 +723,7 @@ try (DocumentContext dc = tailer.readingDocument()) {
 
 ==== Is there a lower level interface?
 
-You can access native memory
+You can access native memory:
 
 .Writing to native memory
 [source, Java]
@@ -755,38 +755,38 @@ try (DocumentContext dc = appender.writingDocument()) {
 
 Chronicle Queue is designed to be a "record everything store" which can read with micro-second real time latency.  This supports even the most demanding High Frequency Trading systems, however it can be used in any application where the recording of information is a concern.
 
-Chronicle Queue Enterprise is design to support reliable replication with notification to either the appender or a tailer when a message has been successfully replicated.
+Chronicle Queue Enterprise is designed to support reliable replication with notification to either the appender or a tailer when a message has been successfully replicated.
 
 === Persistence
 
-Chronicle Queue assumes disk space is cheap (compared with memory). Enterprise SSD costs have come down. One GB of disk space is worth less than 1 minute of your time on minimum wage (in the UK at time of writing; July 2016) Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.  If you use spinning HDD, you can store many TB of disk space for little cost.
+Chronicle Queue assumes disk space is cheap (compared with memory). Enterprise SSD costs have come down. One GB of disk space is worth less than 1 minute of your time on minimum wage (in the UK at time of writing; July 2016). Queue makes full use of the disk space you have, and so you are not limited by the main memory of your machine.  If you use spinning HDD, you can store many TB of disk space for little cost.
 
-The only piece of software Chronicle Queue needs to run is the Operating System. It doesn't have a broker, instead it uses your Operating System to do all the work. If you application dies, the OS keeps running for seconds longer, so no data is lost, even without replication.
+The only piece of software Chronicle Queue needs to run is the Operating System. It doesn't have a broker, instead it uses your Operating System to do all the work. If your application dies, the OS keeps running for seconds longer, so no data is lost, even without replication.
 
 As Chronicle Queue stores all saved data in memory mapped files, this has a trivial on heap overhead, even if you have over 100 TB of data.
 
 === Efficiency
 
-We put significant effort into worrying about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. For web application less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms)  However we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the choice of OS and disk subsystem.
+We put significant effort into worrying about latency you can't see.  Unlike products which focus on support of the web, we care about latency which are a fraction of the time you can see. Less than 40 ms is fine for web applications as it's faster than you can see (the frame rate of cinema is 24 Hz or about 40 ms).  However, we attempt to be under 40 microsecond 99% to 99.99% of the time.  Using queue without replication, we support applications with latencies below 40 microseconds end to end across multiple services.  Often the 99% latency of queue is entirely dependant on the choice of OS and disk subsystem.
 
 === Compression
 
-Replication for Chronicle Queue supports Chronicle Wire Enterprise. This supports a real time compression which calculates the deltas for individual objects as they are written. This can reduce the size of messages bto 1/10th or better without the need for batching i.e without introducing significant latency.
+Replication for Chronicle Queue supports Chronicle Wire Enterprise. This supports a real time compression which calculates the deltas for individual objects as they are written. This can reduce the size of messages to 1/10th, or better, without the need for batching i.e without introducing significant latency.
 
-Queue also supports LZW, Snappy and GZIP compression however these add non-triviallatency.  These are only useful if you have to have strict limitations on network bandwidth.
+Queue also supports LZW, Snappy and GZIP compression however, these add non-triviallatency.  These are only useful if you have to have strict limitations on network bandwidth.
 
 === Delivery Mode Semantics
 
 Chronicle Queue supports a number of semantics.
 
-- every message is replayed on restart
-- only new messages are played on restart.
-- restart from any known point using the index of the entry.
-- replay only messages you have missed. This is supported directly using the methodReader/methodWriter builders.
+- Every message is replayed on restart.
+- Only new messages are played on restart.
+- Restart from any known point using the index of the entry.
+- Replay only the messages you have missed. This is supported directly using the methodReader/methodWriter builders.
 
 === Detailed tracing of timings.
 
-Chronicle Queue supports explicit or implicit nano-second resolution timing for messages as they pass end to end over across your system. We support using nanotime across machine without the need for specialist hardware.
+Chronicle Queue supports explicit or implicit nano-second resolution timing for messages as they pass end to end over across your system. We support using nanotime across machines, without the need for specialist hardware.
 
 .Enabling high resolution timings
 [source, Java]
@@ -840,11 +840,13 @@ Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` whic
 
 == Chronicle Queue vs Kafka
 
-Chronicle Queue is designed to support over an order of magnitude of throughput with an order of magnitude lower latency of Kafka.  While Karfa is faster than many of the alternatives it doesn't support both throughputs over million events per second and low latency e.g. 1 - 20 micro-seconds at the same time.
+Chronicle Queue is designed to support over an order of magnitude of throughput, with an order of magnitude lower than the latency of Kafka.  While Karfa is faster than many of the alternatives it doesn't support both throughputs over million of events per second, and low latency e.g. 1 - 20 micro-seconds at the same time.
 
-Chronicle Queue attempts to handle more volume from a single thread, to a single partition and thus avoid the need for the complexity and downsides of having partitions.  Note: Chronicle Engine supports partitioning of queues across machines, though not the partitioning of a queue.
+Chronicle Queue attempts to handle more volume from a single thread, to a single partition. Thus avoiding the need for the complexity and the downsides of having partitions.  
 
-Unlike Kafka which uses a broker which uses the operating system's file system and cache.  Chronicle Queue relies entirely on the file system and cache.
+NOTE: Chronicle Engine supports partitioning of queues across machines, though not the partitioning of a queue.
+
+Kafka uses a broker which uses the operating system's file system and cache. On the other hand, Chronicle Queue relies entirely on the file system and cache.
 
 === Similar product guides
 
@@ -852,7 +854,7 @@ http://kafka.apache.org/documentation.html[Kafka Documentation]
 
 === Replication
 
-Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduce bandwidth requirements.
+Chronicle Queue Enterprise supports TCP replication with optional filtering so only the required record or even fields are transmitted. This improves performances and reduces bandwidth requirements.
 
 image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-16-at-15.06.49.png[]
 
