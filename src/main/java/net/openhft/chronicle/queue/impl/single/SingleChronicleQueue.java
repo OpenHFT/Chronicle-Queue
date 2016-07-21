@@ -542,9 +542,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             long totalSpace = Files.getFileStore(root).getTotalSpace();
 
             if (unallocatedBytes < totalSpace * .05)
-                LOG.warn("your disk is 95% full, warning: chronicle-queue may crash if it runs out of space.");
+                LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
+                        "it runs out of space.");
 
-            if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+            else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
                 LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
         }
 
