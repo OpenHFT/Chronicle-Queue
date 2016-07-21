@@ -161,7 +161,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}
                         </Bundle-SymbolicName>
-                        <Bundle-Name>${project.artifactId}</Bundle-Name>
+                        <Bundle-Name>OpenHFT :: ${project.artifactId}</Bundle-Name>
                         <Export-Package>net.openhft.chronicle.queue.*</Export-Package>
                     </instructions>
                 </configuration>
