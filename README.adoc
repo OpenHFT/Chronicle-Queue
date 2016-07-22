@@ -864,3 +864,37 @@ image::http://chronicle.software/wp-content/uploads/2014/07/Screen-Shot-2015-01-
 * http://stackoverflow.com/tags/chronicle/info[Chronicle support on StackOverflow]
 * https://groups.google.com/forum/?hl=en-GB#!forum/java-chronicle[Chronicle support on Google Groups]
 * https://higherfrequencytrading.atlassian.net/browse/CHRON[Development Tasks - JIRA]
+
+== Latency Test for Chronicle Queue replication
+
+The following charts time how long it takes to:
+
+- Write a 40 byte message to a Chronicle Queue.
+- Have the write replicated over TCP.
+- Have the second copy acknowledge receipt of the message.
+- Have a thread read the acknowledged message.
+
+The test is run for ten minutes and the distribution of latenices plotted.
+
+image:https://vanilla-java.github.io/images/Latency-to-993.png[]
+
+NOTE: There is a step in latency at around 10 million message per second jumps as the messages start to batch. At rates below this, each message can be sent individually.
+
+The 99.99%ile and above are believed to be delays in passing the message over TCP. Further reserach is needed to prove this. In any case, these delays are much the same regardless of the throughput.
+
+The 99.9%ile and 99.93%ile are a function of how quickly the system can recover after a delay.  The higher the throughput, the less head room the system has to recover form a delay.
+
+image:https://vanilla-java.github.io/images/Latency-from-993.png[]
+
+=== Summary
+
+In the test above, the typical latency varied between 14 and 40 micro-seconds, the 99%ile varied between 17 and 56 micro-seconds depending on the throughput being tested. Notably, the 99.93% latency varied between 21 micro-seconds and 41 milli-seconds, a factor of 2000.
+
+.Possible Throughput results depending on acceptable latencies
+|===
+| Acceptable Latency | Throughput
+| < 30 micro-seconds 99.3% of the time | 7 million message per second
+| < 20 micro-seconds 99.9% of the time | 20 million messages per second
+| < 1 milli-seconds 99.9% of the time | 50 million messages per second
+| < 60 micro-seconds 99.3% of the time | 80 million message per second
+|===
