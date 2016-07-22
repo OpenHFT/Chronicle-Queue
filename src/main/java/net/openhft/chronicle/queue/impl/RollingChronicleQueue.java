@@ -66,7 +66,6 @@ public interface RollingChronicleQueue extends ChronicleQueue {
      */
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
-
     /**
      * The number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
      * exclusive.

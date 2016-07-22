@@ -2219,7 +2219,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 Thread.sleep(1000);
         }
 
-
         for (int lower = 0; lower < indexs.length; lower++) {
             for (int upper = lower; upper < indexs.length; upper++) {
                 System.out.println("lower=" + lower + ",upper=" + upper);

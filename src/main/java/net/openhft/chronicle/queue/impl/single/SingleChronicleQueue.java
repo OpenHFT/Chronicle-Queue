@@ -268,7 +268,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return pool.nextCycle(cycle, direction);
     }
 
-
     private long exceptsPerCycle(long cycle) {
         WireStore wireStore = storeForCycle((int) cycle, epoch, false);
         try {
@@ -277,7 +276,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-
 
     }
 
@@ -532,7 +530,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             }
         }
 
-
         private void checkDiskSpace(final File path) throws IOException {
 
             final Path root = path.getParentFile().toPath().getRoot();
@@ -548,7 +545,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
                 LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
         }
-
 
         /**
          * @return cycleTree for the current directory / parentFile

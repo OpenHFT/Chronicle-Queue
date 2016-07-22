@@ -15,13 +15,11 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
 import java.util.NavigableSet;
-
 
 public interface WireStoreSupplier {
     @Nullable
