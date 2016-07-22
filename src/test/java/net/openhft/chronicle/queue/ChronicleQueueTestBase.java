@@ -118,7 +118,7 @@ public class ChronicleQueueTestBase {
                 .blockSize(640_000)
                 .build();
 
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
         for (int i = 0; i < iterations; i++) {

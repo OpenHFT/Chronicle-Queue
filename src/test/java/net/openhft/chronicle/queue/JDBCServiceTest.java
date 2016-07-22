@@ -1,11 +1,9 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.Marshallable;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -14,15 +12,12 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by peter on 08/04/16.
  */
-@Ignore("TODO Fix handling of Throwable")
 public class JDBCServiceTest {
-
     @Test
     public void testCreateTable() throws SQLException, IOException {
         doCreateTable(4, 10000);
@@ -89,33 +84,4 @@ public class JDBCServiceTest {
         }
     }
 
-    private static class CountingJDBCResult implements JDBCResult {
-        private final AtomicLong queries;
-        private final AtomicLong updates;
-
-        public CountingJDBCResult(AtomicLong queries, AtomicLong updates) {
-            this.queries = queries;
-            this.updates = updates;
-        }
-
-        @Override
-        public void queryResult(Iterator<Marshallable> marshallableList, String query, Object... args) {
-            queries.incrementAndGet();
-        }
-
-        @Override
-        public void queryThrown(Throwable t, String query, Object... args) {
-            throw Jvm.rethrow(t);
-        }
-
-        @Override
-        public void updateResult(long count, String update, Object... args) {
-            updates.incrementAndGet();
-        }
-
-        @Override
-        public void updateThrown(Throwable t, String update, Object... args) {
-            throw Jvm.rethrow(t);
-        }
-    }
 }

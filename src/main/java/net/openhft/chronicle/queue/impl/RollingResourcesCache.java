@@ -41,18 +41,27 @@ public class RollingResourcesCache {
     private final Resource[] values;
     private final int length;
 
-    public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch, @NotNull Function<String, File> fileFactory) {
-        this(cycle.length(), cycle.format(), epoch, fileFactory);
+    @NotNull
+    private final Function<File, String> fileToName;
+
+    public RollingResourcesCache(@NotNull final RollCycle cycle, long epoch,
+                                 @NotNull Function<String, File> nameToFile,
+                                 @NotNull Function<File, String> fileToName) {
+        this(cycle.length(), cycle.format(), epoch, nameToFile, fileToName);
     }
 
-    private RollingResourcesCache(final int length, @NotNull String format, long epoch, @NotNull Function<String, File> fileFactory) {
+    private RollingResourcesCache(final int length,
+                                  @NotNull String format, long epoch,
+                                  @NotNull Function<String, File> nameToFile,
+                                  @NotNull Function<File, String> fileToName) {
         this.length = length;
+        this.fileToName = fileToName;
         this.values = new Resource[SIZE];
         long millis = ((epoch + 43200000) % 86400000) - 43200000;
         ZoneOffset zoneOffset = ZoneOffset.ofTotalSeconds((int) (millis / 1000));
         ZoneId zoneId = ZoneId.ofOffset("GMT", zoneOffset);
         this.formatter = DateTimeFormatter.ofPattern(format).withZone(zoneId);
-        this.fileFactory = fileFactory;
+        this.fileFactory = nameToFile;
     }
 
     /**
@@ -79,6 +88,10 @@ public class RollingResourcesCache {
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))
             epochDay += parse.getLong(ChronoField.SECOND_OF_DAY);
         return Maths.toInt32(epochDay / (length / 1000));
+    }
+
+    public Long toLong(File file) {
+        return Instant.from(formatter.parse(fileToName.apply(file))).toEpochMilli() / length;
     }
 
     public static class Resource {

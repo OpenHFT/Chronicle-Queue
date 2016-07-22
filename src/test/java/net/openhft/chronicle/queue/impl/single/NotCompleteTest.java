@@ -50,7 +50,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -88,7 +88,7 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -121,14 +121,12 @@ public class NotCompleteTest {
 
         File tmpDir = getTmpDir();
         try (final ChronicleQueue queue = binary(tmpDir).rollCycle(RollCycles.TEST_DAILY).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             // start a message which was not completed.
             DocumentContext dc = appender.writingDocument();
             dc.wire().write("some").text("data");
             // didn't call dc.close();
-
-//            System.out.println(queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).build()) {
@@ -137,24 +135,92 @@ public class NotCompleteTest {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertFalse(dc.isPresent());
             }
+
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 0,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 352,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 352, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  456,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 456, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 0\n" +
+                    "  0, 0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 552, header: -1 or 0\n" +
+                    "--- !!not-ready-data! #binary\n" +
+                    "...\n" +
+                    "# 83885524 bytes remaining\n", queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {
-            ExcerptAppender appender = queue.createAppender();
+            ExcerptAppender appender = queue.acquireAppender();
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
             }
 
-//            System.out.println(queue.dump());
-        }
-
-        try (final ChronicleQueue queue = binary(tmpDir).build()) {
-            ExcerptTailer tailer = queue.createTailer();
-
-            try (DocumentContext dc = tailer.readingDocument()) {
-                assertEquals("data", dc.wire().read(() -> "some").text());
-            }
+            assertEquals("--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 552,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 352,\n" +
+                    "    lastIndex: 1\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "# position: 352, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  456,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 456, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  552,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 552, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "some: data\n" +
+                    "...\n" +
+                    "# 83885510 bytes remaining\n", queue.dump());
         }
     }
 }

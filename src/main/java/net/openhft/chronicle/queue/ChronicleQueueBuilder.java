@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStoreFactory;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
@@ -35,6 +36,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
+    @Deprecated
     static SingleChronicleQueueBuilder singleText(String basePath) {
         return SingleChronicleQueueBuilder.text(new File(basePath));
     }
@@ -100,4 +102,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     int indexSpacing();
 
     WireStoreFactory storeFactory();
+
+    B storeFileListener(StoreFileListener storeFileListener);
+
+    StoreFileListener storeFileListener();
 }

@@ -48,18 +48,18 @@ import java.nio.charset.StandardCharsets;
  * portion of memory and then put/fetch/update records using the {@link ChronicleQueue}
  * interface.</p>
  *
- * <p>{@link Excerpt} is the main data container in a {@link ChronicleQueue}, each Chronicle is
- * composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into it
- * and finishing the Excerpt at the upper.</p>
+ * <p>{@link ExcerptCommon} is the main data container in a {@link ChronicleQueue}, each Chronicle
+ * is composed of Excerpts. Putting data to a queue means starting a new Excerpt, writing data into
+ * it and finishing the Excerpt at the upper.</p>
  *
- * <p>While {@link Excerpt} is a generic purpose container allowing for remote access, it also has
- * more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
- * net.openhft.chronicle.queue.ExcerptAppender}</p>
+ * <p>While {@link ExcerptCommon} is a generic purpose container allowing for remote access, it also
+ * has more specialized counterparts for sequential operations. See {@link ExcerptTailer} and {@link
+ * ExcerptAppender}</p>
  *
  * @author peter.lawrey
  */
 public interface ChronicleQueue extends Closeable {
-    int TEST_BLOCK_SIZE = 256 * 1024; // smallest safe block size for Windows.
+    int TEST_BLOCK_SIZE = 256 * 1024; // smallest safe block size for Windows 8+
 
     /**
      * @return a new ExcerptTailer to read sequentially.
@@ -73,23 +73,20 @@ public interface ChronicleQueue extends Closeable {
      * @return A thread local Appender for writing new entries to the end.
      */
     @NotNull
-    ExcerptAppender createAppender();
+    ExcerptAppender acquireAppender();
+
+    /**
+     * @deprecated to be remove in version 4.6 or later use {@link ChronicleQueue#acquireAppender()}
+     */
+    @Deprecated
+    default ExcerptAppender createAppender() {
+        return acquireAppender();
+    }
 
     /**
      * @return the lowest valid index available, or Long.MAX_VALUE if none are found
      */
     long firstIndex();
-
-    /**
-     * @return the index of next index to be written if roll doesn't occur. Or Long.MIN_VALUE if none available.
-     *
-     * The lowest 40bits of the index refers to the sequence number with the cycle, giving a maximum
-     * of 1099511627776 excerpt per cycle. Each cycle has its own file. Each file holds its own
-     * index. You can discard the old files ( if they are no longer used ). The other highest 24
-     * bits  of the index are used for the cycle number (this equates to the filename), giving a
-     * maximum  of 16777216 cycles ( aka files )
-     */
-    long nextIndexToWrite();
 
     /**
      * @return the type of wire used, for example WireTypes.TEXT or WireTypes.BINARY
@@ -128,11 +125,5 @@ public interface ChronicleQueue extends Closeable {
         dump(new OutputStreamWriter(stream, StandardCharsets.UTF_8), fromIndex, toIndex);
     }
 
-    int indexCount();
-
-    int indexSpacing();
-
     int sourceId();
-
-    RollCycle rollcycle();
 }

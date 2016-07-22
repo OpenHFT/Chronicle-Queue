@@ -15,10 +15,35 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-import net.openhft.chronicle.core.annotation.Nullable;
 
-@FunctionalInterface
+import net.openhft.chronicle.queue.TailerDirection;
+import org.jetbrains.annotations.Nullable;
+
+import java.text.ParseException;
+import java.util.NavigableSet;
+
+
 public interface WireStoreSupplier {
     @Nullable
-    WireStore acquire(int cycle, long epoch, boolean createIfAbsent);
+    WireStore acquire(int cycle, boolean createIfAbsent);
+
+    /**
+     * the next available cycle, not cycle will be created by this method, typically used by a
+     * tailer.
+     *
+     * @param currentCycle the current cycle
+     * @param direction    the direction
+     * @return the next available cycle from the current cycle, or -1 if there is not a next cycle
+     */
+    int nextCycle(int currentCycle, TailerDirection direction) throws ParseException;
+
+    /**
+     * the cycles between a range, inclusive
+     *
+     * @param lowerCycle the lower cycle inclusive
+     * @param upperCycle the uper cycle inclusive
+     * @return the cycles between a range, inclusive
+     * @throws ParseException
+     */
+    NavigableSet<Long> cycles(int lowerCycle, int upperCycle) throws ParseException;
 }

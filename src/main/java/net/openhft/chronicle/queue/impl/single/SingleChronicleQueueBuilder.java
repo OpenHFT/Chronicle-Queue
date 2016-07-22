@@ -66,7 +66,7 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     @NotNull
     public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
         return new SingleChronicleQueueBuilder(basePathFile)
-                .wireType(WireType.BINARY);
+                .wireType(WireType.BINARY_LIGHT);
     }
 
     @NotNull
@@ -75,6 +75,7 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
                 .wireType(DEFAULT_ZERO_BINARY);
     }
 
+    @Deprecated
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
         return new SingleChronicleQueueBuilder(name)

@@ -47,7 +47,7 @@ public class Queue30Test extends ChronicleQueueTestBase {
         Runnable r = () -> {
             try {
                 final String name = Thread.currentThread().getName();
-                final ExcerptAppender appender = queue.createAppender();
+                final ExcerptAppender appender = queue.acquireAppender();
                 for (int count = 0; !Thread.currentThread().isInterrupted(); count++) {
                     final int c = count;
                     appender.writeDocument(w ->
@@ -83,7 +83,7 @@ public class Queue30Test extends ChronicleQueueTestBase {
                 .build();
 
         final String name = Thread.currentThread().getName();
-        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptAppender appender = queue.acquireAppender();
         for (int count = 0; ; count++) {
             final int c = count;
             appender.writeDocument(w ->

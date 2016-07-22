@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
@@ -70,12 +71,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
+    private StoreFileListener storeFileListener = (cycle, file) -> {
+        Jvm.debug().on(getClass(), "File released " + file);
+    };
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
         this.blockSize = 64L << 20;
         this.path = path;
-        this.wireType = WireType.BINARY;
+        this.wireType = WireType.BINARY_LIGHT;
         this.epoch = 0;
         this.bufferCapacity = 2 << 20;
         this.indexSpacing = -1;
@@ -119,7 +123,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     @Override
     public long blockSize() {
-        return this.blockSize;
+        // can add an index2index & an index in one go.
+        long minSize = Math.max(TEST_BLOCK_SIZE, 32L * indexCount());
+        return Math.max(minSize, this.blockSize);
     }
 
     @Override
@@ -296,6 +302,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     public WireStoreFactory storeFactory() {
         return storeFactory;
+    }
+
+    @Override
+    public B storeFileListener(StoreFileListener storeFileListener) {
+        this.storeFileListener = storeFileListener;
+        return (B) this;
+    }
+
+    @Override
+    public StoreFileListener storeFileListener() {
+        return storeFileListener;
     }
 
     public B sourceId(int sourceId) {

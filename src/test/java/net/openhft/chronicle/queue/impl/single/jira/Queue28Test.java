@@ -66,7 +66,7 @@ public class Queue28Test extends ChronicleQueueTestBase {
         final ExcerptTailer tailer = queue.createTailer();
         assertFalse(tailer.readDocument(r -> r.read(TestKey.test).int32()));
 
-        final ExcerptAppender appender = queue.createAppender();
+        final ExcerptAppender appender = queue.acquireAppender();
         appender.writeDocument(w -> w.write(TestKey.test).int32(1));
         Jvm.pause(100);
         assertTrue(tailer.readDocument(r -> r.read(TestKey.test).int32()));

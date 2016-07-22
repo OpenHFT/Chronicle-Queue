@@ -22,6 +22,7 @@ import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -37,6 +38,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
+    @Ignore("long running test")
     @Test(timeout = 60000)
     public void testUnbuffered() throws IOException, InterruptedException {
         doTest(false);
@@ -85,7 +87,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
                         .buffered(buffered)
                         .build();
 
-                ExcerptAppender appender = wqueue.createAppender();
+                ExcerptAppender appender = wqueue.acquireAppender();
 
                 Bytes bytes = Bytes.allocateDirect(BYTES_LENGTH).unchecked(true);
 

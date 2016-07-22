@@ -7,6 +7,7 @@ import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.Wires;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,12 +49,15 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS) throws UnrecoverableTimeoutException {
+    public long recoverAndWriteHeader(Wire wire,
+                                      int length,
+                                      long timeoutMS,
+                                      @NotNull final LongValue lastPosition) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Clearing an incomplete header so a header can be written");
         wire.bytes().writeInt(0);
         wire.pauser().reset();
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS);
+            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
         } catch (TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }

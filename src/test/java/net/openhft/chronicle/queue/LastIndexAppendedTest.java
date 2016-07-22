@@ -6,8 +6,8 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rob Austin.
@@ -18,25 +18,20 @@ public class LastIndexAppendedTest {
     public void testLastIndexAppendedAcrossRestarts() throws Exception {
         String path = OS.TARGET + "/deleteme.q-" + System.nanoTime();
 
-        long expectedIndex = 0;
         for (int i = 0; i < 5; i++) {
-            try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(path).build()) {
-                ExcerptAppender appender = queue.createAppender();
+            try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(path)
+                    .rollCycle(TEST_DAILY)
+                    .build()) {
+                ExcerptAppender appender = queue.acquireAppender();
 
                 try (DocumentContext documentContext = appender.writingDocument()) {
-                    long expectedIndex2 = documentContext.index();
-                    assertTrue("expectedIndex: " + expectedIndex2, expectedIndex2 > 0);
-                    if (expectedIndex == 0)
-                        expectedIndex = expectedIndex2;
-                    else
-                        assertEquals(++expectedIndex, expectedIndex2);
+                    int index = (int) documentContext.index();
+                    assertEquals(i, index);
 
                     documentContext.wire().write().text("hello world");
                 }
-                final long lastIndex = queue.nextIndexToWrite();
-                assertEquals(expectedIndex + 1, lastIndex);
 
-                assertEquals(expectedIndex, appender.lastIndexAppended());
+                assertEquals(i, (int) appender.lastIndexAppended());
             }
         }
         try {

@@ -25,9 +25,19 @@ import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.StreamCorruptedException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+    /**
+     * @return the file associated with this store.
+     */
+    File file();
+
+    /**
+     * @param position the start of the last written excerpt to this cycle/store
+     * @return this store
+     */
     WireStore writePosition(long position);
 
     /**
@@ -37,11 +47,11 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     long epoch();
 
     /**
-     * @return the next writable position, Will be or-ed with ROLLED_BIT if it has rolled.
+     * @return the start of the last written excerpt to this cycle/store
      */
     long writePosition();
 
-    ScanResult moveToIndexForRead(@NotNull Wire wire, long index, long timeoutMS);
+    ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
     @NotNull
     MappedBytes bytes();
@@ -49,11 +59,11 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     /**
      * Reverse look up an index for a position.
      *
-     * @param position  of the start of the message
-     * @param timeoutMS
+     * @param ec       the wire of the bytes, to work with
+     * @param position of the start of the message
      * @return index in this store.
      */
-    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 
@@ -61,7 +71,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long lastAcknowledgedIndexReplicated();
 
-    void setPositionForIndex(Wire wire, long index, long position, long timeoutMS) throws UnrecoverableTimeoutException, StreamCorruptedException;
+    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 

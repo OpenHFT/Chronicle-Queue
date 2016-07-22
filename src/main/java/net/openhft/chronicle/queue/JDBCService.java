@@ -39,7 +39,7 @@ public class JDBCService implements Closeable {
 
     void runLoop() {
         try {
-            JDBCResult result = out.createAppender()
+            JDBCResult result = out.acquireAppender()
                     .methodWriterBuilder(JDBCResult.class)
                     .recordHistory(true)
                     .get();
@@ -63,7 +63,7 @@ public class JDBCService implements Closeable {
     }
 
     public JDBCStatement createWriter() {
-        return in.createAppender()
+        return in.acquireAppender()
                 .methodWriterBuilder(JDBCStatement.class)
                 .recordHistory(true)
                 .get();

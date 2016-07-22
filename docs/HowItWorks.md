@@ -47,7 +47,7 @@ Lets see Chronicle in action with an example. In this example we simply will: Cr
             Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
             // write one object
-            ExcerptAppender appender = chronicle.createAppender();
+            ExcerptAppender appender = chronicle.acquireAppender();
             appender.startExcerpt(256); // an upper limit to how much space in bytes this message should need.
             appender.writeObject("TestMessage");
             appender.finish();
@@ -79,7 +79,7 @@ IndexedChronicle creates two RandomAccessFile one for indexes and one for data h
 
 Create appender and reader
 
-	ExcerptAppender appender = chronicle.createAppender();
+	ExcerptAppender appender = chronicle.acquireAppender();
 	ExcerptTailer reader = chronicle.createTailer();
 
 NativeExcerptAppender.startExcerpt method does some checks and calculates startAddr and limitAddr(startAddr+100) for this excerpt

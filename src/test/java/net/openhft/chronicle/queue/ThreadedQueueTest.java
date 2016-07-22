@@ -28,6 +28,8 @@ import java.io.File;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.*;
 
 /**
@@ -88,7 +90,7 @@ public class ThreadedQueueTest {
                         .blockSize(BLOCK_SIZE)
                         .build();
 
-                final ExcerptAppender appender = wqueue.createAppender();
+                final ExcerptAppender appender = wqueue.acquireAppender();
 
                 final Bytes message = Bytes.elasticByteBuffer();
                 for (int i = 0; i < REQUIRED_COUNT; i++) {
@@ -118,9 +120,10 @@ public class ThreadedQueueTest {
 
         new File(path).deleteOnExit();
 
-        final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
+        final ChronicleQueue rqueue = ChronicleQueueBuilder.single(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .rollCycle(TEST_DAILY)
                 .build();
 
         final ExcerptTailer tailer = rqueue.createTailer();
@@ -128,13 +131,14 @@ public class ThreadedQueueTest {
         final ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
+                .rollCycle(TEST_DAILY)
                 .build();
 
         Bytes bytes = Bytes.elasticByteBuffer();
         assertFalse(tailer.readBytes(bytes));
 
-        final ExcerptAppender appender = wqueue.createAppender();
-        appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes()));
+        final ExcerptAppender appender = wqueue.acquireAppender();
+        appender.writeBytes(Bytes.wrapForRead("Hello World".getBytes(ISO_8859_1)));
 
         bytes.clear();
         assertTrue(tailer.readBytes(bytes));

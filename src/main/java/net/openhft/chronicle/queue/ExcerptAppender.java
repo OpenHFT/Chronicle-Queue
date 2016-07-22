@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -43,7 +44,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the
      *                                  given index.
      */
-    default void writeBytes(long index, Bytes<?> bytes) throws StreamCorruptedException {
+    default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
         throw new UnsupportedOperationException();
     }
 
@@ -70,4 +71,17 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * own unique data file to store the excerpt
      */
     int cycle();
+
+    /**
+     * Asynchronous call to load a block before it  needed to reduce latency.
+     */
+    default void pretouch() {
+    }
+
+    /**
+     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will not split a cache line.
+     */
+    void padToCacheAlign(boolean padToCacheAlign);
+
+    boolean padToCacheAlign();
 }

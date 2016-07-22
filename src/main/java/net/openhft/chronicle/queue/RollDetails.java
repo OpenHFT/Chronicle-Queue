@@ -18,11 +18,15 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 
 public class RollDetails extends AbstractMarshallable {
-    final long cycle;
+    final int cycle;
     final long epoch;
 
-    public RollDetails(long cycle, long epoch) {
+    public RollDetails(int cycle, long epoch) {
         this.cycle = cycle;
         this.epoch = epoch;
+    }
+
+    public int cycle() {
+        return cycle;
     }
 }

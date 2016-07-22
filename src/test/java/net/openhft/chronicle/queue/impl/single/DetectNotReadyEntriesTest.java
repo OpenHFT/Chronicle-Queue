@@ -53,7 +53,7 @@ public class DetectNotReadyEntriesTest {
                 "  wireType: !WireType BINARY,\n" +
                 "  writePosition: 309,\n" +
                 "  roll: !SCQSRoll {\n" +
-                "    length: 86400000,\n" +
+                "    length: !int 86400000,\n" +
                 "    format: yyyyMMdd,\n" +
                 "    epoch: 0\n" +
                 "  },\n" +
@@ -65,7 +65,7 @@ public class DetectNotReadyEntriesTest {
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
                 "}\n" +
-                "# position: 288\n" +
+                "# position: 288, header: -1 or 0\n" +
                 "--- !!not-ready-data! #binary\n" +
                 "test: Hello World\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
 
@@ -74,7 +74,9 @@ public class DetectNotReadyEntriesTest {
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .blockSize(TEST_CHUNK_SIZE)
                 .build();
-// TODO Fix the last entry.
+
+        queue.acquireAppender().writeText("Bye for now");
+
         queue.close();
         try {
             IOTools.shallowDeleteDirWithFiles(dir.getAbsolutePath());

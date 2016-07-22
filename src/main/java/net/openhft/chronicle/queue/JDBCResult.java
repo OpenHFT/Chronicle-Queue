@@ -1,14 +1,12 @@
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.wire.Marshallable;
-
-import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by peter on 06/04/16.
  */
 public interface JDBCResult {
-    void queryResult(Iterator<Marshallable> marshallableList, String query, Object... args);
+    void queryResult(List<String> columns, List<List<Object>> rows, String query, Object... args);
 
     void queryThrown(Throwable t, String query, Object... args);
 

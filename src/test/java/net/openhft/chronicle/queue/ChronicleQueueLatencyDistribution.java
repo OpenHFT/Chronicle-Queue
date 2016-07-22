@@ -57,7 +57,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 .blockSize(128 << 20)
                 .build();
 
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
         Thread tailerThread = new Thread(() -> {

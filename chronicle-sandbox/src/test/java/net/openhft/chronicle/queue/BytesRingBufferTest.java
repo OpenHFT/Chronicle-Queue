@@ -156,8 +156,7 @@ public class BytesRingBufferTest {
                 //      bytesRingBuffer.offer(data());
                 //        bytesRingBuffer.offer(data());
                 //   assertEquals(EXPECTED, bytesRingBuffer.take(maxSize -> input.clear()).readUTFΔ());
-                if (i == 29)
-                    System.out.println("");
+
                 Bytes bytes = bytesRingBuffer.take(maxSize -> {
                     Bytes<ByteBuffer> clear = input.clear();
                     return clear;

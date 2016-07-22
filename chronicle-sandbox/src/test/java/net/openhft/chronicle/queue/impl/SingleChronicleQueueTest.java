@@ -80,7 +80,7 @@ public class SingleChronicleQueueTest {
         try {
             final ChronicleQueue chronicle = createQueue(file);
 
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve"));
             appender.writeDocument(wire -> wire.write(() -> "Surname").text("Jobs"));
 
@@ -104,7 +104,7 @@ public class SingleChronicleQueueTest {
 
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -132,7 +132,7 @@ public class SingleChronicleQueueTest {
         try {
 
             final ChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
             Assert.assertEquals(0, appender.lastWrittenIndex());
@@ -146,7 +146,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testLastWrittenIndexPerAppenderNoData");
         try {
             final ChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
             appender.lastWrittenIndex();
         } finally {
             file.delete();
@@ -158,7 +158,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testLastIndexPerChronicle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             appender.writeDocument(wire -> wire.write(() -> "key").text("test"));
             Assert.assertEquals(0, chronicle.lastIndex());
@@ -183,7 +183,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testReadAtIndexSingle");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -208,7 +208,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testReadAtIndex");
         try {
             final DirectChronicleQueue chronicle = createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -236,7 +236,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testReadAtIndexWithIndexes");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -264,7 +264,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testReadAtIndexWithIndexesAtStart");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 100; i++) {
@@ -292,7 +292,7 @@ public class SingleChronicleQueueTest {
         final File file = createTempFile("testScanFromLastKnownIndex");
         try {
             final SingleChronicleQueue chronicle = (SingleChronicleQueue)createQueue(file);
-            final ExcerptAppender appender = chronicle.createAppender();
+            final ExcerptAppender appender = chronicle.acquireAppender();
 
             // create 100 documents
             for (int i = 0; i < 65; i++) {
