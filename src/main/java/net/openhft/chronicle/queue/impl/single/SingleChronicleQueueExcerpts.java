@@ -283,7 +283,6 @@ public class SingleChronicleQueueExcerpts {
                 long seq1 = queue.rollCycle().toSequenceNumber(wire.headerNumber() + 1) - 1;
                 long seq2 = store.sequenceForPosition(this, pos1, true);
 
-
                 if (seq1 != seq2) {
 //                    System.out.println(queue.dump());
                     String message = "~~~~~~~~~~~~~~ " +
