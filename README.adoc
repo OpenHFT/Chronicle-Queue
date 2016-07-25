@@ -71,7 +71,7 @@ image::http://chronicle.software/wp-content/uploads/2014/07/Chronicle-diagram_00
 
 At first glance Chronicle Queue can be seen as **yet another queue implementation** but it has major design choices that should be emphasised.
 
-Using *non-heap storage options* (RandomAccessFile) Queue provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection. 
+Using *non-heap storage options* (RandomAccessFile) Queue provides a processing environment where applications do not suffer from Garbage Collection. While implementing high performance and memory-intensive applications (you heard the fancy term "bigdata"?) in Java; one of the biggest problems is Garbage Collection.
 
 Garbage Collection (GC) may slow down your critical operations non-deterministically at any time. In order to avoid non-determinism and escape from GC delays, off-heap memory solutions are ideal. The main idea is to manage your memory manually so it does not suffer from GC. Chronicle behaves like a management interface over off-heap memory so you can build your own solutions over it.
 
@@ -383,7 +383,7 @@ MethodReader reader = tailer.methodReader(monitor);
 assertTrue(reader.readOne());
 ----
 
-You can decode the message yourself. 
+You can decode the message yourself.
 
 NOTE: the names, type and order of the fields doesn't have to match.
 
@@ -663,7 +663,7 @@ assertEquals("TestMessage", tailer.readText());
 
 ==== Cleanup
 
-Chronicle Queue stores its data off heap, and it is recommended that you call `close()` 
+Chronicle Queue stores its data off heap, and it is recommended that you call `close()`
 once you have finished working with Chronicle-Queue to free resources,
 
 NOTE: no data will be lost if you don't do this, this is only to clean resources used.
@@ -842,7 +842,7 @@ Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` whic
 
 Chronicle Queue is designed to support over an order of magnitude of throughput, with an order of magnitude lower than the latency of Kafka.  While Karfa is faster than many of the alternatives it doesn't support both throughputs over million of events per second, and low latency e.g. 1 - 20 micro-seconds at the same time.
 
-Chronicle Queue attempts to handle more volume from a single thread, to a single partition. Thus avoiding the need for the complexity and the downsides of having partitions.  
+Chronicle Queue attempts to handle more volume from a single thread, to a single partition. Thus avoiding the need for the complexity and the downsides of having partitions.
 
 NOTE: Chronicle Engine supports partitioning of queues across machines, though not the partitioning of a queue.
 
