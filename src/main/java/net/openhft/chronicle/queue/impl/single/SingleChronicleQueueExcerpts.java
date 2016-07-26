@@ -38,7 +38,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
-import java.nio.BufferUnderflowException;
 import java.text.ParseException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
@@ -573,6 +572,8 @@ public class SingleChronicleQueueExcerpts {
 
         class StoreAppenderContext implements DocumentContext {
 
+            boolean isClosed;
+
             private boolean metaData = false;
             private Wire wire;
 
@@ -602,8 +603,13 @@ public class SingleChronicleQueueExcerpts {
             }
 
             @Override
+            public boolean isClosed() {
+                return isClosed;
+            }
+
+            @Override
             public void close() {
-                boolean isClosed = false;
+
                 try {
                     if (wire == StoreAppender.this.wire) {
                         if (padToCacheAlign)
@@ -629,9 +635,6 @@ public class SingleChronicleQueueExcerpts {
                         writeBytes(wire.headerNumber(), wire.bytes());
                         wire = StoreAppender.this.wire;
                     }
-                } catch (BufferUnderflowException bue) {
-                    if (!wire.bytes().isClosed())
-                        throw bue;
                 } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                     throw new IllegalStateException(e);
                 } finally {
