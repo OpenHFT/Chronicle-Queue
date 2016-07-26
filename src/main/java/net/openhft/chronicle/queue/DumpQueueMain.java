@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 
 import static java.lang.System.err;
 
@@ -50,6 +51,7 @@ public class DumpQueueMain {
             if (files == null)
                 err.println("Directory not found " + path);
 
+            Arrays.sort(files);
             for (File file : files)
                 dumpFile(file, out, upperLimit);
 

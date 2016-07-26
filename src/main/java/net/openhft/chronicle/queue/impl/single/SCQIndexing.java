@@ -582,7 +582,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     }
 
     enum IndexingFields implements WireKey {
-        indexCount, indexSpacing, index2Index, lastIndex
+        indexCount, indexSpacing, index2Index,
+        // nextEntryToBeIndexed
+        lastIndex
     }
 
     static class LongArrayValuesHolder {
