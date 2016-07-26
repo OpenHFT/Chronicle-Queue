@@ -43,10 +43,6 @@ public class BackwardsRollIssue extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final long INTERVAL_US = 10;
 
-    public static void main(String[] args) {
-        System.out.println("" + (0x5797cab500000000L < 0x5797cab500000001L));
-    }
-
     @Test()
     public void doTest2() throws IOException, InterruptedException, ExecutionException {
         String path = getTmpDir() + "/backRoll.q";
