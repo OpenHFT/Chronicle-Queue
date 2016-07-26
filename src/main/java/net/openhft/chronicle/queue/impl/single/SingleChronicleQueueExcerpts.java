@@ -383,7 +383,8 @@ public class SingleChronicleQueueExcerpts {
 
         private void position(long position) {
             if (position > store.writePosition() + queue.blockSize())
-                throw new IllegalArgumentException("pos: " + position);
+                throw new IllegalArgumentException("pos: " + position + ", store.writePosition()=" +
+                        store.writePosition() + " queue.blockSize()=" + queue.blockSize());
             // System.err.println("----- "+Thread.currentThread().getName()+" pos: "+position);
             this.position = position;
         }
