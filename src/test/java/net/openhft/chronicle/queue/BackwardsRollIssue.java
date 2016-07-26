@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
@@ -54,7 +53,6 @@ public class BackwardsRollIssue extends ChronicleQueueTestBase {
         new File(path).deleteOnExit();
 
         AtomicLong counter = new AtomicLong();
-        AtomicBoolean appenderFinished = new AtomicBoolean();
         AtomicLong lastIndex = new AtomicLong();
 
         final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(path)
@@ -151,7 +149,6 @@ public class BackwardsRollIssue extends ChronicleQueueTestBase {
 
         appenderFuture.get();
         System.out.println("appender is done. lastIndex=" + lastIndex);
-        appenderFinished.set(true);
 
         // wait for reader 1 and 2
         reader1.get();
