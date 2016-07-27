@@ -88,7 +88,7 @@ class SingleChronicleQueueStore implements WireStore {
                         .int64ForBinding(null);
             } else {
                 this.lastAcknowledgedIndexReplicated = null; // disabled.
-            }
+        }
             if (wire.bytes().readRemaining() > 0) {
                 this.recovery = wire.read(MetaDataField.recovery)
                         .typedMarshallable();

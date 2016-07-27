@@ -112,4 +112,6 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     default boolean readAfterReplicaAcknowledged() {
         return false;
     }
+
+    TailerState state();
 }

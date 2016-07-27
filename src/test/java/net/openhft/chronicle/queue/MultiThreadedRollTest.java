@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
@@ -28,7 +29,7 @@ public class MultiThreadedRollTest {
         reader.shutdown();
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void test() throws ExecutionException, InterruptedException {
 
 
@@ -49,23 +50,44 @@ public class MultiThreadedRollTest {
                 .build();
 
         ExcerptTailer tailer = rqueue.createTailer();
+        try (DocumentContext documentContext = tailer.readingDocument()) {
+            System.out.println("tailer.state: " + tailer.state());
+            // index is only meaningful if present.
+            long index = documentContext.index();
+            //    if (documentContext.isPresent())
+            final boolean present = documentContext.isPresent();
+            System.out.println("documentContext.isPresent=" + present
+                    + (present ? ",index=" + Long.toHexString(index) : ", no index"));
+        }
+
 
         Future f = reader.submit(() -> {
-            long index = 0;
+            long index;
             do {
-
                 try (DocumentContext documentContext = tailer.readingDocument()) {
+                    System.out.println("tailer.state: " + tailer.state());
+                    // index is only meaningful if present.
+                    System.out.println("tailer.state: " + tailer.state());
+                    // index is only meaningful if present.
                     index = documentContext.index();
-               /*     System.out.println("documentContext.isPresent=" + documentContext.isPresent()
-                            + ",index="
-                            + Long.toHexString(index));*/
+                    //    if (documentContext.isPresent())
+                    final boolean present = documentContext.isPresent();
+                    System.out.println("documentContext.isPresent=" + present
+                            + (present ? ",index=" + Long.toHexString(index) : ", no index"));
+                    Jvm.pause(50);
                 }
             } while (index != 0x200000000L && !reader.isShutdown());
 
         });
 
         timeProvider.currentTimeMillis(2000);
+        wqueue.acquireAppender().writeEndOfCycleIfRequired();
+
+        Jvm.pause(200);
+
         wqueue.acquireAppender().writeText("hello world");
+
+
         f.get();
     }
 }

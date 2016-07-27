@@ -84,4 +84,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     void padToCacheAlign(boolean padToCacheAlign);
 
     boolean padToCacheAlign();
+
+    /**
+     * Write an EOF marker on the current cycle if it is about to roll.
+     * It would do this any way if a new message wis written, but this doesn't create a new cycle or add a message.
+     */
+    void writeEndOfCycleIfRequired();
+
 }
