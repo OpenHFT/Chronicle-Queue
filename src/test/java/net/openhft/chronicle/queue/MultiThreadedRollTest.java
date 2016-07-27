@@ -24,11 +24,9 @@ public class MultiThreadedRollTest {
     public void test() throws ExecutionException, InterruptedException {
 
         ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory("reader"));
-
-        SetTimeProvider timeProvider = new SetTimeProvider();
+        final SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1000);
-        String path = getTmpDir() + "/backRoll.q";
-
+        final String path = getTmpDir() + "/backRoll.q";
 
         final RollingChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
                 .timeProvider(timeProvider)
@@ -41,7 +39,6 @@ public class MultiThreadedRollTest {
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
                 .build();
-
 
         ExcerptTailer tailer = rqueue.createTailer();
 
