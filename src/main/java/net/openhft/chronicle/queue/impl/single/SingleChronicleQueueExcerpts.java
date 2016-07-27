@@ -1145,7 +1145,6 @@ public class SingleChronicleQueueExcerpts {
             }
 
             public void wire(AbstractWire wire) {
-                assert this.wire == null || this.wire.usedBy == null;
                 this.wire = wire;
             }
         }
