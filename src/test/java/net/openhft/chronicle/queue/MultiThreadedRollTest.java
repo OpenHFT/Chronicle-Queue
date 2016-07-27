@@ -25,8 +25,7 @@ public class MultiThreadedRollTest {
 
     @After
     public void after() {
-        if (reader != null)
-            reader.shutdown();
+        reader.shutdown();
     }
 
     @Test(timeout = 1000)
