@@ -56,9 +56,9 @@ public class MultiThreadedRollTest {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     index = documentContext.index();
-                    System.out.println("documentContext.isPresent=" + documentContext.isPresent()
+               /*     System.out.println("documentContext.isPresent=" + documentContext.isPresent()
                             + ",index="
-                            + Long.toHexString(index));
+                            + Long.toHexString(index));*/
                 }
             } while (index != 0x200000000L && !reader.isShutdown());
 
