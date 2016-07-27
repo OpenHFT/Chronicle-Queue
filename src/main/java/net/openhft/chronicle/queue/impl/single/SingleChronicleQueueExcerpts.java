@@ -42,6 +42,8 @@ import java.nio.BufferOverflowException;
 import java.text.ParseException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
+import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
+import static net.openhft.chronicle.queue.TailerState.UNINTIALISED;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -694,7 +696,7 @@ public class SingleChronicleQueueExcerpts {
         private int indexSpacingMask;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
-        private TailerState state = TailerState.UNINTIALISED;
+        private TailerState state = UNINTIALISED;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -783,6 +785,14 @@ public class SingleChronicleQueueExcerpts {
                             return x;
                         break;
 
+                    case BEHOND_START:
+                        if (direction == FORWARD) {
+                            state = UNINTIALISED;
+                            continue;
+                        }
+                        return false;
+
+
                     default:
                         throw new AssertionError("state=" + state);
                 }
@@ -868,11 +878,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean moveToIndex(final long index) {
             final ScanResult scanResult = moveToIndexResult(index);
-            final boolean found = scanResult == ScanResult.FOUND;
-            if (found) {
-                state = TailerState.FOUND_CYCLE;
-            }
-            return found;
+            return scanResult == ScanResult.FOUND;
         }
 
         ScanResult moveToIndexResult(long index) {
@@ -913,7 +919,7 @@ public class SingleChronicleQueueExcerpts {
             assert direction != BACKWARD;
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
-                state = TailerState.UNINTIALISED;
+                state = UNINTIALISED;
                 return this;
             }
             if (firstCycle != this.cycle) {
@@ -980,6 +986,8 @@ public class SingleChronicleQueueExcerpts {
                 index--;
             if (index != Long.MIN_VALUE)
                 moveToIndex(index);
+            if (state() == TailerState.CYCLE_NOT_FOUND)
+                state = UNINTIALISED;
             return this;
         }
 
@@ -1025,9 +1033,11 @@ public class SingleChronicleQueueExcerpts {
                 this.store = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
                 if (store == null) {
                     context.wire(null);
-
+                    if (direction == BACKWARD)
+                        state = TailerState.BEHOND_START;
                     return false;
                 }
+                this.state = TailerState.FOUND_CYCLE;
                 this.cycle = cycle;
                 resetWires();
                 final Wire wire = wire();
@@ -1137,7 +1147,7 @@ public class SingleChronicleQueueExcerpts {
                 if (isPresent())
                     incrementIndex();
                 super.close();
-                assert wire.endUse();
+                assert wire == null || wire.endUse();
             }
 
             public boolean present(boolean present) {

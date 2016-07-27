@@ -91,7 +91,11 @@ public class RollingResourcesCache {
     }
 
     public Long toLong(File file) {
-        return Instant.from(formatter.parse(fileToName.apply(file))).toEpochMilli() / length;
+        TemporalAccessor parse = formatter.parse(fileToName.apply(file));
+        if (length == 86400_000L) {
+            return parse.getLong(ChronoField.EPOCH_DAY);
+        } else
+            return Instant.from(parse).toEpochMilli() / length;
     }
 
     public static class Resource {

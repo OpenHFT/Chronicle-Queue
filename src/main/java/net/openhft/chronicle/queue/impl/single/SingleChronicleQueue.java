@@ -575,7 +575,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             if (direction == NONE)
                 throw new AssertionError("direction is NONE");
-
+            assert currentCycle >= 0 : "currentCycle=" + Integer.toHexString(currentCycle);
             final NavigableMap<Long, File> tree = cycleTree();
             final File currentCycleFile = dateCache.resourceFor(currentCycle).path;
 
