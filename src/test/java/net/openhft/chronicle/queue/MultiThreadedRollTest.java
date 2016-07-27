@@ -67,8 +67,6 @@ public class MultiThreadedRollTest {
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     System.out.println("tailer.state: " + tailer.state());
                     // index is only meaningful if present.
-                    System.out.println("tailer.state: " + tailer.state());
-                    // index is only meaningful if present.
                     index = documentContext.index();
                     //    if (documentContext.isPresent())
                     final boolean present = documentContext.isPresent();
