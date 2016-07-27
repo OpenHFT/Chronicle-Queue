@@ -222,40 +222,25 @@ public class WriteBytesTest {
                     "# # EndOfFile\n" +
                     "# position: 1152, header: 18\n" +
                     "--- !!data #binary\n" +
-                    "# # FLOAT64\n" +
-                    "# # FLOAT64\n" +
-                    "# # FLOAT64\n" +
-                    "# # FLOAT64\n" +
+                    "-753555055760.82\n" +
                     "# position: 1164, header: 19\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x92\n" +
-                    "# # Unknown_0x92\n" +
-                    "# # Unknown_0x92\n" +
-                    "# # Unknown_0x92\n" +
+                    "# # FLOAT_STOP_2\n" +
+                    "-48698841.79\n" +
                     "# position: 1176, header: 20\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x93\n" +
-                    "# # Unknown_0x93\n" +
-                    "# # Unknown_0x93\n" +
-                    "# # Unknown_0x93\n" +
+                    "-8422085917.3268\n" +
                     "# position: 1188, header: 21\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x94\n" +
-                    "# # Unknown_0x94\n" +
-                    "# # Unknown_0x94\n" +
-                    "# # Unknown_0x94\n" +
+                    "# # FLOAT_STOP_4\n" +
+                    "-541098.2421\n" +
                     "# position: 1200, header: 22\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x95\n" +
-                    "# # Unknown_0x95\n" +
-                    "# # Unknown_0x95\n" +
-                    "# # Unknown_0x95\n" +
+                    "-93086212.770454\n" +
                     "# position: 1212, header: 23\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x96\n" +
-                    "# # Unknown_0x96\n" +
-                    "# # Unknown_0x96\n" +
-                    "# # Unknown_0x96\n" +
+                    "# # FLOAT_STOP_6\n" +
+                    "-5952.080663\n" +
                     "# position: 1224, header: 24\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x97\n" +
@@ -276,22 +261,22 @@ public class WriteBytesTest {
                     "# # Unknown_0x99\n" +
                     "# position: 1260, header: 27\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9A\n" +
-                    "# # Unknown_0x9A\n" +
-                    "# # Unknown_0x9A\n" +
-                    "# # Unknown_0x9A\n" +
+                    "# # FLOAT_SET_LOW_0\n" +
+                    "# # FLOAT_SET_LOW_0\n" +
+                    "# # FLOAT_SET_LOW_0\n" +
+                    "# # FLOAT_SET_LOW_0\n" +
                     "# position: 1272, header: 28\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9B\n" +
-                    "# # Unknown_0x9B\n" +
-                    "# # Unknown_0x9B\n" +
-                    "# # Unknown_0x9B\n" +
+                    "# # FLOAT_SET_LOW_2\n" +
+                    "# # FLOAT_SET_LOW_2\n" +
+                    "# # FLOAT_SET_LOW_2\n" +
+                    "# # FLOAT_SET_LOW_2\n" +
                     "# position: 1284, header: 29\n" +
                     "--- !!data #binary\n" +
-                    "# # Unknown_0x9C\n" +
-                    "# # Unknown_0x9C\n" +
-                    "# # Unknown_0x9C\n" +
-                    "# # Unknown_0x9C\n" +
+                    "# # FLOAT_SET_LOW_4\n" +
+                    "# # FLOAT_SET_LOW_4\n" +
+                    "# # FLOAT_SET_LOW_4\n" +
+                    "# # FLOAT_SET_LOW_4\n" +
                     "# position: 1296, header: 30\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x9D\n" +
