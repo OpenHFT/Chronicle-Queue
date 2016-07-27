@@ -6,7 +6,6 @@ import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -22,16 +21,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
  */
 public class MultiThreadedRollTest {
 
-
-    final ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory
-            ("reader", true));
-
-    @Before
-    public void before() {
-        reader = Executors.newSingleThreadExecutor(new NamedThreadFactory
-                ("reader", true));
-    }
-
+    final ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory("reader", true));
 
     @After
     public void after() {
