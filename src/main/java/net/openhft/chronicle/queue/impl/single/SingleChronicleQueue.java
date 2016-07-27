@@ -534,16 +534,19 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
             final Path root = path.getParentFile().toPath().getRoot();
 
-            // The returned number of unallocated bytes is a hint, but not a guarantee
-            long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
-            long totalSpace = Files.getFileStore(root).getTotalSpace();
 
-            if (unallocatedBytes < totalSpace * .05)
-                LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
-                        "it runs out of space.");
+            if (root != null && root.getFileSystem() != null) {
+                // The returned number of unallocated bytes is a hint, but not a guarantee
+                long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
+                long totalSpace = Files.getFileStore(root).getTotalSpace();
 
-            else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
-                LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+                if (unallocatedBytes < totalSpace * .05)
+                    LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
+                            "it runs out of space.");
+
+                else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
+                    LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
+            }
         }
 
         /**
