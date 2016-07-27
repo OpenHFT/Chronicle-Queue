@@ -69,7 +69,7 @@ public class DetectNotReadyEntriesTest {
                 "--- !!not-ready-data! #binary\n" +
                 "test: Hello World\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
 
-        bytes.close();
+        bytes.release();
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .blockSize(TEST_CHUNK_SIZE)

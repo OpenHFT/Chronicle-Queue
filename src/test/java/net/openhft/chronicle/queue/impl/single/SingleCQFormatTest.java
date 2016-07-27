@@ -117,7 +117,7 @@ public class SingleCQFormatTest {
 
         MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
 
-        bytes.close();
+        bytes.release();
         SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
@@ -140,7 +140,7 @@ public class SingleCQFormatTest {
 
         MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA | Wires.UNKNOWN_LENGTH);
-        bytes.close();
+        bytes.release();
         SingleChronicleQueue queue = null;
         try {
             queue = binary(dir)
@@ -195,7 +195,7 @@ public class SingleCQFormatTest {
                 "  },\n" +
                 "  lastAcknowledgedIndexReplicated: 0\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        bytes.close();
+        bytes.release();
 
         SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
@@ -242,7 +242,7 @@ public class SingleCQFormatTest {
                 "    timeStamp: 0\n" +
                 "  }\n" +
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
-        bytes.close();
+        bytes.release();
 
         SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
@@ -271,7 +271,7 @@ public class SingleCQFormatTest {
             });
         }
 
-        bytes.close();
+        bytes.release();
         try (SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
@@ -362,7 +362,7 @@ public class SingleCQFormatTest {
                     "# position: 365, header: 1\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes.readPosition(0)));
-            mappedBytes.close();
+            mappedBytes.release();
         }
 
         SingleChronicleQueue queue = binary(dir)
@@ -560,10 +560,10 @@ public class SingleCQFormatTest {
     }
 
     public void checkFileContents(File file, String expected) throws FileNotFoundException {
-        try (MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE)) {
-            bytes.readLimit(bytes.realCapacity());
-            assertEquals(expected, Wires.fromSizePrefixedBlobs(bytes));
-        }
+        MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
+        bytes.readLimit(bytes.realCapacity());
+        assertEquals(expected, Wires.fromSizePrefixedBlobs(bytes));
+        bytes.release();
     }
 
     @Test

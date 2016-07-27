@@ -45,7 +45,7 @@ public class WireStorePool {
     }
 
     public void close() {
-        stores.entrySet().forEach(e -> e.getValue().close());
+        stores.entrySet().forEach(e -> e.getValue().release());
     }
 
     @Nullable

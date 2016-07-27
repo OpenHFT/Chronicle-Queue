@@ -7,7 +7,10 @@ import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
@@ -17,7 +20,7 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
  */
 public class MultiThreadedRollTest {
 
-    @Test
+    @Test(timeout = 1000)
     public void test() throws ExecutionException, InterruptedException {
 
         ExecutorService reader = Executors.newSingleThreadExecutor(new NamedThreadFactory("reader"));
@@ -39,27 +42,15 @@ public class MultiThreadedRollTest {
                 .rollCycle(TEST_SECONDLY)
                 .build();
 
-        CountDownLatch c = new CountDownLatch(1);
 
         ExcerptTailer tailer = rqueue.createTailer();
 
         Future f = reader.submit(() -> {
-            long index;
-            try (DocumentContext documentContext = tailer.readingDocument()) {
-                index = documentContext.index();
-                if (documentContext.isPresent())
-                    System.out.println(Long.toHexString(index));
-
-            }
-
-            c.countDown();
-
-
+            long index = 0;
             do {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     index = documentContext.index();
-                    //    if (documentContext.isPresent())
                     System.out.println("documentContext.isPresent=" + documentContext.isPresent()
                             + ",index="
                             + Long.toHexString(index));
@@ -74,11 +65,7 @@ public class MultiThreadedRollTest {
         });
 
         timeProvider.currentTimeMillis(2000);
-        c.await();
-
         wqueue.acquireAppender().writeText("hello world");
-
-
         f.get();
     }
 }
