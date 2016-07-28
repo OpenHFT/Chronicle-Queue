@@ -45,10 +45,12 @@ public class WireStorePool implements Closeable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
+    @Override
     public boolean isClosed() {
         return isClosed;
     }
 
+    @Override
     public void close() {
         if (isClosed)
             return;
