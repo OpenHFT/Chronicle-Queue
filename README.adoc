@@ -378,12 +378,11 @@ visibility of what has been   stored into the queue and in what order. 
 
 The example below shows how to read a cq4 file from the command line:
 
-You have to use the chronicle-queue.jar, from any version 4.5.3 or later, you have to use a set
-of jars that work together, to find which jars work together please refer to the chronicle-bom,
-which list sets of chroncile jars that work together.
+You have to use the chronicle-queue.jar, from any version 4.5.3 or later, and set up the
+dependent files in the class path.  (to find out which version of jars to include please refer
+ to the chronicle-bom ),
 
-You have to make sure that all the dependent jars ( to run chroncile queue ) are on you class path.
-below is the set of jar that I am using along with the 'cq4' data file.
+once you have the dependent jars on the class path ( like below )
 
 ```
 $ ls -ltr
