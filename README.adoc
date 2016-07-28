@@ -361,6 +361,77 @@ Hello World
 000402e0 6C 6F 20 57 6F 72 6C 64                          lo World
 ----
 
+=== Reading a Queue File for the Command Line
+
+When Chronicle Queue stores is data it creates a file  with an extension of of 'cq4',  
+the data that is written to this file, is usually stored in binary format,  like this :
+
+```
+\ @πheader∂SCQStoreÇE  »wireType∂WireTypeÊBINARYÕwritePositionèèèèß        ƒroll∂SCQSRollÇ*   ∆length¶ÄÓ6 ∆format
+ÎyyyyMMdd-HH≈epoch¶ÄÓ6 »indexing∂SCQSIndexingÇN    indexCount• ÃindexSpacingÀindex2Indexé    ß        …lastIndexé 
+   ß        ﬂlastAcknowledgedIndexReplicatedé     ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ   …timeStampèèèß                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+```
+
+This can often be   difficult to read, especially from the command line. Being able to dump the
+'cq4'  files as text , can also help you fix your production issues, as it gives you the
+visibility of what has been   stored into the queue and in what order. 
+
+The example below shows how to read a cq4 file from the command line:
+
+You have to use the chronicle-queue.jar, from any version 4.5.3 or later, you have to use a set
+of jars that work together, to find which jars work together please refer to the chronicle-bom,
+which list sets of chroncile jars that work together.
+
+You have to make sure that all the dependent jars ( to run chroncile queue ) are on you class path.
+below is the set of jar that I am using along with the 'cq4' data file.
+
+```
+$ ls -ltr
+total 9920
+-rw-r--r--  1 robaustin  staff   112557 28 Jul 14:52 chronicle-queue-4.5.5.jar
+-rw-r--r--  1 robaustin  staff   209268 28 Jul 14:53 chronicle-bytes-1.7.3.jar
+-rw-r--r--  1 robaustin  staff   136434 28 Jul 14:56 chronicle-core-1.7.3.jar
+-rw-r--r--  1 robaustin  staff    33562 28 Jul 15:03 slf4j-api-1.7.14.jar
+-rw-r--r--  1 robaustin  staff   324302 28 Jul 15:04 chronicle-wire-1.7.5.jar
+-rw-r--r--  1 robaustin  staff    35112 28 Jul 15:05 chronicle-threads-1.7.2.jar
+-rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:05 19700101-02.cq4
+```
+
+you can now run
+
+$ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 19700101-02.cq4
+
+this will dump the 19700101-02.cq4 file out as text
+
+```
+--- !!meta-data #binary
+header: !SCQStore {
+  wireType: !WireType BINARY,
+  writePosition: 0,
+  roll: !SCQSRoll {
+    length: !int 3600000,
+    format: yyyyMMdd-HH,
+    epoch: !int 3600000
+  },
+  indexing: !SCQSIndexing {
+    indexCount: !short 4096,
+    indexSpacing: 4,
+    index2Index: 0,
+    lastIndex: 0
+  },
+  lastAcknowledgedIndexReplicated: -1,
+  recovery: !TimedStoreRecovery {
+    timeStamp: 0
+  }
+}
+
+...
+# 4198044 bytes remaining
+
+
+```
+
+
 === Reading from a Queue
 
 Reading the queue follows the same pattern, except there is a possibility there is not a message when you attempt to read it.
