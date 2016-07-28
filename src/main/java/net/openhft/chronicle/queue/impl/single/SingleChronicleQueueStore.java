@@ -38,7 +38,7 @@ import java.io.StreamCorruptedException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-class SingleChronicleQueueStore implements WireStore {
+public class SingleChronicleQueueStore implements WireStore {
     static {
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQIndexing.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(SCQRoll.class, "Roll");
@@ -88,7 +88,7 @@ class SingleChronicleQueueStore implements WireStore {
                         .int64ForBinding(null);
             } else {
                 this.lastAcknowledgedIndexReplicated = null; // disabled.
-        }
+            }
             if (wire.bytes().readRemaining() > 0) {
                 this.recovery = wire.read(MetaDataField.recovery)
                         .typedMarshallable();
@@ -135,6 +135,11 @@ class SingleChronicleQueueStore implements WireStore {
         Bytes<?> bytes = wire.bytes();
         bytes.readPositionUnlimited(0);
         Jvm.debug().on(SingleChronicleQueueStore.class, Wires.fromSizePrefixedBlobs(wire));
+    }
+
+    public static String dump(String directoryFilePath) {
+        SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directoryFilePath).build();
+        return q.dump();
     }
 
     @Override
