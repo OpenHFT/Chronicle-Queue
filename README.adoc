@@ -363,8 +363,7 @@ Hello World
 
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
-Chronicle Queue stores is data with an extension of 'cq4',  this data is stoed in binary
-format,  like this :
+Chronicle Queue stores is data with an extension of 'cq4' in binary format,  like this :
 
 ```
 \ @πheader∂SCQStoreÇE  »wireType∂WireTypeÊBINARYÕwritePositionèèèèß        ƒroll∂SCQSRollÇ*   ∆length¶ÄÓ6 ∆format
@@ -373,8 +372,8 @@ format,  like this :
 ```
 
 This can often be   difficult to read, especially from the command line. Being able to dump the
-'cq4'  files as text , can also help you fix your production issues, as it gives you the
-visibility of what has been   stored into the queue and in what order. 
+'cq4'  files as text , can also help you fix your production issues, as it gives you visibility
+of what has been   stored into the queue and in what order. 
 
 The example below shows how to read a cq4 file from the command line:
 
@@ -397,10 +396,11 @@ total 9920
 ```
 
 you can now run
-
+```
 $ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 19700101-02.cq4
+```
 
-this will dump the 19700101-02.cq4 file out as text
+this will dump the 19700101-02.cq4 file out as text, like this :
 
 ```
 --- !!meta-data #binary
