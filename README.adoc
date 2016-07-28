@@ -404,7 +404,8 @@ $ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 1
 
 this will dump the 19700101-02.cq4 file out as text, like this :
 
-```
+[source, Yaml]
+----
 --- !!meta-data #binary
 header: !SCQStore {
   wireType: !WireType BINARY,
@@ -429,8 +430,7 @@ header: !SCQStore {
 ...
 # 4198044 bytes remaining
 
-
-```
+----
 
 Note : the above example does not show any user data, because no user data was written to this
 example file.
