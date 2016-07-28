@@ -432,7 +432,7 @@ header: !SCQStore {
 
 ```
 
-Note : the above example does not show any use data, because no user data was wittend to this
+Note : the above example does not show any user data, because no user data was written to this
 example file.
 
 === Reading from a Queue
