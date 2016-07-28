@@ -363,8 +363,8 @@ Hello World
 
 === Dumping a Chronicle Queue, cq4 file as text to the Command Line
 
-When Chronicle Queue stores is data it creates a file  with an extension of of 'cq4',  
-the data that is written to this file, is usually stored in binary format,  like this :
+Chronicle Queue stores is data with an extension of 'cq4',  this data is stoed in binary
+format,  like this :
 
 ```
 \ @πheader∂SCQStoreÇE  »wireType∂WireTypeÊBINARYÕwritePositionèèèèß        ƒroll∂SCQSRollÇ*   ∆length¶ÄÓ6 ∆format
