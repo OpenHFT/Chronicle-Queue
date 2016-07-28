@@ -32,7 +32,6 @@ public class MultiThreadedRollTest {
     @Test(timeout = 10000)
     public void test() throws ExecutionException, InterruptedException {
 
-
         final SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1000);
         final String path = getTmpDir() + "/backRoll.q";
@@ -50,17 +49,6 @@ public class MultiThreadedRollTest {
                 .build();
 
         ExcerptTailer tailer = rqueue.createTailer();
-        try (DocumentContext documentContext = tailer.readingDocument()) {
-            System.out.println("tailer.state: " + tailer.state());
-            // index is only meaningful if present.
-            long index = documentContext.index();
-            //    if (documentContext.isPresent())
-            final boolean present = documentContext.isPresent();
-            System.out.println("documentContext.isPresent=" + present
-                    + (present ? ",index=" + Long.toHexString(index) : ", no index"));
-        }
-
-
         Future f = reader.submit(() -> {
             long index;
             do {
@@ -80,12 +68,10 @@ public class MultiThreadedRollTest {
 
         timeProvider.currentTimeMillis(2000);
         wqueue.acquireAppender().writeEndOfCycleIfRequired();
-
         Jvm.pause(200);
-
         wqueue.acquireAppender().writeText("hello world");
-
-
         f.get();
     }
+
+
 }
