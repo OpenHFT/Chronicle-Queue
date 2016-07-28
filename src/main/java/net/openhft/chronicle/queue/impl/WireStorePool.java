@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.annotation.Nullable;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
@@ -25,13 +26,13 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WireStorePool {
+public class WireStorePool implements Closeable {
     @NotNull
     private final WireStoreSupplier supplier;
     @NotNull
     private final Map<RollDetails, WireStore> stores;
-
     private final StoreFileListener storeFileListener;
+    private boolean isClosed = false;
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -44,7 +45,14 @@ public class WireStorePool {
         return new WireStorePool(supplier, storeFileListener);
     }
 
+    public boolean isClosed() {
+        return isClosed;
+    }
+
     public void close() {
+        if (isClosed)
+            return;
+        isClosed = true;
         stores.entrySet().forEach(e -> e.getValue().release());
     }
 
