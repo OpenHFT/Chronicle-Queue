@@ -376,7 +376,7 @@ This can often be  a bit difficult to read, So its better to dump the  'cq4'
    stored into the queue and in what order. 
 
 
-The example below shows how to read a cq4 file from the command line:
+The example below shows how to read a 'cq4' file from the command line:
 
 You have to use the chronicle-queue.jar, from any version 4.5.3 or later, and set up the
 dependent files in the class path.  (to find out which version of jars to include please refer
@@ -396,7 +396,8 @@ total 9920
 -rw-r--r--  1 robaustin  staff  4198400 28 Jul 15:05 19700101-02.cq4
 ```
 
-you can now run
+you can run
+
 ```
 $ java -cp chronicle-queue-4.5.5.jar net.openhft.chronicle.queue.DumpQueueMain 19700101-02.cq4
 ```
