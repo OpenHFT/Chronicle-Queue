@@ -437,7 +437,8 @@ example file.
 
 === Reading from a Queue
 
-Reading the queue follows the same pattern, except there is a possibility there is not a message when you attempt to read it.
+Reading the queue follows the same pattern as writting, except there is a possibility there is
+not a message when you attempt to read it.
 
 .Start Reading
 [source, Java]
