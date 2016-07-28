@@ -371,9 +371,10 @@ Chronicle Queue stores is data with an extension of 'cq4' in binary format :
    ß        ﬂlastAcknowledgedIndexReplicatedé     ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ   …timeStampèèèß                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
 ```
 
-This can often be   difficult to read, especially from the command line. Being able to dump the
-'cq4'  files as text , can also help you fix your production issues, as it gives you visibility
-of what has been   stored into the queue and in what order. 
+This can often be  a bit difficult to read, So its better to dump the  'cq4'  files as text , this
+ can also help you fix your production issues, as it gives you the visibility , of what has been 
+   stored into the queue and in what order. 
+
 
 The example below shows how to read a cq4 file from the command line:
 
@@ -381,7 +382,7 @@ You have to use the chronicle-queue.jar, from any version 4.5.3 or later, and se
 dependent files in the class path.  (to find out which version of jars to include please refer
  to the chronicle-bom ),
 
-once you have the dependent jars on the class path ( like below )
+Once you have the dependent jars on the class path ( like below )
 
 ```
 $ ls -ltr
@@ -430,6 +431,8 @@ header: !SCQStore {
 
 ```
 
+Note : the above example does not show any use data, because no user data was wittend to this
+example file.
 
 === Reading from a Queue
 
