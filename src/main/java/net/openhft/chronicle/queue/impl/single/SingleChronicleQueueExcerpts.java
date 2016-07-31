@@ -43,7 +43,7 @@ import java.text.ParseException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
-import static net.openhft.chronicle.queue.TailerState.UNINTIALISED;
+import static net.openhft.chronicle.queue.TailerState.*;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -792,6 +792,8 @@ public class SingleChronicleQueueExcerpts {
                         }
                         return false;
 
+                    case CYCLE_NOT_FOUND:
+                        return moveToIndex(index);
 
                     default:
                         throw new AssertionError("state=" + state);
@@ -844,7 +846,7 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             }
             if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
-                state = TailerState.FOUND_CYCLE;
+                state = FOUND_CYCLE;
                 return null;
             }
 
@@ -853,7 +855,7 @@ public class SingleChronicleQueueExcerpts {
                 if (cycle == -1)
                     return false;
                 if (moveToIndex(cycle, 0) == ScanResult.FOUND) {
-                    state = TailerState.FOUND_CYCLE;
+                    state = FOUND_CYCLE;
                     return null;
                 }
             } catch (ParseException e) {
@@ -896,7 +898,7 @@ public class SingleChronicleQueueExcerpts {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
 
-            if (cycle != this.cycle) {
+            if (cycle != this.cycle || state != FOUND_CYCLE) {
                 // moves to the expected cycle
                 boolean found = cycle(cycle, false);
                 assert found || store == null;
@@ -1026,27 +1028,28 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean cycle(final int cycle, boolean createIfAbsent) {
-            if (this.cycle != cycle) {
-                if (this.store != null) {
-                    this.queue.release(this.store);
-                }
-                this.store = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
-                if (store == null) {
-                    context.wire(null);
-                    if (direction == BACKWARD)
-                        state = TailerState.BEHOND_START;
-                    return false;
-                }
-                this.state = TailerState.FOUND_CYCLE;
-                this.cycle = cycle;
-                resetWires();
-                final Wire wire = wire();
-
-                wire.parent(this);
-                wire.pauser(queue.pauserSupplier.get());
-//                if (LOG.isDebugEnabled())
-//                    Jvm.debug().on(getClass(), "tailer=" + ((MappedBytes) wire.bytes()).mappedFile().file().getAbsolutePath());
+            if (this.cycle == cycle && state == FOUND_CYCLE) {
+                return true;
             }
+            if (this.store != null) {
+                this.queue.release(this.store);
+            }
+            this.store = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            if (store == null) {
+                context.wire(null);
+                if (direction == BACKWARD)
+                    state = BEHOND_START;
+                else
+                    state = CYCLE_NOT_FOUND;
+                return false;
+            }
+            this.state = FOUND_CYCLE;
+            this.cycle = cycle;
+            resetWires();
+            final Wire wire = wire();
+
+            wire.parent(this);
+            wire.pauser(queue.pauserSupplier.get());
             return true;
         }
 
