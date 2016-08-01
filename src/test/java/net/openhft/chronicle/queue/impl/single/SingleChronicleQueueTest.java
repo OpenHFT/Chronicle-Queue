@@ -2291,7 +2291,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.close();
 
         // this used to fail on windows
-        queue.file().delete(); // assertion fails
+        Assert.assertTrue(queue.file().delete());
     }
 
 }
