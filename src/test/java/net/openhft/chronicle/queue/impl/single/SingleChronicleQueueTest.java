@@ -32,6 +32,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2271,4 +2272,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         public MyMarshable() {
         }
     }
+
+
+    @Test
+    public void checkCloseOnwWindows() throws IOException {
+        if (!OS.isWindows())
+            return;
+        Path dir = Files.createTempDirectory("demo");
+        SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(RollCycles.DAILY);
+        RollingChronicleQueue queue = builder.build();
+        ExcerptAppender appender = queue.acquireAppender();
+        appender.writeText("random text");
+        ExcerptTailer tailer = queue.createTailer();
+        System.out.println(tailer.readText());
+
+        queue.close();
+
+        // this used to fail on windows
+        Assert.assertTrue(queue.file().delete());
+    }
+
 }
