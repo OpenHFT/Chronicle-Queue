@@ -18,10 +18,16 @@ package net.openhft.chronicle.queue;
 /**
  * @author peter.lawrey
  */
-public interface ExcerptCommon {
+public interface ExcerptCommon<E extends ExcerptCommon<E>> {
 
     /**
      * @return the sourceId for the queue which created this.
      */
     int sourceId();
+
+    E lazyIndexing(boolean lazyIndexing);
+
+    boolean lazyIndexing();
+
+    ChronicleQueue queue();
 }

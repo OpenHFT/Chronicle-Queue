@@ -1,0 +1,19 @@
+= Release Notes
+Peter Lawrey
+
+=== Changes from 4.4.0 to 4.5.0
+
+- Improved support for binary messages (Bytes based instead of Wire based) in Queue
+- A number of performance improvements to support replication.
+- Fix some concurrent writer bugs.
+- Improve handling of corrupted Queue with automatic recover via a RecoveryStrategy
+- Changed createAppender() to acquireAppender() to make it clear you don't get a new one each time.
+- Reduce the period for monitoring messages from every second to every 10 seconds.
+- Deprecate the TEXT form of Queue. You can use ChronicleQueue.dump() and DumpQueueMain to dump a queue as text.
+- Deprecate direct constructor calls to SingleChronicleQueueBuilder
+- Adding TEST2_DAILY for up to 512 entries and TEST_HOURLY.
+- Removed lastIndex(), you need to use a tailer.ToEnd() as it's a moving target.
+- Removed support for zero length messages. No clean way of handling them at the moment.
+- Improve cleanup of resources on a close().
+- Support Tailer direction() as either TailerDirection.NONE, FORWARD, or BACKWARD
+- Code simplification after review.

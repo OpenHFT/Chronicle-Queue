@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl;
 
-import org.jetbrains.annotations.NotNull;
+import net.openhft.chronicle.wire.Wire;
 
-/**
- * For a binary search, provide a comparison of Excerpts
- */
-public interface ExcerptComparator {
-    /**
-     * Given some criteria, determine if the entry is -1 = below range, +1 = above range and 0 in
-     * range Can be used for exact matches or a range of values.
-     *
-     * @param excerpt to check
-     * @return -1 below, 0 = in range, +1 above range.
-     */
-    int compare(@NotNull Excerpt excerpt);
+import java.util.function.BiFunction;
+
+@FunctionalInterface
+public interface WireStoreFactory extends BiFunction<RollingChronicleQueue, Wire, WireStore> {
 }

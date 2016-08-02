@@ -139,6 +139,6 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
 
     public <T> T inputWriter(Class<T> tClass) {
         SingleChronicleQueue queue = inputQueue();
-        return queue.createAppender().methodWriterBuilder(tClass).recordHistory(true).onClose(queue).get();
+        return queue.acquireAppender().methodWriterBuilder(tClass).recordHistory(true).onClose(queue).get();
     }
 }

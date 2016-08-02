@@ -17,6 +17,7 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
@@ -25,9 +26,10 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
+import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.threads.TimeoutPauser;
-import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,9 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 
 /**
  * Created by peter on 05/03/2016.
@@ -53,7 +56,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     protected RollCycle rollCycle;
     protected long epoch; // default is 1970-01-01 00:00:00.000 UTC
     protected boolean isBuffered;
-    protected Consumer<Throwable> onThrowable = Throwable::printStackTrace;
     @Nullable
     protected EventLoop eventLoop;
     private long bufferCapacity;
@@ -66,17 +68,22 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private TimeProvider timeProvider = SystemTimeProvider.INSTANCE;
     private Supplier<Pauser> pauserSupplier = () -> new TimeoutPauser(500_000);
     private long timeoutMS = 10_000; // 10 seconds.
-    private BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
+    private WireStoreFactory storeFactory;
     private int sourceId = 0;
+    private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
+    private StoreFileListener storeFileListener = (cycle, file) -> {
+        Jvm.debug().on(getClass(), "File released " + file);
+    };
+
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
         this.blockSize = 64L << 20;
         this.path = path;
-        this.wireType = WireType.BINARY;
+        this.wireType = WireType.BINARY_LIGHT;
         this.epoch = 0;
-        bufferCapacity = 2 << 20;
-        indexSpacing = -1;
-        indexCount = -1;
+        this.bufferCapacity = 2 << 20;
+        this.indexSpacing = -1;
+        this.indexCount = -1;
     }
 
     protected Logger getLogger() {
@@ -110,13 +117,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @Override
     @NotNull
     public B blockSize(int blockSize) {
-        this.blockSize = blockSize;
+        this.blockSize = Math.max(TEST_BLOCK_SIZE, blockSize);
         return (B) this;
     }
 
     @Override
     public long blockSize() {
-        return this.blockSize;
+        // can add an index2index & an index in one go.
+        long minSize = Math.max(TEST_BLOCK_SIZE, 32L * indexCount());
+        return Math.max(minSize, this.blockSize);
     }
 
     @Override
@@ -185,19 +194,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public RollCycle rollCycle() {
         return this.rollCycle;
-    }
-
-    /**
-     * use this to trap exceptions  that came from the other threads
-     *
-     * @param onThrowable your exception handler
-     * @return this
-     */
-    @Override
-    @NotNull
-    public B onThrowable(@NotNull Consumer<Throwable> onThrowable) {
-        this.onThrowable = onThrowable;
-        return (B) this;
     }
 
     /**
@@ -299,13 +295,24 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return timeoutMS;
     }
 
-    public void storeFactory(BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory) {
+    public void storeFactory(WireStoreFactory storeFactory) {
         this.storeFactory = storeFactory;
     }
 
     @Override
-    public BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory() {
+    public WireStoreFactory storeFactory() {
         return storeFactory;
+    }
+
+    @Override
+    public B storeFileListener(StoreFileListener storeFileListener) {
+        this.storeFileListener = storeFileListener;
+        return (B) this;
+    }
+
+    @Override
+    public StoreFileListener storeFileListener() {
+        return storeFileListener;
     }
 
     public B sourceId(int sourceId) {
@@ -317,6 +324,15 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public int sourceId() {
         return sourceId;
+    }
+
+    public StoreRecoveryFactory recoverySupplier() {
+        return recoverySupplier;
+    }
+
+    public B recoverySupplier(StoreRecoveryFactory recoverySupplier) {
+        this.recoverySupplier = recoverySupplier;
+        return (B) this;
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

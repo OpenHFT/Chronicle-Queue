@@ -19,14 +19,25 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
 import net.openhft.chronicle.wire.Demarshallable;
+import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WriteMarshallable;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
-import java.util.concurrent.TimeoutException;
+import java.io.File;
+import java.io.StreamCorruptedException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+    /**
+     * @return the file associated with this store.
+     */
+    File file();
+
+    /**
+     * @param position the start of the last written excerpt to this cycle/store
+     * @return this store
+     */
     WireStore writePosition(long position);
 
     /**
@@ -36,34 +47,33 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     long epoch();
 
     /**
-     * @return the next writable position, Will be or-ed with ROLLED_BIT if it has rolled.
+     * @return the start of the last written excerpt to this cycle/store
      */
     long writePosition();
 
-    /**
-     * @return the sequence number with the cycle
-     */
-    long lastEntryIndexed(Wire wire, long timeoutMS);
-
-    boolean appendRollMeta(@NotNull Wire wire, long cycle, long timeoutMS) throws TimeoutException;
-
-    ScanResult moveToIndex(@NotNull Wire wire, long index, long timeoutMS) throws TimeoutException;
+    ScanResult moveToIndexForRead(@NotNull ExcerptContext ec, long index);
 
     @NotNull
-    MappedBytes mappedBytes();
+    MappedBytes bytes();
 
     /**
      * Reverse look up an index for a position.
      *
-     * @param position  of the start of the message
-     * @param timeoutMS
+     * @param ec       the wire of the bytes, to work with
+     * @param position of the start of the message
      * @return index in this store.
      */
-    long indexForPosition(Wire wire, long position, long timeoutMS) throws EOFException, TimeoutException;
+    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
 
     String dump();
 
     void lastAcknowledgedIndexReplicated(long lastAcknowledgedIndexReplicated);
 
     long lastAcknowledgedIndexReplicated();
+
+    void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
+
+    long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+
+    void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
 }

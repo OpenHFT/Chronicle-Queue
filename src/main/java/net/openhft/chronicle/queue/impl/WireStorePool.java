@@ -15,74 +15,89 @@
  */
 package net.openhft.chronicle.queue.impl;
 
+import net.openhft.chronicle.core.annotation.Nullable;
+import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.queue.RollDetails;
+import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
 
+import java.text.ParseException;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WireStorePool {
+public class WireStorePool implements Closeable {
     @NotNull
     private final WireStoreSupplier supplier;
     @NotNull
     private final Map<RollDetails, WireStore> stores;
+    private final StoreFileListener storeFileListener;
+    private boolean isClosed = false;
 
-    private WireStorePool(@NotNull WireStoreSupplier supplier) {
+    private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
+        this.storeFileListener = storeFileListener;
         this.stores = new ConcurrentHashMap<>();
     }
 
     @NotNull
-    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier) {
-        return new WireStorePool(supplier);
+    public static WireStorePool withSupplier(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
+        return new WireStorePool(supplier, storeFileListener);
     }
 
+    @Override
+    public boolean isClosed() {
+        return isClosed;
+    }
+
+    @Override
     public void close() {
-        // todo
+        if (isClosed)
+            return;
+        isClosed = true;
+        stores.entrySet().forEach(e -> e.getValue().release());
     }
 
-    public synchronized WireStore acquire(long cycle, final long epoch) {
-        @NotNull final RollDetails rollDetails = new RollDetails(cycle, epoch);
+    @Nullable
+    public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
+        RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
-        if (store == null) {
-            stores.put(rollDetails, store = this.supplier.apply(cycle, epoch));
-        } else {
-            store.reserve();
+        if (store != null && store.tryReserve())
+            return store;
+
+        store = this.supplier.acquire(cycle, createIfAbsent);
+        if (store != null) {
+            stores.put(rollDetails, store);
+            storeFileListener.onAcquired(cycle, store.file());
         }
         return store;
+    }
+
+    public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
+        return supplier.nextCycle(currentCycle, direction);
     }
 
     public synchronized void release(@NotNull WireStore store) {
         store.release();
         if (store.refCount() <= 0) {
-            for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet())
-                if (entry.getValue() == store)
+            for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
+                if (entry.getValue() == store) {
                     stores.remove(entry.getKey());
+                    storeFileListener.onReleased(entry.getKey().cycle(), store.file());
+                    break;
+                }
+            }
         }
     }
 
-    private class RollDetails {
-
-        private final long cycle;
-        private final long epoch;
-
-        public RollDetails(long cycle, long epoch) {
-            this.cycle = cycle;
-            this.epoch = epoch;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof RollDetails)) return false;
-            @NotNull RollDetails rollDetails = (RollDetails) o;
-            return cycle == rollDetails.cycle && epoch == rollDetails.epoch;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (cycle ^ (cycle >>> 32));
-            result = 31 * result + (int) (epoch ^ (epoch >>> 32));
-            return result;
-        }
+    /**
+     * list cycles between ( inclusive )
+     *
+     * @param lowerCycle the lower cycle
+     * @param upperCycle the upper cycle
+     * @return an array including these cycles and all the intermediate cycles
+     */
+    public NavigableSet<Long> listCyclesBetween(int lowerCycle, int upperCycle) throws ParseException {
+        return supplier.cycles(lowerCycle, upperCycle);
     }
 }

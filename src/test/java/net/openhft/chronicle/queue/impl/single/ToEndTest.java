@@ -23,6 +23,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -59,13 +60,13 @@ public class ToEndTest {
         System.out.println(baseDir);
         IOTools.shallowDeleteDirWithFiles(baseDir);
         List<Integer> results = new ArrayList<>();
-        RollingChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir)
+        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .indexCount(8)
                 .indexSpacing(1)
                 .build();
 
         checkOneFile(baseDir);
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         checkOneFile(baseDir);
 
         for (int i = 0; i < 10; i++) {
@@ -78,10 +79,10 @@ public class ToEndTest {
         ExcerptTailer tailer = queue.createTailer();
         checkOneFile(baseDir);
 
-        tailer.toEnd();
-        assertEquals(10, queue.rollCycle().toSequenceNumber(tailer.index()));
+        ExcerptTailer atEnd = tailer.toEnd();
+        assertEquals(10, queue.rollCycle().toSequenceNumber(atEnd.index()));
         checkOneFile(baseDir);
-        fillResults(tailer, results);
+        fillResults(atEnd, results);
         checkOneFile(baseDir);
         assertEquals(0, results.size());
 
@@ -103,11 +104,11 @@ public class ToEndTest {
         String baseDir = OS.TARGET + "/toEndBeforeWriteTest";
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(baseDir).build();
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir).build();
         checkOneFile(baseDir);
 
         // if this appender isn't created, the tailer toEnd doesn't cause a roll.
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         checkOneFile(baseDir);
 
         ExcerptTailer tailer = queue.createTailer();
@@ -144,8 +145,13 @@ public class ToEndTest {
     @NotNull
     private List<Integer> fillResults(ExcerptTailer tailer, List<Integer> results) {
         for (int i = 0; i < 10; i++) {
-            if (!tailer.readDocument(wire -> results.add(wire.read(() -> "msg").int32())))
-                break;
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                if (!documentContext.isPresent())
+                    break;
+                results.add(documentContext.wire().read(() -> "msg").int32());
+            }
+
         }
         return results;
     }

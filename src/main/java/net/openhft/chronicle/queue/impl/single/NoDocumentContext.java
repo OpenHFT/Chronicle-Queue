@@ -57,7 +57,7 @@ public enum NoDocumentContext implements DocumentContext {
 
     @Override
     public long index() {
-        return 0;
+        return Long.MIN_VALUE;
     }
 
     @Override

@@ -54,7 +54,7 @@ Any number of threads can be writing to the Chronicle at the same time provided
 
 Example
 
-    ExcerptAppender appender = chronicle.createAppender();
+    ExcerptAppender appender = chronicle.acquireAppender();
      
     // for each record
     appender.startExcept();    // can be called by any number of threads/processes at once

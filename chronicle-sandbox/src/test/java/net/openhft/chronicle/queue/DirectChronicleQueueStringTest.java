@@ -50,7 +50,7 @@ public class DirectChronicleQueueStringTest {
 
     public static final int RUNS = 1000000;
     public static final String EXPECTED_STRING = "Hello World23456789012345678901234567890";
-    public static final byte[] EXPECTED_BYTES = EXPECTED_STRING.getBytes();
+    public static final byte[] EXPECTED_BYTES = EXPECTED_STRING.getBytes(ISO_8859_1);
     public static final String TMP = new File("/tmp").isDirectory() ? "/tmp" : System.getProperty("java.io.tmpdir");
 
     @Test

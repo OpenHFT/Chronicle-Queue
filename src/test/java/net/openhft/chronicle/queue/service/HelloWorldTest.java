@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.service;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Test;
@@ -51,17 +52,21 @@ public class HelloWorldTest {
             helloWorld.hello("April");
             helloWorld.hello("June");
 
-            System.out.println(helloWorldService.inputQueues()[0].dump());
+//            System.out.println(helloWorldService.inputQueues()[0].dump());
             for (int i = 0; i < 2; i++) {
                 while (!replyReader.readOne()) {
                     Thread.yield();
                 }
             }
-            System.out.println(helloWorldService.outputQueue().dump());
+//            System.out.println(helloWorldService.outputQueue().dump());
             verify(replier);
         } finally {
-            IOTools.deleteDirWithFiles(new File(input), 2);
-            IOTools.deleteDirWithFiles(new File(output), 2);
+            try {
+                IOTools.deleteDirWithFiles(new File(input), 2);
+                IOTools.deleteDirWithFiles(new File(output), 2);
+            } catch (IORuntimeException e) {
+                e.printStackTrace();
+            }
         }
     }
 

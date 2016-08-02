@@ -83,7 +83,7 @@ Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s
 Chronicle has three types of excerpt optimised for different purposes.
 
     ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath).build();
-    ExcerptAppender appender = queue.createAppender(); // sequential writes.
+    ExcerptAppender appender = queue.acquireAppender(); // sequential writes.
     ExcerptTailer tailer = queue.createTailer();       // sequential reads ideally, but random reads/write also possible.
 
 === How does writing work?

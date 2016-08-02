@@ -1,0 +1,118 @@
+= Migrating Chronicle Logger to Queue V4
+Peter Lawrey
+
+These are the steps which were taken to migrate Chornicle Logger from using Chronicle Queue v3 to v4.
+
+=== Update the artifactId
+
+.Artifact and package for Chronicle v3.
+[source, xml]
+----
+     <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle</artifactId>
+      </dependency>
+----
+
+to the following artifactId.
+
+.Artifact and package for Chronicle v4.
+[source, xml]
+----
+     <dependency>
+            <groupId>net.openhft</groupId>
+            <artifactId>chronicle-queue</artifactId>
+      </dependency>
+----
+
+NOTE: As Chronicle Queue v3 and v4 use different packages you can use both versions at the same time.
+
+=== Rename the Chronicle class to ChronicleQueue
+
+As Chronicle is the name of a family of products, the interface is now called ChronicleQueue to distinguish it from ChronicleMap for example.
+
+=== createAppender() has been replaced with acquireAppender()
+
+We use the term `acquire` to indicate an object will be created only as needed.
+In this case, the method will create a new `ExcerptAppender` for each thread once.
+A thread cannot have more than one appender in use at once as this would cause a live lock.
+
+This method no longer throws an `IOException`
+
+=== An Appender cannot be used as Bytes directly.
+
+Conflating the `ExcerptAppender` and `Bytes` cause a number of problems
+including the use of `flush()` and `close()` which had different meanings between these two classes.
+
+To use Bytes of an appender you can use either of these two patterns
+
+.Java 7 style try-with-resource block
+[source, java]
+----
+// Writing Java 7 style without a lambda
+try (DocumentContext dc = appender.writingDocument()) {
+    Bytes bytes = dc.wire().bytes();
+    // write to the bytes
+}
+
+// Reading Java 7 style without a lambda
+try (DocumentContext dc = appender.readingDocument()) {
+    Bytes bytes = dc.wire().bytes();
+    // read from the bytes
+}
+----
+
+.Java 8 style use of lambdas
+[source, java]
+----
+// Writing Java 8 style with a lambda
+appender.writeBytes(b -> b
+                    .writeXxx(x)
+                    .writeXxx(y));
+
+// Reading Java 8 style with a lambda
+tailer.readBytes(b -> {
+     int x = b.readInt();
+     String y = b.readUtf8();
+});
+----
+
+=== Using the Wire API instead of the Bytes API
+
+There is two ways to use the Wire API
+
+- as field names and values.
+- a stream of values.
+
+Using the Wire API to write values means the data is self describing.
+This allows for changes in type as well as automatic dumping of the data.
+Adding field names allows the data to be more descriptive as well and in any order or added/removed in future.
+
+.Example of using the ValueOut interface
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    ValueOut out = dc.wire().getValueOut();
+    out.int8(CODE);
+    out.int64(timestamp);
+    out.text(message);
+}
+----
+
+=== Changes to the Bytes API.
+
+Chronicle Bytes disguishes between the read and write position, remaining and limit.
+
+When reading you want to use
+
+- getter `readPosition()` and setter `readPosition(long)` - position to read next
+- getter `readLimit()` and setter `readLimit(long)` -  last valid readPosition(). It is also the writePosition()
+- readRemaining() is  readLimit() - readPosition();
+
+When writing you want to use
+
+- getter `writePosition()` and setter `writePosition(long)` - position to write next
+- getter `writeLimit()` and setter `writeLimit(long)` -  last valid writePosition().
+- writeRemaining() is  writeLimit() - writePosition();
+
+

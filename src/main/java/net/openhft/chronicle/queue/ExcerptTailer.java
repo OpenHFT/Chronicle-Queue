@@ -19,16 +19,15 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableIn;
 import net.openhft.chronicle.wire.ReadMarshallable;
+import net.openhft.chronicle.wire.SourceContext;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.concurrent.TimeoutException;
 
 /**
  * The component that facilitates sequentially reading data from a {@link ChronicleQueue}.
  *
  * @author peter.lawrey
  */
-public interface ExcerptTailer extends ExcerptCommon, MarshallableIn {
+public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, MarshallableIn, SourceContext {
 
     /**
      * equivalent to {@link  ExcerptTailer#readDocument(ReadMarshallable)} but with out the use of a
@@ -63,7 +62,7 @@ public interface ExcerptTailer extends ExcerptCommon, MarshallableIn {
      *              with this cycle
      * @return true if this is a valid entries.
      */
-    boolean moveToIndex(long index) throws TimeoutException;
+    boolean moveToIndex(long index);
 
     /**
      * Replay from the first entry in the first cycle.
@@ -105,4 +104,14 @@ public interface ExcerptTailer extends ExcerptCommon, MarshallableIn {
      * @throws IORuntimeException if the queue couldn't be wound to the last index.
      */
     ExcerptTailer afterLastWritten(ChronicleQueue queue) throws IORuntimeException;
+
+    default void readAfterReplicaAcknowledged(boolean readAfterReplicaAcknowledged) {
+
+    }
+
+    default boolean readAfterReplicaAcknowledged() {
+        return false;
+    }
+
+    TailerState state();
 }

@@ -25,21 +25,25 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
+import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
 
 public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<SingleChronicleQueueBuilder, SingleChronicleQueue> {
     static {
         CLASS_ALIASES.addAlias(WireType.class);
-        CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Roll.class, "SCQSRoll");
-        CLASS_ALIASES.addAlias(SingleChronicleQueueStore.Indexing.class, "SCQSIndexing");
+        CLASS_ALIASES.addAlias(SCQRoll.class, "SCQSRoll");
+        CLASS_ALIASES.addAlias(SCQIndexing.class, "SCQSIndexing");
         CLASS_ALIASES.addAlias(SingleChronicleQueueStore.class, "SCQStore");
+        CLASS_ALIASES.addAlias(TimedStoreRecovery.class);
     }
 
     @SuppressWarnings("unchecked")
+    @Deprecated
     public SingleChronicleQueueBuilder(@NotNull String path) {
         this(new File(path));
     }
 
     @SuppressWarnings("unchecked")
+    @Deprecated
     public SingleChronicleQueueBuilder(@NotNull File path) {
         super(path);
         storeFactory(SingleChronicleQueueBuilder::createStore);
@@ -55,11 +59,23 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
-        return new SingleChronicleQueueBuilder(basePathFile)
-                .wireType(WireType.BINARY);
+    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull String basePath) {
+        return defaultZeroBinary(new File(basePath));
     }
 
+    @NotNull
+    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
+        return new SingleChronicleQueueBuilder(basePathFile)
+                .wireType(WireType.BINARY_LIGHT);
+    }
+
+    @NotNull
+    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
+        return new SingleChronicleQueueBuilder(basePathFile)
+                .wireType(DEFAULT_ZERO_BINARY);
+    }
+
+    @Deprecated
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
         return new SingleChronicleQueueBuilder(name)
@@ -72,9 +88,17 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
 
     @NotNull
     static SingleChronicleQueueStore createStore(RollingChronicleQueue queue, Wire wire) {
-        final SingleChronicleQueueStore wireStore = new
-                SingleChronicleQueueStore(queue.rollCycle(), queue.wireType(), (MappedBytes) wire.bytes(), queue.epoch(), queue.indexCount(), queue.indexSpacing());
+        final SingleChronicleQueueStore wireStore = new SingleChronicleQueueStore(
+                queue.rollCycle(),
+                queue.wireType(),
+                (MappedBytes) wire.bytes(),
+                queue.epoch(),
+                queue.indexCount(),
+                queue.indexSpacing(),
+                queue.recoverySupplier().apply(queue.wireType()));
+
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
+
         return wireStore;
     }
 

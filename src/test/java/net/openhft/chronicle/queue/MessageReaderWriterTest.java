@@ -50,18 +50,18 @@ public class MessageReaderWriterTest {
 
     @Test
     public void testWriteWhileReading() {
-        ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class, "M1");
-        ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class, "M2");
+        ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
+        ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 
         String path = OS.TARGET + "/testWriteWhileReading-" + System.nanoTime() + "-";
 
         try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path + "1").build();
              SingleChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(path + "2").build()) {
             MethodReader reader2 = queue1.createTailer().methodReader(ObjectUtils.printAll(MessageListener.class));
-            MessageListener writer2 = queue2.createAppender().methodWriter(MessageListener.class);
+            MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);
             MethodReader reader1 = queue1.createTailer().methodReader(processor);
-            MessageListener writer1 = queue1.createAppender().methodWriter(MessageListener.class);
+            MessageListener writer1 = queue1.acquireAppender().methodWriter(MessageListener.class);
 
             for (int i = 0; i < 3; i++) {
                 // write a message
@@ -71,7 +71,6 @@ public class MessageReaderWriterTest {
                 // read those messages
                 assertTrue(reader1.readOne());
                 assertTrue(reader1.readOne());
-//                System.out.println(queue1.dump());
                 assertFalse(reader1.readOne());
 
                 // read the produced messages
@@ -79,6 +78,7 @@ public class MessageReaderWriterTest {
                 assertTrue(reader2.readOne());
                 assertFalse(reader2.readOne());
             }
+//            System.out.println(queue1.dump());
         } finally {
             try {
                 IOTools.shallowDeleteDirWithFiles(path + "1");
@@ -100,7 +100,7 @@ public class MessageReaderWriterTest {
 
         public Message1(String text) {
             this.text = text;
-        }
+    }
     }
 
     static class Message2 extends AbstractMarshallable {
@@ -108,7 +108,7 @@ public class MessageReaderWriterTest {
 
         public Message2(long number) {
             this.number = number;
-        }
+    }
     }
 
     static class MessageProcessor implements MessageListener {

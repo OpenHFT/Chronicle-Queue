@@ -15,21 +15,26 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireType;
-import org.junit.Rule;
-import org.junit.rules.*;
-import org.junit.runner.Description;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import net.openhft.chronicle.core.OS;
+import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireKey;
+import net.openhft.chronicle.wire.WireType;
+import org.junit.Rule;
+import org.junit.rules.ErrorCollector;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
@@ -82,6 +87,10 @@ public class ChronicleQueueTestBase {
         }
     }
 
+    public static RollingChronicleQueue createQueue(WireType type) {
+        return new SingleChronicleQueueBuilder(getTmpDir()).wireType(type).build();
+    }
+
     // *************************************************************************
     //
     // *************************************************************************
@@ -109,7 +118,7 @@ public class ChronicleQueueTestBase {
                 .blockSize(640_000)
                 .build();
 
-        ExcerptAppender appender = queue.createAppender();
+        ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
 
         for (int i = 0; i < iterations; i++) {
@@ -135,7 +144,7 @@ public class ChronicleQueueTestBase {
 
         {
             Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
+                () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
             ));
         }
 

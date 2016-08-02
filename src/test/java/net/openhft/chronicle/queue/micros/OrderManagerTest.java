@@ -2,6 +2,7 @@ package net.openhft.chronicle.queue.micros;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
@@ -49,7 +50,7 @@ public class OrderManagerTest {
         File queuePath = new File(OS.TARGET, "testWithQueue-" + System.nanoTime());
         try {
             try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(queuePath).build()) {
-                OrderIdeaListener orderManager = queue.createAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
+                OrderIdeaListener orderManager = queue.acquireAppender().methodWriter(OrderIdeaListener.class, MarketDataListener.class);
                 SidedMarketDataCombiner combiner = new SidedMarketDataCombiner((MarketDataListener) orderManager);
 
                 // events in
@@ -76,7 +77,7 @@ public class OrderManagerTest {
                     assertTrue(reader.readOne());
 
                 assertFalse(reader.readOne());
-                System.out.println(queue.dump());
+//                System.out.println(queue.dump());
             }
 
             verify(listener);
@@ -84,7 +85,6 @@ public class OrderManagerTest {
             try {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -95,7 +95,7 @@ public class OrderManagerTest {
         File queuePath2 = new File(OS.TARGET, "testWithQueueHistory-down-" + System.nanoTime());
         try {
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath).build()) {
-                OrderIdeaListener orderManager = out.createAppender()
+                OrderIdeaListener orderManager = out.acquireAppender()
                         .methodWriterBuilder(OrderIdeaListener.class)
                         .addInterface(MarketDataListener.class)
                         .recordHistory(true)
@@ -118,7 +118,7 @@ public class OrderManagerTest {
                     .build();
                  SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath2).build()) {
 
-                OrderListener listener = out.createAppender()
+                OrderListener listener = out.acquireAppender()
                         .methodWriterBuilder(OrderListener.class)
                         .recordHistory(true)
                         .get();
@@ -129,7 +129,7 @@ public class OrderManagerTest {
                     assertTrue(reader.readOne());
 
                 assertFalse(reader.readOne());
-                System.out.println(out.dump());
+//                System.out.println(out.dump());
             }
 
             try (SingleChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath2).sourceId(2).build()) {
@@ -149,7 +149,6 @@ public class OrderManagerTest {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
@@ -159,24 +158,26 @@ public class OrderManagerTest {
         File queuePath = new File(OS.TARGET, "testRestartingAService-" + System.nanoTime());
         File queuePath2 = new File(OS.TARGET, "testRestartingAService-down-" + System.nanoTime());
         try {
-            long start;
+
             try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(queuePath)
                     .rollCycle(RollCycles.TEST_DAILY)
                     .build()) {
-                SidedMarketDataListener combiner = out.createAppender()
+                SidedMarketDataListener combiner = out.acquireAppender()
                         .methodWriterBuilder(SidedMarketDataListener.class)
                         .recordHistory(true)
                         .get();
 
                 combiner.onSidedPrice(new SidedPrice("EURUSD1", 123456789000L, Side.Sell, 1.1172, 2e6));
-                start = out.lastIndex();
                 combiner.onSidedPrice(new SidedPrice("EURUSD2", 123456789100L, Side.Buy, 1.1160, 2e6));
 
-                combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
-                combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
+                for (int i = 2; i < 10; i += 2) {
+                    combiner.onSidedPrice(new SidedPrice("EURUSD3", 123456789100L, Side.Sell, 1.1173, 2.5e6));
+                    combiner.onSidedPrice(new SidedPrice("EURUSD4", 123456789100L, Side.Buy, 1.1167, 1.5e6));
+                }
             }
 
-            for (int i = 0; i < 4; i++) {
+            // TODO FIx for more.
+            for (int i = 0; i < 10; i++) {
                 // read one message at a time
                 try (SingleChronicleQueue in = SingleChronicleQueueBuilder.binary(queuePath)
                         .sourceId(1)
@@ -185,20 +186,21 @@ public class OrderManagerTest {
                              .rollCycle(RollCycles.TEST_DAILY)
                              .build()) {
 
-                    MarketDataListener mdListener = out.createAppender()
+                    ExcerptAppender excerptAppender = out.acquireAppender();
+                    MarketDataListener mdListener = excerptAppender
                             .methodWriterBuilder(MarketDataListener.class)
                             .recordHistory(true)
                             .get();
                     SidedMarketDataCombiner combiner = new SidedMarketDataCombiner(mdListener);
                     ExcerptTailer tailer = in.createTailer()
                             .afterLastWritten(out);
-                    assertEquals(start + i, tailer.index());
+                    assertEquals(i, in.rollCycle().toSequenceNumber(tailer.index()));
                     MethodReader reader = tailer
                             .methodReader(combiner);
 
-                    assertTrue(reader.readOne());
-                    System.out.println("#### IN\n" + in.dump());
-                    System.out.println("#### OUT:\n" + out.dump());
+//                    System.out.println("#### IN\n" + in.dump());
+//                    System.out.println("#### OUT:\n" + out.dump());
+                    assertTrue("i: " + i, reader.readOne());
                 }
             }
         } finally {
@@ -206,7 +208,6 @@ public class OrderManagerTest {
                 IOTools.shallowDeleteDirWithFiles(queuePath);
                 IOTools.shallowDeleteDirWithFiles(queuePath2);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }

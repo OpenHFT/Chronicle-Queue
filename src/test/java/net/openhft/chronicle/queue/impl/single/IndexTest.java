@@ -71,16 +71,17 @@ public class IndexTest extends ChronicleQueueTestBase {
     @Test
     public void test() throws IOException {
 
-        final RollingChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
+        final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .build();
 
-        final ExcerptAppender appender = queue.createAppender();
-        final int cycle = appender.cycle();
+        final ExcerptAppender appender = queue.acquireAppender();
         for (int i = 0; i < 5; i++) {
             final int n = i;
+            appender.writeDocument(
+                    w -> w.write(TestKey.test).int32(n));
+            final int cycle = queue.lastCycle();
             long index0 = queue.rollCycle().toIndex(cycle, n);
-            appender.writeDocument(w -> w.write(TestKey.test).int32(n));
             long indexA = appender.lastIndexAppended();
             accessHexEquals(index0, indexA);
         }

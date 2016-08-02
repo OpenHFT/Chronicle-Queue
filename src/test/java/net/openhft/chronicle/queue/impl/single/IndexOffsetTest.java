@@ -27,8 +27,8 @@ import org.junit.Test;
 
 public class IndexOffsetTest {
 
-    static final SingleChronicleQueueStore.Indexing indexing = new SingleChronicleQueueStore.Indexing(WireType.BINARY, 1 << 17, 1 << 6);
-    static final SingleChronicleQueueStore.Indexing indexing2 = new SingleChronicleQueueStore.Indexing(WireType.BINARY, 1 << 7, 1 << 3);
+    static final SCQIndexing indexing = new SCQIndexing(WireType.BINARY, 1 << 17, 1 << 6);
+    static final SCQIndexing indexing2 = new SCQIndexing(WireType.BINARY, 1 << 7, 1 << 3);
     private ThreadDump threadDump;
 
     @Before
@@ -61,5 +61,4 @@ public class IndexOffsetTest {
         Assert.assertEquals(16, indexing2.toAddress1(129));
         Assert.assertEquals(17, indexing2.toAddress1(128 + 8));
     }
-
 }
