@@ -77,7 +77,7 @@ public class DumpQueueMain {
                     boolean last = dumper.dumpOne(sb);
                     if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
                         // truncate trailing zeros
-                        if (sb.indexOf("\n]\n") == sb.length() - 3) {
+                        if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
                             int i = indexOfLastZero(sb);
                             if (i < sb.length())
                                 sb.setLength(i - 5);
@@ -86,7 +86,6 @@ public class DumpQueueMain {
                     }
 
                     out.println(sb);
-
 
                     if (last)
                         break;
