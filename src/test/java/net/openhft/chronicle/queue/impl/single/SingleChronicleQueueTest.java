@@ -2241,6 +2241,41 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
+
+    @Test
+    public void testReadingWritingWhenCycleIsSkipped() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        // write first message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("first message");
+        }
+
+        Thread.sleep(1100);
+
+        // write second message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("second message");
+        }
+
+        // read both messages
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            ExcerptTailer tailer = queue.createTailer();
+            Assert.assertEquals("first message", tailer.readText());
+            Assert.assertEquals("second message", tailer.readText());
+        }
+
+    }
+
+
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
 
