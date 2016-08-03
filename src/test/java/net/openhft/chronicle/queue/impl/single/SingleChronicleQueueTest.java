@@ -2243,7 +2243,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
-    public void testReadingWritingWhenCycleNextCycle() throws Exception {
+    public void testReadingWritingWhenNextCycleIsInSequence() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
