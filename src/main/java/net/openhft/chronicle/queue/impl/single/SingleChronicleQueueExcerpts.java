@@ -773,7 +773,12 @@ public class SingleChronicleQueueExcerpts {
 
                     case FOUND_CYCLE:
                         try {
-                            return inAnCycle(includeMetaData);
+                            boolean result = inAnCycle(includeMetaData);
+                            if (!result) {
+                                state = TailerState.END_OF_CYCLE;
+                                break;
+                            }
+                            return result;
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
@@ -785,12 +790,17 @@ public class SingleChronicleQueueExcerpts {
                             return x;
                         break;
 
-                    case BEHOND_START:
+                    case BEHOND_START_OF_CYCLE:
                         if (direction == FORWARD) {
                             state = UNINTIALISED;
                             continue;
                         }
-                        return false;
+                        if (direction == BACKWARD) {
+                            state = END_OF_CYCLE;
+                            continue;
+                        }
+                        throw new AssertionError("direction not set, direction=" + direction);
+
 
                     case CYCLE_NOT_FOUND:
                         return moveToIndex(index);
@@ -1038,7 +1048,7 @@ public class SingleChronicleQueueExcerpts {
             if (store == null) {
                 context.wire(null);
                 if (direction == BACKWARD)
-                    state = BEHOND_START;
+                    state = BEHOND_START_OF_CYCLE;
                 else
                     state = CYCLE_NOT_FOUND;
                 return false;
