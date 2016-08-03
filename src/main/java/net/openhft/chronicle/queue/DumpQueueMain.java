@@ -34,13 +34,8 @@ import static java.lang.System.err;
 public class DumpQueueMain {
     static final String FILE = System.getProperty("file");
 
-    /*   public static void main(String[] args) throws FileNotFoundException {
-           dump(args[0]);
-       }
-   */
-
     public static void main(String[] args) throws FileNotFoundException {
-        dump("/Users/robaustin/git-projects/MUFG/target/Chronicle/dataRolling/20160803-085100.cq4");
+        dump(args[0]);
     }
 
     public static void dump(String path) throws FileNotFoundException {
