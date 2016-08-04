@@ -1,5 +1,6 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
@@ -32,7 +33,7 @@ public class RareAppenderLatencyTest {
     public void testRareAppenderLatency() throws IOException, InterruptedException {
         System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
 
-      /*  if (Jvm.isDebug())
+        if (Jvm.isDebug())
             // this is a performance test so should not be run in debug mode
             return;
 
@@ -40,7 +41,7 @@ public class RareAppenderLatencyTest {
 
         if (isAssertionsOn)
             // this is a performance test so should not be run with assertions turned on
-            return;*/
+            return;
 
         System.out.println("starting test");
         String pathname = OS.getTarget() + "/testRareAppenderLatency-" + System.nanoTime();
