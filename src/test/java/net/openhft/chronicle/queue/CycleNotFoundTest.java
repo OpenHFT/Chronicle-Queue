@@ -35,9 +35,9 @@ import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
 
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
-    private static final int NUMBER_OF_TAILERS = 2;
+    private static final int NUMBER_OF_TAILERS = 8;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 1_000;
+    private static final long NUMBER_OF_MSG = 1_000_000;
 
     @Ignore("long running test")
     @Test
