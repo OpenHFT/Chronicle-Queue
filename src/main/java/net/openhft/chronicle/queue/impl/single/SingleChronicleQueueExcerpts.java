@@ -802,6 +802,10 @@ public class SingleChronicleQueueExcerpts {
                             return false;
                         }
 
+                        // was falling through when we didn't moveToIndex(nextIndex).
+                        // I think this happens when we get ahead of the appender?
+                        // Fixs going back to the first cycle.
+                        break;
                     }
                     case BEHOND_START_OF_CYCLE: {
                         if (direction == FORWARD) {
@@ -900,13 +904,15 @@ public class SingleChronicleQueueExcerpts {
                         try {
                             bytes.writePosition(pos);
                             store.writeEOF(wire(), timeoutMS());
-                            return inAnCycle(includeMetaData);
                         } finally {
                             bytes.writeLimit(wlim);
                             bytes.readLimit(lim);
                             bytes.readPosition(pos);
                         }
 
+                        // something weird with recursion and finally?
+                        // Fixes reading bad data after writingEOF.
+                        return inAnCycle(includeMetaData);
                     }
 
                     return false;
