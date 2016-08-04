@@ -4,7 +4,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -16,17 +15,34 @@ import static junit.framework.TestCase.assertFalse;
 /**
  * Created by skidder on 8/2/16.
  *
- * Targeting the problem of tailers in different threads where one writes very rarely, and the other nearly constantly.
+ * Targeting the problem of tailers in different threads where one writes very rarely, and the other
+ * nearly constantly.
  *
- * The rare appender will have very bad latency proportional to the number of messages written since it last appended.
+ * The rare appender will have very bad latency proportional to the number of messages written since
+ * it last appended.
  */
 public class RareAppenderLatencyTest {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
-    @Ignore("scott's test, todo fix")
+
+    boolean isAssertionsOn;
+
     @Test
     public void testRareAppenderLatency() throws IOException, InterruptedException {
+        System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
+
+      /*  if (Jvm.isDebug())
+            // this is a performance test so should not be run in debug mode
+            return;
+
+        assert (isAssertionsOn = true) == true;
+
+        if (isAssertionsOn)
+            // this is a performance test so should not be run with assertions turned on
+            return;*/
+
+        System.out.println("starting test");
         String pathname = OS.getTarget() + "/testRareAppenderLatency-" + System.nanoTime();
         new File(pathname).deleteOnExit();
 

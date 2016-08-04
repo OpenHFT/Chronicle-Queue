@@ -37,9 +37,9 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final int NUMBER_OF_TAILERS = 2;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 1_000_000;
+    private static final long NUMBER_OF_MSG = 1_000;
 
-    @Ignore("Scott's test, todo")
+    @Ignore("long running test")
     @Test
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException {
         String path = getTmpDir() + "/tailerCycleNotFound.q";
