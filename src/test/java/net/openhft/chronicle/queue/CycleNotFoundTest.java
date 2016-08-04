@@ -103,7 +103,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
             tailers.add(executorService.submit(reader));
         }
 
-        Thread appenderThread = new Thread(() -> {
+
+        // Appender run in a different thread
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+        executorService1.submit(() -> {
             ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
                     .wireType(WireType.FIELDLESS_BINARY)
                     .rollCycle(TEST_SECONDLY)
@@ -120,13 +123,13 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                     dc.wire().write().int64(i);
                 }
                 next += INTERVAL_US * 1000;
+                if (executorService1.isShutdown())
+                    return;
             }
             wqueue.close();
-        }, "appender-thread");
+        }).get();
 
 
-        appenderThread.start();
-        appenderThread.join();
         System.out.println("appender is done.");
 
         // wait for all the tailer to finish
