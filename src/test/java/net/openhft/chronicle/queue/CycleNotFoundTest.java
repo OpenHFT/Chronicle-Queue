@@ -39,10 +39,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
     private static final int NUMBER_OF_TAILERS = 4;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 100_000;
+    private static final long NUMBER_OF_MSG = 1_000_000;
 
     //  @Ignore("long running test")
-    @Test(timeout = 5000)
+    @Test(timeout = 50000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
         String path = getTmpDir() + "/tailerCycleNotFound.q";
         new File(path).deleteOnExit();
