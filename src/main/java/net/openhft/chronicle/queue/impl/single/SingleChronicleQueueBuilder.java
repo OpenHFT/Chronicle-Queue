@@ -23,6 +23,7 @@ import net.openhft.chronicle.wire.WireType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import static net.openhft.chronicle.core.pool.ClassAliasPool.CLASS_ALIASES;
 import static net.openhft.chronicle.wire.WireType.DEFAULT_ZERO_BINARY;
@@ -51,6 +52,11 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
 
     public static void init() {
         // make sure the static block has been called.
+    }
+
+    @NotNull
+    public static SingleChronicleQueueBuilder binary(@NotNull Path path) {
+        return binary(path.toFile());
     }
 
     @NotNull

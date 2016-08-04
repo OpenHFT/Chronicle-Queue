@@ -25,6 +25,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -32,6 +33,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -264,9 +266,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testCheckIndexWithWritingDocument() {
         doTestCheckIndex(
                 (appender, n) -> {
-                    try (final DocumentContext dc = appender.writingDocument()) {
-                        dc.wire().writeEventName("").object("" + n);
-                    }
+            try (final DocumentContext dc = appender.writingDocument()) {
+                dc.wire().writeEventName("").object("" + n);
+            }
                 });
     }
 
@@ -2373,6 +2375,61 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
+    }
+
+    @Ignore("still working on this test for scott")
+    @Test
+    public void testAppender() throws IOException, ExecutionException, InterruptedException {
+        ExecutorService executorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("appender-thread",
+                true));
+        try {
+            // final int NUMBER_OF_TAILERS = 2;
+            final long INTERVAL_US = 25_000;
+            final long NUMBER_OF_MSG = 100;
+
+            final Path dir = Files.createTempDirectory("demo");
+
+
+            Future f = executorService.submit(() -> {
+                try (ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(dir)
+                        //  .wireType(WireType.FIELDLESS_BINARY)
+                        .rollCycle(TEST_SECONDLY)
+                        //       .blockSize(BLOCK_SIZE)
+                        .build()) {
+
+                    final ExcerptAppender appender = wqueue.acquireAppender();
+
+                    long next = System.nanoTime() + INTERVAL_US * 1000;
+                    for (int i = 0; i < NUMBER_OF_MSG; i++) {
+                        while (System.nanoTime() < next)
+                    /* busy wait*/ ;
+                        try (DocumentContext dc = appender.writingDocument()) {
+                            dc.wire().write().int64(i);
+                        }
+                        next += INTERVAL_US * 1000;
+                        if (executorService.isShutdown()) return;
+                    }
+                }
+            });
+
+            f.get();
+
+            System.out.println(dir);
+
+
+            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(dir)
+                    //  .wireType(WireType.FIELDLESS_BINARY)
+                    .rollCycle(TEST_SECONDLY)
+                    //       .blockSize(BLOCK_SIZE)
+                    .build()) {
+
+                ExcerptTailer tailer = rqueue.createTailer();
+            }
+        } finally {
+            executorService.shutdownNow();
+        }
+
+
     }
 
 

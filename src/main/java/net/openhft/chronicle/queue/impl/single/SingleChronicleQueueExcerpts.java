@@ -31,7 +31,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +43,7 @@ import java.text.ParseException;
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.TailerState.*;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -201,20 +201,22 @@ public class SingleChronicleQueueExcerpts {
 
         private void resetPosition() throws UnrecoverableTimeoutException {
             try {
-                lastTouchedPage = -1;
+            lastTouchedPage = -1;
 
-                if (store == null || wire == null)
-                    return;
-                position(store.writePosition());
+            if (store == null || wire == null)
+                return;
+            position(store.writePosition());
 
-                Bytes<?> bytes = wire.bytes();
-                int header = bytes.readInt(position);
-                assert position == 0 || Wires.isReadyData(header);
-                bytes.writePosition(position + 4 + Wires.lengthOf(header));
-                if (lazyIndexing) {
-                    wire.headerNumber(Long.MIN_VALUE);
-                    return;
-                }
+            Bytes<?> bytes = wire.bytes();
+            int header = bytes.readInt(position);
+            assert position == 0 || Wires.isReadyData(header);
+            bytes.writePosition(position + 4 + Wires.lengthOf(header));
+            if (lazyIndexing) {
+                wire.headerNumber(Long.MIN_VALUE);
+                return;
+            }
+
+
 
                 final long headerNumber = store.sequenceForPosition(this, position, true);
 //                Thread.yield();
@@ -223,7 +225,15 @@ public class SingleChronicleQueueExcerpts {
 //                System.err.println("==== " + Thread.currentThread().getName()+" pos: "+position+" hdr: "+headerNumber);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || checkIndex(wire.headerNumber(), position);
-            } catch (BufferOverflowException | EOFException | StreamCorruptedException e) {
+
+            } catch (EOFException e) {
+                // todo improve this
+                // you can't index a file that has an EOF marker, sequenceForPosition can do
+                // indexing and  also would not want to set a headerNumber on a file with a
+                // EOF, so lets just ignore this exception
+                Jvm.debug().on(SingleChronicleQueue.class, e);
+
+            } catch (BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
             }
             assert checkWritePositionHeaderNumber();
@@ -760,6 +770,7 @@ public class SingleChronicleQueueExcerpts {
             return NoDocumentContext.INSTANCE;
         }
 
+
         private boolean next(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
             for (int i = 0; i < 1000; i++) {
                 switch (state) {
@@ -773,46 +784,97 @@ public class SingleChronicleQueueExcerpts {
 
                     case FOUND_CYCLE:
                         try {
-                            boolean result = inAnCycle(includeMetaData);
-                            if (!result) {
-                                state = TailerState.END_OF_CYCLE;
-                                break;
-                            }
-                            return result;
+                            return inAnCycle(includeMetaData);
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
                         break;
 
-                    case END_OF_CYCLE:
-                        Boolean x = atTheEndOfACycle();
-                        if (x != null)
-                            return x;
-                        break;
+                    case END_OF_CYCLE: {
+                        long nextIndex = nextIndexWithNextCycle(queue.rollCycle().toCycle(index));
+                        if (nextIndex != Long.MIN_VALUE) {
+                            if (moveToIndex(nextIndex)) {
+                                state = FOUND_CYCLE;
+                                continue;
+                            }
+                        } else {
+                            state = END_OF_CYCLE;
+                            return false;
+                        }
 
-                    case BEHOND_START_OF_CYCLE:
+                    }
+                    case BEHOND_START_OF_CYCLE: {
                         if (direction == FORWARD) {
                             state = UNINTIALISED;
                             continue;
                         }
                         if (direction == BACKWARD) {
-                            state = END_OF_CYCLE;
-                            continue;
+
+                            // give the position of the last entry and
+                            // flag we want to count it even though we don't know if it will be meta data or not.
+                            try {
+
+                                boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
+
+                                if (foundCycle) {
+                                    long lastSequenceNumberInThisCycle = store.sequenceForPosition(this, Long.MAX_VALUE, false);
+                                    long nextIndex = queue.rollCycle().toIndex(this.cycle,
+                                            lastSequenceNumberInThisCycle);
+                                    moveToIndex(nextIndex);
+                                    state = FOUND_CYCLE;
+                                    continue;
+                                }
+
+                                long nextIndex = nextIndexWithNextCycle(queue.rollCycle().toCycle(index));
+                                if (nextIndex != Long.MIN_VALUE) {
+                                    moveToIndex(nextIndex);
+                                    state = FOUND_CYCLE;
+                                    continue;
+                                }
+
+                                state = BEHOND_START_OF_CYCLE;
+                                return false;
+
+                            } catch (EOFException e) {
+                                throw new AssertionError(e);
+                            }
+
                         }
-                        throw new AssertionError("direction not set, direction=" + direction);
+                    }
+                    throw new AssertionError("direction not set, direction=" + direction);
 
 
                     case CYCLE_NOT_FOUND:
-                        return moveToIndex(index);
+
+                        if (index == Long.MIN_VALUE) {
+                            this.store = null;
+                            return false;
+                        }
+
+                        if (moveToIndex(index)) {
+                            state = FOUND_CYCLE;
+                            continue;
+                        } else
+                            return false;
 
                     default:
                         throw new AssertionError("state=" + state);
                 }
             }
-            throw new IllegalStateException("Unable to progress to the next cycle");
+
+            throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
-        private boolean inAnCycle(boolean includeMetaData) throws EOFException, StreamCorruptedException {
+
+        private static boolean isReadOnly(Bytes bytes) {
+            if (bytes instanceof MappedBytes)
+                return !((MappedBytes) bytes).mappedFile().file().canWrite();
+            else
+                return false;
+        }
+
+        private boolean inAnCycle(boolean includeMetaData) throws EOFException,
+                StreamCorruptedException {
             Bytes<?> bytes = wire().bytes();
             bytes.readLimit(bytes.capacity());
             if (readAfterReplicaAcknowledged) {
@@ -826,8 +888,29 @@ public class SingleChronicleQueueExcerpts {
                 if (!moveToIndex(index))
                     return false;
             switch (wire().readDataHeader(includeMetaData)) {
-                case NONE:
+                case NONE: {
+
+                    // if current time is not the current cycle, then write an EOF marker and
+                    // re-read from here, you may find that in the mean time an appender writes
+                    // another message, however the EOF marker will always be at the end.
+                    if (cycle != queue.cycle() && !isReadOnly(bytes)) {
+                        long pos = bytes.readPosition();
+                        long lim = bytes.readLimit();
+                        long wlim = bytes.writeLimit();
+                        try {
+                            bytes.writePosition(pos);
+                            store.writeEOF(wire(), timeoutMS());
+                            return inAnCycle(includeMetaData);
+                        } finally {
+                            bytes.writeLimit(wlim);
+                            bytes.readLimit(lim);
+                            bytes.readPosition(pos);
+                        }
+
+                    }
+
                     return false;
+                }
                 case META_DATA:
                     context.metaData(true);
                     break;
@@ -850,28 +933,51 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        @Nullable
-        private Boolean atTheEndOfACycle() {
+
+        private long nextIndexWithNextCycle(int cycle) {
             if (cycle > queue.lastCycle() || direction == TailerDirection.NONE) {
-                return false;
-            }
-            if (moveToIndex(cycle + direction.add(), 0) == ScanResult.FOUND) {
-                state = FOUND_CYCLE;
-                return null;
+                return Long.MIN_VALUE;
             }
 
+            int nextCycle = cycle + direction.add();
+            boolean found = cycle(nextCycle, false);
+            if (found)
+                return nextIndexWithinFoundCycle(nextCycle);
+
+
+            if (this.cycle == Integer.MIN_VALUE)
+                return Long.MIN_VALUE;
+
             try {
-                int cycle = queue.nextCycle(this.cycle, direction);
-                if (cycle == -1)
-                    return false;
-                if (moveToIndex(cycle, 0) == ScanResult.FOUND) {
-                    state = FOUND_CYCLE;
-                    return null;
-                }
+                int nextCycle0 = queue.nextCycle(this.cycle, direction);
+                if (nextCycle0 == -1)
+                    return Long.MIN_VALUE;
+
+                return nextIndexWithinFoundCycle(nextCycle0);
+
             } catch (ParseException e) {
                 throw new IllegalStateException(e);
             }
-            return false;
+
+        }
+
+        private long nextIndexWithinFoundCycle(int nextCycle) {
+            state = FOUND_CYCLE;
+            if (direction == FORWARD)
+                return queue.rollCycle().toIndex(nextCycle, 0);
+
+            if (direction == BACKWARD) {
+                try {
+                    long lastSequenceNumber0 = store.sequenceForPosition(this, Long
+                            .MAX_VALUE, false) - 1;
+                    return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
+
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            } else {
+                throw new IllegalStateException("direction=" + direction);
+            }
         }
 
         /**
@@ -890,7 +996,7 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean moveToIndex(final long index) {
             final ScanResult scanResult = moveToIndexResult(index);
-            return scanResult == ScanResult.FOUND;
+            return scanResult == FOUND;
         }
 
         ScanResult moveToIndexResult(long index) {
@@ -910,15 +1016,15 @@ public class SingleChronicleQueueExcerpts {
 
             if (cycle != this.cycle || state != FOUND_CYCLE) {
                 // moves to the expected cycle
-                boolean found = cycle(cycle, false);
-                assert found || store == null;
+                if (!cycle(cycle, false))
+                    return ScanResult.NOT_REACHED;
             }
+
             this.index = index;
-            if (store == null)
-                return ScanResult.NOT_REACHED;
             ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
             Bytes<?> bytes = wire().bytes();
-            if (scanResult == ScanResult.FOUND) {
+            if (scanResult == FOUND) {
+                state = FOUND_CYCLE;
                 return scanResult;
             }
             bytes.readLimit(bytes.readPosition());
@@ -938,8 +1044,11 @@ public class SingleChronicleQueueExcerpts {
                 // moves to the expected cycle
                 boolean found = cycle(firstCycle, false);
                 assert found || store == null;
+                if (found)
+                    state = FOUND_CYCLE;
             }
             index = queue.rollCycle().toIndex(cycle, 0);
+            state = FOUND_CYCLE;
             if (wire() != null)
                 wire().bytes().readPosition(0);
             return this;
@@ -1021,38 +1130,53 @@ public class SingleChronicleQueueExcerpts {
         private void incrementIndex() {
             RollCycle rollCycle = queue.rollCycle();
             long seq = rollCycle.toSequenceNumber(this.index);
+            int cycle = rollCycle.toCycle(this.index);
+
             seq += direction.add();
             if (rollCycle.toSequenceNumber(seq) < seq) {
                 cycle(cycle + 1, false);
                 seq = 0;
             } else if (seq < 0) {
                 if (seq == -1) {
-                    cycle(cycle - 1, false);
+                    this.index = rollCycle.toIndex(cycle - 1, seq);
+                    this.state = BEHOND_START_OF_CYCLE;
+                    return;
                 } else {
                     // TODO FIX so we can roll back to the precious cycle.
                     throw new IllegalStateException("Winding to the previous day not supported");
                 }
             }
 
-            this.index = rollCycle.toIndex(this.cycle, seq);
+            this.index = rollCycle.toIndex(cycle, seq);
         }
 
         private boolean cycle(final int cycle, boolean createIfAbsent) {
-            if (this.cycle == cycle && state == FOUND_CYCLE) {
+            if (this.cycle == cycle && state == FOUND_CYCLE)
                 return true;
-            }
-            if (this.store != null) {
-                this.queue.release(this.store);
-            }
-            this.store = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
-            if (store == null) {
-                context.wire(null);
+
+            WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+
+            if (nextStore == null && this.store == null)
+                return false;
+
+            if (nextStore == this.store)
+                return true;
+
+            if (nextStore == null) {
                 if (direction == BACKWARD)
                     state = BEHOND_START_OF_CYCLE;
                 else
                     state = CYCLE_NOT_FOUND;
                 return false;
+            } else {
+                if (this.store != null) {
+                    this.queue.release(this.store);
+                }
+                context.wire(null);
+                this.store = nextStore;
             }
+
+
             this.state = FOUND_CYCLE;
             this.cycle = cycle;
             resetWires();

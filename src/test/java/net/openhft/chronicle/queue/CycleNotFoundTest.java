@@ -21,6 +21,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -38,7 +39,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final long INTERVAL_US = 25;
     private static final long NUMBER_OF_MSG = 1_000_000;
 
-    @Test()
+    @Ignore("Scott's test, todo")
+    @Test
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException {
         String path = getTmpDir() + "/tailerCycleNotFound.q";
         new File(path).deleteOnExit();
@@ -62,7 +64,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                             lastState = tailer.state();
                         } else {
                             long n = dc.wire().read().int64();
-                            if (n <= last) System.out.println("num did not increase! " + n + " last: " + last);
+                            if (n <= last)
+                                System.out.println("num did not increase! " + n + " last: " + last);
                             else if (n != last + 1)
                                 System.out.println("num increased by more than 1! " + n + " last: " + last);
 
