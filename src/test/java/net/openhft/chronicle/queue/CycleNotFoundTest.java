@@ -92,7 +92,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
 
             } finally {
-                System.out.printf("Read %,d messages", count);
+                System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName()
+                        + "\n", count);
             }
         };
 
