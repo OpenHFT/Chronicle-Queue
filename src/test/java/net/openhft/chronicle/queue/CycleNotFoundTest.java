@@ -50,6 +50,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         AtomicLong counter = new AtomicLong();
 
         Runnable reader = () -> {
+            long count = 0;
             try (RollingChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                     .wireType(WireType.FIELDLESS_BINARY)
                     .rollCycle(RollCycles.TEST_SECONDLY)
@@ -59,7 +60,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                 final ExcerptTailer tailer = rqueue.createTailer();
                 long last = -1;
                 TailerState lastState = TailerState.UNINTIALISED;
-                long count = 0;
+
                 while (count < NUMBER_OF_MSG) {
 
 
@@ -91,7 +92,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
 
             } finally {
-                System.out.printf("Read %,d messages", counter.intValue());
+                System.out.printf("Read %,d messages", count);
             }
         };
 
