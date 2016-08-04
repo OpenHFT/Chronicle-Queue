@@ -42,7 +42,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final long NUMBER_OF_MSG = 100_000;
 
     //  @Ignore("long running test")
-    @Test
+    @Test(timeout = 5000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
         String path = getTmpDir() + "/tailerCycleNotFound.q";
         new File(path).deleteOnExit();
@@ -97,12 +97,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
 
         List<Future> tailers = new ArrayList<>();
-        for (
-                int i = 0;
-                i < NUMBER_OF_TAILERS; i++)
-
-        {
-            Thread tailerThread = new Thread(reader, "tailer-thread-" + i);
+        for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
             tailers.add(executorService.submit(reader));
         }
 
@@ -130,16 +125,12 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
         appenderThread.start();
         appenderThread.join();
+        System.out.println("appender is done.");
 
+        // wait for all the tailer to finish
         for (Future f : tailers) {
             f.get();
         }
-
-
-        System.out.println("appender is done.");
-
-        //Pause to allow tailer to catch up (if needed)
-
 
         assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get());
     }
