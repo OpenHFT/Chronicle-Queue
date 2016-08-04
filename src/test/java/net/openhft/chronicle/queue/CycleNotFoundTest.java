@@ -16,35 +16,37 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static junit.framework.TestCase.assertEquals;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+import static org.junit.Assert.assertEquals;
 
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
-    private static final int NUMBER_OF_TAILERS = 2;
+    private static final int NUMBER_OF_TAILERS = 4;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 1_000;
+    private static final long NUMBER_OF_MSG = 100_000;
 
-    @Ignore("long running test")
+    //  @Ignore("long running test")
     @Test
-    public void tailerCycleNotFoundTest() throws IOException, InterruptedException {
+    public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
         String path = getTmpDir() + "/tailerCycleNotFound.q";
         new File(path).deleteOnExit();
-
+        ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
         AtomicLong counter = new AtomicLong();
 
         Runnable reader = () -> {
@@ -57,8 +59,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                 final ExcerptTailer tailer = rqueue.createTailer();
                 long last = -1;
                 TailerState lastState = TailerState.UNINTIALISED;
+                long count = 0;
+                while (count < NUMBER_OF_MSG) {
 
-                while (!Thread.interrupted()) {
+
                     try (DocumentContext dc = tailer.readingDocument()) {
                         if (!dc.isPresent()) {
                             lastState = tailer.state();
@@ -71,6 +75,7 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
                             last = n;
                             counter.incrementAndGet();
+                            count++;
                             lastState = tailer.state();
                         }
                     } catch (UnsupportedOperationException uoe) {
@@ -80,16 +85,25 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                         System.out.println("current state: " + state);
                         lastState = state;
                     }
+                    if (executorService.isShutdown())
+                        return;
                 }
+
+
             } finally {
                 System.out.printf("Read %,d messages", counter.intValue());
             }
         };
 
-        List<Thread> tailers = new ArrayList<>();
-        for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
+
+        List<Future> tailers = new ArrayList<>();
+        for (
+                int i = 0;
+                i < NUMBER_OF_TAILERS; i++)
+
+        {
             Thread tailerThread = new Thread(reader, "tailer-thread-" + i);
-            tailers.add(tailerThread);
+            tailers.add(executorService.submit(reader));
         }
 
         Thread appenderThread = new Thread(() -> {
@@ -113,26 +127,19 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
             wqueue.close();
         }, "appender-thread");
 
-        tailers.forEach(Thread::start);
-        Jvm.pause(100);
 
         appenderThread.start();
         appenderThread.join();
+
+        for (Future f : tailers) {
+            f.get();
+        }
+
+
         System.out.println("appender is done.");
 
         //Pause to allow tailer to catch up (if needed)
-        for (int i = 0; i < 10; i++) {
-            if (NUMBER_OF_MSG * NUMBER_OF_TAILERS > counter.get())
-                Jvm.pause(Jvm.isDebug() ? 10000 : 1000);
-        }
 
-        for (int i = 0; i < 10; i++) {
-            for (final Thread tailer : tailers) {
-                tailer.interrupt();
-                tailer.join(100);
-            }
-        }
-        Thread.sleep(200);
 
         assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get());
     }
