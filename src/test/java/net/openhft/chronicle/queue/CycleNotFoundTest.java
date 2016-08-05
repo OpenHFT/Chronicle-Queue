@@ -20,6 +20,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -37,14 +38,16 @@ import static org.junit.Assert.assertEquals;
 
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
-    private static final int NUMBER_OF_TAILERS = 4;
+    private static final int NUMBER_OF_TAILERS = 10;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 1_000_000;
+    private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
+    // reduced so that it runs quicker for the continuous integration (CI)
 
-    //  @Ignore("long running test")
     @Test(timeout = 50000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
-        String path = getTmpDir() + "/tailerCycleNotFound.q";
+        String path = getTmpDir() + "/" + System.nanoTime();  // added nano time just to make
+        // sure the dir is unique ( and clean) , when testing sometime I found this was not the
+        // case.
         new File(path).deleteOnExit();
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
         AtomicLong counter = new AtomicLong();
@@ -59,41 +62,32 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
                 final ExcerptTailer tailer = rqueue.createTailer();
                 long last = -1;
-                TailerState lastState = TailerState.UNINTIALISED;
 
                 while (count < NUMBER_OF_MSG) {
 
-
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        if (!dc.isPresent()) {
-                            lastState = tailer.state();
-                        } else {
-                            long n = dc.wire().read().int64();
-                            if (n <= last)
-                                System.out.println("num did not increase! " + n + " last: " + last);
-                            else if (n != last + 1)
-                                System.out.println("num increased by more than 1! " + n + " last: " + last);
 
-                            last = n;
-                            counter.incrementAndGet();
-                            count++;
-                            lastState = tailer.state();
-                        }
-                    } catch (UnsupportedOperationException uoe) {
-                        uoe.printStackTrace();
-                        System.out.println("last state before exception: " + lastState);
-                        TailerState state = tailer.state();
-                        System.out.println("current state: " + state);
-                        lastState = state;
+                        if (!dc.isPresent())
+                            continue;
+
+                        Assert.assertTrue(dc.isData());
+                        Assert.assertEquals(last + 1, last = dc.wire().read().int64());
+                        count++;
+                        counter.incrementAndGet();
                     }
+
                     if (executorService.isShutdown())
-                        return;
+                        Assert.fail();
+                }
+
+                // check nothing after the NUMBER_OF_MSG
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    Assert.assertFalse(dc.isPresent());
                 }
 
 
             } finally {
-                System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName()
-                        + "\n", count);
+                System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }
         };
 
@@ -102,7 +96,6 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
             tailers.add(executorService.submit(reader));
         }
-
 
         // Appender run in a different thread
         ExecutorService executorService1 = Executors.newSingleThreadExecutor();

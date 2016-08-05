@@ -201,21 +201,20 @@ public class SingleChronicleQueueExcerpts {
 
         private void resetPosition() throws UnrecoverableTimeoutException {
             try {
-            lastTouchedPage = -1;
+                lastTouchedPage = -1;
 
-            if (store == null || wire == null)
-                return;
-            position(store.writePosition());
+                if (store == null || wire == null)
+                    return;
+                position(store.writePosition());
 
-            Bytes<?> bytes = wire.bytes();
-            int header = bytes.readInt(position);
-            assert position == 0 || Wires.isReadyData(header);
-            bytes.writePosition(position + 4 + Wires.lengthOf(header));
-            if (lazyIndexing) {
-                wire.headerNumber(Long.MIN_VALUE);
-                return;
-            }
-
+                Bytes<?> bytes = wire.bytes();
+                int header = bytes.readInt(position);
+                assert position == 0 || Wires.isReadyData(header);
+                bytes.writePosition(position + 4 + Wires.lengthOf(header));
+                if (lazyIndexing) {
+                    wire.headerNumber(Long.MIN_VALUE);
+                    return;
+                }
 
 
                 final long headerNumber = store.sequenceForPosition(this, position, true);
@@ -782,26 +781,29 @@ public class SingleChronicleQueueExcerpts {
                             return false;
                         break;
 
-                    case FOUND_CYCLE:
+                    case FOUND_CYCLE: {
                         try {
                             return inAnCycle(includeMetaData);
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
                         break;
+                    }
 
                     case END_OF_CYCLE: {
-                        long nextIndex = nextIndexWithNextAvailableCycle(queue.rollCycle().toCycle(index));
+                        long oldIndex = this.index;
+                        int currentCycle = queue.rollCycle().toCycle(oldIndex);
+                        long nextIndex = nextIndexWithNextAvailableCycle(currentCycle);
+
                         if (nextIndex != Long.MIN_VALUE) {
                             if (moveToIndex(nextIndex)) {
                                 state = FOUND_CYCLE;
                                 continue;
                             }
-                        } else {
-                            state = END_OF_CYCLE;
-                            return false;
                         }
-
+                        moveToIndex(oldIndex);
+                        state = END_OF_CYCLE;
+                        return false;
                     }
                     case BEHOND_START_OF_CYCLE: {
                         if (direction == FORWARD) {
@@ -825,7 +827,10 @@ public class SingleChronicleQueueExcerpts {
                                     continue;
                                 }
 
-                                long nextIndex = nextIndexWithNextAvailableCycle(queue.rollCycle().toCycle(index));
+
+                                int cycle = queue.rollCycle().toCycle(index);
+                                long nextIndex = nextIndexWithNextAvailableCycle(cycle);
+
                                 if (nextIndex != Long.MIN_VALUE) {
                                     moveToIndex(nextIndex);
                                     state = FOUND_CYCLE;
@@ -900,13 +905,13 @@ public class SingleChronicleQueueExcerpts {
                         try {
                             bytes.writePosition(pos);
                             store.writeEOF(wire(), timeoutMS());
-                            return inAnCycle(includeMetaData);
                         } finally {
                             bytes.writeLimit(wlim);
                             bytes.readLimit(lim);
                             bytes.readPosition(pos);
                         }
 
+                        return inAnCycle(includeMetaData);
                     }
 
                     return false;
@@ -933,8 +938,32 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-
         private long nextIndexWithNextAvailableCycle(int cycle) {
+            if (cycle == Integer.MIN_VALUE)
+                throw new AssertionError("cycle == Integer.MIN_VALUE");
+
+            long nextIndex, doubleCheck;
+
+            // DONT REMVOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
+            // FIRST RESULT CAN DIFFER FROM THE DOUBLE CHECK, AS THE APPENDER CAN RACE WITH THE
+            // TAILER
+            do {
+
+/*
+                if (times != 0)
+                    System.out.println("times=" + times);
+                times++;*/
+                nextIndex = nextIndexWithNextAvailableCycle0(cycle);
+                doubleCheck = nextIndexWithNextAvailableCycle0(cycle);
+            } while (nextIndex != doubleCheck);
+
+            if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle)
+                System.out.println("rolled " + (queue.rollCycle().toCycle(nextIndex) - cycle) + " times");
+
+            return nextIndex;
+        }
+
+        private long nextIndexWithNextAvailableCycle0(int cycle) {
             if (cycle > queue.lastCycle() || direction == TailerDirection.NONE) {
                 return Long.MIN_VALUE;
             }
@@ -943,10 +972,6 @@ public class SingleChronicleQueueExcerpts {
             boolean found = cycle(nextCycle, false);
             if (found)
                 return nextIndexWithinFoundCycle(nextCycle);
-
-
-            if (this.cycle == Integer.MIN_VALUE)
-                return Long.MIN_VALUE;
 
             try {
                 int nextCycle0 = queue.nextCycle(this.cycle, direction);

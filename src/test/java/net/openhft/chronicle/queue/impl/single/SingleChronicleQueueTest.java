@@ -25,7 +25,6 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -33,7 +32,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2377,78 +2375,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    //@Ignore("still working on this test for scott")
-    @Test
-    public void testAppender() throws IOException, ExecutionException, InterruptedException {
-        ExecutorService appenderES = Executors.newSingleThreadExecutor(new NamedThreadFactory("appender-thread",
-                true));
-        try {
-            // final int NUMBER_OF_TAILERS = 2;
-            final long INTERVAL_US = 25_000;
-            final long NUMBER_OF_MSG = 1_000;
-            final int BLOCK_SIZE = 256 << 20;
-            AtomicLong counter = new AtomicLong();
 
-            final Path dir = Files.createTempDirectory("demo");
-
-
-            Future f = appenderES.submit(() -> {
-                try (ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(dir)
-                        .wireType(WireType.FIELDLESS_BINARY)
-                        .rollCycle(TEST_SECONDLY)
-                        .blockSize(BLOCK_SIZE)
-                        .build()) {
-
-                    final ExcerptAppender appender = wqueue.acquireAppender();
-
-                    long next = System.nanoTime() + INTERVAL_US * 1000;
-                    for (int i = 0; i < NUMBER_OF_MSG; i++) {
-                        while (System.nanoTime() < next)
-                    /* busy wait*/ ;
-
-                        try (DocumentContext dc = appender.writingDocument()) {
-                            dc.wire().write().int64(i);
-                        }
-                        next += INTERVAL_US * 1000;
-                        if (appenderES.isShutdown()) return;
-                    }
-                }
-            });
-
-            f.get();
-
-            System.out.println("Appender Finished");
-
-
-            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(dir)
-                    .wireType(WireType.FIELDLESS_BINARY)
-                    .rollCycle(TEST_SECONDLY)
-                    .blockSize(BLOCK_SIZE)
-                    .build()) {
-
-                ExcerptTailer tailer = rqueue.createTailer();
-                long value = -1;
-                while (counter.get() < NUMBER_OF_MSG)
-                    try (DocumentContext documentContext = tailer.readingDocument()) {
-                        if (documentContext.isPresent()) {
-                            long newValue = documentContext.wire().read().int64();
-                            counter.incrementAndGet();
-                            Assert.assertEquals(value + 1, newValue);
-                            value = newValue;
-                        }
-
-                    }
-
-            }
-
-            Assert.assertEquals(NUMBER_OF_MSG, counter.get());
-            System.out.println("tailer Finished");
-        } finally {
-            appenderES.shutdownNow();
-        }
-
-
-    }
 
 
     /*@Test
