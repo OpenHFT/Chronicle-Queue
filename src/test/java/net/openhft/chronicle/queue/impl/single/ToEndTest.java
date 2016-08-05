@@ -22,10 +22,12 @@ import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -53,6 +56,51 @@ public class ToEndTest {
     public void checkThreadDump() {
         threadDump.assertNoNewThreads();
     }
+
+    @Test
+    public void missingCyclesToEndTest() throws InterruptedException {
+        String path = OS.TARGET + "/missingCyclesToEndTest-" + System.nanoTime();
+        IOTools.shallowDeleteDirWithFiles(path);
+
+        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+
+        final ExcerptAppender appender = queue.acquireAppender();
+
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+        // Rolls one or two cycles ahead.
+        Thread.sleep(1100);
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
+
+        final ExcerptTailer tailer = queue.createTailer().toEnd();
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertFalse("We should be at the end of the queue. Instead we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()), dc.isPresent());
+        }
+
+        // Roll another cycle or two.
+        Thread.sleep(1100);
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertTrue("Should be able to read next entry! Instead NoDocumentContext.", dc.isPresent());
+            int i = dc.wire().read(() -> "msg").int32();
+            Assert.assertEquals("Should've read 3, instead we read: " + i, 3, i);
+        }
+
+        // now read from the beginning
+        tailer.toStart();
+
+        for (int j = 0; j <= 3; j++) {
+            try (DocumentContext dc = tailer.readingDocument()) {
+                assertTrue(dc.isPresent());
+                int i = dc.wire().read(() -> "msg").int32();
+                Assert.assertEquals(j++, i);
+            }
+        }
+    }
+
 
     @Test
     public void toEndTest() {
