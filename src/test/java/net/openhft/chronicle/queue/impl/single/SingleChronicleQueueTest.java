@@ -32,7 +32,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2242,6 +2241,109 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
+
+    @Test
+    public void testReadingWritingWhenNextCycleIsInSequence() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        // write first message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("first message");
+        }
+
+        Thread.sleep(1100);
+
+        // write second message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("second message");
+        }
+
+        // read both messages
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            ExcerptTailer tailer = queue.createTailer();
+            Assert.assertEquals("first message", tailer.readText());
+            Assert.assertEquals("second message", tailer.readText());
+        }
+
+    }
+
+    @Test
+    public void testReadingWritingWhenCycleIsSkipped() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        // write first message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("first message");
+        }
+
+        Thread.sleep(2100);
+
+        // write second message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("second message");
+        }
+
+        // read both messages
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            ExcerptTailer tailer = queue.createTailer();
+            Assert.assertEquals("first message", tailer.readText());
+            Assert.assertEquals("second message", tailer.readText());
+        }
+
+    }
+
+
+    @Test
+    public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        // write first message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("first message");
+        }
+
+        Thread.sleep(2100);
+
+        // write second message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            queue.acquireAppender().writeText("second message");
+        }
+
+        // read both messages
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+            ExcerptTailer tailer = queue.createTailer();
+            ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
+            Assert.assertEquals("second message", excerptTailer.readText());
+            Assert.assertEquals("first message", excerptTailer.readText());
+        }
+
+    }
+
+
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
 
@@ -2274,10 +2376,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
-    @Test
+
+
+    /*@Test
     public void checkCloseOnwWindows() throws IOException {
-        if (!OS.isWindows())
-            return;
+        //if (!OS.isWindows())
+        //     return;
         Path dir = Files.createTempDirectory("demo");
         SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
@@ -2292,6 +2396,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         // this used to fail on windows
         Assert.assertTrue(queue.file().delete());
-    }
+    }*/
 
 }

@@ -1,30 +1,69 @@
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static junit.framework.TestCase.assertFalse;
 
 /**
  * Created by skidder on 8/2/16.
  *
- * Targeting the problem of tailers in different threads where one writes very rarely, and the other nearly constantly.
+ * Targeting the problem of tailers in different threads where one writes very rarely, and the other
+ * nearly constantly.
  *
- * The rare appender will have very bad latency proportional to the number of messages written since it last appended.
+ * The rare appender will have very bad latency proportional to the number of messages written since
+ * it last appended.
  */
 public class RareAppenderLatencyTest {
     private final static int HEAVY_MSGS = 1_000_000;
     private final static int RARE_MSGS = 50;
 
+
+    boolean isAssertionsOn;
+    private ExecutorService appenderES;
+
+    @Before
+    public void before() {
+        appenderES = Executors.newSingleThreadExecutor(new NamedThreadFactory
+                ("Appender", false));
+    }
+
+    @After
+    public void after() {
+        appenderES.shutdownNow();
+    }
+
+
     @Test
-    public void testRareAppenderLatency() throws IOException, InterruptedException {
+    public void testRareAppenderLatency() throws IOException, InterruptedException, ExecutionException {
+        System.setProperty("ignoreHeaderCountIfNumberOfExcerptsBehindExceeds", "" + (1 << 12));
+
+        if (Jvm.isDebug())
+            // this is a performance test so should not be run in debug mode
+            return;
+
+        assert (isAssertionsOn = true) == true;
+
+        if (isAssertionsOn)
+            // this is a performance test so should not be run with assertions turned on
+            return;
+
+        System.out.println("starting test");
         String pathname = OS.getTarget() + "/testRareAppenderLatency-" + System.nanoTime();
         new File(pathname).deleteOnExit();
 
@@ -46,7 +85,7 @@ public class RareAppenderLatencyTest {
         }
 
         // Write a bunch of messages from another thread.
-        Thread heavyWriter = new Thread(() -> {
+        Future f = appenderES.submit(() -> {
             ExcerptAppender appender = queue.acquireAppender();
             long start = System.currentTimeMillis();
             for (int i = 0; i < HEAVY_MSGS; i++) {
@@ -55,13 +94,14 @@ public class RareAppenderLatencyTest {
                             .write(() -> "ts").int64(System.currentTimeMillis())
                             .write(() -> "msg").text(text);
                 }
+                if (appenderES.isShutdown())
+                    return;
             }
 
             System.out.println("Wrote heavy " + HEAVY_MSGS + " msgs in " + (System.currentTimeMillis() - start) + " ms");
         });
 
-        heavyWriter.start();
-        heavyWriter.join();
+        f.get();
 
         // Write a message from the Main thread again (this will have unacceptable latency!)
         rareAppender = queue.acquireAppender();

@@ -16,36 +16,44 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static junit.framework.TestCase.assertEquals;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+import static org.junit.Assert.assertEquals;
 
 public class CycleNotFoundTest extends ChronicleQueueTestBase {
     private static final int BLOCK_SIZE = 256 << 20;
-    private static final int NUMBER_OF_TAILERS = 2;
+    private static final int NUMBER_OF_TAILERS = 10;
     private static final long INTERVAL_US = 25;
-    private static final long NUMBER_OF_MSG = 1_000_000;
+    private static final long NUMBER_OF_MSG = 100_000; // this is working this  1_000_000 but
+    // reduced so that it runs quicker for the continuous integration (CI)
 
-    @Test()
-    public void tailerCycleNotFoundTest() throws IOException, InterruptedException {
-        String path = getTmpDir() + "/tailerCycleNotFound.q";
+    @Test(timeout = 50000)
+    public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
+        String path = getTmpDir() + "/" + System.nanoTime();  // added nano time just to make
+        // sure the dir is unique ( and clean) , when testing sometime I found this was not the
+        // case.
         new File(path).deleteOnExit();
-
+        ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
         AtomicLong counter = new AtomicLong();
 
         Runnable reader = () -> {
+            long count = 0;
             try (RollingChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
                     .wireType(WireType.FIELDLESS_BINARY)
                     .rollCycle(RollCycles.TEST_SECONDLY)
@@ -54,42 +62,44 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
                 final ExcerptTailer tailer = rqueue.createTailer();
                 long last = -1;
-                TailerState lastState = TailerState.UNINTIALISED;
 
-                while (!Thread.interrupted()) {
+                while (count < NUMBER_OF_MSG) {
+
                     try (DocumentContext dc = tailer.readingDocument()) {
-                        if (!dc.isPresent()) {
-                            lastState = tailer.state();
-                        } else {
-                            long n = dc.wire().read().int64();
-                            if (n <= last) System.out.println("num did not increase! " + n + " last: " + last);
-                            else if (n != last + 1)
-                                System.out.println("num increased by more than 1! " + n + " last: " + last);
 
-                            last = n;
-                            counter.incrementAndGet();
-                            lastState = tailer.state();
-                        }
-                    } catch (UnsupportedOperationException uoe) {
-                        uoe.printStackTrace();
-                        System.out.println("last state before exception: " + lastState);
-                        TailerState state = tailer.state();
-                        System.out.println("current state: " + state);
-                        lastState = state;
+                        if (!dc.isPresent())
+                            continue;
+
+                        Assert.assertTrue(dc.isData());
+                        Assert.assertEquals(last + 1, last = dc.wire().read().int64());
+                        count++;
+                        counter.incrementAndGet();
                     }
+
+                    if (executorService.isShutdown())
+                        Assert.fail();
                 }
+
+                // check nothing after the NUMBER_OF_MSG
+                try (DocumentContext dc = tailer.readingDocument()) {
+                    Assert.assertFalse(dc.isPresent());
+                }
+
+
             } finally {
-                System.out.printf("Read %,d messages", counter.intValue());
+                System.out.printf("Read %,d messages, thread=" + Thread.currentThread().getName() + "\n", count);
             }
         };
 
-        List<Thread> tailers = new ArrayList<>();
+
+        List<Future> tailers = new ArrayList<>();
         for (int i = 0; i < NUMBER_OF_TAILERS; i++) {
-            Thread tailerThread = new Thread(reader, "tailer-thread-" + i);
-            tailers.add(tailerThread);
+            tailers.add(executorService.submit(reader));
         }
 
-        Thread appenderThread = new Thread(() -> {
+        // Appender run in a different thread
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+        executorService1.submit(() -> {
             ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
                     .wireType(WireType.FIELDLESS_BINARY)
                     .rollCycle(TEST_SECONDLY)
@@ -106,30 +116,19 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
                     dc.wire().write().int64(i);
                 }
                 next += INTERVAL_US * 1000;
+                if (executorService1.isShutdown())
+                    return;
             }
             wqueue.close();
-        }, "appender-thread");
+        }).get();
 
-        tailers.forEach(Thread::start);
-        Jvm.pause(100);
 
-        appenderThread.start();
-        appenderThread.join();
         System.out.println("appender is done.");
 
-        //Pause to allow tailer to catch up (if needed)
-        for (int i = 0; i < 10; i++) {
-            if (NUMBER_OF_MSG * NUMBER_OF_TAILERS > counter.get())
-                Jvm.pause(Jvm.isDebug() ? 10000 : 1000);
+        // wait for all the tailer to finish
+        for (Future f : tailers) {
+            f.get();
         }
-
-        for (int i = 0; i < 10; i++) {
-            for (final Thread tailer : tailers) {
-                tailer.interrupt();
-                tailer.join(100);
-            }
-        }
-        Thread.sleep(200);
 
         assertEquals(NUMBER_OF_MSG * NUMBER_OF_TAILERS, counter.get());
     }

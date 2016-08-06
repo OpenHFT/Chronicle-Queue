@@ -69,9 +69,19 @@ public class DumpQueueMain {
                 WireDumper dumper = WireDumper.of(bytes);
                 while (bytes.readRemaining() >= 4) {
                     sb.setLength(0);
-
                     boolean last = dumper.dumpOne(sb);
+                    if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
+                        // truncate trailing zeros
+                        if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
+                            int i = indexOfLastZero(sb);
+                            if (i < sb.length())
+                                sb.setLength(i - 5);
+                            sb.append(" # truncated trailing zeros\n]");
+                        }
+                    }
+
                     out.println(sb);
+
                     if (last)
                         break;
                     if (bytes.readPosition() > upperLimit) {
@@ -83,5 +93,18 @@ public class DumpQueueMain {
                 err.println("Failed to read " + file + " " + ioe);
             }
         }
+    }
+
+    private static int LENGTH = ", 0".length();
+
+    static int indexOfLastZero(CharSequence str) {
+        int i = str.length() - 3;
+        do {
+            i -= LENGTH;
+            CharSequence charSequence = str.subSequence(i, i + 3);
+            if (!", 0".contentEquals(charSequence))
+                return i + LENGTH;
+        } while (i > 3);
+        return 0;
     }
 }
