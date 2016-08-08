@@ -22,7 +22,7 @@ public class WriteReadTextTest {
 
         int largest = 20993248;
 
-        StringBuilder tmpSB = new StringBuilder(largest);
+        StringBuilder tmpSB = new StringBuilder(largest + 6);
 
         tmpSB.append("ABC");
         for (int i = 0; i < largest; i++) {
