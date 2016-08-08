@@ -44,6 +44,7 @@ public class WriteReadTextTest {
         doTest(CONSTRUCTED);
     }
 
+    @Ignore("Issue https://github.com/OpenHFT/Chronicle-Queue/issues/283")
     @Test
     public void testExtremelyLarge() {
         doTest(EXTREMELY_LARGE);
