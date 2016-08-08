@@ -39,10 +39,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
@@ -87,6 +85,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private ThreadLocal<ExcerptContext> tlTailer;
+    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -354,9 +353,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return result;
     }
 
+    public void addCloseListener(Runnable closer) {
+        closers.add(closer);
+    }
+
     @Override
     public void close() {
         this.pool.close();
+        closers.forEach(Runnable::run);
     }
 
     @Override
@@ -531,10 +535,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         private void checkDiskSpace(final File path) throws IOException {
-
             final Path root = path.getParentFile().toPath().getRoot();
-
-
             if (root != null && root.getFileSystem() != null) {
                 // The returned number of unallocated bytes is a hint, but not a guarantee
                 long unallocatedBytes = Files.getFileStore(root).getUnallocatedSpace();
@@ -543,7 +544,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 if (unallocatedBytes < totalSpace * .05)
                     LOG.warn("your disk is more than 95% full, warning: chronicle-queue may crash if " +
                             "it runs out of space.");
-
                 else if (unallocatedBytes < (100 << 20)) // if less than 10 Megabytes
                     LOG.warn("your disk is almost full, warning: chronicle-queue may crash if it runs out of space.");
             }
