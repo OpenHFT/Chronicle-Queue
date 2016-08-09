@@ -2025,13 +2025,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
 
-                int size = 2_000_000;
+                int size = 200_000;
 
                 IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
                 System.out.println(".");
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
