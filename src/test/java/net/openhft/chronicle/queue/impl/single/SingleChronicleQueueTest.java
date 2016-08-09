@@ -1989,17 +1989,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
+        // some text to simulate load.
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
+        String text = sb.toString();
+
         for (int j = 0; j < 10; j++) {
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .rollCycle(TEST_DAILY)
                     .build()) {
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
 
                 int size = 20;
 
-                IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl));
+                IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
 
                 ExcerptTailer tailer = q.createTailer();
                 for (int i = 0; i < size; i++) {
@@ -2015,6 +2020,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testRandomConcurrentReadWrite() throws TimeoutException, ExecutionException,
             InterruptedException {
 
+        // some text to simulate load.
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
+        String text = sb.toString();
+
         for (int j = 0; j < 2; j++) {
 
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -2022,12 +2032,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .rollCycle(TEST_SECONDLY)
                     .build()) {
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
-                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
+                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-                int size = 200_000;
+                int size = 2_000_000;
 
-                IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
+                IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
 
                 System.out.println(".");
             }
@@ -2079,25 +2089,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt) {
+    private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
         if (Math.random() > 0.5)
-            writeTestDocument(tla);
+            writeTestDocument(tla, text);
         else
-            readDocument(tlt);
+            readDocument(tlt, text);
     }
 
-    private void readDocument(ThreadLocal<ExcerptTailer> tlt) {
+    private void readDocument(ThreadLocal<ExcerptTailer> tlt, String text) {
         try (DocumentContext dc = tlt.get().readingDocument()) {
             if (!dc.isPresent())
                 return;
             Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+            Assert.assertEquals(text, dc.wire().read(() -> "text").text());
         }
     }
 
-    private void writeTestDocument(ThreadLocal<ExcerptAppender> tl) {
+    private void writeTestDocument(ThreadLocal<ExcerptAppender> tl, String text) {
         try (DocumentContext dc = tl.get().writingDocument()) {
             long index = dc.index();
             dc.wire().write("key").int64(index);
+            dc.wire().write("text").text(text);
         }
     }
 
