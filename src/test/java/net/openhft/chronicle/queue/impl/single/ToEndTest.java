@@ -29,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.*;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -97,6 +98,40 @@ public class ToEndTest {
                 Assert.assertEquals(j++, i);
             }
         }
+    }
+
+    @Test
+    @Ignore("unsure if this is correct behavior")
+    public void tailerToEndIncreasesRefCount() throws Exception {
+        String path = OS.TARGET + "/toEndIncRefCount-" + System.nanoTime();
+        IOTools.shallowDeleteDirWithFiles(path);
+
+        SetTimeProvider time = new SetTimeProvider();
+        long now = System.currentTimeMillis();
+        time.currentTimeMillis(now);
+
+        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(time)
+                .build();
+
+        final SingleChronicleQueueExcerpts.StoreAppender appender = (SingleChronicleQueueExcerpts.StoreAppender) queue.acquireAppender();
+        Field storeF1 = SingleChronicleQueueExcerpts.StoreAppender.class.getDeclaredField("store");
+        storeF1.setAccessible(true);
+        SingleChronicleQueueStore store1 = (SingleChronicleQueueStore) storeF1.get(appender);
+        System.out.println(store1);
+
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
+
+        final SingleChronicleQueueExcerpts.StoreTailer tailer = (SingleChronicleQueueExcerpts.StoreTailer) queue.createTailer();
+        System.out.println(tailer);
+        tailer.toEnd();
+        System.out.println(tailer);
+
+        Field storeF2 = SingleChronicleQueueExcerpts.StoreTailer.class.getDeclaredField("store");
+        storeF2.setAccessible(true);
+        SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
+        assertEquals(1, store2.refCount());
     }
 
 
