@@ -27,7 +27,9 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -36,13 +38,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static junit.framework.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-/**
- * Created by daniel on 07/03/2016.
- */
 public class ToEndTest {
     private ThreadDump threadDump;
 
@@ -119,7 +116,7 @@ public class ToEndTest {
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(5));
 
         // roll 5 cycles
-        timeProvider.currentTimeMillis(now += timeIncMs*5);
+        timeProvider.currentTimeMillis(now += timeIncMs * 5);
 
         try (DocumentContext dc = tailer.readingDocument()) {
             assertTrue(dc.isPresent());
@@ -131,7 +128,6 @@ public class ToEndTest {
     }
 
     @Test
-    @Ignore("unsure if this is correct behavior")
     public void tailerToEndIncreasesRefCount() throws Exception {
         String path = OS.TARGET + "/toEndIncRefCount-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
@@ -161,7 +157,9 @@ public class ToEndTest {
         Field storeF2 = SingleChronicleQueueExcerpts.StoreTailer.class.getDeclaredField("store");
         storeF2.setAccessible(true);
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
-        assertEquals(1, store2.refCount());
+
+        // the reference count here is 2, one of the reference is the appender and on the tailer
+        assertEquals(2, store2.refCount());
     }
 
 

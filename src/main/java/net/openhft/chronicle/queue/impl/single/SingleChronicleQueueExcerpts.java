@@ -286,7 +286,7 @@ public class SingleChronicleQueueExcerpts {
                     } catch (EOFException theySeeMeRolling) {
 
                         assert !((AbstractWire) wire).isInsideHeader();
-                        setCycle2( cycle =queue.cycle(), true);
+                        setCycle2(cycle = queue.cycle(), true);
 
                         // retry.
                     }
@@ -747,7 +747,7 @@ public class SingleChronicleQueueExcerpts {
             Wire w0 = wireForIndex;
             if (w0 != null)
                 w0.bytes().release();
-            if (store != null && store.refCount() > 0)
+            if (store != null)
                 queue.release(store);
             store = null;
         }
@@ -1135,10 +1135,11 @@ public class SingleChronicleQueueExcerpts {
                 final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
                 assert wireStore != null;
 
-                if (this.store != wireStore) {
+                if (store != null)
                     queue.release(store);
-                    this.store = wireStore;
 
+                if (this.store != wireStore) {
+                    this.store = wireStore;
                     resetWires();
                     this.cycle = lastCycle;
                 }
@@ -1230,8 +1231,12 @@ public class SingleChronicleQueueExcerpts {
 
             WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
 
+
             if (nextStore == null && this.store == null)
                 return false;
+
+            if (this.store != null)
+                queue.release(store);
 
             if (nextStore == this.store)
                 return true;
@@ -1244,10 +1249,7 @@ public class SingleChronicleQueueExcerpts {
                 return false;
             } else {
                 context.wire(null);
-                if (this.store != null)
-                    queue.release(store);
                 this.store = nextStore;
-
             }
 
 
