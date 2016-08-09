@@ -1235,29 +1235,26 @@ public class SingleChronicleQueueExcerpts {
             if (nextStore == null && this.store == null)
                 return false;
 
-            if (this.store != null)
-                queue.release(store);
-
-            if (nextStore == this.store)
-                return true;
-
             if (nextStore == null) {
                 if (direction == BACKWARD)
                     state = BEHOND_START_OF_CYCLE;
                 else
                     state = CYCLE_NOT_FOUND;
                 return false;
-            } else {
-                context.wire(null);
-                this.store = nextStore;
             }
 
+            if (store != null)
+                queue.release(store);
 
+            if (nextStore == this.store)
+                return true;
+
+            context.wire(null);
+            this.store = nextStore;
             this.state = FOUND_CYCLE;
             this.cycle = cycle;
             resetWires();
             final Wire wire = wire();
-
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
             return true;
