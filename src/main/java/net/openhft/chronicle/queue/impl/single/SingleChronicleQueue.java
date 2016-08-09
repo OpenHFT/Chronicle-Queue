@@ -359,8 +359,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public void close() {
-        this.pool.close();
         closers.forEach(Runnable::run);
+        this.pool.close();
     }
 
     @Override

@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.core.annotation.Nullable;
-import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.RollDetails;
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.NotNull;
@@ -25,9 +24,8 @@ import java.text.ParseException;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class WireStorePool implements Closeable {
+public class WireStorePool {
     @NotNull
     private final WireStoreSupplier supplier;
     @NotNull
@@ -46,50 +44,30 @@ public class WireStorePool implements Closeable {
         return new WireStorePool(supplier, storeFileListener);
     }
 
-    @Override
-    public boolean isClosed() {
-        return isClosed;
-    }
-
-    @Override
     public synchronized void close() {
         if (isClosed)
             return;
         isClosed = true;
 
-        refCounts.entrySet().forEach(e -> {
-            int refCount = e.getValue().get();
-            for (int i = 1; i < refCount; i++) {
-                e.getKey().release();
-            }
+        stores.values().forEach(e -> {
+            release(e);
         });
-
     }
-
-    private Map<WireStore, AtomicInteger> refCounts = new ConcurrentHashMap<>();
 
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);
-
         WireStore store = stores.get(rollDetails);
         if (store != null && store.tryReserve()) {
-            incRefCount(store);
             return store;
         }
 
         store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
-            incRefCount(store);
             stores.put(rollDetails, store);
             storeFileListener.onAcquired(cycle, store.file());
         }
         return store;
-    }
-
-    private void incRefCount(WireStore store) {
-        final AtomicInteger count = refCounts.computeIfAbsent(store, k -> new AtomicInteger());
-        count.incrementAndGet();
     }
 
     public int nextCycle(final int currentCycle, @NotNull TailerDirection direction) throws ParseException {
@@ -97,7 +75,6 @@ public class WireStorePool implements Closeable {
     }
 
     public synchronized void release(@NotNull WireStore store) {
-        decRefCount(store);
         store.release();
         if (store.refCount() <= 0) {
             for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
@@ -107,14 +84,6 @@ public class WireStorePool implements Closeable {
                     break;
                 }
             }
-        }
-    }
-
-    private void decRefCount(@NotNull WireStore store) {
-        AtomicInteger atomicInteger = refCounts.get(store);
-        if (atomicInteger != null) {
-            if (atomicInteger.decrementAndGet() == 0)
-                refCounts.remove(store);
         }
     }
 

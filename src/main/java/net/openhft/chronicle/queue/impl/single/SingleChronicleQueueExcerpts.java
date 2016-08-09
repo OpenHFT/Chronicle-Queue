@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
-import net.openhft.chronicle.bytes.NoBytesStore;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
@@ -64,7 +63,7 @@ public class SingleChronicleQueueExcerpts {
     // *************************************************************************
 
     /**
-     * StoreAppender
+     * // StoreAppender
      */
     static class StoreAppender implements ExcerptAppender, ExcerptContext {
         static final int HEAD_ROOM = 1 << 20;
@@ -189,11 +188,10 @@ public class SingleChronicleQueueExcerpts {
 
             SingleChronicleQueue queue = this.queue;
 
-            if (this.store != null) {
+            if (this.store != null)
                 queue.release(this.store);
-            }
+
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
-            this.cycle = cycle;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -268,11 +266,13 @@ public class SingleChronicleQueueExcerpts {
             boolean ok = false;
             try {
                 int cycle = queue.cycle();
+                if (this.cycle != cycle || wire == null) {
+                    rollCycleTo(cycle);
+                }
+
                 for (int i = 0; i <= 100; i++) {
                     try {
-                        if (this.cycle != cycle || wire == null) {
-                            rollCycleTo(cycle);
-                        }
+
                         assert wire != null;
 
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
@@ -283,12 +283,29 @@ public class SingleChronicleQueueExcerpts {
                         break;
 
                     } catch (EOFException theySeeMeRolling) {
+
                         assert !((AbstractWire) wire).isInsideHeader();
+                        long oldCycle = cycle;
+                        if (cycle == queue.cycle())
+                            // this is for the case where the EOF has been written before queue
+                            // .cycle() has ben updated
+                            cycle++;
+                        else
+                            cycle = queue.cycle();
+
+                        assert oldCycle < cycle;
+
+                        this.store = queue.storeForCycle(cycle, queue.epoch(), true);
+                        resetWires(queue);
+                        this.cycle = cycle;
+
+                        this.wire().bytes().writePosition(0);
+                        this.wire().headerNumber(queue.rollCycle().toIndex(cycle, 0) - 1);
+
                         // retry.
                     }
                     if (i == 100)
                         throw new IllegalStateException("Unable to roll to the current cycle");
-                    cycle++;
                 }
                 ok = true;
 
@@ -734,17 +751,19 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
             this.cycle = Integer.MIN_VALUE;
             this.index = 0;
-            queue.addCloseListener(() -> {
-
-                Wire wireForIndex0 = wireForIndex;
-                if (wireForIndex0 != null)
-                    wireForIndex0.bytes().release();
-
-                context.close();
-
-            });
+            queue.addCloseListener(StoreTailer.this::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             toStart();
+        }
+
+        private void close() {
+            context.wire(null);
+            Wire w0 = wireForIndex;
+            if (w0 != null)
+                w0.bytes().release();
+            if (store != null && store.refCount() > 0)
+                queue.release(store);
+            store = null;
         }
 
         @Override
@@ -1131,9 +1150,9 @@ public class SingleChronicleQueueExcerpts {
                 assert wireStore != null;
 
                 if (this.store != wireStore) {
-                    this.store.release();
+                    queue.release(store);
                     this.store = wireStore;
-                    this.store.reserve();
+
                     resetWires();
                 }
                 // give the position of the last entry and
@@ -1156,7 +1175,7 @@ public class SingleChronicleQueueExcerpts {
 
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
 
-            if (wireForIndexOld != null && wireForIndexOld.bytes().bytesStore() != NoBytesStore.NO_BYTES_STORE)
+            if (wireForIndexOld != null)
                 wireForIndexOld.bytes().release();
 
         }
@@ -1237,15 +1256,11 @@ public class SingleChronicleQueueExcerpts {
                     state = CYCLE_NOT_FOUND;
                 return false;
             } else {
-                if (this.store != null) {
-                    this.queue.release(this.store);
-                }
                 context.wire(null);
                 if (this.store != null)
-                    this.store.release();
+                    queue.release(store);
                 this.store = nextStore;
-                if (this.store != null)
-                    this.store.reserve();
+
             }
 
 
@@ -1366,14 +1381,10 @@ public class SingleChronicleQueueExcerpts {
 
             public void wire(@Nullable AbstractWire wire) {
 
-                if (wire != null && wire.bytes().bytesStore() != NoBytesStore.NO_BYTES_STORE)
-                    wire.bytes().reserve();
-
                 AbstractWire oldWire = this.wire;
                 this.wire = wire;
 
-                if (oldWire != null &&
-                        oldWire.bytes().bytesStore() != NoBytesStore.NO_BYTES_STORE)
+                if (oldWire != null)
                     oldWire.bytes().release();
             }
         }
