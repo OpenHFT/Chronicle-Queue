@@ -17,6 +17,7 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
 import net.openhft.chronicle.wire.Demarshallable;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -28,7 +29,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.StreamCorruptedException;
 
-public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
     /**
      * @return the file associated with this store.
      */

@@ -31,6 +31,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,7 @@ public class SingleChronicleQueueExcerpts {
     // *************************************************************************
 
     /**
-     * StoreAppender
+     * // StoreAppender
      */
     static class StoreAppender implements ExcerptAppender, ExcerptContext {
         static final int HEAD_ROOM = 1 << 20;
@@ -85,9 +86,19 @@ public class SingleChronicleQueueExcerpts {
         private long lastTouchedPos = 0;
         private boolean padToCacheAlign;
 
-        public StoreAppender(@NotNull SingleChronicleQueue queue) {
+        StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
+            queue.addCloseListener(StoreAppender.this::close);
             context = new StoreAppenderContext();
+        }
+
+        private void close() {
+            Wire w0 = wireForIndex;
+            if (w0 != null)
+                w0.bytes().release();
+            Wire w = wire;
+            if (w != null)
+                w.bytes().release();
         }
 
         @Override
@@ -177,9 +188,9 @@ public class SingleChronicleQueueExcerpts {
 
             SingleChronicleQueue queue = this.queue;
 
-            if (this.store != null) {
+            if (this.store != null)
                 queue.release(this.store);
-            }
+
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
             this.cycle = cycle;
             resetWires(queue);
@@ -195,8 +206,19 @@ public class SingleChronicleQueueExcerpts {
 
         private void resetWires(SingleChronicleQueue queue) {
             WireType wireType = queue.wireType();
-            wire = wireType.apply(store.bytes());
-            wireForIndex = wireType.apply(store.bytes());
+            {
+                Wire oldw = this.wire;
+                this.wire = wireType.apply(store.bytes());
+                if (oldw != null)
+                    oldw.bytes().release();
+            }
+            {
+                Wire old = this.wireForIndex;
+                this.wireForIndex = wireType.apply(store.bytes());
+                if (old != null)
+                    old.bytes().release();
+            }
+
         }
 
         private void resetPosition() throws UnrecoverableTimeoutException {
@@ -245,11 +267,13 @@ public class SingleChronicleQueueExcerpts {
             boolean ok = false;
             try {
                 int cycle = queue.cycle();
+
                 for (int i = 0; i <= 100; i++) {
                     try {
                         if (this.cycle != cycle || wire == null) {
                             rollCycleTo(cycle);
                         }
+
                         assert wire != null;
 
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
@@ -260,12 +284,14 @@ public class SingleChronicleQueueExcerpts {
                         break;
 
                     } catch (EOFException theySeeMeRolling) {
+
                         assert !((AbstractWire) wire).isInsideHeader();
+                        setCycle2( cycle =queue.cycle(), true);
+
                         // retry.
                     }
                     if (i == 100)
                         throw new IllegalStateException("Unable to roll to the current cycle");
-                    cycle++;
                 }
                 ok = true;
 
@@ -711,8 +737,19 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
             this.cycle = Integer.MIN_VALUE;
             this.index = 0;
+            queue.addCloseListener(StoreTailer.this::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             toStart();
+        }
+
+        private void close() {
+            context.wire(null);
+            Wire w0 = wireForIndex;
+            if (w0 != null)
+                w0.bytes().release();
+            if (store != null && store.refCount() > 0)
+                queue.release(store);
+            store = null;
         }
 
         @Override
@@ -852,6 +889,8 @@ public class SingleChronicleQueueExcerpts {
                     case CYCLE_NOT_FOUND:
 
                         if (index == Long.MIN_VALUE) {
+                            if (this.store != null)
+                                queue.release(this.store);
                             this.store = null;
                             return false;
                         }
@@ -1097,7 +1136,9 @@ public class SingleChronicleQueueExcerpts {
                 assert wireStore != null;
 
                 if (this.store != wireStore) {
+                    queue.release(store);
                     this.store = wireStore;
+
                     resetWires();
                 }
                 // give the position of the last entry and
@@ -1115,7 +1156,14 @@ public class SingleChronicleQueueExcerpts {
 
             final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
             this.context.wire(wire);
+
+            Wire wireForIndexOld = wireForIndex;
+
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
+
+            if (wireForIndexOld != null)
+                wireForIndexOld.bytes().release();
+
         }
 
         private Wire readAnywhere(Wire wire) {
@@ -1194,11 +1242,11 @@ public class SingleChronicleQueueExcerpts {
                     state = CYCLE_NOT_FOUND;
                 return false;
             } else {
-                if (this.store != null) {
-                    this.queue.release(this.store);
-                }
                 context.wire(null);
+                if (this.store != null)
+                    queue.release(store);
                 this.store = nextStore;
+
             }
 
 
@@ -1290,7 +1338,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         class StoreTailerContext extends ReadDocumentContext {
-            public StoreTailerContext() {
+            StoreTailerContext() {
                 super(null);
             }
 
@@ -1308,16 +1356,22 @@ public class SingleChronicleQueueExcerpts {
             public void close() {
                 if (isPresent())
                     incrementIndex();
+
                 super.close();
-                assert wire == null || wire.endUse();
+                // assert wire == null || wire.endUse();
             }
 
-            public boolean present(boolean present) {
+            boolean present(boolean present) {
                 return this.present = present;
             }
 
-            public void wire(AbstractWire wire) {
+            public void wire(@Nullable AbstractWire wire) {
+
+                AbstractWire oldWire = this.wire;
                 this.wire = wire;
+
+                if (oldWire != null)
+                    oldWire.bytes().release();
             }
         }
     }

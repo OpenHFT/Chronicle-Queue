@@ -59,11 +59,10 @@ public class NotCompleteTest {
             Thread.sleep(100);
 
 //            System.out.println(queue.dump());
-        }
 
         // this is what will corrupt the queue
         BinaryLongReference.forceAllToNotCompleteState();
-
+    }
         try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {
@@ -97,11 +96,10 @@ public class NotCompleteTest {
             Thread.sleep(100);
 
 //            System.out.println(queue.dump());
-        }
 
         // this is what will corrupt the queue
         BinaryLongArrayReference.forceAllToNotCompleteState();
-
+    }
         try (final ChronicleQueue queue = binary(tmpDir)
                 .timeoutMS(500)
                 .build()) {

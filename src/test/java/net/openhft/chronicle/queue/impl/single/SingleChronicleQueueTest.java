@@ -16,6 +16,8 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
@@ -32,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2022,7 +2025,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
 
-                int size = 200_000;
+                int size = 2_000_000;
 
                 IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
@@ -2032,6 +2035,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
+
 
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
@@ -2308,7 +2312,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-
+    @Ignore("todo fix sometimes fails")
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
@@ -2344,6 +2348,63 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
 
+    @Test
+    public void testTailerSnappingRollWithNewAppender() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+
+        // write first message
+        try (ChronicleQueue queue = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(rollCycle).build()) {
+
+            ExcerptAppender excerptAppender = queue.acquireAppender();
+            excerptAppender.writeText("someText");
+
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+            Future f1 = executorService.submit(() -> {
+
+                try (ChronicleQueue queue2 = ChronicleQueueBuilder
+                        .single(dir.toString())
+                        .rollCycle(rollCycle).build()) {
+                    queue2.acquireAppender().writeText("someText more");
+                }
+                Jvm.pause(1500);
+                try (ChronicleQueue queue2 = ChronicleQueueBuilder
+                        .single(dir.toString())
+                        .rollCycle(rollCycle).build()) {
+                    queue2.acquireAppender().writeText("someText more");
+                }
+
+            });
+
+            Future f2 = executorService.submit(() -> {
+
+                // write second message
+                try (ChronicleQueue queue2 = ChronicleQueueBuilder
+                        .single(dir.toString())
+                        .rollCycle(rollCycle).build()) {
+
+                    for (int i = 0; i < 5; i++) {
+                        queue2.acquireAppender().writeText("someText more");
+                        Jvm.pause(500);
+                    }
+                }
+
+
+            });
+
+            f1.get();
+            f2.get();
+
+            executorService.shutdownNow();
+        }
+    }
+
+
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
 
@@ -2373,29 +2434,44 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
+
     }
 
-
-
-
-    /*@Test
-    public void checkCloseOnwWindows() throws IOException {
+    @Test
+    public void checkCloseOnwWindows() throws IOException, InterruptedException {
         //if (!OS.isWindows())
         //     return;
-        Path dir = Files.createTempDirectory("demo");
-        SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                .single(dir.toString())
-                .rollCycle(RollCycles.DAILY);
-        RollingChronicleQueue queue = builder.build();
-        ExcerptAppender appender = queue.acquireAppender();
-        appender.writeText("random text");
-        ExcerptTailer tailer = queue.createTailer();
-        System.out.println(tailer.readText());
 
-        queue.close();
+        MappedFile mappedFile;
+        {
+            Path dir = Files.createTempDirectory("demo");
+            SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                    .single(dir.toString())
+                    .rollCycle(RollCycles.DAILY);
+            File f;
+            try (RollingChronicleQueue queue = builder.build()) {
+                ExcerptAppender appender = queue.acquireAppender();
 
-        // this used to fail on windows
-        Assert.assertTrue(queue.file().delete());
-    }*/
+
+                try (DocumentContext documentContext1 = appender.writingDocument()) {
+                    documentContext1.wire().write().text("some text");
+                }
+
+                try (DocumentContext documentContext = queue.createTailer().readingDocument()) {
+                    MappedBytes bytes = (MappedBytes) documentContext.wire().bytes();
+                    mappedFile = bytes.mappedFile();
+                    Assert.assertEquals("some text", documentContext.wire().read().text());
+                }
+
+            }
+
+            assert mappedFile.isClosed();
+
+            // this used to fail on windows
+            Assert.assertTrue(mappedFile.file().delete());
+        }
+
+
+    }
 
 }
