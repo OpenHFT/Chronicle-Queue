@@ -1140,6 +1140,7 @@ public class SingleChronicleQueueExcerpts {
                     this.store = wireStore;
 
                     resetWires();
+                    this.cycle = lastCycle;
                 }
                 // give the position of the last entry and
                 // flag we want to count it even though we don't know if it will be meta data or not.

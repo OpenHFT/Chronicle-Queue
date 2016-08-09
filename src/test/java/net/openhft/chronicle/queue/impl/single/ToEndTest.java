@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.threads.ThreadDump;
+import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -54,48 +55,77 @@ public class ToEndTest {
         threadDump.assertNoNewThreads();
     }
 
-    @Ignore("fix https://github.com/OpenHFT/Chronicle-Queue/pull/280")
     @Test
     public void missingCyclesToEndTest() throws InterruptedException {
         String path = OS.TARGET + "/missingCyclesToEndTest-" + System.nanoTime();
         IOTools.shallowDeleteDirWithFiles(path);
 
-        RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        final SetTimeProvider timeProvider = new SetTimeProvider();
+        long now = 1470757797000L;
+        long timeIncMs = 1001;
+        timeProvider.currentTimeMillis(now);
+
+        final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
                 .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(timeProvider)
                 .build();
 
         final ExcerptAppender appender = queue.acquireAppender();
 
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(1));
-        // Rolls one or two cycles ahead.
-        Thread.sleep(1100);
+
+        // roll
+        timeProvider.currentTimeMillis(now += timeIncMs);
+
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(2));
-
-        final ExcerptTailer tailer = queue.createTailer().toEnd();
-
-        try (DocumentContext dc = tailer.readingDocument()) {
-            assertFalse("We should be at the end of the queue. Instead we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()), dc.isPresent());
-        }
-
-        // Roll another cycle or two.
-        Thread.sleep(1100);
         appender.writeDocument(wire -> wire.write(() -> "msg").int32(3));
 
+
+        final ExcerptTailer tailer = queue.createTailer().toEnd();
         try (DocumentContext dc = tailer.readingDocument()) {
-            assertTrue("Should be able to read next entry! Instead NoDocumentContext.", dc.isPresent());
-            int i = dc.wire().read(() -> "msg").int32();
-            Assert.assertEquals("Should've read 3, instead we read: " + i, 3, i);
+            if (dc.isPresent()) {
+                fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+            }
         }
 
-        // now read from the beginning
+        // append same cycle.
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(4));
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertTrue("Should be able to read entry in this cycle. Got NoDocumentContext.", dc.isPresent());
+            int i = dc.wire().read(() -> "msg").int32();
+            assertEquals("Should've read 4, instead we read: " + i, 4, i);
+        }
+
+        // read from the beginning
         tailer.toStart();
 
-        for (int j = 0; j <= 3; j++) {
+        for (int j = 1; j <= 4; j++) {
             try (DocumentContext dc = tailer.readingDocument()) {
                 assertTrue(dc.isPresent());
                 int i = dc.wire().read(() -> "msg").int32();
-                Assert.assertEquals(j++, i);
+                assertEquals(j, i);
             }
+        }
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            if (dc.isPresent()) {
+                fail("Should be at the end of the queue but dc.isPresent and we read: " + String.valueOf(dc.wire().read(() -> "msg").int32()));
+            }
+        }
+
+        // write another
+        appender.writeDocument(wire -> wire.write(() -> "msg").int32(5));
+
+        // roll 5 cycles
+        timeProvider.currentTimeMillis(now += timeIncMs*5);
+
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertTrue(dc.isPresent());
+            assertEquals(5, dc.wire().read(() -> "msg").int32());
+        }
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertFalse(dc.isPresent());
         }
     }
 
