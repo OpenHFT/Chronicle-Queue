@@ -192,6 +192,7 @@ public class SingleChronicleQueueExcerpts {
                 queue.release(this.store);
 
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
+            this.cycle = cycle;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -269,8 +270,7 @@ public class SingleChronicleQueueExcerpts {
 
                 for (int i = 0; i <= 100; i++) {
                     try {
-
-                        if (queue.cycle() != cycle || wire == null) {
+                        if (this.cycle != cycle || wire == null) {
                             rollCycleTo(cycle);
                         }
 
@@ -286,17 +286,7 @@ public class SingleChronicleQueueExcerpts {
                     } catch (EOFException theySeeMeRolling) {
 
                         assert !((AbstractWire) wire).isInsideHeader();
-                        long oldCycle = cycle;
-                        if (cycle == queue.cycle())
-                            // this is for the case where the EOF has been written before queue
-                            // .cycle() has ben updated
-                            cycle++;
-                        else
-                            cycle = queue.cycle();
-
-                        assert oldCycle < cycle;
-
-                        setCycle2(cycle,true);
+                        setCycle2( cycle =queue.cycle(), true);
 
                         // retry.
                     }
