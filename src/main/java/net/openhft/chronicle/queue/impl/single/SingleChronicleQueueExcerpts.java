@@ -266,12 +266,13 @@ public class SingleChronicleQueueExcerpts {
             boolean ok = false;
             try {
                 int cycle = queue.cycle();
-                if (this.cycle != cycle || wire == null) {
-                    rollCycleTo(cycle);
-                }
 
                 for (int i = 0; i <= 100; i++) {
                     try {
+
+                        if (queue.cycle() != cycle || wire == null) {
+                            rollCycleTo(cycle);
+                        }
 
                         assert wire != null;
 
@@ -295,12 +296,7 @@ public class SingleChronicleQueueExcerpts {
 
                         assert oldCycle < cycle;
 
-                        this.store = queue.storeForCycle(cycle, queue.epoch(), true);
-                        resetWires(queue);
-                        this.cycle = cycle;
-
-                        this.wire().bytes().writePosition(0);
-                        this.wire().headerNumber(queue.rollCycle().toIndex(cycle, 0) - 1);
+                        setCycle2(cycle,true);
 
                         // retry.
                     }

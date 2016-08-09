@@ -2025,7 +2025,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> q.acquireAppender());
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(() -> q.createTailer());
 
-                int size = 200_000;
+                int size = 2_000_000;
 
                 IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt));
 
@@ -2035,6 +2035,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
+
 
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
