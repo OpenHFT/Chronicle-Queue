@@ -192,7 +192,6 @@ public class SingleChronicleQueueExcerpts {
                 queue.release(this.store);
 
             this.store = queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
-            this.cycle = cycle;
             resetWires(queue);
 
             // only set the cycle after the wire is set.
@@ -268,17 +267,14 @@ public class SingleChronicleQueueExcerpts {
             try {
                 int cycle = queue.cycle();
 
+                if (this.cycle != cycle || wire == null)
+                    rollCycleTo(cycle);
+
                 for (int i = 0; i <= 100; i++) {
                     try {
-                        if (this.cycle != cycle || wire == null) {
-                            rollCycleTo(cycle);
-                        }
-
                         assert wire != null;
-
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
                         position(pos);
-
                         context.metaData = false;
                         context.wire = wire;
                         break;
@@ -286,9 +282,24 @@ public class SingleChronicleQueueExcerpts {
                     } catch (EOFException theySeeMeRolling) {
 
                         assert !((AbstractWire) wire).isInsideHeader();
-                        setCycle2(cycle = queue.cycle(), true);
-
-                        // retry.
+                        int qCycle = queue.cycle();
+                        if (cycle < queue.cycle()) {
+                            setCycle2(cycle = qCycle, true);
+                        } else if (cycle == qCycle) {
+                            // for the rare case where the qCycle has just changed in the last
+                            // few milliseconds since
+                            setCycle2(++cycle, true);
+                        } else
+                            throw new IllegalStateException("Found an EOF on the next cycle file," +
+                                    " this next file, should noy have an EOF as its cycle number" +
+                                    " is greater than the current cycle (based on the current " +
+                                    "time), this should only happen " +
+                                    "if it " +
+                                    "was written by a different appender set with a different " +
+                                    "EPOC or different roll cycle." +
+                                    "All your appenders ( that write to a given directory ) " +
+                                    "should have the same EPOCH and roll cycle" +
+                                    " qCycle=" + qCycle + ", cycle=" + cycle);
                     }
                     if (i == 100)
                         throw new IllegalStateException("Unable to roll to the current cycle");
@@ -1121,7 +1132,7 @@ public class SingleChronicleQueueExcerpts {
         /**
          * gives approximately the last index, can not be relied on as the last index may have
          * changed just after this was called. For this reason, this code is not in queue as it
-         * should only be and internal method
+         * should only be an internal method
          *
          * @return the last index at the time this method was called.
          */

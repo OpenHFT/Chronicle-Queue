@@ -1598,6 +1598,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEnd2() {
+
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
@@ -1618,6 +1619,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text", Assert::assertEquals)));
         }
+
     }
 
     @Test
