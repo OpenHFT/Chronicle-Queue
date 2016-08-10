@@ -244,7 +244,7 @@ public class SingleChronicleQueueExcerpts {
 //                assert headerNumber == headerNumber2;
 //                System.err.println("==== " + Thread.currentThread().getName()+" pos: "+position+" hdr: "+headerNumber);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
-                assert lazyIndexing || checkIndex(wire.headerNumber(), position);
+                assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
             } catch (EOFException e) {
                 // todo improve this
@@ -611,8 +611,8 @@ public class SingleChronicleQueueExcerpts {
 
                     System.out.println(store.dump());
 
-                    assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
-                    assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
+                        assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
+                        assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
                 } else {
               /*      System.out.println("checked Thread=" + Thread.currentThread().getName() +
@@ -682,7 +682,7 @@ public class SingleChronicleQueueExcerpts {
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, position);
                             else
-                                assert lazyIndexing || checkIndex(lastIndex, position);
+                                assert lazyIndexing || lastIndex == Long.MIN_VALUE || checkIndex(lastIndex, position);
                         }
                         assert checkWritePositionHeaderNumber();
                     } else if (wire != null) {
@@ -705,7 +705,7 @@ public class SingleChronicleQueueExcerpts {
                         long headerNumber0 = queue.rollCycle().toIndex(cycle, store
                                 .sequenceForPosition(StoreAppender.this, position, false));
                         assert (((AbstractWire) wire).isInsideHeader());
-                        wire.headerNumber(headerNumber0 - 1);
+                        return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                     } catch (IOException e) {
                         throw new IORuntimeException(e);
                     }
@@ -1183,15 +1183,38 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
+
+        private boolean headerNumberCheck(AbstractWire wire) {
+
+            wire.headNumberCheck((actual, position) -> {
+                try {
+                    long expecting = store.sequenceForPosition(this, position, false);
+                    if (actual != expecting)
+                        return;
+                    LOG.error("", new AssertionError("header number check failed " +
+                            "expectingHeaderNumber" + expecting +
+                            " actualHeaderNumber=" + actual) + ", the header number that was " +
+                            "assigned ( the actual ) differs from that in the index ( the " +
+                            "expected )");
+
+                } catch (Exception e) {
+                    LOG.error("", e);
+                }
+            });
+
+            return true;
+        }
+
         private void resetWires() {
             WireType wireType = queue.wireType();
 
             final AbstractWire wire = (AbstractWire) readAnywhere(wireType.apply(store.bytes()));
+            assert headerNumberCheck(wire);
             this.context.wire(wire);
 
             Wire wireForIndexOld = wireForIndex;
-
             wireForIndex = readAnywhere(wireType.apply(store.bytes()));
+            assert headerNumberCheck((AbstractWire) wireForIndex);
 
             if (wireForIndexOld != null)
                 wireForIndexOld.bytes().release();
