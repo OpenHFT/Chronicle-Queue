@@ -994,21 +994,40 @@ public class SingleChronicleQueueExcerpts {
 
             long nextIndex, doubleCheck;
 
-            // DONT REMVOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
+            // DONT REMOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
             // FIRST RESULT CAN DIFFER FROM THE DOUBLE CHECK, AS THE APPENDER CAN RACE WITH THE
             // TAILER
             do {
 
-/*
-                if (times != 0)
-                    System.out.println("times=" + times);
-                times++;*/
                 nextIndex = nextIndexWithNextAvailableCycle0(cycle);
+
+                if (nextIndex != Long.MIN_VALUE) {
+                    int nextCycle = queue.rollCycle().toCycle(nextIndex);
+                    if (nextCycle == cycle + 1) {
+                        // don't do the double check if the next cycle is adjacent to the current
+                        return nextIndex;
+                    }
+                }
+
                 doubleCheck = nextIndexWithNextAvailableCycle0(cycle);
             } while (nextIndex != doubleCheck);
 
-            if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle)
-                System.out.println("rolled " + (queue.rollCycle().toCycle(nextIndex) - cycle) + " times");
+            if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle) {
+
+                /**
+                 * lets say that you were using a roll cycle of TEST_SECONDLY
+                 * and you wrote a message to the queue, if you created a tailer and read the first message,
+                 * then waited around 22 seconds before writing the next message, when the tailer
+                 * came to read the next message, there would be a gap of 22 cycle files
+                 * that did not exist, that is what this is reporting. If you are using daily rolling,
+                 * and writing every day, you should not see this message.
+                 */
+
+                LOG.info("Rolled " + (queue
+                        .rollCycle().toCycle(nextIndex) - cycle) + " " + "times to find the " +
+                        "next cycle file. This can occur if you appenders have not written " +
+                        "anything for a while, leaving the cycle files with a gap.");
+            }
 
             return nextIndex;
         }
