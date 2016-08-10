@@ -2036,6 +2036,70 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    public void testToEndPrevCycleEOF() throws TimeoutException, ExecutionException, InterruptedException {
+
+        File tmpDir = getTmpDir();
+
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
+
+            q.acquireAppender().writeText("first");
+        }
+
+        Thread.sleep(1500);
+
+        // this will write an EOF
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
+
+            ExcerptTailer tailer = q.createTailer();
+
+            Assert.assertEquals("first", tailer.readText());
+            Assert.assertEquals(null, tailer.readText());
+
+        }
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
+
+            ExcerptTailer tailer = q.createTailer().toEnd();
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                Assert.assertFalse(documentContext.isPresent());
+            }
+
+            try (DocumentContext documentContext = tailer.readingDocument()) {
+                Assert.assertFalse(documentContext.isPresent());
+            }
+        }
+
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
+
+            ExcerptTailer excerptTailerBeforeAppend = q.createTailer().toEnd();
+            q.acquireAppender().writeText("more text");
+            ExcerptTailer excerptTailerAfterAppend = q.createTailer().toEnd();
+            q.acquireAppender().writeText("even more text");
+
+            Assert.assertEquals("more text", excerptTailerBeforeAppend.readText());
+            Assert.assertEquals("even more text", excerptTailerAfterAppend.readText());
+            Assert.assertEquals("even more text", excerptTailerBeforeAppend.readText());
+        }
+
+    }
+
+
+    @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");

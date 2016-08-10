@@ -1125,7 +1125,7 @@ public class SingleChronicleQueueExcerpts {
          *
          * @return the last index at the time this method was called.
          */
-        private long approximateLastIndex() {
+        private long approximateLastIndex() throws EOFException {
             try {
                 RollCycle rollCycle = queue.rollCycle();
                 final int lastCycle = queue.lastCycle();
@@ -1148,7 +1148,7 @@ public class SingleChronicleQueueExcerpts {
                 long sequenceNumber = store.sequenceForPosition(this, Long.MAX_VALUE, false);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
-            } catch (EOFException | StreamCorruptedException | UnrecoverableTimeoutException e) {
+            } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             }
         }
@@ -1177,14 +1177,20 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            long index = approximateLastIndex();
-            if (direction != TailerDirection.FORWARD)
-                index--;
-            if (index != Long.MIN_VALUE)
-                moveToIndex(index);
-            if (state() == TailerState.CYCLE_NOT_FOUND)
-                state = UNINTIALISED;
-            return this;
+            try {
+                long index = approximateLastIndex();
+
+                if (direction != TailerDirection.FORWARD)
+                    index--;
+                if (index != Long.MIN_VALUE)
+                    moveToIndex(index);
+                if (state() == TailerState.CYCLE_NOT_FOUND)
+                    state = UNINTIALISED;
+                return this;
+            } catch (EOFException e) {
+                state = END_OF_CYCLE;
+                return this;
+            }
         }
 
         @Override

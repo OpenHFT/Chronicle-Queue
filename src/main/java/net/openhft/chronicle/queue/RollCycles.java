@@ -80,4 +80,9 @@ public enum RollCycles implements RollCycle {
     public int toCycle(long index) {
         return Maths.toUInt31(index >> cycleShift);
     }
+
+    public long maxNumberOfExcerptPerCycle() {
+        return sequenceMask;
+    }
+
 }
