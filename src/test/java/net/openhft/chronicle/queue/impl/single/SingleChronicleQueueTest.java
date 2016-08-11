@@ -1988,6 +1988,38 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testWriteALotOfDataInTheSameCycle() throws TimeoutException, ExecutionException,
+            InterruptedException {
+
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .rollCycle(TEST_DAILY)
+                .build()) {
+
+            ExcerptAppender excerptAppender = q.acquireAppender();
+
+            int size = 1000_000;
+            for (int i = 0; i < size; i++) {
+                try (DocumentContext documentContext = excerptAppender.writingDocument()) {
+                    documentContext.wire().write().int64(i);
+                }
+            }
+
+            ExcerptTailer tailer = q.createTailer();
+
+            for (int i = 0; i < size; i++) {
+                try (DocumentContext documentContext = tailer.readingDocument()) {
+                    Assert.assertEquals(i, documentContext.wire().read().int64());
+                }
+            }
+
+        }
+
+
+    }
+
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
@@ -2004,7 +2036,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
 
-                int size = 20;
+                int size = 5;
 
                 IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
 
