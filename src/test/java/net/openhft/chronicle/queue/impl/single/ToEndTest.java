@@ -16,8 +16,10 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -28,6 +30,7 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,21 +39,28 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
 
 public class ToEndTest {
     private ThreadDump threadDump;
+    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     @Before
-    public void threadDump() {
+    public void before() {
         threadDump = new ThreadDump();
+        exceptionKeyIntegerMap = Jvm.recordExceptions(true);
     }
 
     @After
-    public void checkThreadDump() {
+    public void after() {
         threadDump.assertNoNewThreads();
+
+        Jvm.dumpException(exceptionKeyIntegerMap);
+        Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
+        Jvm.resetExceptionHandlers();
     }
 
     @Test
