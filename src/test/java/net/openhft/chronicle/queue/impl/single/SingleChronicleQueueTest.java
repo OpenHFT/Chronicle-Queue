@@ -1988,38 +1988,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
-    @Test
-    public void testWriteALotOfDataInTheSameCycle() throws TimeoutException, ExecutionException,
-            InterruptedException {
-
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .rollCycle(TEST_DAILY)
-                .build()) {
-
-            ExcerptAppender excerptAppender = q.acquireAppender();
-
-            int size = 1000_000;
-            for (int i = 0; i < size; i++) {
-                try (DocumentContext documentContext = excerptAppender.writingDocument()) {
-                    documentContext.wire().write().int64(i);
-                }
-            }
-
-            ExcerptTailer tailer = q.createTailer();
-
-            for (int i = 0; i < size; i++) {
-                try (DocumentContext documentContext = tailer.readingDocument()) {
-                    Assert.assertEquals(i, documentContext.wire().read().int64());
-                }
-            }
-
-        }
-
-
-    }
-
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
@@ -2028,26 +1996,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-        for (int j = 0; j < 10; j++) {
-            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                    .wireType(this.wireType)
-                    .rollCycle(TEST_DAILY)
-                    .build()) {
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
 
-                int size = 5;
+            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
 
-                IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
+            int size = 2_000_000;
 
-                ExcerptTailer tailer = q.createTailer();
-                for (int i = 0; i < size; i++) {
-                    try (DocumentContext dc = tailer.readingDocument(false)) {
-                        Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
-                    }
+            IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
+
+            ExcerptTailer tailer = q.createTailer();
+            for (int i = 0; i < size; i++) {
+                try (DocumentContext dc = tailer.readingDocument(false)) {
+                    Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
                 }
             }
         }
+
     }
 
     @Test
@@ -2059,23 +2027,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-        for (int j = 0; j < 2; j++) {
 
-            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                    .wireType(this.wireType)
-                    .rollCycle(TEST_SECONDLY)
-                    .build()) {
+        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .rollCycle(TEST_SECONDLY)
+                .build()) {
 
-                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
-                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
+            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
+            final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-                int size = 2_000_000;
+            int size = 2_000_000;
 
-                IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
+            IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
 
-                System.out.println(".");
-            }
+            System.out.println(".");
         }
+
     }
 
 
