@@ -2387,7 +2387,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-    @Ignore("todo fix sometimes fails")
+
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
