@@ -1597,6 +1597,32 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testAppendedBeforeToEnd() throws Exception {
+        File tmpDir = getTmpDir();
+        ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+        ExcerptTailer tailer = chronicle.createTailer();
+
+        ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+                .wireType(this.wireType)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+
+        ExcerptAppender append = chronicle2.acquireAppender();
+        append.writeDocument(w -> w.write(() -> "test").text("text"));
+
+        tailer.toEnd();
+        try (DocumentContext dc = tailer.readingDocument()) {
+            assertFalse(dc.isPresent());
+        }
+
+        append.writeDocument(w -> w.write(() -> "test").text("text2"));
+        assertTrue(tailer.readDocument(w -> w.read(() -> "test").text("text2", Assert::assertEquals)));
+    }
+
+    @Test
     public void testToEnd2() {
 
         File tmpDir = getTmpDir();
