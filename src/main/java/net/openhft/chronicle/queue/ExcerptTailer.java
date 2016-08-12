@@ -50,8 +50,8 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     long index();
 
     /**
-     * @return the cycle this appender is on, usually with chronicle-queue each cycle will have
-     * its own unique data file to store the excerpt
+     * @return the cycle this appender is on, usually with chronicle-queue each cycle will have its
+     * own unique data file to store the excerpt
      */
     int cycle();
 
@@ -73,10 +73,17 @@ public interface ExcerptTailer extends ExcerptCommon<ExcerptTailer>, Marshallabl
     ExcerptTailer toStart();
 
     /**
-     * Wind to the last entry int eh last entry
-     * <p>
-     *     If the direction() == FORWARD, this will be 1 more than the last entry.<br/>Otherwise the index will be the last entry.
-     * </p>
+     * Wind to the last entry int eh last entry <p> If the direction() == FORWARD, this will be 1
+     * more than the last entry.<br/>Otherwise the index will be the last entry. </p>
+     *
+     * This is not atomic with the appenders, in other words if a cycle has been added in the
+     * current millisecond, toEnd() may not see it, This is because for performance reasons, the
+     * queue.lastCycle() is cached, as finding the last cycle is expensive, it requires asking the
+     * directory for the Files.list() so, this cache is only refreshed if the call toEnd() is in a
+     * new millisecond. Hence a whole milliseconds with of data could be added to the
+     * chronicle-queue that toEnd() won’t see. For appenders that that are on the same
+     * JVM, they can be informed that the last cycle has changed, this
+     * will yield better results, but atomicity can still not be guaranteed.
      *
      * @return this Excerpt
      */
