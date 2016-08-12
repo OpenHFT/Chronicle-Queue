@@ -436,6 +436,17 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return firstCycle;
     }
 
+
+    /**
+     * allows the appenders to inform the queue that they have rolled
+     *
+     * @param cycle the cycle the appender has rolled to
+     */
+    void onRoll(int cycle) {
+        if (lastCycle < cycle)
+            lastCycle = cycle;
+    }
+
     @Override
     public int lastCycle() {
         setFirstAndLastCycle();

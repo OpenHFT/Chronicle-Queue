@@ -196,11 +196,11 @@ public class SingleChronicleQueueExcerpts {
 
             // only set the cycle after the wire is set.
             this.cycle = cycle;
-
             assert wire.startUse();
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
             resetPosition();
+            queue.onRoll(cycle);
         }
 
         private void resetWires(SingleChronicleQueue queue) {
@@ -291,9 +291,9 @@ public class SingleChronicleQueueExcerpts {
                             setCycle2(++cycle, true);
                         } else
                             throw new IllegalStateException("Found an EOF on the next cycle file," +
-                                    " this next file, should noy have an EOF as its cycle number" +
-                                    " is greater than the current cycle (based on the current " +
-                                    "time), this should only happen " +
+                                    " this next file, should not have an EOF as its cycle " +
+                                    "number is greater than the current cycle (based on the " +
+                                    "current time), this should only happen " +
                                     "if it " +
                                     "was written by a different appender set with a different " +
                                     "EPOC or different roll cycle." +
@@ -552,6 +552,7 @@ public class SingleChronicleQueueExcerpts {
             if (wire != null)
                 store.writeEOF(wire, timeoutMS());
             setCycle2(cycle, true);
+
         }
 
         @Override
@@ -611,8 +612,8 @@ public class SingleChronicleQueueExcerpts {
 
                     System.out.println(store.dump());
 
-                        assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
-                        assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
+                    assert seq1 == seq3 : "seq1=" + seq1 + ", seq3=" + seq3;
+                    assert seq1 == seq2 : "seq1=" + seq1 + ", seq2=" + seq2;
 
                 } else {
               /*      System.out.println("checked Thread=" + Thread.currentThread().getName() +
@@ -1189,16 +1190,16 @@ public class SingleChronicleQueueExcerpts {
             wire.headNumberCheck((actual, position) -> {
                 try {
                     long expecting = store.sequenceForPosition(this, position, false);
-                    if (actual != expecting)
-                        return;
+                    if (actual == expecting)
+                        return true;
                     LOG.error("", new AssertionError("header number check failed " +
-                            "expectingHeaderNumber" + expecting +
-                            " actualHeaderNumber=" + actual) + ", the header number that was " +
-                            "assigned ( the actual ) differs from that in the index ( the " +
-                            "expected )");
+                            "expecting=" + expecting +
+                            "  !=  actual=" + actual));
 
+                    return false;
                 } catch (Exception e) {
                     LOG.error("", e);
+                    return false;
                 }
             });
 
