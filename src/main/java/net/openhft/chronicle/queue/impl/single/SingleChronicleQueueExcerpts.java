@@ -1230,17 +1230,26 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
+            final long oldIndex = this.index;
             try {
                 long index = approximateLastIndex();
 
                 if (direction != TailerDirection.FORWARD)
                     index--;
-                if (index != Long.MIN_VALUE)
-                    moveToIndex(index);
+                if (index != Long.MIN_VALUE) {
+                    if (moveToIndexResult(index) == ScanResult.NOT_FOUND) {
+                        // we found last index on an unwritten cycle
+                        state = FOUND_CYCLE;
+                    }
+                }
                 if (state() == TailerState.CYCLE_NOT_FOUND)
                     state = UNINTIALISED;
                 return this;
             } catch (EOFException e) {
+                Jvm.debug().on(getClass(), "caught EOF while moving to end.");
+                if (oldIndex == this.index) {
+                    Jvm.debug().on(getClass(), "index did not advance. index=" + this.index);
+                }
                 state = END_OF_CYCLE;
                 return this;
             }
