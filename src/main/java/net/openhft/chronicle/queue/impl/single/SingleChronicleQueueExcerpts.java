@@ -1157,13 +1157,15 @@ public class SingleChronicleQueueExcerpts {
          * @return the last index at the time this method was called.
          */
         private long approximateLastIndex() throws EOFException {
+
+            RollCycle rollCycle = queue.rollCycle();
+            final int lastCycle = queue.lastCycle();
             try {
-                RollCycle rollCycle = queue.rollCycle();
-                final int lastCycle = queue.lastCycle();
                 if (lastCycle == Integer.MIN_VALUE)
                     return rollCycle.toIndex(queue.cycle(), 0L);
 
                 final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
+                this.cycle = lastCycle;
                 assert wireStore != null;
 
                 if (store != null)
@@ -1172,13 +1174,16 @@ public class SingleChronicleQueueExcerpts {
                 if (this.store != wireStore) {
                     this.store = wireStore;
                     resetWires();
-                    this.cycle = lastCycle;
                 }
                 // give the position of the last entry and
                 // flag we want to count it even though we don't know if it will be meta data or not.
+
                 long sequenceNumber = store.sequenceForPosition(this, Long.MAX_VALUE, false);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
+            } catch (EOFException e) {
+                this.index = queue.rollCycle().toIndex(queue.cycle(), Long.MAX_VALUE);
+                throw e;
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             }

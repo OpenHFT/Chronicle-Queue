@@ -248,6 +248,8 @@ public class ToEndTest {
         IOTools.shallowDeleteDirWithFiles(baseDir);
     }
 
+    long lastCycle;
+
     @Test
     public void toEndAfterWriteTest() {
         String baseDir = OS.TARGET + "/toEndAfterWriteTest";
@@ -256,14 +258,19 @@ public class ToEndTest {
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(1470757797000L);
 
-        ChronicleQueue wqueue = SingleChronicleQueueBuilder
+        RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(baseDir)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build();
         ExcerptAppender appender = wqueue.acquireAppender();
+
         for (int i = 0; i < 10; i++) {
-            appender.writeText("hi-"+i);
+            try(DocumentContext dc = appender.writingDocument()){
+                dc.wire().write().text("hi-"+i);
+                lastCycle = wqueue.rollCycle().toCycle(dc.index());
+            }
+
             stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
         }
 
@@ -282,7 +289,9 @@ public class ToEndTest {
         assertNull(tailer.readText());
         stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
 
-        assertNull(rqueue.createTailer().toEnd().readText());
+        ExcerptTailer tailer1 = rqueue.createTailer();
+        ExcerptTailer excerptTailer = tailer1.toEnd();
+        assertNull(excerptTailer.readText());
 
         IOTools.shallowDeleteDirWithFiles(baseDir);
     }
