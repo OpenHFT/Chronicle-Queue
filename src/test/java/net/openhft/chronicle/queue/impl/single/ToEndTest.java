@@ -30,7 +30,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,7 +50,7 @@ public class ToEndTest {
     @Before
     public void before() {
         threadDump = new ThreadDump();
-        exceptionKeyIntegerMap = Jvm.recordExceptions(true);
+        exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
     @After
@@ -59,7 +58,7 @@ public class ToEndTest {
         threadDump.assertNoNewThreads();
 
         Jvm.dumpException(exceptionKeyIntegerMap);
-        Assert.assertTrue(exceptionKeyIntegerMap.isEmpty());
+        assertTrue(exceptionKeyIntegerMap.isEmpty());
         Jvm.resetExceptionHandlers();
     }
 
@@ -246,6 +245,45 @@ public class ToEndTest {
             final int j = i;
             appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
         }*/
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+    }
+
+    @Test
+    public void toEndAfterWriteTest() {
+        String baseDir = OS.TARGET + "/toEndAfterWriteTest";
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+
+        final SetTimeProvider stp = new SetTimeProvider();
+        stp.currentTimeMillis(1470757797000L);
+
+        ChronicleQueue wqueue = SingleChronicleQueueBuilder
+                .binary(baseDir)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(stp)
+                .build();
+        ExcerptAppender appender = wqueue.acquireAppender();
+        for (int i = 0; i < 10; i++) {
+            appender.writeText("hi-"+i);
+            stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+        }
+
+        ChronicleQueue rqueue = SingleChronicleQueueBuilder
+                .binary(baseDir)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(stp)
+                .build();
+
+        ExcerptTailer tailer = rqueue.createTailer();
+        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+
+        //noinspection StatementWithEmptyBody
+        while (tailer.readText() != null) ;
+
+        assertNull(tailer.readText());
+        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+
+        assertNull(rqueue.createTailer().toEnd().readText());
+
         IOTools.shallowDeleteDirWithFiles(baseDir);
     }
 
