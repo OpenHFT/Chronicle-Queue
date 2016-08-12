@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.TimeZone;
 import java.util.function.Consumer;
 
 /**
@@ -65,6 +66,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
 
     @NotNull
     B rollCycle(@NotNull RollCycle rollCycle);
+
+    void timeZone(TimeZone timeZone);
 
     long bufferCapacity();
 
