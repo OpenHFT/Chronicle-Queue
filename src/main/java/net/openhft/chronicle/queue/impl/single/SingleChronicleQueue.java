@@ -43,6 +43,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -357,8 +358,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         closers.add(closer);
     }
 
+
+    volatile AtomicBoolean isClosed = new AtomicBoolean();
+
+    @Override
+    public boolean isClosed() {
+        return isClosed.get();
+    }
+
     @Override
     public void close() {
+        if (isClosed.getAndSet(true))
+            return;
         closers.forEach(Runnable::run);
         this.pool.close();
     }
