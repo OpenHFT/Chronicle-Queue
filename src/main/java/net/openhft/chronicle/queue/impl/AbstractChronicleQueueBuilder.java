@@ -74,6 +74,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private StoreFileListener storeFileListener = (cycle, file) -> {
         Jvm.debug().on(getClass(), "File released " + file);
     };
+    private boolean readOnly = false;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -332,6 +333,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public B recoverySupplier(StoreRecoveryFactory recoverySupplier) {
         this.recoverySupplier = recoverySupplier;
+        return (B) this;
+    }
+
+    @Override
+    public boolean readOnly() {
+        return readOnly;
+    }
+
+    @Override
+    public B readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
         return (B) this;
     }
 

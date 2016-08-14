@@ -82,6 +82,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
+    private final boolean readOnly;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private ThreadLocal<ExcerptContext> tlTailer;
@@ -108,6 +109,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         storeFactory = builder.storeFactory();
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
+        readOnly = builder.readOnly();
         tlTailer = ThreadLocal.withInitial(() -> new SingleChronicleQueueExcerpts.StoreTailer(this));
     }
 
@@ -247,6 +249,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public ExcerptAppender acquireAppender() {
+        if (readOnly) {
+            throw new IllegalStateException("Can't append to a read-only chronicle");
+        }
         return excerptAppenderThreadLocal.get();
     }
 
@@ -478,7 +483,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private MappedBytes mappedBytes(File cycleFile) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
+        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, readOnly);
     }
 
     private int toCycle(Map.Entry<Long, File> entry) throws ParseException {
@@ -522,7 +527,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
                 WireStore wireStore;
-                if (wire.writeFirstHeader()) {
+                if ((! readOnly) && wire.writeFirstHeader()) {
                     wireStore = storeFactory.apply(that, wire);
                     wire.updateFirstHeader();
                 } else {
