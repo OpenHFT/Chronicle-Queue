@@ -237,12 +237,7 @@ public class SingleChronicleQueueExcerpts {
                     return;
                 }
 
-
                 final long headerNumber = store.sequenceForPosition(this, position, true);
-//                Thread.yield();
-//                long headerNumber2 = store.sequenceForPosition(this, position);
-//                assert headerNumber == headerNumber2;
-//                System.err.println("==== " + Thread.currentThread().getName()+" pos: "+position+" hdr: "+headerNumber);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
 
@@ -515,7 +510,17 @@ public class SingleChronicleQueueExcerpts {
             return queue;
         }
 
-        private <T> void append(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException {
+        /**
+         * overwritten in delta wire
+         *
+         * @param wire
+         * @param index
+         */
+        void beforeAppend(Wire wire, long index) {
+        }
+
+        private <T> void append(int length, WireWriter<T> wireWriter, T writer) throws
+                UnrecoverableTimeoutException {
 
             assert checkAppendingThread();
             try {
@@ -525,6 +530,8 @@ public class SingleChronicleQueueExcerpts {
 
                 try {
                     position(store.writeHeader(wire, length, timeoutMS()));
+                    assert ((AbstractWire) wire).isInsideHeader();
+                    beforeAppend(wire, wire.headerNumber() + 1);
                     wireWriter.write(writer, wire);
                     wire.updateHeader(length, position, false);
                     lastIndex(wire.headerNumber());
@@ -555,16 +562,20 @@ public class SingleChronicleQueueExcerpts {
 
         }
 
-        @Override
+        /**
+         * Write an EOF marker on the current cycle if it is about to roll. It would do this any way
+         * if a new message wis written, but this doesn't create a new cycle or add a message.
+         */
         public void writeEndOfCycleIfRequired() {
             if (wire != null && queue.cycle() != cycle)
                 store.writeEOF(wire, timeoutMS());
         }
 
-        private <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
+        <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws
+                UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1), true);
             position(store.writeHeader(wire, length, timeoutMS()));
-
+            beforeAppend(wire, wire.headerNumber() + 1);
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
         }

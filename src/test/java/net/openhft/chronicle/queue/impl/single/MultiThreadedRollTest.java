@@ -1,9 +1,9 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
@@ -67,7 +67,8 @@ public class MultiThreadedRollTest {
         });
 
         timeProvider.currentTimeMillis(2000);
-        wqueue.acquireAppender().writeEndOfCycleIfRequired();
+        ((SingleChronicleQueueExcerpts.StoreAppender)  wqueue.acquireAppender())
+        .writeEndOfCycleIfRequired();
         Jvm.pause(200);
         wqueue.acquireAppender().writeText("hello world");
         f.get();
