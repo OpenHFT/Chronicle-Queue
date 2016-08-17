@@ -1153,6 +1153,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testDocumentIndexTest() {
+        try (final SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(this.wireType)
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.acquireAppender();
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                long index = dc.index();
+                Assert.assertEquals(0, chronicle.rollCycle().toSequenceNumber(index));
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+            }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                Assert.assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()));
+                dc.wire().write(() -> "FirstName").text("Rob");
+            }
+        }
+    }
+
+
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())

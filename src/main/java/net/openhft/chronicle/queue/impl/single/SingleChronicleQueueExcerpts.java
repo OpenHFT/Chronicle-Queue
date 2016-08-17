@@ -723,7 +723,7 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
 
-                return isMetaData() ? wire.headerNumber() : wire.headerNumber() + 1;
+                return isMetaData() ? Long.MIN_VALUE : wire.headerNumber()+1;
             }
 
             @Override
