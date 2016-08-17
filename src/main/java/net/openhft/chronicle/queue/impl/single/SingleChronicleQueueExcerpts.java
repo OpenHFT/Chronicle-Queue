@@ -685,11 +685,12 @@ public class SingleChronicleQueueExcerpts {
 
                         wire.updateHeader(position, metaData);
 
-                        lastIndex(wire.headerNumber());
+
                         lastPosition = position;
                         lastCycle = cycle;
 
                         if (!metaData) {
+                            lastIndex(wire.headerNumber());
                             store.writePosition(position);
                             if (lastIndex != Long.MIN_VALUE)
                                 writeIndexForPosition(lastIndex, position);

@@ -1038,10 +1038,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             long index;
             try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
                 dc.wire().write(() -> "FirstName").text("Quartilla");
                 index = dc.index();
             }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.metaData(true);
+                dc.wire().write(() -> "FirstName").text("Quartilla");
+            }
+
 
             Assert.assertEquals(index, appender.lastIndexAppended());
         }
