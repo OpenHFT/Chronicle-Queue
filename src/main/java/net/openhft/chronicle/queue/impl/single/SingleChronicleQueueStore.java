@@ -58,6 +58,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private final ReferenceCounter refCount;
     private final StoreRecovery recovery;
 
+    private LongValue deltaCheckpointInterval;
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
 
@@ -73,6 +74,7 @@ public class SingleChronicleQueueStore implements WireStore {
             this.wireType = wire.read(MetaDataField.wireType).object(WireType.class);
             assert wireType != null;
             this.writePosition = wire.newLongReference();
+
             wire.read(MetaDataField.writePosition).int64(writePosition);
             this.roll = wire.read(MetaDataField.roll).typedMarshallable();
 
@@ -95,10 +97,19 @@ public class SingleChronicleQueueStore implements WireStore {
             } else {
                 this.recovery = new SimpleStoreRecovery(); // disabled.
             }
+
+            if (wire.bytes().readRemaining() > 0) {
+                this.deltaCheckpointInterval = wire.read(MetaDataField.deltaCheckpointInterval)
+                        .int64ForBinding(null);
+            } else {
+                this.deltaCheckpointInterval = null; // disabled.
+            }
+
         } finally {
             assert wire.endUse();
         }
     }
+
 
     /**
      * @param rollCycle    the current rollCycle
@@ -109,13 +120,13 @@ public class SingleChronicleQueueStore implements WireStore {
      * @param indexSpacing the spacing between indexed entries.
      * @param recovery
      */
-    SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
-                              @NotNull final WireType wireType,
-                              @NotNull MappedBytes mappedBytes,
-                              long epoch,
-                              int indexCount,
-                              int indexSpacing,
-                              StoreRecovery recovery) {
+    public SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
+                                     @NotNull final WireType wireType,
+                                     @NotNull MappedBytes mappedBytes,
+                                     long epoch,
+                                     int indexCount,
+                                     int indexSpacing,
+                                     StoreRecovery recovery) {
         this.recovery = recovery;
         this.roll = new SCQRoll(rollCycle, epoch);
         this.wireType = wireType;
@@ -128,6 +139,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
+        this.deltaCheckpointInterval = wireType.newLongReference().get();
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
     }
 
@@ -257,6 +269,7 @@ public class SingleChronicleQueueStore implements WireStore {
         return "SingleChronicleQueueStore{" +
                 "indexing=" + indexing +
                 ", wireType=" + wireType +
+                ", checkpointInterval=" + this.deltaCheckpointInterval.getValue() +
                 ", roll=" + roll +
                 ", writePosition=" + writePosition +
                 ", mappedFile=" + mappedFile +
@@ -282,9 +295,11 @@ public class SingleChronicleQueueStore implements WireStore {
                 .write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
-                .write(MetaDataField.lastAcknowledgedIndexReplicated)
-                .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
+                .write(MetaDataField.lastAcknowledgedIndexReplicated).
+                int64forBinding(-1L, lastAcknowledgedIndexReplicated);
+
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
+        wire.write(MetaDataField.deltaCheckpointInterval).int64forBinding(-1L, this.deltaCheckpointInterval);
     }
 
     @Override
@@ -318,13 +333,24 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
+    @Override
+    public long deltaCheckpointInterval() {
+        LongValue deltaCheckpointInterval0 = deltaCheckpointInterval;
+
+        if (deltaCheckpointInterval0 == null)
+            return -1;
+
+        return deltaCheckpointInterval.getValue();
+    }
+
     enum MetaDataField implements WireKey {
         wireType,
         writePosition,
         roll,
         indexing,
         lastAcknowledgedIndexReplicated,
-        recovery;
+        recovery,
+        deltaCheckpointInterval;
 
         @Nullable
         @Override
@@ -332,5 +358,8 @@ public class SingleChronicleQueueStore implements WireStore {
             throw new IORuntimeException("field " + name() + " required");
         }
     }
+
+
 }
+
 

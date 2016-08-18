@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
@@ -78,6 +79,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
+    private int deltaCheckpointInterval;
     @NotNull
     private final TimeProvider time;
     @NotNull
@@ -107,6 +109,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         pauserSupplier = builder.pauserSupplier();
         timeoutMS = builder.timeoutMS();
         storeFactory = builder.storeFactory();
+
+        if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
+            try {
+                Method deltaCheckpointInterval = builder.getClass().getDeclaredMethod
+                        ("deltaCheckpointInterval");
+                deltaCheckpointInterval.setAccessible(true);
+                this.deltaCheckpointInterval = (Integer) deltaCheckpointInterval.invoke(builder);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
         tlTailer = ThreadLocal.withInitial(() -> new SingleChronicleQueueExcerpts.StoreTailer(this));
@@ -226,6 +240,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @Override
     public StoreRecoveryFactory recoverySupplier() {
         return recoverySupplier;
+    }
+
+    @Override
+    public int deltaCheckpointInterval() {
+        return deltaCheckpointInterval;
     }
 
     /**

@@ -26,6 +26,7 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
@@ -334,6 +335,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.recoverySupplier = recoverySupplier;
         return (B) this;
     }
+
+
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
         NONE;

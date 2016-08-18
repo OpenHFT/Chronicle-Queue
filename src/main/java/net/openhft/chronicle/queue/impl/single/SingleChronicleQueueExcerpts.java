@@ -72,7 +72,7 @@ public class SingleChronicleQueueExcerpts {
         private final StoreAppenderContext context;
 
         private int cycle = Integer.MIN_VALUE;
-        private WireStore store;
+        WireStore store;
         private Wire wire;
         private Wire bufferWire; // if you have a buffered write.
         private Wire wireForIndex;
@@ -724,7 +724,7 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
 
-                return isMetaData() ? Long.MIN_VALUE : wire.headerNumber()+1;
+                return isMetaData() ? Long.MIN_VALUE : wire.headerNumber() + 1;
             }
 
             @Override
