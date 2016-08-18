@@ -50,10 +50,8 @@ public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
 
     @FunctionalInterface
-    public interface WireWriter<T> {
-        void write(
-                T message,
-                WireOut wireOut);
+    interface WireWriter<T> {
+        void write(T message, WireOut wireOut);
     }
 
     // *************************************************************************
@@ -70,9 +68,8 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreAppenderContext context;
-
-        private int cycle = Integer.MIN_VALUE;
         WireStore store;
+        private int cycle = Integer.MIN_VALUE;
         private Wire wire;
         private Wire bufferWire; // if you have a buffered write.
         private Wire wireForIndex;
@@ -713,18 +710,18 @@ public class SingleChronicleQueueExcerpts {
 
             @Override
             public long index() throws IORuntimeException {
-                if (wire.headerNumber() == Long.MIN_VALUE) {
+                if (this.wire.headerNumber() == Long.MIN_VALUE) {
                     try {
                         long headerNumber0 = queue.rollCycle().toIndex(cycle, store
                                 .sequenceForPosition(StoreAppender.this, position, false));
-                        assert (((AbstractWire) wire).isInsideHeader());
+                        assert (((AbstractWire) this.wire).isInsideHeader());
                         return isMetaData() ? headerNumber0 : headerNumber0 + 1;
                     } catch (IOException e) {
                         throw new IORuntimeException(e);
                     }
                 }
 
-                return isMetaData() ? Long.MIN_VALUE : wire.headerNumber() + 1;
+                return isMetaData() ? Long.MIN_VALUE : this.wire.headerNumber() + 1;
             }
 
             @Override
@@ -747,9 +744,9 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
+        long index; // index of the next read.
+        WireStore store;
         private int cycle;
-        private long index; // index of the next read.
-        private WireStore store;
         private TailerDirection direction = TailerDirection.FORWARD;
         private boolean lazyIndexing = false;
         private int indexSpacingMask;
@@ -764,6 +761,13 @@ public class SingleChronicleQueueExcerpts {
             queue.addCloseListener(StoreTailer.this::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             toStart();
+        }
+
+        private static boolean isReadOnly(Bytes bytes) {
+            if (bytes instanceof MappedBytes)
+                return !((MappedBytes) bytes).mappedFile().file().canWrite();
+            else
+                return false;
         }
 
         private void close() {
@@ -829,7 +833,6 @@ public class SingleChronicleQueueExcerpts {
             }
             return NoDocumentContext.INSTANCE;
         }
-
 
         private boolean next(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
             for (int i = 0; i < 1000; i++) {
@@ -931,14 +934,6 @@ public class SingleChronicleQueueExcerpts {
             }
 
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
-        }
-
-
-        private static boolean isReadOnly(Bytes bytes) {
-            if (bytes instanceof MappedBytes)
-                return !((MappedBytes) bytes).mappedFile().file().canWrite();
-            else
-                return false;
         }
 
         private boolean inAnCycle(boolean includeMetaData) throws EOFException,
@@ -1092,7 +1087,7 @@ public class SingleChronicleQueueExcerpts {
          */
         @Override
         public long index() {
-            return index;
+            return this.index;
         }
 
         @Override
@@ -1109,14 +1104,6 @@ public class SingleChronicleQueueExcerpts {
         ScanResult moveToIndexResult(long index) {
             final int cycle = queue.rollCycle().toCycle(index);
             final long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
-            return moveToIndex(cycle, sequenceNumber, index);
-        }
-
-        ScanResult moveToIndex(int cycle, long sequenceNumber) {
-            return moveToIndex(cycle, sequenceNumber, queue.rollCycle().toIndex(cycle, sequenceNumber));
-        }
-
-        ScanResult moveToIndex(int cycle, long sequenceNumber, long index) {
             if (LOG.isDebugEnabled()) {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -1127,7 +1114,7 @@ public class SingleChronicleQueueExcerpts {
                     return ScanResult.NOT_REACHED;
             }
 
-            this.index = index;
+            index(index);
             ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
             Bytes<?> bytes = wire().bytes();
             if (scanResult == FOUND) {
@@ -1154,7 +1141,7 @@ public class SingleChronicleQueueExcerpts {
                 if (found)
                     state = FOUND_CYCLE;
             }
-            index = queue.rollCycle().toIndex(cycle, 0);
+            index(queue.rollCycle().toIndex(cycle, 0));
             state = FOUND_CYCLE;
             if (wire() != null)
                 wire().bytes().readPosition(0);
@@ -1194,7 +1181,7 @@ public class SingleChronicleQueueExcerpts {
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
             } catch (EOFException e) {
-                this.index = queue.rollCycle().toIndex(queue.cycle(), Long.MAX_VALUE);
+                this.index(queue.rollCycle().toIndex(queue.cycle(), Long.MAX_VALUE));
                 throw e;
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
@@ -1299,7 +1286,7 @@ public class SingleChronicleQueueExcerpts {
                 seq = 0;
             } else if (seq < 0) {
                 if (seq == -1) {
-                    this.index = rollCycle.toIndex(cycle - 1, seq);
+                    this.index(rollCycle.toIndex(cycle - 1, seq));
                     this.state = BEHOND_START_OF_CYCLE;
                     return;
                 } else {
@@ -1308,7 +1295,12 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
 
-            this.index = rollCycle.toIndex(cycle, seq);
+            this.index(rollCycle.toIndex(cycle, seq));
+        }
+
+        // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
+        void index(long index) {
+            this.index = index;
         }
 
         private boolean cycle(final int cycle, boolean createIfAbsent) {
@@ -1316,7 +1308,6 @@ public class SingleChronicleQueueExcerpts {
                 return true;
 
             WireStore nextStore = this.queue.storeForCycle(cycle, queue.epoch(), createIfAbsent);
-
 
             if (nextStore == null && this.store == null)
                 return false;

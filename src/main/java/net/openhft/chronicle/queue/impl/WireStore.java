@@ -78,5 +78,5 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
 
-    long deltaCheckpointInterval();
+    int deltaCheckpointInterval();
 }
