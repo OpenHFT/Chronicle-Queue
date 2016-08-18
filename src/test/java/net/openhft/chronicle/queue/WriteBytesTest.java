@@ -78,16 +78,16 @@ public class WriteBytesTest {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 32,\n" +
                     "    indexSpacing: 4,\n" +
-                    "    index2Index: 381,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 256\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
                     "    timeStamp: 0\n" +
                     "  },\n" +
-                    "  deltaCheckpointInterval: !int -1\n" +
+                    "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 381, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 32, used: 2\n" +
@@ -186,12 +186,12 @@ public class WriteBytesTest {
                     "00000430 89 88 88 88 88 88 88 88                          ········         \n" +
                     "# position: 1080, header: 10\n" +
                     "--- !!data #binary\n" +
-                    "!!binary eQEAQLkGaA==\n" +
+                    "!!binary dQEAQLkGaA==\n" +
                     "\n" +
                     "# position: 1092, header: 11\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x8B\n" +
-                    "!!binary eQEAQLkG\n" +
+                    "!!binary dQEAQLkG\n" +
                     "\n" +
                     "# position: 1104, header: 12\n" +
                     "--- !!data #binary\n" +

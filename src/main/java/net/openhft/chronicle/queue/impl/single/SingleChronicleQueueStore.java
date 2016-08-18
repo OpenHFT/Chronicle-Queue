@@ -24,7 +24,6 @@ import net.openhft.chronicle.core.ReferenceCounter;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
-import net.openhft.chronicle.core.values.IntValue;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -59,7 +58,7 @@ public class SingleChronicleQueueStore implements WireStore {
     private final ReferenceCounter refCount;
     private final StoreRecovery recovery;
 
-    private IntValue deltaCheckpointInterval;
+    private int deltaCheckpointInterval;
     @Nullable
     private LongValue lastAcknowledgedIndexReplicated;
 
@@ -100,9 +99,9 @@ public class SingleChronicleQueueStore implements WireStore {
 
             if (wire.bytes().readRemaining() > 0) {
                 this.deltaCheckpointInterval = wire.read(MetaDataField.deltaCheckpointInterval)
-                        .int32ForBinding(null);
+                        .int32();
             } else {
-                this.deltaCheckpointInterval = null; // disabled.
+                this.deltaCheckpointInterval = -1; // disabled.
             }
 
         } finally {
@@ -112,13 +111,15 @@ public class SingleChronicleQueueStore implements WireStore {
 
 
     /**
-     * @param rollCycle    the current rollCycle
-     * @param wireType     the wire type that is being used
-     * @param mappedBytes  used to mapped the data store file
-     * @param epoch        sets an epoch offset as the number of number of milliseconds since
-     * @param indexCount   the number of entries in each index.
-     * @param indexSpacing the spacing between indexed entries.
+     * @param rollCycle               the current rollCycle
+     * @param wireType                the wire type that is being used
+     * @param mappedBytes             used to mapped the data store file
+     * @param epoch                   sets an epoch offset as the number of number of milliseconds
+     *                                since
+     * @param indexCount              the number of entries in each index.
+     * @param indexSpacing            the spacing between indexed entries.
      * @param recovery
+     * @param deltaCheckpointInterval
      */
     public SingleChronicleQueueStore(@Nullable RollCycle rollCycle,
                                      @NotNull final WireType wireType,
@@ -126,7 +127,8 @@ public class SingleChronicleQueueStore implements WireStore {
                                      long epoch,
                                      int indexCount,
                                      int indexSpacing,
-                                     StoreRecovery recovery) {
+                                     StoreRecovery recovery,
+                                     int deltaCheckpointInterval) {
         this.recovery = recovery;
         this.roll = new SCQRoll(rollCycle, epoch);
         this.wireType = wireType;
@@ -140,7 +142,7 @@ public class SingleChronicleQueueStore implements WireStore {
         this.indexing = new SCQIndexing(wireType, indexCount, indexSpacing);
         this.indexing.writePosition = this.writePosition = wireType.newLongReference().get();
         this.lastAcknowledgedIndexReplicated = wireType.newLongReference().get();
-        this.deltaCheckpointInterval = wireType.newIntReference().get();
+        this.deltaCheckpointInterval = deltaCheckpointInterval;
     }
 
     public static void dumpStore(Wire wire) {
@@ -269,7 +271,7 @@ public class SingleChronicleQueueStore implements WireStore {
         return "SingleChronicleQueueStore{" +
                 "indexing=" + indexing +
                 ", wireType=" + wireType +
-                ", checkpointInterval=" + this.deltaCheckpointInterval.getValue() +
+                ", checkpointInterval=" + this.deltaCheckpointInterval +
                 ", roll=" + roll +
                 ", writePosition=" + writePosition +
                 ", mappedFile=" + mappedFile +
@@ -298,7 +300,7 @@ public class SingleChronicleQueueStore implements WireStore {
                 .write(MetaDataField.lastAcknowledgedIndexReplicated)
                 .int64forBinding(-1L, lastAcknowledgedIndexReplicated);
         wire.write(MetaDataField.recovery).typedMarshallable(recovery);
-        wire.write(MetaDataField.deltaCheckpointInterval).int32forBinding(-1, this.deltaCheckpointInterval);
+        wire.write(MetaDataField.deltaCheckpointInterval).int32(this.deltaCheckpointInterval);
     }
 
     @Override
@@ -334,12 +336,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public int deltaCheckpointInterval() {
-        IntValue deltaCheckpointInterval0 = deltaCheckpointInterval;
-
-        if (deltaCheckpointInterval0 == null)
-            return -1;
-
-        return deltaCheckpointInterval.getValue();
+        return deltaCheckpointInterval;
     }
 
     enum MetaDataField implements WireKey {
