@@ -109,7 +109,6 @@ public class SingleChronicleQueueStore implements WireStore {
         }
     }
 
-
     /**
      * @param rollCycle               the current rollCycle
      * @param wireType                the wire type that is being used
@@ -154,6 +153,14 @@ public class SingleChronicleQueueStore implements WireStore {
     public static String dump(String directoryFilePath) {
         SingleChronicleQueue q = SingleChronicleQueueBuilder.binary(directoryFilePath).build();
         return q.dump();
+    }
+
+    /**
+     * @return the type of wire used
+     */
+    @Override
+    public WireType wireType() {
+        return wireType;
     }
 
     @Override
@@ -354,5 +361,7 @@ public class SingleChronicleQueueStore implements WireStore {
             throw new IORuntimeException("field " + name() + " required");
         }
     }
+
+
 }
 
