@@ -1114,8 +1114,13 @@ public class SingleChronicleQueueExcerpts {
                     return ScanResult.NOT_REACHED;
             }
 
+            ScanResult scanResult = FOUND;
+
+
             index(index);
-            ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
+
+            scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
+
             Bytes<?> bytes = wire().bytes();
             if (scanResult == FOUND) {
                 state = FOUND_CYCLE;
@@ -1155,6 +1160,7 @@ public class SingleChronicleQueueExcerpts {
          *
          * @return the last index at the time this method was called.
          */
+
         private long approximateLastIndex() throws EOFException {
 
             RollCycle rollCycle = queue.rollCycle();
@@ -1295,7 +1301,7 @@ public class SingleChronicleQueueExcerpts {
                 }
             }
 
-            this.index(rollCycle.toIndex(cycle, seq));
+            this.index = rollCycle.toIndex(cycle, seq);
         }
 
         // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
