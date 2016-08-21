@@ -60,10 +60,15 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
+
+    public interface InternalAppender {
+        void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException;
+    }
+
     /**
      * // StoreAppender
      */
-    static class StoreAppender implements ExcerptAppender, ExcerptContext {
+    static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
         static final int HEAD_ROOM = 1 << 20;
         @NotNull
         private final SingleChronicleQueue queue;
@@ -1114,12 +1119,8 @@ public class SingleChronicleQueueExcerpts {
                     return ScanResult.NOT_REACHED;
             }
 
-            ScanResult scanResult = FOUND;
-
-
             index(index);
-
-            scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
+            ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
 
             Bytes<?> bytes = wire().bytes();
             if (scanResult == FOUND) {

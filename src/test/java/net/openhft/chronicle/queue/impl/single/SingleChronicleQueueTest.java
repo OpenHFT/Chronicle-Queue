@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
@@ -1654,8 +1655,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-            ExcerptAppender sync = syncQ.acquireAppender();
 
+            InternalAppender sync = (InternalAppender) syncQ.acquireAppender();
             try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .build()) {
