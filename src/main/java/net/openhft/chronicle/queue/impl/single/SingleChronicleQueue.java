@@ -482,6 +482,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     void onRoll(int cycle) {
         if (lastCycle < cycle)
             lastCycle = cycle;
+        if (firstCycle > cycle)
+            firstCycle = cycle;
     }
 
     @Override
