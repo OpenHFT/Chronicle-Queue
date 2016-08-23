@@ -425,12 +425,27 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
-        @Nullable
-        final String[] files = getList();
+        // we use this to double check the result
+        long lastCycle0;
+        long fistCycle0;
 
-        if (files == null)
-            return;
+        do {
+            final String[] files = getList();
 
+            if (files == null)
+                return;
+
+            fistCycle0 = firstCycle;
+            lastCycle0 = lastCycle;
+            setFirstLastCycle(files);
+
+        } while (fistCycle0 != firstCycle || lastCycle0 != lastCycle);
+
+
+        firstAndLastCycleTime = now;
+    }
+
+    private void setFirstLastCycle(String[] files) {
         for (String file : files) {
             try {
                 if (!file.endsWith(SUFFIX))
@@ -448,7 +463,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 // ignored
             }
         }
-        //   firstAndLastCycleTime = now;
     }
 
     public int firstCycle() {
