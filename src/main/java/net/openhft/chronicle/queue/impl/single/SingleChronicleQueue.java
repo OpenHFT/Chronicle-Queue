@@ -448,7 +448,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 // ignored
             }
         }
-        firstAndLastCycleTime = now;
+        //   firstAndLastCycleTime = now;
     }
 
     public int firstCycle() {
