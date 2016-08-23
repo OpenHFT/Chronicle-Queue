@@ -422,11 +422,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (now == firstAndLastCycleTime)
             return;
 
-        firstAndLastCycleTime = now;
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
-        @Nullable final String[] files = getList();
+        @Nullable
+        final String[] files = getList();
 
         if (files == null)
             return;
@@ -448,6 +448,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 // ignored
             }
         }
+        firstAndLastCycleTime = now;
     }
 
     public int firstCycle() {
