@@ -432,8 +432,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         do {
             final String[] files = getList();
 
-            if (files == null)
+            if (files == null) {
+                firstCycle = Integer.MAX_VALUE;
+                lastCycle = Integer.MIN_VALUE;
                 return;
+            }
 
             fistCycle0 = firstCycle;
             lastCycle0 = lastCycle;
