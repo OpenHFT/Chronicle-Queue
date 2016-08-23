@@ -79,16 +79,17 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final long bufferCapacity;
     private final int indexSpacing;
     private final int indexCount;
-    private int deltaCheckpointInterval;
     @NotNull
     private final TimeProvider time;
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
+    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
+    volatile AtomicBoolean isClosed = new AtomicBoolean();
+    private int deltaCheckpointInterval;
     private ThreadLocal<ExcerptContext> tlTailer;
-    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -377,9 +378,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         closers.add(closer);
     }
 
-
-    volatile AtomicBoolean isClosed = new AtomicBoolean();
-
     @Override
     public boolean isClosed() {
         return isClosed.get();
@@ -398,9 +396,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.pool.release(store);
     }
 
-//    long lastPathListTime = 0;
-//    String[] lastPathList = null;
-
     @Override
     public final int cycle() {
         return this.rollCycle.current(time, epoch);
@@ -408,7 +403,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
-        // TODO - as discuessed, peter is going find another way to do this as this solution
+        // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
         int cycle = firstCycle();
@@ -419,12 +414,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     String[] getList() {
-//        final long now = time.currentTimeMillis();
-//        if (lastPathListTime + 10 > now) {
-//            return lastPathList;
-//        }
-//        lastPathListTime = now;
-//        return lastPathList = path.list();
         return path.list();
     }
 
@@ -433,14 +422,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (now == firstAndLastCycleTime)
             return;
 
+        firstAndLastCycleTime = now;
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
         @Nullable final String[] files = getList();
 
-        if (files == null) {
+        if (files == null)
             return;
-        }
 
         for (String file : files) {
             try {
