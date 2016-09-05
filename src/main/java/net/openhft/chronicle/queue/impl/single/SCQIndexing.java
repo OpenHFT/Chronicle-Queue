@@ -200,19 +200,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     long newIndex(StoreRecovery recovery, ExcerptContext ec, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException, TimeoutException {
         try {
             if (index2Index.compareAndSet(index2, NOT_INITIALIZED, BinaryLongReference.LONG_NOT_COMPLETE)) {
-                System.out.println("newIndex : A - index2=" + index2 + ",value=" + index2Index
-                        .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
+                //     System.out.println("newIndex : A - index2=" + index2 + ",value=" + index2Index
+                //           .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                //         .hashCode());
                 long pos = newIndex(recovery, ec, false, timeoutMS);
                 if (pos < 0)
                     throw new IllegalStateException("pos: " + pos);
 
-                System.out.println("newIndex : B - index2=" + index2 + ",value=" + index2Index
-                        .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
+                //   System.out.println("newIndex : B - index2=" + index2 + ",value=" + index2Index
+                //         .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                //       .hashCode());
 
                 if (index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, pos)) {
                     index2Index.setMaxUsed(index2 + 1);
-                    System.out.println("newIndex : C - index2=" + index2 + ",value=" + index2Index
-                            .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
+                    ///        System.out.println("newIndex : C - index2=" + index2 + ",value=" +
+                    //     // index2Index
+                    //           .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                    //              .hashCode());
                     return pos;
                 }
                 throw new IllegalStateException("Index " + index2 + " in index2index was altered");
@@ -230,8 +234,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         } catch (Exception e) {
             // reset the index as failed to add it.
             index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, NOT_INITIALIZED);
-            System.out.println("newIndex : D - index2=" + index2 + ",value=" + index2Index
-                    .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
+            //  System.out.println("newIndex : D - index2=" + index2 + ",value=" + index2Index
+            //        .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
             throw e;
         }
     }
