@@ -74,7 +74,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-//                {WireType.TEXT},
+                //                {WireType.TEXT},
                 {WireType.BINARY}
                 //{ WireType.FIELDLESS_BINARY }
         });
@@ -1370,7 +1370,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-//    @Ignore("Not sure it is useful")
+    //    @Ignore("Not sure it is useful")
     public void testReadWrite() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
@@ -1624,7 +1624,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
-//            System.out.println(chronicle.dump());
+            //            System.out.println(chronicle.dump());
             Assert.assertEquals(nextIndexToWrite,
                     appender.lastIndexAppended());
         }
@@ -1775,19 +1775,27 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String text = sb.toString();
 
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .rollCycle(TEST_SECONDLY)
-                .build()) {
+        for (int i = 0; i < 20; i++) {
 
-            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
-            final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
+            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(this.wireType)
+                    .rollCycle(MINUTELY)
+                    .build()) {
 
-            int size = 20_000_000;
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> {
+                    final ExcerptAppender appender = q.acquireAppender();
+                    appender.padToCacheAlign(true);
+                    return appender;
+                });
+                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-            IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
+                int size = 20_000_000;
 
-            System.out.println(".");
+                IntStream.range(0, size).parallel().forEach(j -> doSomthing(tl, tlt, text));
+
+                System.out.println(". " + i);
+                Jvm.pause(1000);
+            }
         }
 
     }
@@ -1912,14 +1920,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (DocumentContext dc = tlt.get().readingDocument()) {
             if (!dc.isPresent())
                 return;
-            Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+            // Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
+            Assert.assertEquals(123, dc.wire().read(() -> "key").int64());
             Assert.assertEquals(text, dc.wire().read(() -> "text").text());
         }
     }
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl, String text) {
         try (DocumentContext dc = tl.get().writingDocument()) {
-            long index = dc.index();
+            // long index = dc.index();
+            long index = 123;
             dc.wire().write("key").int64(index);
             dc.wire().write("text").text(text);
         }
