@@ -1774,8 +1774,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-
-
         for (int i = 0; i < 20; i++) {
             ExecutorService executor = Executors.newWorkStealingPool(8);
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -1925,16 +1923,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (DocumentContext dc = tlt.get().readingDocument()) {
             if (!dc.isPresent())
                 return;
-            // Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
-            Assert.assertEquals(123, dc.wire().read(() -> "key").int64());
+            Assert.assertEquals(dc.index(), dc.wire().read(() -> "key").int64());
             Assert.assertEquals(text, dc.wire().read(() -> "text").text());
         }
     }
 
     private void writeTestDocument(ThreadLocal<ExcerptAppender> tl, String text) {
         try (DocumentContext dc = tl.get().writingDocument()) {
-            // long index = dc.index();
-            long index = 123;
+            long index = dc.index();
             dc.wire().write("key").int64(index);
             dc.wire().write("text").text(text);
         }
