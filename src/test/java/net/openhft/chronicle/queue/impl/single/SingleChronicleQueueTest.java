@@ -1775,8 +1775,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String text = sb.toString();
 
 
-        for (int i = 0; i < 20; i++) {
 
+        for (int i = 0; i < 20; i++) {
+            ExecutorService executor = Executors.newWorkStealingPool(8);
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .rollCycle(MINUTELY)
@@ -1791,8 +1792,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 int size = 20_000_000;
 
-                IntStream.range(0, size).parallel().forEach(j -> doSomthing(tl, tlt, text));
+                for (int j = 0; j < size; j++) {
+                    executor.execute(() -> doSomthing(tl, tlt, text));
+                }
 
+                executor.shutdown();
+                executor.awaitTermination(10_000, TimeUnit.SECONDS);
                 System.out.println(". " + i);
                 Jvm.pause(1000);
             }
