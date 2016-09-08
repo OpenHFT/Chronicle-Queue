@@ -86,12 +86,20 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         private long lastTouchedPage = -1;
         private long lastTouchedPos = 0;
-        private boolean padToCacheAlign;
+        private boolean padToCacheAlign = true;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
             queue.addCloseListener(StoreAppender.this::close);
             context = new StoreAppenderContext();
+        }
+
+
+        @Override
+        public void writeText(CharSequence text) throws UnrecoverableTimeoutException {
+            try (DocumentContext dc = writingDocument()) {
+                dc.wire().bytes().append8bit(text);
+            }
         }
 
         private void close() {
@@ -103,6 +111,13 @@ public class SingleChronicleQueueExcerpts {
                 w.bytes().release();
         }
 
+        /**
+         * only set to false in latency sensitive implementation, where you are only using a
+         * single queue appender
+         *
+         * @param padToCacheAlign if {@code true}, if near the end of a cache line, pad it so a
+         *                        following 4-byte int value will not split a cache line.
+         */
         @Override
         public void padToCacheAlign(boolean padToCacheAlign) {
             this.padToCacheAlign = padToCacheAlign;
@@ -686,7 +701,6 @@ public class SingleChronicleQueueExcerpts {
                             wire.padToCacheAlign();
 
                         wire.updateHeader(position, metaData);
-
 
                         lastPosition = position;
                         lastCycle = cycle;
