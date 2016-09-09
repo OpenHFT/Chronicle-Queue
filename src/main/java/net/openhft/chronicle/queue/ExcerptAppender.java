@@ -47,6 +47,7 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
         throw new UnsupportedOperationException();
     }
 */
+
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
      *
@@ -78,10 +79,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will not split a cache line.
+     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will
+     * not split a cache line.
      */
-    void padToCacheAlign(boolean padToCacheAlign);
+    void padToCacheAlign(Padding padToCacheAlign);
 
-    boolean padToCacheAlign();
+    Padding padToCacheAlign();
 
 }
