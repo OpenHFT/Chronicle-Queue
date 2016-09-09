@@ -15,9 +15,9 @@ import static org.junit.Assert.assertEquals;
  * Created by daniel on 16/05/2016.
  */
 public class WriteBytesTest {
-    Bytes outgoingBytes = Bytes.elasticByteBuffer();
-    private byte[] incomingMsgBytes = new byte[100];
-    private byte[] outgoingMsgBytes = new byte[100];
+    final Bytes outgoingBytes = Bytes.elasticByteBuffer();
+    private final byte[] incomingMsgBytes = new byte[100];
+    private final byte[] outgoingMsgBytes = new byte[100];
 
     @Test
     public void testWriteBytes() {

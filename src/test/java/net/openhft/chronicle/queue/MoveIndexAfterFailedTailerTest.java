@@ -33,7 +33,7 @@ public class MoveIndexAfterFailedTailerTest {
         }
     }
 
-    private void read(ChronicleQueue aChronicle, int expected) throws IOException {
+    private void read(ChronicleQueue aChronicle, int expected) {
         final ExcerptTailer myTailer = aChronicle.createTailer();
         final int myLast = HOURLY.toCycle(myTailer.toEnd().index());
         final int myFirst = HOURLY.toCycle(myTailer.toStart().index());
@@ -61,7 +61,7 @@ public class MoveIndexAfterFailedTailerTest {
         };
     }
 
-    private void write(ChronicleQueue aChronicle, int messages) throws IOException {
+    private void write(ChronicleQueue aChronicle, int messages) {
         final ExcerptAppender myAppender = aChronicle.acquireAppender();
         for (int myCount = 0; myCount < messages; myCount++) {
             myAppender.writeDocument(aMarshallable -> aMarshallable.write().bytes(Long.toString(currentTimeMillis()).getBytes(StandardCharsets.UTF_8)));

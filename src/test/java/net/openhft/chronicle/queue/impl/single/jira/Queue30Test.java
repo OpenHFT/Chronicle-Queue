@@ -74,6 +74,7 @@ public class Queue30Test extends ChronicleQueueTestBase {
 
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     @Ignore("Stress test - doesn't finish")
     @Test
     public void testST() throws IOException {

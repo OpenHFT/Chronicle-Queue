@@ -57,7 +57,7 @@ public class RareAppenderLatencyTest {
             // this is a performance test so should not be run in debug mode
             return;
 
-        assert (isAssertionsOn = true) == true;
+        assert (isAssertionsOn = true);
 
         if (isAssertionsOn)
             // this is a performance test so should not be run with assertions turned on

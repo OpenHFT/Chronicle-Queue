@@ -49,7 +49,7 @@ public class WireStorePool {
             return;
         isClosed = true;
 
-        stores.values().forEach(e -> release(e));
+        stores.values().forEach(this::release);
     }
 
     @Nullable

@@ -337,9 +337,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = queue.createTailer();
             int cycle = appender.cycle();
             for (int i = 0; i <= 5; i++) {
-                final int n = i;
 
-                writeTo.accept(appender, n);
+                writeTo.accept(appender, i);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
@@ -1700,7 +1699,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     MapWrapper object = documentContext.wire().read().object(MapWrapper.class);
-                    Assert.assertEquals(1.2, (double) object.map.get("hello"), 0.0);
+                    Assert.assertEquals(1.2, object.map.get("hello"), 0.0);
                 }
             }
         }
@@ -1861,10 +1860,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
-                .rollCycle(rollCycle);
+                .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.acquireAppender();
         final ExcerptTailer tailer = queue.createTailer();
@@ -2023,10 +2021,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testCountExceptsBetweenCycles() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
-                .rollCycle(rollCycle);
+                .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.createAppender();
 
@@ -2232,10 +2229,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testCountExceptsWithRubbishData() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");
-        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
-                .rollCycle(rollCycle);
+                .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
 
         // rubbish data
@@ -2338,7 +2334,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private static class MapWrapper extends AbstractMarshallable {
-        Map<CharSequence, Double> map = new HashMap<>();
+        final Map<CharSequence, Double> map = new HashMap<>();
     }
 
     static class MyMarshable extends AbstractMarshallable implements Demarshallable {

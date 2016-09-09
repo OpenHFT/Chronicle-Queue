@@ -63,7 +63,7 @@ public class SingleChronicleQueueExcerpts {
 
 
     public interface InternalAppender {
-        void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException;
+        void writeBytes(long index, BytesStore bytes);
     }
 
     /**
@@ -405,7 +405,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
+        public void writeBytes(long index, BytesStore bytes) {
             if (index < 0)
                 throw new IllegalArgumentException("index: " + index);
             if (bytes.isEmpty())
@@ -481,7 +481,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException, EOFException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException {
             if (LOG.isDebugEnabled()) {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -777,12 +777,12 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
+        private final int indexSpacingMask;
         long index; // index of the next read.
         WireStore store;
         private int cycle;
         private TailerDirection direction = TailerDirection.FORWARD;
         private boolean lazyIndexing = false;
-        private int indexSpacingMask;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
         private TailerState state = UNINTIALISED;
@@ -797,10 +797,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private static boolean isReadOnly(Bytes bytes) {
-            if (bytes instanceof MappedBytes)
-                return !((MappedBytes) bytes).mappedFile().file().canWrite();
-            else
-                return false;
+            return bytes instanceof MappedBytes &&
+                    !((MappedBytes) bytes).mappedFile().file().canWrite();
         }
 
         private void close() {

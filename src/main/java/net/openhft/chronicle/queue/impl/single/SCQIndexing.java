@@ -71,9 +71,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     public long toAddress0(long index) {
         long siftedIndex = index >> (indexSpacingBits + indexCountBits);
         long mask = indexCount - 1L;
-        long maskedShiftedIndex = mask & siftedIndex;
         // convert to an offset
-        return maskedShiftedIndex;
+        return mask & siftedIndex;
     }
 
     long toAddress1(long index) {
