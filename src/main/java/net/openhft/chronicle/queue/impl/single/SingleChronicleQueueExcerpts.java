@@ -86,7 +86,7 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         private long lastTouchedPage = -1;
         private long lastTouchedPos = 0;
-        private boolean padToCacheAlign = true;
+        private boolean padToCacheAlign;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
