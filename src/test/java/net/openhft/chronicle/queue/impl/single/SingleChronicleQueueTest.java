@@ -1063,7 +1063,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      * @
      */
     @Test
-    @Ignore("todo fix")
     public void testEPOC() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
@@ -1734,7 +1733,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Ignore("todo fix : possible reference counting issue")
     @Test
     public void testAppendedSkipToEndMultiThreaded() throws TimeoutException, ExecutionException, InterruptedException {
 
