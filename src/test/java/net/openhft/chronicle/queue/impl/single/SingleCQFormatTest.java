@@ -88,8 +88,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" +
-                SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
         @NotNull SingleChronicleQueue queue = binary(dir)
@@ -118,7 +117,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
 
         bytes.release();
         @NotNull SingleChronicleQueue queue = binary(dir)
@@ -141,7 +140,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         bytes.release();
         @Nullable SingleChronicleQueue queue = null;
@@ -169,7 +168,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
@@ -218,7 +217,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -268,7 +267,7 @@ public class SingleCQFormatTest {
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header")
@@ -328,7 +327,7 @@ public class SingleCQFormatTest {
         @NotNull RollCycles cycle = RollCycles.DAILY;
 
         {
-            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE, this);
+            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
             @NotNull Wire wire = new BinaryWire(mappedBytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
@@ -572,7 +571,7 @@ public class SingleCQFormatTest {
     }
 
     public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
-        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE, this);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.readLimit(bytes.realCapacity());
         assertEquals(expected, Wires.fromSizePrefixedBlobs(bytes));
         bytes.release();

@@ -498,7 +498,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private MappedBytes mappedBytes(File cycleFile) throws FileNotFoundException {
         long chunkSize = OS.pageAlign(blockSize);
         long overlapSize = OS.pageAlign(blockSize / 4);
-        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize, this);
+        return MappedBytes.mappedBytes(cycleFile, chunkSize, overlapSize);
     }
 
     private int toCycle(Map.Entry<Long, File> entry) throws ParseException {

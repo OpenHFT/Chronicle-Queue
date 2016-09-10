@@ -64,7 +64,7 @@ public class DumpQueueMain {
     public static void dumpFile(File file, PrintStream out, long upperLimit) {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
             try {
-                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20, out);
+                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20);
                 bytes.readLimit(bytes.realCapacity());
                 StringBuilder sb = new StringBuilder();
                 WireDumper dumper = WireDumper.of(bytes);
