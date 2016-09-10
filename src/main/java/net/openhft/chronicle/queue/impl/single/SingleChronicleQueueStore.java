@@ -184,7 +184,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public String dump() {
         mappedFile.reserve();
-        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile);
+        MappedBytes bytes = MappedBytes.mappedBytes(mappedFile, this);
         try {
             bytes.readLimit(bytes.realCapacity());
             return Wires.fromSizePrefixedBlobs(bytes);
@@ -264,7 +264,7 @@ public class SingleChronicleQueueStore implements WireStore {
     @Override
     public MappedBytes bytes() {
         mappedFile.reserve();
-        return MappedBytes.mappedBytes(mappedFile);
+        return MappedBytes.mappedBytes(mappedFile, this);
     }
 
     @Override
