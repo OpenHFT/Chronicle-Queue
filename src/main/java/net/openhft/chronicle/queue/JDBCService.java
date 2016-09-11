@@ -22,16 +22,15 @@ public class JDBCService implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDBCService.class);
     private final ChronicleQueue in;
     private final ChronicleQueue out;
-    private final ExecutorService service;
     private final ThrowingSupplier<Connection, SQLException> connectionSupplier;
     private volatile boolean closed = false;
 
-    public JDBCService(ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) throws SQLException {
+    public JDBCService(ChronicleQueue in, ChronicleQueue out, ThrowingSupplier<Connection, SQLException> connectionSupplier) {
         this.in = in;
         this.out = out;
         this.connectionSupplier = connectionSupplier;
 
-        service = Executors.newSingleThreadExecutor(
+        ExecutorService service = Executors.newSingleThreadExecutor(
                 new NamedThreadFactory(in.file().getName() + "-JDBCService", true));
         service.execute(this::runLoop);
         service.shutdown(); // stop when the task exits.

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class TopOfBookPrice extends AbstractMarshallable {
     public static final long TIMESTAMP_LIMIT = TimeUnit.SECONDS.toMillis(1000);
-    String symbol;
+    final String symbol;
     long timestamp;
     double buyPrice, buyQuantity;
     double sellPrice, sellQuantity;

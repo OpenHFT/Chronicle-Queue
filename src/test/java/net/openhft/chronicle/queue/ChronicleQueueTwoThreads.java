@@ -44,7 +44,7 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         doTest(false);
     }
 
-    void doTest(boolean buffered) throws IOException, InterruptedException {
+    void doTest(boolean buffered) throws InterruptedException {
         String path = getTmpDir() + "/deleteme.q";
 
         new File(path).deleteOnExit();

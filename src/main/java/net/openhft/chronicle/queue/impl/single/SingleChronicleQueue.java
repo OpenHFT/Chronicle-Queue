@@ -62,6 +62,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final long timeoutMS;
     @NotNull
     final File path;
+    final AtomicBoolean isClosed = new AtomicBoolean();
     @NotNull
     private final RollCycle rollCycle;
     @NotNull
@@ -85,11 +86,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
     private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
+    private final ThreadLocal<ExcerptContext> tlTailer;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
-    volatile AtomicBoolean isClosed = new AtomicBoolean();
     private int deltaCheckpointInterval;
-    private ThreadLocal<ExcerptContext> tlTailer;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -432,21 +432,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             return;
 
         for (String file : files) {
-            try {
-                if (!file.endsWith(SUFFIX))
-                    continue;
 
-                file = file.substring(0, file.length() - SUFFIX.length());
+            if (!file.endsWith(SUFFIX))
+                continue;
 
-                int fileCycle = dateCache.parseCount(file);
-                if (firstCycle > fileCycle)
-                    firstCycle = fileCycle;
-                if (lastCycle < fileCycle)
-                    lastCycle = fileCycle;
+            file = file.substring(0, file.length() - SUFFIX.length());
 
-            } catch (ParseException fallback) {
-                // ignored
-            }
+            int fileCycle = dateCache.parseCount(file);
+            if (firstCycle > fileCycle)
+                firstCycle = fileCycle;
+            if (lastCycle < fileCycle)
+                lastCycle = fileCycle;
+
         }
 
         firstAndLastCycleTime = now;
@@ -587,7 +584,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
          * @return cycleTree for the current directory / parentFile
          * @throws ParseException
          */
-        private NavigableMap<Long, File> cycleTree() throws ParseException {
+        private NavigableMap<Long, File> cycleTree() {
 
             final File parentFile = path;
 

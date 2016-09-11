@@ -26,7 +26,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueStore;
 import net.openhft.chronicle.queue.impl.single.StoreRecoveryFactory;
 import net.openhft.chronicle.queue.impl.single.TimedStoreRecovery;
 import net.openhft.chronicle.threads.Pauser;
@@ -46,6 +45,7 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
 /**
  * Created by peter on 05/03/2016.
  */
+@SuppressWarnings("ALL")
 public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue>
         implements ChronicleQueueBuilder<B, Q> {
 
@@ -72,9 +72,8 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private WireStoreFactory storeFactory;
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
-    private StoreFileListener storeFileListener = (cycle, file) -> {
-        Jvm.debug().on(getClass(), "File released " + file);
-    };
+    private StoreFileListener storeFileListener = (cycle, file) ->
+            Jvm.debug().on(getClass(), "File released " + file);
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;

@@ -333,9 +333,10 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException {
+    public void writeEOF(Wire wire, long timeoutMS) throws
+            UnrecoverableTimeoutException {
         try {
-            wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS);
+            wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
         } catch (TimeoutException e) {
             recovery.writeEndOfWire(wire, timeoutMS);
         }

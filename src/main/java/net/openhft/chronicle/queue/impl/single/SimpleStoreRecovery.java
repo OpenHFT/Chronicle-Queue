@@ -23,7 +23,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     private static final Logger LOG = LoggerFactory.getLogger(SimpleStoreRecovery.class);
 
     @Override
-    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Rebuilding the index2index");
         index2Index.setValue(0);
         try {
@@ -34,7 +34,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     }
 
     @Override
-    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Timed out trying to get index2index[" + index2 + "]");
         index2indexArr.setValueAt(index2, 0L);
         try {

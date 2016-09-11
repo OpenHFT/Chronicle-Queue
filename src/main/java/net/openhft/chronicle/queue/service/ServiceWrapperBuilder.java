@@ -16,10 +16,10 @@ import java.util.function.Supplier;
  * Created by peter on 23/04/16.
  */
 public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
-    private List<String> inputPaths = new ArrayList<>();
+    private final List<String> inputPaths = new ArrayList<>();
+    private final List<Function<O, Object>> serviceFunctions = new ArrayList<>();
     private String outputPath;
     private Class<O> outClass;
-    private List<Function<O, Object>> serviceFunctions = new ArrayList<>();
     private EventLoop eventLoop;
     private HandlerPriority priority = HandlerPriority.MEDIUM;
     private boolean createdEventLoop = false;

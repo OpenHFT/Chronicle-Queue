@@ -16,9 +16,9 @@ import java.util.concurrent.TimeoutException;
  * Created by peter on 21/05/16.
  */
 public interface StoreRecovery extends WriteMarshallable {
-    long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException;
+    long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
 
-    long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException;
+    long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException;
 
     default long writeHeader(Wire wire,
                              int length,

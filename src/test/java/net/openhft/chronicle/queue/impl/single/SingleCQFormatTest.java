@@ -27,6 +27,8 @@ import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.micros.Order;
 import net.openhft.chronicle.queue.micros.Side;
 import net.openhft.chronicle.wire.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -51,15 +53,15 @@ public class SingleCQFormatTest {
         SingleChronicleQueueBuilder.init();
     }
 
-    int appendMode;
+    private int appendMode;
     private ThreadDump threadDump;
 
-    public static void assertHexEquals(long a, long b) {
+    private static void assertHexEquals(long a, long b) {
         if (a != b)
             assertEquals(Long.toHexString(a) + " != " + Long.toHexString(b), a, b);
     }
 
-    public static void expected(ExcerptTailer tailer, String expected) {
+    private static void expected(@NotNull ExcerptTailer tailer, String expected) {
         try (DocumentContext dc = tailer.readingDocument()) {
             assertTrue(dc.isPresent());
             Bytes bytes2 = Bytes.allocateDirect(128);
@@ -70,9 +72,9 @@ public class SingleCQFormatTest {
 
     @Test
     public void testEmptyDirectory() {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
-        SingleChronicleQueue queue = binary(dir).build();
+        @NotNull SingleChronicleQueue queue = binary(dir).build();
         assertEquals(Integer.MAX_VALUE, queue.firstCycle());
         assertEquals(Long.MAX_VALUE, queue.firstIndex());
         assertEquals(Integer.MIN_VALUE, queue.lastCycle());
@@ -83,19 +85,19 @@ public class SingleCQFormatTest {
 
     @Test
     public void testInvalidFile() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.write8bit("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>");
 
-        SingleChronicleQueue queue = binary(dir)
+        @NotNull SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
         assertEquals(1, queue.firstCycle());
         assertEquals(1, queue.lastCycle());
         try {
-            ExcerptTailer tailer = queue.createTailer();
+            @NotNull ExcerptTailer tailer = queue.createTailer();
             tailer.toEnd();
             fail();
         } catch (Exception e) {
@@ -112,13 +114,13 @@ public class SingleCQFormatTest {
 
     @Test
     public void testNoHeader() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
 
         bytes.release();
-        SingleChronicleQueue queue = binary(dir)
+        @NotNull SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
 
@@ -135,13 +137,13 @@ public class SingleCQFormatTest {
     @Test(expected = TimeoutException.class)
     @Ignore("Long running")
     public void testDeadHeader() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA | Wires.UNKNOWN_LENGTH);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
         bytes.release();
-        SingleChronicleQueue queue = null;
+        @Nullable SingleChronicleQueue queue = null;
         try {
             queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
@@ -154,8 +156,8 @@ public class SingleCQFormatTest {
         }
     }
 
-    public void testQueue(SingleChronicleQueue queue) {
-        ExcerptTailer tailer = queue.createTailer();
+    private void testQueue(@NotNull SingleChronicleQueue queue) {
+        @NotNull ExcerptTailer tailer = queue.createTailer();
         try (DocumentContext dc = tailer.readingDocument()) {
             assertFalse(dc.isPresent());
         }
@@ -163,11 +165,11 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        Wire wire = new BinaryWire(bytes);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
                 w.write(() -> "wireType").object(WireType.BINARY);
@@ -197,7 +199,7 @@ public class SingleCQFormatTest {
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
-        SingleChronicleQueue queue = binary(dir)
+        @NotNull SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
         testQueue(queue);
@@ -212,11 +214,11 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader2() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        Wire wire = new BinaryWire(bytes);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
             dc.wire().writeEventName(() -> "header").typedMarshallable(
                     new SingleChronicleQueueStore(RollCycles.HOURLY, WireType.BINARY, bytes, 60 *
@@ -246,7 +248,7 @@ public class SingleCQFormatTest {
                 "}\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
         bytes.release();
 
-        SingleChronicleQueue queue = binary(dir)
+        @NotNull SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .rollCycle(RollCycles.HOURLY)
                 .build();
@@ -262,19 +264,19 @@ public class SingleCQFormatTest {
 
     @Test
     public void testIncompleteHeader() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
 
-        MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-        Wire wire = new BinaryWire(bytes);
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+        @NotNull Wire wire = new BinaryWire(bytes);
         try (DocumentContext dc = wire.writingDocument(true)) {
-            dc.wire().writeEventName(() -> "header").typePrefix(SingleChronicleQueueStore.class).marshallable(w -> {
-                w.write(() -> "wireType").object(WireType.BINARY);
-            });
+            dc.wire().writeEventName(() -> "header")
+                    .typePrefix(SingleChronicleQueueStore.class).marshallable(
+                    w -> w.write(() -> "wireType").object(WireType.BINARY));
         }
 
         bytes.release();
-        try (SingleChronicleQueue queue = binary(dir)
+        try (@NotNull SingleChronicleQueue queue = binary(dir)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
             testQueue(queue);
@@ -293,19 +295,19 @@ public class SingleCQFormatTest {
 
     @Test
     public void testMyData() {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         ClassAliasPool.CLASS_ALIASES.addAlias(MyData.class);
 
-        try (SingleChronicleQueue queue = binary(dir)
+        try (@NotNull SingleChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+            @NotNull ExcerptAppender appender = queue.acquireAppender();
             try (DocumentContext dc = appender.writingDocument()) {
-                MyData name = new MyData("name", 12345, 1.2, 111);
+                @NotNull MyData name = new MyData("name", 12345, 1.2, 111);
                 System.out.println(name);
                 name.writeMarshallable(dc.wire());
 
-                MyData name2 = new MyData("name2", 12346, 1.3, 112);
+                @NotNull MyData name2 = new MyData("name2", 12346, 1.3, 112);
                 System.out.println(name2);
                 name2.writeMarshallable(dc.wire());
             }
@@ -320,13 +322,13 @@ public class SingleCQFormatTest {
 
     @Test
     public void testTwoMessages() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
         dir.mkdir();
-        RollCycles cycle = RollCycles.DAILY;
+        @NotNull RollCycles cycle = RollCycles.DAILY;
 
         {
-            MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
-            Wire wire = new BinaryWire(mappedBytes);
+            @NotNull MappedBytes mappedBytes = MappedBytes.mappedBytes(new File(dir, "19700102" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
+            @NotNull Wire wire = new BinaryWire(mappedBytes);
             try (DocumentContext dc = wire.writingDocument(true)) {
                 dc.wire().writeEventName(() -> "header").typedMarshallable(
                         new SingleChronicleQueueStore(cycle, WireType.BINARY, mappedBytes, 0,
@@ -371,11 +373,11 @@ public class SingleCQFormatTest {
             mappedBytes.release();
         }
 
-        SingleChronicleQueue queue = binary(dir)
+        @NotNull SingleChronicleQueue queue = binary(dir)
                 .rollCycle(cycle)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build();
-        ExcerptTailer tailer = queue.createTailer();
+        @NotNull ExcerptTailer tailer = queue.createTailer();
         readTwo(tailer);
         tailer.toStart();
         readTwo(tailer);
@@ -414,10 +416,10 @@ public class SingleCQFormatTest {
         for (int m = 0; m <= 2; m++) {
             appendMode = m;
 
-            File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+            @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
-            SingleChronicleQueue queue = binary(dir)
+            @NotNull SingleChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .indexCount(8)
                     .indexSpacing(1)
@@ -425,7 +427,7 @@ public class SingleCQFormatTest {
 
             long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
             appendMessage(queue, start, "Hello World");
-            String expected1 = "--- !!meta-data #binary\n" +
+            @NotNull String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 576,\n" +
@@ -468,7 +470,7 @@ public class SingleCQFormatTest {
             checkFileContents(dir.listFiles()[0], expected1);
 
             appendMessage(queue, start + 1, "Another Hello World");
-            String expected2 = "--- !!meta-data #binary\n" +
+            @NotNull String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 596,\n" +
@@ -516,7 +518,7 @@ public class SingleCQFormatTest {
 
             appendMessage(queue, start + 2, "Bye for now");
 
-            String expected = "--- !!meta-data #binary\n" +
+            @NotNull String expected = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 624,\n" +
@@ -568,8 +570,8 @@ public class SingleCQFormatTest {
         }
     }
 
-    public void checkFileContents(File file, String expected) throws FileNotFoundException {
-        MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
+    public void checkFileContents(@NotNull File file, String expected) throws FileNotFoundException {
+        @NotNull MappedBytes bytes = MappedBytes.mappedBytes(file, ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.readLimit(bytes.realCapacity());
         assertEquals(expected, Wires.fromSizePrefixedBlobs(bytes));
         bytes.release();
@@ -578,10 +580,10 @@ public class SingleCQFormatTest {
     @Test
     public void testWritingTwentyMessagesTinyIndex() throws FileNotFoundException, TimeoutException {
         for (int spacing : new int[]{1, 2, 4}) {
-            File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+            @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
             dir.mkdir();
 
-            SingleChronicleQueue queue = binary(dir)
+            @NotNull SingleChronicleQueue queue = binary(dir)
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     // only do this for testing
                     .indexCount(8)
@@ -589,11 +591,11 @@ public class SingleCQFormatTest {
                     .build();
 
             long start = RollCycles.DAILY.toIndex(queue.cycle(), 0);
-            ExcerptTailer tailer = queue.createTailer();
+            @NotNull ExcerptTailer tailer = queue.createTailer();
             assertFalse(tailer.moveToIndex(start));
 
             appendMessage(queue, start, "Hello World");
-            String expected00 = "--- !!meta-data #binary\n" +
+            @NotNull String expected00 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 576,\n" +
@@ -649,10 +651,10 @@ public class SingleCQFormatTest {
             assertTrue(tailer.moveToIndex(start + 19));
             assertFalse(tailer.moveToIndex(start + 20));
 
-            String expected1 = "--- !!meta-data #binary\n" +
+            @NotNull String expected1 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 1334,\n" +
+                    "  writePosition: 1344,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -676,7 +678,7 @@ public class SingleCQFormatTest {
                     "  # length: 8, used: 3\n" +
                     "  480,\n" +
                     "  836,\n" +
-                    "  1176,\n" +
+                    "  1183,\n" +
                     "  0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 480, header: -1\n" +
@@ -725,62 +727,62 @@ public class SingleCQFormatTest {
                     "  # length: 8, used: 8\n" +
                     "  806,\n" +
                     "  928,\n" +
-                    "  959,\n" +
-                    "  990,\n" +
-                    "  1021,\n" +
-                    "  1052,\n" +
-                    "  1083,\n" +
-                    "  1114\n" +
+                    "  960,\n" +
+                    "  991,\n" +
+                    "  1024,\n" +
+                    "  1055,\n" +
+                    "  1088,\n" +
+                    "  1119\n" +
                     "]\n" +
                     "# position: 928, header: 9\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 10\n" +
-                    "# position: 959, header: 10\n" +
+                    "# position: 960, header: 10\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 11\n" +
-                    "# position: 990, header: 11\n" +
+                    "# position: 991, header: 11\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 12\n" +
-                    "# position: 1021, header: 12\n" +
+                    "# position: 1024, header: 12\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 13\n" +
-                    "# position: 1052, header: 13\n" +
+                    "# position: 1055, header: 13\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 14\n" +
-                    "# position: 1083, header: 14\n" +
+                    "# position: 1088, header: 14\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 1114, header: 15\n" +
+                    "# position: 1119, header: 15\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 1145, header: 16\n" +
+                    "# position: 1152, header: 16\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 1176, header: 16\n" +
+                    "# position: 1183, header: 16\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 4\n" +
-                    "  1145,\n" +
-                    "  1272,\n" +
-                    "  1303,\n" +
-                    "  1334,\n" +
+                    "  1152,\n" +
+                    "  1280,\n" +
+                    "  1311,\n" +
+                    "  1344,\n" +
                     "  0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 1272, header: 17\n" +
+                    "# position: 1280, header: 17\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 1303, header: 18\n" +
+                    "# position: 1311, header: 18\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 1334, header: 19\n" +
+                    "# position: 1344, header: 19\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326322 bytes remaining\n";
-            String expected2 = "--- !!meta-data #binary\n" +
+                    "# 326312 bytes remaining\n";
+            @NotNull String expected2 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 1238,\n" +
+                    "  writePosition: 1247,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -803,7 +805,7 @@ public class SingleCQFormatTest {
                     "index2index: [\n" +
                     "  # length: 8, used: 2\n" +
                     "  480,\n" +
-                    "  1084,\n" +
+                    "  1088,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 480, header: -1\n" +
@@ -864,35 +866,35 @@ public class SingleCQFormatTest {
                     "# position: 991, header: 14\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 1022, header: 15\n" +
+                    "# position: 1024, header: 15\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 1053, header: 16\n" +
+                    "# position: 1055, header: 16\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 1084, header: 16\n" +
+                    "# position: 1088, header: 16\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  1053,\n" +
-                    "  1207,\n" +
+                    "  1055,\n" +
+                    "  1216,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 1176, header: 17\n" +
+                    "# position: 1184, header: 17\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 1207, header: 18\n" +
+                    "# position: 1216, header: 18\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 1238, header: 19\n" +
+                    "# position: 1247, header: 19\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326418 bytes remaining\n";
-            String expected3 = "--- !!meta-data #binary\n" +
+                    "# 326409 bytes remaining\n";
+            @NotNull String expected3 = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 1146,\n" +
+                    "  writePosition: 1152,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -925,7 +927,7 @@ public class SingleCQFormatTest {
                     "  686,\n" +
                     "  806,\n" +
                     "  929,\n" +
-                    "  1053,\n" +
+                    "  1055,\n" +
                     "  0, 0, 0\n" +
                     "]\n" +
                     "# position: 576, header: 0\n" +
@@ -973,24 +975,24 @@ public class SingleCQFormatTest {
                     "# position: 991, header: 14\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 15\n" +
-                    "# position: 1022, header: 15\n" +
+                    "# position: 1024, header: 15\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 16\n" +
-                    "# position: 1053, header: 16\n" +
+                    "# position: 1055, header: 16\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 17\n" +
-                    "# position: 1084, header: 17\n" +
+                    "# position: 1088, header: 17\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 18\n" +
-                    "# position: 1115, header: 18\n" +
+                    "# position: 1119, header: 18\n" +
                     "--- !!data #binary\n" +
                     "msg: Another Hello World 19\n" +
-                    "# position: 1146, header: 19\n" +
+                    "# position: 1152, header: 19\n" +
                     "--- !!data #binary\n" +
                     "msg: Bye for now\n" +
                     "...\n" +
-                    "# 326510 bytes remaining\n";
-            String expected = spacing == 1 ? expected1 :
+                    "# 326504 bytes remaining\n";
+            @NotNull String expected = spacing == 1 ? expected1 :
                     spacing == 2 ? expected2 : expected3;
 
             checkFileContents(dir.listFiles()[0], expected);
@@ -1012,8 +1014,8 @@ public class SingleCQFormatTest {
         appendMode = 0;
     }
 
-    public void appendMessage(SingleChronicleQueue queue, long expectedIndex, String msg) {
-        ExcerptAppender appender = queue.acquireAppender();
+    public void appendMessage(@NotNull SingleChronicleQueue queue, long expectedIndex, String msg) {
+        @NotNull ExcerptAppender appender = queue.acquireAppender();
         switch (appendMode) {
             case 1:
                 appender.writeDocument(w -> w.write(() -> "msg").text(msg));
@@ -1038,7 +1040,7 @@ public class SingleCQFormatTest {
         assertHexEquals(expectedIndex, index);
     }
 
-    public void readTwo(ExcerptTailer tailer) {
+    public void readTwo(@NotNull ExcerptTailer tailer) {
         long start = RollCycles.DAILY.toIndex(1, 0L);
         assertEquals(start, tailer.index());
         expected(tailer, "msg: Hello world\n");
@@ -1053,13 +1055,13 @@ public class SingleCQFormatTest {
 
     @Test
     public void writeMap() {
-        Map<String, Object> map = new TreeMap<>();
+        @NotNull Map<String, Object> map = new TreeMap<>();
         map.put("abc", "def");
         map.put("hello", "world");
         map.put("number", 1L);
         map.put("double", 1.28);
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
-        try (ChronicleQueue queue = binary(dir).blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        try (@NotNull ChronicleQueue queue = binary(dir).blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
             ExcerptAppender appender = queue.acquireAppender().lazyIndexing(true);
             appender.writeMap(map);
 
@@ -1102,7 +1104,7 @@ public class SingleCQFormatTest {
                     "...\n" +
                     "# 654851 bytes remaining\n", queue.dump());
 
-            ExcerptTailer tailer = queue.createTailer();
+            @NotNull ExcerptTailer tailer = queue.createTailer();
             Map<String, Object> map2 = tailer.readMap();
             Map<String, Object> map3 = tailer.readMap();
             assertEquals("{abc=def, double=1.28, hello=world, number=1}", map2.toString());
@@ -1114,18 +1116,18 @@ public class SingleCQFormatTest {
     @Test
     public void writeMarshallable() {
         ClassAliasPool.CLASS_ALIASES.addAlias(Order.class);
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
-        try (ChronicleQueue queue = binary(dir)
+        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        try (@NotNull ChronicleQueue queue = binary(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+            @NotNull ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(new Order("Symbol", Side.Buy, 1.2345, 1e6));
             appender.writeDocument(w -> w.write("newOrder").object(new Order("Symbol2", Side.Sell, 2.999, 10e6)));
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 637,\n" +
+                    "  writePosition: 640,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1155,7 +1157,7 @@ public class SingleCQFormatTest {
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
                     "  576,\n" +
-                    "  637,\n" +
+                    "  640,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
                     "# position: 576, header: 0\n" +
@@ -1164,7 +1166,7 @@ public class SingleCQFormatTest {
                     "side: Buy\n" +
                     "limitPrice: 1.2345\n" +
                     "quantity: 1000000.0\n" +
-                    "# position: 637, header: 1\n" +
+                    "# position: 640, header: 1\n" +
                     "--- !!data #binary\n" +
                     "newOrder: !Order {\n" +
                     "  symbol: Symbol2,\n" +
@@ -1173,18 +1175,18 @@ public class SingleCQFormatTest {
                     "  quantity: 10000000.0\n" +
                     "}\n" +
                     "...\n" +
-                    "# 326955 bytes remaining\n", queue.dump());
+                    "# 326952 bytes remaining\n", queue.dump());
         }
     }
 
     @Test
     public void testWritingIndex() {
-        String dir = OS.TARGET + "/testWritingIndex-" + System.nanoTime();
-        try (ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
+        @NotNull String dir = OS.TARGET + "/testWritingIndex-" + System.nanoTime();
+        try (@NotNull ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
+            @NotNull final ExcerptAppender appender = queue.acquireAppender();
             appender.writeText("msg-1");
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
@@ -1347,13 +1349,13 @@ public class SingleCQFormatTest {
         }
     }
 
-    static class MyData extends AbstractMarshallable {
-        String name;
-        long num;
-        double d;
-        int counter;
+    private static class MyData extends AbstractMarshallable {
+        final String name;
+        final long num;
+        final double d;
+        final int counter;
 
-        public MyData(String name, long num, double d, int counter) {
+        MyData(String name, long num, double d, int counter) {
             this.name = name;
             this.num = num;
             this.d = d;

@@ -29,7 +29,7 @@ public class JDBCServiceTest {
         doCreateTable(5, 200000);
     }
 
-    public void doCreateTable(int repeats, int noUpdates) throws SQLException, IOException {
+    public void doCreateTable(int repeats, int noUpdates) throws SQLException {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
             String path1 = OS.TARGET + "/createTable-" + System.nanoTime();

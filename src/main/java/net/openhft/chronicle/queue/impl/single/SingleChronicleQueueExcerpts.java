@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
+import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
@@ -62,7 +63,7 @@ public class SingleChronicleQueueExcerpts {
 
 
     public interface InternalAppender {
-        void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException;
+        void writeBytes(long index, BytesStore bytes);
     }
 
     /**
@@ -86,12 +87,49 @@ public class SingleChronicleQueueExcerpts {
         private int lastCycle;
         private long lastTouchedPage = -1;
         private long lastTouchedPos = 0;
-        private boolean padToCacheAlign;
+        private Padding padToCacheLines = Padding.SMART;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
             queue.addCloseListener(StoreAppender.this::close);
             context = new StoreAppenderContext();
+        }
+
+        public Padding padToCacheAlign() {
+            return padToCacheLines;
+        }
+
+        /**
+         * @param padToCacheLines the default for chronicle queue is Padding.SMART, which
+         *                        automatically pads all method calls other than {@link
+         *                        StoreAppender#writeBytes(net.openhft.chronicle.bytes.WriteBytesMarshallable)}
+         *                        and   {@link StoreAppender#writeText(java.lang.CharSequence)}.
+         *                        Which can not be padded with out changing the message format, The
+         *                        reason we pad is to ensure that a message header does not straggle
+         *                        a cache line.
+         */
+        public void padToCacheAlign(Padding padToCacheLines) {
+            this.padToCacheLines = padToCacheLines;
+        }
+
+        /**
+         * @param marshallable to write to excerpt.
+         */
+        public void writeBytes(@NotNull WriteBytesMarshallable marshallable) throws UnrecoverableTimeoutException {
+            try (DocumentContext dc = writingDocument()) {
+                marshallable.writeMarshallable(dc.wire().bytes());
+                if (padToCacheAlign() != Padding.ALWAYS)
+                    ((StoreAppenderContext) dc).padToCacheAlign = false;
+            }
+        }
+
+        @Override
+        public void writeText(CharSequence text) throws UnrecoverableTimeoutException {
+            try (DocumentContext dc = writingDocument()) {
+                dc.wire().bytes().append8bit(text);
+                if (padToCacheAlign() != Padding.ALWAYS)
+                    ((StoreAppenderContext) dc).padToCacheAlign = false;
+            }
         }
 
         private void close() {
@@ -101,16 +139,6 @@ public class SingleChronicleQueueExcerpts {
             Wire w = wire;
             if (w != null)
                 w.bytes().release();
-        }
-
-        @Override
-        public void padToCacheAlign(boolean padToCacheAlign) {
-            this.padToCacheAlign = padToCacheAlign;
-        }
-
-        @Override
-        public boolean padToCacheAlign() {
-            return padToCacheAlign;
         }
 
         @Override
@@ -274,6 +302,7 @@ public class SingleChronicleQueueExcerpts {
                         position(pos);
                         context.metaData = false;
                         context.wire = wire;
+                        context.padToCacheAlign = padToCacheAlign() != Padding.NEVER;
                         break;
 
                     } catch (EOFException theySeeMeRolling) {
@@ -376,7 +405,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
+        public void writeBytes(long index, BytesStore bytes) {
             if (index < 0)
                 throw new IllegalArgumentException("index: " + index);
             if (bytes.isEmpty())
@@ -452,7 +481,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException, EOFException {
+        ScanResult moveToIndex(int cycle, long sequenceNumber) throws UnrecoverableTimeoutException {
             if (LOG.isDebugEnabled()) {
                 Jvm.debug().on(getClass(), "moveToIndex: " + Long.toHexString(cycle) + " " + Long.toHexString(sequenceNumber));
             }
@@ -643,7 +672,7 @@ public class SingleChronicleQueueExcerpts {
         class StoreAppenderContext implements DocumentContext {
 
             boolean isClosed;
-
+            boolean padToCacheAlign = true;
             private boolean metaData = false;
             private Wire wire;
 
@@ -686,7 +715,6 @@ public class SingleChronicleQueueExcerpts {
                             wire.padToCacheAlign();
 
                         wire.updateHeader(position, metaData);
-
 
                         lastPosition = position;
                         lastCycle = cycle;
@@ -749,12 +777,12 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
+        private final int indexSpacingMask;
         long index; // index of the next read.
         WireStore store;
         private int cycle;
         private TailerDirection direction = TailerDirection.FORWARD;
         private boolean lazyIndexing = false;
-        private int indexSpacingMask;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
         private TailerState state = UNINTIALISED;
@@ -769,10 +797,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private static boolean isReadOnly(Bytes bytes) {
-            if (bytes instanceof MappedBytes)
-                return !((MappedBytes) bytes).mappedFile().file().canWrite();
-            else
-                return false;
+            return bytes instanceof MappedBytes &&
+                    !((MappedBytes) bytes).mappedFile().file().canWrite();
         }
 
         private void close() {
