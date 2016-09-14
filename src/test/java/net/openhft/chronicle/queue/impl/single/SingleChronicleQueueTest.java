@@ -2027,8 +2027,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-        for (int j = 0; j < 2; j++) {
-
+        for (int i = 0; i < 2; i++) {
             try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
                     .rollCycle(TEST_SECONDLY)
@@ -2037,9 +2036,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-                int size = 2_000_000;
+                int size = 200_000;
 
-                IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
+                IntStream.range(0, size).parallel().forEach(j -> doSomthing(tl, tlt, text));
 
                 System.out.println(".");
             }
@@ -2156,10 +2155,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
-        if (Math.random() > 0.5)
-            writeTestDocument(tla, text);
-        else
-            readDocument(tlt, text);
+        try {
+            if (Math.random() > 0.5)
+                writeTestDocument(tla, text);
+            else
+                readDocument(tlt, text);
+        } catch (NullPointerException e) {
+            LOGGER.error("Caught NPE.", e);
+            System.exit(1);
+        }
     }
 
     private void readDocument(ThreadLocal<ExcerptTailer> tlt, String text) {
