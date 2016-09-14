@@ -49,17 +49,21 @@ public class WireStorePool {
             return;
         isClosed = true;
 
-        stores.values().forEach(e -> {
-            release(e);
-        });
+        stores.values().forEach(this::release);
     }
 
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
-        if (store != null && store.tryReserve()) {
-            return store;
+        if (store != null) {
+            if (store.tryReserve())
+                return store;
+            else
+                /// this should never happen,
+                // this method is synchronized
+                // and this remove below, is only any use if the acquire method below that fails
+                stores.remove(rollDetails);
         }
 
         store = this.supplier.acquire(cycle, createIfAbsent);
@@ -76,7 +80,10 @@ public class WireStorePool {
 
     public synchronized void release(@NotNull WireStore store) {
         store.release();
-        if (store.refCount() <= 0) {
+
+        long refCount = store.refCount();
+        assert refCount >= 0;
+        if (refCount == 0) {
             for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
                 if (entry.getValue() == store) {
                     stores.remove(entry.getKey());

@@ -105,4 +105,8 @@ public interface RollingChronicleQueue extends ChronicleQueue {
 
     Function<WireType, StoreRecovery> recoverySupplier();
 
+    /**
+     * @return the checkpointInterval used by delta wire
+     */
+    int deltaCheckpointInterval();
 }

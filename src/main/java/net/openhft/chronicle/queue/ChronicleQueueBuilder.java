@@ -106,4 +106,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     B storeFileListener(StoreFileListener storeFileListener);
 
     StoreFileListener storeFileListener();
+
+
 }

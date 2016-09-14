@@ -16,8 +16,10 @@
 
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
+import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
@@ -36,21 +38,28 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
 
 public class ToEndTest {
     private ThreadDump threadDump;
+    private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     @Before
-    public void threadDump() {
+    public void before() {
         threadDump = new ThreadDump();
+        exceptionKeyIntegerMap = Jvm.recordExceptions();
     }
 
     @After
-    public void checkThreadDump() {
+    public void after() {
         threadDump.assertNoNewThreads();
+
+        Jvm.dumpException(exceptionKeyIntegerMap);
+        assertTrue(exceptionKeyIntegerMap.isEmpty());
+        Jvm.resetExceptionHandlers();
     }
 
     @Test
@@ -236,6 +245,54 @@ public class ToEndTest {
             final int j = i;
             appender.writeDocument(wire -> wire.write(() -> "msg").int32(j));
         }*/
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+    }
+
+    long lastCycle;
+
+    @Test
+    public void toEndAfterWriteTest() {
+        String baseDir = OS.TARGET + "/toEndAfterWriteTest";
+        IOTools.shallowDeleteDirWithFiles(baseDir);
+
+        final SetTimeProvider stp = new SetTimeProvider();
+        stp.currentTimeMillis(1470757797000L);
+
+        RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
+                .binary(baseDir)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(stp)
+                .build();
+        ExcerptAppender appender = wqueue.acquireAppender();
+
+        for (int i = 0; i < 10; i++) {
+            try(DocumentContext dc = appender.writingDocument()){
+                dc.wire().write().text("hi-"+i);
+                lastCycle = wqueue.rollCycle().toCycle(dc.index());
+            }
+
+            stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+        }
+
+        ChronicleQueue rqueue = SingleChronicleQueueBuilder
+                .binary(baseDir)
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .timeProvider(stp)
+                .build();
+
+        ExcerptTailer tailer = rqueue.createTailer();
+        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+
+        //noinspection StatementWithEmptyBody
+        while (tailer.readText() != null) ;
+
+        assertNull(tailer.readText());
+        stp.currentTimeMillis(stp.currentTimeMillis() + 1000);
+
+        ExcerptTailer tailer1 = rqueue.createTailer();
+        ExcerptTailer excerptTailer = tailer1.toEnd();
+        assertNull(excerptTailer.readText());
+
         IOTools.shallowDeleteDirWithFiles(baseDir);
     }
 

@@ -33,6 +33,7 @@ import static java.lang.System.err;
  */
 public class DumpQueueMain {
     static final String FILE = System.getProperty("file");
+    private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
         dump(args[0]);
@@ -94,8 +95,6 @@ public class DumpQueueMain {
             }
         }
     }
-
-    private static int LENGTH = ", 0".length();
 
     static int indexOfLastZero(CharSequence str) {
         int i = str.length() - 3;

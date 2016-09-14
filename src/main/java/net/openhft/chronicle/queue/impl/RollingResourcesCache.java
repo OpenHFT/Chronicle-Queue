@@ -21,7 +21,6 @@ import net.openhft.chronicle.queue.RollCycle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.text.ParseException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -82,7 +81,7 @@ public class RollingResourcesCache {
         return dv;
     }
 
-    public int parseCount(@NotNull String name) throws ParseException {
+    public int parseCount(@NotNull String name) {
         TemporalAccessor parse = formatter.parse(name);
         long epochDay = parse.getLong(ChronoField.EPOCH_DAY) * 86400;
         if (parse.isSupported(ChronoField.SECOND_OF_DAY))

@@ -101,7 +101,8 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
                 queue.epoch(),
                 queue.indexCount(),
                 queue.indexSpacing(),
-                queue.recoverySupplier().apply(queue.wireType()));
+                queue.recoverySupplier().apply(queue.wireType()),
+                queue.deltaCheckpointInterval());
 
         wire.writeEventName(MetaDataKeys.header).typedMarshallable(wireStore);
 

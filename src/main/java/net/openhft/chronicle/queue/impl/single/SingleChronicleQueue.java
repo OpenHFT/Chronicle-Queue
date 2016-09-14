@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
@@ -43,6 +44,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -60,6 +62,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     final long timeoutMS;
     @NotNull
     final File path;
+    final AtomicBoolean isClosed = new AtomicBoolean();
     @NotNull
     private final RollCycle rollCycle;
     @NotNull
@@ -82,10 +85,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
+    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
+    private final ThreadLocal<ExcerptContext> tlTailer;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
-    private ThreadLocal<ExcerptContext> tlTailer;
-    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
+    private int deltaCheckpointInterval;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -106,6 +110,18 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         pauserSupplier = builder.pauserSupplier();
         timeoutMS = builder.timeoutMS();
         storeFactory = builder.storeFactory();
+
+        if (builder.getClass().getName().equals("software.chronicle.enterprise.queue.EnterpriseChronicleQueueBuilder")) {
+            try {
+                Method deltaCheckpointInterval = builder.getClass().getDeclaredMethod
+                        ("deltaCheckpointInterval");
+                deltaCheckpointInterval.setAccessible(true);
+                this.deltaCheckpointInterval = (Integer) deltaCheckpointInterval.invoke(builder);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
         tlTailer = ThreadLocal.withInitial(() -> new SingleChronicleQueueExcerpts.StoreTailer(this));
@@ -225,6 +241,11 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @Override
     public StoreRecoveryFactory recoverySupplier() {
         return recoverySupplier;
+    }
+
+    @Override
+    public int deltaCheckpointInterval() {
+        return deltaCheckpointInterval;
     }
 
     /**
@@ -358,7 +379,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
+    public boolean isClosed() {
+        return isClosed.get();
+    }
+
+    @Override
     public void close() {
+        if (isClosed.getAndSet(true))
+            return;
         closers.forEach(Runnable::run);
         this.pool.close();
     }
@@ -368,9 +396,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         this.pool.release(store);
     }
 
-//    long lastPathListTime = 0;
-//    String[] lastPathList = null;
-
     @Override
     public final int cycle() {
         return this.rollCycle.current(time, epoch);
@@ -378,7 +403,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     @Override
     public long firstIndex() {
-        // TODO - as discuessed, peter is going find another way to do this as this solution
+        // TODO - as discussed, peter is going find another way to do this as this solution
         // currently breaks tests in chronicle engine - see net.openhft.chronicle.engine.queue.LocalQueueRefTest
 
         int cycle = firstCycle();
@@ -389,12 +414,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     String[] getList() {
-//        final long now = time.currentTimeMillis();
-//        if (lastPathListTime + 10 > now) {
-//            return lastPathList;
-//        }
-//        lastPathListTime = now;
-//        return lastPathList = path.list();
         return path.list();
     }
 
@@ -406,34 +425,46 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
 
-        @Nullable final String[] files = getList();
+        // we use this to double check the result
+        final String[] files = getList();
 
-        if (files == null) {
+        if (files == null)
             return;
-        }
 
         for (String file : files) {
-            try {
-                if (!file.endsWith(SUFFIX))
-                    continue;
 
-                file = file.substring(0, file.length() - SUFFIX.length());
+            if (!file.endsWith(SUFFIX))
+                continue;
 
-                int fileCycle = dateCache.parseCount(file);
-                if (firstCycle > fileCycle)
-                    firstCycle = fileCycle;
-                if (lastCycle < fileCycle)
-                    lastCycle = fileCycle;
+            file = file.substring(0, file.length() - SUFFIX.length());
 
-            } catch (ParseException fallback) {
-                // ignored
-            }
+            int fileCycle = dateCache.parseCount(file);
+            if (firstCycle > fileCycle)
+                firstCycle = fileCycle;
+            if (lastCycle < fileCycle)
+                lastCycle = fileCycle;
+
         }
+
+        firstAndLastCycleTime = now;
     }
 
     public int firstCycle() {
         setFirstAndLastCycle();
         return firstCycle;
+    }
+
+
+    /**
+     * allows the appenders to inform the queue that they have rolled
+     *
+     * @param cycle the cycle the appender has rolled to
+     */
+    void onRoll(int cycle) {
+        if (lastCycle < cycle)
+            lastCycle = cycle;
+        if (firstCycle > cycle)
+            firstCycle = cycle;
     }
 
     @Override
@@ -553,7 +584,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
          * @return cycleTree for the current directory / parentFile
          * @throws ParseException
          */
-        private NavigableMap<Long, File> cycleTree() throws ParseException {
+        private NavigableMap<Long, File> cycleTree() {
 
             final File parentFile = path;
 

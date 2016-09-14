@@ -19,10 +19,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
@@ -30,6 +27,8 @@ import java.io.File;
 import java.io.StreamCorruptedException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
+
+
     /**
      * @return the file associated with this store.
      */
@@ -77,4 +76,11 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
     void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
+
+    int deltaCheckpointInterval();
+
+    /**
+     * @return the type of wire used
+     */
+    WireType wireType();
 }

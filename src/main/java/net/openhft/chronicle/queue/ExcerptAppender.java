@@ -16,7 +16,6 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -44,9 +43,10 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the
      *                                  given index.
      */
-    default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
+  /*  default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
         throw new UnsupportedOperationException();
     }
+*/
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
@@ -79,16 +79,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will not split a cache line.
+     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will
+     * not split a cache line.
      */
-    void padToCacheAlign(boolean padToCacheAlign);
+    void padToCacheAlign(Padding padToCacheAlign);
 
-    boolean padToCacheAlign();
-
-    /**
-     * Write an EOF marker on the current cycle if it is about to roll.
-     * It would do this any way if a new message wis written, but this doesn't create a new cycle or add a message.
-     */
-    void writeEndOfCycleIfRequired();
+    Padding padToCacheAlign();
 
 }

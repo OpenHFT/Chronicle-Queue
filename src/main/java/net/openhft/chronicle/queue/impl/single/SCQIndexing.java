@@ -1,4 +1,21 @@
 
+/*
+ * Copyright 2016 higherfrequencytrading.com
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.Byteable;
@@ -71,9 +88,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     public long toAddress0(long index) {
         long siftedIndex = index >> (indexSpacingBits + indexCountBits);
         long mask = indexCount - 1L;
-        long maskedShiftedIndex = mask & siftedIndex;
         // convert to an offset
-        return maskedShiftedIndex;
+        return mask & siftedIndex;
     }
 
     long toAddress1(long index) {
@@ -200,11 +216,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     long newIndex(StoreRecovery recovery, ExcerptContext ec, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException, TimeoutException {
         try {
             if (index2Index.compareAndSet(index2, NOT_INITIALIZED, BinaryLongReference.LONG_NOT_COMPLETE)) {
+                //     System.out.println("newIndex : A - index2=" + index2 + ",value=" + index2Index
+                //           .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                //         .hashCode());
                 long pos = newIndex(recovery, ec, false, timeoutMS);
                 if (pos < 0)
                     throw new IllegalStateException("pos: " + pos);
+
+                //   System.out.println("newIndex : B - index2=" + index2 + ",value=" + index2Index
+                //         .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                //       .hashCode());
+
                 if (index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, pos)) {
                     index2Index.setMaxUsed(index2 + 1);
+                    ///        System.out.println("newIndex : C - index2=" + index2 + ",value=" +
+                    //     // index2Index
+                    //           .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread()
+                    //              .hashCode());
                     return pos;
                 }
                 throw new IllegalStateException("Index " + index2 + " in index2index was altered");
@@ -222,6 +250,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         } catch (Exception e) {
             // reset the index as failed to add it.
             index2Index.compareAndSet(index2, BinaryLongReference.LONG_NOT_COMPLETE, NOT_INITIALIZED);
+            //  System.out.println("newIndex : D - index2=" + index2 + ",value=" + index2Index
+            //        .getVolatileValueAt(index2) + ",Thread=" + Thread.currentThread().hashCode());
             throw e;
         }
     }
