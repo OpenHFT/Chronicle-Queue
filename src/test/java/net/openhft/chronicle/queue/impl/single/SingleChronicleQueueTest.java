@@ -1776,12 +1776,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
+                .blockSize(128)
                 .build()) {
 
             final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
             final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-            int size = 100_000;
+            int size = 200_000_000;
 
             IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
 
