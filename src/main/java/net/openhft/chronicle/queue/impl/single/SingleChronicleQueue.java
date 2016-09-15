@@ -299,6 +299,16 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     }
 
+    /**
+     * Will give you the number of excerpts between 2 index’s ( as exists on the current file
+     * system ). If intermediate chronicle files are removed this will effect the result.
+     *
+     * @param lowerIndex the lower index
+     * @param upperIndex the higher index
+     * @return will give you the number of excerpts between 2 index’s. It’s not as simple as just
+     * subtracting one number from the other.
+     * @throws IllegalStateException if we are not able to read the chronicle files
+     */
     @Override
     public long countExcerpts(long lowerIndex, long upperIndex) throws IllegalStateException {
         if (lowerIndex > upperIndex) {
