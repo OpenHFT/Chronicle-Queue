@@ -1029,7 +1029,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private long nextIndexWithNextAvailableCycle(int cycle) {
-            long nextIndex = -1;
+            long nextIndex = Long.MIN_VALUE;
             for (int i = 0; i <= MAX_RETRY; i++) {
 
                 if (cycle == Integer.MIN_VALUE)
@@ -1038,7 +1038,7 @@ public class SingleChronicleQueueExcerpts {
 
                 long doubleCheck;
 
-                // DONT REMOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
+                // DON'T REMOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
                 // FIRST RESULT CAN DIFFER FROM THE DOUBLE CHECK, AS THE APPENDER CAN RACE WITH THE
                 // TAILER
                 do {
