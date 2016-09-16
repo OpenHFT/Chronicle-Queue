@@ -134,9 +134,11 @@ public class SingleChronicleQueueExcerpts {
 
         private void close() {
             Wire w0 = wireForIndex;
+            wireForIndex = null;
             if (w0 != null)
                 w0.bytes().release();
             Wire w = wire;
+            wire = null;
             if (w != null)
                 w.bytes().release();
         }
