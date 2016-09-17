@@ -776,7 +776,6 @@ public class SingleChronicleQueueExcerpts {
      * Tailer
      */
     public static class StoreTailer implements ExcerptTailer, SourceContext, ExcerptContext {
-        public static final int MAX_RETRY = 5;
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreTailerContext context = new StoreTailerContext();
@@ -1031,14 +1030,10 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private long nextIndexWithNextAvailableCycle(int cycle) {
-            long nextIndex = Long.MIN_VALUE;
-            for (int i = 0; i <= MAX_RETRY; i++) {
-
                 if (cycle == Integer.MIN_VALUE)
                     throw new AssertionError("cycle == Integer.MIN_VALUE");
 
-
-                long doubleCheck;
+            long nextIndex, doubleCheck;
 
                 // DON'T REMOVE THIS DOUBLE CHECK - ESPECIALLY WHEN USING SECONDLY THE
                 // FIRST RESULT CAN DIFFER FROM THE DOUBLE CHECK, AS THE APPENDER CAN RACE WITH THE
@@ -1060,9 +1055,6 @@ public class SingleChronicleQueueExcerpts {
 
                 if (nextIndex != Long.MIN_VALUE && queue.rollCycle().toCycle(nextIndex) - 1 != cycle) {
 
-                    if (i < MAX_RETRY)
-                        continue;
-
                     /**
                      * lets say that you were using a roll cycle of TEST_SECONDLY
                      * and you wrote a message to the queue, if you created a tailer and read the first message,
@@ -1077,8 +1069,6 @@ public class SingleChronicleQueueExcerpts {
                             "next cycle file. This can occur if you appenders have not written " +
                             "anything for a while, leaving the cycle files with a gap.");
                 }
-                return nextIndex;
-            }
 
             return nextIndex;
         }
