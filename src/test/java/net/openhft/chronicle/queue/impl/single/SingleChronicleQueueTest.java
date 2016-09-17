@@ -47,6 +47,7 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.*;
+import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -1783,7 +1784,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> {
                     final ExcerptAppender appender = q.acquireAppender();
-                    appender.padToCacheAlign(true);
+                    appender.padToCacheAlign(ALWAYS);
                     return appender;
                 });
                 final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
