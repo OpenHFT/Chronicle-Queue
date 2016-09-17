@@ -28,7 +28,6 @@ import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
-import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -1766,6 +1765,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
+    @Ignore("Long Running Test")
     @Test
     public void testRandomConcurrentReadWrite() throws TimeoutException, ExecutionException,
             InterruptedException {
