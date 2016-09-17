@@ -261,7 +261,7 @@ public class SingleChronicleQueueExcerpts {
                 position(store.writePosition());
 
                 Bytes<?> bytes = wire.bytes();
-                int header = bytes.readInt(position);
+                int header = bytes.readVolatileInt(position);
                 assert position == 0 || Wires.isReadyData(header);
                 bytes.writePosition(position + 4 + Wires.lengthOf(header));
                 if (lazyIndexing) {

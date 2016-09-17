@@ -200,7 +200,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @return the address of the Excerpt containing the usable index, just after the header
      */
     long newIndex(StoreRecovery recovery, @NotNull ExcerptContext ec, boolean index2index, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
-        long writePosition = this.writePosition.getValue();
+        long writePosition = this.writePosition.getVolatileValue();
         Wire wire = ec.wireForIndex();
         wire.bytes().writePosition(writePosition);
 
@@ -358,7 +358,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         @NotNull
         final Bytes<?> bytes = wire.bytes();
 
-        long end = writePosition.getValue();
+        long end = writePosition.getVolatileValue();
         bytes.readPositionUnlimited(knownAddress);
 
         for (long i = fromKnownIndex; ; i++) {
@@ -467,7 +467,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             if (used == 0)
                 continue;
 
-            long posN = indexValues.getValueAt(0);
+            long posN = indexValues.getVolatileValueAt(0);
             assert posN >= 0;
             if (posN > position)
                 continue;

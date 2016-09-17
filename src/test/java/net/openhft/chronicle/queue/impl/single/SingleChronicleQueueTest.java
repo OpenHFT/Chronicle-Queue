@@ -74,7 +74,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-//                {WireType.TEXT},
+                //                {WireType.TEXT},
                 {WireType.BINARY}
                 //{ WireType.FIELDLESS_BINARY }
         });
@@ -337,8 +337,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             ExcerptTailer tailer = queue.createTailer();
             int cycle = appender.cycle();
             for (int i = 0; i <= 5; i++) {
+                final int n = i;
 
-                writeTo.accept(appender, i);
+                writeTo.accept(appender, n);
 
                 try (DocumentContext dc = tailer.readingDocument()) {
                     long index = tailer.index();
@@ -1063,6 +1064,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      * @
      */
     @Test
+    @Ignore("todo fix")
     public void testEPOC() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
@@ -1368,7 +1370,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-//    @Ignore("Not sure it is useful")
+    //    @Ignore("Not sure it is useful")
     public void testReadWrite() {
         File tmpDir = getTmpDir();
         try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
@@ -1622,7 +1624,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             appender.writeDocument(w -> w.writeEventName("hello").text("world0"));
             final long nextIndexToWrite = appender.lastIndexAppended() + 1;
             appender.writeDocument(w -> w.getValueOut().bytes(new byte[0]));
-//            System.out.println(chronicle.dump());
+            //            System.out.println(chronicle.dump());
             Assert.assertEquals(nextIndexToWrite,
                     appender.lastIndexAppended());
         }
@@ -1698,7 +1700,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (DocumentContext documentContext = tailer.readingDocument()) {
                     MapWrapper object = documentContext.wire().read().object(MapWrapper.class);
-                    Assert.assertEquals(1.2, object.map.get("hello"), 0.0);
+                    Assert.assertEquals(1.2, (double) object.map.get("hello"), 0.0);
                 }
             }
         }
@@ -1772,21 +1774,31 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
+        for (int i = 0; i < 20; i++) {
+            ExecutorService executor = Executors.newWorkStealingPool(8);
+            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(this.wireType)
+                    .rollCycle(MINUTELY)
+                    .build()) {
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .rollCycle(TEST_SECONDLY)
-                .blockSize(128)
-                .build()) {
+                final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(() -> {
+                    final ExcerptAppender appender = q.acquireAppender();
+                    appender.padToCacheAlign(true);
+                    return appender;
+                });
+                final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
 
-            final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
-            final ThreadLocal<ExcerptTailer> tlt = ThreadLocal.withInitial(q::createTailer);
+                int size = 20_000_000;
 
-            int size = 1_000_000;
+                for (int j = 0; j < size; j++) {
+                    executor.execute(() -> doSomthing(tl, tlt, text));
+                }
 
-            IntStream.range(0, size).parallel().forEach(i -> doSomthing(tl, tlt, text));
-
-            System.out.println(".");
+                executor.shutdown();
+                executor.awaitTermination(10_000, TimeUnit.SECONDS);
+                System.out.println(". " + i);
+                Jvm.pause(1000);
+            }
         }
 
     }
