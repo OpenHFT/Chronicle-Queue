@@ -1796,7 +1796,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
 
                 executor.shutdown();
-                executor.awaitTermination(10_000, TimeUnit.SECONDS);
+                if (!executor.awaitTermination(10_000, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+
                 System.out.println(". " + i);
                 Jvm.pause(1000);
             }
