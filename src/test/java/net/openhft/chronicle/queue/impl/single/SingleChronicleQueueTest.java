@@ -1916,15 +1916,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
-        try {
-            if (Math.random() > 0.5)
-                writeTestDocument(tla, text);
-            else
-                readDocument(tlt, text);
-        } catch (NullPointerException e) {
-            LOGGER.error("Caught NPE.", e);
-            System.exit(1);
-        }
+        if (Math.random() > 0.5)
+            writeTestDocument(tla, text);
+        else
+            readDocument(tlt, text);
     }
 
     private void readDocument(ThreadLocal<ExcerptTailer> tlt, String text) {
