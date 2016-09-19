@@ -386,7 +386,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -395,7 +395,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -404,35 +404,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 599, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -441,7 +441,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -450,35 +450,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 599, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -487,7 +487,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -496,35 +496,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 599, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -533,7 +533,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -542,35 +542,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 599, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -579,7 +579,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -588,35 +588,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 599, header: 1 or 2\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -625,7 +625,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -634,29 +634,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n", queue.dump());
+                    "# 327077 bytes remaining\n", queue.dump());
 
             final ExcerptTailer tailer = queue.createTailer().toStart();
             for (int i = 0; i < 6; i++) {
@@ -870,6 +870,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = appender.writingDocument()) {
                 Assert.assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()));
                 dc.wire().write(() -> "FirstName").text("Rob");
+            }
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                Assert.assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()));
+                dc.wire().write(() -> "FirstName").text("Rob");
+            }
+
+            ExcerptTailer tailer = chronicle.createTailer();
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                long index = dc.index();
+                Assert.assertEquals(0, chronicle.rollCycle().toSequenceNumber(index));
+
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertEquals(1, chronicle.rollCycle().toSequenceNumber(dc.index()));
+
+            }
+
+            try (DocumentContext dc = tailer.readingDocument()) {
+                Assert.assertEquals(2, chronicle.rollCycle().toSequenceNumber(dc.index()));
+
             }
         }
     }
