@@ -300,7 +300,7 @@ public class SingleChronicleQueueStore implements WireStore {
             lastAcknowledgedIndexReplicated = wire.newLongReference();
 
         wire.write(MetaDataField.wireType).object(wireType)
-                .writeAlignTo(64, 0).write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
+                .writeAlignTo(8, 0).write(MetaDataField.writePosition).int64forBinding(0L, writePosition)
                 .write(MetaDataField.roll).typedMarshallable(this.roll)
                 .write(MetaDataField.indexing).typedMarshallable(this.indexing)
                 .write(MetaDataField.lastAcknowledgedIndexReplicated)
