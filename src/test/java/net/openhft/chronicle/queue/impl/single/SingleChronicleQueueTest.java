@@ -1805,7 +1805,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 Jvm.pause(1000);
             }
         }
-
     }
 
 
