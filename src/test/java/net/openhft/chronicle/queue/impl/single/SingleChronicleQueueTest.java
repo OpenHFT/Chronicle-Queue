@@ -1986,7 +1986,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 660,\n" +
+                    "  writePosition: 668,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -1995,7 +1995,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -2004,54 +2004,54 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  568,\n" +
-                    "  580,\n" +
-                    "  608,\n" +
-                    "  620,\n" +
-                    "  648,\n" +
-                    "  660,\n" +
+                    "  576,\n" +
+                    "  588,\n" +
+                    "  616,\n" +
+                    "  628,\n" +
+                    "  656,\n" +
+                    "  668,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data\n" +
                     "hello A0\n" +
-                    "# position: 580, header: 1\n" +
+                    "# position: 588, header: 1\n" +
                     "--- !!data\n" +
                     "hello B0\n" +
-                    "# position: 592, header: 1\n" +
+                    "# position: 600, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 608, header: 2\n" +
+                    "# position: 616, header: 2\n" +
                     "--- !!data\n" +
                     "hello A1\n" +
-                    "# position: 620, header: 3\n" +
+                    "# position: 628, header: 3\n" +
                     "--- !!data\n" +
                     "hello B1\n" +
-                    "# position: 632, header: 3\n" +
+                    "# position: 640, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 648, header: 4\n" +
+                    "# position: 656, header: 4\n" +
                     "--- !!data\n" +
                     "hello A2\n" +
-                    "# position: 660, header: 5\n" +
+                    "# position: 668, header: 5\n" +
                     "--- !!data\n" +
                     "hello B2\n" +
-                    "# position: 672, header: 5\n" +
+                    "# position: 680, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 83885388 bytes remaining\n", syncQ.dump());
+                    "# 83885380 bytes remaining\n", syncQ.dump());
         }
 
     }
