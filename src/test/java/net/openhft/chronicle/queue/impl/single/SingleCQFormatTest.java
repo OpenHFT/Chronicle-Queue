@@ -363,10 +363,10 @@ public class SingleCQFormatTest {
                     "  },\n" +
                     "  deltaCheckpointInterval: !byte -1\n" +
                     "}\n" +
-                    "# position: 378, header: 0\n" +
+                    "# position: 370, header: 0\n" +
                     "--- !!data #binary\n" +
                     "msg: Hello world\n" +
-                    "# position: 399, header: 1\n" +
+                    "# position: 391, header: 1\n" +
                     "--- !!data #binary\n" +
                     "msg: Also hello world\n", Wires.fromSizePrefixedBlobs(mappedBytes
                     .readPosition(0)));
