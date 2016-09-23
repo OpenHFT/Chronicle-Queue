@@ -29,6 +29,7 @@ import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.TailerDirection;
 import net.openhft.chronicle.queue.impl.*;
 import net.openhft.chronicle.threads.Pauser;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -90,6 +91,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
     private final boolean readOnly;
+
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
         epoch = builder.epoch();
@@ -555,7 +557,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 wire.headerNumber(rollCycle.toIndex(cycle, 0) - 1);
 
                 WireStore wireStore;
-                if ((! readOnly) && wire.writeFirstHeader()) {
+                if ((!readOnly) && wire.writeFirstHeader()) {
                     wireStore = storeFactory.apply(that, wire);
                     wire.updateFirstHeader();
                 } else {
