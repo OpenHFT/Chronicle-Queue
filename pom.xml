@@ -59,7 +59,6 @@
 
     <dependencies>
 
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-core</artifactId>
@@ -128,7 +127,6 @@
             <artifactId>jmh-generator-annprocess</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
