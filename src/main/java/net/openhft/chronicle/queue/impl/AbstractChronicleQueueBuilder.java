@@ -73,7 +73,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener = (cycle, file) ->
-            Jvm.debug().on(getClass(), "File released " + file);
+        Jvm.debug().on(getClass(), "File released " + file);
+
+    private boolean readOnly = false;
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
@@ -335,7 +337,16 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         return (B) this;
     }
 
+    @Override
+    public boolean readOnly() {
+        return readOnly;
+    }
 
+    @Override
+    public B readOnly(boolean readOnly) {
+        this.readOnly = readOnly;
+        return (B) this;
+    }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {
         NONE;
