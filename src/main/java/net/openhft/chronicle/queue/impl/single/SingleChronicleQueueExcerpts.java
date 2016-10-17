@@ -1066,7 +1066,7 @@ public class SingleChronicleQueueExcerpts {
 
                     LOG.info("Rolled " + (queue
                             .rollCycle().toCycle(nextIndex) - cycle) + " " + "times to find the " +
-                            "next cycle file. This can occur if you appenders have not written " +
+                            "next cycle file. This can occur if your appenders have not written " +
                             "anything for a while, leaving the cycle files with a gap.");
                 }
 
