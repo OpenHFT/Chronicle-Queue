@@ -24,6 +24,7 @@ import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.time.SetTimeProvider;
+import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -41,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
@@ -1634,6 +1636,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
         try (DocumentContext documentContext = backwardTailer.readingDocument()) {
             assertFalse(documentContext.isPresent());
+        }
+    }
+
+    @Test
+    public void testOverreadForwardFromFutureCycleThenReadBackwardTailer() {
+        File tmpDir = getTmpDir();
+        RollCycle cycle = TEST2_DAILY;
+        // when "forwardToFuture" flag is set, go one cycle to the future
+        AtomicBoolean forwardToFuture = new AtomicBoolean(false);
+        TimeProvider timeProvider = () -> forwardToFuture.get()
+                ? System.currentTimeMillis() + cycle.length()
+                : System.currentTimeMillis();
+
+        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+                .rollCycle(cycle)
+                .wireType(this.wireType)
+                .timeProvider(timeProvider)
+                .build()) {
+
+            ExcerptAppender appender = chronicle.acquireAppender();
+            appender.writeDocument(w -> w.writeEventName("hello").text("world"));
+
+            // go to the cycle next to the one the write was made on
+            forwardToFuture.set(true);
+
+            ExcerptTailer forwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.FORWARD)
+                    .toStart();
+
+            try(DocumentContext context = forwardTailer.readingDocument()) {
+                assertTrue(context.isPresent());
+            }
+            try(DocumentContext context = forwardTailer.readingDocument()) {
+                assertFalse(context.isPresent());
+            }
+            
+            ExcerptTailer backwardTailer = chronicle.createTailer()
+                    .direction(TailerDirection.BACKWARD)
+                    .toEnd();
+            
+            try(DocumentContext context = backwardTailer.readingDocument()) {
+                assertTrue(context.isPresent());
+            }
         }
     }
 
