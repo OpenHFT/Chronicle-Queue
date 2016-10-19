@@ -63,8 +63,8 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
                 run = reader.readOne();
             }
 
-            Assert.assertEquals(true, someManager.methodWithOneParamInvoked);
-            Assert.assertEquals(true, someManager.methodWithoutParamsInvoked);
+            Assert.assertEquals(true, someManager.methodWithOneParamInvoked);       // one param method was invoked
+            Assert.assertEquals(true, someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
 
             LOG.warn(queue.dump());
         }
