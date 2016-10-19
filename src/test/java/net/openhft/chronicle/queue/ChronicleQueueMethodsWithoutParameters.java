@@ -2,7 +2,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.MethodReader;
-import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +9,43 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
+import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Created on 19.10.2016.
  */
 public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBase {
+
+    protected static final Logger LOG = LoggerFactory.getLogger(ChronicleQueueMethodsWithoutParameters.class);
+
+    @Test
+    public void test() throws IOException, InterruptedException {
+        File file = getTmpDir();
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(file).rollCycle(TEST_DAILY).build()) {
+
+            SomeListener someListener = queue.acquireAppender().methodWriter(SomeListener.class);
+
+            SomeManager someManager = new SomeManager();
+            MethodReader reader = queue.createTailer().methodReader(someManager);
+
+            LOG.debug("Writing to queue");
+            someListener.methodWithOneParam(1);
+            someListener.methodWithoutParams();
+
+            LOG.debug("Reading from queue");
+            assertTrue(reader.readOne());
+            assertTrue(reader.readOne());
+            assertFalse(reader.readOne());
+
+            assertTrue(someManager.methodWithOneParamInvoked);       // one param method was invoked
+            assertTrue(someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
+
+            LOG.warn(queue.dump());
+        }
+    }
 
     public interface SomeListener {
 
@@ -35,38 +67,6 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
         @Override
         public void methodWithOneParam(int i) {
             methodWithOneParamInvoked = true;
-        }
-    }
-
-    protected static final Logger LOG = LoggerFactory.getLogger(ChronicleQueueMethodsWithoutParameters.class);
-
-    @Test
-    public void test() throws IOException, InterruptedException {
-        File file = getTmpDir();
-
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(file).build()) {
-            final ExcerptAppender appender = queue.acquireAppender();
-            final ExcerptTailer tailer = queue.createTailer();
-
-            SomeListener someListener = appender.methodWriter(SomeListener.class);
-
-            SomeManager someManager = new SomeManager();
-            MethodReader reader = tailer.methodReader(someManager);
-
-            LOG.debug("Writing to queue");
-            someListener.methodWithOneParam(1);
-            someListener.methodWithoutParams();
-
-            LOG.debug("Reading from queue");
-            boolean run = true;
-            while (run) {
-                run = reader.readOne();
-            }
-
-            Assert.assertEquals(true, someManager.methodWithOneParamInvoked);       // one param method was invoked
-            Assert.assertEquals(true, someManager.methodWithoutParamsInvoked);      // no params method was NOT invoked
-
-            LOG.warn(queue.dump());
         }
     }
 }
