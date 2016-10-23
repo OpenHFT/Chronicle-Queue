@@ -2322,6 +2322,84 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
     }
 
+    /**
+     * see https://github.com/OpenHFT/Chronicle-Queue/issues/299
+     */
+    @Test
+    public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() throws
+            Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
+                .single(dir.toString())
+                .rollCycle(RollCycles.TEST_SECONDLY);
+        final RollingChronicleQueue queue = builder.build();
+
+        int value = 0;
+        long cycle = 0;
+
+        long startIndex = 0;
+        for (int i = 0; i < 56; i++) {
+            try (final DocumentContext dc = queue.acquireAppender().writingDocument()) {
+
+                if (cycle == 0)
+                    cycle = queue.rollCycle().toCycle(dc.index());
+                final long index = dc.index();
+                final long seq = queue.rollCycle().toSequenceNumber(index);
+
+
+                if (seq == 52)
+                    startIndex = dc.index();
+
+                if (seq >= 52) {
+                    final int v = value++;
+                    System.out.println("stored => sequence-number=" + seq + ", value=" + v);
+                    dc.wire().write("value").int64(v);
+                } else {
+                    dc.wire().write("value").int64(0);
+                }
+
+            }
+        }
+
+
+        ExcerptTailer tailer = queue.createTailer();
+
+        Assert.assertTrue(tailer.moveToIndex(startIndex));
+
+        tailer = tailer.direction(TailerDirection.FORWARD);
+        Assert.assertEquals(0, action(tailer, queue.rollCycle()));
+        Assert.assertEquals(1, action(tailer, queue.rollCycle()));
+
+        tailer = tailer.direction(TailerDirection.BACKWARD);
+        Assert.assertEquals(2, action(tailer, queue.rollCycle()));
+        Assert.assertEquals(1, action(tailer, queue.rollCycle()));
+
+        tailer = tailer.direction(TailerDirection.FORWARD);
+        Assert.assertEquals(0, action(tailer, queue.rollCycle()));
+        Assert.assertEquals(1, action(tailer, queue.rollCycle()));
+    }
+
+    private long action(final ExcerptTailer tailer1, final RollCycle rollCycle) {
+
+        //  tailer1.direction(direction);
+        long readvalue = 0;
+        long seqNumRead = 0;
+        try (final DocumentContext dc = tailer1.readingDocument()) {
+
+            readvalue = dc.wire().read("value").int64();
+            seqNumRead = dc.index();
+        }
+
+        final long nextSeq = rollCycle.toSequenceNumber(tailer1.index());
+        System.out.println("Return-value=" + readvalue +
+                ", seq=" + rollCycle.toSequenceNumber(seqNumRead) +
+                ", next-seq=" + nextSeq + "(" + Long.toHexString(nextSeq) + "x0)" + ",direction="
+                + tailer1.direction());
+
+        return readvalue;
+    }
+
     @Test
     public void checkReferenceCountingAndCheckFileDeletion() throws IOException, InterruptedException {
 
