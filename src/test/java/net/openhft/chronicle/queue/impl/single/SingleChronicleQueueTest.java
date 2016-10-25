@@ -1646,7 +1646,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
         TimeProvider timeProvider = () -> forwardToFuture.get()
-                ? System.currentTimeMillis() +   TimeUnit.MILLISECONDS.toDays(1)
+                ? System.currentTimeMillis() + TimeUnit.MILLISECONDS.toDays(1)
                 : System.currentTimeMillis();
 
         try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
@@ -1665,18 +1665,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     .direction(TailerDirection.FORWARD)
                     .toStart();
 
-            try(DocumentContext context = forwardTailer.readingDocument()) {
+            try (DocumentContext context = forwardTailer.readingDocument()) {
                 assertTrue(context.isPresent());
             }
-            try(DocumentContext context = forwardTailer.readingDocument()) {
+            try (DocumentContext context = forwardTailer.readingDocument()) {
                 assertFalse(context.isPresent());
             }
-            
+
             ExcerptTailer backwardTailer = chronicle.createTailer()
                     .direction(TailerDirection.BACKWARD)
                     .toEnd();
-            
-            try(DocumentContext context = backwardTailer.readingDocument()) {
+
+            try (DocumentContext context = backwardTailer.readingDocument()) {
                 assertTrue(context.isPresent());
             }
         }
@@ -2308,6 +2308,41 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+
+    @Test
+    public void testLongLivingTailerAppenderReAcquiredEachSecond() throws Exception {
+
+        final Path dir = Files.createTempDirectory("demo");
+        final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
+
+        final String basePath = dir.toString();
+        try (ChronicleQueue queuet = ChronicleQueueBuilder
+                .single(basePath).rollCycle(rollCycle).build()) {
+
+            final ExcerptTailer tailer = queuet.createTailer();
+
+            // write first message
+            try (ChronicleQueue queue = ChronicleQueueBuilder
+                    .single(basePath).rollCycle(rollCycle).build()) {
+
+
+                for (int i = 0; i < 5; i++) {
+
+                    final ExcerptAppender appender = queue.acquireAppender();
+                    Thread.sleep(1000);
+                    try (final DocumentContext dc = appender.writingDocument()) {
+                        dc.wire().write("some").int32(i);
+                    }
+
+                    try (final DocumentContext dc = tailer.readingDocument()) {
+                        Assert.assertEquals(i, dc.wire().read("some").int32());
+                    }
+
+                }
+            }
+        }
+
+    }
 
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
