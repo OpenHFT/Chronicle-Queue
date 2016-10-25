@@ -68,21 +68,13 @@ public class RollCycleMultiThreadTest {
     }
 
     private class ParallelQueueObserver implements Callable, StoreFileListener {
-        SingleChronicleQueue queue;
 
         volatile int documentsRead;
         private final ExcerptTailer tailer;
 
         ParallelQueueObserver(ChronicleQueue queue) {
-
             documentsRead = 0;
             tailer = queue.createTailer();
-
-        }
-
-
-        public int documentsRead() {
-            return documentsRead;
         }
 
         @Override
@@ -97,7 +89,7 @@ public class RollCycleMultiThreadTest {
 
         @Override
         public Integer call() throws Exception {
-            System.out.println("run");
+
             try (final DocumentContext dc = tailer.readingDocument()) {
 
                 System.out.println("index=" + Long.toHexString(dc.index()));
