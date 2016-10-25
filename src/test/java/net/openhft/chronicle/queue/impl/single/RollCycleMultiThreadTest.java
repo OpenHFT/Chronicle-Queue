@@ -54,7 +54,7 @@ public class RollCycleMultiThreadTest {
     private class TestTimeProvider implements TimeProvider {
 
 
-        private long addInMs;
+        private volatile long addInMs = 0;
 
         @Override
         public long currentTimeMillis() {
