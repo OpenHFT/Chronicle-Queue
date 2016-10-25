@@ -7,8 +7,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.After;
@@ -31,9 +29,9 @@ import static net.openhft.chronicle.queue.RollCycles.DAILY;
 import static net.openhft.chronicle.wire.WireType.FIELDLESS_BINARY;
 import static org.junit.Assert.assertEquals;
 
-public class RollCycleTest2 {
+public class RollCycleMultiThreadTest {
 
-    Path path;
+    private Path path;
 
     @Before
     public void setUp() throws Exception {
@@ -53,7 +51,7 @@ public class RollCycleTest2 {
                 });
     }
 
-    class TestTimeProvider implements TimeProvider {
+    private class TestTimeProvider implements TimeProvider {
 
 
         private long addInMs;
@@ -63,19 +61,19 @@ public class RollCycleTest2 {
             return System.currentTimeMillis() + addInMs;
         }
 
-        public void add(long addInMs) {
+        void add(long addInMs) {
             this.addInMs = addInMs;
         }
 
     }
 
-    class ParallelQueueObserver implements Callable, StoreFileListener {
+    private class ParallelQueueObserver implements Callable, StoreFileListener {
         SingleChronicleQueue queue;
 
         volatile int documentsRead;
         private final ExcerptTailer tailer;
 
-        public ParallelQueueObserver(ChronicleQueue queue) {
+        ParallelQueueObserver(ChronicleQueue queue) {
 
             documentsRead = 0;
             tailer = queue.createTailer();
@@ -111,7 +109,7 @@ public class RollCycleTest2 {
 
                 String readText = sb.toString();
                 if (java.util.Objects.equals(sb, "")) {
-                    return null;
+                    return documentsRead;
                 }
                 System.out.println("Read a document " + readText);
                 documentsRead++;
@@ -119,6 +117,39 @@ public class RollCycleTest2 {
             }
             return documentsRead;
         }
+    }
+
+
+    @Test
+    public void testRead1() throws Exception {
+        TestTimeProvider timeProvider = new TestTimeProvider();
+
+        ChronicleQueue queue0 = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build();
+
+        ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
+
+        final ExecutorService scheduledExecutorService = Executors
+                .newSingleThreadScheduledExecutor();
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build()) {
+            ExcerptAppender appender = queue.acquireAppender();
+
+            Assert.assertEquals(0, (int) scheduledExecutorService.submit(observer::call).get());
+            // two days pass
+            timeProvider.add(TimeUnit.DAYS.toMillis(2));
+            //     scheduledExecutorService.submit(observer::call).get();
+            try (final DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("Day 3 data");
+            }
+            Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
+
+            System.out.println(queue.dump());
+            assertEquals(1, observer.documentsRead);
+
+        }
+
     }
 
     @Test
@@ -151,13 +182,15 @@ public class RollCycleTest2 {
 
             //    Assert.assertEquals(1, (int) observer.call());
             Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer).get());
+
             //
             // two days pass
-             timeProvider.add(TimeUnit.DAYS.toMillis(2));
+            timeProvider.add(TimeUnit.DAYS.toMillis(2));
             //     scheduledExecutorService.submit(observer::call).get();
             try (final DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("Day 3 data");
             }
+
             Assert.assertEquals(2, (int) scheduledExecutorService.submit(observer).get());
 
 
@@ -165,40 +198,6 @@ public class RollCycleTest2 {
             assertEquals(2, observer.documentsRead);
 
         }
-
-
     }
 
-    @Test
-    public void testRead1() throws Exception {
-        TestTimeProvider timeProvider = new TestTimeProvider();
-
-        ChronicleQueue queue0 = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build();
-
-        ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
-
-        final ExecutorService scheduledExecutorService = Executors
-                .newSingleThreadScheduledExecutor();
-
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
-
-            Assert.assertEquals(0, (int) scheduledExecutorService.submit(observer::call).get());
-            // two days pass
-            timeProvider.add(TimeUnit.DAYS.toMillis(2));
-            //     scheduledExecutorService.submit(observer::call).get();
-            try (final DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write().text("Day 3 data");
-            }
-            Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
-
-            System.out.println(queue.dump());
-            assertEquals(1, observer.documentsRead);
-
-        }
-
-
-    }
 }
