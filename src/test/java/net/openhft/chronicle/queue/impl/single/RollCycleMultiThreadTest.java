@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.StopCharTesters;
-import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -131,13 +130,11 @@ public class RollCycleMultiThreadTest {
             Assert.assertEquals(0, (int) scheduledExecutorService.submit(observer::call).get());
             // two days pass
             timeProvider.add(TimeUnit.DAYS.toMillis(2));
-            //     scheduledExecutorService.submit(observer::call).get();
+
             try (final DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("Day 3 data");
             }
             Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer::call).get());
-
-            System.out.println(queue.dump());
             assertEquals(1, observer.documentsRead);
 
         }
@@ -148,23 +145,23 @@ public class RollCycleMultiThreadTest {
     public void testRead2() throws Exception {
         TestTimeProvider timeProvider = new TestTimeProvider();
 
-        final SystemTimeProvider instance = SystemTimeProvider.INSTANCE;
-
-
         ChronicleQueue queue0 = SingleChronicleQueueBuilder
                 .binary(path)
                 .rollCycle(DAILY)
                 .timeProvider(timeProvider)
-                .wireType(FIELDLESS_BINARY).build();
+                .wireType(FIELDLESS_BINARY)
+                .build();
 
-
-        ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
+        final ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
         final ExecutorService scheduledExecutorService = Executors
                 .newSingleThreadScheduledExecutor();
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).rollCycle(DAILY).timeProvider(timeProvider).wireType(
-                FIELDLESS_BINARY).build()) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(DAILY)
+                .timeProvider(timeProvider)
+                .wireType(FIELDLESS_BINARY)
+                .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
 
@@ -172,13 +169,11 @@ public class RollCycleMultiThreadTest {
                 dc.wire().write().text("Day 1 data");
             }
 
-            //    Assert.assertEquals(1, (int) observer.call());
             Assert.assertEquals(1, (int) scheduledExecutorService.submit(observer).get());
 
-            //
             // two days pass
             timeProvider.add(TimeUnit.DAYS.toMillis(2));
-            //     scheduledExecutorService.submit(observer::call).get();
+
             try (final DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("Day 3 data");
             }
