@@ -1646,7 +1646,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
         TimeProvider timeProvider = () -> forwardToFuture.get()
-                ? System.currentTimeMillis() + cycle.length()
+                ? System.currentTimeMillis() +   TimeUnit.MICROSECONDS.toDays(1)
                 : System.currentTimeMillis();
 
         try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
