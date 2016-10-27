@@ -1455,7 +1455,7 @@ public class SingleChronicleQueueExcerpts {
             store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
         }
 
-        class StoreTailerContext extends ReadDocumentContext {
+        class  StoreTailerContext extends ReadDocumentContext {
             StoreTailerContext() {
                 super(null);
             }

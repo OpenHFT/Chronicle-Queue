@@ -433,7 +433,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     private void setFirstAndLastCycle() {
-        long now = time.currentTimeMillis();
+        long now = time.currentTimeMillis() + System.currentTimeMillis();
         if (now == firstAndLastCycleTime)
             return;
 

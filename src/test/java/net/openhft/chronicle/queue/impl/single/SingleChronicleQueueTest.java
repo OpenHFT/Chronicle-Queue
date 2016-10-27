@@ -2253,6 +2253,45 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
 
     @Test
+    public void testReadWritingWithTimeProvider() throws Exception {
+        final Path path = Files.createTempDirectory("q");
+
+        long time = System.currentTimeMillis();
+
+        try (ChronicleQueue q1 = SingleChronicleQueueBuilder
+                .binary(path)
+                .timeProvider(() -> time)
+                .build()) {
+
+            try (SingleChronicleQueue q2 = SingleChronicleQueueBuilder
+                    .binary(path)
+                    .timeProvider(() -> time)
+                    .build()) {
+
+                final ExcerptAppender appender2 = q2.acquireAppender();
+
+                final ExcerptTailer tailer1 = q1.createTailer();
+                final ExcerptTailer tailer2 = q2.createTailer();
+
+                try (final DocumentContext dc = appender2.writingDocument()) {
+                    dc.wire().write().text("some data");
+                }
+
+                try (DocumentContext dc = tailer2.readingDocument()) {
+                    Assert.assertTrue(dc.isPresent());
+                }
+
+                Assert.assertTrue(q1.file().equals(q2.file()));
+
+                try (DocumentContext dc = tailer1.readingDocument()) {
+                    Assert.assertTrue(dc.isPresent());       /// <-- fail here
+                }
+
+            }
+        }
+    }
+
+    @Test
     public void testTailerSnappingRollWithNewAppender() throws Exception {
 
         final Path dir = Files.createTempDirectory("demo");
