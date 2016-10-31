@@ -232,22 +232,22 @@ public class WriteBytesTest {
                     "00000470                          8F 8E 8E 8E 8E 8E 8E 8E          ········\n" +
                     "# position: 1152, header: 16\n" +
                     "--- !!data #binary\n" +
-                    "-0.000000000000000000000000000014156185439721036\n" +
+                    "-1.4156185439721035E-29\n" +
                     "# position: 1164, header: 17\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT32\n" +
-                    "-0.00000000000000000000000000005702071897398123\n" +
+                    "-5.702071897398123E-29\n" +
                     "# # EndOfFile\n" +
                     "# position: 1176, header: 18\n" +
                     "--- !!data #binary\n" +
-                    "-753555055760.82\n" +
+                    "-7.5355505576082E11\n" +
                     "# position: 1188, header: 19\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_2\n" +
                     "-48698841.79\n" +
                     "# position: 1200, header: 20\n" +
                     "--- !!data #binary\n" +
-                    "-8422085917.3268\n" +
+                    "-8.4220859173268E9\n" +
                     "# position: 1212, header: 21\n" +
                     "--- !!data #binary\n" +
                     "# # FLOAT_STOP_4\n" +
@@ -470,7 +470,7 @@ public class WriteBytesTest {
                     "# # HINT\n" +
                     "# position: 1740, header: 65\n" +
                     "--- !!data #binary\n" +
-                    "Ã\u0080: \"\": \"\": \"\": \"\": \"\": \"\": \n" +
+                    "\"\\u00C0\": \"\": \"\": \"\": \"\": \"\": \"\": \n" +
                     "# position: 1752, header: 66\n" +
                     "--- !!data #binary\n" +
                     "000006d0                                      C2 C1 C1 C1              ····\n" +
@@ -490,7 +490,7 @@ public class WriteBytesTest {
                     "00000710 C5 C5 C5 C5                                      ····             \n" +
                     "# position: 1812, header: 71\n" +
                     "--- !!data #binary\n" +
-                    "Ã\u0086Ã\u0086Ã\u0086Ã\u0086Ã\u0086Ã\u0086Ã\u0086: \n" +
+                    "\"\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\": \n" +
                     "# position: 1824, header: 72\n" +
                     "--- !!data #binary\n" +
                     "00000720             C8 C7 C7 C7  C7 C7 C7 C7                 ···· ····    \n" +
