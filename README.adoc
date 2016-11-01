@@ -237,8 +237,34 @@ This makes using Stream Processing attractive for systems which need a high degr
 Chronicle Queue is designed to be driven from code. You can easily add an interface which suits your needs.
 
 === Writing to a Queue
+In Chronicle-Queue we refer to the act of writing your data to the chronicle as storing an excerpt. This data could be made up from anything ranging from text, numbers or a serialised blob. Ultimately all your data regardless of what it is, is  stored as a series of bytes.
+Just before storing your excerpt to chronicle queue, chronicle queue reserves an 8 byte header.  Into this header chronicle-queue will write the length of your data. This way, when chronicle-queue  comes to read your excerpt it knows how long each blob of data is. Within this 8 byte header we also reserve a few bits that are used for a number of internal operations, such as locking to make chronicle-queue thread safe across both processors and threads. The important thing to note is because of this you can’t strictly convert the 8 bytes to an integer to find the length of your data blob.
 
-Once you start writing to a queue, you have a choice of a number of high level interfaces down to a low level API to raw memory.
+Chronicle-Queue uses the following low level interface to write the data 
+[source, Java]
+----
+try (final DocumentContext dc = appender.writingDocument()) {     dc.wire().write().text(“your text data“); }
+----
+
+the close on the try-with-resources, is the point at when the length of the data is written to the header. You can also use the DocumentContext to find out the index that your data has just been assigned ( see below )  you can later use this index to move-to/look up this excerpt. Each chronicle-queue excerpt has a unique index.
+
+[source, Java]
+----
+   long index = 0;
+        try (final DocumentContext dc = appender.writingDocument()) {
+            dc.wire().write().text(“your text data“);
+            index = dc.index();
+         }
+
+----
+The high level methods below such as “writeText()” are convenience methods on calling  appender.writingDocument(), but both approaches essentially do the same thing. The actual code of writeText(CharSequence text) look like this.
+
+[source, Java]
+----
+/**  * @param text to write a message  */ default void writeText(CharSequence text) throws UnrecoverableTimeoutException {     try (DocumentContext dc = writingDocument()) {         dc.wire().bytes().append8bit(text);     } }
+----
+
+You have a choice of a number of high level interfaces down to a low level API to raw memory.
 
 [source, Java]
 ----
@@ -366,9 +392,9 @@ Hello World
 Chronicle Queue stores its data in binary format, with a file extension of 'cq4' :
 
 ```
-\ @πheader∂SCQStoreÇE  »wireType∂WireTypeÊBINARYÕwritePositionèèèèß        ƒroll∂SCQSRollÇ*   ∆length¶ÄÓ6 ∆format
-ÎyyyyMMdd-HH≈epoch¶ÄÓ6 »indexing∂SCQSIndexingÇN    indexCount• ÃindexSpacingÀindex2Indexé    ß        …lastIndexé 
-   ß        ﬂlastAcknowledgedIndexReplicatedé     ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ   …timeStampèèèß                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+\�@πheader∂SCQStoreÇE��»wireType∂WireTypeÊBINARYÕwritePositionèèèèß��������ƒroll∂SCQSRollÇ*���∆length¶ÄÓ6�∆format
+ÎyyyyMMdd-HH≈epoch¶ÄÓ6�»indexing∂SCQSIndexingÇN��� indexCount•�ÃindexSpacingÀindex2Indexé����ß��������…lastIndexé�
+���ß��������ﬂlastAcknowledgedIndexReplicatedé�����ßˇˇˇˇˇˇˇˇ»recovery∂TimedStoreRecoveryÇ���…timeStampèèèß����������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
 ```
 
 This can often be  a bit difficult to read, So its better to dump the  'cq4'  files as text , this
