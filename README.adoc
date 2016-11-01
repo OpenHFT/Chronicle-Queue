@@ -258,7 +258,7 @@ try (final DocumentContext dc = appender.writingDocument()) {
     System.out.println("your data was store to index="+ dc.index());
 }   
 ----
-The high level methods below such as “writeText()” are convenience methods on calling  appender.writingDocument(), but both approaches essentially do the same thing. The actual code of writeText(CharSequence text) look like this.
+The high level methods below such as “writeText()” are convenience methods on calling  appender.writingDocument(), but both approaches essentially do the same thing. The actual code of writeText(CharSequence text) looks like this.
 
 [source, Java]
 ----
