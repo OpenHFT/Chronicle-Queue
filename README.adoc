@@ -122,7 +122,8 @@ Appenders and tailers are cheap as they don't even require a TCP connection. The
 
 Rather than partition the queue files across servers, we support each server, storing as much data as you have disk space.
 This is much more scalable than being limited to the amount of memory space you have.
-You can buy a redundant pair of 6 TB of enterprise disks for $700 (retail) at the time of writing (July 2016) and that is much cheaper than 6 TB of memory.
+You can buy a redundant pair of 6 TB of enterprise disks for $700 (retail) at the time of 
+(July 2016) and that is much cheaper than 6 TB of memory.
 
 === Restrictions on topics and messages.
 
@@ -243,35 +244,35 @@ Just before storing your excerpt to chronicle queue, chronicle queue reserves an
 Chronicle-Queue uses the following low level interface to write the data 
 [source, Java]
 ----
-try (final DocumentContext dc = appender.writingDocument()) {     dc.wire().write().text(“your text data“); }
+try (final DocumentContext dc = appender.writingDocument()) { 
+      dc.wire().write().text(“your text data“);
+}
 ----
 
 the close on the try-with-resources, is the point at when the length of the data is written to the header. You can also use the DocumentContext to find out the index that your data has just been assigned ( see below )  you can later use this index to move-to/look up this excerpt. Each chronicle-queue excerpt has a unique index.
 
 [source, Java]
 ----
-   long index = 0;
-        try (final DocumentContext dc = appender.writingDocument()) {
-            dc.wire().write().text(“your text data“);
-            index = dc.index();
-         }
-
+try (final DocumentContext dc = appender.writingDocument()) {
+    dc.wire().write().text(“your text data“);
+    System.out.println("your data was store to index="+ dc.index());
+}   
 ----
 The high level methods below such as “writeText()” are convenience methods on calling  appender.writingDocument(), but both approaches essentially do the same thing. The actual code of writeText(CharSequence text) look like this.
 
 [source, Java]
 ----
-/**  * @param text to write a message  */ default void writeText(CharSequence text) throws UnrecoverableTimeoutException {     try (DocumentContext dc = writingDocument()) {         dc.wire().bytes().append8bit(text);     } }
+/**
+ * @param text to write a message
+ */
+void writeText(CharSequence text) {
+    try (DocumentContext dc = writingDocument()) {
+        dc.wire().bytes().append8bit(text);
+    }
+}
 ----
 
-You have a choice of a number of high level interfaces down to a low level API to raw memory.
-
-[source, Java]
-----
-try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
-   final ExcerptAppender appender = queue.acquireAppender();
-----
-
+So you have a choice of a number of high level interfaces down to a low level API to raw memory.
 This is the highest level API which hides the fact you are writing to messaging at all. The benefit is; you can swap calls to the interface with a real component or an interface to a different protocol.
 
 [source, Java]
