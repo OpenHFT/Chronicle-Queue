@@ -238,7 +238,7 @@ Chronicle Queue is designed to be driven from code. You can easily add an interf
 
 === Writing to a Queue
 In Chronicle-Queue we refer to the act of writing your data to the chronicle as storing an excerpt. This data could be made up from anything ranging from text, numbers or a serialised blob. Ultimately all your data regardless of what it is, is  stored as a series of bytes.
-Just before storing your excerpt to chronicle queue, chronicle queue reserves an 8 byte header.  Into this header chronicle-queue will write the length of your data. This way, when chronicle-queue  comes to read your excerpt it knows how long each blob of data is. Within this 8 byte header we also reserve a few bits that are used for a number of internal operations, such as locking to make chronicle-queue thread safe across both processors and threads. The important thing to note is because of this you can’t strictly convert the 8 bytes to an integer to find the length of your data blob.
+Just before storing your excerpt to chronicle queue, chronicle queue reserves an 8 byte header. Into this header chronicle-queue will write the length of your data. This way, when chronicle-queue comes to read your excerpt it knows how long each blob of data is. We refer to this 8byte header along with your except as a document. So strickly speaking Chronicle-Queue can be used to read and write documents. Within this 8 byte header we also reserve a few bits that are used for a number of internal operations, such as locking to make chronicle-queue thread safe across both processors and threads. The important thing to note is because of this you can’t strictly convert the 8 bytes to an integer to find the length of your data blob.
 
 To write data to a Chronicle-Queue, you must first create an Appender
 
@@ -248,7 +248,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades")
    final ExcerptAppender appender = queue.acquireAppender();
 ----
 
-So, Chronicle-Queue uses and Appender to write to the queue and a Tailer to read from the queue. Unlike other java queuing soliutions, messages are not lost when they are read with a Tailer, This is covered in more detail in the second below on "Reading from a Queue"
+So, Chronicle-Queue uses and Appender to write to the queue and a Tailer to read from the queue. Unlike other java queuing soliutions, messages are not lost when they are read with a Tailer, This is covered in more detail in the section below on "Reading from a Queue"
 
 Chronicle-Queue uses the following low level interface to write the data 
 [source, Java]
