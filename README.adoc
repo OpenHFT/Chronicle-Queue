@@ -246,6 +246,7 @@ To write data to a Chronicle-Queue, you must first create an Appender
 ----
 try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades").build()) {
    final ExcerptAppender appender = queue.acquireAppender();
+}   
 ----
 
 So, Chronicle-Queue uses and Appender to write to the queue and a Tailer to read from the queue. Unlike other java queuing soliutions, messages are not lost when they are read with a Tailer, This is covered in more detail in the section below on "Reading from a Queue"
