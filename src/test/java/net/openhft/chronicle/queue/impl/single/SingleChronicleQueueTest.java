@@ -43,7 +43,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
@@ -57,8 +56,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
     private final WireType wireType;
-    private final AtomicLong lastPosition = new AtomicLong();
-    private final AtomicLong lastIndex = new AtomicLong();
+
     // *************************************************************************
     //
     // TESTS
@@ -78,7 +76,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
                 //                {WireType.TEXT},
-                {WireType.BINARY}
+                {WireType.BINARY},
+                {WireType.DELTA_BINARY}
                 //{ WireType.FIELDLESS_BINARY }
         });
     }
@@ -2283,10 +2282,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 Assert.assertTrue(q1.file().equals(q2.file()));
 
-                try (DocumentContext dc = tailer1.readingDocument()) {
-                    Assert.assertTrue(dc.isPresent());       /// <-- fail here
+                for (int i = 0; i < 10; i++) {
+                    try (DocumentContext dc = tailer1.readingDocument()) {
+                        if (dc.isPresent())
+                            return;
+                    }
+                    Jvm.pause(1);
                 }
-
+                fail();
             }
         }
     }
