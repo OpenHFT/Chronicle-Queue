@@ -21,6 +21,7 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
+import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,13 +58,14 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
-    protected final ThreadLocal<ExcerptAppender> excerptAppenderThreadLocal = ThreadLocal.withInitial(this::newAppender);
+    protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
     protected final int sourceId;
     final Supplier<Pauser> pauserSupplier;
     final long timeoutMS;
     @NotNull
     final File path;
     final AtomicBoolean isClosed = new AtomicBoolean();
+    private final ThreadLocal<WeakReference<ExcerptContext>> tlTailer = new ThreadLocal<>();
     @NotNull
     private final RollCycle rollCycle;
     @NotNull
@@ -86,11 +89,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
     private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
-    private final ThreadLocal<ExcerptContext> tlTailer;
+    private final boolean readOnly;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
-    private final boolean readOnly;
 
     protected SingleChronicleQueue(@NotNull final SingleChronicleQueueBuilder builder) {
         rollCycle = builder.rollCycle();
@@ -126,7 +128,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         sourceId = builder.sourceId();
         recoverySupplier = builder.recoverySupplier();
         readOnly = builder.readOnly();
-        tlTailer = ThreadLocal.withInitial(() -> new SingleChronicleQueueExcerpts.StoreTailer(this));
+    }
+
+    ExcerptContext getContext() {
+        return ThreadLocalHelper.getTL(tlTailer, this, SingleChronicleQueueExcerpts.StoreTailer::new);
     }
 
     @NotNull
@@ -273,7 +278,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         if (readOnly) {
             throw new IllegalStateException("Can't append to a read-only chronicle");
         }
-        return excerptAppenderThreadLocal.get();
+        return ThreadLocalHelper.getTL(excerptAppenderThreadLocal, this, SingleChronicleQueue::newAppender);
     }
 
     @NotNull
@@ -296,7 +301,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private long exceptsPerCycle(long cycle) {
         WireStore wireStore = storeForCycle((int) cycle, epoch, false);
         try {
-            return wireStore.sequenceForPosition(tlTailer.get(), wireStore.writePosition(),
+            return wireStore.sequenceForPosition(getContext(), wireStore.writePosition(),
                     true) + 1;
         } catch (Exception e) {
             throw new IllegalStateException(e);

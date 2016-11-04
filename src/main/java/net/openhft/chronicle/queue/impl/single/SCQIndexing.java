@@ -24,6 +24,7 @@ import net.openhft.chronicle.bytes.ref.BinaryLongReference;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.Closeable;
+import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.queue.impl.ExcerptContext;
@@ -33,11 +34,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static java.lang.ThreadLocal.withInitial;
 import static net.openhft.chronicle.wire.Wires.NOT_INITIALIZED;
 
 /**
@@ -48,8 +49,9 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     private final int indexSpacing, indexSpacingBits;
     private final LongValue index2Index;
     private final LongValue nextEntryToBeIndexed;
-    private final ThreadLocal<LongArrayValuesHolder> index2indexArray;
-    private final ThreadLocal<LongArrayValuesHolder> indexArray;
+    private final Supplier<LongArrayValues> longArraySupplier;
+    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> index2indexArray;
+    private final ThreadLocal<WeakReference<LongArrayValuesHolder>> indexArray;
     private final WriteMarshallable index2IndexTemplate;
     private final WriteMarshallable indexTemplate;
     LongValue writePosition;
@@ -79,10 +81,19 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         this.indexSpacingBits = Maths.intLog2(indexSpacing);
         this.index2Index = index2Index;
         this.nextEntryToBeIndexed = nextEntryToBeIndexed;
-        this.index2indexArray = withInitial(() -> new LongArrayValuesHolder(longArraySupplier.get()));
-        this.indexArray = withInitial(() -> new LongArrayValuesHolder(longArraySupplier.get()));
+        this.longArraySupplier = longArraySupplier;
+        this.index2indexArray = new ThreadLocal<>();
+        this.indexArray = new ThreadLocal<>();
         this.index2IndexTemplate = w -> w.writeEventName(() -> "index2index").int64array(indexCount);
         this.indexTemplate = w -> w.writeEventName(() -> "index").int64array(indexCount);
+    }
+
+    private LongArrayValuesHolder getIndex2IndexArray() {
+        return ThreadLocalHelper.getTL(index2indexArray, longArraySupplier, las -> new LongArrayValuesHolder(las.get()));
+    }
+
+    private LongArrayValuesHolder getIndexArray() {
+        return ThreadLocalHelper.getTL(indexArray, longArraySupplier, las -> new LongArrayValuesHolder(las.get()));
     }
 
     public long toAddress0(long index) {
@@ -167,7 +178,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     @NotNull
     private LongArrayValues arrayForAddress(@NotNull Wire wire, long secondaryAddress) {
-        LongArrayValuesHolder holder = indexArray.get();
+        LongArrayValuesHolder holder = getIndexArray();
         if (holder.address == secondaryAddress)
             return holder.values;
         holder.address = secondaryAddress;
@@ -495,7 +506,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     LongArrayValues getIndex2index(StoreRecovery recovery, ExcerptContext ec, long timeoutMS) throws
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
-        LongArrayValuesHolder holder = index2indexArray.get();
+        LongArrayValuesHolder holder = getIndex2IndexArray();
         LongArrayValues values = holder.values;
         if (((Byteable) values).bytesStore() != null || timeoutMS == 0)
             return values;

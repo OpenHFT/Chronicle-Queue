@@ -77,7 +77,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Arrays.asList(new Object[][]{
                 //                {WireType.TEXT},
                 {WireType.BINARY},
-                {WireType.DELTA_BINARY}
+//                {WireType.DELTA_BINARY}
                 //{ WireType.FIELDLESS_BINARY }
         });
     }
