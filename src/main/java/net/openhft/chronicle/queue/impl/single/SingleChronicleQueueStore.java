@@ -338,7 +338,11 @@ public class SingleChronicleQueueStore implements WireStore {
         try {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
         } catch (TimeoutException e) {
-            recovery.writeEndOfWire(wire, timeoutMS);
+            try {
+                recovery.writeEndOfWire(wire, timeoutMS);
+            } catch (UnsupportedOperationException e2) {
+                throw new UnrecoverableTimeoutException(e);
+            }
         }
     }
 

@@ -238,7 +238,7 @@ Chronicle Queue is designed to be driven from code. You can easily add an interf
 
 === Writing to a Queue
 In Chronicle-Queue we refer to the act of writing your data to the chronicle as storing an excerpt. This data could be made up from anything ranging from text, numbers or a serialised blob. Ultimately all your data regardless of what it is, is  stored as a series of bytes.
-Just before storing your excerpt to chronicle queue, chronicle queue reserves an 8 byte header. Into this header chronicle-queue will write the length of your data. This way, when chronicle-queue comes to read your excerpt it knows how long each blob of data is. We refer to this 8byte header along with your except as a document. So strickly speaking Chronicle-Queue can be used to read and write documents. Within this 8 byte header we also reserve a few bits that are used for a number of internal operations, such as locking to make chronicle-queue thread safe across both processors and threads. The important thing to note is because of this you can’t strictly convert the 8 bytes to an integer to find the length of your data blob.
+Just before storing your excerpt to chronicle queue, chronicle queue reserves an 8 byte header. Into this header chronicle-queue will write the length of your data. This way, when chronicle-queue comes to read your excerpt it knows how long each blob of data is. We refer to this 8 byte header along with your excerpt as a document. So strictly speaking Chronicle-Queue can be used to read and write documents. Within this 8 byte header we also reserve a few bits that are used for a number of internal operations, such as locking to make chronicle-queue thread safe across both processors and threads. The important thing to note is because of this you can’t strictly convert the 8 bytes to an integer to find the length of your data blob.
 
 To write data to a Chronicle-Queue, you must first create an Appender
 
@@ -249,7 +249,7 @@ try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(path + "/trades")
 }   
 ----
 
-So, Chronicle-Queue uses and Appender to write to the queue and a Tailer to read from the queue. Unlike other java queuing soliutions, messages are not lost when they are read with a Tailer, This is covered in more detail in the section below on "Reading from a Queue"
+So, Chronicle-Queue uses an Appender to write to the queue and a Tailer to read from the queue. Unlike other java queuing solutions, messages are not lost when they are read with a Tailer, This is covered in more detail in the section below on "Reading from a Queue"
 
 Chronicle-Queue uses the following low level interface to write the data 
 [source, Java]
@@ -893,7 +893,7 @@ We put significant effort into worrying about latency you can't see.  Unlike pro
 
 Replication for Chronicle Queue supports Chronicle Wire Enterprise. This supports a real time compression which calculates the deltas for individual objects as they are written. This can reduce the size of messages to 1/10th, or better, without the need for batching i.e without introducing significant latency.
 
-Queue also supports LZW, Snappy and GZIP compression however, these add non-triviallatency.  These are only useful if you have to have strict limitations on network bandwidth.
+Queue also supports LZW, Snappy and GZIP compression however, these add non-trivial latency.  These are only useful if you have to have strict limitations on network bandwidth.
 
 === Delivery Mode Semantics
 
@@ -960,7 +960,7 @@ Chronicle Queue manages storage by cycle. You can add a `StoreFileListener` whic
 
 == Chronicle Queue vs Kafka
 
-Chronicle Queue is designed to support over an order of magnitude of throughput, with an order of magnitude lower than the latency of Kafka.  While Karfa is faster than many of the alternatives it doesn't support both throughputs over million of events per second, and low latency e.g. 1 - 20 micro-seconds at the same time.
+Chronicle Queue is designed to support over an order of magnitude of throughput, with an order of magnitude lower than the latency of Kafka.  While Kafka is faster than many of the alternatives it doesn't support both throughputs over million of events per second, and low latency e.g. 1 - 20 micro-seconds at the same time.
 
 Chronicle Queue attempts to handle more volume from a single thread, to a single partition. Thus avoiding the need for the complexity and the downsides of having partitions.
 
@@ -994,13 +994,13 @@ The following charts time how long it takes to:
 - Have the second copy acknowledge receipt of the message.
 - Have a thread read the acknowledged message.
 
-The test is run for ten minutes and the distribution of latenices plotted.
+The test is run for ten minutes and the distribution of latencies plotted.
 
 image:https://vanilla-java.github.io/images/Latency-to-993.png[]
 
 NOTE: There is a step in latency at around 10 million message per second jumps as the messages start to batch. At rates below this, each message can be sent individually.
 
-The 99.99%ile and above are believed to be delays in passing the message over TCP. Further reserach is needed to prove this. In any case, these delays are much the same regardless of the throughput.
+The 99.99%ile and above are believed to be delays in passing the message over TCP. Further research is needed to prove this. In any case, these delays are much the same regardless of the throughput.
 
 The 99.9%ile and 99.93%ile are a function of how quickly the system can recover after a delay.  The higher the throughput, the less head room the system has to recover form a delay.
 
