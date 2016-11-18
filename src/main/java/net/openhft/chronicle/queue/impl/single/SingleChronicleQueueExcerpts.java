@@ -590,9 +590,12 @@ public class SingleChronicleQueueExcerpts {
             if (this.cycle == cycle)
                 throw new AssertionError();
             if (wire != null)
-                store.writeEOF(wire, timeoutMS());
+                try {
+                    store.writeEOF(wire, timeoutMS());
+                } catch (UnrecoverableTimeoutException e) {
+                    Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
+                }
             setCycle2(cycle, true);
-
         }
 
         /**
@@ -600,8 +603,13 @@ public class SingleChronicleQueueExcerpts {
          * if a new message wis written, but this doesn't create a new cycle or add a message.
          */
         public void writeEndOfCycleIfRequired() {
-            if (wire != null && queue.cycle() != cycle)
-                store.writeEOF(wire, timeoutMS());
+            if (wire != null && queue.cycle() != cycle) {
+                try {
+                    store.writeEOF(wire, timeoutMS());
+                } catch (UnrecoverableTimeoutException e) {
+                    Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
+                }
+            }
         }
 
         <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws
@@ -1455,7 +1463,7 @@ public class SingleChronicleQueueExcerpts {
             store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
         }
 
-        class  StoreTailerContext extends ReadDocumentContext {
+        class StoreTailerContext extends ReadDocumentContext {
             StoreTailerContext() {
                 super(null);
             }
