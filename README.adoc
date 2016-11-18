@@ -809,6 +809,14 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 
 === FAQ
 
+=== How to find the current cq4 chroncile-queue is writing to
+
+[source, Java]
+----
+WireStore wireStore = queue.storeForCycle(queue.cycle(), 0, false);
+System.out.println(wireStore.file().getAbsolutePath());
+----
+
 ==== Do we have to use Wire, can we use Bytes?
 
 You can access the Bytes in wire as follows:
