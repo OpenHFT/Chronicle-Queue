@@ -5,19 +5,21 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
+import net.openhft.chronicle.queue.impl.WireStore;
+import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.Wires;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -163,5 +165,45 @@ public class RollCycleTest {
         }
 
         assertEquals(2, observer.documentsRead);
+    }
+
+
+    @Test
+    public void testWriteToCorruptedFile() throws Exception {
+
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .rollCycle(RollCycles.TEST_DAILY).build()) {
+
+            ExcerptAppender appender = queue.acquireAppender();
+
+            long index;
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("hello world");
+                index = dc.index();
+            }
+
+
+            WireStore wireStore = queue.storeForCycle(queue.rollCycle().toCycle(index), 0, false);
+
+            try (FileOutputStream fileOutputStream = new FileOutputStream(wireStore.file(), true)) {
+                fileOutputStream.write(Wires.NOT_COMPLETE_UNKNOWN_LENGTH);
+                fileOutputStream.flush();
+
+            }
+
+            Thread.sleep(1000);
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("hello world 2");
+            }
+
+
+
+            try (DocumentContext dc = appender.writingDocument()) {
+                dc.wire().write().text("hello world 2");
+            }
+
+
+        }
     }
 }
