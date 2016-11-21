@@ -2411,7 +2411,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         queue.acquireAppender().writeText("hello world");
 
-
         ExcerptTailer excerptTailer = queue.createTailer().toEnd();
         long index = excerptTailer.index();
         System.out.println("index=" + Long.toHexString(index));
