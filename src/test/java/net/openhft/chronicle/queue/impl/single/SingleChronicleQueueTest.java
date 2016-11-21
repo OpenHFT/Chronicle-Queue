@@ -2399,7 +2399,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
     }
 
-
+    @Ignore
     @Test
     public void testTailer() throws Exception {
 
