@@ -1139,6 +1139,8 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
+            if (index() == index)
+                return true;
             final ScanResult scanResult = moveToIndexResult(index);
             return scanResult == FOUND;
         }
