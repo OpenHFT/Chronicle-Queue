@@ -498,7 +498,7 @@ public class SingleChronicleQueueExcerpts {
 
             ScanResult scanResult = this.store.moveToIndexForRead(this, sequenceNumber);
             Bytes<?> bytes = wire.bytes();
-            if (scanResult == ScanResult.NOT_FOUND) {
+            if (scanResult == NOT_FOUND) {
                 // so you won't read any if it ran out of data.
                 bytes.writePosition(bytes.readPosition());
                 return scanResult;
@@ -1141,21 +1141,6 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public boolean moveToIndex(final long index) {
             final ScanResult scanResult = moveToIndexResult(index);
-            if (scanResult == NOT_FOUND) {
-                try {
-                    long last = approximateLastIndex();
-
-                    if (index == last) {
-                        // we found last index on an unwritten cycle
-                        state = FOUND_CYCLE;
-                        return true;
-                    }
-
-                } catch (EOFException e) {
-                    return false;
-                }
-
-            }
             return scanResult == FOUND;
         }
 
@@ -1302,7 +1287,7 @@ public class SingleChronicleQueueExcerpts {
                 if (direction != TailerDirection.FORWARD)
                     index--;
                 if (index != Long.MIN_VALUE) {
-                    if (moveToIndexResult(index) == ScanResult.NOT_FOUND) {
+                    if (moveToIndexResult(index) == NOT_FOUND) {
                         // we found last index on an unwritten cycle
                         state = FOUND_CYCLE;
                     }
