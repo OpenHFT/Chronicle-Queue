@@ -2399,7 +2399,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
     }
 
-    @Ignore
     @Test
     public void testTailer() throws Exception {
 
@@ -2411,8 +2410,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         queue.acquireAppender().writeText("hello world");
 
-        ExcerptTailer excerptTailer = queue.createTailer().toEnd();
+        ExcerptTailer tailer = queue.createTailer();
+        ExcerptTailer excerptTailer = tailer.toEnd();
         long index = excerptTailer.index();
+
         System.out.println("index=" + Long.toHexString(index));
         Assert.assertTrue(excerptTailer.moveToIndex(index));
 

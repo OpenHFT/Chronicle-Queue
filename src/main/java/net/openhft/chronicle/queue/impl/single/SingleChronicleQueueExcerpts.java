@@ -46,6 +46,7 @@ import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
 import static net.openhft.chronicle.queue.TailerState.*;
 import static net.openhft.chronicle.queue.impl.single.ScanResult.FOUND;
+import static net.openhft.chronicle.queue.impl.single.ScanResult.NOT_FOUND;
 
 public class SingleChronicleQueueExcerpts {
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueueExcerpts.class);
@@ -1139,9 +1140,22 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public boolean moveToIndex(final long index) {
-            if (index() == index)
-                return true;
             final ScanResult scanResult = moveToIndexResult(index);
+            if (scanResult == NOT_FOUND) {
+                try {
+                    long last = approximateLastIndex();
+
+                    if (index == last) {
+                        // we found last index on an unwritten cycle
+                        state = FOUND_CYCLE;
+                        return true;
+                    }
+
+                } catch (EOFException e) {
+                    return false;
+                }
+
+            }
             return scanResult == FOUND;
         }
 
