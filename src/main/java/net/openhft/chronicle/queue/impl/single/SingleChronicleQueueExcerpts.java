@@ -720,6 +720,10 @@ public class SingleChronicleQueueExcerpts {
             @Override
             public void close() {
 
+                if (isClosed) {
+                    LOG.warn("Already Closed, close was called twice.");
+                    return;
+                }
 
                 try {
                     if (wire == StoreAppender.this.wire) {
