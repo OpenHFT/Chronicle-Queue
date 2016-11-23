@@ -814,8 +814,8 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 
 The time chronicle-queue rolls, is based on the UTC time, it uses System.currentTimeMillis().
 
-When using daily rolling, chronicle queue will, roll at midnight UTC. If you wish to change the time it rolls, you have to change
- chronicle-queue's epoch() time. This time is a milliSecond offset, in other words,  if you set the epoch to be epoch(1) then chronicle will roll at 1ms passed midnight.
+When using daily rolling chronicle queue will roll at midnight UTC. If you wish to change the time it rolls, you have to change
+ chronicle-queue's epoch() time. This time is a milli seconds offset, in other words,  if you set the epoch to be epoch(1) then chronicle will roll at 1ms passed midnight.
 
 [source, Java]
 ----
