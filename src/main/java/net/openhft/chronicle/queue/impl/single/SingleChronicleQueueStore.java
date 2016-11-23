@@ -200,7 +200,6 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public WireStore writePosition(long position) {
-
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header))
