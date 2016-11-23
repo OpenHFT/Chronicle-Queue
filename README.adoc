@@ -810,7 +810,7 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 === FAQ
 
 
-=== How to change the time that chronicle-queue roll
+=== How to change the time that chronicle-queue rolls
 
 The time chronicle-queue rolls, is based on the UTC time, it uses System.currentTimeMillis().
 
