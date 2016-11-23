@@ -809,7 +809,22 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 
 === FAQ
 
-=== How to find the current cq4 chroncile-queue is writing to
+
+=== How to change the time that chronicle-queue roll
+
+The time chronicle-queue rolls, is based on the UTC time, it uses System.currentTimeMillis().
+
+When using daily rolling chronicle queue will roll at midnight UTC. If you wish to change the time it rolls, you have to change
+ chronicle-queue's epoch() time. This time is a milli seconds offset, in other words,  if you set the epoch to be epoch(1) then chronicle will roll at 1ms passed midnight.
+
+[source, Java]
+----
+Path path = Files.createTempDirectory("rollCycleTest");
+SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).epoch(0).build();
+----
+
+
+=== How to find the current cq4 chronicle-queue is writing to
 
 [source, Java]
 ----
