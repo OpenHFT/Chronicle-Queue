@@ -159,11 +159,17 @@ public class SingleChronicleQueueExcerpts {
                 long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 4); // for the next 4 ticks.
                 long last = pos + headroom;
                 Thread thread = Thread.currentThread();
+                int count = 0, pretouch = 0;
                 for (; lastTouchedPage < last; lastTouchedPage += OS.pageSize()) {
                     if (thread.isInterrupted())
                         break;
-                    bytes.compareAndSwapInt(lastTouchedPage, 0, 0);
+                    if (bytes.compareAndSwapInt(lastTouchedPage, 0, 0))
+                        pretouch++;
+                    count++;
                 }
+                if (pretouch < count)
+                    Jvm.debug().on(getClass(), "pretouch for only " + pretouch + " or " + count);
+
                 long pos2 = store.writePosition();
                 if (Jvm.isDebugEnabled(getClass())) {
                     String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
