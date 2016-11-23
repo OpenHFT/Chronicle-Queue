@@ -821,7 +821,7 @@ When using daily rolling, chronicle queue will, roll at midnight UTC. If you wis
 ----
 Path path = Files.createTempDirectory("rollCycleTest");
 SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).epoch(0).build();
---
+----
 
 
 === How to find the current cq4 chronicle-queue is writing to
