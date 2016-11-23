@@ -810,9 +810,9 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 === FAQ
 
 
-=== How to change the time the role occurs
+=== How to change the time that chronicle-queue roll
 
-The time of the roll is based on the current time stamp.
+The time chronicle-queue rolls, is based on the UTC time, it uses System.currentTimeMillis().
 
 When using daily rolling, chronicle queue will, roll at midnight UTC. If you wish to change the time you roll, you have to change
  chronicle-queue's epoch time. This time is a milliSecond offset, in other words,  if you set the epoch to be epoch(1) then chronicle will roll at 1ms passed midnight.
