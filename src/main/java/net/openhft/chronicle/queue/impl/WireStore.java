@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.EOFException;
 import java.io.File;
 import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeoutException;
 
 public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
 
@@ -75,7 +76,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
-    void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
+    void writeEOF(Wire wire, long timeoutMS) throws TimeoutException;
 
     int deltaCheckpointInterval();
 

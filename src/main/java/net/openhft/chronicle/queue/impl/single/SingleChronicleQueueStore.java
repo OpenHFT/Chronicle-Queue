@@ -200,6 +200,7 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public WireStore writePosition(long position) {
+
         assert writePosition.getVolatileValue() + mappedFile.chunkSize() > position;
         int header = mappedBytes.readVolatileInt(position);
         if (Wires.isReadyData(header))
@@ -333,16 +334,8 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public void writeEOF(Wire wire, long timeoutMS) throws
-            UnrecoverableTimeoutException {
-        try {
+            TimeoutException {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
-        } catch (TimeoutException e) {
-            try {
-                recovery.writeEndOfWire(wire, timeoutMS);
-            } catch (UnsupportedOperationException e2) {
-                throw new UnrecoverableTimeoutException(e);
-            }
-        }
     }
 
     @Override

@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.nio.BufferOverflowException;
 import java.text.ParseException;
+import java.util.concurrent.TimeoutException;
 
 import static net.openhft.chronicle.queue.TailerDirection.BACKWARD;
 import static net.openhft.chronicle.queue.TailerDirection.FORWARD;
@@ -596,12 +597,13 @@ public class SingleChronicleQueueExcerpts {
         private void rollCycleTo(int cycle) throws UnrecoverableTimeoutException {
             if (this.cycle == cycle)
                 throw new AssertionError();
-            if (wire != null)
+            if (wire != null) {
                 try {
                     store.writeEOF(wire, timeoutMS());
-                } catch (UnrecoverableTimeoutException e) {
+                } catch (TimeoutException e) {
                     Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
                 }
+            }
             setCycle2(cycle, true);
         }
 
@@ -613,7 +615,7 @@ public class SingleChronicleQueueExcerpts {
             if (wire != null && queue.cycle() != cycle) {
                 try {
                     store.writeEOF(wire, timeoutMS());
-                } catch (UnrecoverableTimeoutException e) {
+                } catch (TimeoutException e) {
                     Jvm.warn().on(SingleChronicleQueueExcerpts.class, "Unable to terminate the previous cycle, continuing", e);
                 }
             }
@@ -1016,6 +1018,8 @@ public class SingleChronicleQueueExcerpts {
                         try {
                             bytes.writePosition(pos);
                             store.writeEOF(wire(), timeoutMS());
+                        } catch (TimeoutException e) {
+                            Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
                         } finally {
                             bytes.writeLimit(wlim);
                             bytes.readLimit(lim);
