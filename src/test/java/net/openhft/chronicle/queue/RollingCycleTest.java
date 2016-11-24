@@ -108,7 +108,7 @@ public class RollingCycleTest {
                     "000002a0 61 6D 65 5F 2D 32 35 38  32 37 36 31 37 32 B1 5D ame_-258 276172·]\n" +
                     "000002b0 7B F2 E3 AE D7 8D A9 9D  E4 EF FB 0C 34 E9 81 37 {······· ····4··7\n" +
                     "000002c0 AD 65 3B C2 B1 7C                                ·e;··|           \n" +
-                    "# position: 710, header: 2 or 3\n" +
+                    "# position: 710, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 83885366 bytes remaining\n" +
@@ -165,7 +165,7 @@ public class RollingCycleTest {
                     "000002a0 5F 2D 31 30 32 33 35 39  39 33 38 36 08 AA BC 9F _-102359 9386····\n" +
                     "000002b0 42 D9 D1 60 A5 60 17 E1  B6 7C C7 23 69 83 41 73 B··`·`·· ·|·#i·As\n" +
                     "000002c0 4F 1C E8 B1                                      O···             \n" +
-                    "# position: 708, header: 2 or 3\n" +
+                    "# position: 708, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 83885368 bytes remaining\n" +

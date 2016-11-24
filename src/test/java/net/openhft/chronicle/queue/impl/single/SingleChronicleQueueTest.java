@@ -426,7 +426,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 578, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327085 bytes remaining\n" +
@@ -472,7 +472,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 578, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327085 bytes remaining\n" +
@@ -518,7 +518,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 578, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327085 bytes remaining\n" +
@@ -564,7 +564,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 578, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327085 bytes remaining\n" +
@@ -610,7 +610,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "# position: 578, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 591, header: 1 or 2\n" +
+                    "# position: 591, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
                     "# 327085 bytes remaining\n" +
