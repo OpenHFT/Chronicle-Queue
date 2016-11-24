@@ -884,6 +884,21 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
+=== Ensure long Running tasks are not performed with a writingDocument()
+
+The writingDocument() should be performed as quickly as possible because a write lock is held
+until the DocumentContext is closed by the try-with-resources,  this blocks other appenders and
+tailers.
+
+[source, Java]
+----
+ try (DocumentContext dc = appender.writingDocument()) {
+    // this should be performed as quickly as possible because a write lock is held until the
+    DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
+ }
+ ----
+
+
 == Design
 
 === Motivation
