@@ -23,7 +23,6 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,11 +77,5 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
         } catch (TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }
-    }
-
-    @Override
-    public void writeEndOfWire(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException {
-        Jvm.warn().on(getClass(), "Overwriting an incomplete header with an EOF header to the end store");
-        wire.bytes().writeInt(Wires.END_OF_DATA);
     }
 }
