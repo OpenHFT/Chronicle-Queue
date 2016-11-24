@@ -115,11 +115,13 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException {
+    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
         while (true) {
             long offset = bytes.writePosition();
             int num = bytes.readInt(offset);
+            if (Wires.isEndOfFile(num))
+                throw new EOFException();
             if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
                 Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
             } else {

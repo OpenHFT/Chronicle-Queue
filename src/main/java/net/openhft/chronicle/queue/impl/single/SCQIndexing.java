@@ -380,7 +380,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     if (bytes.readPosition() > end)
                         return ScanResult.NOT_REACHED;
                     int header = bytes.readInt();
-                    if (Wires.isNotComplete(header))
+                    if (Wires.isNotComplete(header)) // or isEndOfFile
                         return ScanResult.NOT_REACHED;
                     bytes.readSkip(Wires.lengthOf(header));
                     continue;

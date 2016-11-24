@@ -48,7 +48,7 @@ public interface StoreRecovery extends WriteMarshallable {
         }
     }
 
-    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException;
+    long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException;
 
     void writeEndOfWire(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
 }
