@@ -43,7 +43,8 @@ public class Pretoucher {
 
             long pos2 = posSupplier.getAsLong();
             if (Jvm.isDebugEnabled(getClass())) {
-                String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
+
+                String message = bytes.mappedFile().file() + ": Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
                 Jvm.debug().on(getClass(), message);
             }
             lastTouchedPos = pos;
