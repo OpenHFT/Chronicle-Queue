@@ -867,6 +867,18 @@ try (DocumentContext dc = tailer.readingDocument()) {
 }
 ----
 
+.Checking that you have data
+you can use isPresent() to check that there is data to read
+[source, Java]
+----
+try (DocumentContext dc = tailer.readingDocument()) {
+    if(!dc.isPresent()) // this will tell you if there is any data  to read
+        return;
+    Bytes bytes = wire.bytes();
+    // read from the bytes
+}
+----
+
 ==== Is there a lower level interface?
 
 You can access native memory:
