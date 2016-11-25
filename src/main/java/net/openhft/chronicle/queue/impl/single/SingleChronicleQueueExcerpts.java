@@ -860,6 +860,17 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private boolean next(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
+            if (state == FOUND_CYCLE) {
+                try {
+                    return inACycle(includeMetaData);
+                } catch (EOFException eof) {
+                    state = TailerState.END_OF_CYCLE;
+                }
+            }
+            return next0(includeMetaData);
+        }
+
+        private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
             for (int i = 0; i < 1000; i++) {
                 switch (state) {
                     case UNINTIALISED:
@@ -872,7 +883,7 @@ public class SingleChronicleQueueExcerpts {
 
                     case FOUND_CYCLE: {
                         try {
-                            return inAnCycle(includeMetaData);
+                            return inACycle(includeMetaData);
                         } catch (EOFException eof) {
                             state = TailerState.END_OF_CYCLE;
                         }
@@ -961,7 +972,7 @@ public class SingleChronicleQueueExcerpts {
             throw new IllegalStateException("Unable to progress to the next cycle, state=" + state);
         }
 
-        private boolean inAnCycle(boolean includeMetaData) throws EOFException,
+        private boolean inACycle(boolean includeMetaData) throws EOFException,
                 StreamCorruptedException {
             Bytes<?> bytes = wire().bytes();
             bytes.readLimit(bytes.capacity());
@@ -977,27 +988,11 @@ public class SingleChronicleQueueExcerpts {
                     return false;
             switch (wire().readDataHeader(includeMetaData)) {
                 case NONE: {
-
                     // if current time is not the current cycle, then write an EOF marker and
                     // re-read from here, you may find that in the mean time an appender writes
                     // another message, however the EOF marker will always be at the end.
-                    if (cycle != queue.cycle() && !isReadOnly(bytes)) {
-                        long pos = bytes.readPosition();
-                        long lim = bytes.readLimit();
-                        long wlim = bytes.writeLimit();
-                        try {
-                            bytes.writePosition(pos);
-                            store.writeEOF(wire(), timeoutMS());
-                        } catch (TimeoutException e) {
-                            Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
-                        } finally {
-                            bytes.writeLimit(wlim);
-                            bytes.readLimit(lim);
-                            bytes.readPosition(pos);
-                        }
-
-                        return inAnCycle(includeMetaData);
-                    }
+                    if (cycle != queue.cycle() && !isReadOnly(bytes))
+                        return checkMoveToNextCycle(includeMetaData, bytes);
 
                     return false;
                 }
@@ -1009,18 +1004,41 @@ public class SingleChronicleQueueExcerpts {
                     break;
             }
 
-            if (!lazyIndexing
-                    && direction == TailerDirection.FORWARD
-                    && (index & indexSpacingMask) == 0
-                    && !context.isMetaData())
-                store.setPositionForSequenceNumber(this,
-                        queue.rollCycle().toSequenceNumber(index), bytes
-                                .readPosition());
+            if ((index & indexSpacingMask) == 0)
+                indexEntry(bytes);
+
             context.closeReadLimit(bytes.capacity());
             wire().readAndSetLength(bytes.readPosition());
             long end = bytes.readLimit();
             context.closeReadPosition(end);
             return true;
+        }
+
+        private void indexEntry(Bytes<?> bytes) throws StreamCorruptedException {
+            if (!lazyIndexing
+                    && direction == TailerDirection.FORWARD
+                    && !context.isMetaData())
+                store.setPositionForSequenceNumber(this,
+                        queue.rollCycle().toSequenceNumber(index), bytes
+                                .readPosition());
+        }
+
+        private boolean checkMoveToNextCycle(boolean includeMetaData, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
+            long pos = bytes.readPosition();
+            long lim = bytes.readLimit();
+            long wlim = bytes.writeLimit();
+            try {
+                bytes.writePosition(pos);
+                store.writeEOF(wire(), timeoutMS());
+            } catch (TimeoutException e) {
+                Jvm.warn().on(getClass(), "Unable to append EOF, skipping", e);
+            } finally {
+                bytes.writeLimit(wlim);
+                bytes.readLimit(lim);
+                bytes.readPosition(pos);
+            }
+
+            return inACycle(includeMetaData);
         }
 
         private long nextIndexWithNextAvailableCycle(int cycle) {
