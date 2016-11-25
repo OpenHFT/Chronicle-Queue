@@ -71,7 +71,7 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytesAndDump() {
-        String dir = OS.TARGET + "/WriteBytesTestAndDump";
+        String dir = OS.TARGET + "/WriteBytesTestAndDump-" + System.nanoTime();
         try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .rollCycle(TEST4_DAILY)
                 .build()) {

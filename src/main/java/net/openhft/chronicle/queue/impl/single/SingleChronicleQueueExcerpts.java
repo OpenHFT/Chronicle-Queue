@@ -22,7 +22,6 @@ import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.WriteBytesMarshallable;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.util.StringUtils;
@@ -87,8 +86,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
-        private long lastTouchedPage = -1;
-        private long lastTouchedPos = 0;
+        private Pretoucher pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
@@ -148,36 +146,9 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void pretouch() {
             setCycle(queue.cycle(), true);
-            long pos = store.writePosition();
-            MappedBytes bytes = (MappedBytes) wire.bytes();
-
-            if (lastTouchedPage < 0) {
-                lastTouchedPage = pos - pos % OS.pageSize();
-                lastTouchedPos = pos;
-                String message = "Reset lastTouched to " + lastTouchedPage;
-                Jvm.debug().on(getClass(), message);
-            } else {
-                long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 4); // for the next 4 ticks.
-                long last = pos + headroom;
-                Thread thread = Thread.currentThread();
-                int count = 0, pretouch = 0;
-                for (; lastTouchedPage < last; lastTouchedPage += OS.pageSize()) {
-                    if (thread.isInterrupted())
-                        break;
-                    if (bytes.compareAndSwapInt(lastTouchedPage, 0, 0))
-                        pretouch++;
-                    count++;
-                }
-                if (pretouch < count)
-                    Jvm.debug().on(getClass(), "pretouch for only " + pretouch + " or " + count);
-
-                long pos2 = store.writePosition();
-                if (Jvm.isDebugEnabled(getClass())) {
-                    String message = "Advanced " + (pos - lastTouchedPos) / 1024 + " KB between pretouch() and " + (pos2 - pos) / 1024 + " KB while mapping of " + headroom / 1024 + " KB.";
-                    Jvm.debug().on(getClass(), message);
-                }
-                lastTouchedPos = pos;
-            }
+            if (pretoucher == null)
+                pretoucher = new Pretoucher(() -> this.store.writePosition());
+            pretoucher.pretouch((MappedBytes) wire.bytes());
         }
 
         @Override
@@ -262,7 +233,6 @@ public class SingleChronicleQueueExcerpts {
 
         private void resetPosition() throws UnrecoverableTimeoutException {
             try {
-                lastTouchedPage = -1;
 
                 if (store == null || wire == null)
                     return;
