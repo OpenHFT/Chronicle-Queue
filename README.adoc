@@ -903,10 +903,10 @@ tailers.
 
 [source, Java]
 ----
- try (DocumentContext dc = appender.writingDocument()) {
-    // this should be performed as quickly as possible because a write lock is held until the
-    DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
- }
+try (DocumentContext dc = appender.writingDocument()) {
+  // this should be performed as quickly as possible because a write lock is held until the
+  // DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
+}
 ----
 
 
