@@ -8,9 +8,15 @@ Peter Lawrey, Rob Austin
 
 *Or you may already be using Chronicle and just want some help - http://chronicle.software/support/[find out more..]*
 
+
 == Chronicle Queue
 
+===  Java Doc
+http://openhft.github.io/Chronicle-Queue/apidocs/
+
+=== What is Chronicle Queue 
 Chronicle Queue is a distributed unbounded persisted queue.
+
 It supports asynchronous RMI and Publish/Subscribe interfaces with micro-second latencies.
 In optimised examples, a message can be passed between JVMs in under a micro-second, and passed between JVMs on different machines via replication in under 10 micro-seconds.
 Chronicle Queue provides stable, soft, real time latencies into the millions of messages per second for a single thread to one queue with total ordering of every event.
