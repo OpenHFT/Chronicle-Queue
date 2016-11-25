@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.time.TimeProvider;
 
 public enum RollCycles implements RollCycle {
     TEST_SECONDLY("yyyyMMdd-HHmmss", 1000, 1 << 15, 4), // only good for testing
@@ -67,6 +68,11 @@ public enum RollCycles implements RollCycle {
     }
 
     @Override
+    public int current(TimeProvider time, long epoch) {
+        return (int) ((time.currentTimeMillis() - epoch) / length());
+    }
+
+    @Override
     public long toIndex(int cycle, long sequenceNumber) {
         return ((long) cycle << cycleShift) + (sequenceNumber & sequenceMask);
     }
@@ -80,5 +86,6 @@ public enum RollCycles implements RollCycle {
     public int toCycle(long index) {
         return Maths.toUInt31(index >> cycleShift);
     }
+
 
 }

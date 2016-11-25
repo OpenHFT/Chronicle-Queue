@@ -20,7 +20,7 @@ public class Pretoucher {
 
     public void pretouch(MappedBytes bytes) {
         long pos = posSupplier.getAsLong();
-        if (lastTouchedPage > pos) {
+        if (lastTouchedPage > pos + HEAD_ROOM) {
             lastTouchedPage = pos - pos % OS.pageSize();
             lastTouchedPos = pos;
             String message = "Reset lastTouched to " + lastTouchedPage;
