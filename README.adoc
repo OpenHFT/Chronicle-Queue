@@ -867,25 +867,6 @@ try (DocumentContext dc = tailer.readingDocument()) {
 }
 ----
 
-
-=== Shutdown
-
-You should try to avoid abruptly killing chronicle queue, especially if its in the middle of
-writing a message
-[source, Java]
-----
-try (DocumentContext dc = appender.writingDocument()) {
-    // killing chronicle queue here will leave the file in a locked state
- }
-----
-
-if you kill chronicle queue when its half way through writing a document,
-this can leave your  chronicle-queue in a locked state, which could later prevent other appenders
-from writing to the queue file.  Although, we don't recommend that you "$kill -9" your process, 
-luckily in the event that your process abruptly terminates, we have added recovery code  that
-should recover from this situation.
-
-
 ==== Is there a lower level interface?
 
 You can access native memory:
@@ -914,7 +895,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-=== Ensure long Running tasks are not performed with a writingDocument()
+==== Ensure long Running tasks are not performed with a writingDocument()
 
 The writingDocument() should be performed as quickly as possible because a write lock is held
 until the DocumentContext is closed by the try-with-resources,  this blocks other appenders and
@@ -926,8 +907,25 @@ tailers.
     // this should be performed as quickly as possible because a write lock is held until the
     DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
  }
- ----
+----
 
+
+==== How to Shutdown
+
+You should try to avoid abruptly killing chronicle queue, especially if its in the middle of
+writing a message
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    // killing chronicle queue here will leave the file in a locked state
+ }
+----
+
+if you kill chronicle queue when its half way through writing a document,
+this can leave your  chronicle-queue in a locked state, which could later prevent other appenders
+from writing to the queue file.  Although, we don't recommend that you "$kill -9" your process, 
+luckily in the event that your process abruptly terminates, we have added recovery code  that
+should recover from this situation.
 
 == Design
 
