@@ -11,9 +11,6 @@ Peter Lawrey, Rob Austin
 
 == Chronicle Queue
 
-===  Java Doc
-http://openhft.github.io/Chronicle-Queue/apidocs/
-
 === What is Chronicle Queue 
 Chronicle Queue is a distributed unbounded persisted queue.
 
@@ -68,6 +65,12 @@ Click here to get the http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.open
 Snapshots are available on https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle-queue[OSS sonatype]
 
 https://github.com/OpenHFT/Chronicle-Queue/blob/master/RELEASE-NOTES.adoc[Chronicle Queue Release Notes]
+
+===  Java Doc
+http://openhft.github.io/Chronicle-Queue/apidocs/
+
+=== Simple Step-By-Step Guide
+see https://github.com/OpenHFT/Chronicle-Queue-Sample
 
 === Overview
 
