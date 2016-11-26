@@ -21,11 +21,13 @@ public class Pretoucher {
 
     public void pretouch(MappedBytes bytes) {
         long pos = posSupplier.getAsLong();
+        // don't retain the bytes object when it is head so keep the hashCode instead.
+        // small risk of a duplicate hashCode.
         if (lastBytesHashcode != System.identityHashCode(bytes)) {
-            lastTouchedPage = 0;
-            lastTouchedPos = 0;
+            lastTouchedPage = pos - pos % OS.pageSize();
+            lastTouchedPos = pos;
             lastBytesHashcode = System.identityHashCode(bytes);
-            String message = bytes.mappedFile().file() + "Reset pretoucher";
+            String message = bytes.mappedFile().file() + "Reset pretoucher to pos " + pos;
             Jvm.debug().on(getClass(), message);
 
         } else {
