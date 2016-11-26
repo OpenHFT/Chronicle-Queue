@@ -86,7 +86,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private long lastPosition;
         private int lastCycle;
-        private Pretoucher pretoucher = null;
+        private PretoucherState pretoucher = null;
         private Padding padToCacheLines = Padding.SMART;
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
@@ -147,7 +147,7 @@ public class SingleChronicleQueueExcerpts {
         public void pretouch() {
             setCycle(queue.cycle(), true);
             if (pretoucher == null)
-                pretoucher = new Pretoucher(() -> this.store.writePosition());
+                pretoucher = new PretoucherState(() -> this.store.writePosition());
             pretoucher.pretouch((MappedBytes) wire.bytes());
         }
 

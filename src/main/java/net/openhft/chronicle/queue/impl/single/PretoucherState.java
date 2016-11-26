@@ -1,4 +1,4 @@
-package net.openhft.chronicle.queue;
+package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.Jvm;
