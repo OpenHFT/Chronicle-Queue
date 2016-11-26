@@ -775,7 +775,7 @@ public class SingleChronicleQueueExcerpts {
         long index; // index of the next read.
         WireStore store;
         private int cycle;
-        private long timeForNextCycle;
+        private long timeForNextCycle = Long.MAX_VALUE;
         private TailerDirection direction = TailerDirection.FORWARD;
         private boolean lazyIndexing = false;
         private Wire wireForIndex;
@@ -992,7 +992,13 @@ public class SingleChronicleQueueExcerpts {
                     // if current time is not the current cycle, then write an EOF marker and
                     // re-read from here, you may find that in the mean time an appender writes
                     // another message, however the EOF marker will always be at the end.
-                    if (queue.time().currentTimeMillis() >= timeForNextCycle && !isReadOnly(bytes))
+                    long now = queue.time().currentTimeMillis();
+                    boolean cycleChange2 = now >= timeForNextCycle;
+/*                    int qcycle = queue.cycle();
+                    boolean cycleChange = this.cycle != qcycle;
+                    if (cycleChange != cycleChange2)
+                        System.out.println("error");*/
+                    if (cycleChange2 && !isReadOnly(bytes))
                         return checkMoveToNextCycle(includeMetaData, bytes);
 
                     return false;
@@ -1471,9 +1477,9 @@ public class SingleChronicleQueueExcerpts {
         public void setCycle(int cycle) {
             this.cycle = cycle;
             if (cycle == Integer.MIN_VALUE) {
-                timeForNextCycle = Long.MIN_VALUE;
+                timeForNextCycle = Long.MAX_VALUE;
             } else {
-                timeForNextCycle = (long) cycle * queue.rollCycle().length() + queue.epoch();
+                timeForNextCycle = (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
             }
         }
 
