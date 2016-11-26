@@ -10,9 +10,10 @@ import java.util.function.LongSupplier;
  * Created by peter on 25/11/2016.
  */
 public class Pretoucher {
-    static final int HEAD_ROOM = 1 << 20;
+    private static final int HEAD_ROOM = 1 << 20;
     private final LongSupplier posSupplier;
     private long lastTouchedPage = 0, lastTouchedPos = 0;
+    private int lastBytesHashcode = 0;
 
     public Pretoucher(LongSupplier posSupplier) {
         this.posSupplier = posSupplier;
@@ -20,10 +21,11 @@ public class Pretoucher {
 
     public void pretouch(MappedBytes bytes) {
         long pos = posSupplier.getAsLong();
-        if (lastTouchedPage > pos + HEAD_ROOM) {
-            lastTouchedPage = pos - pos % OS.pageSize();
-            lastTouchedPos = pos;
-            String message = "Reset lastTouched to " + lastTouchedPage;
+        if (lastBytesHashcode != System.identityHashCode(bytes)) {
+            lastTouchedPage = 0;
+            lastTouchedPos = 0;
+            lastBytesHashcode = System.identityHashCode(bytes);
+            String message = bytes.mappedFile().file() + "Reset pretoucher";
             Jvm.debug().on(getClass(), message);
 
         } else {
@@ -39,7 +41,7 @@ public class Pretoucher {
                 count++;
             }
             if (pretouch < count)
-                Jvm.debug().on(getClass(), "pretouch for only " + pretouch + " or " + count);
+                Jvm.debug().on(getClass(), "pretouch for only " + pretouch + " of " + count);
 
             long pos2 = posSupplier.getAsLong();
             if (Jvm.isDebugEnabled(getClass())) {
