@@ -775,6 +775,7 @@ public class SingleChronicleQueueExcerpts {
         long index; // index of the next read.
         WireStore store;
         private int cycle;
+        private long timeForNextCycle;
         private TailerDirection direction = TailerDirection.FORWARD;
         private boolean lazyIndexing = false;
         private Wire wireForIndex;
@@ -783,7 +784,7 @@ public class SingleChronicleQueueExcerpts {
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
-            this.cycle = Integer.MIN_VALUE;
+            this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(StoreTailer.this::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
@@ -991,7 +992,7 @@ public class SingleChronicleQueueExcerpts {
                     // if current time is not the current cycle, then write an EOF marker and
                     // re-read from here, you may find that in the mean time an appender writes
                     // another message, however the EOF marker will always be at the end.
-                    if (cycle != queue.cycle() && !isReadOnly(bytes))
+                    if (queue.time().currentTimeMillis() >= timeForNextCycle && !isReadOnly(bytes))
                         return checkMoveToNextCycle(includeMetaData, bytes);
 
                     return false;
@@ -1015,7 +1016,8 @@ public class SingleChronicleQueueExcerpts {
         }
 
         private void indexEntry(Bytes<?> bytes) throws StreamCorruptedException {
-            if (!lazyIndexing
+            if (store.indexable(index)
+                    && !lazyIndexing
                     && direction == TailerDirection.FORWARD
                     && !context.isMetaData())
                 store.setPositionForSequenceNumber(this,
@@ -1211,7 +1213,7 @@ public class SingleChronicleQueueExcerpts {
                     return rollCycle.toIndex(queue.cycle(), 0L);
 
                 final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
-                this.cycle = lastCycle;
+                this.setCycle(lastCycle);
                 assert wireStore != null;
 
                 if (store != null)
@@ -1381,7 +1383,7 @@ public class SingleChronicleQueueExcerpts {
             context.wire(null);
             this.store = nextStore;
             this.state = FOUND_CYCLE;
-            this.cycle = cycle;
+            this.setCycle(cycle);
             resetWires();
             final Wire wire = wire();
             wire.parent(this);
@@ -1464,6 +1466,15 @@ public class SingleChronicleQueueExcerpts {
                 return;
             }
             store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
+        }
+
+        public void setCycle(int cycle) {
+            this.cycle = cycle;
+            if (cycle == Integer.MIN_VALUE) {
+                timeForNextCycle = Long.MIN_VALUE;
+            } else {
+                timeForNextCycle = (long) cycle * queue.rollCycle().length() + queue.epoch();
+            }
         }
 
         class StoreTailerContext extends ReadDocumentContext {

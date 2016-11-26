@@ -311,6 +311,11 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
+    public boolean indexable(long index) {
+        return indexing.indexable(index);
+    }
+
+    @Override
     public void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber,
                                              long position)
             throws UnrecoverableTimeoutException, StreamCorruptedException {

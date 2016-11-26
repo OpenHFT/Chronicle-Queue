@@ -84,4 +84,6 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * @return the type of wire used
      */
     WireType wireType();
+
+    boolean indexable(long index);
 }
