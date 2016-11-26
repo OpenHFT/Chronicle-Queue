@@ -30,7 +30,7 @@ class PretoucherState {
             String message = bytes.mappedFile().file() + "Reset pretoucher to pos " + pos;
             Jvm.debug().on(getClass(), message);
 
-        } else {
+        } else if (pos >= lastTouchedPage + OS.pageSize()) {
             long headroom = Math.max(HEAD_ROOM, (pos - lastTouchedPos) * 4); // for the next 4 ticks.
             long last = pos + headroom;
             Thread thread = Thread.currentThread();
