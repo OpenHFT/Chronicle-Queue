@@ -9,13 +9,13 @@ import java.util.function.LongSupplier;
 /**
  * Created by peter on 25/11/2016.
  */
-public class Pretoucher {
+class PretoucherState {
     private static final int HEAD_ROOM = 1 << 20;
     private final LongSupplier posSupplier;
     private long lastTouchedPage = 0, lastTouchedPos = 0;
     private int lastBytesHashcode = 0;
 
-    public Pretoucher(LongSupplier posSupplier) {
+    public PretoucherState(LongSupplier posSupplier) {
         this.posSupplier = posSupplier;
     }
 
