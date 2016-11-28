@@ -2399,6 +2399,49 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
     }
 
+    @Ignore("fails - Nested blocks of writingDocument() not supported")
+    @Test
+    public void testCopyQueue() throws Exception {
+        final Path source = Files.createTempDirectory("source");
+        final Path target = Files.createTempDirectory("target");
+        {
+
+            final RollingChronicleQueue q = ChronicleQueueBuilder
+                    .single(source.toString()).build();
+
+            ExcerptAppender excerptAppender = q.acquireAppender();
+            excerptAppender.writeMessage(() -> "one", 1);
+            excerptAppender.writeMessage(() -> "two", 2);
+            excerptAppender.writeMessage(() -> "three", 3);
+        }
+        {
+            final RollingChronicleQueue s = ChronicleQueueBuilder
+                    .single(source.toString()).build();
+
+            ExcerptTailer sourceTailer = s.createTailer();
+
+
+            final RollingChronicleQueue t = ChronicleQueueBuilder
+                    .single(target.toString()).build();
+
+            ExcerptAppender appender = t.acquireAppender();
+
+            for (; ; ) {
+                try (DocumentContext rdc = sourceTailer.readingDocument()) {
+                    if (!rdc.isPresent())
+                        break;
+
+                    try (DocumentContext wdc = appender.writingDocument(rdc.index())) {
+                        wdc.wire().bytes().write(rdc.wire().bytes());
+                    }
+
+                }
+            }
+            System.out.println(s.dump());
+
+        }
+    }
+
 
     /**
      * see https://github.com/OpenHFT/Chronicle-Queue/issues/299
