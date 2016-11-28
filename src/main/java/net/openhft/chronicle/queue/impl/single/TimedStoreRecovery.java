@@ -25,8 +25,6 @@ import net.openhft.chronicle.core.values.LongArrayValues;
 import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.util.concurrent.Callable;
@@ -38,7 +36,6 @@ import java.util.concurrent.TimeoutException;
  */
 public class TimedStoreRecovery extends AbstractMarshallable implements StoreRecovery, Demarshallable {
     public static final StoreRecoveryFactory FACTORY = TimedStoreRecovery::new;
-    private static final Logger LOG = LoggerFactory.getLogger(TimedStoreRecovery.class);
     private final LongValue timeStamp;
 
     @UsedViaReflection
@@ -115,11 +112,13 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
     }
 
     @Override
-    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException {
+    public long recoverAndWriteHeader(Wire wire, int length, long timeoutMS, final LongValue lastPosition) throws UnrecoverableTimeoutException, EOFException {
         Bytes<?> bytes = wire.bytes();
         while (true) {
             long offset = bytes.writePosition();
             int num = bytes.readInt(offset);
+            if (Wires.isEndOfFile(num))
+                throw new EOFException();
             if (Wires.isNotComplete(num) && bytes.compareAndSwapInt(offset, num, 0)) {
                 Jvm.warn().on(getClass(), "Unable to write a header at index: " + Long.toHexString(wire.headerNumber()) + " position: " + offset + " resetting");
             } else {
@@ -133,10 +132,5 @@ public class TimedStoreRecovery extends AbstractMarshallable implements StoreRec
                 throw new AssertionError(e);
             }
         }
-    }
-
-    @Override
-    public void writeEndOfWire(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException {
-        throw new UnsupportedOperationException();
     }
 }

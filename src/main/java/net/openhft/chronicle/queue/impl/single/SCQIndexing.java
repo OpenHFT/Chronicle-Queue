@@ -380,7 +380,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                     if (bytes.readPosition() > end)
                         return ScanResult.NOT_REACHED;
                     int header = bytes.readInt();
-                    if (Wires.isNotComplete(header))
+                    if (Wires.isNotComplete(header)) // or isEndOfFile
                         return ScanResult.NOT_REACHED;
                     bytes.readSkip(Wires.lengthOf(header));
                     continue;
@@ -620,6 +620,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
             assert posN == position;
         }
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
+    }
+
+    public boolean indexable(long index) {
+        return (index & (indexSpacing - 1)) != 0;
     }
 
     enum IndexingFields implements WireKey {
