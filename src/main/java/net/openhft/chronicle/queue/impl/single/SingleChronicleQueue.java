@@ -535,6 +535,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                 '}';
     }
 
+    public TimeProvider time() {
+        return time;
+    }
+
     private class StoreSupplier implements WireStoreSupplier {
 
         @Override

@@ -8,9 +8,12 @@ Peter Lawrey, Rob Austin
 
 *Or you may already be using Chronicle and just want some help - http://chronicle.software/support/[find out more..]*
 
+
 == Chronicle Queue
 
+=== What is Chronicle Queue 
 Chronicle Queue is a distributed unbounded persisted queue.
+
 It supports asynchronous RMI and Publish/Subscribe interfaces with micro-second latencies.
 In optimised examples, a message can be passed between JVMs in under a micro-second, and passed between JVMs on different machines via replication in under 10 micro-seconds.
 Chronicle Queue provides stable, soft, real time latencies into the millions of messages per second for a single thread to one queue with total ordering of every event.
@@ -62,6 +65,12 @@ Click here to get the http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22net.open
 Snapshots are available on https://oss.sonatype.org/content/repositories/snapshots/net/openhft/chronicle-queue[OSS sonatype]
 
 https://github.com/OpenHFT/Chronicle-Queue/blob/master/RELEASE-NOTES.adoc[Chronicle Queue Release Notes]
+
+===  Java Doc
+see http://openhft.github.io/Chronicle-Queue/apidocs/
+
+=== Simple Step-By-Step Guide
+see https://github.com/OpenHFT/Chronicle-Queue-Sample
 
 === Overview
 
@@ -823,6 +832,17 @@ Path path = Files.createTempDirectory("rollCycleTest");
 SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path).epoch(0).build();
 ----
 
+ We don't recommend you change the epoch() on an existing system, which already has .cq4 files
+ create, using a diffrent epoch().
+
+ If you were to set :
+
+ [source, Java]
+ ----
+ .epoch(System.currentTimeMillis()
+ ----
+
+This would make the current time the roll time, and the cycle numbers would start from ZERO.
 
 === How to find the current cq4 chronicle-queue is writing to
 
@@ -856,6 +876,18 @@ try (DocumentContext dc = tailer.readingDocument()) {
 }
 ----
 
+.Checking that you have data
+you can use isPresent() to check that there is data to read
+[source, Java]
+----
+try (DocumentContext dc = tailer.readingDocument()) {
+    if(!dc.isPresent()) // this will tell you if there is any data  to read
+        return;
+    Bytes bytes = wire.bytes();
+    // read from the bytes
+}
+----
+
 ==== Is there a lower level interface?
 
 You can access native memory:
@@ -884,7 +916,7 @@ try (DocumentContext dc = appender.writingDocument()) {
 }
 ----
 
-=== Ensure long Running tasks are not performed with a writingDocument()
+==== Ensure long Running tasks are not performed with a writingDocument()
 
 The writingDocument() should be performed as quickly as possible because a write lock is held
 until the DocumentContext is closed by the try-with-resources,  this blocks other appenders and
@@ -892,12 +924,29 @@ tailers.
 
 [source, Java]
 ----
- try (DocumentContext dc = appender.writingDocument()) {
-    // this should be performed as quickly as possible because a write lock is held until the
-    DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
- }
- ----
+try (DocumentContext dc = appender.writingDocument()) {
+  // this should be performed as quickly as possible because a write lock is held until the
+  // DocumentContext is closed by the try-with-resources,  this blocks other appenders and tailers.
+}
+----
 
+
+==== How to Shutdown
+
+You should try to avoid abruptly killing chronicle queue, especially if its in the middle of
+writing a message
+[source, Java]
+----
+try (DocumentContext dc = appender.writingDocument()) {
+    // killing chronicle queue here will leave the file in a locked state
+ }
+----
+
+if you kill chronicle queue when its half way through writing a document,
+this can leave your  chronicle-queue in a locked state, which could later prevent other appenders
+from writing to the queue file.  Although, we don't recommend that you "$kill -9" your process, 
+luckily in the event that your process abruptly terminates, we have added recovery code  that
+should recover from this situation.
 
 == Design
 

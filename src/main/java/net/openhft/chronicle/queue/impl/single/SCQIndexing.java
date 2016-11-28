@@ -622,6 +622,10 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         nextEntryToBeIndexed.setMaxValue(sequenceNumber + indexSpacing);
     }
 
+    public boolean indexable(long index) {
+        return (index & (indexSpacing - 1)) != 0;
+    }
+
     enum IndexingFields implements WireKey {
         indexCount, indexSpacing, index2Index,
         // nextEntryToBeIndexed
