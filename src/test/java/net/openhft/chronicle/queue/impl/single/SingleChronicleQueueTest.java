@@ -2399,7 +2399,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
     }
 
-    @Ignore("fails - Nested blocks of writingDocument() not supported")
+    //    @Ignore("fails - Nested blocks of writingDocument() not supported")
     @Test
     public void testCopyQueue() throws Exception {
         final Path source = Files.createTempDirectory("source");
@@ -2413,6 +2413,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             excerptAppender.writeMessage(() -> "one", 1);
             excerptAppender.writeMessage(() -> "two", 2);
             excerptAppender.writeMessage(() -> "three", 3);
+            excerptAppender.writeMessage(() -> "four", 4);
         }
         {
             final RollingChronicleQueue s = ChronicleQueueBuilder
@@ -2432,7 +2433,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                         break;
 
                     try (DocumentContext wdc = appender.writingDocument(rdc.index())) {
-                        wdc.wire().bytes().write(rdc.wire().bytes());
+                        final Bytes<?> bytes = rdc.wire().bytes();
+                        System.out.println(bytes);
+                        wdc.wire().bytes().write(bytes);
                     }
 
                 }
