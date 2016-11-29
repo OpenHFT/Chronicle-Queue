@@ -43,7 +43,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -88,7 +87,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     private final BiFunction<RollingChronicleQueue, Wire, WireStore> storeFactory;
     private final StoreRecoveryFactory recoverySupplier;
-    private final Set<Runnable> closers = new CopyOnWriteArraySet<>();
+    private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
     long firstAndLastCycleTime = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
@@ -401,8 +400,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return result;
     }
 
-    public void addCloseListener(Runnable closer) {
-        closers.add(closer);
+    public <T> void addCloseListener(T key, Consumer<T> closer) {
+        synchronized (closers) {
+            closers.put(key, closer);
+        }
     }
 
     @Override
@@ -414,7 +415,10 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     public void close() {
         if (isClosed.getAndSet(true))
             return;
-        closers.forEach(Runnable::run);
+        synchronized (closers) {
+            closers.forEach((k, v) -> v.accept(k));
+            closers.clear();
+        }
         this.pool.close();
     }
 

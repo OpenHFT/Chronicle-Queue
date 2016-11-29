@@ -71,7 +71,6 @@ public class SingleChronicleQueueExcerpts {
      * // StoreAppender
      */
     static class StoreAppender implements ExcerptAppender, ExcerptContext, InternalAppender {
-        static final int HEAD_ROOM = 1 << 20;
         @NotNull
         private final SingleChronicleQueue queue;
         private final StoreAppenderContext context;
@@ -91,7 +90,7 @@ public class SingleChronicleQueueExcerpts {
 
         StoreAppender(@NotNull SingleChronicleQueue queue) {
             this.queue = queue;
-            queue.addCloseListener(StoreAppender.this::close);
+            queue.addCloseListener(this, StoreAppender::close);
             context = new StoreAppenderContext();
         }
 
@@ -132,7 +131,7 @@ public class SingleChronicleQueueExcerpts {
             }
         }
 
-        private void close() {
+        void close() {
             Wire w0 = wireForIndex;
             wireForIndex = null;
             if (w0 != null)
@@ -364,6 +363,7 @@ public class SingleChronicleQueueExcerpts {
             assert checkAppendingThread();
             context.wire = acquireBufferWire();
             context.wire.headerNumber(index);
+            context.isClosed = false;
             return context;
         }
 
@@ -789,7 +789,7 @@ public class SingleChronicleQueueExcerpts {
             this.queue = queue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
-            queue.addCloseListener(StoreTailer.this::close);
+            queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
             toStart();
         }
