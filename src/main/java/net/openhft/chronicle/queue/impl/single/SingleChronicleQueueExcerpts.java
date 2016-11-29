@@ -280,6 +280,7 @@ public class SingleChronicleQueueExcerpts {
                         assert wire != null;
                         long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
                         position(pos);
+                        context.isClosed = false;
                         context.metaData = false;
                         context.wire = wire;
                         context.padToCacheAlign = padToCacheAlign() != Padding.NEVER;
@@ -358,6 +359,7 @@ public class SingleChronicleQueueExcerpts {
 
         @Override
         public DocumentContext writingDocument(long index) {
+            context.isClosed = false;
             assert checkAppendingThread();
             context.wire = acquireBufferWire();
             context.wire.headerNumber(index);
