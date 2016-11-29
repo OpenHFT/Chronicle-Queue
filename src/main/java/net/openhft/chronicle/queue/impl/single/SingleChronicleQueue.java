@@ -168,8 +168,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         for (int i = firstCycle(), max = lastCycle(); i <= max; i++) {
             WireStore wireStore = storeForCycle(i, epoch, false);
             if (wireStore != null) {
-//                sb.append("# ").append(wireStore.bytes().mappedFile().file()).append("\n");
-                sb.append(wireStore.dump());
+                try {
+//                    sb.append("# ").append(wireStore.bytes().mappedFile().file()).append("\n");
+                    sb.append(wireStore.dump());
+                } finally {
+                    release(wireStore);
+                }
             }
         }
         return sb.toString();
@@ -305,6 +309,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
                     true) + 1;
         } catch (Exception e) {
             throw new IllegalStateException(e);
+        } finally {
+            if (wireStore != null)
+                release(wireStore);
         }
 
     }

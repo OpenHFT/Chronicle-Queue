@@ -141,6 +141,9 @@ public class SingleChronicleQueueExcerpts {
             wire = null;
             if (w != null)
                 w.bytes().release();
+            if (store != null)
+                queue.release(store);
+            store = null;
         }
 
         @Override
