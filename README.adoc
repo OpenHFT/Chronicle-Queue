@@ -819,6 +819,24 @@ try (ChronicleQueue queue = ChronicleQueueBuilder.single("queue-dir").build()) {
 === FAQ
 
 
+=== If you are seeing "OutOfMemoryError: Map failed"
+
+[source, Java]
+----
+Caused by: java.lang.OutOfMemoryError: Map failed
+            at sun.nio.ch.FileChannelImpl.map0(Native Method)
+            at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+            at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+            at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+            at java.lang.reflect.Method.invoke(Method.java:497)
+            at net.openhft.chronicle.core.OS.map0(OS.java:292)
+            at net.openhft.chronicle.core.OS.map(OS.java:280)
+            ... 54 more
+----
+
+The problem is that it's running out of virtual memory, you are more likley to see this
+if you are running a 32Bit Jvm on 64bit. One work around is to use a 64bit Jvm.
+
 === How to change the time that chronicle-queue rolls
 
 The time chronicle-queue rolls, is based on the UTC time, it uses System.currentTimeMillis().
