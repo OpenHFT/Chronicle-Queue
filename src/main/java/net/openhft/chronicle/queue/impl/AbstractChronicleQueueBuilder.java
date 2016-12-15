@@ -19,6 +19,7 @@ package net.openhft.chronicle.queue.impl;
 import net.openhft.chronicle.bytes.BytesRingBufferStats;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
@@ -79,7 +80,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
 
     public AbstractChronicleQueueBuilder(File path) {
         this.rollCycle = RollCycles.DAILY;
-        this.blockSize = 64L << 20;
+        this.blockSize = OS.is64Bit() ? 64L << 20 : TEST_BLOCK_SIZE;
         this.path = path;
         this.wireType = WireType.BINARY_LIGHT;
         this.epoch = 0;
