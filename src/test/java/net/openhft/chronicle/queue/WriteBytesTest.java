@@ -203,13 +203,11 @@ public class WriteBytesTest {
                     "00000430 89 88 88 88 88 88 88 88                          ········         \n" +
                     "# position: 1080, header: 10\n" +
                     "--- !!data #binary\n" +
-                    "!!binary dQEAQLkGaA==\n" +
-                    "\n" +
+                    "\"\\x89\\x89\\x89\\x89\\x89\\x89\\x89\"\n" +
                     "# position: 1092, header: 11\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x8B\n" +
-                    "!!binary dQEAQLkG\n" +
-                    "\n" +
+                    "\"\\x8A\\x8A\\x8A\\x8A\\x8A\\x8A\"\n" +
                     "# position: 1104, header: 12\n" +
                     "--- !!data #binary\n" +
                     "# # Unknown_0x8C\n" +
@@ -470,7 +468,7 @@ public class WriteBytesTest {
                     "# # HINT\n" +
                     "# position: 1740, header: 65\n" +
                     "--- !!data #binary\n" +
-                    "\"\\u00C0\": \"\": \"\": \"\": \"\": \"\": \"\": \n" +
+                    "\"\\xC0\": \"\": \"\": \"\": \"\": \"\": \"\": \n" +
                     "# position: 1752, header: 66\n" +
                     "--- !!data #binary\n" +
                     "000006d0                                      C2 C1 C1 C1              ····\n" +
@@ -490,7 +488,7 @@ public class WriteBytesTest {
                     "00000710 C5 C5 C5 C5                                      ····             \n" +
                     "# position: 1812, header: 71\n" +
                     "--- !!data #binary\n" +
-                    "\"\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\\u00C6\": \n" +
+                    "\"\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\\xC6\": \n" +
                     "# position: 1824, header: 72\n" +
                     "--- !!data #binary\n" +
                     "00000720             C8 C7 C7 C7  C7 C7 C7 C7                 ···· ····    \n" +
