@@ -29,8 +29,4 @@ public interface ExcerptContext {
 
     long timeoutMS();
 
-    default void pauserReset() {
-        wire().pauser().reset();
-        wireForIndex().pauser().reset();
-    }
 }

@@ -27,6 +27,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.core.util.StringUtils;
 import net.openhft.chronicle.queue.*;
+import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.*;
@@ -1409,14 +1410,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                      .blockSize(2 << 20)
                      .build()) {
             ExcerptAppender append = chronicle2.acquireAppender();
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 50000; i++)
                 append.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
             ExcerptTailer tailer = chronicle.createTailer();
             ExcerptTailer tailer2 = chronicle.createTailer();
             ExcerptTailer tailer3 = chronicle.createTailer();
             ExcerptTailer tailer4 = chronicle.createTailer();
-            for (int i = 0; i < 100_000; i++) {
+            for (int i = 0; i < 50_000; i++) {
                 if (i % 10000 == 0)
                     System.gc();
                 if (i % 2 == 0)
@@ -1811,7 +1812,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
@@ -1819,7 +1819,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ThreadLocal<ExcerptAppender> tl = ThreadLocal.withInitial(q::acquireAppender);
 
-            int size = 2_000_000;
+            int size = 50_000;
 
             IntStream.range(0, size).parallel().forEach(i -> writeTestDocument(tl, text));
 

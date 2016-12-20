@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class JDBCServiceTest {
     @Test
     public void testCreateTable() throws SQLException, IOException {
-        doCreateTable(4, 10000);
+        doCreateTable(4, 5000);
     }
 
     @Test

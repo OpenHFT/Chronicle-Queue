@@ -529,7 +529,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         try {
             return getSecondaryAddress1(recovery, ec, timeoutMS, index2indexArr, index2);
         } catch (TimeoutException fallback) {
-            ec.pauserReset();
+            ec.wire().pauser().reset();
+            ec.wireForIndex().pauser().reset();
             return recovery.recoverSecondaryAddress(index2indexArr, index2, () -> getSecondaryAddress1(recovery, ec, timeoutMS, index2indexArr, index2), timeoutMS);
         }
     }
