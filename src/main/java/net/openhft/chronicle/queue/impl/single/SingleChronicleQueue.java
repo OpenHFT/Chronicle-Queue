@@ -319,22 +319,22 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
      * Will give you the number of excerpts between 2 index’s ( as exists on the current file
      * system ). If intermediate chronicle files are removed this will effect the result.
      *
-     * @param lowerIndex the lower index
-     * @param upperIndex the higher index
+     * @param fromIndex the lower index
+     * @param toIndex the higher index
      * @return will give you the number of excerpts between 2 index’s. It’s not as simple as just
      * subtracting one number from the other.
      * @throws IllegalStateException if we are not able to read the chronicle files
      */
     @Override
-    public long countExcerpts(long lowerIndex, long upperIndex) throws IllegalStateException {
-        if (lowerIndex > upperIndex) {
-            long temp = lowerIndex;
-            lowerIndex = upperIndex;
-            upperIndex = temp;
+    public long countExcerpts(long fromIndex, long toIndex) throws IllegalStateException {
+        if (fromIndex > toIndex) {
+            long temp = fromIndex;
+            fromIndex = toIndex;
+            toIndex = temp;
         }
 
         // if the are the same
-        if (lowerIndex == upperIndex)
+        if (fromIndex == toIndex)
             return 0;
 
         long result = 0;
@@ -343,24 +343,24 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         // accordingly
         long sequenceNotSet = rollCycle().toSequenceNumber(-1);
 
-        if (rollCycle().toSequenceNumber(lowerIndex) == sequenceNotSet) {
+        if (rollCycle().toSequenceNumber(fromIndex) == sequenceNotSet) {
             result++;
-            lowerIndex++;
+            fromIndex++;
         }
 
-        if (rollCycle().toSequenceNumber(upperIndex) == sequenceNotSet) {
+        if (rollCycle().toSequenceNumber(toIndex) == sequenceNotSet) {
             result--;
-            upperIndex++;
+            toIndex++;
         }
 
-        int lowerCycle = rollCycle().toCycle(lowerIndex);
-        int upperCycle = rollCycle().toCycle(upperIndex);
+        int lowerCycle = rollCycle().toCycle(fromIndex);
+        int upperCycle = rollCycle().toCycle(toIndex);
 
         if (lowerCycle == upperCycle)
-            return upperIndex - lowerIndex;
+            return toIndex - fromIndex;
 
-        long upperSeqNum = rollCycle().toSequenceNumber(upperIndex);
-        long lowerSeqNum = rollCycle().toSequenceNumber(lowerIndex);
+        long upperSeqNum = rollCycle().toSequenceNumber(toIndex);
+        long lowerSeqNum = rollCycle().toSequenceNumber(fromIndex);
 
         if (lowerCycle + 1 == upperCycle) {
             long l = exceptsPerCycle(lowerCycle);

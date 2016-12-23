@@ -67,24 +67,24 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     int nextCycle(int currentCycle, @NotNull TailerDirection direction) throws ParseException;
 
     /**
-     * The number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
+     * The number of excerpts between the indexes, {@code fromIndex} inclusive, {@code toIndex}
      * exclusive.
      *
-     * When {@code index1} and {@code index2} are in different cycles which are not adjacent, this
+     * When {@code fromIndex} and {@code toIndex} are in different cycles which are not adjacent, this
      * operation can be expensive, as the index count for each intermediate cycle has to be found
      * and calculated. As such, and in this situation, it's not recommended to call this method
      * regularly in latency sensitive systems.
      *
-     * @param index1 from index, the index provided must exist.  To improve performance no checking
-     *               is  carried out to validate if an excerpt exists at this index.
-     * @param index2 to index, the index provided must exist. To improve performance no checking is
-     *               carried out to validate if an excerpt exists at this index.
+     * @param fromIndex from index, the index provided must exist.  To improve performance no checking
+     *               is  carried out to validate if an excerpt exists at this index. ( inclusive )
+     * @param toIndex to index, the index provided must exist. To improve performance no checking is
+     *               carried out to validate if an excerpt exists at this index. ( exclusive )
      * @return the number of excerpts between the indexes, {@code index1} inclusive, {@code index2}
      * exclusive.
-     * @throws java.lang.IllegalStateException if the cycle of {@code index1} or {@code index2} can
+     * @throws java.lang.IllegalStateException if the cycle of {@code fromIndex} or {@code toIndex} can
      *                                         not be ascertained
      */
-    long countExcerpts(long index1, long index2) throws java.lang.IllegalStateException;
+    long countExcerpts(long fromIndex, long toIndex) throws java.lang.IllegalStateException;
 
     /**
      * @return the current cycle
