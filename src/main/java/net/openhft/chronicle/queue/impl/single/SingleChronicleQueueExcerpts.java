@@ -1089,7 +1089,7 @@ public class SingleChronicleQueueExcerpts {
                  * and writing every day, you should not see this message.
                  */
 
-                LOG.info("Rolled " + (queue
+                LOG.debug("Rolled " + (queue
                         .rollCycle().toCycle(nextIndex) - cycle) + " " + "times to find the " +
                         "next cycle file. This can occur if your appenders have not written " +
                         "anything for a while, leaving the cycle files with a gap.");
