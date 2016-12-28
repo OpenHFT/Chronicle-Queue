@@ -87,7 +87,7 @@ public class RollCycleMultiThreadTest {
         }
 
         @Override
-        public Integer call() throws Exception {
+        public synchronized Integer call() throws Exception {
 
             try (final DocumentContext dc = tailer.readingDocument()) {
 
