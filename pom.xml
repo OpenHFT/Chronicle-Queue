@@ -15,7 +15,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
@@ -24,7 +25,7 @@
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
         <version>1.1.10</version>
-        <relativePath />
+        <relativePath/>
     </parent>
     <artifactId>chronicle-queue</artifactId>
     <version>4.5.22-SNAPSHOT</version>
@@ -34,8 +35,8 @@
     <description>Java library for persisted low latency messaging (Java 8+)</description>
 
     <dependencyManagement>
-        <dependencies>
 
+        <dependencies>
             <dependency>
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
