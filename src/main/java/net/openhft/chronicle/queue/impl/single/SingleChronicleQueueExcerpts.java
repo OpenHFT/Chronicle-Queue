@@ -911,7 +911,7 @@ public class SingleChronicleQueueExcerpts {
                         state = END_OF_CYCLE;
                         return false;
                     }
-                    case BEHOND_START_OF_CYCLE: {
+                    case BEYOND_START_OF_CYCLE: {
                         if (direction == FORWARD) {
                             state = UNINTIALISED;
                             continue;
@@ -943,7 +943,7 @@ public class SingleChronicleQueueExcerpts {
                                     continue;
                                 }
 
-                                state = BEHOND_START_OF_CYCLE;
+                                state = BEYOND_START_OF_CYCLE;
                                 return false;
 
                             } catch (EOFException e) {
@@ -1352,7 +1352,7 @@ public class SingleChronicleQueueExcerpts {
             } else if (seq < 0) {
                 if (seq == -1) {
                     this.index(rollCycle.toIndex(cycle - 1, seq));
-                    this.state = BEHOND_START_OF_CYCLE;
+                    this.state = BEYOND_START_OF_CYCLE;
                     return;
                 } else {
                     // TODO FIX so we can roll back to the precious cycle.
@@ -1379,7 +1379,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (nextStore == null) {
                 if (direction == BACKWARD)
-                    state = BEHOND_START_OF_CYCLE;
+                    state = BEYOND_START_OF_CYCLE;
                 else
                     state = CYCLE_NOT_FOUND;
                 return false;
