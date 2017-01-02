@@ -785,7 +785,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean lazyIndexing = false;
         private Wire wireForIndex;
         private boolean readAfterReplicaAcknowledged;
-        private TailerState state = UNINTIALISED;
+        private TailerState state = UNINITIALISED;
 
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
@@ -879,7 +879,7 @@ public class SingleChronicleQueueExcerpts {
         private boolean next0(boolean includeMetaData) throws UnrecoverableTimeoutException, StreamCorruptedException {
             for (int i = 0; i < 1000; i++) {
                 switch (state) {
-                    case UNINTIALISED:
+                    case UNINITIALISED:
                         final long firstIndex = queue.firstIndex();
                         if (firstIndex == Long.MAX_VALUE)
                             return false;
@@ -911,9 +911,9 @@ public class SingleChronicleQueueExcerpts {
                         state = END_OF_CYCLE;
                         return false;
                     }
-                    case BEHOND_START_OF_CYCLE: {
+                    case BEYOND_START_OF_CYCLE: {
                         if (direction == FORWARD) {
-                            state = UNINTIALISED;
+                            state = UNINITIALISED;
                             continue;
                         }
                         if (direction == BACKWARD) {
@@ -943,7 +943,7 @@ public class SingleChronicleQueueExcerpts {
                                     continue;
                                 }
 
-                                state = BEHOND_START_OF_CYCLE;
+                                state = BEYOND_START_OF_CYCLE;
                                 return false;
 
                             } catch (EOFException e) {
@@ -1190,7 +1190,7 @@ public class SingleChronicleQueueExcerpts {
             assert direction != BACKWARD;
             final int firstCycle = queue.firstCycle();
             if (firstCycle == Integer.MAX_VALUE) {
-                state = UNINTIALISED;
+                state = UNINITIALISED;
                 return this;
             }
             if (firstCycle != this.cycle) {
@@ -1308,7 +1308,7 @@ public class SingleChronicleQueueExcerpts {
                     }
                 }
                 if (state() == TailerState.CYCLE_NOT_FOUND)
-                    state = UNINTIALISED;
+                    state = UNINITIALISED;
                 return this;
             } catch (EOFException e) {
                 Jvm.debug().on(getClass(), "caught EOF while moving to end.");
@@ -1352,7 +1352,7 @@ public class SingleChronicleQueueExcerpts {
             } else if (seq < 0) {
                 if (seq == -1) {
                     this.index(rollCycle.toIndex(cycle - 1, seq));
-                    this.state = BEHOND_START_OF_CYCLE;
+                    this.state = BEYOND_START_OF_CYCLE;
                     return;
                 } else {
                     // TODO FIX so we can roll back to the precious cycle.
@@ -1379,7 +1379,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (nextStore == null) {
                 if (direction == BACKWARD)
-                    state = BEHOND_START_OF_CYCLE;
+                    state = BEYOND_START_OF_CYCLE;
                 else
                     state = CYCLE_NOT_FOUND;
                 return false;
