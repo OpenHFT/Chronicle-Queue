@@ -20,7 +20,6 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -50,7 +49,6 @@ public class WriteReadTextTest {
     }
 
     @Test
-    @Ignore("Causes a JVM crash")
     public void testAll() {
         doTest(MINIMAL, CONSTRUCTED, REALISTIC, EXTREMELY_LARGE);
     }
@@ -60,7 +58,6 @@ public class WriteReadTextTest {
         doTest(CONSTRUCTED);
     }
 
-    @Ignore("Issue https://github.com/OpenHFT/Chronicle-Queue/issues/283")
     @Test
     public void testExtremelyLarge() {
         doTest(EXTREMELY_LARGE);
