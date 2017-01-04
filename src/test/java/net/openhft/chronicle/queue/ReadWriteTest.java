@@ -77,4 +77,15 @@ public class ReadWriteTest {
             out.acquireAppender();
         }
     }
+    @Test
+    public void testToEndOnReadOnly() {
+
+        try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(true).build()) {
+            ExcerptTailer tailer = out.createTailer();
+            tailer.toEnd();
+            long index = tailer.index();
+            assertTrue(index != 0);
+        }
+    }
+
 }
