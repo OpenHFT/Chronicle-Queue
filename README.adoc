@@ -1115,3 +1115,34 @@ In the test above, the typical latency varied between 14 and 40 micro-seconds, t
 | < 1 milli-seconds 99.9% of the time | 50 million messages per second
 | < 60 micro-seconds 99.3% of the time | 80 million message per second
 |===
+
+=== FAQ
+
+==== Is there an Appender to Trailer notification?
+
+Not implicitly. We didn't want to assume whether the appenders or trailers
+
+- were running at the same time.
+- were in the same process
+- wanted to block on the queue for either writing or reading.
+
+If both the Appender and Trailer are in the same process, the Trailer can use a pauser when not busy
+
+.Call the reader, and pause if no messages.
+[source, java]
+----
+pauser = balanced ? Parser.balanced() : Pauser.millis(1, 10);
+while (!closed) {
+    if (reader.readOne())
+        pauser.reset();
+    else
+        pauser.pause();
+}
+----
+
+In another thread you can wake the reader with
+
+[source, Java]
+----
+pauser.unpause();
+----

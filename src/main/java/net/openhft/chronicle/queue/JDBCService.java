@@ -19,7 +19,6 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.ThrowingSupplier;
-import net.openhft.chronicle.threads.LongPauser;
 import net.openhft.chronicle.threads.NamedThreadFactory;
 import net.openhft.chronicle.threads.Pauser;
 import net.openhft.chronicle.wire.MethodReader;
@@ -30,7 +29,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by peter on 06/04/16.
@@ -61,7 +59,7 @@ public class JDBCService implements Closeable {
                     .get();
             JDBCComponent js = new JDBCComponent(connectionSupplier, result);
             MethodReader reader = in.createTailer().afterLastWritten(out).methodReader(js);
-            Pauser pauser = new LongPauser(50, 200, 1, 10, TimeUnit.MILLISECONDS);
+            Pauser pauser = Pauser.millis(1, 10);
             while (!closed) {
                 if (reader.readOne())
                     pauser.reset();
