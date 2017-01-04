@@ -182,7 +182,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         if (holder.address == secondaryAddress)
             return holder.values;
         holder.address = secondaryAddress;
-        wire.bytes().readPositionRemaining(secondaryAddress, 256 << 20);
+        wire.bytes().readPositionRemaining(secondaryAddress, 4); // to read the header.
         wire.readMetaDataHeader();
         return array(wire, holder.values, false);
     }
