@@ -50,67 +50,6 @@ public class RollCycleMultiThreadTest {
                 });
     }
 
-    private class TestTimeProvider implements TimeProvider {
-
-
-        private volatile long addInMs = 0;
-
-        @Override
-        public long currentTimeMillis() {
-            return System.currentTimeMillis() + addInMs;
-        }
-
-        void add(long addInMs) {
-            this.addInMs = addInMs;
-        }
-
-    }
-
-    private class ParallelQueueObserver implements Callable, StoreFileListener {
-
-        volatile int documentsRead;
-        private final ExcerptTailer tailer;
-
-        ParallelQueueObserver(ChronicleQueue queue) {
-            documentsRead = 0;
-            tailer = queue.createTailer();
-        }
-
-        @Override
-        public void onAcquired(int cycle, File file) {
-            System.out.println("Acquiring " + file);
-        }
-
-        @Override
-        public void onReleased(int cycle, File file) {
-            System.out.println("Releasing " + file);
-        }
-
-        @Override
-        public synchronized Integer call() throws Exception {
-
-            try (final DocumentContext dc = tailer.readingDocument()) {
-
-                System.out.println("index=" + Long.toHexString(dc.index()));
-                if (!dc.isPresent())
-                    return documentsRead;
-
-                StringBuilder sb = Wires.acquireStringBuilder();
-                dc.wire().bytes().parse8bit(sb, StopCharTesters.ALL);
-
-                String readText = sb.toString();
-                if (java.util.Objects.equals(sb, "")) {
-                    return documentsRead;
-                }
-                System.out.println("Read a document " + readText);
-                documentsRead++;
-
-            }
-            return documentsRead;
-        }
-    }
-
-
     @Test
     public void testRead1() throws Exception {
         TestTimeProvider timeProvider = new TestTimeProvider();
@@ -180,11 +119,67 @@ public class RollCycleMultiThreadTest {
 
             Assert.assertEquals(2, (int) scheduledExecutorService.submit(observer).get());
 
-
             System.out.println(queue.dump());
             assertEquals(2, observer.documentsRead);
-
         }
     }
 
+    private class TestTimeProvider implements TimeProvider {
+
+        private volatile long addInMs = 0;
+
+        @Override
+        public long currentTimeMillis() {
+            return System.currentTimeMillis() + addInMs;
+        }
+
+        void add(long addInMs) {
+            this.addInMs = addInMs;
+        }
+
+    }
+
+    private class ParallelQueueObserver implements Callable, StoreFileListener {
+
+        private final ExcerptTailer tailer;
+        volatile int documentsRead;
+
+        ParallelQueueObserver(ChronicleQueue queue) {
+            documentsRead = 0;
+            tailer = queue.createTailer();
+        }
+
+        @Override
+        public void onAcquired(int cycle, File file) {
+            System.out.println("Acquiring " + file);
+        }
+
+        @Override
+        public void onReleased(int cycle, File file) {
+            System.out.println("Releasing " + file);
+        }
+
+        @Override
+        public synchronized Integer call() throws Exception {
+
+            try (final DocumentContext dc = tailer.readingDocument()) {
+
+                System.out.println("index=" + Long.toHexString(dc.index()));
+                if (!dc.isPresent())
+                    return documentsRead;
+
+                StringBuilder sb = Wires.acquireStringBuilder();
+                dc.wire().bytes().parse8bit(sb, StopCharTesters.ALL);
+
+                String readText = sb.toString();
+                if (java.util.Objects.equals(sb, "")) {
+                    return documentsRead;
+                }
+                System.out.println("Read a document " + readText);
+                documentsRead++;
+
+            }
+            return documentsRead;
+        }
+    }
 }

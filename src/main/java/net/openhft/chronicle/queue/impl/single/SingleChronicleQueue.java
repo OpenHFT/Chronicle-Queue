@@ -57,6 +57,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     public static final String SUFFIX = ".cq4";
     private static final Logger LOG = LoggerFactory.getLogger(SingleChronicleQueue.class);
+    private static final int FIRST_AND_LAST_RETRY_MAX = Integer.getInteger("cq.firstAndLastRetryMax", 8);
     protected final ThreadLocal<WeakReference<ExcerptAppender>> excerptAppenderThreadLocal = new ThreadLocal<>();
     protected final int sourceId;
     final Supplier<Pauser> pauserSupplier;
@@ -90,6 +91,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     private final Map<Object, Consumer> closers = new WeakHashMap<>();
     private final boolean readOnly;
     long firstAndLastCycleTime = 0;
+    int firstAndLastRetry = 0;
     int firstCycle = Integer.MAX_VALUE, lastCycle = Integer.MIN_VALUE;
     private int deltaCheckpointInterval;
 
@@ -450,8 +452,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
     private void setFirstAndLastCycle() {
         long now = time.currentTimeMillis() + System.currentTimeMillis();
-        if (now == firstAndLastCycleTime)
-            return;
+        if (now == firstAndLastCycleTime) {
+            if (++firstAndLastRetry > FIRST_AND_LAST_RETRY_MAX)
+                return;
+            // give it a moment.
+            Thread.yield();
+        }
 
         firstCycle = Integer.MAX_VALUE;
         lastCycle = Integer.MIN_VALUE;
@@ -478,6 +484,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         }
 
         firstAndLastCycleTime = now;
+        firstAndLastRetry = 0;
     }
 
     public int firstCycle() {
