@@ -338,9 +338,14 @@ public class SingleChronicleQueueStore implements WireStore {
     }
 
     @Override
-    public void writeEOF(Wire wire, long timeoutMS) throws
-            TimeoutException {
+    public void writeEOF(Wire wire, long timeoutMS) throws TimeoutException {
+        // just in case we are about to release this
+        if (wire.bytes().tryReserve()) {
             wire.writeEndOfWire(timeoutMS, TimeUnit.MILLISECONDS, writePosition());
+            wire.bytes().release();
+        } else {
+            Jvm.debug().on(getClass(), "Tried to writeEOF to as it was being closed");
+        }
     }
 
     @Override
