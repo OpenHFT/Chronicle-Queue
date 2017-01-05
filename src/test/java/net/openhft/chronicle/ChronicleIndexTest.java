@@ -35,15 +35,15 @@ public class ChronicleIndexTest {
 
     @Test
     public void test() throws IOException {
-        VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(folder.newFolder()).build();
+        VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(folder.newFolder()).build();
         VanillaChronicle.VanillaAppender appender = chronicle.createAppender();
         appender.startExcerpt();
         appender.writeUTF("This is a test");
         appender.finish();
 
         long lastIndex = appender.lastWrittenIndex();
-        Assert.assertTrue("lastIndex: "+ lastIndex, lastIndex >= 0);
-        Assert.assertEquals(lastIndex+1, appender.index());
+        Assert.assertTrue("lastIndex: " + lastIndex, lastIndex >= 0);
+        Assert.assertEquals(lastIndex + 1, appender.index());
 
         Excerpt excerpt = chronicle.createExcerpt();
         Assert.assertTrue(excerpt.index(lastIndex));

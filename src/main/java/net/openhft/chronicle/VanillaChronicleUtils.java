@@ -32,8 +32,18 @@ import java.util.List;
 
 public class VanillaChronicleUtils {
 
+    public static final FileFilter IS_DIR = new FileFilter() {
+        @Override
+        public boolean accept(File pathname) {
+            return pathname.isDirectory();
+        }
+    };
     private static Method GET_ATTRIBUTES;
     private static Object FS;
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     static {
         try {
@@ -41,7 +51,7 @@ public class VanillaChronicleUtils {
             field.setAccessible(true);
 
             FS = field.get(null);
-            if(FS != null) {
+            if (FS != null) {
                 try {
                     GET_ATTRIBUTES = FS.getClass().getDeclaredMethod("getBooleanAttributes0", File.class);
                     GET_ATTRIBUTES.setAccessible(true);
@@ -54,19 +64,7 @@ public class VanillaChronicleUtils {
         }
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static final FileFilter IS_DIR = new FileFilter() {
-        @Override
-        public boolean accept(File pathname) {
-            return pathname.isDirectory();
-        }
-    };
-
     /**
-     *
      * @param cycleDir
      * @param name
      * @param forAppend
@@ -86,7 +84,7 @@ public class VanillaChronicleUtils {
         }
 
         cycleDir.mkdirs();
-        if(!exists(file) && !forAppend) {
+        if (!exists(file) && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 
@@ -95,20 +93,20 @@ public class VanillaChronicleUtils {
 
     public static File indexFileFor(int cycle, int indexCount, VanillaDateCache dateCache) {
         return new File(
-            dateCache.valueFor(cycle).path,
-            VanillaIndexCache.FILE_NAME_PREFIX + indexCount
+                dateCache.valueFor(cycle).path,
+                VanillaIndexCache.FILE_NAME_PREFIX + indexCount
         );
     }
 
     public static File dataFileFor(int cycle, int threadId, int dataCount, VanillaDateCache dateCache) {
         return new File(
-            dateCache.valueFor(cycle).path,
-            VanillaDataCache.FILE_NAME_PREFIX + threadId + "-" + dataCount
+                dateCache.valueFor(cycle).path,
+                VanillaDataCache.FILE_NAME_PREFIX + threadId + "-" + dataCount
         );
     }
 
     public static List<File> findLeafDirectories(File root) {
-        if(exists(root)) {
+        if (exists(root)) {
             final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
             if (files != null && files.length != 0) {
                 List<File> leafs = new ArrayList<>();
@@ -125,8 +123,8 @@ public class VanillaChronicleUtils {
 
     public static List<File> findLeafDirectories(List<File> leafs, File root) {
         final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
-        if(files != null && files.length != 0) {
-            for(int i=files.length - 1; i >= 0; i--) {
+        if (files != null && files.length != 0) {
+            for (int i = files.length - 1; i >= 0; i--) {
                 findLeafDirectories(leafs, files[i]);
             }
         } else {
@@ -139,8 +137,8 @@ public class VanillaChronicleUtils {
     public static boolean exists(@NotNull File path) {
         try {
             return GET_ATTRIBUTES != null
-                ? ((Integer) GET_ATTRIBUTES.invoke(FS, path)) > 0
-                : path.exists();
+                    ? ((Integer) GET_ATTRIBUTES.invoke(FS, path)) > 0
+                    : path.exists();
         } catch (Exception e) {
             return path.exists();
         }

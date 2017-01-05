@@ -32,6 +32,22 @@ public class AppenderAdapters {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AppenderAdapters.class);
 
+    public static AppenderAdapter createAdapter(Chronicle chronicle) throws IOException {
+        if (chronicle instanceof IndexedChronicle) {
+            return new AppenderAdapters.IndexedAppenderAdapter(
+                    chronicle,
+                    chronicle.createAppender());
+        }
+
+        if (chronicle instanceof VanillaChronicle) {
+            return new AppenderAdapters.VanillaAppenderAdapter(
+                    chronicle,
+                    chronicle.createAppender());
+        }
+
+        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
+    }
+
     static final class IndexedAppenderAdapter extends AppenderAdapter {
         public IndexedAppenderAdapter(
                 @NotNull final Chronicle chronicle,
@@ -49,6 +65,10 @@ public class AppenderAdapters {
             super.wrapped.startExcerpt(capacity);
         }
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     static final class VanillaAppenderAdapter extends AppenderAdapter {
         private final VanillaChronicle chronicle;
@@ -73,25 +93,5 @@ public class AppenderAdapters {
             int cycle = (int) (index >>> chronicle.getEntriesForCycleBits());
             this.appender.startExcerpt(capacity, cycle);
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static AppenderAdapter createAdapter(Chronicle chronicle) throws IOException {
-        if (chronicle instanceof IndexedChronicle) {
-            return new AppenderAdapters.IndexedAppenderAdapter(
-                    chronicle,
-                    chronicle.createAppender());
-        }
-
-        if (chronicle instanceof VanillaChronicle) {
-            return new AppenderAdapters.VanillaAppenderAdapter(
-                    chronicle,
-                    chronicle.createAppender());
-        }
-
-        throw new IllegalArgumentException("Can only adapt Indexed or Vanilla chronicles");
     }
 }

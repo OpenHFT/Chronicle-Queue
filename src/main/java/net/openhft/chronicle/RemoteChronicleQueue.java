@@ -57,7 +57,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
     @Override
     public void close() throws IOException {
-        if(!closed) {
+        if (!closed) {
             closed = true;
             closeConnection();
         }
@@ -81,7 +81,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     protected synchronized ExcerptCommon createAppender0() {
-        if( this.excerpt != null) {
+        if (this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
@@ -89,7 +89,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     protected synchronized ExcerptCommon createExcerpt0() {
-        if( this.excerpt != null) {
+        if (this.excerpt != null) {
             throw new IllegalStateException("An excerpt has already been created");
         }
 
@@ -97,7 +97,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
     }
 
     private boolean openConnection() {
-        if(!connection.isOpen()) {
+        if (!connection.isOpen()) {
             try {
                 connection.open(this.blocking);
             } catch (IOException e) {
@@ -105,15 +105,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         boolean connected = connection.isOpen();
-        if(connected) {
+        if (connected) {
             this.lastReconnectionAttempt = 0;
             this.lastReconnectionAttemptMS = 0;
         } else {
             lastReconnectionAttempt++;
-            if(builder.reconnectionWarningThreshold() > 0) {
+            if (builder.reconnectionWarningThreshold() > 0) {
                 if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
                     LOGGER.warn("Failed to establish a connection {}",
-                        ChronicleTcp.connectionName("", builder)
+                            ChronicleTcp.connectionName("", builder)
                     );
                 }
             }
@@ -180,7 +180,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void startExcerpt(long excerptSize) {
-            if(!isFinished()) {
+            if (!isFinished()) {
                 finish();
             }
 
@@ -194,9 +194,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         @Override
         public void finish() {
-            if(!isFinished()) {
-                if(!connection.isOpen()) {
-                    if(!waitForConnection()) {
+            if (!isFinished()) {
+                if (!connection.isOpen()) {
+                    if (!waitForConnection()) {
                         super.finish();
                         throw new IllegalStateException("Unable to connect to the Source");
                     }
@@ -208,29 +208,29 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     buffer.limit((int) wrapped.position());
                     connection.writeAllOrEOF(buffer);
 
-                    if(builder.appendRequireAck()) {
+                    if (builder.appendRequireAck()) {
                         connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, -1);
 
-                        int  recType  = readBuffer.getInt();
+                        int recType = readBuffer.getInt();
                         long recIndex = readBuffer.getLong();
 
-                        switch(recType) {
+                        switch (recType) {
                             case ChronicleTcp.ACK_LEN:
                                 this.lastIndex = recIndex;
                                 break;
 
                             case ChronicleTcp.NACK_LEN:
                                 throw new IllegalStateException(
-                                    "Message discarded by server, reason: " + (
-                                        recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
-                                            ? "unsupported"
-                                            : "unknown")
+                                        "Message discarded by server, reason: " + (
+                                                recIndex == ChronicleTcp.IDX_NOT_SUPPORTED
+                                                        ? "unsupported"
+                                                        : "unknown")
                                 );
                             default:
                                 logger.warn("Unknown message received {}, {}", recType, recIndex);
                         }
                     }
-                } catch(IOException e) {
+                } catch (IOException e) {
                     LOGGER.trace("", e);
                     throw new IllegalStateException(e);
                 }
@@ -259,15 +259,15 @@ class RemoteChronicleQueue extends WrappedChronicle {
 
         private boolean waitForConnection() {
             try {
-            for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i--) {
-                openConnection();
+                for (int i = builder.reconnectionAttempts(); !connection.isOpen() && i > 0; i--) {
+                    openConnection();
 
                     if (!openConnection())
                         Thread.sleep(builder.reconnectionIntervalMillis());
 
-            }
+                }
 
-            return connection.isOpen();
+                return connection.isOpen();
             } catch (InterruptedException e) {
                 throw new AssertionError(e);
             }
@@ -330,9 +330,9 @@ class RemoteChronicleQueue extends WrappedChronicle {
         @Override
         public boolean index(long index) {
             try {
-                if(!connection.isOpen()) {
-                    if(shouldConnect()) {
-                        if(!openConnection()) {
+                if (!connection.isOpen()) {
+                    if (shouldConnect()) {
+                        if (!openConnection()) {
                             return false;
                         }
 
@@ -348,10 +348,10 @@ class RemoteChronicleQueue extends WrappedChronicle {
                 while (true) {
                     connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, -1);
 
-                    int  receivedSize  = buffer().getInt();
+                    int receivedSize = buffer().getInt();
                     long receivedIndex = buffer().getLong();
 
-                    switch(receivedSize) {
+                    switch (receivedSize) {
                         case ChronicleTcp.SYNC_IDX_LEN:
                             if (index == ChronicleTcp.IDX_TO_START) {
                                 return receivedIndex == -1;
@@ -390,7 +390,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
             finish();
 
             try {
-                if(!connection.isOpen()) {
+                if (!connection.isOpen()) {
                     if (index(this.index)) {
                         return nextIndex();
 
@@ -399,11 +399,11 @@ class RemoteChronicleQueue extends WrappedChronicle {
                     }
                 }
 
-                if(!connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, this.readCount)) {
+                if (!connection.readUpTo(buffer(), ChronicleTcp.HEADER_SIZE, this.readCount)) {
                     return false;
                 }
 
-                int  receivedSize  = buffer().getInt();
+                int receivedSize = buffer().getInt();
                 long receivedIndex = buffer().getLong();
 
                 switch (receivedSize) {
@@ -443,7 +443,7 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         protected boolean advanceIndex() {
-            if(nextIndex()) {
+            if (nextIndex()) {
                 finish();
                 return true;
 

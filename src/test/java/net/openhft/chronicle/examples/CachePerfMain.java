@@ -37,6 +37,7 @@ import java.util.Random;
  * @author ygokirmak
  */
 public class CachePerfMain {
+    static final int keys = Integer.getInteger("keys", 10000000);
     private static final String TMP = System.getProperty("java.io.tmpdir");
     private static int[] keyArray;
     @NotNull
@@ -62,8 +63,6 @@ public class CachePerfMain {
         _maxObjSize = maxObjSize;
     }
 
-    static final int keys = Integer.getInteger("keys", 10000000);
-
     public static void main(String... ignored) throws IOException {
         String basePath = TMP + "/ExampleCacheMain";
         ChronicleTools.deleteOnExit(basePath);
@@ -78,14 +77,14 @@ public class CachePerfMain {
         for (int i = 0; i < 2; i++) {
             duration = putTest(keys, "base", map);
             System.out.printf(i
-                    + "th iter: Took %.3f secs to put seq %,d entries%n",
+                            + "th iter: Took %.3f secs to put seq %,d entries%n",
                     duration / 1e9, keys);
         }
 
         for (int i = 0; i < 2; i++) {
             duration = getTest(keys, map);
             System.out.printf(i
-                    + "th iter: Took %.3f secs to get seq %,d entries%n",
+                            + "th iter: Took %.3f secs to get seq %,d entries%n",
                     duration / 1e9, keys);
         }
 
@@ -97,7 +96,7 @@ public class CachePerfMain {
             System.gc();
             duration = getTest(keys, map);
             System.out.printf(i
-                    + "th iter: Took %.3f secs to get random %,d entries%n",
+                            + "th iter: Took %.3f secs to get random %,d entries%n",
                     duration / 1e9, keys);
         }
 
@@ -105,7 +104,7 @@ public class CachePerfMain {
             duration = putTest(keys, "modif", map);
             System.out
                     .printf(i
-                            + "th iter: Took %.3f secs to update random %,d entries%n",
+                                    + "th iter: Took %.3f secs to update random %,d entries%n",
                             duration / 1e9, keys);
         }
     }

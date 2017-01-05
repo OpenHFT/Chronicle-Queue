@@ -43,7 +43,7 @@ public interface ExcerptAppender extends ExcerptCommon {
 
     /**
      * Add a padded entry to keep the index in sync with a master source.
-     *
+     * <p>
      * Not for public use. This method is expected to be retained only
      * as a package private method in a future release.
      */

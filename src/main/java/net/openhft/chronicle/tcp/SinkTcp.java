@@ -52,16 +52,16 @@ public abstract class SinkTcp extends TcpConnection {
         running.set(true);
 
         SocketChannel socketChannel = openSocketChannel();
-        if(socketChannel != null) {
+        if (socketChannel != null) {
             socketChannel.configureBlocking(blocking);
             socketChannel.socket().setTcpNoDelay(true);
             socketChannel.socket().setSoTimeout(0);
             socketChannel.socket().setSoLinger(false, 0);
 
-            if(this.builder.receiveBufferSize() > 0) {
+            if (this.builder.receiveBufferSize() > 0) {
                 socketChannel.socket().setReceiveBufferSize(this.builder.receiveBufferSize());
             }
-            if(this.builder.sendBufferSize() > 0) {
+            if (this.builder.sendBufferSize() > 0) {
                 socketChannel.socket().setSendBufferSize(this.builder.sendBufferSize());
             }
 

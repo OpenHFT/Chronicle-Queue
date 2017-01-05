@@ -33,7 +33,7 @@ public class SinkTcpInitiator extends SinkTcp {
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(true);
 
-            if(builder.bindAddress() != null) {
+            if (builder.bindAddress() != null) {
                 channel.bind(builder.bindAddress());
             }
 
@@ -42,7 +42,7 @@ public class SinkTcpInitiator extends SinkTcp {
             logger.info("Connected to {} from {}", channel.getRemoteAddress(), channel.getLocalAddress());
 
             return channel;
-        } catch(IOException e) {
+        } catch (IOException e) {
         }
 
         return null;

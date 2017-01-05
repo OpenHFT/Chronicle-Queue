@@ -146,7 +146,7 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
     @Test
     public void testVanillaFinishAfterClose() throws IOException {
         final String basePath = getTestPath();
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(basePath).build();
         final ExcerptAppender appender = chronicle.createAppender();
         final ExcerptTailer tailer = chronicle.createTailer();
 
@@ -157,7 +157,7 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
 
             assertTrue(appender.isFinished());
 
-            for(long i=0;i<5;i++) {
+            for (long i = 0; i < 5; i++) {
                 appender.startExcerpt(8);
                 appender.writeLong(i);
                 appender.close();
@@ -196,10 +196,10 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         final Set<Long> indices = new HashSet<>(RUNS);
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
-            .defaultMessageSize(128)
-            .indexBlockSize(indicesPerFile * 8)
-            .dataBlockSize(16 * 1024)
-            .build();
+                .defaultMessageSize(128)
+                .indexBlockSize(indicesPerFile * 8)
+                .dataBlockSize(16 * 1024)
+                .build();
 
         chronicle.clear();
 
@@ -246,9 +246,9 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
     @Test
     public void testCheckedVanillaExcerpt() throws IOException {
         final String basePath = getTestPath();
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(basePath)
-            .useCheckedExcerpt(true)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(basePath)
+                .useCheckedExcerpt(true)
+                .build();
 
         final ExcerptAppender appender = chronicle.createAppender();
 
@@ -286,14 +286,14 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeByte(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeByte(8,1);
+            appender.writeByte(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -302,14 +302,14 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeChar(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeChar(8,1);
+            appender.writeChar(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -318,14 +318,14 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeShort(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeShort(8,1);
+            appender.writeShort(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -334,35 +334,35 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeInt(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
             appender.writeOrderedInt(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeInt(8,1);
+            appender.writeInt(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeOrderedInt(8,1);
+            appender.writeOrderedInt(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.compareAndSwapInt(8,1,2);
+            appender.compareAndSwapInt(8, 1, 2);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -371,35 +371,35 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeLong(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
             appender.writeOrderedLong(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeLong(8,1);
+            appender.writeLong(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeOrderedLong(8,1);
+            appender.writeOrderedLong(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.compareAndSwapLong(8,1,2);
+            appender.compareAndSwapLong(8, 1, 2);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -408,23 +408,23 @@ public class VanillaChronicle3Test extends VanillaChronicleTestBase {
         try {
             appender.writeDouble(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeDouble(8,1);
+            appender.writeDouble(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
 
     private void testObject(final ExcerptAppender appender) {
         try {
-            appender.writeObject("1234567890",0,5);
+            appender.writeObject("1234567890", 0, 5);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }

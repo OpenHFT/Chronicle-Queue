@@ -21,7 +21,6 @@ package net.openhft.chronicle.examples;
 import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ChronicleQueueBuilder;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
 import net.openhft.chronicle.tools.ChronicleTools;
 
 import java.io.File;
@@ -34,8 +33,8 @@ To add a load to the system, run the following in the console if you have a fast
 while true; do dd if=/dev/zero of=$RANDOM bs=10240 count=10000; sleep 1; done
  */
 public class PagingLatencyTest {
-    private static final String TMP = System.getProperty("java.io.tmpdir");
     public static final int WARMUP = 10 * 1000;
+    private static final String TMP = System.getProperty("java.io.tmpdir");
 
     public static void main(String[] args) throws IOException, InterruptedException {
         String path = new File(TMP, "test-paging-latency").getAbsolutePath();

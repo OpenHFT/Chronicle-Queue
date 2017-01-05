@@ -29,7 +29,6 @@ import java.util.TimeZone;
 
 import static net.openhft.chronicle.VanillaChronicleUtils.dataFileFor;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class VanillaDataCacheTest extends VanillaChronicleTestBase {
     private static final TimeZone GMT = TimeZone.getTimeZone("GMT");

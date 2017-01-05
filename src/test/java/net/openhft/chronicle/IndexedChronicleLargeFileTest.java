@@ -30,20 +30,20 @@ import java.util.Arrays;
 
 public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
 
-	private static byte[] generateByteArray(int dataSize) throws UnsupportedEncodingException {
-		byte[] result = new byte[dataSize];
-		for (int i = 0; i < dataSize; i++) {
-			result[i] = (byte) (i % 128);
-		}
-		return result;
-	}
+    private static byte[] generateByteArray(int dataSize) throws UnsupportedEncodingException {
+        byte[] result = new byte[dataSize];
+        for (int i = 0; i < dataSize; i++) {
+            result[i] = (byte) (i % 128);
+        }
+        return result;
+    }
 
     private static void close(Closeable closeable) {
         if (closeable != null) {
             try {
                 closeable.close();
             } catch (IOException e) {
-                LOGGER.warn("",e);
+                LOGGER.warn("", e);
             }
         }
     }
@@ -54,62 +54,62 @@ public class IndexedChronicleLargeFileTest extends IndexedChronicleTestBase {
         }
     }
 
-	@Test
-	public void testLargeFile() throws IOException {
-		Assume.assumeTrue(Jvm.is64Bit());
+    @Test
+    public void testLargeFile() throws IOException {
+        Assume.assumeTrue(Jvm.is64Bit());
 
         String basePath = getTestPath();
 
-		Chronicle indexedChronicle = null;
-		ExcerptAppender appender = null;
-		Excerpt excerpt = null;
+        Chronicle indexedChronicle = null;
+        ExcerptAppender appender = null;
+        Excerpt excerpt = null;
 
-		final int dataSize = 1024;
-		final long kilo = 1024L;
+        final int dataSize = 1024;
+        final long kilo = 1024L;
 
-		try {
-			final byte[] dataToWrite = generateByteArray(dataSize);
+        try {
+            final byte[] dataToWrite = generateByteArray(dataSize);
             final byte[] readBuffer = new byte[dataSize];
 
-			indexedChronicle = ChronicleQueueBuilder.indexed(basePath).build();
+            indexedChronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
-			// create appender and write data to file
-			// write > 4M times, each time 1K is written
-			// i.e. file is > 4 GB
-			appender = indexedChronicle.createAppender();
-			long numberOfTimes = (kilo * kilo * 4L) + kilo;
-			for (long i = 0; i < numberOfTimes; i++) {
-				appender.startExcerpt(dataSize);
-				appender.write(dataToWrite);
-				appender.finish();
-			}
+            // create appender and write data to file
+            // write > 4M times, each time 1K is written
+            // i.e. file is > 4 GB
+            appender = indexedChronicle.createAppender();
+            long numberOfTimes = (kilo * kilo * 4L) + kilo;
+            for (long i = 0; i < numberOfTimes; i++) {
+                appender.startExcerpt(dataSize);
+                appender.write(dataToWrite);
+                appender.finish();
+            }
 
-			// create excerpt and read back data
-			excerpt = indexedChronicle.createExcerpt();
-			long index = 0;
-			while (excerpt.nextIndex()) {
-				int bytesRead = excerpt.read(readBuffer);
-				excerpt.finish();
-				// use Arrays.equals() to avoid using extremely slow Assert.assertArrayEquals()
-				if (bytesRead != dataSize || !Arrays.equals(dataToWrite, readBuffer)) {
-					Assert.fail("Array not equal at index " + index + "\r\n"
-							+ "bytes read: " + bytesRead + "\r\n"
-							+ "expected : " + Arrays.toString(dataToWrite) + "\r\n"
-							+ "actual : " + Arrays.toString(readBuffer));
-				}
+            // create excerpt and read back data
+            excerpt = indexedChronicle.createExcerpt();
+            long index = 0;
+            while (excerpt.nextIndex()) {
+                int bytesRead = excerpt.read(readBuffer);
+                excerpt.finish();
+                // use Arrays.equals() to avoid using extremely slow Assert.assertArrayEquals()
+                if (bytesRead != dataSize || !Arrays.equals(dataToWrite, readBuffer)) {
+                    Assert.fail("Array not equal at index " + index + "\r\n"
+                            + "bytes read: " + bytesRead + "\r\n"
+                            + "expected : " + Arrays.toString(dataToWrite) + "\r\n"
+                            + "actual : " + Arrays.toString(readBuffer));
+                }
 
-				index++;
-			}
-		} finally {
-			close(appender);
-			close(excerpt);
-			close(indexedChronicle);
+                index++;
+            }
+        } finally {
+            close(appender);
+            close(excerpt);
+            close(indexedChronicle);
 
-			excerpt = null;
-			appender = null;
-			indexedChronicle = null;
+            excerpt = null;
+            appender = null;
+            indexedChronicle = null;
 
             assertClean(basePath);
-		}
-	}
+        }
+    }
 }

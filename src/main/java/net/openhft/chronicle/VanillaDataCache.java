@@ -66,7 +66,8 @@ public class VanillaDataCache implements Closeable {
         return (len + 3) & ~3;
     }
 
-    public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite) throws IOException {
+    public synchronized VanillaMappedBytes dataFor(int cycle, int threadId, int dataCount, boolean forWrite)
+            throws IOException {
         key.cycle = cycle;
         key.threadId = threadId;
         key.dataCount = dataCount;
@@ -76,9 +77,9 @@ public class VanillaDataCache implements Closeable {
             long start = System.nanoTime();
 
             File file = VanillaChronicleUtils.mkFiles(
-                dateCache.valueFor(cycle).path,
-                FILE_NAME_PREFIX + threadId + "-" + dataCount,
-                forWrite);
+                    dateCache.valueFor(cycle).path,
+                    FILE_NAME_PREFIX + threadId + "-" + dataCount,
+                    forWrite);
 
             vmb = this.cache.put(key.clone(), file, 1L << blockBits, dataCount);
             fileLifecycleListener.onEvent(EventType.NEW, file, System.nanoTime() - start);

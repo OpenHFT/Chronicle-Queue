@@ -58,12 +58,12 @@ public class VanillaIndexCache implements Closeable {
         this.dateCache = dateCache;
 
         this.cache = new VanillaMappedCache<>(
-            builder.indexCacheCapacity(),
-            true,
-            builder.cleanupOnClose()
+                builder.indexCacheCapacity(),
+                true,
+                builder.cleanupOnClose()
         );
 
-        this.indexFileMap = new LinkedHashMap<IndexKey, File>(32,1.0f,true) {
+        this.indexFileMap = new LinkedHashMap<IndexKey, File>(32, 1.0f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<IndexKey, File> eldest) {
                 return size() >= 32;
@@ -119,22 +119,22 @@ public class VanillaIndexCache implements Closeable {
         key.indexCount = indexCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
-        if(vmb == null) {
+        if (vmb == null) {
             File file = this.indexFileMap.get(key);
-            if(file == null) {
+            if (file == null) {
                 this.indexFileMap.put(
-                    key.clone(),
-                    file = indexFileFor(cycle, indexCount, dateCache)
+                        key.clone(),
+                        file = indexFileFor(cycle, indexCount, dateCache)
                 );
             }
 
             long start = System.nanoTime();
             File parent = file.getParentFile();
-            if(forAppend && !VanillaChronicleUtils.exists(parent)) {
+            if (forAppend && !VanillaChronicleUtils.exists(parent)) {
                 parent.mkdirs();
             }
 
-            if(!forAppend && !VanillaChronicleUtils.exists(file)) {
+            if (!forAppend && !VanillaChronicleUtils.exists(file)) {
                 return null;
             }
 
@@ -167,12 +167,12 @@ public class VanillaIndexCache implements Closeable {
         }
 
         throw new AssertionError(
-            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.valueFor(cycle).text + ")"
+                "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.valueFor(cycle).text + ")"
         );
     }
 
     int lastIndexFile() {
-        int lastCycle = (int)lastCycle();
+        int lastCycle = (int) lastCycle();
         return lastIndexFile(lastCycle);
     }
 
@@ -186,7 +186,7 @@ public class VanillaIndexCache implements Closeable {
         final File cyclePath = dateCache.valueFor(cycle).path;
         final String[] files = cyclePath.list();
         if (files != null) {
-            for (int i=files.length - 1; i>=0; i--) {
+            for (int i = files.length - 1; i >= 0; i--) {
                 if (files[i].startsWith(FILE_NAME_PREFIX)) {
                     int index = Integer.parseInt(files[i].substring(FILE_NAME_PREFIX.length()));
                     if (maxIndex < index) {
@@ -206,7 +206,7 @@ public class VanillaIndexCache implements Closeable {
         }
 
         long firstDate = Long.MAX_VALUE;
-        for (int i=files.size() - 1; i >= 0; i--) {
+        for (int i = files.size() - 1; i >= 0; i--) {
             try {
                 String name = files.get(i).getAbsolutePath().substring(basePath.length() + 1);
                 long date = dateCache.parseCount(name);
@@ -228,7 +228,7 @@ public class VanillaIndexCache implements Closeable {
         }
 
         long firstDate = Long.MIN_VALUE;
-        for (int i=files.size() - 1; i >= 0; i--) {
+        for (int i = files.size() - 1; i >= 0; i--) {
             try {
                 String name = files.get(i).getAbsolutePath().substring(basePath.length() + 1);
                 long date = dateCache.parseCount(name);
@@ -244,7 +244,7 @@ public class VanillaIndexCache implements Closeable {
     }
 
     public void checkCounts(int min, int max) {
-        this.cache.checkCounts(min,max);
+        this.cache.checkCounts(min, max);
     }
 
     static class IndexKey implements Cloneable {
@@ -262,7 +262,7 @@ public class VanillaIndexCache implements Closeable {
                 return false;
             }
 
-            if(obj == this) {
+            if (obj == this) {
                 return true;
             }
 
@@ -282,8 +282,8 @@ public class VanillaIndexCache implements Closeable {
         @Override
         public String toString() {
             return "IndexKey ["
-                + "cycle="       + cycle      + ","
-                + "indexCount="  + indexCount + "]";
+                    + "cycle=" + cycle + ","
+                    + "indexCount=" + indexCount + "]";
         }
     }
 }

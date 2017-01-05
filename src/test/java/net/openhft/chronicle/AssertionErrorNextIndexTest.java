@@ -19,7 +19,6 @@
 package net.openhft.chronicle;
 
 import net.openhft.chronicle.tools.ChronicleIndexReader;
-import net.openhft.chronicle.tools.ChronicleTools;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -63,10 +62,10 @@ public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
         //config.dataBlockSize(4 * 1024);
 
         Chronicle chronicle1 = ChronicleQueueBuilder.indexed(basePath)
-            .test()
-            .indexBlockSize(1024 * 1024)
-            .dataBlockSize(4 * 1024)
-            .build();
+                .test()
+                .indexBlockSize(1024 * 1024)
+                .dataBlockSize(4 * 1024)
+                .build();
 
         ExcerptAppender appender = chronicle1.createAppender();
         for (int i = 0; i < 100; i++) {
@@ -76,10 +75,10 @@ public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
 
         {
             Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-                .test()
-                .indexBlockSize(1024 * 1024)
-                .dataBlockSize(4 * 1024)
-                .build();
+                    .test()
+                    .indexBlockSize(1024 * 1024)
+                    .dataBlockSize(4 * 1024)
+                    .build();
 
             ExcerptTailer tailer = chronicle.createTailer();
             int counter = 0;
@@ -100,10 +99,10 @@ public class AssertionErrorNextIndexTest extends IndexedChronicleTestBase {
 
         while (counter < 100) {
             Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-                .test()
-                .indexBlockSize(1024 * 1024)
-                .dataBlockSize(4 * 1024)
-                .build();
+                    .test()
+                    .indexBlockSize(1024 * 1024)
+                    .dataBlockSize(4 * 1024)
+                    .build();
 
             ExcerptTailer tailer = chronicle.createTailer();
             System.out.println("index(" + (lastIndex - 1) + ")");

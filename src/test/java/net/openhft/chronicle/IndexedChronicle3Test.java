@@ -33,8 +33,8 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
-            .useCheckedExcerpt(true)
-            .build();
+                .useCheckedExcerpt(true)
+                .build();
 
         final ExcerptAppender appender = chronicle.createAppender();
 
@@ -69,14 +69,14 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeByte(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeByte(8,1);
+            appender.writeByte(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -85,14 +85,14 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeChar(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeChar(8,1);
+            appender.writeChar(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -101,14 +101,14 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeShort(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeShort(8,1);
+            appender.writeShort(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -117,35 +117,35 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeInt(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
             appender.writeOrderedInt(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeInt(8,1);
+            appender.writeInt(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeOrderedInt(8,1);
+            appender.writeOrderedInt(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.compareAndSwapInt(8,1,2);
+            appender.compareAndSwapInt(8, 1, 2);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -154,35 +154,35 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeLong(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
             appender.writeOrderedLong(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeLong(8,1);
+            appender.writeLong(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeOrderedLong(8,1);
+            appender.writeOrderedLong(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.compareAndSwapLong(8,1,2);
+            appender.compareAndSwapLong(8, 1, 2);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
@@ -191,23 +191,23 @@ public class IndexedChronicle3Test extends IndexedChronicleTestBase {
         try {
             appender.writeDouble(1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
 
         try {
-            appender.writeDouble(8,1);
+            appender.writeDouble(8, 1);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }
 
     private void testObject(final ExcerptAppender appender) {
         try {
-            appender.writeObject("1234567890",0,5);
+            appender.writeObject("1234567890", 0, 5);
             fail("expected IllegalStateException");
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             // expected
         }
     }

@@ -120,7 +120,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * On 64 bit JVMs it has the following params: <ul> <li>data block size <b>128M</b></li>
          * </ul>
-         *
+         * <p>
          * On 32 bit JVMs it has the following params: <ul> <li>data block size <b>16M</b></li>
          * </ul>
          */
@@ -189,7 +189,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
          * Sets the size of the index cache lines. Index caches (files) consist of fixed size lines,
          * each line having ultiple index entries on it. This param specifies the size of such a
          * multi entry line.
-         *
+         * <p>
          * Default value is <b>64</b>.
          *
          * @param cacheLineSize the size of the cache lines making up index files
@@ -203,7 +203,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * The size of the index cache lines (index caches are made up of multiple fixed length
          * lines, each line contains multiple index entries).
-         *
+         * <p>
          * Default value is <b>64</b>.
          *
          * @return the size of the index cache lines
@@ -286,7 +286,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * A pre-defined ChronicleBuilder for small {@link net.openhft.chronicle.Chronicle}
          * instances.
-         *
+         * <p>
          * It has the following params: <ul> <li>data block size <b>16M</b></li> </ul>
          */
         public IndexedChronicleQueueBuilder small() {
@@ -297,7 +297,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * A pre-defined ChronicleBuilder for medium {@link net.openhft.chronicle.Chronicle}
          * instances.
-         *
+         * <p>
          * It has the following params: <ul> <li>data block size <b>128M</b></li> </ul>
          */
         public IndexedChronicleQueueBuilder medium() {
@@ -308,7 +308,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * A pre-defined ChronicleBuilder for large {@link net.openhft.chronicle.Chronicle}
          * instances.
-         *
+         * <p>
          * It has the following params: <ul> <li>data block size <b>512M</b></li> </ul>
          */
         public IndexedChronicleQueueBuilder large() {
@@ -319,7 +319,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         /**
          * A pre-defined ChronicleBuilder for test {@link net.openhft.chronicle.Chronicle}
          * instances.
-         *
+         * <p>
          * It has the following params: <ul> <li>data block size <b>8k</b></li> </ul>
          */
         IndexedChronicleQueueBuilder test() {
@@ -340,7 +340,6 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return fileLifecycleListener(fileLifecycleListener);
         }
 
-
         public IndexedChronicleQueueBuilder fileLifecycleListener(FileLifecycleListener fileLifecycleListener) {
             this.fileLifecycleListener = fileLifecycleListener;
             return this;
@@ -349,6 +348,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public FileLifecycleListener fileLifecycleListener() {
             return fileLifecycleListener;
         }
+
         @Override
         public Chronicle build() throws IOException {
             return new IndexedChronicle(this);
@@ -553,7 +553,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
                 throw new IllegalArgumentException("EntriesPerCycle must not exceed 1L << 48 (" + (1L << 48) + ")");
             }
 
-            if(!Maths.isPowerOf2(entriesPerCycle)) {
+            if (!Maths.isPowerOf2(entriesPerCycle)) {
                 throw new IllegalArgumentException("EntriesPerCycle must be a power of 2");
             }
 
@@ -734,7 +734,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder bindAddress(final InetSocketAddress bindAddress) {
-            this.bindAddressProvider =  AddressProviders.single(bindAddress);
+            this.bindAddressProvider = AddressProviders.single(bindAddress);
             return this;
         }
 
@@ -750,7 +750,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.connectAddressProvider;
         }
 
-        public ReplicaChronicleQueueBuilder bindAddressProvider(AddressProvider bindAddressProvider ) {
+        public ReplicaChronicleQueueBuilder bindAddressProvider(AddressProvider bindAddressProvider) {
             this.bindAddressProvider = bindAddressProvider;
             return this;
         }
@@ -770,7 +770,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return this.connectAddressProvider;
         }
 
-        public ReplicaChronicleQueueBuilder connectAddressProvider(AddressProvider connectAddressprovider ) {
+        public ReplicaChronicleQueueBuilder connectAddressProvider(AddressProvider connectAddressprovider) {
             this.connectAddressProvider = connectAddressprovider;
             return this;
         }
@@ -812,7 +812,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder reconnectionAttempts(int reconnectionAttempts) {
-            if(reconnectionAttempts < 0) {
+            if (reconnectionAttempts < 0) {
                 throw new IllegalArgumentException("ReconnectionAttempts must be greater or equals than 0");
             }
 
@@ -825,7 +825,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder reconnectionWarningThreshold(int reconnectionWarningThreshold) {
-            if(reconnectionWarningThreshold < 0) {
+            if (reconnectionWarningThreshold < 0) {
                 throw new IllegalArgumentException("ReconnectionWarningThreshold must be greater or equals than 0");
             }
 
@@ -896,7 +896,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder minBufferSize(int minBufferSize) {
-            if(!Maths.isPowerOf2(minBufferSize)) {
+            if (!Maths.isPowerOf2(minBufferSize)) {
                 throw new IllegalArgumentException("MinBufferSize must be a power of 2");
             }
 
@@ -1038,7 +1038,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder selectorSpinLoopCount(int selectorSpinLoopCount) {
-            if(selectorSpinLoopCount != -1 && selectorSpinLoopCount <= 0) {
+            if (selectorSpinLoopCount != -1 && selectorSpinLoopCount <= 0) {
                 throw new IllegalArgumentException("SelectorSpinLoopCount must be greater than 0 or -1 (disabled)");
             }
 
@@ -1051,7 +1051,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         }
 
         public ReplicaChronicleQueueBuilder readSpinCount(int readSpinCount) {
-            if(readSpinCount != -1 && readSpinCount <= 0) {
+            if (readSpinCount != -1 && readSpinCount <= 0) {
                 throw new IllegalArgumentException("ReadSpinCount must be greater than 0 or -1 (disabled)");
             }
 
@@ -1224,10 +1224,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public Chronicle doBuild() {
             SinkTcp cnx;
 
-            if(bindAddress() != null && connectAddress() == null) {
+            if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
 
-            } else if(connectAddress() != null) {
+            } else if (connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
 
             } else {
@@ -1264,10 +1264,10 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         public Chronicle doBuild() {
             SinkTcp cnx;
 
-            if(bindAddress() != null && connectAddress() == null) {
+            if (bindAddress() != null && connectAddress() == null) {
                 cnx = new SinkTcpAcceptor(this);
 
-            } else if(connectAddress() != null) {
+            } else if (connectAddress() != null) {
                 cnx = new SinkTcpInitiator(this);
 
             } else {

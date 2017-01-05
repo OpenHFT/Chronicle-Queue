@@ -18,14 +18,9 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.Chronicle;
 import net.openhft.chronicle.ExcerptAppender;
-import net.openhft.chronicle.IndexedChronicle;
-import net.openhft.chronicle.VanillaChronicle;
 import net.openhft.chronicle.tools.WrappedExcerptAppender;
 import net.openhft.lang.model.constraints.NotNull;
-
-import java.io.IOException;
 
 public abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppender> {
 
@@ -34,5 +29,6 @@ public abstract class AppenderAdapter extends WrappedExcerptAppender<ExcerptAppe
     }
 
     public abstract void writePaddedEntry();
+
     public abstract void startExcerpt(long capacity, long index);
 }

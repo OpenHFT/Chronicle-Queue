@@ -26,14 +26,14 @@ class RemoteChronicleQueueTailer extends RemoteChronicleQueue {
     RemoteChronicleQueueTailer(ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder, SinkTcp connection) {
         super(builder, connection, builder.readSpinCount() > 0 ? false : true);
     }
-    
+
     @Override
     public Excerpt createExcerpt() throws IOException {
-        return (Excerpt)createExcerpt0();
+        return (Excerpt) createExcerpt0();
     }
 
     @Override
     public ExcerptTailer createTailer() throws IOException {
-        return (ExcerptTailer)createExcerpt0();
+        return (ExcerptTailer) createExcerpt0();
     }
 }

@@ -37,9 +37,9 @@ public final class ChronicleWarmup {
             ChronicleTools.deleteOnExit(basePath);
             try {
                 Chronicle ic = ChronicleQueueBuilder.indexed(basePath)
-                    .dataBlockSize(64)
-                    .indexBlockSize(64)
-                    .build();
+                        .dataBlockSize(64)
+                        .indexBlockSize(64)
+                        .build();
 
                 ExcerptAppender appender = ic.createAppender();
                 ExcerptTailer tailer = ic.createTailer();

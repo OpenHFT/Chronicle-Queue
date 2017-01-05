@@ -50,8 +50,8 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
 
         try {
             sink = ChronicleQueueBuilder.remoteTailer()
-                .connectAddress(new InetSocketAddress("localhost", port))
-                .build();
+                    .connectAddress(new InetSocketAddress("localhost", port))
+                    .build();
 
             tailer = sink.createTailer();
             assertFalse(tailer.nextIndex());
@@ -69,9 +69,9 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             appender.writeLong(2);
             appender.finish();
 
-            sink =ChronicleQueueBuilder.remoteTailer()
-                .connectAddress("localhost", port)
-                .build();
+            sink = ChronicleQueueBuilder.remoteTailer()
+                    .connectAddress("localhost", port)
+                    .build();
 
             tailer = sink.createTailer().toStart();
             assertTrue("nextIndex should return true", tailer.nextIndex());
@@ -88,8 +88,8 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             sink = null;
 
             sink = ChronicleQueueBuilder.remoteTailer()
-                .connectAddress("localhost", port)
-                .build();
+                    .connectAddress("localhost", port)
+                    .build();
 
             tailer = sink.createTailer().toEnd();
             assertFalse("nextIndex should return false", tailer.nextIndex());
@@ -114,7 +114,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
         final ExecutorService executor = Executors.newFixedThreadPool(clients);
 
         try {
-            for(int i=0; i<clients; i++) {
+            for (int i = 0; i < clients; i++) {
                 executor.submit(new Runnable() {
                     @Override
                     public void run() {
@@ -155,10 +155,10 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
                             errorCollector.addError(ae);
                         } finally {
                             try {
-                                if(tailer != null) {
+                                if (tailer != null) {
                                     tailer.close();
                                 }
-                                if(sink != null) {
+                                if (sink != null) {
                                     sink.close();
                                 }
                             } catch (IOException ioe) {
@@ -171,12 +171,12 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
 
             LOGGER.info("Write {} elements to the source", items);
             final ExcerptAppender appender = source.createAppender();
-            for(int i=0;i<items;i++) {
+            for (int i = 0; i < items; i++) {
                 appender.startExcerpt();
-                appender.writeObject(new Jira75Quote(i, i, DateTime.now(), "instr-" + i,'f'));
+                appender.writeObject(new Jira75Quote(i, i, DateTime.now(), "instr-" + i, 'f'));
                 appender.finish();
 
-                if(latch.getCount() > 0) {
+                if (latch.getCount() > 0) {
                     latch.countDown();
                 }
             }
@@ -187,7 +187,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             executor.awaitTermination(30, TimeUnit.SECONDS);
 
             assertEquals(0, latch.getCount());
-        } catch(Exception e) {
+        } catch (Exception e) {
             LOGGER.warn("Exception", e);
         } finally {
             source.close();
@@ -197,8 +197,8 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
 
     protected void testJiraChron78(final int port, final Chronicle source) throws IOException, InterruptedException {
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -232,8 +232,8 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
 
     protected void testJiraChron81(final int port, final Chronicle source) throws IOException, InterruptedException {
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         try {
             final ExcerptTailer tailer = sink.createTailer().toEnd();
@@ -289,29 +289,54 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             this.entryType = entryType;
         }
 
-        public double getPrice() { return price; }
-        public void setPrice(double price) { this.price = price; }
+        public double getPrice() {
+            return price;
+        }
 
-        public double getQuantity() { return quantity; }
-        public void setQuantity(double quantity) { this.quantity = quantity; }
+        public void setPrice(double price) {
+            this.price = price;
+        }
 
-        public DateTime getDateTime() { return dateTime; }
-        public void setDateTime(DateTime dateTime) { this.dateTime = dateTime; }
+        public double getQuantity() {
+            return quantity;
+        }
 
-        public String getInstrument() { return instrument; }
-        public void setInstrument(String instrument) { this.instrument = instrument; }
+        public void setQuantity(double quantity) {
+            this.quantity = quantity;
+        }
 
-        public char getEntryType() { return entryType; }
-        public void setEntryType(char entryType) { this.entryType = entryType; }
+        public DateTime getDateTime() {
+            return dateTime;
+        }
+
+        public void setDateTime(DateTime dateTime) {
+            this.dateTime = dateTime;
+        }
+
+        public String getInstrument() {
+            return instrument;
+        }
+
+        public void setInstrument(String instrument) {
+            this.instrument = instrument;
+        }
+
+        public char getEntryType() {
+            return entryType;
+        }
+
+        public void setEntryType(char entryType) {
+            this.entryType = entryType;
+        }
 
         public String toString() {
             return "Jira75Quote ["
-               + "price=" + price
-               + ", quantity=" + quantity
-               + ", dateTime=" + dateTime
-               + ", instrument=" + instrument
-               + ", entryType=" + entryType
-               + "]";
+                    + "price=" + price
+                    + ", quantity=" + quantity
+                    + ", dateTime=" + dateTime
+                    + ", instrument=" + instrument
+                    + ", entryType=" + entryType
+                    + "]";
         }
 
         @Override
@@ -332,7 +357,7 @@ public class StatelessChronicleTestBase extends ChronicleTcpTestBase {
             out.writeDouble(quantity);
             out.writeUTFΔ(instrument);
             out.writeChar(entryType);
-            if(writeDateTime) {
+            if (writeDateTime) {
                 out.writeLong(dateTime.toDate().getTime());
             }
         }

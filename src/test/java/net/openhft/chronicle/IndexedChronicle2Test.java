@@ -36,7 +36,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         final Chronicle ch1 = ChronicleQueueBuilder.indexed(basePath).build();
 
         ExcerptAppender app = ch1.createAppender();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             app.startExcerpt();
             app.writeLong(i);
             app.finish();
@@ -45,7 +45,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         app.close();
 
         ExcerptTailer tail1 = ch1.createTailer().toStart();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             assertTrue(tail1.nextIndex());
             assertEquals(i, tail1.readLong());
             assertEquals(i, tail1.readLong(0));
@@ -56,7 +56,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
 
         final Chronicle ch2 = ChronicleQueueBuilder.indexed(basePath).build();
         ExcerptTailer tail2 = ch1.createTailer().toStart();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             assertTrue(tail2.nextIndex());
             assertEquals(i, tail2.readLong());
             assertEquals(i, tail2.readLong(0));
@@ -76,13 +76,13 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         final String basePath = getTestPath();
 
         final Chronicle ch1 = ChronicleQueueBuilder.indexed(basePath)
-            .test()
-            .indexBlockSize(64)
-            .dataBlockSize(64)
-            .build();
+                .test()
+                .indexBlockSize(64)
+                .dataBlockSize(64)
+                .build();
 
         ExcerptAppender app = ch1.createAppender();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             app.startExcerpt();
             app.writeLong(i);
             app.finish();
@@ -91,7 +91,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         app.close();
 
         ExcerptTailer tail1 = ch1.createTailer().toStart();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             assertTrue(tail1.nextIndex());
             assertEquals(i, tail1.readLong());
             assertEquals(i, tail1.readLong(0));
@@ -101,13 +101,13 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         tail1.close();
 
         final Chronicle ch2 = ChronicleQueueBuilder.indexed(basePath)
-            .test()
-            .indexBlockSize(64)
-            .dataBlockSize(64)
-            .build();
+                .test()
+                .indexBlockSize(64)
+                .dataBlockSize(64)
+                .build();
 
         ExcerptTailer tail2 = ch1.createTailer().toStart();
-        for(long i=0;i<100;i++) {
+        for (long i = 0; i < 100; i++) {
             assertTrue(tail2.nextIndex());
             assertEquals(i, tail2.readLong());
             assertEquals(i, tail2.readLong(0));
@@ -130,7 +130,7 @@ public class IndexedChronicle2Test extends IndexedChronicleTestBase {
         final Chronicle ch = ChronicleQueueBuilder.indexed(basePath).build();
         final ExcerptAppender ap = ch.createAppender();
 
-        for(long i=0; i < nb; i++) {
+        for (long i = 0; i < nb; i++) {
             ap.startExcerpt();
             ap.writeLong(i);
             ap.finish();

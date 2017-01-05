@@ -51,7 +51,6 @@ class VanillaDateCache {
      * Formats a cycle number into a date/time String based on a fixed date/time format.
      *
      * @param cycle the cycle number to format
-     *
      * @return the formatted date/time string
      */
     /*
@@ -69,7 +68,6 @@ class VanillaDateCache {
         return dv.text;
     }
     */
-
     public DateValue valueFor(int cycle) {
         long millis = (long) cycle * cycleLength;
         int hash = (int) Maths.hash(millis) & (SIZE - 1);
@@ -78,9 +76,9 @@ class VanillaDateCache {
             synchronized (format) {
                 String text = format.format(new Date(millis));
                 return values[hash] = new DateValue(
-                    millis,
-                    text,
-                    new File(rootPath, text));
+                        millis,
+                        text,
+                        new File(rootPath, text));
             }
         }
         return dv;

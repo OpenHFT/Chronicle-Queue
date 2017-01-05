@@ -39,15 +39,15 @@ public class StatefulLocalIndexedChronicleTest extends StatefulChronicleTestBase
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(chronicle)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
-            .sharedChronicle(true)
-            .connectAddress("localhost", port)
-            .build();
+                .sharedChronicle(true)
+                .connectAddress("localhost", port)
+                .build();
 
         final CountDownLatch latch = new CountDownLatch(5);
         final Random random = new Random();

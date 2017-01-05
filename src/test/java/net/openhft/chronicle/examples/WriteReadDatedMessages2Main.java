@@ -18,7 +18,10 @@
 
 package net.openhft.chronicle.examples;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 
 import java.io.IOException;
 import java.io.InputStreamReader;

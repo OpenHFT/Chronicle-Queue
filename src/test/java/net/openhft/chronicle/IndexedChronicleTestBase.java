@@ -27,13 +27,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class IndexedChronicleTestBase {
 
-    protected static final Logger LOGGER  = LoggerFactory.getLogger("IndexedChronicleTest");
+    protected static final Logger LOGGER = LoggerFactory.getLogger("IndexedChronicleTest");
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
     @Rule
@@ -41,20 +39,6 @@ public class IndexedChronicleTestBase {
 
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
-
-    protected synchronized String getTestPath() {
-        final String path = TMP_DIR + "/ic-" + testName.getMethodName();
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
-
-    protected synchronized String getTestPath(String suffix) {
-        final String path = TMP_DIR + "/ic-" + testName.getMethodName() + suffix;
-        ChronicleTools.deleteOnExit(path);
-
-        return path;
-    }
 
     protected static void assertExists(String path) {
         assertNotNull(path);
@@ -72,5 +56,19 @@ public class IndexedChronicleTestBase {
         assertNotNull(path);
         assertTrue(new File(path + ".index").delete());
         assertTrue(new File(path + ".data").delete());
+    }
+
+    protected synchronized String getTestPath() {
+        final String path = TMP_DIR + "/ic-" + testName.getMethodName();
+        ChronicleTools.deleteOnExit(path);
+
+        return path;
+    }
+
+    protected synchronized String getTestPath(String suffix) {
+        final String path = TMP_DIR + "/ic-" + testName.getMethodName() + suffix;
+        ChronicleTools.deleteOnExit(path);
+
+        return path;
     }
 }

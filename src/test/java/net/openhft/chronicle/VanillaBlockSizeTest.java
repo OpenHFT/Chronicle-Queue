@@ -17,7 +17,6 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.lang.Jvm;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,6 +42,9 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
 
     @Rule
     public final TestName testName = new TestName();
+    final int MAX_SIZE_TAIL_SAMPLE = 10000000; // 10000000
+    final int MAX_SIZE_TAIL_ITEM_SIZE = 256;
+    final int MAX_SIZE_TAIL_ITEMS = Integer.MAX_VALUE;
 
     @Ignore
     @Test
@@ -57,15 +59,15 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
         new Random().nextBytes(byteArrays);
 
         Chronicle chronicle = ChronicleQueueBuilder
-            .vanilla(root.getAbsolutePath() + "/blocksize-test")
-            .dataBlockSize(1073741824)
-            .indexBlockSize(1073741824)
-            .build();
+                .vanilla(root.getAbsolutePath() + "/blocksize-test")
+                .dataBlockSize(1073741824)
+                .indexBlockSize(1073741824)
+                .build();
 
         ExcerptAppender appender = chronicle.createAppender();
 
         System.out.println("Test...");
-        for (int count=0 ; ; count++) {
+        for (int count = 0; ; count++) {
             appender.startExcerpt(ITEM_SIZE);
             appender.write(byteArrays, 0, ITEM_SIZE);
             appender.finish();
@@ -75,10 +77,6 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
             }
         }
     }
-
-    final int MAX_SIZE_TAIL_SAMPLE = 10000000; // 10000000
-    final int MAX_SIZE_TAIL_ITEM_SIZE = 256;
-    final int MAX_SIZE_TAIL_ITEMS = Integer.MAX_VALUE;
 
     @Ignore
     @Test
@@ -94,10 +92,10 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
         final int tailers = 1;
 
         final ExecutorService executor = Executors.newFixedThreadPool(appenders + tailers);
-        for(int i=0; i<appenders; i++) {
+        for (int i = 0; i < appenders; i++) {
             executor.execute(new MaxSizeAppender(builder, "p-" + i));
         }
-        for(int i=0; i<tailers; i++) {
+        for (int i = 0; i < tailers; i++) {
             executor.execute(new MaxSizeTailer(builder, "t-" + i));
         }
 
@@ -161,7 +159,7 @@ public class VanillaBlockSizeTest extends VanillaChronicleTestBase {
 
                 final ExcerptTailer tailer = chronicle.createTailer();
                 for (int count = 0; count < MAX_SIZE_TAIL_ITEMS; ) {
-                    if(tailer.nextIndex()) {
+                    if (tailer.nextIndex()) {
                         tailer.read(byteArrays);
                         tailer.finish();
 

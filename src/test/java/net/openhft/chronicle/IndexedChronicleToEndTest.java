@@ -26,22 +26,6 @@ import static org.junit.Assert.assertFalse;
 
 public class IndexedChronicleToEndTest extends IndexedChronicleTestBase {
 
-    @Test
-    public void testToEnd() throws IOException, ClassNotFoundException, InterruptedException {
-        final String basePath = getTestPath();
-        final Chronicle chronicle1 = ChronicleQueueBuilder.indexed(basePath).small().build();
-        final Chronicle chronicle2 = ChronicleQueueBuilder.indexed(basePath).small().build();
-
-        try {
-            appendSome(chronicle1);
-            showLast(chronicle2);
-        } finally {
-            chronicle1.close();
-            chronicle2.close();
-            assertClean(basePath);
-        }
-    }
-
     private static void appendSome(Chronicle queue) throws IOException {
         ExcerptAppender appender = queue.createAppender();
         for (int i = 0; i < 10; i++) {
@@ -59,5 +43,21 @@ public class IndexedChronicleToEndTest extends IndexedChronicleTestBase {
         assertEquals("Expected 9", 9, tailer.index());
 
         tailer.close();
+    }
+
+    @Test
+    public void testToEnd() throws IOException, ClassNotFoundException, InterruptedException {
+        final String basePath = getTestPath();
+        final Chronicle chronicle1 = ChronicleQueueBuilder.indexed(basePath).small().build();
+        final Chronicle chronicle2 = ChronicleQueueBuilder.indexed(basePath).small().build();
+
+        try {
+            appendSome(chronicle1);
+            showLast(chronicle2);
+        } finally {
+            chronicle1.close();
+            chronicle2.close();
+            assertClean(basePath);
+        }
     }
 }

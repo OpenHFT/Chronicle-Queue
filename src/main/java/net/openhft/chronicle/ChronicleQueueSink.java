@@ -23,9 +23,6 @@ import net.openhft.chronicle.tcp.SinkTcp;
 import net.openhft.chronicle.tools.ResizableDirectByteBufferBytes;
 import net.openhft.chronicle.tools.WrappedChronicle;
 import net.openhft.chronicle.tools.WrappedExcerpt;
-import net.openhft.lang.io.ByteBufferBytes;
-import net.openhft.lang.io.DirectByteBufferBytes;
-import net.openhft.lang.io.IByteBufferBytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,7 +136,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean openConnection() {
-            if(!connection.isOpen()) {
+            if (!connection.isOpen()) {
                 try {
                     connection.open();
                 } catch (IOException e) {
@@ -147,14 +144,14 @@ class ChronicleQueueSink extends WrappedChronicle {
             }
 
             boolean connected = connection.isOpen();
-            if(connected) {
+            if (connected) {
                 builder.connectionListener().onConnect(connection.socketChannel());
                 this.lastReconnectionAttempt = 0;
                 this.lastReconnectionAttemptMS = 0;
 
             } else {
                 lastReconnectionAttempt++;
-                if(builder.reconnectionWarningThreshold() > 0) {
+                if (builder.reconnectionWarningThreshold() > 0) {
                     if (lastReconnectionAttempt > builder.reconnectionWarningThreshold()) {
                         logger.warn("Failed to establish a connection {}",
                                 ChronicleTcp.connectionName("", builder)
@@ -167,7 +164,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         protected boolean shouldConnect() {
-            if(lastReconnectionAttempt >= builder.reconnectionAttempts()) {
+            if (lastReconnectionAttempt >= builder.reconnectionAttempts()) {
                 long now = System.currentTimeMillis();
                 if (now < lastReconnectionAttemptMS + reconnectionIntervalMS) {
                     return false;
@@ -215,9 +212,9 @@ class ChronicleQueueSink extends WrappedChronicle {
             if (!closed && !connection.isOpen() && shouldConnect()) {
                 try {
                     doReadNext();
-                } catch(IOException e) {
+                } catch (IOException e) {
                     logIOException(logger, "Exception reading from socket", e);
-                    if(!closed) {
+                    if (!closed) {
                         builder.connectionListener().onError(connection.socketChannel(), e);
                     }
                 }
@@ -233,7 +230,7 @@ class ChronicleQueueSink extends WrappedChronicle {
                 }
             } catch (IOException e) {
                 logIOException(logger, "Exception reading from socket", e);
-                if(!closed) {
+                if (!closed) {
                     builder.connectionListener().onError(connection.socketChannel(), e);
                 }
 
@@ -248,7 +245,8 @@ class ChronicleQueueSink extends WrappedChronicle {
             return false;
         }
 
-        protected abstract boolean doReadNext()  throws IOException;
+        protected abstract boolean doReadNext() throws IOException;
+
         protected abstract boolean doReadNextExcerpt() throws IOException;
     }
 
@@ -263,7 +261,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         protected boolean doReadNext() throws IOException {
-            if(openConnection()) {
+            if (openConnection()) {
                 readBuffer.clear();
                 readBuffer.limit(0);
 
@@ -274,7 +272,7 @@ class ChronicleQueueSink extends WrappedChronicle {
         }
 
         @Override
-        protected boolean doReadNextExcerpt()  throws IOException {
+        protected boolean doReadNextExcerpt() throws IOException {
             query(wrappedChronicle.lastIndex());
 
             if (connection.readUpTo(readBuffer, ChronicleTcp.HEADER_SIZE, readSpinCount)) {
@@ -309,7 +307,7 @@ class ChronicleQueueSink extends WrappedChronicle {
 
         @Override
         protected boolean doReadNext() throws IOException {
-            if(openConnection()) {
+            if (openConnection()) {
                 readBuffer.clear();
                 readBuffer.limit(0);
 

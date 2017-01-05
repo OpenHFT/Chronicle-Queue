@@ -41,16 +41,16 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
     @Test(expected = UnsupportedOperationException.class)
     public void testVanillaStatelessExceptionOnCreateAppender() throws IOException, InterruptedException {
         ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", 9876)
-            .build()
-            .createAppender();
+                .connectAddress("localhost", 9876)
+                .build()
+                .createAppender();
     }
 
     @Test(expected = IllegalStateException.class)
     public void testVanillaStatelessExceptionOnCreatTailerTwice() throws IOException, InterruptedException {
         Chronicle ch = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", 9876)
-            .build();
+                .connectAddress("localhost", 9876)
+                .build();
 
         ch.createTailer();
         ch.createTailer();
@@ -62,15 +62,15 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -85,7 +85,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             appender.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
-            assertEquals(-1,tailer1.index());
+            assertEquals(-1, tailer1.index());
 
             for (long i = 1; i <= items; i++) {
                 assertTrue(tailer1.nextIndex());
@@ -117,15 +117,15 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         try {
             final ExcerptAppender appender = source.createAppender();
@@ -143,7 +143,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             appender.writeLong(3);
             appender.finish();
 
-            while(!tailer.nextIndex());
+            while (!tailer.nextIndex()) ;
 
             assertEquals(3, tailer.readLong());
             tailer.finish();
@@ -171,20 +171,20 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         try {
-            for(int i=0;i<tailers;i++) {
+            for (int i = 0; i < tailers; i++) {
                 executor.submit(new Runnable() {
                     public void run() {
                         try {
                             final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-                                .connectAddress("localhost", port)
-                                .build();
+                                    .connectAddress("localhost", port)
+                                    .build();
 
                             final ExcerptTailer tailer = sink.createTailer().toStart();
                             for (long i = 1; i <= items; ) {
@@ -213,7 +213,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
             final ExcerptAppender appender = source.createAppender();
 
-            for (int i=1; i<=items; i++) {
+            for (int i = 1; i <= items; i++) {
                 appender.startExcerpt(8);
                 appender.writeLong(i);
                 appender.finish();
@@ -237,15 +237,15 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         final int items = 1000;
         final ExcerptAppender appender = source.createAppender();
@@ -285,15 +285,15 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.remoteTailer()
-            .connectAddress("localhost", port)
-            .build();
+                .connectAddress("localhost", port)
+                .build();
 
         final int items = 1000000;
         final ExcerptAppender appender = source.createAppender();
@@ -311,10 +311,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 st.nextIndex();
                 st.finish();
 
-                if(i == 1) {
+                if (i == 1) {
                     startIndex = st.index();
 
-                } else if(i == items) {
+                } else if (i == items) {
                     endIndex = st.index();
                 }
             }
@@ -323,7 +323,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             st.close();
 
             final ExcerptTailer tailer1 = sink.createTailer().toStart();
-            assertEquals(-1,tailer1.index());
+            assertEquals(-1, tailer1.index());
             assertTrue(tailer1.nextIndex());
             assertEquals(startIndex, tailer1.index());
             assertEquals(1, tailer1.readLong());
@@ -394,19 +394,19 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
             public void run() {
                 try {
                     final Chronicle sink = remoteTailer()
-                        .connectAddressProvider(new AddressProvider() {
-                            @Override
-                            public InetSocketAddress get() {
-                                return new InetSocketAddress(
-                                    "localhost",
-                                    portSupplier.getAndAssertOnError());
-                            }
-                        })
-                        .build();
+                            .connectAddressProvider(new AddressProvider() {
+                                @Override
+                                public InetSocketAddress get() {
+                                    return new InetSocketAddress(
+                                            "localhost",
+                                            portSupplier.getAndAssertOnError());
+                                }
+                            })
+                            .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
                             long expected = items - latch.getCount() + 1;
                             long actual = tailer.readLong();
                             assertEquals(expected, actual);
@@ -438,7 +438,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .build();
 
         ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
+        for (long i = 0; i < items / 2; i++) {
             appender1.startExcerpt(8);
             appender1.writeLong(i + 1);
             appender1.finish();
@@ -446,7 +446,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
 
         appender1.close();
 
-        while(latch.getCount() > 10) {
+        while (latch.getCount() > 10) {
             Thread.sleep(25);
         }
 
@@ -462,7 +462,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
                 .build();
 
         ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
+        for (long i = items / 2; i < items; i++) {
             appender2.startExcerpt(8);
             appender2.writeLong(i + 1);
             appender2.finish();
@@ -473,7 +473,7 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final Chronicle check = vanilla(basePathSource).build();
         final ExcerptTailer checkTailer = check.createTailer();
         for (long i = 1; i <= items; ) {
-            if(checkTailer.nextIndex()) {
+            if (checkTailer.nextIndex()) {
                 long actual = checkTailer.readLong();
                 assertEquals(i, actual);
                 checkTailer.finish();
@@ -501,10 +501,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         testJiraChron74(portSupplier.getAndAssertOnError(), chronicle);
     }
@@ -518,10 +518,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         testJiraChron75(portSupplier.getAndAssertOnError(), chronicle);
     }
@@ -535,10 +535,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         testJiraChron78(portSupplier.getAndAssertOnError(), chronicle);
     }
@@ -552,10 +552,10 @@ public class StatelessVanillaChronicleTailerTest extends StatelessChronicleTestB
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePathSource)
-            .source()
+                .source()
                 .bindAddress(0)
                 .connectionListener(portSupplier)
-            .build();
+                .build();
 
         testJiraChron81(portSupplier.getAndAssertOnError(), chronicle);
     }

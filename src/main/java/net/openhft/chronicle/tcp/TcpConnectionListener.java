@@ -23,7 +23,10 @@ import java.nio.channels.SocketChannel;
 
 public interface TcpConnectionListener {
     void onError(SelectableChannel channel, Exception exception);
+
     void onListen(ServerSocketChannel channel);
+
     void onConnect(SocketChannel channel);
+
     void onDisconnect(SocketChannel channel);
 }

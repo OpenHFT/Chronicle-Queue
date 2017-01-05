@@ -26,16 +26,14 @@ import org.junit.rules.TestName;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Tests aimed to check the consistency of the interfaces:
  * - toStart
  * - toEnd
  */
-public class ChronicleTest  {
+public class ChronicleTest {
 
     protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 
@@ -64,7 +62,7 @@ public class ChronicleTest  {
         final long items = 10;
         final ExcerptAppender ap = ch.createAppender();
 
-        for(long i=1; i <= items; i++) {
+        for (long i = 1; i <= items; i++) {
             ap.startExcerpt();
             ap.writeLong(i);
             ap.finish();
@@ -86,8 +84,8 @@ public class ChronicleTest  {
     }
 
     @Test
-    public void testIndexedChronicleToStartToEndBehavior()  throws IOException {
-       final Chronicle ch = ChronicleQueueBuilder.indexed(getIndexedTestPath()).build();
+    public void testIndexedChronicleToStartToEndBehavior() throws IOException {
+        final Chronicle ch = ChronicleQueueBuilder.indexed(getIndexedTestPath()).build();
 
         testChronicleToStartToEndBehavior(ch);
 
@@ -96,7 +94,7 @@ public class ChronicleTest  {
     }
 
     @Test
-    public void testVanillaChronicleToStartToEndBehavior()  throws IOException {
+    public void testVanillaChronicleToStartToEndBehavior() throws IOException {
         final Chronicle ch = ChronicleQueueBuilder.vanilla(getVanillaTestPath()).build();
 
         testChronicleToStartToEndBehavior(ch);

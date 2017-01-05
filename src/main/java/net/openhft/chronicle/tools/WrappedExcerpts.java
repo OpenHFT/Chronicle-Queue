@@ -35,6 +35,10 @@ public class WrappedExcerpts {
             super.finished = true;
         }
 
+        public static ByteBufferBytesExcerpt withSize(int size) {
+            return new ByteBufferBytesExcerpt(ChronicleTcp.createBufferOfSize(size));
+        }
+
         @Override
         public boolean wasPadding() {
             throw new UnsupportedOperationException();
@@ -79,10 +83,6 @@ public class WrappedExcerpts {
         public Excerpt toEnd() {
             throw new UnsupportedOperationException();
         }
-
-        public static ByteBufferBytesExcerpt withSize(int size) {
-            return new ByteBufferBytesExcerpt(ChronicleTcp.createBufferOfSize(size));
-        }
     }
 
     //**************************************************************************
@@ -100,26 +100,26 @@ public class WrappedExcerpts {
         }
 
         protected ByteBuffer buffer() {
-            return ((ByteBufferBytesExcerpt)wrappedExcerpt).buffer();
+            return ((ByteBufferBytesExcerpt) wrappedExcerpt).buffer();
         }
 
         protected ByteBufferBytesExcerpt excerpt() {
-            return ((ByteBufferBytesExcerpt)wrappedExcerpt);
+            return ((ByteBufferBytesExcerpt) wrappedExcerpt);
         }
 
         protected void resize(long capacity) {
-            if(capacity > Integer.MAX_VALUE) {
+            if (capacity > Integer.MAX_VALUE) {
                 throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
             }
 
-            if(capacity > excerpt().capacity()) {
+            if (capacity > excerpt().capacity()) {
                 setExcerpt(ByteBufferBytesExcerpt.withSize((int) capacity));
             }
 
             excerpt().clear();
             excerpt().limit(capacity);
             buffer().clear();
-            buffer().limit((int)capacity);
+            buffer().limit((int) capacity);
         }
 
         protected void cleanup() {

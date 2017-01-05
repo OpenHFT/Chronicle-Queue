@@ -51,7 +51,7 @@ public class ResizableDirectByteBufferBytes extends DirectByteBufferBytes {
 
     public ResizableDirectByteBufferBytes setBufferPositionAndLimit(int position, long limit) {
         buffer().position(position);
-        buffer().limit((int)limit);
+        buffer().limit((int) limit);
 
         return this;
     }

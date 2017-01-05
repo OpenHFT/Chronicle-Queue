@@ -50,7 +50,7 @@ public class ChronicleTcpTestBase {
     @Rule
     public final TestName testName = new TestName();
     @Rule
-    public final TemporaryFolder folder= new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
+    public final TemporaryFolder folder = new TemporaryFolder(new File(System.getProperty("java.io.tmpdir")));
     @Rule
     public final ErrorCollector errorCollector = new ErrorCollector();
 
@@ -59,10 +59,10 @@ public class ChronicleTcpTestBase {
     @Rule
     public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
-            if(TRACE_TEST_EXECUTION) {
+            if (TRACE_TEST_EXECUTION) {
                 LOGGER.info("Starting test: {}.{}",
-                    description.getClassName(),
-                    description.getMethodName()
+                        description.getClassName(),
+                        description.getMethodName()
                 );
             }
         }
@@ -89,13 +89,13 @@ public class ChronicleTcpTestBase {
         try {
             String mn = testName.getMethodName();
             File path = mn == null
-                ? folder.newFolder(getClass().getSimpleName(), name)
-                : folder.newFolder(getClass().getSimpleName(), mn, name);
+                    ? folder.newFolder(getClass().getSimpleName(), name)
+                    : folder.newFolder(getClass().getSimpleName(), mn, name);
 
             LOGGER.debug("tmpdir: " + path);
 
             return path.getAbsolutePath();
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -110,7 +110,7 @@ public class ChronicleTcpTestBase {
             LOGGER.debug("tmpdir: " + path);
 
             return path.getAbsolutePath();
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -128,7 +128,7 @@ public class ChronicleTcpTestBase {
     }
 
     protected synchronized String getIndexedTestPath() {
-       final String path = getTmpDir("indexed-" + Math.abs(random.nextLong()));
+        final String path = getTmpDir("indexed-" + Math.abs(random.nextLong()));
         ChronicleTools.deleteOnExit(path);
         return path;
     }
@@ -151,7 +151,8 @@ public class ChronicleTcpTestBase {
         return path;
     }
 
-    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout) throws IOException, InterruptedException  {
+    public void testNonBlockingClient(final Chronicle source, final Chronicle sink, final long timeout)
+            throws IOException, InterruptedException {
         final int messages = 1000;
 
         final Thread t1 = new Thread(new Runnable() {
@@ -196,14 +197,14 @@ public class ChronicleTcpTestBase {
                     boolean hasNext = false;
 
                     final ExcerptTailer tailer = sink.createTailer();
-                    for(int i = 1; i <= messages; ) {
-                        start   = System.currentTimeMillis();
+                    for (int i = 1; i <= messages; ) {
+                        start = System.currentTimeMillis();
                         hasNext = tailer.nextIndex();
-                        end     = System.currentTimeMillis();
+                        end = System.currentTimeMillis();
 
                         assertTrue("Timeout exceeded " + (end - start), (end - start) < timeout);
 
-                        if(hasNext) {
+                        if (hasNext) {
                             assertEquals(i, tailer.readLong());
                             assertEquals(i + 1, tailer.readLong());
                             i++;

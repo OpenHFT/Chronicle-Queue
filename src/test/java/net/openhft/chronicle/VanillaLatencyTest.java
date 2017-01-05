@@ -35,7 +35,6 @@
  */
 package net.openhft.chronicle;
 
-import net.openhft.lang.Jvm;
 import org.HdrHistogram.Histogram;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -73,21 +72,21 @@ public class VanillaLatencyTest {
 
         // Randomize
         System.out.println("Randomize...");
-        for (int i=0;i<SAMPLE;i++) {
+        for (int i = 0; i < SAMPLE; i++) {
             random.nextBytes(byteArrays[0]);
         }
 
         Chronicle indexedChronicle = ChronicleQueueBuilder
-            .indexed(root.getAbsolutePath() + "/indexed-latency")
-            .build();
+                .indexed(root.getAbsolutePath() + "/indexed-latency")
+                .build();
 
         System.out.println("----------------------- INDEXED -----------------------");
         latencyTest(indexedChronicle, COUNT, byteArrays);
         indexedChronicle.close();
 
         Chronicle vanillaChronicle = ChronicleQueueBuilder
-            .vanilla(root.getAbsolutePath() + "/vanilla-latency")
-            .build();
+                .vanilla(root.getAbsolutePath() + "/vanilla-latency")
+                .build();
 
         System.out.println("----------------------- VANILLA -----------------------");
         latencyTest(vanillaChronicle, COUNT, byteArrays);
@@ -103,7 +102,7 @@ public class VanillaLatencyTest {
 
         // Warmup
         System.out.println("Warmup...");
-        for (int i=0; i<SAMPLE; i++) {
+        for (int i = 0; i < SAMPLE; i++) {
             appender.startExcerpt(ITEM_SIZE);
             appender.write(byteArrays[i], 0, ITEM_SIZE);
             appender.finish();
@@ -111,7 +110,7 @@ public class VanillaLatencyTest {
 
         System.out.println("Test...");
         int index = 0;
-        for (int i=0; i<count; i++, index++) {
+        for (int i = 0; i < count; i++, index++) {
             long start = System.nanoTime();
 
             appender.startExcerpt(ITEM_SIZE);
@@ -123,10 +122,10 @@ public class VanillaLatencyTest {
 
             if (i > 0 && i % SAMPLE == 0) {
                 System.out.println(
-                    "Total: " + i +
-                    " Mean: " + histogram.getMean() +
-                    " Max: " + histogram.getMaxValue()+
-                    " StdDev: " + histogram.getStdDeviation()
+                        "Total: " + i +
+                                " Mean: " + histogram.getMean() +
+                                " Max: " + histogram.getMaxValue() +
+                                " StdDev: " + histogram.getStdDeviation()
                 );
             }
         }

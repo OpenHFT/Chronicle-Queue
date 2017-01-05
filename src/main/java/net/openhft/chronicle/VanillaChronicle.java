@@ -37,12 +37,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -120,7 +115,7 @@ public class VanillaChronicle implements Chronicle {
         this.entriesForCycleBits = Maths.intLog2(this.builder.entriesPerCycle());
         this.entriesForCycleMask = -1L >>> -entriesForCycleBits;
 
-        if(!VanillaChronicleUtils.exists(builder.path())) {
+        if (!VanillaChronicleUtils.exists(builder.path())) {
             builder.path().mkdirs();
         }
     }
@@ -154,10 +149,10 @@ public class VanillaChronicle implements Chronicle {
 
         if (serializer == null) {
             serializer = BytesMarshallableSerializer.create(
-                new VanillaBytesMarshallerFactory(),
-                builder.useCompressedObjectSerializer()
-                    ? JDKZObjectSerializer.INSTANCE
-                    : JDKObjectSerializer.INSTANCE
+                    new VanillaBytesMarshallerFactory(),
+                    builder.useCompressedObjectSerializer()
+                            ? JDKZObjectSerializer.INSTANCE
+                            : JDKObjectSerializer.INSTANCE
             );
 
             marshallersCache.set(new WeakReference<>(serializer));
@@ -249,12 +244,12 @@ public class VanillaChronicle implements Chronicle {
         if (lastIndexCount >= 0) {
             try {
                 final VanillaMappedBytes buffer = indexCache.indexFor(cycle, lastIndexCount, false);
-                if(buffer != null) {
-                final long indices = VanillaIndexCache.countIndices(buffer);
-                buffer.release();
+                if (buffer != null) {
+                    final long indices = VanillaIndexCache.countIndices(buffer);
+                    buffer.release();
 
-                final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
-                return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
+                    final long indexEntryNumber = (indices > 0) ? indices - 1 : 0;
+                    return (((long) cycle) << entriesForCycleBits) + (((long) lastIndexCount) << indexBlockLongsBits) + indexEntryNumber;
                 } else {
                     return -1;
                 }
@@ -291,11 +286,10 @@ public class VanillaChronicle implements Chronicle {
     }
 
     public enum Cycle {
-            SECONDS ("yyyyMMddHHmmss", 1000, 1L << 28),
-            MINUTES ("yyyyMMddHHmm"  , 60 * 1000, 1L << 34),
-            HOURS   ("yyyyMMddHH"    , 60 * 60 * 1000, 1L << 40),
-            DAYS    ("yyyyMMdd"      , 24 * 60 * 60 * 1000, 1L << 40),
-        ;
+        SECONDS("yyyyMMddHHmmss", 1000, 1L << 28),
+        MINUTES("yyyyMMddHHmm", 60 * 1000, 1L << 34),
+        HOURS("yyyyMMddHH", 60 * 60 * 1000, 1L << 40),
+        DAYS("yyyyMMdd", 24 * 60 * 60 * 1000, 1L << 40),;
 
         private static Cycle[] VALUES = values();
 
@@ -310,8 +304,8 @@ public class VanillaChronicle implements Chronicle {
         }
 
         public static Cycle forLength(int length) {
-            for(int i=VALUES.length - 1; i >= 0; i--) {
-                if(VALUES[i].length == length) {
+            for (int i = VALUES.length - 1; i >= 0; i--) {
+                if (VALUES[i].length == length) {
                     return VALUES[i];
                 }
             }
@@ -320,8 +314,8 @@ public class VanillaChronicle implements Chronicle {
         }
 
         public static Cycle forFormat(String format) {
-            for(int i=VALUES.length - 1; i >= 0; i--) {
-                if(VALUES[i].format == format || VALUES[i].format.equals(format)) {
+            for (int i = VALUES.length - 1; i >= 0; i--) {
+                if (VALUES[i].format == format || VALUES[i].format.equals(format)) {
                     return VALUES[i];
                 }
             }
@@ -365,7 +359,7 @@ public class VanillaChronicle implements Chronicle {
     private abstract class AbstractVanillaExcerpt extends NativeBytes implements VanillaExcerptCommon {
         protected VanillaMappedBytes indexBytes;
         protected VanillaMappedBytes dataBytes;
-        protected long index ;
+        protected long index;
 
         private int lastCycle = Integer.MIN_VALUE;
         private int lastIndexCount = Integer.MIN_VALUE;
@@ -429,7 +423,7 @@ public class VanillaChronicle implements Chronicle {
                         releaseDataBytes();
 
                         indexBytes = indexCache.indexFor(cycle, indexCount, false);
-                        if(indexBytes == null) {
+                        if (indexBytes == null) {
                             return false;
                         }
 
@@ -682,6 +676,7 @@ public class VanillaChronicle implements Chronicle {
         public void nextSynchronous(boolean nextSynchronous) {
             this.nextSynchronous = nextSynchronous;
         }
+
         @Override
         public void finish() {
             if (finished) {
@@ -705,13 +700,13 @@ public class VanillaChronicle implements Chronicle {
                 long position = VanillaIndexCache.append(indexBytes, indexValue, nextSynchronous);
                 if (position < 0) {
                     if (indexBytes != null) {
-                        lastIndexIndex = (int)indexBytes.index() + 1;
+                        lastIndexIndex = (int) indexBytes.index() + 1;
                         indexBytes.release();
                         indexBytes = null;
                     }
 
                     indexBytes = indexCache.append(appenderCycle, indexValue, nextSynchronous, lastIndexIndex, positionArr);
-                    lastIndexIndex = (int)indexBytes.index();
+                    lastIndexIndex = (int) indexBytes.index();
                     setLastWrittenIndex(appenderCycle, indexBytes.index(), positionArr[0]);
 
                 } else {
@@ -778,8 +773,8 @@ public class VanillaChronicle implements Chronicle {
         @NotNull
         @Override
         public ExcerptTailer toStart() {
-            if(!this.fsWatchEnabled) {
-            super.toStart();
+            if (!this.fsWatchEnabled) {
+                super.toStart();
             } else {
                 toStartWithFsWatch();
             }
@@ -788,35 +783,35 @@ public class VanillaChronicle implements Chronicle {
         }
 
         private ExcerptTailer toStartWithFsWatch() {
-            if(this.index == -1 && this.fsWatchKey == null) {
+            if (this.index == -1 && this.fsWatchKey == null) {
                 super.toStart();
             }
 
-            if(this.index == -1 && fsWatchEnabled) {
+            if (this.index == -1 && fsWatchEnabled) {
                 try {
-                    if(this.fsWatchKey == null) {
+                    if (this.fsWatchKey == null) {
                         this.fsWatchKey = this.fsWatchPath.register(this.fsWatch, StandardWatchEventKinds.ENTRY_CREATE);
                     }
 
                     WatchKey key = fsWatch.poll();
-                    if(key != null && key.isValid()) {
+                    if (key != null && key.isValid()) {
                         List<WatchEvent<?>> events = key.pollEvents();
-                        for(int i=events.size() - 1; i >= 0; i--) {
-                            if(events.get(i).kind() != StandardWatchEventKinds.OVERFLOW) {
+                        for (int i = events.size() - 1; i >= 0; i--) {
+                            if (events.get(i).kind() != StandardWatchEventKinds.OVERFLOW) {
                                 super.toStart();
-                                if(this.index != -1) {
+                                if (this.index != -1) {
                                     events.clear();
                                     break;
                                 }
                             }
                         }
                     }
-                } catch(IOException e) {
+                } catch (IOException e) {
                     throw new IllegalStateException(e);
                 }
             }
 
-            if(this.index != -1 && this.fsWatchKey != null) {
+            if (this.index != -1 && this.fsWatchKey != null) {
                 this.fsWatchKey.cancel();
                 this.fsWatchKey = null;
             }
@@ -846,11 +841,12 @@ public class VanillaChronicle implements Chronicle {
 
         /**
          * Calculate working directory path from current cycle
+         *
          * @return directory path
          */
         @Override
         public File getActiveWorkingDirectory() {
-            int cycle = (int)((index() >> 40) & 0xFFFFFF);
+            int cycle = (int) ((index() >> 40) & 0xFFFFFF);
             return dateCache.valueFor(cycle).path;
         }
     }

@@ -38,6 +38,10 @@ public class WrappedExcerptAppenders {
             super.finished = true;
         }
 
+        public static ByteBufferBytesAppender withSize(int size) {
+            return new ByteBufferBytesAppender(ChronicleTcp.createBufferOfSize(size));
+        }
+
         @Override
         public void startExcerpt() {
             clear();
@@ -46,7 +50,7 @@ public class WrappedExcerptAppenders {
 
         @Override
         public void startExcerpt(long capacity) {
-            if(capacity <= capacity()) {
+            if (capacity <= capacity()) {
                 clear();
                 buffer().clear();
 
@@ -92,10 +96,6 @@ public class WrappedExcerptAppenders {
         public void nextSynchronous(boolean nextSynchronous) {
             throw new UnsupportedOperationException();
         }
-
-        public static ByteBufferBytesAppender withSize(int size) {
-            return new ByteBufferBytesAppender(ChronicleTcp.createBufferOfSize(size));
-        }
     }
 
     //**************************************************************************
@@ -119,7 +119,7 @@ public class WrappedExcerptAppenders {
 
         @Override
         public void startExcerpt(long capacity) {
-            if(capacity > Integer.MAX_VALUE) {
+            if (capacity > Integer.MAX_VALUE) {
                 throw new IllegalStateException("Only capacities up to Integer.MAX_VALUE are supported");
             }
 

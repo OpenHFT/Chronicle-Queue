@@ -103,7 +103,7 @@ public class ChronicleTcp {
     }
 
     public static boolean isLocalhost(@NotNull InetSocketAddress address) {
-        if(address.getAddress().isLoopbackAddress()) {
+        if (address.getAddress().isLoopbackAddress()) {
             return true;
         }
 

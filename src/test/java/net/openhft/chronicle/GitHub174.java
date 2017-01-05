@@ -31,23 +31,23 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class GitHub174 {
 
-    @Parameterized.Parameters
-    public static Collection dataBlockSize() {
-        return Arrays.asList(new Object[][] {
-                {  64               },
-                {  64 * 128         },
-                { 128 * 1024        },
-                {  32 * 1024 * 1024 },
-                {  64 * 1024 * 1024 },
-                { 128 * 1024 * 1024 },
-                { 256 * 1024 * 1024 }
-        });
-    }
-
     private final int dataBlockSize;
 
     public GitHub174(int dataBlockSize) {
         this.dataBlockSize = dataBlockSize;
+    }
+
+    @Parameterized.Parameters
+    public static Collection dataBlockSize() {
+        return Arrays.asList(new Object[][]{
+                {64},
+                {64 * 128},
+                {128 * 1024},
+                {32 * 1024 * 1024},
+                {64 * 1024 * 1024},
+                {128 * 1024 * 1024},
+                {256 * 1024 * 1024}
+        });
     }
 
     @Test
@@ -91,8 +91,8 @@ public class GitHub174 {
 
     private Chronicle chronicle(String path) throws IOException {
         return ChronicleQueueBuilder
-            .indexed(path)
-            .dataBlockSize(this.dataBlockSize)
-            .build();
+                .indexed(path)
+                .dataBlockSize(this.dataBlockSize)
+                .build();
     }
 }

@@ -28,20 +28,6 @@ import java.io.IOException;
  */
 public class Jira57 {
 
-    public static class TickDataTest {
-        public final long timeStamp;
-        public final double price;
-        public final double volume;
-        public final int priceType;
-
-        public TickDataTest(long timeStamp, double price, double volume, int priceType) {
-            this.timeStamp = timeStamp;
-            this.price = price;
-            this.volume = volume;
-            this.priceType = priceType;
-        }
-    }
-
     public static void write(TickDataTest tickData, ExcerptAppender toAppender) {
         toAppender.startExcerpt(28); // errors with, or with 28, but at a different point.
         toAppender.writeLong(tickData.timeStamp);
@@ -97,7 +83,7 @@ public class Jira57 {
                 Assert.assertFalse(excerpt.wasPadding());
                 boolean condition = tailer.nextIndex();
                 if (j == 3)
-                Assert.assertEquals(dump(excerpt), dump(tailer));
+                    Assert.assertEquals(dump(excerpt), dump(tailer));
                 if (!condition)
                     Assert.assertTrue("start: " + start + ", j: " + j, condition);
                 Assert.assertFalse(tailer.wasPadding());
@@ -126,5 +112,19 @@ public class Jira57 {
 
     static String dump(ExcerptCommon common) {
         return ((IndexedChronicle.AbstractIndexedExcerpt) common).dumpState();
+    }
+
+    public static class TickDataTest {
+        public final long timeStamp;
+        public final double price;
+        public final double volume;
+        public final int priceType;
+
+        public TickDataTest(long timeStamp, double price, double volume, int priceType) {
+            this.timeStamp = timeStamp;
+            this.price = price;
+            this.volume = volume;
+            this.priceType = priceType;
+        }
     }
 }

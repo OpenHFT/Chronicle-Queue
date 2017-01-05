@@ -26,14 +26,14 @@ import org.slf4j.LoggerFactory;
 public class ChronicleTestRunListener extends RunListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("HFT");
 
-    public void testStarted(Description description)   {
-        if(Boolean.getBoolean("hft.test.printTestStarted")) {
+    public void testStarted(Description description) {
+        if (Boolean.getBoolean("hft.test.printTestStarted")) {
             LOGGER.info("TestStarted >> {}::{}", description.getClassName(), description.getMethodName());
         }
     }
 
-    public void testFinished(Description description)   {
-        if(Boolean.getBoolean("hft.test.printTestFinished")) {
+    public void testFinished(Description description) {
+        if (Boolean.getBoolean("hft.test.printTestFinished")) {
             LOGGER.info("TestFinished << {}::{}", description.getClassName(), description.getMethodName());
         }
     }

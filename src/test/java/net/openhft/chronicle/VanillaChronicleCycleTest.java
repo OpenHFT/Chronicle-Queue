@@ -31,6 +31,46 @@ import java.util.concurrent.TimeUnit;
 
 public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
+    static Runnable createReader(final Chronicle chron, final VanillaChronicle.Cycle cycle, final CountDownLatch latch) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try (ExcerptTailer tailer = chron.createTailer()) {
+                    while (latch.getCount() != 0) {
+                        if (tailer.nextIndex()) {
+                            tailer.readInt();
+                            tailer.finish();
+                            latch.countDown();
+                        } else {
+                            Thread.sleep(cycle.length() / 4);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                }
+            }
+        };
+    }
+
+    static Runnable createWriter(final Chronicle chron, final VanillaChronicle.Cycle cycle, final int loops) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try (ExcerptAppender appender = chron.createAppender()) {
+                    for (int i = 0; i < loops; i++) {
+                        appender.startExcerpt(4);
+                        appender.writeInt(i);
+                        appender.finish();
+
+                        Thread.sleep(cycle.length() / 4);
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("", e);
+                }
+            }
+        };
+    }
+
     @Test
     public void testsCycles() {
         final String basePath = getTestPath();
@@ -38,7 +78,7 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(basePath);
 
-        for(VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
+        for (VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
             builder.cycle(cycle);
             Assert.assertEquals(cycle.entries(), builder.entriesPerCycle());
             Assert.assertEquals(cycle.format(), builder.cycleFormat());
@@ -53,10 +93,10 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(basePath);
 
-        for(VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
+        for (VanillaChronicle.Cycle cycle : VanillaChronicle.Cycle.values()) {
             Assert.assertEquals(
-                cycle.entries(),
-                builder.cycleLength(cycle.length(), false).entriesPerCycle()
+                    cycle.entries(),
+                    builder.cycleLength(cycle.length(), false).entriesPerCycle()
             );
         }
     }
@@ -103,16 +143,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
-            createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
-                cycle,
-                iterations)
+                createWriter(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                        cycle,
+                        iterations)
         );
         svc.execute(
-            createReader(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
-                cycle,
-                latch)
+                createReader(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmmss").build(),
+                        cycle,
+                        latch)
         );
 
         svc.shutdown();
@@ -120,6 +160,10 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
 
         Assert.assertEquals(0, latch.getCount());
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
     @Ignore("TODO FIX")
@@ -133,16 +177,16 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         final ExecutorService svc = Executors.newFixedThreadPool(2);
 
         svc.execute(
-            createWriter(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
-                cycle,
-                iterations)
+                createWriter(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                        cycle,
+                        iterations)
         );
         svc.execute(
-            createReader(
-                ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
-                cycle,
-                latch)
+                createReader(
+                        ChronicleQueueBuilder.vanilla(basePath).cycle(cycle).cycleFormat("yyyyMMdd/HHmm/ss").build(),
+                        cycle,
+                        latch)
         );
 
         svc.shutdown();
@@ -172,49 +216,5 @@ public class VanillaChronicleCycleTest extends VanillaChronicleTestBase {
         File[] files = new File(basePath).listFiles();
         Assert.assertNotNull(files);
         Assert.assertTrue(files.length >= 5);
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    static Runnable createReader(final Chronicle chron, final VanillaChronicle.Cycle cycle, final CountDownLatch latch) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                try(ExcerptTailer tailer = chron.createTailer()) {
-                    while(latch.getCount() != 0) {
-                        if(tailer.nextIndex()) {
-                            tailer.readInt();
-                            tailer.finish();
-                            latch.countDown();
-                        } else {
-                            Thread.sleep(cycle.length() / 4);
-                        }
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("", e);
-                }
-            }
-        };
-    }
-
-    static Runnable createWriter(final Chronicle chron, final VanillaChronicle.Cycle cycle, final int loops) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                try(ExcerptAppender appender = chron.createAppender()) {
-                    for (int i = 0; i < loops; i++) {
-                        appender.startExcerpt(4);
-                        appender.writeInt(i);
-                        appender.finish();
-
-                        Thread.sleep(cycle.length() / 4);
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("", e);
-                }
-            }
-        };
     }
 }

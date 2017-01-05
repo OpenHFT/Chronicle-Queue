@@ -52,7 +52,7 @@ public interface ExcerptCommon extends Bytes {
     /**
      * Finish reading or writing. This checks there was not a buffer overflow and
      * shrink wraps new entries and add them to the index
-     *
+     * <p>
      * May throw:
      * - AssertionError
      * - ConcurrentModificationException

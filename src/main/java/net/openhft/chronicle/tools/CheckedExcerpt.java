@@ -100,7 +100,7 @@ public class CheckedExcerpt extends WrappedExcerpt {
     @Override
     public boolean compareAndSwapInt(long offset, int expected, int x) {
         checkSpaceLeft(offset, 4);
-        return super.compareAndSwapInt(offset, expected, x) ;
+        return super.compareAndSwapInt(offset, expected, x);
     }
 
     @Override

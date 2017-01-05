@@ -31,14 +31,14 @@ public final class SourceTcpInitiator extends SourceTcp {
 
     public SourceTcpInitiator(final ChronicleQueueBuilder.ReplicaChronicleQueueBuilder builder) {
         super(
-            "source-acceptor",
-            builder,
-            new ThreadPoolExecutor(
-                1,
-                1,
-                0L,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>())
+                "source-acceptor",
+                builder,
+                new ThreadPoolExecutor(
+                        1,
+                        1,
+                        0L,
+                        TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>())
         );
 
         this.socketChannel = null;
@@ -85,7 +85,7 @@ public final class SourceTcpInitiator extends SourceTcp {
 
     @Override
     public boolean isLocalhost() {
-        if(builder.connectAddress().getAddress().isLoopbackAddress()) {
+        if (builder.connectAddress().getAddress().isLoopbackAddress()) {
             return true;
         }
 

@@ -28,10 +28,10 @@ import java.util.Iterator;
 /**
  * References:
  * - Netty's SelectedSelectionKeySet
- *     https://github.com/real-logic/Aeron/blob/master/aeron-driver/src/main/java/uk/co/real_logic/aeron/driver/NioSelectedKeySet.java
+ * https://github.com/real-logic/Aeron/blob/master/aeron-driver/src/main/java/uk/co/real_logic/aeron/driver/NioSelectedKeySet.java
  * - Aeron's NioSelectedKeySet
- *     https://github.com/netty/netty/blob/master/transport/src/main/java/io/netty/channel/nio/SelectedSelectionKeySet.java
- *
+ * https://github.com/netty/netty/blob/master/transport/src/main/java/io/netty/channel/nio/SelectedSelectionKeySet.java
+ * <p>
  * Assumes single threaded usage.
  */
 public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
@@ -110,19 +110,19 @@ public class VanillaSelectionKeySet extends AbstractSet<SelectionKey> {
 
     /**
      * {@inheritDoc}
-     *
+     * <p>
      * It seems that on MacOSX this method is used to check if a SelectionKey has
      * already been added to the list of availables keys.
      */
     @Override
     public boolean contains(final Object o) {
-        if(o instanceof SelectionKey) {
-            final SelectionKey key = (SelectionKey)o;
+        if (o instanceof SelectionKey) {
+            final SelectionKey key = (SelectionKey) o;
             for (int i = 0; i < keys.length && keys[i] != null; i++) {
-                if(key == keys[i]) {
+                if (key == keys[i]) {
                     return true;
                 }
-                if(keys[i].channel() == key.channel() && keys[i].interestOps() == key.interestOps() ) {
+                if (keys[i].channel() == key.channel() && keys[i].interestOps() == key.interestOps()) {
                     return true;
                 }
             }

@@ -63,14 +63,14 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     private static Callable<Void> createAppendTask(final VanillaChronicle chronicle, final long startValue, final long endValue) {
         return new Callable<Void>() {
             @Override
-            public Void call()   {
+            public Void call() {
                 ExcerptAppender appender = null;
                 try {
                     appender = chronicle.createAppender();
                     appendValues(appender, startValue, endValue);
-                } catch(IOException e) {
+                } catch (IOException e) {
                 } finally {
-                    if(appender != null) {
+                    if (appender != null) {
                         appender.close();
                     }
                 }
@@ -96,9 +96,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         excerpt.findRange(startEnd, mec);
 
         assertEquals(
-            "lo: " + mec.lo + ", hi: " + mec.hi,
-            "[" + elo + ", " + ehi + "]",
-            Arrays.toString(startEnd));
+                "lo: " + mec.lo + ", hi: " + mec.hi,
+                "[" + elo + ", " + ehi + "]",
+                Arrays.toString(startEnd));
     }
 
     @Test
@@ -108,11 +108,11 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .defaultMessageSize(128)
-            .indexBlockSize(1024)
-            .dataBlockSize(1024)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .defaultMessageSize(128)
+                .indexBlockSize(1024)
+                .dataBlockSize(1024)
+                .build();
 
         chronicle.clear();
 
@@ -150,9 +150,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .defaultMessageSize(64)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .defaultMessageSize(64)
+                .build();
 
         chronicle.clear();
 
@@ -171,17 +171,16 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
                                 appender.startExcerpt();
 
                                 appender.appendDateMillis(System.currentTimeMillis())
-                                    .append(" - ")
-                                    .append(finalT)
-                                    .append(" / ")
-                                    .append(i)
-                                    .append('\n');
+                                        .append(" - ")
+                                        .append(finalT)
+                                        .append(" / ")
+                                        .append(i)
+                                        .append('\n');
 
                                 appender.finish();
                             }
                             appender.close();
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
@@ -211,15 +210,15 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         ChronicleQueueBuilder builder = ChronicleQueueBuilder.vanilla(baseDir)
-            .defaultMessageSize(128)
-            .indexBlockSize(256 << 10)
-            .dataBlockSize(512 << 10);
+                .defaultMessageSize(128)
+                .indexBlockSize(256 << 10)
+                .dataBlockSize(512 << 10);
 
-        final VanillaChronicle chronicle1 = (VanillaChronicle)builder.build();
+        final VanillaChronicle chronicle1 = (VanillaChronicle) builder.build();
 
         chronicle1.clear();
 
-        final VanillaChronicle chronicle2 = (VanillaChronicle)builder.build();
+        final VanillaChronicle chronicle2 = (VanillaChronicle) builder.build();
 
         try {
             ExcerptAppender appender = chronicle1.createAppender();
@@ -269,7 +268,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -319,7 +318,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -391,7 +390,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
 
         try {
             ExcerptAppender appender = chronicle.createAppender();
@@ -469,7 +468,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle writer = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle writer = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         writer.clear();
 
         try {
@@ -482,7 +481,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             }
 
             {
-                final VanillaChronicle reader = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+                final VanillaChronicle reader = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
                 final ExcerptTailer tailer = reader.createTailer();
 
                 for (long i = 0; i < 3; i++) {
@@ -496,7 +495,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             }
 
             {
-                final VanillaChronicle reader = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+                final VanillaChronicle reader = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
                 final ExcerptTailer tailer = reader.createTailer().toStart();
 
                 for (long i = 0; i < 3; i++) {
@@ -525,7 +524,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -571,7 +570,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -604,7 +603,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle wchronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle wchronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         wchronicle.clear();
 
         try {
@@ -616,7 +615,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             }
 
             // test a vanilla tailer, wind to end
-            final VanillaChronicle rchronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+            final VanillaChronicle rchronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
             final ExcerptTailer tailer = rchronicle.createTailer().toEnd();
             assertEquals(2, tailer.readLong());
             assertFalse(tailer.nextIndex());
@@ -641,7 +640,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
         chronicle.clear();
 
         try {
@@ -696,8 +695,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle wchronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
-        final VanillaChronicle rchronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle wchronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
+        final VanillaChronicle rchronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir).build();
 
         wchronicle.clear();
 
@@ -770,13 +769,13 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         final ChronicleQueueBuilder.VanillaChronicleQueueBuilder builder =
-            ChronicleQueueBuilder.vanilla(baseDir)
-                .entriesPerCycle(1L << 16)
-                .cycleLength(1000, false)
-                .cycleFormat("yyyyMMddHHmmss")
-                .indexBlockSize(16L << 10);
+                ChronicleQueueBuilder.vanilla(baseDir)
+                        .entriesPerCycle(1L << 16)
+                        .cycleLength(1000, false)
+                        .cycleFormat("yyyyMMddHHmmss")
+                        .indexBlockSize(16L << 10);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)builder.build();
+        final VanillaChronicle chronicle = (VanillaChronicle) builder.build();
 
         chronicle.clear();
 
@@ -812,7 +811,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
             tailer.close();
 
-            chronicle.checkCounts(1,1);
+            chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -828,12 +827,12 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .indexBlockSize(16L << 10)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .indexBlockSize(16L << 10)
+                .build();
 
         chronicle.clear();
 
@@ -861,7 +860,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
             tailer.close();
 
-            chronicle.checkCounts(1,1);
+            chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -875,10 +874,10 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         final String baseDir = getTestPath();
         assertNotNull(baseDir);
 
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .dataBlockSize(64)
-            .indexBlockSize(64)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .dataBlockSize(64)
+                .indexBlockSize(64)
+                .build();
 
         chronicle.clear();
 
@@ -908,7 +907,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
 
             tailer.close();
 
-            chronicle.checkCounts(1,1);
+            chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -923,13 +922,13 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         // Create with small data and index sizes so that the test frequently generates new files
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .dataBlockSize(128)
-            .indexBlockSize(64)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .dataBlockSize(128)
+                .indexBlockSize(64)
+                .build();
 
         chronicle.clear();
 
@@ -962,7 +961,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
             tailer.close();
 
-            chronicle.checkCounts(1,1);
+            chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -977,13 +976,13 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         // Create with small data and index sizes so that the test frequently generates new file
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .entriesPerCycle(1L << 20)
-            .cycleLength(1000, false)
-            .cycleFormat("yyyyMMddHHmmss")
-            .dataBlockSize(128)
-            .indexBlockSize(64)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .entriesPerCycle(1L << 20)
+                .cycleLength(1000, false)
+                .cycleFormat("yyyyMMddHHmmss")
+                .dataBlockSize(128)
+                .indexBlockSize(64)
+                .build();
 
         chronicle.clear();
 
@@ -1005,7 +1004,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             appender.close();
             tailer.close();
 
-            chronicle.checkCounts(1,1);
+            chronicle.checkCounts(1, 1);
         } finally {
             chronicle.close();
             chronicle.clear();
@@ -1020,9 +1019,9 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         assertNotNull(baseDir);
 
         // Create with small index size to ensure multiple index files are created
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
-            .indexBlockSize(64)
-            .build();
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
+                .indexBlockSize(64)
+                .build();
 
         chronicle.clear();
 
@@ -1064,7 +1063,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     public void testGetActiveWorkingDirectory() throws IOException {
 
         final String baseDir = getTestPath();
-        final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
+        final VanillaChronicle chronicle = (VanillaChronicle) ChronicleQueueBuilder.vanilla(baseDir)
                 .cycleLength(1000 * 60 * 60)
                 .cycleFormat("yyyyMMddHH")
                 .build();
@@ -1096,8 +1095,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     public void testWithFsWatcher() throws IOException {
         final String baseDir = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
-            .enableFsWatcher(true)
-            .build();
+                .enableFsWatcher(true)
+                .build();
 
         //chronicle.clear();
 
@@ -1106,18 +1105,18 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             ExcerptTailer tailer = chronicle.createTailer();
             tailer.toStart();
 
-            for(int i=0; i<100; i++) {
+            for (int i = 0; i < 100; i++) {
                 assertFalse(tailer.nextIndex());
             }
 
             ExcerptAppender appender = chronicle.createAppender();
-            for(int i=0; i<100; i++) {
+            for (int i = 0; i < 100; i++) {
                 appender.startExcerpt(4);
                 appender.writeInt(i);
                 appender.finish();
             }
 
-            for(int i=0; i<100; i++) {
+            for (int i = 0; i < 100; i++) {
                 assertTrue(tailer.nextIndex());
                 assertEquals(i, tailer.readInt());
                 tailer.finish();

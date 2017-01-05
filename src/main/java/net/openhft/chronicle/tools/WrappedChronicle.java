@@ -28,11 +28,12 @@ public class WrappedChronicle implements Chronicle {
 
     protected final Chronicle wrappedChronicle;
 
-    public boolean isClosed() {
-        return wrappedChronicle.isClosed();
-    }
     public WrappedChronicle(final Chronicle wrappedChronicle) {
         this.wrappedChronicle = wrappedChronicle;
+    }
+
+    public boolean isClosed() {
+        return wrappedChronicle.isClosed();
     }
 
     @Override
@@ -57,14 +58,14 @@ public class WrappedChronicle implements Chronicle {
 
     @Override
     public void clear() {
-        if(this.wrappedChronicle != null) {
+        if (this.wrappedChronicle != null) {
             this.wrappedChronicle.clear();
         }
     }
 
     @Override
     public void close() throws IOException {
-        if(this.wrappedChronicle != null) {
+        if (this.wrappedChronicle != null) {
             this.wrappedChronicle.close();
         }
     }

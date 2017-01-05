@@ -360,7 +360,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
             Thread.sleep(100);
 
-            if(i % 10 ==0) {
+            if (i % 10 == 0) {
                 LOGGER.info(".");
             }
         }
@@ -382,8 +382,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer1 = sink1.createTailer().toStart();
 
         LOGGER.info("Sink1 reading first 50 items then stopping");
-        for( int count=0; count < 50 ;) {
-            if(tailer1.nextIndex()) {
+        for (int count = 0; count < 50; ) {
+            if (tailer1.nextIndex()) {
                 assertEquals(1000000000 + count, tailer1.parseLong());
                 tailer1.finish();
 
@@ -409,10 +409,10 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
         final ExcerptTailer tailer2 = sink2.createTailer().toEnd();
         assertEquals(1000000000 + 49, tailer2.parseLong());
         tailer2.finish();
-        
+
         LOGGER.info("Sink2 restarting to continue to read the next 50 items");
-        for(int count=50 ; count < 100 ; ) {
-            if(tailer2.nextIndex()) {
+        for (int count = 50; count < 100; ) {
+            if (tailer2.nextIndex()) {
                 assertEquals(1000000000 + count, tailer2.parseLong());
                 tailer2.finish();
 
@@ -501,8 +501,8 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                             .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
                             assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
@@ -532,7 +532,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
+        for (long i = 0; i < items / 2; i++) {
             appender1.startExcerpt(8);
             appender1.writeLong(i);
             appender1.finish();
@@ -540,7 +540,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
 
         appender1.close();
 
-        while(latch.getCount() > 10) {
+        while (latch.getCount() > 10) {
             Thread.sleep(250);
         }
 
@@ -556,7 +556,7 @@ public class StatefulVanillaChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
+        for (long i = items / 2; i < items; i++) {
             appender2.startExcerpt(8);
             appender2.writeLong(i);
             appender2.finish();

@@ -134,7 +134,8 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
         doRewriteableEntries(true, true, false);
     }
 
-    private void doRewriteableEntries(boolean useUnsafe, boolean minimiseByteBuffers, boolean synchronousMode) throws IOException {
+    private void doRewriteableEntries(boolean useUnsafe, boolean minimiseByteBuffers, boolean synchronousMode)
+            throws IOException {
         final String basePath = getTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath).build();
 
@@ -210,7 +211,8 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
         for (int j = 0; j < repeats; j++) {
             long start = System.nanoTime();
 
-            int records = 10 * 1000 * 1000; {
+            int records = 10 * 1000 * 1000;
+            {
                 Chronicle ic = ChronicleQueueBuilder.indexed(basePath).build();
 //                ic.useUnsafe(true);
 //                ic.clear();

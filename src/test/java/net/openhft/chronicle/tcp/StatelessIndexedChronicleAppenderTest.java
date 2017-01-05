@@ -34,15 +34,15 @@ public class StatelessIndexedChronicleAppenderTest extends StatelessChronicleTes
         final PortSupplier portSupplier = new PortSupplier();
 
         final Chronicle source = indexed(basePathSource)
-            .source()
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .source()
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final Chronicle remoteAppender = remoteAppender()
-            .connectAddress("localhost", portSupplier.getAndAssertOnError())
-            .appendRequireAck(true)
-            .build();
+                .connectAddress("localhost", portSupplier.getAndAssertOnError())
+                .appendRequireAck(true)
+                .build();
 
         final ExcerptAppender appender = remoteAppender.createAppender();
 

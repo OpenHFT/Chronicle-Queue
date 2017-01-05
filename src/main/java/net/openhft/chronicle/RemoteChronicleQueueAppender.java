@@ -29,6 +29,6 @@ class RemoteChronicleQueueAppender extends RemoteChronicleQueue {
 
     @Override
     public ExcerptAppender createAppender() throws IOException {
-        return (ExcerptAppender)createAppender0();
+        return (ExcerptAppender) createAppender0();
     }
 }

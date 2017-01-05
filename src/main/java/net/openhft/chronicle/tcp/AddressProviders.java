@@ -21,6 +21,14 @@ import java.net.InetSocketAddress;
 
 public class AddressProviders {
 
+    public static final AddressProvider single(InetSocketAddress address) {
+        return new Single(address);
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     private static final class Single implements AddressProvider {
         private final InetSocketAddress address;
 
@@ -32,13 +40,5 @@ public class AddressProviders {
         public InetSocketAddress get() {
             return this.address;
         }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    public static final AddressProvider single(InetSocketAddress address) {
-        return new Single(address);
     }
 }

@@ -295,6 +295,10 @@ public class IndexedChronicle implements Chronicle {
     //
     // *************************************************************************
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     protected abstract class AbstractIndexedExcerpt extends NativeBytes implements ExcerptCommon {
         @NotNull
         final int cacheLineMask;
@@ -330,30 +334,6 @@ public class IndexedChronicle implements Chronicle {
         // inherited - long positionAddr;
         // inherited - long limitAddr;
 
-        public String dumpState() {
-            return "{" +
-                    "cacheLineMask=" + cacheLineMask +
-                    "\ndataBlockSize=" + dataBlockSize +
-                    "\nindexBlockSize=" + indexBlockSize +
-                    "\nindexEntriesPerLine=" + indexEntriesPerLine +
-                    "\nindexEntriesPerBlock=" + indexEntriesPerBlock +
-                    "\ncacheLineSize=" + cacheLineSize +
-                    "\nindex=" + index +
-                    "\nindexStartAddr=" + indexStartAddr +
-                    "\nindexStartOffset=" + indexStartOffset +
-                    "\nindexBaseForLine=" + indexBaseForLine +
-                    "\ndataStartAddr=" + dataStartAddr +
-                    "\ndataStartOffset=" + dataStartOffset +
-                    "\nindexPositionAddr=" + indexPositionAddr +
-                    "\npadding=" + padding +
-                    '}';
-        }
-
-        // the start of this entry
-        // inherited - long startAddr;
-        // inherited - long positionAddr;
-        // inherited - long limitAddr;
-
         protected AbstractIndexedExcerpt() throws IOException {
             //super(new VanillaBytesMarshallerFactory(), NO_PAGE, NO_PAGE, null);
             super(
@@ -377,6 +357,30 @@ public class IndexedChronicle implements Chronicle {
             loadDataBuffer();
 
             finished = true;
+        }
+
+        // the start of this entry
+        // inherited - long startAddr;
+        // inherited - long positionAddr;
+        // inherited - long limitAddr;
+
+        public String dumpState() {
+            return "{" +
+                    "cacheLineMask=" + cacheLineMask +
+                    "\ndataBlockSize=" + dataBlockSize +
+                    "\nindexBlockSize=" + indexBlockSize +
+                    "\nindexEntriesPerLine=" + indexEntriesPerLine +
+                    "\nindexEntriesPerBlock=" + indexEntriesPerBlock +
+                    "\ncacheLineSize=" + cacheLineSize +
+                    "\nindex=" + index +
+                    "\nindexStartAddr=" + indexStartAddr +
+                    "\nindexStartOffset=" + indexStartOffset +
+                    "\nindexBaseForLine=" + indexBaseForLine +
+                    "\ndataStartAddr=" + dataStartAddr +
+                    "\ndataStartOffset=" + dataStartOffset +
+                    "\nindexPositionAddr=" + indexPositionAddr +
+                    "\npadding=" + padding +
+                    '}';
         }
 
         @Override
@@ -1064,9 +1068,5 @@ public class IndexedChronicle implements Chronicle {
                 setLimitAddr(0);
             }
         }
-    }
-
-    public boolean isClosed() {
-        return closed;
     }
 }

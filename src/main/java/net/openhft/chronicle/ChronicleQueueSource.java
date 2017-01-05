@@ -40,7 +40,7 @@ class ChronicleQueueSource extends WrappedChronicle {
 
     @Override
     public void close() throws IOException {
-        if(!closed) {
+        if (!closed) {
             closed = true;
             if (this.connection != null) {
                 this.connection.close();

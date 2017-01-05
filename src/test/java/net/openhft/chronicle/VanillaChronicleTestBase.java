@@ -66,7 +66,7 @@ public class VanillaChronicleTestBase {
     }
 
     protected void sleep(long timeout, TimeUnit unit) {
-        sleep(TimeUnit.MILLISECONDS.convert(timeout,unit));
+        sleep(TimeUnit.MILLISECONDS.convert(timeout, unit));
     }
 
     protected void sleep(long timeout) {
@@ -83,27 +83,27 @@ public class VanillaChronicleTestBase {
 
     public void lsof(final String pid, final String pattern) throws IOException {
         String cmd = null;
-        if(new File("/usr/sbin/lsof").exists()) {
+        if (new File("/usr/sbin/lsof").exists()) {
             cmd = "/usr/sbin/lsof";
 
-        } else if(new File("/usr/bin/lsof").exists()) {
+        } else if (new File("/usr/bin/lsof").exists()) {
             cmd = "/usr/bin/lsof";
         }
 
-        if(cmd != null) {
+        if (cmd != null) {
             final ProcessBuilder pb = new ProcessBuilder(cmd, "-p", pid);
             final Process proc = pb.start();
             final BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
             String line;
-            while((line = br.readLine()) != null) {
-                if(StringUtils.isBlank(pattern) || line.matches(pattern) || line.contains(pattern)) {
+            while ((line = br.readLine()) != null) {
+                if (StringUtils.isBlank(pattern) || line.matches(pattern) || line.contains(pattern)) {
                     System.out.println(line);
                 }
             }
 
-           br.close();
-           proc.destroy();
+            br.close();
+            proc.destroy();
         }
     }
 

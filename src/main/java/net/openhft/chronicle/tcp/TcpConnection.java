@@ -37,7 +37,7 @@ class TcpConnection {
     }
 
     protected void setSocketChannel(SocketChannel socketChannel) throws IOException {
-        if(this.socketChannel != null) {
+        if (this.socketChannel != null) {
             close();
         }
 
@@ -49,7 +49,7 @@ class TcpConnection {
     }
 
     public boolean isOpen() {
-        if(this.socketChannel != null) {
+        if (this.socketChannel != null) {
             return this.socketChannel.isOpen();
         }
 
@@ -57,8 +57,8 @@ class TcpConnection {
     }
 
     public void close() throws IOException {
-        if(socketChannel != null) {
-            if(socketChannel.isOpen()) {
+        if (socketChannel != null) {
+            if (socketChannel.isOpen()) {
                 socketChannel.close();
             }
 
@@ -67,7 +67,7 @@ class TcpConnection {
     }
 
     public String debugString() {
-        if(this.socketChannel != null) {
+        if (this.socketChannel != null) {
             try {
                 StringBuilder sb = new StringBuilder();
                 sb.append("[");
@@ -75,11 +75,11 @@ class TcpConnection {
                 sb.append(" -> ");
                 sb.append(this.socketChannel.getRemoteAddress());
                 sb.append("]");
-            } catch(IOException e) {
+            } catch (IOException e) {
             }
         }
 
-         return "[] -> []";
+        return "[] -> []";
     }
 
     public int write(final ByteBuffer buffer) throws IOException {
@@ -167,8 +167,8 @@ class TcpConnection {
                 if (rb < 0) {
                     throw new EOFException();
 
-                } else if(bytes == 0 && rb == 0 && readCount > -1) {
-                    if(spins++ >= readCount) {
+                } else if (bytes == 0 && rb == 0 && readCount > -1) {
+                    if (spins++ >= readCount) {
                         buffer.flip();
                         return false;
                     }
@@ -200,8 +200,8 @@ class TcpConnection {
             if (rb < 0) {
                 throw new EOFException();
 
-            } else if(bytes == 0 && rb == 0 && readCount > -1) {
-                if(spins++ >= readCount) {
+            } else if (bytes == 0 && rb == 0 && readCount > -1) {
+                if (spins++ >= readCount) {
                     return false;
                 }
             } else {
@@ -223,8 +223,8 @@ class TcpConnection {
             if (rb < 0) {
                 throw new EOFException();
 
-            } else if(bytes == 0 && rb == 0 && readCount > -1) {
-                if(spins++ >= readCount) {
+            } else if (bytes == 0 && rb == 0 && readCount > -1) {
+                if (spins++ >= readCount) {
                     return false;
                 }
             } else {
@@ -257,11 +257,11 @@ class TcpConnection {
         buffer.clear();
         buffer.limit(size);
 
-        if(readCount == -1) {
+        if (readCount == -1) {
             readFullyOrEOF(buffer);
 
         } else {
-            if(!readAllOrNone(buffer, readCount)) {
+            if (!readAllOrNone(buffer, readCount)) {
                 buffer.clear();
                 return false;
             }

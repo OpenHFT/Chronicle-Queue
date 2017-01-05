@@ -330,8 +330,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         chronicleTarget.clear();
 
         testJira77(
-            chronicleSrc,
-            chronicleTarget
+                chronicleSrc,
+                chronicleTarget
         );
     }
 
@@ -347,8 +347,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
     @Test
     public void testIndexedJira80() throws IOException {
         testJira80(
-            indexed(getIndexedTestPath("master")),
-            indexed(getIndexedTestPath("slave"))
+                indexed(getIndexedTestPath("master")),
+                indexed(getIndexedTestPath("slave"))
         );
     }
 
@@ -380,8 +380,8 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                             .build();
 
                     ExcerptTailer tailer = sink.createTailer();
-                    while(latch.getCount() > 0) {
-                        if(tailer.nextIndex()) {
+                    while (latch.getCount() > 0) {
+                        if (tailer.nextIndex()) {
                             assertEquals(items - latch.getCount(), tailer.readLong());
                             tailer.finish();
                             latch.countDown();
@@ -411,7 +411,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender1 = source1.createAppender();
-        for(long i=0; i < items / 2 ; i++) {
+        for (long i = 0; i < items / 2; i++) {
             appender1.startExcerpt(8);
             appender1.writeLong(i);
             appender1.finish();
@@ -419,7 +419,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
         appender1.close();
 
-        while(latch.getCount() > 10) {
+        while (latch.getCount() > 10) {
             Thread.sleep(250);
         }
 
@@ -435,7 +435,7 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 .build();
 
         ExcerptAppender appender2 = source2.createAppender();
-        for(long i=items / 2; i < items; i++) {
+        for (long i = items / 2; i < items; i++) {
             appender2.startExcerpt(8);
             appender2.writeLong(i);
             appender2.finish();

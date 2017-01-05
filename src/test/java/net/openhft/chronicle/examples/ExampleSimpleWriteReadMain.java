@@ -20,7 +20,10 @@ package net.openhft.chronicle.examples;
 
 import net.openhft.affinity.AffinityLock;
 import net.openhft.affinity.AffinityStrategies;
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import net.openhft.chronicle.tools.ChronicleTools;
 
 import java.io.IOException;

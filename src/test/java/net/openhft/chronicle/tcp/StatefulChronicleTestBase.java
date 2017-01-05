@@ -34,23 +34,23 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
     //
     // *************************************************************************
 
-    public void testJira77(Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException{
+    public void testJira77(Chronicle chronicleSrc, Chronicle chronicleTarget) throws IOException {
         final int BYTES_LENGTH = 1 << 16;
 
         final Random random = new Random();
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleSrc)
-            .minBufferSize(2 * BYTES_LENGTH)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .minBufferSize(2 * BYTES_LENGTH)
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleTarget)
-            .minBufferSize(2 * BYTES_LENGTH)
-            .connectAddress("localhost", port)
-            .build();
+                .minBufferSize(2 * BYTES_LENGTH)
+                .connectAddress("localhost", port)
+                .build();
 
         ExcerptAppender app = chronicleSource.createAppender();
         byte[] bytes = new byte[BYTES_LENGTH];
@@ -82,7 +82,8 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
         chronicleTarget.clear();
     }
 
-    public void testJira80(final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder) throws IOException {
+    public void testJira80(final ChronicleQueueBuilder chronicleMasterBuilder, final ChronicleQueueBuilder chronicleSlaveBuilder)
+            throws IOException {
         final long chunks = 4;
         final long itemsPerChunk = 100000;
 
@@ -90,9 +91,9 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
 
         final Chronicle chronicleMaster = chronicleMasterBuilder.build();
         final Chronicle chronicleSource = ChronicleQueueBuilder.source(chronicleMaster)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         chronicleSource.clear();
 
@@ -109,25 +110,26 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
 
         appender.close();
 
-        for(long i=0; i <= chunks; i++) {
+        for (long i = 0; i <= chunks; i++) {
             Chronicle chronicleSink = ChronicleQueueBuilder.sink(chronicleSlaveBuilder.build())
-                .connectAddress("localhost", port)
-                .build();
+                    .connectAddress("localhost", port)
+                    .build();
 
-            if(i == 0) {
+            if (i == 0) {
                 chronicleSink.clear();
             }
 
             final ExcerptTailer tailer = chronicleSink.createTailer();
-            for(long c=0; c < (i * itemsPerChunk); c++) {
-                while (!tailer.nextIndex()) { }
+            for (long c = 0; c < (i * itemsPerChunk); c++) {
+                while (!tailer.nextIndex()) {
+                }
                 long n1 = tailer.readLong();
                 char ch = tailer.readChar();
                 long n2 = tailer.parseLong();
 
-                assertEquals(c , n1);
+                assertEquals(c, n1);
                 assertEquals(ch, '=');
-                assertEquals(c , n2);
+                assertEquals(c, n2);
 
                 tailer.finish();
             }
@@ -137,7 +139,7 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
         }
 
         // compare source and sink
-        final Chronicle slave  = chronicleSlaveBuilder.build();
+        final Chronicle slave = chronicleSlaveBuilder.build();
         final ExcerptTailer slaveTailer = slave.createTailer().toStart();
 
         final ExcerptTailer masterTailer = chronicleMaster.createTailer().toStart();
@@ -146,8 +148,8 @@ public class StatefulChronicleTestBase extends ChronicleTcpTestBase {
             assertTrue(masterTailer.nextIndex());
             assertTrue(slaveTailer.nextIndex());
 
-            assertEquals(masterTailer.readLong() , slaveTailer.readLong());
-            assertEquals(masterTailer.readChar() , slaveTailer.readChar());
+            assertEquals(masterTailer.readLong(), slaveTailer.readLong());
+            assertEquals(masterTailer.readChar(), slaveTailer.readChar());
             assertEquals(masterTailer.parseLong(), slaveTailer.parseLong());
 
             masterTailer.finish();

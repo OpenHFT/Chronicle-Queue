@@ -63,7 +63,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
-        return asList(new Object[][]{ {TypeOfQueue.INDEXED}, {TypeOfQueue.VANILLA} });
+        return asList(new Object[][]{{TypeOfQueue.INDEXED}, {TypeOfQueue.VANILLA}});
     }
 
     private static long timeFrom(String data) {
@@ -156,7 +156,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         final String sinkCloseBasePath;
 
         final String testId = "testReplicationWithPriceMarketDataFilter";
-        if(typeOfQueue == TypeOfQueue.VANILLA) {
+        if (typeOfQueue == TypeOfQueue.VANILLA) {
             sourceBasePath = getVanillaTestPath(testId, "source");
             sinkHighLowBasePath = getVanillaTestPath(testId, "sink-highlow");
             sinkCloseBasePath = getVanillaTestPath(testId, "sink-close");
@@ -178,7 +178,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
         try {
             Callable<Void> appenderCallable = new Callable<Void>() {
-                public Void call()   {
+                public Void call() {
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -199,7 +199,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> highLowCallable = new Callable<Void>() {
-                public Void call()   {
+                public Void call() {
                     try {
                         final Chronicle highLowSink = sink(sinkHighLowBasePath)
                                 .withMapping(HighLow.fromMarketData()) // this is sent to the source
@@ -232,7 +232,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             lock.release();
                             highLowSink.clear();
                         }
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         LOGGER.warn("", e);
                     }
 
@@ -241,7 +241,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> closeCallable = new Callable<Void>() {
-                public Void call()   {
+                public Void call() {
                     try {
                         final Chronicle closeSink = sink(sinkCloseBasePath)
                                 .withMapping(Close.fromMarketData()) // this is sent to the source
@@ -249,7 +249,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                                 .build();
 
                         AffinityLock lock = AffinityLock.acquireLock();
-                        try(final ExcerptTailer tailer = closeSink.createTailer()) {
+                        try (final ExcerptTailer tailer = closeSink.createTailer()) {
                             while (tailer.nextIndex()) {
                                 Close actual = new Close();
                                 actual.readMarshallable(tailer);
@@ -274,11 +274,11 @@ public class WithMappedTest extends ChronicleTcpTestBase {
 
                                 tailer.finish();
                             }
-                        }finally {
-                                lock.release();
-                                closeSink.clear();
-                            }
-                    } catch(Exception e) {
+                        } finally {
+                            lock.release();
+                            closeSink.clear();
+                        }
+                    } catch (Exception e) {
                         LOGGER.warn("", e);
                     }
 
@@ -327,7 +327,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             source.close();
             source.clear();
 
-            if(typeOfQueue == TypeOfQueue.VANILLA) {
+            if (typeOfQueue == TypeOfQueue.VANILLA) {
                 assertFalse(new File(sourceBasePath).exists());
                 assertFalse(new File(sinkCloseBasePath).exists());
                 assertFalse(new File(sinkHighLowBasePath).exists());
@@ -347,7 +347,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
         final String sinkHighLowBasePath;
 
         final String testId = "testReplicationWithEvenDayFilter";
-        if(typeOfQueue == TypeOfQueue.VANILLA) {
+        if (typeOfQueue == TypeOfQueue.VANILLA) {
             sourceBasePath = getVanillaTestPath(testId, "source");
             sinkHighLowBasePath = getVanillaTestPath(testId, "sink-highlow");
 
@@ -371,7 +371,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             }
 
             Callable<Void> appenderCallable = new Callable<Void>() {
-                public Void call()   {
+                public Void call() {
                     AffinityLock lock = AffinityLock.acquireLock();
                     try {
                         final ExcerptAppender appender = source.createAppender();
@@ -392,7 +392,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             };
 
             Callable<Void> dayFilterCallable = new Callable<Void>() {
-                public Void call()   {
+                public Void call() {
 
                     try {
                         final Chronicle highLowSink = sink(sinkHighLowBasePath)
@@ -428,7 +428,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
                             highLowSink.close();
                             highLowSink.clear();
                         }
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         LOGGER.warn("", e);
                     }
                     return null;
@@ -464,7 +464,7 @@ public class WithMappedTest extends ChronicleTcpTestBase {
             source.clear();
 
             // check cleanup
-            if(typeOfQueue == TypeOfQueue.VANILLA) {
+            if (typeOfQueue == TypeOfQueue.VANILLA) {
                 assertFalse(new File(sourceBasePath).exists());
                 assertFalse(new File(sinkHighLowBasePath).exists());
 

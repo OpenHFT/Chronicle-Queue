@@ -52,7 +52,7 @@ public class IndexedChronicleResourcesTest extends IndexedChronicleTestBase {
     }
 
     private void deleteAndAssert(String basePath) throws IOException {
-        for (String name : new String[] { basePath + ".data", basePath + ".index" }) {
+        for (String name : new String[]{basePath + ".data", basePath + ".index"}) {
             File file = new File(name);
             if (file.exists()) {
                 assertTrue(file.getCanonicalPath(), file.delete());

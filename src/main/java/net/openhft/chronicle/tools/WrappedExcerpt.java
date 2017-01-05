@@ -27,7 +27,8 @@ import java.io.StreamCorruptedException;
 /**
  * @author peter.lawrey
  */
-public class WrappedExcerpt extends WrappedBytes implements ExcerptTailer, ExcerptAppender, Excerpt, MappingProvider<WrappedExcerpt> {
+public class WrappedExcerpt extends WrappedBytes
+        implements ExcerptTailer, ExcerptAppender, Excerpt, MappingProvider<WrappedExcerpt> {
     protected ExcerptTailer wrappedTailer;
     protected ExcerptAppender wrappedAppender;
     protected ExcerptCommon wrappedCommon;

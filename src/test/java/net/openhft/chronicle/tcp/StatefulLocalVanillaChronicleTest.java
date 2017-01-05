@@ -18,7 +18,10 @@
 
 package net.openhft.chronicle.tcp;
 
-import net.openhft.chronicle.*;
+import net.openhft.chronicle.Chronicle;
+import net.openhft.chronicle.ChronicleQueueBuilder;
+import net.openhft.chronicle.ExcerptAppender;
+import net.openhft.chronicle.ExcerptTailer;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -31,21 +34,21 @@ import static org.junit.Assert.assertTrue;
 public class StatefulLocalVanillaChronicleTest extends StatefulChronicleTestBase {
 
     @Test
-    public void testPersistedLocalVanillaSink() throws IOException, InterruptedException{
+    public void testPersistedLocalVanillaSink() throws IOException, InterruptedException {
         final String basePath = getVanillaTestPath();
         final Chronicle chronicle = ChronicleQueueBuilder.vanilla(basePath).build();
 
         final PortSupplier portSupplier = new PortSupplier();
         final Chronicle source = ChronicleQueueBuilder.source(chronicle)
-            .bindAddress(0)
-            .connectionListener(portSupplier)
-            .build();
+                .bindAddress(0)
+                .connectionListener(portSupplier)
+                .build();
 
         final int port = portSupplier.getAndAssertOnError();
         final Chronicle sink = ChronicleQueueBuilder.sink(chronicle)
-            .sharedChronicle(true)
-            .connectAddress("localhost",port)
-            .build();
+                .sharedChronicle(true)
+                .connectAddress("localhost", port)
+                .build();
 
         final CountDownLatch latch = new CountDownLatch(5);
         final Random random = new Random();
