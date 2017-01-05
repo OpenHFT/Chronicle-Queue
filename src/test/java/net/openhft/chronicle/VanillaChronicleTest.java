@@ -101,20 +101,6 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             Arrays.toString(startEnd));
     }
 
-    static class MyExcerptComparator implements ExcerptComparator {
-        int lo, hi;
-
-        @Override
-        public int compare(Excerpt excerpt) {
-            final int x = excerpt.readInt();
-            return x < lo ? -1 : x > hi ? +1 : 0;
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     @Test
     public void testAppend() throws IOException {
         final int RUNS = 1000;
@@ -150,6 +136,10 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             assertFalse(new File(baseDir).exists());
         }
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     // for 0.5m Throughput was 2940 per milli-second
     // for 100m Throughput was 4364 per milli-second
@@ -1071,7 +1061,7 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
     }
 
     @Test
-    public void testGetActiveWorkingDirectory() throws Exception {
+    public void testGetActiveWorkingDirectory() throws IOException {
 
         final String baseDir = getTestPath();
         final VanillaChronicle chronicle = (VanillaChronicle)ChronicleQueueBuilder.vanilla(baseDir)
@@ -1091,8 +1081,8 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
             readAvailableValues(tailer);
 
             //Get current file from tailer and check it exists under base directory
-            String file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
-            assertTrue(new File(baseDir + "/" + file).exists());
+            File file = ((VanillaChronicle.VanillaTailer) tailer).getActiveWorkingDirectory();
+            assertTrue(file.exists());
 
         } finally {
 
@@ -1101,4 +1091,54 @@ public class VanillaChronicleTest extends VanillaChronicleTestBase {
         }
     }
 
+    @Test
+    @Ignore("TODO FIX")
+    public void testWithFsWatcher() throws IOException {
+        final String baseDir = getTestPath();
+        final Chronicle chronicle = ChronicleQueueBuilder.vanilla(baseDir)
+            .enableFsWatcher(true)
+            .build();
+
+        //chronicle.clear();
+
+        try {
+
+            ExcerptTailer tailer = chronicle.createTailer();
+            tailer.toStart();
+
+            for(int i=0; i<100; i++) {
+                assertFalse(tailer.nextIndex());
+            }
+
+            ExcerptAppender appender = chronicle.createAppender();
+            for(int i=0; i<100; i++) {
+                appender.startExcerpt(4);
+                appender.writeInt(i);
+                appender.finish();
+            }
+
+            for(int i=0; i<100; i++) {
+                assertTrue(tailer.nextIndex());
+                assertEquals(i, tailer.readInt());
+                tailer.finish();
+            }
+
+            appender.close();
+            tailer.close();
+
+        } finally {
+            chronicle.close();
+            chronicle.clear();
+        }
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
+        }
+    }
 }

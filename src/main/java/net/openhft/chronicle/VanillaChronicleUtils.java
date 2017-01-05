@@ -18,14 +18,45 @@
 
 package net.openhft.chronicle;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class VanillaChronicleUtils {
+
+    private static Method GET_ATTRIBUTES;
+    private static Object FS;
+
+    static {
+        try {
+            Field field = File.class.getDeclaredField("fs");
+            field.setAccessible(true);
+
+            FS = field.get(null);
+            if(FS != null) {
+                try {
+                    GET_ATTRIBUTES = FS.getClass().getDeclaredMethod("getBooleanAttributes0", File.class);
+                    GET_ATTRIBUTES.setAccessible(true);
+                } catch (Exception ex) {
+                    GET_ATTRIBUTES = null;
+                }
+            }
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     public static final FileFilter IS_DIR = new FileFilter() {
         @Override
@@ -34,39 +65,62 @@ public class VanillaChronicleUtils {
         }
     };
 
+    /**
+     *
+     * @param cycleDir
+     * @param name
+     * @param forAppend
+     * @return null if !forAppend and file does not exist
+     * @throws IOException
+     */
     public static File mkFiles(
-            String basePath, String cycleStr, String name, boolean forAppend) throws IOException {
+            File cycleDir, String name, boolean forAppend) throws IOException {
 
-        final File dir = new File(basePath, cycleStr);
-        final File file = new File(dir, name);
+        final File file = new File(cycleDir, name);
 
         if (!forAppend) {
             //This test needs to be done before any directories are created.
-            if (!file.exists()) {
-                throw new FileNotFoundException(file.getAbsolutePath());
+            if (!exists(file)) {
+                return null;
             }
         }
 
-        dir.mkdirs();
-        if(!file.exists() && !forAppend) {
+        cycleDir.mkdirs();
+        if(!exists(file) && !forAppend) {
             throw new FileNotFoundException(file.getAbsolutePath());
         }
 
         return file;
     }
 
-    public static File fileFor(
-            String basePath, int cycle, int indexCount, VanillaDateCache dateCache) {
+    public static File indexFileFor(int cycle, int indexCount, VanillaDateCache dateCache) {
         return new File(
-            new File(basePath, dateCache.formatFor(cycle)),
-            VanillaIndexCache.FILE_NAME_PREFIX + indexCount);
+            dateCache.valueFor(cycle).path,
+            VanillaIndexCache.FILE_NAME_PREFIX + indexCount
+        );
+    }
+
+    public static File dataFileFor(int cycle, int threadId, int dataCount, VanillaDateCache dateCache) {
+        return new File(
+            dateCache.valueFor(cycle).path,
+            VanillaDataCache.FILE_NAME_PREFIX + threadId + "-" + dataCount
+        );
     }
 
     public static List<File> findLeafDirectories(File root) {
-        final List<File> files =  findLeafDirectories(new ArrayList<File>(), root);
-        files.remove(root);
+        if(exists(root)) {
+            final File[] files = root.listFiles(VanillaChronicleUtils.IS_DIR);
+            if (files != null && files.length != 0) {
+                List<File> leafs = new ArrayList<>();
+                for (int i = files.length - 1; i >= 0; i--) {
+                    findLeafDirectories(leafs, files[i]);
+                }
 
-        return files;
+                return leafs;
+            }
+        }
+
+        return Collections.emptyList();
     }
 
     public static List<File> findLeafDirectories(List<File> leafs, File root) {
@@ -80,5 +134,15 @@ public class VanillaChronicleUtils {
         }
 
         return leafs;
+    }
+
+    public static boolean exists(@NotNull File path) {
+        try {
+            return GET_ATTRIBUTES != null
+                ? ((Integer) GET_ATTRIBUTES.invoke(FS, path)) > 0
+                : path.exists();
+        } catch (Exception e) {
+            return path.exists();
+        }
     }
 }

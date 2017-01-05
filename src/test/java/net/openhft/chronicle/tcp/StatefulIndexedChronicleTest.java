@@ -45,6 +45,10 @@ import static org.junit.Assert.assertEquals;
  */
 public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
 
+    static final int RATE = Integer.getInteger("rate", 100000);
+    static final int COUNT = Integer.getInteger("count", RATE * 2);
+    static final int WARMUP = Integer.getInteger("warmup", RATE);
+
     @Test
     public void testOverTCP() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
@@ -171,6 +175,13 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         assertIndexedClean(basePathSource);
         assertIndexedClean(basePathSink);
     }
+
+    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
+    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
     public void testPricePublishing2() throws IOException, InterruptedException {
@@ -305,117 +316,6 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 (mid - start) / prices / 1e3, (end - mid) / prices / 1e3);
     }
 
-    // Took an average of 0.42 us to write and 0.61 us to read (Java 6)
-    // Took an average of 0.35 us to write and 0.59 us to read (Java 7)
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    interface PriceListener {
-        void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);
-    }
-
-    static class PriceWriter implements PriceListener {
-        private final ExcerptAppender excerpt;
-
-        PriceWriter(ExcerptAppender excerpt) {
-            this.excerpt = excerpt;
-        }
-
-        @Override
-        public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
-            excerpt.startExcerpt();
-            excerpt.writeByte('P'); // code for a price
-            excerpt.writeLong(timeInMicros);
-            excerpt.writeEnum(symbol);
-            excerpt.writeDouble(bp);
-            excerpt.writeInt(bq);
-            excerpt.writeDouble(ap);
-            excerpt.writeInt(aq);
-            excerpt.finish();
-        }
-    }
-
-    static class PriceReader {
-        private final ExcerptTailer excerpt;
-        private final PriceListener listener;
-
-        PriceReader(ExcerptTailer excerpt, PriceListener listener) {
-            this.excerpt = excerpt;
-            this.listener = listener;
-        }
-
-        public boolean read() {
-            if (!excerpt.nextIndex()) {
-                return false;
-            }
-
-            char ch = (char) excerpt.readByte();
-            switch (ch) {
-                case 'P': {
-                    long timeInMicros = excerpt.readLong();
-                    String symbol = excerpt.readEnum(String.class);
-                    double bp = excerpt.readDouble();
-                    int bq = excerpt.readInt();
-                    double ap = excerpt.readDouble();
-                    int aq = excerpt.readInt();
-                    listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
-                    break;
-                }
-
-                default:
-                    throw new AssertionError("Unexpected code " + ch);
-            }
-            return true;
-        }
-    }
-
-    static class PriceUpdate implements Externalizable, Serializable {
-        private long timeInMicros;
-        private String symbol;
-        private double bp;
-        private int bq;
-        private double ap;
-        private int aq;
-
-        public PriceUpdate() {
-        }
-
-        PriceUpdate(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
-            this.timeInMicros = timeInMicros;
-            this.symbol = symbol;
-            this.bp = bp;
-            this.bq = bq;
-            this.ap = ap;
-            this.aq = aq;
-        }
-
-        //        @Override
-        public void writeExternal(@NotNull ObjectOutput out) throws IOException {
-            out.writeLong(timeInMicros);
-            out.writeUTF(symbol);
-            out.writeDouble(bp);
-            out.writeInt(bq);
-            out.writeDouble(ap);
-            out.writeInt(aq);
-        }
-
-        //        @Override
-        public void readExternal(@NotNull ObjectInput in) throws IOException, ClassNotFoundException {
-            timeInMicros = in.readLong();
-            symbol = in.readUTF();
-            bp = in.readDouble();
-            bq = in.readInt();
-            ap = in.readDouble();
-            aq = in.readInt();
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
     /**
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-77
      *
@@ -434,6 +334,10 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
             chronicleTarget
         );
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     /**
      * https://higherfrequencytrading.atlassian.net/browse/CHRON-80
@@ -545,14 +449,6 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         source2.close();
         source2.clear();
     }
-    
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    static final int RATE = Integer.getInteger("rate", 100000);
-    static final int COUNT = Integer.getInteger("count", RATE * 2);
-    static final int WARMUP = Integer.getInteger("warmup", RATE);
 
     @Test
     public void testReplicationLatencyPerf() throws IOException, InterruptedException {
@@ -637,6 +533,10 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
         assertIndexedClean(sink.name());
     }
 
+    // *************************************************************************
+    //
+    // *************************************************************************
+
     @Test
     public void testIndexedNonBlockingClient() throws IOException, InterruptedException {
         final String basePathSource = getIndexedTestPath("source");
@@ -662,5 +562,105 @@ public class StatefulIndexedChronicleTest extends StatefulChronicleTestBase {
                 sink,
                 sinkBuilder.heartbeatIntervalMillis()
         );
+    }
+
+    interface PriceListener {
+        void onPrice(long timeInMicros, String symbol, double bp, int bq, double ap, int aq);
+    }
+
+    static class PriceWriter implements PriceListener {
+        private final ExcerptAppender excerpt;
+
+        PriceWriter(ExcerptAppender excerpt) {
+            this.excerpt = excerpt;
+        }
+
+        @Override
+        public void onPrice(long timeInMicros, @NotNull String symbol, double bp, int bq, double ap, int aq) {
+            excerpt.startExcerpt();
+            excerpt.writeByte('P'); // code for a price
+            excerpt.writeLong(timeInMicros);
+            excerpt.writeEnum(symbol);
+            excerpt.writeDouble(bp);
+            excerpt.writeInt(bq);
+            excerpt.writeDouble(ap);
+            excerpt.writeInt(aq);
+            excerpt.finish();
+        }
+    }
+
+    static class PriceReader {
+        private final ExcerptTailer excerpt;
+        private final PriceListener listener;
+
+        PriceReader(ExcerptTailer excerpt, PriceListener listener) {
+            this.excerpt = excerpt;
+            this.listener = listener;
+        }
+
+        public boolean read() {
+            if (!excerpt.nextIndex()) {
+                return false;
+            }
+
+            char ch = (char) excerpt.readByte();
+            switch (ch) {
+                case 'P': {
+                    long timeInMicros = excerpt.readLong();
+                    String symbol = excerpt.readEnum(String.class);
+                    double bp = excerpt.readDouble();
+                    int bq = excerpt.readInt();
+                    double ap = excerpt.readDouble();
+                    int aq = excerpt.readInt();
+                    listener.onPrice(timeInMicros, symbol, bp, bq, ap, aq);
+                    break;
+                }
+
+                default:
+                    throw new AssertionError("Unexpected code " + ch);
+            }
+            return true;
+        }
+    }
+
+    static class PriceUpdate implements Externalizable, Serializable {
+        private long timeInMicros;
+        private String symbol;
+        private double bp;
+        private int bq;
+        private double ap;
+        private int aq;
+
+        public PriceUpdate() {
+        }
+
+        PriceUpdate(long timeInMicros, String symbol, double bp, int bq, double ap, int aq) {
+            this.timeInMicros = timeInMicros;
+            this.symbol = symbol;
+            this.bp = bp;
+            this.bq = bq;
+            this.ap = ap;
+            this.aq = aq;
+        }
+
+        //        @Override
+        public void writeExternal(@NotNull ObjectOutput out) throws IOException {
+            out.writeLong(timeInMicros);
+            out.writeUTF(symbol);
+            out.writeDouble(bp);
+            out.writeInt(bq);
+            out.writeDouble(ap);
+            out.writeInt(aq);
+        }
+
+        //        @Override
+        public void readExternal(@NotNull ObjectInput in) throws IOException, ClassNotFoundException {
+            timeInMicros = in.readLong();
+            symbol = in.readUTF();
+            bp = in.readDouble();
+            bq = in.readInt();
+            ap = in.readDouble();
+            aq = in.readInt();
+        }
     }
 }

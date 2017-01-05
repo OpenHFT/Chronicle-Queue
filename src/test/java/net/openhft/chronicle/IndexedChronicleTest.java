@@ -36,12 +36,12 @@ import static org.junit.Assert.*;
  * @author peter.lawrey
  */
 public class IndexedChronicleTest extends IndexedChronicleTestBase {
+    public static final String TMP = System.getProperty("java.io.tmpdir");
+    private static final long WARMUP = 20000;
+
     static {
         ChronicleTools.warmup();
     }
-
-    public static final String TMP = System.getProperty("java.io.tmpdir");
-    private static final long WARMUP = 20000;
 
     static void validateExcerpt(@NotNull ExcerptCommon r, int i, int expected) {
         if (expected > r.remaining() || 8 * expected < r.remaining())
@@ -91,20 +91,6 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
                 "[" + elo + ", " + ehi + "]",
                 Arrays.toString(startEnd));
     }
-
-    static class MyExcerptComparator implements ExcerptComparator {
-        int lo, hi;
-
-        @Override
-        public int compare(Excerpt excerpt) {
-            final int x = excerpt.readInt();
-            return x < lo ? -1 : x > hi ? +1 : 0;
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     @Test
     @Ignore
@@ -207,6 +193,10 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
             assertClean(basePath);
         }
     }
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     @Test
     public void testClean() throws IOException {
@@ -645,6 +635,16 @@ public class IndexedChronicleTest extends IndexedChronicleTestBase {
         } finally {
             chronicle.close();
             assertClean(basePath);
+        }
+    }
+
+    static class MyExcerptComparator implements ExcerptComparator {
+        int lo, hi;
+
+        @Override
+        public int compare(Excerpt excerpt) {
+            final int x = excerpt.readInt();
+            return x < lo ? -1 : x > hi ? +1 : 0;
         }
     }
 }

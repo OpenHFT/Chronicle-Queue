@@ -15,18 +15,19 @@
   ~     along with this program.  If not, see <http://www.gnu.org/licenses />.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>net.openhft</groupId>
         <artifactId>java-parent-pom</artifactId>
-        <version>1.1.8</version>
+        <version>1.1.10</version>
         <relativePath />
     </parent>
 
     <artifactId>chronicle</artifactId>
-    <version>3.6.0</version>
+    <version>3.6.3-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>OpenHTF/Chronicle-Queue/chronicle</name>
@@ -38,34 +39,22 @@
                 <groupId>net.openhft</groupId>
                 <artifactId>third-party-bom</artifactId>
                 <type>pom</type>
-                <version>3.4.23</version>
+                <version>3.5.6</version>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>net.openhft</groupId>
-                <artifactId>lang</artifactId>
-                <version>6.7.6</version>
+                <artifactId>chronicle-bom</artifactId>
+                <version>1.13.44</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>net.openhft</groupId>
-                <artifactId>affinity</artifactId>
-                <version>2.2</version>
-            </dependency>
-            <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>2.8</version>
-            </dependency>
-            <dependency>
-                <groupId>org.hamcrest</groupId>
-                <artifactId>hamcrest-all</artifactId>
-                <version>1.3</version>
-            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
-
         <dependency>
             <groupId>net.openhft</groupId>
             <artifactId>lang</artifactId>
@@ -239,7 +228,7 @@
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
         <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
         </developerConnection>
-        <tag>chronicle-3.6.0</tag>
+        <tag>master</tag>
     </scm>
 
 </project>

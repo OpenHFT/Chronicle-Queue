@@ -31,10 +31,10 @@ public class DateCacheTest {
 
     @Test
     public void testFormat() {
-        VanillaDateCache dc = new VanillaDateCache("yyyyMMdd", 86400000, GMT);
-        String str = dc.formatFor(16067);
+        VanillaDateCache dc = new VanillaDateCache("/tmp","yyyyMMdd", 86400000, GMT);
+        String str = dc.valueFor(16067).text;
         assertEquals("20131228", str);
-        String str1 = dc.formatFor(1);
+        String str1 = dc.valueFor(1).text;
         assertEquals("19700102", str1);
     }
 
@@ -44,13 +44,13 @@ public class DateCacheTest {
         SimpleDateFormat sdf = new SimpleDateFormat(format);
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-        VanillaDateCache dc = new VanillaDateCache(format, 1000, GMT);
+        VanillaDateCache dc = new VanillaDateCache("/tmp",format, 1000, GMT);
 
         int now = (int) (System.currentTimeMillis() / 1000);
         for (int i = 0; i < 10000; i++) {
             int now2 = now + i;
             String str2 = sdf.format(new Date(now2 * 1000L));
-            String str = dc.formatFor(now2);
+            String str = dc.valueFor(now2).text;
             assertEquals("i: " + i, str2, str);
         }
     }

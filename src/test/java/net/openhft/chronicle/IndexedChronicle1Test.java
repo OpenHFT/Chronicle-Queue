@@ -24,6 +24,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -57,6 +58,28 @@ public class IndexedChronicle1Test extends IndexedChronicleTestBase {
     // *************************************************************************
     //
     // *************************************************************************
+
+    @Test
+    public void testFileSizes() throws IOException {
+        final String basePath = getTestPath();
+        try (final Chronicle chronicle = ChronicleQueueBuilder.indexed(basePath)
+                .dataBlockSize(256 << 10)
+                .indexBlockSize(64 << 10)
+                .build()) {
+            ExcerptAppender appender = chronicle.createAppender();
+            int objects = 100;
+            for (int i = 0; i < objects; i++) {
+                appender.startExcerpt();
+                appender.writeObject(BigDecimal.valueOf(i % 1000));
+                appender.finish();
+            }
+            appender.close();
+            Assert.assertEquals(256.0, new File(basePath + ".data").length() / 1024.0, 0.0);
+            Assert.assertEquals(64.0, new File(basePath + ".index").length() / 1024.0, 0.0);
+        } finally {
+            assertClean(basePath);
+        }
+    }
 
     @Test
     public void testSerializationPerformance() throws IOException, ClassNotFoundException, InterruptedException {

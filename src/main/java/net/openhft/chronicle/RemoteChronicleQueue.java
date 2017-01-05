@@ -258,19 +258,19 @@ class RemoteChronicleQueue extends WrappedChronicle {
         }
 
         private boolean waitForConnection() {
+            try {
             for(int i=builder.reconnectionAttempts(); !connection.isOpen() && i>0; i--) {
                 openConnection();
 
-                if(!openConnection()) {
-                    try {
+                    if (!openConnection())
                         Thread.sleep(builder.reconnectionIntervalMillis());
-                    } catch(InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
+
             }
 
             return connection.isOpen();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
         }
     }
 

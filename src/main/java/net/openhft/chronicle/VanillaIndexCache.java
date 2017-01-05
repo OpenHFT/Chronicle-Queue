@@ -28,9 +28,11 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static net.openhft.chronicle.VanillaChronicleUtils.indexFileFor;
 
 public class VanillaIndexCache implements Closeable {
     public static final String FILE_NAME_PREFIX = "index-";
@@ -41,7 +43,7 @@ public class VanillaIndexCache implements Closeable {
     private final int blockBits;
     private final VanillaDateCache dateCache;
     private final VanillaMappedCache<IndexKey> cache;
-    private final Map<IndexKey, File> cyclePathMap;
+    private final Map<IndexKey, File> indexFileMap;
     private final FileLifecycleListener fileLifecycleListener;
 
     VanillaIndexCache(
@@ -61,7 +63,12 @@ public class VanillaIndexCache implements Closeable {
             builder.cleanupOnClose()
         );
 
-        this.cyclePathMap = new HashMap<>();
+        this.indexFileMap = new LinkedHashMap<IndexKey, File>(32,1.0f,true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<IndexKey, File> eldest) {
+                return size() >= 32;
+            }
+        };
     }
 
     public static long append(final VanillaMappedBytes bytes, final long indexValue, final boolean synchronous) {
@@ -107,40 +114,32 @@ public class VanillaIndexCache implements Closeable {
         return indices;
     }
 
-    public synchronized File cyclePathFor(int cycle) {
-        key.cycle = cycle;
-        key.indexCount = 0;
-
-        File path = this.cyclePathMap.get(key);
-        if(path == null) {
-            this.cyclePathMap.put(
-                key.clone(),
-                path = new File(baseFile, dateCache.formatFor(cycle))
-            );
-        }
-
-        return path;
-    }
-
     public synchronized VanillaMappedBytes indexFor(int cycle, int indexCount, boolean forAppend) throws IOException {
         key.cycle = cycle;
         key.indexCount = indexCount;
 
         VanillaMappedBytes vmb = this.cache.get(key);
         if(vmb == null) {
-            long start = System.nanoTime();
-            String name = FILE_NAME_PREFIX + indexCount;
-            vmb = this.cache.put(
-                key.clone(),
-                VanillaChronicleUtils.mkFiles(
-                    basePath,
-                    dateCache.formatFor(cycle),
-                        name,
-                    forAppend),
-                1L << blockBits,
-                indexCount);
+            File file = this.indexFileMap.get(key);
+            if(file == null) {
+                this.indexFileMap.put(
+                    key.clone(),
+                    file = indexFileFor(cycle, indexCount, dateCache)
+                );
+            }
 
-            fileLifecycleListener.onEvent(EventType.NEW, new File(name), System.nanoTime() - start);
+            long start = System.nanoTime();
+            File parent = file.getParentFile();
+            if(forAppend && !VanillaChronicleUtils.exists(parent)) {
+                parent.mkdirs();
+            }
+
+            if(!forAppend && !VanillaChronicleUtils.exists(file)) {
+                return null;
+            }
+
+            vmb = this.cache.put(key.clone(), file, 1L << blockBits, indexCount);
+            fileLifecycleListener.onEvent(EventType.NEW, file, System.nanoTime() - start);
         }
 
         vmb.reserve();
@@ -168,7 +167,7 @@ public class VanillaIndexCache implements Closeable {
         }
 
         throw new AssertionError(
-            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.formatFor(cycle) + ")"
+            "Unable to write index" + indexValue + "on cycle " + cycle + "(" + dateCache.valueFor(cycle).text + ")"
         );
     }
 
@@ -184,7 +183,7 @@ public class VanillaIndexCache implements Closeable {
     int lastIndexFile(int cycle, int defaultCycle) {
         int maxIndex = -1;
 
-        final File cyclePath = cyclePathFor(cycle);
+        final File cyclePath = dateCache.valueFor(cycle).path;
         final String[] files = cyclePath.list();
         if (files != null) {
             for (int i=files.length - 1; i>=0; i--) {

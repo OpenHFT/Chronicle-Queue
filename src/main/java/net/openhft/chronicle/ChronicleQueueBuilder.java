@@ -335,7 +335,13 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             return new SourceChronicleQueueBuilder(this);
         }
 
+        @Deprecated
         public IndexedChronicleQueueBuilder fileGrowthListener(FileLifecycleListener fileLifecycleListener) {
+            return fileLifecycleListener(fileLifecycleListener);
+        }
+
+
+        public IndexedChronicleQueueBuilder fileLifecycleListener(FileLifecycleListener fileLifecycleListener) {
             this.fileLifecycleListener = fileLifecycleListener;
             return this;
         }
@@ -390,6 +396,8 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
         private boolean cleanupOnClose;
         private FileLifecycleListener fileLifecycleListener = FileLifecycleListener.FileLifecycleListeners.IGNORE;
 
+        private boolean enableFsWatcher;
+
         private VanillaChronicleQueueBuilder(File path) {
             this.path = path;
             this.synchronous = false;
@@ -406,6 +414,7 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
             this.cycleTimeZone = TimeZone.getTimeZone("GMT");
             this.cleanupOnClose = false;
             this.useCompressedObjectSerializer = true;
+            this.enableFsWatcher = false;
         }
 
         protected File path() {
@@ -607,6 +616,15 @@ public abstract class ChronicleQueueBuilder implements Cloneable {
 
         public FileLifecycleListener fileLifecycleListener() {
             return fileLifecycleListener;
+        }
+
+        public boolean enableFsWatcher() {
+            return this.enableFsWatcher;
+        }
+
+        public VanillaChronicleQueueBuilder enableFsWatcher(boolean enableFsWatcher) {
+            this.enableFsWatcher = enableFsWatcher;
+            return this;
         }
 
         @Override

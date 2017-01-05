@@ -67,8 +67,8 @@ public final class SourceTcpInitiator extends SourceTcp {
 
                             try {
                                 Thread.sleep(builder.reconnectionIntervalMillis());
-                            } catch (InterruptedException ie) {
-                                Thread.currentThread().interrupt();
+                            } catch (InterruptedException e1) {
+                                throw new AssertionError(e1);
                             }
 
                             socketChannel = null;

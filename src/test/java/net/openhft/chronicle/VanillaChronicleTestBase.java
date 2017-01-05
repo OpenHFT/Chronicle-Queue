@@ -73,7 +73,7 @@ public class VanillaChronicleTestBase {
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            e.printStackTrace();
         }
     }
 
