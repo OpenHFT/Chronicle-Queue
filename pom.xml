@@ -135,6 +135,18 @@
 
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>chronicle-enterprise-release</id>
+            <url>
+                http://nexus.chronicle.software/content/repositories/releases
+            </url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
     <build>
         <plugins>
             <plugin>
