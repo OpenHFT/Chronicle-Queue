@@ -226,9 +226,8 @@
     <scm>
         <url>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</url>
         <connection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</connection>
-        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git
-        </developerConnection>
-        <tag>master</tag>
+        <developerConnection>scm:git:git@github.com:OpenHFT/Chronicle-Queue.git</developerConnection>
+        <tag>3.6.x</tag>
     </scm>
 
 </project>
