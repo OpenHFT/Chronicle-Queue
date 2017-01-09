@@ -1118,15 +1118,15 @@ In the test above, the typical latency varied between 14 and 40 micro-seconds, t
 
 === FAQ
 
-==== Is there an Appender to Trailer notification?
+==== Is there an Appender to Tailer notification?
 
-Not implicitly. We didn't want to assume whether the appenders or trailers
+Not implicitly. We didn't want to assume whether the appenders or tailers
 
 - were running at the same time.
 - were in the same process
 - wanted to block on the queue for either writing or reading.
 
-If both the Appender and Trailer are in the same process, the Trailer can use a pauser when not busy
+If both the Appender and Tailer are in the same process, the Tailer can use a pauser when not busy
 
 .Call the reader, and pause if no messages.
 [source, java]
