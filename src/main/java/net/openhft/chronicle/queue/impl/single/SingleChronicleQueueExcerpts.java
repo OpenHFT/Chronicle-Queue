@@ -62,7 +62,6 @@ public class SingleChronicleQueueExcerpts {
     //
     // *************************************************************************
 
-
     public interface InternalAppender {
         void writeBytes(long index, BytesStore bytes);
     }
@@ -624,7 +623,8 @@ public class SingleChronicleQueueExcerpts {
             return true;
         }
 
-        void writeIndexForPosition(long index, long position) throws UnrecoverableTimeoutException, StreamCorruptedException {
+        void writeIndexForPosition(long index, long position)
+                throws UnrecoverableTimeoutException, StreamCorruptedException {
 
             if (!lazyIndexing) {
                 long sequenceNumber = queue.rollCycle().toSequenceNumber(index);
@@ -857,6 +857,13 @@ public class SingleChronicleQueueExcerpts {
                     assert wire().startUse();
                     return context;
                 }
+                RollCycle rollCycle = queue.rollCycle();
+                ;
+                if (state == CYCLE_NOT_FOUND && direction == FORWARD) {
+                    int firstCycle = queue.firstCycle();
+                    if (rollCycle.toCycle(index) < firstCycle)
+                        toStart();
+                }
             } catch (StreamCorruptedException e) {
                 throw new IllegalStateException(e);
             } catch (UnrecoverableTimeoutException notComplete) {
@@ -933,7 +940,6 @@ public class SingleChronicleQueueExcerpts {
                                     continue;
                                 }
 
-
                                 int cycle = queue.rollCycle().toCycle(index);
                                 long nextIndex = nextIndexWithNextAvailableCycle(cycle);
 
@@ -953,7 +959,6 @@ public class SingleChronicleQueueExcerpts {
                         }
                     }
                     throw new AssertionError("direction not set, direction=" + direction);
-
 
                     case CYCLE_NOT_FOUND:
 
@@ -1036,7 +1041,8 @@ public class SingleChronicleQueueExcerpts {
                                 .readPosition());
         }
 
-        private boolean checkMoveToNextCycle(boolean includeMetaData, Bytes<?> bytes) throws EOFException, StreamCorruptedException {
+        private boolean checkMoveToNextCycle(boolean includeMetaData, Bytes<?> bytes)
+                throws EOFException, StreamCorruptedException {
             long pos = bytes.readPosition();
             long lim = bytes.readLimit();
             long wlim = bytes.writeLimit();
@@ -1247,7 +1253,6 @@ public class SingleChronicleQueueExcerpts {
                 throw new IllegalStateException(e);
             }
         }
-
 
         private boolean headerNumberCheck(AbstractWire wire) {
 
