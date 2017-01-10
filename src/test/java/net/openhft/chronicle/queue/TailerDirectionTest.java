@@ -100,6 +100,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
             msgIndexes.put(msg, idx);
         }
 
+
         Assert.assertEquals("[Forward 1] Wrong message 0", testMessage(0), readNextEntry(tailer));
         Assert.assertEquals("[Forward 1] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
         Assert.assertEquals("[Forward 1] Wrong message 1", testMessage(1), readNextEntry(tailer));
@@ -111,8 +112,15 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         Assert.assertEquals("[Backward] Wrong Tailer index after reading msg 2", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
         Assert.assertEquals("[Backward] Wrong message 1", testMessage(1), readNextEntry(tailer));
         Assert.assertEquals("[Backward] Wrong Tailer index after reading msg 1", msgIndexes.get(testMessage(0)).longValue(), tailer.index());
+        Assert.assertEquals("[Backward] Wrong message 0", testMessage(0), readNextEntry(tailer));
+
+        String res = readNextEntry(tailer);
+        Assert.assertTrue("Backward: res is"+res, res == null);
 
         tailer.direction(TailerDirection.FORWARD);
+
+        res = readNextEntry(tailer);
+        Assert.assertTrue("Forward: res is"+res, res == null);
 
         Assert.assertEquals("[Forward 2] Wrong message 0", testMessage(0), readNextEntry(tailer));
         Assert.assertEquals("[Forward 2] Wrong Tailer index after reading msg 0", msgIndexes.get(testMessage(1)).longValue(), tailer.index());
