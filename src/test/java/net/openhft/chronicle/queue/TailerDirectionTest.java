@@ -129,4 +129,39 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
 
         queue.close();
     }
+
+    @Test
+    public void testTailerBackwardsReadBeyondCycle() throws Exception {
+        String basePath = OS.TARGET + "/tailerForwardBackwardBeyondCycle-" + System.nanoTime();
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath).rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
+        ExcerptAppender appender = queue.acquireAppender();
+
+        //
+        // Prepare test messages in queue
+        //
+        // Map of test messages with their queue index position
+        HashMap<String,Long> msgIndexes =  new HashMap<>();
+
+        for (int i = 0; i < 20; i++) {
+            String msg = testMessage(i);
+            long idx = appendEntry(appender, msg);
+            msgIndexes.put(msg, idx);
+            if (i>0 && i % 10 == 0) {
+                Thread.sleep(1000);
+            } // should roll over with TEST_SECONDLY
+        }
+        ExcerptTailer tailer = queue.createTailer();
+        tailer.direction(TailerDirection.BACKWARD);
+        tailer.toEnd();
+        try {
+            for (int i = 19; i >= 0; i--) {
+                Assert.assertEquals("[Backward] Wrong message " + i, testMessage(i), readNextEntry(tailer));
+                //Assert.assertEquals("[Backward] Wrong Tailer index after reading msg "+i, msgIndexes.get(testMessage(i)).longValue(), tailer.index());
+            }
+        } catch (Exception e) {
+            Assert.fail("Exception thrown while reading backwards:"+e.getMessage());
+        }
+        queue.close();
+    }
 }
