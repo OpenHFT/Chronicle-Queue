@@ -787,12 +787,16 @@ public class SingleChronicleQueueExcerpts {
         private boolean readAfterReplicaAcknowledged;
         private TailerState state = UNINITIALISED;
 
+        // used for accessing for the store of the lastAcknowledgedIndexReplicated
+        private final ThreadLocal<StoreTailer> tempTailer;
+
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
+            tempTailer = ThreadLocal.withInitial(() -> (StoreTailer) queue.createTailer());
             toStart();
         }
 
@@ -1469,28 +1473,36 @@ public class SingleChronicleQueueExcerpts {
 
         @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
-            RollCycle rollCycle = queue.rollCycle();
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            StoreTailer temp = tempTailer.get();
+            RollCycle rollCycle = temp.queue.rollCycle();
             int cycle0 = rollCycle.toCycle(acknowledgeIndex);
-            if (cycle0 != cycle) {
-                if (!cycle(cycle0, false)) {
+            if (cycle0 != temp.cycle) {
+                if (!temp.cycle(cycle0, false)) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
                     return;
                 }
             }
-            if (store == null) {
+            if (temp.store == null) {
                 Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
                 return;
             }
-            store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
+            temp.store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
+        }
+
+
+        public long lastAcknowledgedIndexReplicated() throws EOFException {
+            // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
+            final StoreTailer temp = (StoreTailer) tempTailer.get().toEnd();
+            return temp.store.lastAcknowledgedIndexReplicated();
         }
 
         public void setCycle(int cycle) {
             this.cycle = cycle;
-            if (cycle == Integer.MIN_VALUE) {
-                timeForNextCycle = Long.MAX_VALUE;
-            } else {
-                timeForNextCycle = (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
-            }
+
+            timeForNextCycle = cycle == Integer.MIN_VALUE ? Long.MAX_VALUE :
+                    (long) (cycle + 1) * queue.rollCycle().length() + queue.epoch();
+
         }
 
         class StoreTailerContext extends ReadDocumentContext {
