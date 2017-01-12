@@ -1105,6 +1105,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    public void testNegativeEPOC() {
+        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+                .wireType(wireType)
+                .epoch(-TimeUnit.HOURS.toMillis(12))
+                .build()) {
+
+            final ExcerptAppender appender = chronicle.acquireAppender();
+            appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
+
+            chronicle.createTailer().readingDocument();
+        }
+    }
+
+    @Test
     public void testIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
