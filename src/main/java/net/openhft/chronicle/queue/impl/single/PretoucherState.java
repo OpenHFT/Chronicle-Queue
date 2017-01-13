@@ -44,7 +44,7 @@ class PretoucherState {
             lastTouchedPage = pos - pos % OS.pageSize();
             lastTouchedPos = pos;
             lastBytesHashcode = System.identityHashCode(bytes);
-            String message = getFile(bytes) + " - Reset pretoucher to pos " + pos;
+            String message = getFile(bytes) + " - Reset pretoucher to pos " + pos + " as the underlying MappedBytes changed.";
             debug(message);
 
         } else {
