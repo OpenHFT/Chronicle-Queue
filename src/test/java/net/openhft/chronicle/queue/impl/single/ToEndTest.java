@@ -44,6 +44,7 @@ import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.*;
 
 public class ToEndTest {
+    long lastCycle;
     private ThreadDump threadDump;
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
@@ -167,10 +168,9 @@ public class ToEndTest {
         storeF2.setAccessible(true);
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
-        // the reference count here is 2, one of the reference is the appender and on the tailer
-        assertEquals(2, store2.refCount());
+        // the reference count here is 3, one of the reference is the appender, on the tailer and the underlyign store itself.
+        assertEquals(3, store2.refCount());
     }
-
 
     @Test
     public void toEndTest() {
@@ -247,8 +247,6 @@ public class ToEndTest {
         }*/
         IOTools.shallowDeleteDirWithFiles(baseDir);
     }
-
-    long lastCycle;
 
     @Test
     public void toEndAfterWriteTest() {

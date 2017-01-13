@@ -49,8 +49,8 @@ public class JDBCServiceTest {
     public void doCreateTable(int repeats, int noUpdates) throws SQLException {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
-            String path1 = OS.TARGET + "/createTable-" + System.nanoTime();
-            String path2 = OS.TARGET + "/createTable-" + System.nanoTime();
+            String path1 = OS.TARGET + "/createTable1-" + System.nanoTime();
+            String path2 = OS.TARGET + "/createTable2-" + System.nanoTime();
             File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 

@@ -268,8 +268,13 @@ public class SingleChronicleQueueStore implements WireStore {
 
     @Override
     public long sequenceForPosition(final ExcerptContext ec, final long position, boolean inclusive) throws
-            EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+            UnrecoverableTimeoutException, StreamCorruptedException {
         return indexing.sequenceForPosition(recovery, ec, position, inclusive);
+    }
+
+    @Override
+    public long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException {
+        return indexing.lastSequenceNumber(recovery, ec);
     }
 
     @Override

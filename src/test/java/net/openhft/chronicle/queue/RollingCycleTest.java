@@ -28,6 +28,7 @@ import net.openhft.chronicle.core.time.SetTimeProvider;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -41,6 +42,7 @@ public class RollingCycleTest {
 
         String basePath = OS.TARGET + "/testRollCycle" + System.nanoTime();
         try (final ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
+//                .testBlockSize() changes size remaining
                 .timeoutMS(5)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .timeProvider(stp)
@@ -49,7 +51,7 @@ public class RollingCycleTest {
             final ExcerptAppender appender = queue.acquireAppender();
             int numWritten = 0;
             for (int h = 0; h < 3; h++) {
-                stp.currentTimeMillis(start + h * 86_400_000);
+                stp.currentTimeMillis(start + TimeUnit.DAYS.toMillis(h));
                 for (int i = 0; i < 3; i++) {
                     appender.writeBytes(new TestBytesMarshallable());
                     numWritten++;

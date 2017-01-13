@@ -42,7 +42,7 @@ public class DetectNotReadyEntriesTest {
 
     @Test
     public void testDeadEntries() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);

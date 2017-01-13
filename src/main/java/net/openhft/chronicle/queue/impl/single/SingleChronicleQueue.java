@@ -52,6 +52,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static net.openhft.chronicle.queue.TailerDirection.NONE;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreAppender;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.StoreTailer;
 
 public class SingleChronicleQueue implements RollingChronicleQueue {
 
@@ -65,7 +67,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     final File path;
     final AtomicBoolean isClosed = new AtomicBoolean();
-    private final ThreadLocal<WeakReference<ExcerptContext>> tlTailer = new ThreadLocal<>();
+    private final ThreadLocal<WeakReference<StoreTailer>> tlTailer = new ThreadLocal<>();
     @NotNull
     private final RollCycle rollCycle;
     @NotNull
@@ -131,8 +133,8 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         readOnly = builder.readOnly();
     }
 
-    ExcerptContext getContext() {
-        return ThreadLocalHelper.getTL(tlTailer, this, SingleChronicleQueueExcerpts.StoreTailer::new);
+    StoreTailer acquireTailer() {
+        return ThreadLocalHelper.getTL(tlTailer, this, StoreTailer::new);
     }
 
     @NotNull
@@ -274,7 +276,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     protected ExcerptAppender newAppender() {
-        return new SingleChronicleQueueExcerpts.StoreAppender(this);
+        return new StoreAppender(this);
     }
 
     @NotNull
@@ -289,7 +291,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     @NotNull
     @Override
     public ExcerptTailer createTailer() {
-        return new SingleChronicleQueueExcerpts.StoreTailer(this);
+        return new StoreTailer(this).toStart();
     }
 
     @Nullable
@@ -303,18 +305,21 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         return pool.nextCycle(cycle, direction);
     }
 
-    private long exceptsPerCycle(long cycle) {
-        WireStore wireStore = storeForCycle((int) cycle, epoch, false);
+    long exceptsPerCycle(int cycle) {
+        StoreTailer tailer = acquireTailer();
         try {
-            return wireStore.sequenceForPosition(getContext(), wireStore.writePosition(),
-                    true) + 1;
-        } catch (Exception e) {
+            long index = rollCycle.toIndex(cycle, 0);
+            if (tailer.moveToIndex(index)) {
+                assert tailer.store.refCount() > 1;
+                return tailer.store.lastSequenceNumber(tailer) + 1;
+            } else {
+                return -1;
+            }
+        } catch (StreamCorruptedException e) {
             throw new IllegalStateException(e);
         } finally {
-            if (wireStore != null)
-                release(wireStore);
+            tailer.release();
         }
-
     }
 
     /**
@@ -322,7 +327,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
      * system ). If intermediate chronicle files are removed this will effect the result.
      *
      * @param fromIndex the lower index
-     * @param toIndex the higher index
+     * @param toIndex   the higher index
      * @return will give you the number of excerpts between 2 index’s. It’s not as simple as just
      * subtracting one number from the other.
      * @throws IllegalStateException if we are not able to read the chronicle files
@@ -395,7 +400,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
 
         final Long[] array = cycles.toArray(new Long[cycles.size()]);
         for (int i = 1; i < array.length - 1; i++) {
-            long x = exceptsPerCycle(array[i]);
+            long x = exceptsPerCycle(Math.toIntExact(array[i]));
             result += x;
         }
 
@@ -425,8 +430,9 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
     }
 
     @Override
-    public final void release(@NotNull WireStore store) {
-        this.pool.release(store);
+    public final void release(WireStore store) {
+        if (store != null)
+            this.pool.release(store);
     }
 
     @Override
@@ -491,7 +497,6 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         setFirstAndLastCycle();
         return firstCycle;
     }
-
 
     /**
      * allows the appenders to inform the queue that they have rolled
@@ -568,8 +573,12 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             try {
                 File path = dateValue.path;
                 final File parentFile = path.getParentFile();
-                if (parentFile != null && !parentFile.exists())
-                    parentFile.mkdirs();
+                if (parentFile != null && !parentFile.exists()) {
+                    if (createIfAbsent)
+                        parentFile.mkdirs();
+                    else
+                        return null;
+                }
 
                 if (!path.exists() && !createIfAbsent)
                     return null;
@@ -631,7 +640,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
             final File parentFile = path;
 
             if (!parentFile.exists())
-                throw new AssertionError("parentFile=" + parentFile.getName() + " does not exist");
+                throw new IllegalStateException("parentFile=" + parentFile.getName() + " does not exist");
 
             final RollingResourcesCache dateCache = SingleChronicleQueue.this.dateCache;
             final NavigableMap<Long, File> tree = new TreeMap<>();

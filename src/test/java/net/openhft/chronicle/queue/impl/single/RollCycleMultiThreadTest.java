@@ -1,6 +1,7 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.StopCharTesters;
+import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -17,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -34,7 +36,7 @@ public class RollCycleMultiThreadTest {
 
     @Before
     public void setUp() throws Exception {
-        path = Files.createTempDirectory("rollCycleTest");
+        path = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
     }
 
     @After

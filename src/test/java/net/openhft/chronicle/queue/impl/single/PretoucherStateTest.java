@@ -35,7 +35,7 @@ public class PretoucherStateTest {
         PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 4096, 64 << 10, record, () -> false);
         ps.pretouch(null);
         ps.pretouch(null);
-        assertEquals("debug none - Reset pretoucher to pos 4096\n" +
+        assertEquals("debug none - Reset pretoucher to pos 4096 as the underlying MappedBytes changed.\n" +
                 "touchPage 4096\n" +
                 "touchPage 8192\n" +
                 "touchPage 12288\n" +
@@ -66,7 +66,7 @@ public class PretoucherStateTest {
         for (int i = 0; i < 4; i++)
             ps.pretouch(null);
         ps.pretouch(null);
-        assertEquals("debug none - Reset pretoucher to pos 1052672\n" +
+        assertEquals("debug none - Reset pretoucher to pos 1052672 as the underlying MappedBytes changed.\n" +
                 "touchPage 1052672\n" +
                 "touchPage 1056768\n" +
                 "touchPage 1060864\n" +
@@ -91,30 +91,51 @@ public class PretoucherStateTest {
     public void pretouchLongBreak() throws Exception {
         long[] pos = {0};
         final StringBuilder record = new StringBuilder();
-        PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 256, 16 << 10, record, () -> true);
-        ps.pretouch(null); // reset();
-        for (int i = 0; i < 100; i++)
+        PretoucherState ps = new DummyPretoucherState(() -> pos[0] += 1024, 16 << 10, record, () -> true);
+        for (int i = 0; i <= 20; i++) {
+            record.append("pos: " + pos[0] + ", i:" + i + "\n");
             ps.pretouch(null);
-        ps.pretouch(null);
-        assertEquals("debug none - Reset pretoucher to pos 256\n" +
+        }
+        assertEquals("pos: 0, i:0\n" +
+                "debug none - Reset pretoucher to pos 1024 as the underlying MappedBytes changed.\n" +
+                "pos: 1024, i:1\n" +
                 "touchPage 0\n" +
                 "touchPage 4096\n" +
                 "touchPage 8192\n" +
                 "touchPage 12288\n" +
                 "touchPage 16384\n" +
-                "debug none: Advanced 0 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 1 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 3072, i:2\n" +
+                "pos: 4096, i:3\n" +
                 "touchPage 20480\n" +
-                "debug none: Advanced 3 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 3 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 6144, i:4\n" +
+                "pos: 7168, i:5\n" +
+                "pos: 8192, i:6\n" +
                 "touchPage 24576\n" +
-                "debug none: Advanced 4 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 4 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 10240, i:7\n" +
+                "pos: 11264, i:8\n" +
+                "pos: 12288, i:9\n" +
                 "touchPage 28672\n" +
-                "debug none: Advanced 4 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 4 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 14336, i:10\n" +
+                "pos: 15360, i:11\n" +
+                "pos: 16384, i:12\n" +
                 "touchPage 32768\n" +
-                "debug none: Advanced 4 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 4 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 18432, i:13\n" +
+                "pos: 19456, i:14\n" +
+                "pos: 20480, i:15\n" +
                 "touchPage 36864\n" +
-                "debug none: Advanced 4 KB between pretouch() and 0 KB while mapping of 16 KB.\n" +
+                "debug none: Advanced 4 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 22528, i:16\n" +
+                "pos: 23552, i:17\n" +
+                "pos: 24576, i:18\n" +
                 "touchPage 40960\n" +
-                "debug none: Advanced 4 KB between pretouch() and 0 KB while mapping of 16 KB.\n", record.toString());
+                "debug none: Advanced 4 KB between pretouch() and 1 KB while mapping of 16 KB.\n" +
+                "pos: 26624, i:19\n" +
+                "pos: 27648, i:20\n", record.toString());
     }
 
     class DummyPretoucherState extends PretoucherState {

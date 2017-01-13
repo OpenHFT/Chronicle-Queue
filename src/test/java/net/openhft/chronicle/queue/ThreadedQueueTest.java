@@ -121,6 +121,7 @@ public class ThreadedQueueTest {
         new File(path).deleteOnExit();
 
         final ChronicleQueue rqueue = ChronicleQueueBuilder.single(path)
+                .testBlockSize()
                 .wireType(WireType.FIELDLESS_BINARY)
                 .blockSize(BLOCK_SIZE)
                 .rollCycle(TEST_DAILY)

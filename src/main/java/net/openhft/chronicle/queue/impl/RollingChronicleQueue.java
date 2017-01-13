@@ -44,7 +44,7 @@ public interface RollingChronicleQueue extends ChronicleQueue {
     /**
      * @param store the {@code store} to release
      */
-    void release(@NotNull WireStore store);
+    void release(WireStore store);
 
     /**
      * @return the first cycle number found, or Integer.MAX_VALUE is none found.

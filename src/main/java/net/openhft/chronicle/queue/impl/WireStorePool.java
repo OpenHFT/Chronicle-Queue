@@ -68,6 +68,7 @@ public class WireStorePool {
 
         store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
+            store.reserve();
             stores.put(rollDetails, store);
             storeFileListener.onAcquired(cycle, store.file());
         }
