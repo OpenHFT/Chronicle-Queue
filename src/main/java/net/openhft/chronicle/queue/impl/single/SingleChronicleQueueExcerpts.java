@@ -172,18 +172,6 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
-            this.lazyIndexing = lazyIndexing;
-            resetPosition();
-            return this;
-        }
-
-        @Override
-        public boolean lazyIndexing() {
-            return lazyIndexing;
-        }
-
-        @Override
         public boolean recordHistory() {
             return sourceId() != 0;
         }
@@ -251,13 +239,6 @@ public class SingleChronicleQueueExcerpts {
                 final long headerNumber = store.sequenceForPosition(this, position, true);
                 wire.headerNumber(queue.rollCycle().toIndex(cycle, headerNumber + 1) - 1);
                 assert lazyIndexing || wire.headerNumber() != -1 || checkIndex(wire.headerNumber(), position);
-
-            } catch (EOFException e) {
-                // todo improve this
-                // you can't index a file that has an EOF marker, sequenceForPosition can do
-                // indexing and  also would not want to set a headerNumber on a file with a
-                // EOF, so lets just ignore this exception
-                Jvm.debug().on(SingleChronicleQueue.class, e);
 
             } catch (BufferOverflowException | StreamCorruptedException e) {
                 throw new AssertionError(e);
@@ -349,7 +330,6 @@ public class SingleChronicleQueueExcerpts {
                     System.err.println(message);
                     throw new AssertionError(message);
                 }
-            } catch (EOFException e) {
 
             } catch (IOException e) {
                 Jvm.fatal().on(getClass(), e);
@@ -787,17 +767,12 @@ public class SingleChronicleQueueExcerpts {
         private boolean readAfterReplicaAcknowledged;
         private TailerState state = UNINITIALISED;
 
-        // used for accessing for the store of the lastAcknowledgedIndexReplicated
-        private final ThreadLocal<StoreTailer> tempTailer;
-
         public StoreTailer(@NotNull final SingleChronicleQueue queue) {
             this.queue = queue;
             this.setCycle(Integer.MIN_VALUE);
             this.index = 0;
             queue.addCloseListener(this, StoreTailer::close);
             indexSpacingMask = queue.rollCycle().defaultIndexSpacing() - 1;
-            tempTailer = ThreadLocal.withInitial(() -> (StoreTailer) queue.createTailer());
-            toStart();
         }
 
         private static boolean isReadOnly(Bytes bytes) {
@@ -828,17 +803,6 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public long timeoutMS() {
             return queue.timeoutMS;
-        }
-
-        @Override
-        public ExcerptTailer lazyIndexing(boolean lazyIndexing) {
-            this.lazyIndexing = lazyIndexing;
-            return this;
-        }
-
-        @Override
-        public boolean lazyIndexing() {
-            return lazyIndexing;
         }
 
         @Override
@@ -931,35 +895,29 @@ public class SingleChronicleQueueExcerpts {
 
                             // give the position of the last entry and
                             // flag we want to count it even though we don't know if it will be meta data or not.
-                            try {
 
-                                boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
+                            boolean foundCycle = cycle(queue.rollCycle().toCycle(index), false);
 
-                                if (foundCycle) {
-                                    long lastSequenceNumberInThisCycle = store.sequenceForPosition(this, Long.MAX_VALUE, false);
-                                    long nextIndex = queue.rollCycle().toIndex(this.cycle,
-                                            lastSequenceNumberInThisCycle);
-                                    moveToIndex(nextIndex);
-                                    state = FOUND_CYCLE;
-                                    continue;
-                                }
-
-                                int cycle = queue.rollCycle().toCycle(index);
-                                long nextIndex = nextIndexWithNextAvailableCycle(cycle);
-
-                                if (nextIndex != Long.MIN_VALUE) {
-                                    moveToIndex(nextIndex);
-                                    state = FOUND_CYCLE;
-                                    continue;
-                                }
-
-                                state = BEYOND_START_OF_CYCLE;
-                                return false;
-
-                            } catch (EOFException e) {
-                                throw new AssertionError(e);
+                            if (foundCycle) {
+                                long lastSequenceNumberInThisCycle = store.sequenceForPosition(this, Long.MAX_VALUE, false);
+                                long nextIndex = queue.rollCycle().toIndex(this.cycle,
+                                        lastSequenceNumberInThisCycle);
+                                moveToIndex(nextIndex);
+                                state = FOUND_CYCLE;
+                                continue;
                             }
 
+                            int cycle = queue.rollCycle().toCycle(index);
+                            long nextIndex = nextIndexWithNextAvailableCycle(cycle);
+
+                            if (nextIndex != Long.MIN_VALUE) {
+                                moveToIndex(nextIndex);
+                                state = FOUND_CYCLE;
+                                continue;
+                            }
+
+                            state = BEYOND_START_OF_CYCLE;
+                            return false;
                         }
                     }
                     throw new AssertionError("direction not set, direction=" + direction);
@@ -1138,8 +1096,7 @@ public class SingleChronicleQueueExcerpts {
 
             if (direction == BACKWARD) {
                 try {
-                    long lastSequenceNumber0 = store.sequenceForPosition(this, Long
-                            .MAX_VALUE, false) - 1;
+                    long lastSequenceNumber0 = store.lastSequenceNumber(this);
                     return queue.rollCycle().toIndex(nextCycle, lastSequenceNumber0);
 
                 } catch (Exception e) {
@@ -1222,16 +1179,16 @@ public class SingleChronicleQueueExcerpts {
          * changed just after this was called. For this reason, this code is not in queue as it
          * should only be an internal method
          *
-         * @return the last index at the time this method was called.
+         * @return the last index at the time this method was called, or Long.MIN_VALUE if none.
          */
 
-        private long approximateLastIndex() throws EOFException {
+        private long approximateLastIndex() {
 
             RollCycle rollCycle = queue.rollCycle();
             final int lastCycle = queue.lastCycle();
             try {
                 if (lastCycle == Integer.MIN_VALUE)
-                    return rollCycle.toIndex(queue.cycle(), 0L);
+                    return Long.MIN_VALUE;
 
                 final WireStore wireStore = queue.storeForCycle(lastCycle, queue.epoch(), false);
                 this.setCycle(lastCycle);
@@ -1247,12 +1204,9 @@ public class SingleChronicleQueueExcerpts {
                 // give the position of the last entry and
                 // flag we want to count it even though we don't know if it will be meta data or not.
 
-                long sequenceNumber = store.sequenceForPosition(this, Long.MAX_VALUE, false);
+                long sequenceNumber = store.lastSequenceNumber(this);
                 return rollCycle.toIndex(lastCycle, sequenceNumber);
 
-            } catch (EOFException e) {
-                this.index(queue.rollCycle().toIndex(queue.cycle(), Long.MAX_VALUE));
-                throw e;
             } catch (StreamCorruptedException | UnrecoverableTimeoutException e) {
                 throw new IllegalStateException(e);
             }
@@ -1304,29 +1258,38 @@ public class SingleChronicleQueueExcerpts {
         @NotNull
         @Override
         public ExcerptTailer toEnd() {
-            final long oldIndex = this.index;
-            try {
-                long index = approximateLastIndex();
+            long index = approximateLastIndex();
 
-                if (direction != TailerDirection.FORWARD)
-                    index--;
-                if (index != Long.MIN_VALUE) {
-                    if (moveToIndexResult(index) == NOT_FOUND) {
-                        // we found last index on an unwritten cycle
-                        state = FOUND_CYCLE;
-                    }
-                }
+            if (index == Long.MIN_VALUE) {
                 if (state() == TailerState.CYCLE_NOT_FOUND)
                     state = UNINITIALISED;
                 return this;
-            } catch (EOFException e) {
-                Jvm.debug().on(getClass(), "caught EOF while moving to end.");
-                if (oldIndex == this.index) {
-                    Jvm.debug().on(getClass(), "index did not advance. index=" + this.index);
-                }
-                state = END_OF_CYCLE;
-                return this;
             }
+            switch (moveToIndexResult(index)) {
+                case NOT_FOUND:
+                    throw new IllegalStateException("NOT_FOUND");
+
+                case FOUND:
+                    if (direction == FORWARD) {
+                        switch (moveToIndexResult(++index)) {
+                            case FOUND:
+                                // the end moved!!
+                                state = FOUND_CYCLE;
+                                break;
+                            case NOT_REACHED:
+                                throw new IllegalStateException("NOT_REACHED after FOUND");
+                            case NOT_FOUND:
+                                state = FOUND_CYCLE;
+                                break;
+                        }
+                    }
+                    break;
+                case NOT_REACHED:
+                    approximateLastIndex();
+                    throw new IllegalStateException("NOT_REACHED index: " + Long.toHexString(index));
+            }
+
+            return this;
         }
 
         @Override
@@ -1355,21 +1318,46 @@ public class SingleChronicleQueueExcerpts {
             int cycle = rollCycle.toCycle(this.index);
 
             seq += direction.add();
-            if (rollCycle.toSequenceNumber(seq) < seq) {
-                cycle(cycle + 1, false);
-                seq = 0;
-            } else if (seq < 0) {
-                if (seq == -1) {
-                    this.index(rollCycle.toIndex(cycle - 1, seq));
-                    this.state = BEYOND_START_OF_CYCLE;
-                    return;
-                } else {
-                    // TODO FIX so we can roll back to the precious cycle.
-                    throw new IllegalStateException("Winding to the previous day not supported");
-                }
+            switch (direction) {
+                case NONE:
+                    break;
+                case FORWARD:
+                    if (rollCycle.toSequenceNumber(seq) < seq) {
+                        cycle(cycle + 1, false);
+                        seq = 0;
+                    }
+                    break;
+                case BACKWARD:
+                    if (seq < 0) {
+                        windBackCycle(cycle);
+                        return;
+                    }
+                    break;
             }
-
             this.index = rollCycle.toIndex(cycle, seq);
+
+        }
+
+        private void windBackCycle(int cycle) {
+            if (tryWindBack(cycle - 1))
+                return;
+            cycle--;
+            for (long first = queue.firstCycle(); cycle >= first; cycle--) {
+                if (tryWindBack(cycle))
+                    return;
+            }
+            this.index(queue.rollCycle().toIndex(cycle, -1));
+            this.state = BEYOND_START_OF_CYCLE;
+        }
+
+        private boolean tryWindBack(int cycle) {
+            long count = queue.exceptsPerCycle(cycle);
+            if (count <= 0)
+                return false;
+            RollCycle rollCycle = queue.rollCycle();
+            moveToIndex(rollCycle.toIndex(cycle, count - 1));
+            this.state = FOUND_CYCLE;
+            return true;
         }
 
         // DON'T INLINE THIS METHOD, as it's used by enterprise chronicle queue
@@ -1409,6 +1397,14 @@ public class SingleChronicleQueueExcerpts {
             wire.parent(this);
             wire.pauser(queue.pauserSupplier.get());
             return true;
+        }
+
+        void release() {
+            if (store != null) {
+                store.release();
+                store = null;
+            }
+            state = UNINITIALISED;
         }
 
         @Override
@@ -1474,27 +1470,34 @@ public class SingleChronicleQueueExcerpts {
         @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            StoreTailer temp = tempTailer.get();
-            RollCycle rollCycle = temp.queue.rollCycle();
-            int cycle0 = rollCycle.toCycle(acknowledgeIndex);
-            if (cycle0 != temp.cycle) {
-                if (!temp.cycle(cycle0, false)) {
-                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
+            StoreTailer temp = queue.acquireTailer();
+            try {
+                RollCycle rollCycle = queue.rollCycle();
+                int cycle0 = rollCycle.toCycle(acknowledgeIndex);
+                if (cycle0 != temp.cycle) {
+                    if (!temp.cycle(cycle0, false)) {
+                        Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
+                        return;
+                    }
+                }
+                if (temp.store == null) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
                     return;
                 }
+                temp.store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
+            } finally {
+                temp.release();
             }
-            if (temp.store == null) {
-                Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
-                return;
-            }
-            temp.store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
         }
-
 
         public long lastAcknowledgedIndexReplicated() throws EOFException {
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
-            final StoreTailer temp = (StoreTailer) tempTailer.get().toEnd();
-            return temp.store.lastAcknowledgedIndexReplicated();
+            final StoreTailer temp = (StoreTailer) queue.acquireTailer().toEnd();
+            try {
+                return temp.store.lastAcknowledgedIndexReplicated();
+            } finally {
+                temp.release();
+            }
         }
 
         public void setCycle(int cycle) {

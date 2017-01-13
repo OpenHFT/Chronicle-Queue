@@ -25,9 +25,5 @@ public interface ExcerptCommon<E extends ExcerptCommon<E>> {
      */
     int sourceId();
 
-    E lazyIndexing(boolean lazyIndexing);
-
-    boolean lazyIndexing();
-
     ChronicleQueue queue();
 }

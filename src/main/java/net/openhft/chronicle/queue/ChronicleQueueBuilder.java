@@ -25,7 +25,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.util.TimeZone;
 import java.util.function.Consumer;
 
 /**
@@ -55,6 +54,12 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
 
     @NotNull
     B blockSize(int blockSize);
+
+    @NotNull
+    default B testBlockSize() {
+        // small size for testing purposes only.
+        return blockSize(256 << 10);
+    }
 
     long blockSize();
 

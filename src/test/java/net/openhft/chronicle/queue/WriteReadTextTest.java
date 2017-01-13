@@ -75,9 +75,11 @@ public class WriteReadTextTest {
 
     private void doTest(String... problematic) {
 
-        String myPath = OS.TMP + "/writeReadText-" + System.nanoTime();
+        String myPath = OS.TARGET + "/writeReadText-" + System.nanoTime();
 
-        try (SingleChronicleQueue theQueue = ChronicleQueueBuilder.single(myPath).build()) {
+        try (SingleChronicleQueue theQueue = ChronicleQueueBuilder.single(myPath)
+                // .testBlockSize() not suitable as large message sizes.
+                .build()) {
 
             ExcerptAppender appender = theQueue.acquireAppender();
             ExcerptTailer tailer = theQueue.createTailer();

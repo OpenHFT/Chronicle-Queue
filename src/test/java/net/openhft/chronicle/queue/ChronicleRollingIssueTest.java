@@ -36,12 +36,13 @@ public class ChronicleRollingIssueTest {
         int threads = Runtime.getRuntime().availableProcessors() - 1;
         int messages = 50;
 
-        String path = OS.TARGET + "/ChronicleRollingIssueTest-" + System.nanoTime();
+        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         AtomicInteger count = new AtomicInteger();
 
         Runnable appendRunnable = () -> {
             try (final ChronicleQueue writeQueue = ChronicleQueueBuilder
                     .single(path)
+                    .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY).build()) {
                 for (int i = 0; i < messages; i++) {
                     long millis = System.currentTimeMillis() % 1000;
@@ -64,6 +65,7 @@ public class ChronicleRollingIssueTest {
         long lastIndex = 0;
         try (final ChronicleQueue queue = ChronicleQueueBuilder
                 .single(path)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY).build()) {
             ExcerptTailer tailer = queue.createTailer();
             int count2 = 0;

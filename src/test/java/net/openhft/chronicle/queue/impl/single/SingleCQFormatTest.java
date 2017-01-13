@@ -72,7 +72,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testEmptyDirectory() {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
         @NotNull SingleChronicleQueue queue = binary(dir).build();
         assertEquals(Integer.MAX_VALUE, queue.firstCycle());
@@ -137,7 +137,7 @@ public class SingleCQFormatTest {
     @Test(expected = TimeoutException.class)
     @Ignore("Long running")
     public void testDeadHeader() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
@@ -165,7 +165,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
@@ -214,7 +214,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader2() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101-02" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
@@ -264,7 +264,7 @@ public class SingleCQFormatTest {
 
     @Test
     public void testIncompleteHeader() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
@@ -1061,8 +1061,11 @@ public class SingleCQFormatTest {
         map.put("number", 1L);
         map.put("double", 1.28);
         @NotNull File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
-        try (@NotNull ChronicleQueue queue = binary(dir).blockSize(ChronicleQueue.TEST_BLOCK_SIZE).build()) {
-            ExcerptAppender appender = queue.acquireAppender().lazyIndexing(true);
+        try (@NotNull ChronicleQueue queue = binary(dir)
+                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
+            ExcerptAppender appender = queue.acquireAppender();
             appender.writeMap(map);
 
             map.put("abc", "aye-bee-see");
@@ -1071,17 +1074,17 @@ public class SingleCQFormatTest {
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 437,\n" +
+                    "  writePosition: 636,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
                     "    epoch: 0\n" +
                     "  },\n" +
                     "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: !short 16384,\n" +
-                    "    indexSpacing: 16,\n" +
-                    "    index2Index: 0,\n" +
-                    "    lastIndex: 0\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 377,\n" +
+                    "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
                     "  recovery: !TimedStoreRecovery {\n" +
@@ -1089,20 +1092,35 @@ public class SingleCQFormatTest {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 377, header: 0\n" +
+                    "# position: 377, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index2index: [\n" +
+                    "  # length: 8, used: 1\n" +
+                    "  480,\n" +
+                    "  0, 0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 480, header: -1\n" +
+                    "--- !!meta-data #binary\n" +
+                    "index: [\n" +
+                    "  # length: 8, used: 2\n" +
+                    "  576,\n" +
+                    "  636,\n" +
+                    "  0, 0, 0, 0, 0, 0\n" +
+                    "]\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "abc: def\n" +
                     "double: 1.28\n" +
                     "hello: world\n" +
                     "number: 1\n" +
-                    "# position: 437, header: 1\n" +
+                    "# position: 636, header: 1\n" +
                     "--- !!data #binary\n" +
                     "abc: aye-bee-see\n" +
                     "double: 1.28\n" +
                     "hello: world\n" +
                     "number: 1\n" +
                     "...\n" +
-                    "# 654851 bytes remaining\n", queue.dump());
+                    "# 326972 bytes remaining\n", queue.dump());
 
             @NotNull ExcerptTailer tailer = queue.createTailer();
             Map<String, Object> map2 = tailer.readMap();
@@ -1183,6 +1201,7 @@ public class SingleCQFormatTest {
     public void testWritingIndex() {
         @NotNull String dir = OS.TARGET + "/testWritingIndex-" + System.nanoTime();
         try (@NotNull ChronicleQueue queue = ChronicleQueueBuilder.single(dir)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                 .build()) {

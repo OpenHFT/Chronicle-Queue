@@ -33,10 +33,11 @@ public class LastIndexAppendedTest {
 
     @Test
     public void testLastIndexAppendedAcrossRestarts() throws Exception {
-        String path = OS.TARGET + "/deleteme.q-" + System.nanoTime();
+        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         for (int i = 0; i < 5; i++) {
             try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(path)
+                    .testBlockSize()
                     .rollCycle(TEST_DAILY)
                     .build()) {
                 ExcerptAppender appender = queue.acquireAppender();

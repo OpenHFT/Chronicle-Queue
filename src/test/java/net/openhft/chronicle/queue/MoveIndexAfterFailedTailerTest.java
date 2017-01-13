@@ -35,7 +35,9 @@ public class MoveIndexAfterFailedTailerTest {
 
     @Test
     public void test() throws IOException {
-        final ChronicleQueueBuilder myBuilder = ChronicleQueueBuilder.single(OS.TARGET + "/chronicle-" + System.nanoTime())
+        String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        final ChronicleQueueBuilder myBuilder = ChronicleQueueBuilder.single(basePath)
+                .testBlockSize()
                 .timeProvider(System::currentTimeMillis)
                 .rollCycle(HOURLY);
 

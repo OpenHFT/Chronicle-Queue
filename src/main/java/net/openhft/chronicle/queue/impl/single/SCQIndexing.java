@@ -21,6 +21,7 @@ package net.openhft.chronicle.queue.impl.single;
 import net.openhft.chronicle.bytes.Byteable;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.ref.BinaryLongReference;
+import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.io.Closeable;
@@ -132,12 +133,14 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @param ec       the current wire
      * @return the position of the index
      */
-    long indexToIndex(StoreRecovery recovery, @NotNull final ExcerptContext ec, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    long indexToIndex(StoreRecovery recovery, @NotNull final ExcerptContext ec, long timeoutMS)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         long index2Index = this.index2Index.getVolatileValue();
         return index2Index > 0 ? index2Index : acquireIndex2Index(recovery, ec, timeoutMS);
     }
 
-    long acquireIndex2Index(StoreRecovery recovery, ExcerptContext ec, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    long acquireIndex2Index(StoreRecovery recovery, ExcerptContext ec, long timeoutMS)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         try {
             return acquireIndex2Index0(recovery, ec, timeoutMS);
         } catch (TimeoutException fallback) {
@@ -145,7 +148,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    long acquireIndex2Index0(StoreRecovery recovery, ExcerptContext ec, long timeoutMS) throws EOFException, TimeoutException, UnrecoverableTimeoutException, StreamCorruptedException {
+    long acquireIndex2Index0(StoreRecovery recovery, ExcerptContext ec, long timeoutMS)
+            throws EOFException, TimeoutException, UnrecoverableTimeoutException, StreamCorruptedException {
         long start = System.currentTimeMillis();
         Pauser pauser = ec.wireForIndex().pauser();
         try {
@@ -210,7 +214,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @param ec the current wire
      * @return the address of the Excerpt containing the usable index, just after the header
      */
-    long newIndex(StoreRecovery recovery, @NotNull ExcerptContext ec, boolean index2index, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    long newIndex(StoreRecovery recovery, @NotNull ExcerptContext ec, boolean index2index, long timeoutMS)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         long writePosition = this.writePosition.getVolatileValue();
         Wire wire = ec.wireForIndex();
         wire.bytes().writePosition(writePosition);
@@ -224,7 +229,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return position;
     }
 
-    long newIndex(StoreRecovery recovery, ExcerptContext ec, LongArrayValues index2Index, long index2, long timeoutMS) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException, TimeoutException {
+    long newIndex(StoreRecovery recovery, ExcerptContext ec, LongArrayValues index2Index, long index2, long timeoutMS)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException, TimeoutException {
         try {
             if (index2Index.compareAndSet(index2, NOT_INITIALIZED, BinaryLongReference.LONG_NOT_COMPLETE)) {
                 //     System.out.println("newIndex : A - index2=" + index2 + ",value=" + index2Index
@@ -282,7 +288,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
      * @param index    the index we wish to move to
      * @return the position of the {@code targetIndex} or -1 if the index can not be found
      */
-    ScanResult moveToIndex(StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index) throws UnrecoverableTimeoutException, StreamCorruptedException {
+    ScanResult moveToIndex(StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index)
+            throws UnrecoverableTimeoutException, StreamCorruptedException {
         try {
             ScanResult scanResult = moveToIndex0(recovery, ec, index);
             if (scanResult != null)
@@ -304,7 +311,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return ScanResult.NOT_FOUND;
     }
 
-    ScanResult moveToIndex0(StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    ScanResult moveToIndex0(StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         LongArrayValues index2index = getIndex2index(recovery, ec, ec.timeoutMS());
 
@@ -403,15 +411,23 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         bytes.readPositionUnlimited(startAddress);
         long i = indexOfNext - 1;
         while (bytes.readPosition() <= toPosition) {
-            WireIn.HeaderType headerType = wire.readDataHeader(true);
+            WireIn.HeaderType headerType;
+            try {
+                headerType = wire.readDataHeader(true);
+            } catch (EOFException e) {
+                if (toPosition == Long.MAX_VALUE)
+                    return i;
+                throw e;
+            }
 
             if (!inclusive && toPosition == bytes.readPosition())
                 return i;
 
             switch (headerType) {
                 case NONE:
-                    if (toPosition == Long.MAX_VALUE)
-                        return i + 1;
+                    if (toPosition == Long.MAX_VALUE) {
+                        return i;
+                    }
 
                     int header = bytes.readVolatileInt(bytes.readPosition());
                     throw new IllegalArgumentException(
@@ -448,62 +464,67 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                              @NotNull ExcerptContext ec,
                              final long position,
                              boolean inclusive)
-            throws EOFException, StreamCorruptedException {
-
-        long timeoutMS = ((AbstractWire) ec.wire()).isInsideHeader() ? 0 : ec.timeoutMS();
-
-        final LongArrayValues index2indexArr = getIndex2index(recovery, ec, timeoutMS);
+            throws StreamCorruptedException {
         long indexOfNext = 0;
         long lastKnownAddress = 0;
-        if (((Byteable) index2indexArr).bytesStore() == null)
-            return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
+        try {
+            long timeoutMS = ((AbstractWire) ec.wire()).isInsideHeader() ? 0 : ec.timeoutMS();
 
-        int used2 = Maths.toUInt31(index2indexArr.getUsed());
-        if (used2 == 0) {
-            // create the first index: eagerly.
-            getSecondaryAddress(recovery, ec, timeoutMS, index2indexArr, 0);
-        }
-        Outer:
-        for (int index2 = used2 - 1; index2 >= 0; index2--) {
-            long secondaryAddress = getSecondaryAddress(recovery, ec, timeoutMS, index2indexArr, index2);
-            if (secondaryAddress == 0)
-                continue;
+            final LongArrayValues index2indexArr = getIndex2index(recovery, ec, timeoutMS);
+            if (((Byteable) index2indexArr).bytesStore() == null)
+                return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
 
-            LongArrayValues indexValues = arrayForAddress(ec.wireForIndex(), secondaryAddress);
-            // TODO use a binary rather than linear search
-
-            // check the first one to see if any in the index is appropriate.
-            int used = Maths.toUInt31(indexValues.getUsed());
-            assert used >= 0;
-            if (used == 0)
-                continue;
-
-            long posN = indexValues.getVolatileValueAt(0);
-            assert posN >= 0;
-            if (posN > position)
-                continue;
-
-            for (int index1 = used - 1; index1 >= 0; index1--) {
-                long pos = indexValues.getVolatileValueAt(index1);
-                // TODO pos shouldn't be 0, but holes in the index appear..
-                if (pos == 0 || pos > position) {
-                    continue;
-                }
-                lastKnownAddress = pos;
-                indexOfNext = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
-
-                if (lastKnownAddress == position)
-                    return indexOfNext;
-
-                break Outer;
+            int used2 = Maths.toUInt31(index2indexArr.getUsed());
+            if (used2 == 0) {
+                // create the first index: eagerly.
+                getSecondaryAddress(recovery, ec, timeoutMS, index2indexArr, 0);
             }
+            Outer:
+            for (int index2 = used2 - 1; index2 >= 0; index2--) {
+                long secondaryAddress = getSecondaryAddress(recovery, ec, timeoutMS, index2indexArr, index2);
+                if (secondaryAddress == 0)
+                    continue;
+
+                LongArrayValues indexValues = arrayForAddress(ec.wireForIndex(), secondaryAddress);
+                // TODO use a binary rather than linear search
+
+                // check the first one to see if any in the index is appropriate.
+                int used = Maths.toUInt31(indexValues.getUsed());
+                assert used >= 0;
+                if (used == 0)
+                    continue;
+
+                long posN = indexValues.getVolatileValueAt(0);
+                assert posN >= 0;
+                if (posN > position)
+                    continue;
+
+                for (int index1 = used - 1; index1 >= 0; index1--) {
+                    long pos = indexValues.getVolatileValueAt(index1);
+                    // TODO pos shouldn't be 0, but holes in the index appear..
+                    if (pos == 0 || pos > position) {
+                        continue;
+                    }
+                    lastKnownAddress = pos;
+                    indexOfNext = ((long) index2 << (indexCountBits + indexSpacingBits)) + (index1 << indexSpacingBits);
+
+                    if (lastKnownAddress == position)
+                        return indexOfNext;
+
+                    break Outer;
+                }
+            }
+        } catch (EOFException e) {
+            Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
         }
-
-        return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
-
+        try {
+            return linearScanByPosition(ec.wireForIndex(), position, indexOfNext, lastKnownAddress, inclusive);
+        } catch (EOFException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    LongArrayValues getIndex2index(StoreRecovery recovery, ExcerptContext ec, long timeoutMS) throws
+    private LongArrayValues getIndex2index(StoreRecovery recovery, ExcerptContext ec, long timeoutMS) throws
             EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         LongArrayValuesHolder holder = getIndex2IndexArray();
@@ -525,7 +546,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    long getSecondaryAddress(StoreRecovery recovery, ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+    private long getSecondaryAddress(StoreRecovery recovery, ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
         try {
             return getSecondaryAddress1(recovery, ec, timeoutMS, index2indexArr, index2);
         } catch (TimeoutException fallback) {
@@ -535,7 +557,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         }
     }
 
-    long getSecondaryAddress1(StoreRecovery recovery, ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2) throws EOFException, TimeoutException, UnrecoverableTimeoutException, StreamCorruptedException {
+    long getSecondaryAddress1(StoreRecovery recovery, ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2)
+            throws EOFException, TimeoutException, UnrecoverableTimeoutException, StreamCorruptedException {
         long secondaryAddress = index2indexArr.getVolatileValueAt(index2);
         if (secondaryAddress == 0) {
             if (timeoutMS == 0)
@@ -553,7 +576,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
         return secondaryAddress;
     }
 
-    private long getSecondaryAddress0(ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2) throws TimeoutException {
+    private long getSecondaryAddress0(ExcerptContext ec, long timeoutMS, LongArrayValues index2indexArr, int index2)
+            throws TimeoutException {
         long secondaryAddress;
         Pauser pauser = ec.wireForIndex().pauser();
         while (true) {
@@ -582,7 +606,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     void setPositionForSequenceNumber(StoreRecovery recovery,
                                       ExcerptContext ec,
                                       long sequenceNumber,
-                                      long position) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
+                                      long position)
+            throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
         // only say for example index every 0,15,31st entry
         if ((sequenceNumber & (indexSpacing - 1)) != 0)
@@ -625,6 +650,11 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
 
     public boolean indexable(long index) {
         return (index & (indexSpacing - 1)) != 0;
+    }
+
+    public long lastSequenceNumber(StoreRecovery recovery, ExcerptContext ec)
+            throws StreamCorruptedException {
+        return sequenceForPosition(recovery, ec, Long.MAX_VALUE, false);
     }
 
     enum IndexingFields implements WireKey {

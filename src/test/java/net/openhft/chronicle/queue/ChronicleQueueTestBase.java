@@ -27,8 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -67,20 +65,16 @@ public class ChronicleQueueTestBase {
     // *************************************************************************
 
     public static File getTmpDir() {
-        try {
-            final File tmpDir = Files.createTempDirectory("chronicle" + "-").toFile();
+        final File tmpDir = new File(OS.TARGET, "chronicle-" + System.nanoTime());
 
-            DeleteStatic.INSTANCE.add(tmpDir);
+        DeleteStatic.INSTANCE.add(tmpDir);
 
-            // Log the temporary directory in OSX as it is quite obscure
-            if (OS.isMacOSX()) {
-                LOGGER.info("Tmp dir: {}", tmpDir);
-            }
-
-            return tmpDir;
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
+        // Log the temporary directory in OSX as it is quite obscure
+        if (OS.isMacOSX()) {
+            LOGGER.info("Tmp dir: {}", tmpDir);
         }
+
+        return tmpDir;
     }
 
     public static RollingChronicleQueue createQueue(WireType type) {
@@ -140,7 +134,7 @@ public class ChronicleQueueTestBase {
 
         {
             Runtime.getRuntime().addShutdownHook(new Thread(
-                () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
+                    () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
             ));
         }
 

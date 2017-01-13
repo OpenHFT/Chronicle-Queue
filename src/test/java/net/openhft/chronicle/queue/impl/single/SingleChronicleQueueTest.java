@@ -39,8 +39,8 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -743,7 +743,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().write(() -> "FirstName").text("Quartilla");
             }
 
-
             Assert.assertEquals(index, appender.lastIndexAppended());
         }
     }
@@ -854,7 +853,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testDocumentIndexTest() {
         try (final SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
@@ -898,7 +896,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
     }
-
 
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
@@ -1724,7 +1721,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .wireType(this.wireType)
                 .build()) {
 
-
             InternalAppender sync = (InternalAppender) syncQ.acquireAppender();
             try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                     .wireType(this.wireType)
@@ -1874,12 +1870,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testToEndPrevCycleEOF() throws TimeoutException, ExecutionException, InterruptedException {
 
         File tmpDir = getTmpDir();
-
 
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
@@ -1889,7 +1883,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             q.acquireAppender().writeText("first");
         }
 
-        Thread.sleep(1500);
+        Thread.sleep(1100);
 
         // this will write an EOF
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
@@ -1920,7 +1914,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
 
-
         try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
@@ -1938,13 +1931,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, "demo-" + System.nanoTime());
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.acquireAppender();
@@ -1962,7 +1955,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 writingContext.wire()
                         .write().bytes(stringsToPut.get(1).getBytes());
             }
-            Thread.sleep(2000);
+            Thread.sleep(2100);
             try (DocumentContext writingContext = appender.writingDocument()) {
                 writingContext.wire().write().bytes(stringsToPut.get(2).getBytes());
             }
@@ -2101,11 +2094,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
+    @Ignore("Long running")
     public void testCountExceptsBetweenCycles() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.createAppender();
@@ -2148,16 +2143,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
@@ -2167,6 +2162,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write second message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
@@ -2174,24 +2170,26 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // read both messages
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
         }
-
     }
 
     @Test
     public void testReadingWritingWhenCycleIsSkipped() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
-                .rollCycle(rollCycle).build()) {
+                .testBlockSize()
+                .rollCycle(rollCycle)
+                .build()) {
             queue.acquireAppender().writeText("first message");
         }
 
@@ -2200,6 +2198,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write second message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
@@ -2207,6 +2206,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // read both messages
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
@@ -2215,16 +2215,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     }
 
-
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
@@ -2234,6 +2234,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write second message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
@@ -2241,19 +2242,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // read both messages
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
             Assert.assertEquals("second message", excerptTailer.readText());
             Assert.assertEquals("first message", excerptTailer.readText());
         }
-
     }
-
 
     @Test
     public void testReadWritingWithTimeProvider() throws Exception {
-        final Path path = Files.createTempDirectory("q");
+        final Path path = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
 
         long time = System.currentTimeMillis();
 
@@ -2297,13 +2297,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerSnappingRollWithNewAppender() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
-
 
         // write first message
         try (ChronicleQueue queue = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(rollCycle).build()) {
 
             ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -2315,12 +2315,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 try (ChronicleQueue queue2 = ChronicleQueueBuilder
                         .single(dir.toString())
+                        .testBlockSize()
                         .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
-                Jvm.pause(1500);
+                Jvm.pause(1100);
                 try (ChronicleQueue queue2 = ChronicleQueueBuilder
                         .single(dir.toString())
+                        .testBlockSize()
                         .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
@@ -2332,14 +2334,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 // write second message
                 try (ChronicleQueue queue2 = ChronicleQueueBuilder
                         .single(dir.toString())
+                        .testBlockSize()
                         .rollCycle(rollCycle).build()) {
 
                     for (int i = 0; i < 5; i++) {
                         queue2.acquireAppender().writeText("someText more");
-                        Jvm.pause(500);
+                        Jvm.pause(400);
                     }
                 }
-
 
             });
 
@@ -2350,28 +2352,32 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         final String basePath = dir.toString();
         try (ChronicleQueue queuet = ChronicleQueueBuilder
-                .single(basePath).rollCycle(rollCycle).build()) {
+                .single(basePath)
+                .testBlockSize()
+                .rollCycle(rollCycle)
+                .build()) {
 
             final ExcerptTailer tailer = queuet.createTailer();
 
             // write first message
             try (ChronicleQueue queue = ChronicleQueueBuilder
-                    .single(basePath).rollCycle(rollCycle).build()) {
-
+                    .single(basePath)
+                    .testBlockSize()
+                    .rollCycle(rollCycle)
+                    .build()) {
 
                 for (int i = 0; i < 5; i++) {
 
                     final ExcerptAppender appender = queue.acquireAppender();
-                    Thread.sleep(1000);
+                    Thread.sleep(1100);
                     try (final DocumentContext dc = appender.writingDocument()) {
                         dc.wire().write("some").int32(i);
                     }
@@ -2379,19 +2385,18 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     try (final DocumentContext dc = tailer.readingDocument()) {
                         Assert.assertEquals(i, dc.wire().read("some").int32());
                     }
-
                 }
             }
         }
-
     }
 
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
 
@@ -2402,12 +2407,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     //    @Ignore("fails - Nested blocks of writingDocument() not supported")
     @Test
     public void testCopyQueue() throws Exception {
-        final Path source = Files.createTempDirectory("source");
-        final Path target = Files.createTempDirectory("target");
+        final Path source = Paths.get(OS.TARGET, getClass().getSimpleName() + "-source-" + System.nanoTime());
+        final Path target = Paths.get(OS.TARGET, getClass().getSimpleName() + "-target-" + System.nanoTime());
         {
 
             final RollingChronicleQueue q = ChronicleQueueBuilder
-                    .single(source.toString()).build();
+                    .single(source.toString())
+                    .testBlockSize()
+                    .build();
 
             ExcerptAppender excerptAppender = q.acquireAppender();
             excerptAppender.writeMessage(() -> "one", 1);
@@ -2417,13 +2424,16 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
         {
             final RollingChronicleQueue s = ChronicleQueueBuilder
-                    .single(source.toString()).build();
+                    .single(source.toString())
+                    .testBlockSize()
+                    .build();
 
             ExcerptTailer sourceTailer = s.createTailer();
 
-
             final RollingChronicleQueue t = ChronicleQueueBuilder
-                    .single(target.toString()).build();
+                    .single(target.toString())
+                    .testBlockSize()
+                    .build();
 
             ExcerptAppender appender = t.acquireAppender();
 
@@ -2445,7 +2455,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-
     /**
      * see https://github.com/OpenHFT/Chronicle-Queue/issues/299
      */
@@ -2453,9 +2462,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() throws
             Exception {
 
-        final Path dir = Files.createTempDirectory("demo");
+        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                 .single(dir.toString())
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
 
@@ -2471,7 +2481,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final long index = dc.index();
                 final long seq = queue.rollCycle().toSequenceNumber(index);
 
-
                 if (seq == 52)
                     startIndex = dc.index();
 
@@ -2485,7 +2494,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             }
         }
-
 
         ExcerptTailer tailer = queue.createTailer();
 
@@ -2529,14 +2537,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         MappedFile mappedFile;
         {
-            Path dir = Files.createTempDirectory("demo");
+            Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
             SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                     .single(dir.toString())
+                    .testBlockSize()
                     .rollCycle(RollCycles.DAILY);
             File f;
             try (RollingChronicleQueue queue = builder.build()) {
                 ExcerptAppender appender = queue.acquireAppender();
-
 
                 try (DocumentContext documentContext1 = appender.writingDocument()) {
                     documentContext1.wire().write().text("some text");
@@ -2555,7 +2563,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertTrue(mappedFile.file().delete());
         }
 
-
     }
 
     @Test
@@ -2564,20 +2571,20 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         MappedFile mappedFile1, mappedFile2, mappedFile3, mappedFile4;
         {
-            Path dir = Files.createTempDirectory("demo");
+            Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
             SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
                     .single(dir.toString())
+                    .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY);
             File f;
             try (RollingChronicleQueue queue = builder.build()) {
                 ExcerptAppender appender = queue.acquireAppender();
 
-
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write().text("some text");
                     mappedFile1 = toMappedFile(dc);
                 }
-                Thread.sleep(1010);
+                Thread.sleep(1100);
                 try (DocumentContext dc = appender.writingDocument()) {
                     dc.wire().write().text("some more text");
                     mappedFile2 = toMappedFile(dc);
@@ -2608,7 +2615,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertTrue(mappedFile2.file().delete());
 
         }
-
 
     }
 

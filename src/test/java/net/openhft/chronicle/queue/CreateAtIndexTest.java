@@ -38,16 +38,20 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWriteBytesWithIndex() throws Exception {
-        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
-                .rollCycle(TEST_DAILY).build()) {
+                .testBlockSize()
+                .rollCycle(TEST_DAILY)
+                .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
             appender.writeBytes(0x421d00000001L, Bytes.from("hello world"));
         }
         // try again and fail.
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
 //            try {
@@ -60,7 +64,9 @@ public class CreateAtIndexTest {
         }
 
         // try too far
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             try {
@@ -72,7 +78,9 @@ public class CreateAtIndexTest {
             }
         }
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
             InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             appender.writeBytes(0x421d00000002L, Bytes.from("hello world"));
@@ -87,11 +95,13 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
-        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         long expected = 0;
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
 

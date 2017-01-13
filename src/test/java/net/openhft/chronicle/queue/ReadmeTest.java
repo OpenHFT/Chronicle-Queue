@@ -42,9 +42,11 @@ public class ReadmeTest {
 
     @Test
     public void createAQueue() {
-        final String basePath = OS.TARGET + "/createAQueue-" + System.nanoTime();
+        final String basePath = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
-                .rollCycle(RollCycles.TEST_DAILY).build()) {
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
             // Obtain an ExcerptAppender
             ExcerptAppender appender = queue.acquireAppender();
 
