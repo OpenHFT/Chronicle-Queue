@@ -1102,17 +1102,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     }
 
     @Test
-    @Ignore("fails")
     public void testNegativeEPOC() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(wireType)
-                .epoch(-TimeUnit.HOURS.toMillis(12))
-                .build()) {
+        for (int h = -14; h <= 14; h++) {
+            try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+                    .wireType(wireType)
+                    .testBlockSize()
+                    .epoch(TimeUnit.HOURS.toMillis(h))
+                    .build()) {
 
-            final ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
+                final ExcerptAppender appender = chronicle.acquireAppender();
+                appender.writeDocument(wire -> wire.write(() -> "key").text("value=v"));
 
-            chronicle.createTailer().readingDocument();
+                chronicle.createTailer()
+                        .readDocument(wire -> {
+                            assertEquals("value=v", wire.read("key").text());
+                        });
+            }
         }
     }
 
