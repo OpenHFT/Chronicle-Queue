@@ -1087,10 +1087,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      * @
      */
     @Test
-    @Ignore("todo fix")
     public void testEPOC() {
         try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
                 .wireType(this.wireType)
+                .testBlockSize()
                 .epoch(System.currentTimeMillis())
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {

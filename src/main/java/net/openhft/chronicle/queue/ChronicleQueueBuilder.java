@@ -55,6 +55,15 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     @NotNull
     B blockSize(int blockSize);
 
+    /**
+     * THIS IS FOR TESTING ONLY.
+     * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
+     * <p>
+     * Using this will be slower when you have many messages, and break when you have large messages.
+     * </p>
+     *
+     * @return this
+     */
     @NotNull
     default B testBlockSize() {
         // small size for testing purposes only.
