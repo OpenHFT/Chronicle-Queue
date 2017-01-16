@@ -19,7 +19,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.bytes.MappedFile;
 import net.openhft.chronicle.core.Jvm;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.annotation.UsedViaReflection;
 import net.openhft.chronicle.core.onoes.ExceptionKey;
 import net.openhft.chronicle.core.threads.ThreadDump;
@@ -47,16 +46,15 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.*;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
-import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 
 @RunWith(Parameterized.class)
 public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
-    private final WireType wireType;
+    protected final WireType wireType;
 
     // *************************************************************************
     //
@@ -103,7 +101,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testAppend() {
         try (final RollingChronicleQueue queue =
                      builder(getTmpDir(), wireType)
-                             .testBlockSize()
                              .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -118,7 +115,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .build()) {
 
             final String expected = "some long message";
@@ -160,7 +156,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingLessBytesThanWritten() {
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -192,7 +187,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendAndRead() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -226,7 +220,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testReadAndAppend() {
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), this.wireType)
-                             .testBlockSize()
                              .build()) {
 
             int[] results = new int[2];
@@ -335,7 +328,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
         try (final ChronicleQueue queue = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .timeProvider(stp)
                 .build()) {
 
@@ -365,7 +357,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         try (final ChronicleQueue queue =
                      builder(getTmpDir(), this.wireType)
-                             .testBlockSize()
                              .rollCycle(TEST_DAILY)
                              .timeProvider(stp)
                              .build()) {
@@ -387,281 +378,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             --- !!not-ready-meta-data! #binary
             ...
              */
-            assertEquals("--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 0\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1000\n" +
-                    "# position: 599, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 1\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1001\n" +
-                    "# position: 599, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 2\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1002\n" +
-                    "# position: 599, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 3\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1003\n" +
-                    "# position: 599, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 4\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1004\n" +
-                    "# position: 599, header: 1 EOF\n" +
-                    "--- !!not-ready-meta-data! #binary\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n" +
-                    "--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 586,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 2\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 2\n" +
-                    "  576,\n" +
-                    "  586,\n" +
-                    "  0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data #binary\n" +
-                    "test: 5\n" +
-                    "# position: 586, header: 1\n" +
-                    "--- !!data #binary\n" +
-                    "test2: !short 1005\n" +
-                    "...\n" +
-                    "# 327077 bytes remaining\n", queue.dump());
+            assertEquals(expectedAppendAndReadWithRolling(), queue.dump());
 
+            assumeFalse(wireType == WireType.DEFAULT_ZERO_BINARY);
             final ExcerptTailer tailer = queue.createTailer().toStart();
             for (int i = 0; i < 6; i++) {
                 final int n = i;
@@ -678,10 +397,287 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
+    @NotNull
+    protected String expectedAppendAndReadWithRolling() {
+        return "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 0\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1000\n" +
+                "# position: 599, header: 1 EOF\n" +
+                "--- !!not-ready-meta-data! #binary\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 1\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1001\n" +
+                "# position: 599, header: 1 EOF\n" +
+                "--- !!not-ready-meta-data! #binary\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 2\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1002\n" +
+                "# position: 599, header: 1 EOF\n" +
+                "--- !!not-ready-meta-data! #binary\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 3\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1003\n" +
+                "# position: 599, header: 1 EOF\n" +
+                "--- !!not-ready-meta-data! #binary\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 4\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1004\n" +
+                "# position: 599, header: 1 EOF\n" +
+                "--- !!not-ready-meta-data! #binary\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n" +
+                "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 586,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 2\n" +
+                "  576,\n" +
+                "  586,\n" +
+                "  0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data #binary\n" +
+                "test: 5\n" +
+                "# position: 586, header: 1\n" +
+                "--- !!data #binary\n" +
+                "test2: !short 1005\n" +
+                "...\n" +
+                "# 327077 bytes remaining\n";
+    }
+
     @Test
     public void testAppendAndReadAtIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -708,7 +704,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testSimpleWire() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -729,7 +724,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testIndexWritingDocument() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -752,7 +746,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingMarshallableDocument() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             MyMarshable myMarshable = new MyMarshable();
@@ -775,7 +768,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testMetaData() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -831,7 +823,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingSecondDocumentNotExist() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -857,7 +848,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testDocumentIndexTest() {
         try (final SingleChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -901,7 +891,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -934,7 +923,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testSimpleByteTest() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -952,7 +940,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadAtIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .indexCount(8)
                 .indexSpacing(8)
                 .build()) {
@@ -988,7 +975,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadAtIndex4MB() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
@@ -1027,7 +1013,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLastWrittenIndexPerAppender() {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
 
@@ -1039,7 +1024,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalStateException.class)
     public void testLastWrittenIndexPerAppenderNoData() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
             final ExcerptAppender appender = chronicle.acquireAppender();
             appender.lastIndexAppended();
@@ -1050,7 +1034,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalStateException.class) //: no messages written
     public void testNoMessagesWritten() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1061,7 +1044,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testHeaderIndexReadAtIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -1090,7 +1072,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testEPOC() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .epoch(System.currentTimeMillis())
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1105,7 +1086,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testNegativeEPOC() {
         for (int h = -14; h <= 14; h++) {
             try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                    .testBlockSize()
                     .epoch(TimeUnit.HOURS.toMillis(h))
                     .build()) {
 
@@ -1123,7 +1103,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
@@ -1158,7 +1137,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocument() {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
@@ -1226,7 +1204,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testReadingDocumentWithFirstAMove() throws TimeoutException {
 
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
 
@@ -1282,7 +1259,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testReadingDocumentWithFirstAMoveWithEpoch() throws TimeoutException {
 
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
                 .build()) {
@@ -1338,7 +1314,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testToEnd() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
             ExcerptTailer tailer = chronicle.createTailer();
@@ -1347,7 +1322,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             tailer.toEnd();
 
             try (ChronicleQueue chronicle2 = builder(dir, wireType)
-                    .testBlockSize()
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
 
@@ -1363,13 +1337,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testAppendedBeforeToEnd() throws Exception {
         File dir = getTmpDir();
         ChronicleQueue chronicle = builder(dir, this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build();
         ExcerptTailer tailer = chronicle.createTailer();
 
         ChronicleQueue chronicle2 = builder(dir, this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build();
 
@@ -1389,10 +1361,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testToEnd2() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, wireType)
-                .testBlockSize()
                 .build();
              ChronicleQueue chronicle2 = builder(dir, wireType)
-                     .testBlockSize()
                      .build()) {
 
             ExcerptAppender append = chronicle2.acquireAppender();
@@ -1448,7 +1418,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testReadingDocumentForEmptyQueue() {
         File dir = getTmpDir();
         try (ChronicleQueue chronicle = builder(dir, this.wireType)
-                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
             ExcerptTailer tailer = chronicle.createTailer();
@@ -1458,7 +1427,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             try (ChronicleQueue chronicle2 = builder(dir, this.wireType)
-                    .testBlockSize()
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
                 ExcerptAppender appender = chronicle2.acquireAppender();
@@ -1476,7 +1444,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testMetaData6() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1532,8 +1499,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalArgumentException.class)
     public void dontPassQueueToReader() {
-        String dirname = OS.TARGET + "/dontPassQueueToReader-" + System.nanoTime();
-        try (ChronicleQueue queue = binary(dirname).testBlockSize().build()) {
+        try (ChronicleQueue queue = binary(getTmpDir()).build()) {
             queue.createTailer().afterLastWritten(queue).methodReader();
         }
     }
@@ -1541,7 +1507,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEndBeforeWrite() {
         try (RollingChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .rollCycle(TEST2_DAILY)
                 .build()) {
 
@@ -1562,7 +1527,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testSomeMessages() {
         try (RollingChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .rollCycle(TEST2_DAILY)
                 .build()) {
 
@@ -1585,7 +1549,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testForwardFollowedBackBackwardTailer() {
         try (RollingChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(TEST2_DAILY)
                 .build()) {
 
@@ -1659,7 +1622,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 : System.currentTimeMillis();
 
         try (RollingChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(cycle)
                 .timeProvider(timeProvider)
                 .build()) {
@@ -1694,7 +1656,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLastIndexAppended() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             ExcerptAppender appender = chronicle.acquireAppender();
@@ -1710,7 +1671,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testZeroLengthMessage() {
         try (ChronicleQueue chronicle = builder(getTmpDir(), wireType)
-                .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build()) {
 
@@ -1728,13 +1688,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testMoveToWithAppender() throws TimeoutException, StreamCorruptedException {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             InternalAppender sync = (InternalAppender) syncQ.acquireAppender();
             File name2 = Utils.tempDir(testName.getMethodName());
             try (ChronicleQueue chronicle = builder(name2, this.wireType)
-                    .testBlockSize()
                     .build()) {
 
                 ExcerptAppender appender = chronicle.acquireAppender();
@@ -1758,12 +1716,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testMapWrapper() throws TimeoutException, StreamCorruptedException {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             File name2 = Utils.tempDir(testName.getMethodName());
             try (ChronicleQueue chronicle = builder(name2, this.wireType)
-                    .testBlockSize()
                     .build()) {
 
                 ExcerptAppender appender = chronicle.acquireAppender();
@@ -1791,7 +1747,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testAppendedSkipToEnd() throws TimeoutException, ExecutionException, InterruptedException {
 
         try (RollingChronicleQueue q = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .build()) {
 
             ExcerptAppender appender = q.acquireAppender();
@@ -1821,7 +1776,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         String text = sb.toString();
 
         try (ChronicleQueue q = builder(getTmpDir(), this.wireType)
-                .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -1867,7 +1821,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 int size = 20_000_000;
 
                 for (int j = 0; j < size; j++) {
-                    executor.execute(() -> doSomthing(tl, tlt, text));
+                    executor.execute(() -> doSomething(tl, tlt, text));
                 }
 
                 executor.shutdown();
@@ -1885,7 +1839,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testToEndPrevCycleEOF() throws TimeoutException, ExecutionException, InterruptedException {
         File dir = getTmpDir();
         try (ChronicleQueue q = builder(dir, wireType)
-                .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -1896,7 +1849,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         // this will write an EOF
         try (ChronicleQueue q = builder(dir, wireType)
-                .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -1908,7 +1860,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue q = builder(dir, wireType)
-                .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -1924,7 +1875,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
 
         try (ChronicleQueue q = builder(dir, wireType)
-                .testBlockSize()
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
@@ -1943,11 +1893,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
 
-        final RollingChronicleQueue queue =
-                binary(getTmpDir())
-                        .testBlockSize()
-                        .rollCycle(RollCycles.TEST_SECONDLY)
-                        .build();
+        final RollingChronicleQueue queue = binary(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build();
         final ExcerptAppender appender = queue.acquireAppender();
         final ExcerptTailer tailer = queue.createTailer();
 
@@ -1983,7 +1931,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    private void doSomthing(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
+    private void doSomething(ThreadLocal<ExcerptAppender> tla, ThreadLocal<ExcerptTailer> tlt, String text) {
         if (Math.random() > 0.5)
             writeTestDocument(tla, text);
         else
@@ -2011,7 +1959,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testMultipleAppenders() {
         try (ChronicleQueue syncQ = builder(getTmpDir(), this.wireType)
                 .rollCycle(TEST_DAILY)
-                .testBlockSize()
                 .build()) {
 
             ExcerptAppender syncA = syncQ.acquireAppender();
@@ -2028,86 +1975,89 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     dc.wire().getValueOut().text("some meta " + i);
                 }
             }
-            assertEquals("--- !!meta-data #binary\n" +
-                    "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY_LIGHT,\n" +
-                    "  writePosition: 668,\n" +
-                    "  roll: !SCQSRoll {\n" +
-                    "    length: !int 86400000,\n" +
-                    "    format: yyyyMMdd,\n" +
-                    "    epoch: 0\n" +
-                    "  },\n" +
-                    "  indexing: !SCQSIndexing {\n" +
-                    "    indexCount: 8,\n" +
-                    "    indexSpacing: 1,\n" +
-                    "    index2Index: 377,\n" +
-                    "    lastIndex: 6\n" +
-                    "  },\n" +
-                    "  lastAcknowledgedIndexReplicated: -1,\n" +
-                    "  recovery: !TimedStoreRecovery {\n" +
-                    "    timeStamp: 0\n" +
-                    "  },\n" +
-                    "  deltaCheckpointInterval: 0\n" +
-                    "}\n" +
-                    "# position: 377, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index2index: [\n" +
-                    "  # length: 8, used: 1\n" +
-                    "  480,\n" +
-                    "  0, 0, 0, 0, 0, 0, 0\n" +
-                    "]\n" +
-                    "# position: 480, header: -1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "index: [\n" +
-                    "  # length: 8, used: 6\n" +
-                    "  576,\n" +
-                    "  588,\n" +
-                    "  616,\n" +
-                    "  628,\n" +
-                    "  656,\n" +
-                    "  668,\n" +
-                    "  0, 0\n" +
-                    "]\n" +
-                    "# position: 576, header: 0\n" +
-                    "--- !!data\n" +
-                    "hello A0\n" +
-                    "# position: 588, header: 1\n" +
-                    "--- !!data\n" +
-                    "hello B0\n" +
-                    "# position: 600, header: 1\n" +
-                    "--- !!meta-data #binary\n" +
-                    "some meta 0\n" +
-                    "# position: 616, header: 2\n" +
-                    "--- !!data\n" +
-                    "hello A1\n" +
-                    "# position: 628, header: 3\n" +
-                    "--- !!data\n" +
-                    "hello B1\n" +
-                    "# position: 640, header: 3\n" +
-                    "--- !!meta-data #binary\n" +
-                    "some meta 1\n" +
-                    "# position: 656, header: 4\n" +
-                    "--- !!data\n" +
-                    "hello A2\n" +
-                    "# position: 668, header: 5\n" +
-                    "--- !!data\n" +
-                    "hello B2\n" +
-                    "# position: 680, header: 5\n" +
-                    "--- !!meta-data #binary\n" +
-                    "some meta 2\n" +
-                    "...\n" +
-                    "# 326980 bytes remaining\n", syncQ.dump());
+            assertEquals(expectedMultipleAppenders(), syncQ.dump());
         }
+    }
+
+    @NotNull
+    protected String expectedMultipleAppenders() {
+        return "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 668,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 8,\n" +
+                "    indexSpacing: 1,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 6\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 8, used: 1\n" +
+                "  480,\n" +
+                "  0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 480, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 8, used: 6\n" +
+                "  576,\n" +
+                "  588,\n" +
+                "  616,\n" +
+                "  628,\n" +
+                "  656,\n" +
+                "  668,\n" +
+                "  0, 0\n" +
+                "]\n" +
+                "# position: 576, header: 0\n" +
+                "--- !!data\n" +
+                "hello A0\n" +
+                "# position: 588, header: 1\n" +
+                "--- !!data\n" +
+                "hello B0\n" +
+                "# position: 600, header: 1\n" +
+                "--- !!meta-data #binary\n" +
+                "some meta 0\n" +
+                "# position: 616, header: 2\n" +
+                "--- !!data\n" +
+                "hello A1\n" +
+                "# position: 628, header: 3\n" +
+                "--- !!data\n" +
+                "hello B1\n" +
+                "# position: 640, header: 3\n" +
+                "--- !!meta-data #binary\n" +
+                "some meta 1\n" +
+                "# position: 656, header: 4\n" +
+                "--- !!data\n" +
+                "hello A2\n" +
+                "# position: 668, header: 5\n" +
+                "--- !!data\n" +
+                "hello B2\n" +
+                "# position: 680, header: 5\n" +
+                "--- !!meta-data #binary\n" +
+                "some meta 2\n" +
+                "...\n" +
+                "# 326980 bytes remaining\n";
     }
 
     @Test
     @Ignore("Long running")
     public void testCountExceptsBetweenCycles() throws Exception {
 
-        final SingleChronicleQueueBuilder builder =
-                binary(getTmpDir())
-                        .testBlockSize()
-                        .rollCycle(RollCycles.TEST_SECONDLY);
+        final SingleChronicleQueueBuilder builder = binary(getTmpDir())
+                .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.createAppender();
 
@@ -2156,28 +2106,22 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
 
         Thread.sleep(1100);
 
         // write second message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
@@ -2191,29 +2135,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle)
-                             .build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle)
+                .build()) {
             queue.acquireAppender().writeText("first message");
         }
 
         Thread.sleep(2100);
 
         // write second message
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
@@ -2230,7 +2168,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write first message
         try (ChronicleQueue queue =
                      binary(dir)
-                             .testBlockSize()
                              .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
@@ -2240,7 +2177,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write second message
         try (ChronicleQueue queue =
                      binary(dir)
-                             .testBlockSize()
                              .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
@@ -2248,7 +2184,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // read both messages
         try (ChronicleQueue queue =
                      binary(dir)
-                             .testBlockSize()
                              .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
@@ -2264,14 +2199,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         long time = System.currentTimeMillis();
 
         try (ChronicleQueue q1 = binary(dir)
-                .testBlockSize()
-                             .timeProvider(() -> time)
-                             .build()) {
+                .timeProvider(() -> time)
+                .build()) {
 
             try (SingleChronicleQueue q2 = binary(dir)
-                    .testBlockSize()
-                                 .timeProvider(() -> time)
-                                 .build()) {
+                    .timeProvider(() -> time)
+                    .build()) {
 
                 final ExcerptAppender appender2 = q2.acquireAppender();
 
@@ -2309,7 +2242,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         // write first message
         try (ChronicleQueue queue =
                      binary(dir)
-                             .testBlockSize()
                              .rollCycle(rollCycle).build()) {
 
             ExcerptAppender excerptAppender = queue.acquireAppender();
@@ -2319,17 +2251,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             Future f1 = executorService.submit(() -> {
 
-                try (ChronicleQueue queue2 =
-                             binary(dir)
-                                     .testBlockSize()
-                                     .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
                 Jvm.pause(1100);
-                try (ChronicleQueue queue2 =
-                             binary(dir)
-                                     .testBlockSize()
-                                     .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
 
@@ -2338,10 +2266,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Future f2 = executorService.submit(() -> {
 
                 // write second message
-                try (ChronicleQueue queue2 =
-                             binary(dir)
-                                     .testBlockSize()
-                                     .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 = binary(dir)
+                        .rollCycle(rollCycle).build()) {
 
                     for (int i = 0; i < 5; i++) {
                         queue2.acquireAppender().writeText("someText more");
@@ -2364,18 +2290,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         final File dir = Utils.tempDir(testName.getMethodName());
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
-        try (ChronicleQueue queuet =
-                     binary(dir)
-                             .testBlockSize()
-                             .rollCycle(rollCycle)
-                             .build()) {
+        try (ChronicleQueue queuet = binary(dir)
+                .rollCycle(rollCycle)
+                .build()) {
 
             final ExcerptTailer tailer = queuet.createTailer();
 
             // write first message
             try (ChronicleQueue queue =
                          binary(dir)
-                                 .testBlockSize()
                                  .rollCycle(rollCycle)
                                  .build()) {
 
@@ -2399,9 +2322,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testCountExceptsWithRubbishData() throws Exception {
 
         try (final RollingChronicleQueue queue = binary(getTmpDir())
-                             .testBlockSize()
-                             .rollCycle(RollCycles.TEST_SECONDLY)
-                             .build()) {
+                .rollCycle(RollCycles.TEST_SECONDLY)
+                .build()) {
 
             // rubbish data
             queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
@@ -2417,7 +2339,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final RollingChronicleQueue q =
                     binary(source)
-                            .testBlockSize()
                             .build();
 
             ExcerptAppender excerptAppender = q.acquireAppender();
@@ -2429,14 +2350,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         {
             final RollingChronicleQueue s =
                     binary(source)
-                            .testBlockSize()
                             .build();
 
             ExcerptTailer sourceTailer = s.createTailer();
 
             final RollingChronicleQueue t =
                     binary(target)
-                            .testBlockSize()
                             .build();
 
             ExcerptAppender appender = t.acquireAppender();
@@ -2467,7 +2386,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Exception {
 
         final RollingChronicleQueue queue = binary(getTmpDir())
-                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY).build();
 
         int value = 0;
@@ -2540,7 +2458,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         {
             try (RollingChronicleQueue queue =
                          binary(getTmpDir())
-                                 .testBlockSize()
                                  .rollCycle(RollCycles.TEST_SECONDLY)
                                  .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
@@ -2572,7 +2489,6 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         {
             try (RollingChronicleQueue queue =
                          binary(getTmpDir())
-                                 .testBlockSize()
                                  .rollCycle(RollCycles.TEST_SECONDLY)
                                  .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
@@ -2611,7 +2527,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Assert.assertTrue(mappedFile2.file().delete());
 
         }
+    }
 
+    protected SingleChronicleQueueBuilder builder(File file, WireType wireType) {
+        return SingleChronicleQueueBuilder.builder(file, wireType).testBlockSize();
+    }
+
+    protected SingleChronicleQueueBuilder binary(File file) {
+        return SingleChronicleQueueBuilder.binary(file).testBlockSize();
     }
 
     private MappedFile toMappedFile(DocumentContext documentContext) {
