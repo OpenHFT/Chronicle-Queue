@@ -1,6 +1,5 @@
 package net.openhft.chronicle.queue.impl.single;
 
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -8,54 +7,30 @@ import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
 public class RollCycleTest {
-
-    Path path;
-
-    @Before
-    public void setUp() throws Exception {
-        path = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        Files.walk(path)
-                .collect(Collectors.toCollection(LinkedList::new))
-                .descendingIterator()
-                .forEachRemaining(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (Exception e) {
-                    }
-                });
-    }
-
     @Test
     public void newRollCycleIgnored() throws Exception {
+        File path = Utils.tempDir("newRollCycleIgnored");
         TestTimeProvider timeProvider = new TestTimeProvider();
-        ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path);
+        ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(RollCycles.DAILY).timeProvider(timeProvider).wireType(WireType.FIELDLESS_BINARY).build()) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+                .fieldlessBinary(path)
+                .testBlockSize()
+                .rollCycle(RollCycles.DAILY)
+                .timeProvider(timeProvider)
+                .build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
             Thread thread = new Thread(observer);
@@ -79,11 +54,16 @@ public class RollCycleTest {
 
     @Test
     public void newRollCycleIgnored2() throws Exception {
-        TestTimeProvider timeProvider = new TestTimeProvider();
-        ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path);
+        File path = Utils.tempDir("newRollCycleIgnored2");
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(RollCycles.DAILY).timeProvider(timeProvider).wireType(WireType.FIELDLESS_BINARY).build()) {
+        TestTimeProvider timeProvider = new TestTimeProvider();
+        ParallelQueueObserver observer = new ParallelQueueObserver(timeProvider, path.toPath());
+
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+                .testBlockSize()
+                .rollCycle(RollCycles.DAILY)
+                .timeProvider(timeProvider)
+                .build()) {
             ExcerptAppender appender = queue.acquireAppender();
             // uncomment next line to make the test pass
             appender.writeText("Day 1 data");
@@ -110,8 +90,12 @@ public class RollCycleTest {
     @Test
     public void testWriteToCorruptedFile() throws Exception {
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(RollCycles.TEST_DAILY).build()) {
+        File dir = Utils.tempDir("testWriteToCorruptedFile");
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+                .binary(dir)
+                .testBlockSize()
+                .rollCycle(RollCycles.TEST_DAILY)
+                .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
 
@@ -162,8 +146,12 @@ public class RollCycleTest {
         int documentsRead;
 
         public ParallelQueueObserver(TimeProvider timeProvider, Path path) {
-            queue = SingleChronicleQueueBuilder.binary(path)
-                    .rollCycle(RollCycles.DAILY).timeProvider(timeProvider).storeFileListener(this).wireType(WireType.FIELDLESS_BINARY).build();
+            queue = SingleChronicleQueueBuilder.fieldlessBinary(path.toFile())
+                    .testBlockSize()
+                    .rollCycle(RollCycles.DAILY)
+                    .timeProvider(timeProvider)
+                    .storeFileListener(this)
+                    .build();
 
             documentsRead = 0;
             progressLatch = new CountDownLatch(1);

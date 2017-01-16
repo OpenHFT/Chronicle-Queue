@@ -19,7 +19,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueTestBase;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 
 import java.io.File;
@@ -35,9 +34,9 @@ public class Queue36Test extends ChronicleQueueTestBase {
     @Test
     public void testTail() throws IOException {
         File basePath = getTmpDir();
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(basePath)
-                .wireType(WireType.BINARY)
-            .build();
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+                .testBlockSize()
+                .build();
 
         checkNoFiles(basePath);
         ExcerptTailer tailer = queue.createTailer();
@@ -45,7 +44,8 @@ public class Queue36Test extends ChronicleQueueTestBase {
         tailer.toStart();
         checkNoFiles(basePath);
 
-        assertFalse(tailer.readDocument(d -> {}));
+        assertFalse(tailer.readDocument(d -> {
+        }));
 
         checkNoFiles(basePath);
     }

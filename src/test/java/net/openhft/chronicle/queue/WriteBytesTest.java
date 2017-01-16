@@ -41,7 +41,9 @@ public class WriteBytesTest {
     @Test
     public void testWriteBytes() {
         File dir = Utils.tempDir("WriteBytesTest");
-        try (ChronicleQueue queue = binary(dir).build()) {
+        try (ChronicleQueue queue = binary(dir)
+                .testBlockSize()
+                .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
@@ -75,6 +77,7 @@ public class WriteBytesTest {
     public void testWriteBytesAndDump() {
         File dir = Utils.tempDir("WriteBytesTestAndDump");
         try (ChronicleQueue queue = binary(dir)
+                .testBlockSize()
                 .rollCycle(TEST4_DAILY)
                 .build()) {
 
@@ -1110,7 +1113,7 @@ public class WriteBytesTest {
                     "--- !!data\n" +
                     "\u007F\u007F\u007F\u007F\u007F\u007F\u007F\u007F\n" +
                     "...\n" +
-                    "# 83881760 bytes remaining\n", queue.dump());
+                    "# 323360 bytes remaining\n", queue.dump());
 
         } finally {
             try {

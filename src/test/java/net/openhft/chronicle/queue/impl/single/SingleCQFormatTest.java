@@ -74,7 +74,7 @@ public class SingleCQFormatTest {
     public void testEmptyDirectory() {
         @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
-        @NotNull SingleChronicleQueue queue = binary(dir).build();
+        @NotNull SingleChronicleQueue queue = binary(dir).testBlockSize().build();
         assertEquals(Integer.MAX_VALUE, queue.firstCycle());
         assertEquals(Long.MAX_VALUE, queue.firstIndex());
         assertEquals(Integer.MIN_VALUE, queue.lastCycle());
@@ -137,8 +137,7 @@ public class SingleCQFormatTest {
     @Test(expected = TimeoutException.class)
     @Ignore("Long running")
     public void testDeadHeader() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-        dir.mkdir();
+        @NotNull File dir = Utils.tempDir("testDeadHeader");
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         bytes.writeInt(Wires.NOT_COMPLETE | Wires.META_DATA);
@@ -146,6 +145,7 @@ public class SingleCQFormatTest {
         @Nullable SingleChronicleQueue queue = null;
         try {
             queue = binary(dir)
+                    .testBlockSize()
                     .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
                     .build();
 
@@ -165,8 +165,8 @@ public class SingleCQFormatTest {
 
     @Test
     public void testCompleteHeader() throws FileNotFoundException {
-        @NotNull File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-        dir.mkdir();
+        @NotNull File dir = Utils.tempDir("testCompleteHeader");
+        dir.mkdirs();
 
         @NotNull MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), ChronicleQueue.TEST_BLOCK_SIZE);
         @NotNull Wire wire = new BinaryWire(bytes);

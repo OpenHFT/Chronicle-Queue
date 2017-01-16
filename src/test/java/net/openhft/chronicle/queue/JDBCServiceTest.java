@@ -55,8 +55,14 @@ public class JDBCServiceTest {
             File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(path1).build();
-                 ChronicleQueue out = SingleChronicleQueueBuilder.binary(path2).build()) {
+            try (ChronicleQueue in = SingleChronicleQueueBuilder
+                    .binary(path1)
+                    .testBlockSize()
+                    .build();
+                 ChronicleQueue out = SingleChronicleQueueBuilder
+                         .binary(path2)
+                         .testBlockSize()
+                         .build()) {
 
                 JDBCService service = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""));
 

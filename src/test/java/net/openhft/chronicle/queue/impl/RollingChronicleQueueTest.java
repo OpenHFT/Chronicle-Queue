@@ -25,6 +25,7 @@ public class RollingChronicleQueueTest {
 
         File name = Utils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
         final SingleChronicleQueue q = binary(name)
+                .testBlockSize()
                 .timeProvider(time::get)
                 .rollCycle(TEST2_DAILY)
                 .build();
@@ -92,7 +93,7 @@ public class RollingChronicleQueueTest {
                 "# position: 763, header: 2 EOF\n" +
                 "--- !!not-ready-meta-data! #binary\n" +
                 "...\n" +
-                "# 83885313 bytes remaining\n" +
+                "# 326913 bytes remaining\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -134,7 +135,7 @@ public class RollingChronicleQueueTest {
                 "# position: 734, header: 0 EOF\n" +
                 "--- !!not-ready-meta-data! #binary\n" +
                 "...\n" +
-                "# 83885342 bytes remaining\n" +
+                "# 326942 bytes remaining\n" +
                 "--- !!meta-data #binary\n" +
                 "header: !SCQStore {\n" +
                 "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -177,7 +178,7 @@ public class RollingChronicleQueueTest {
                 "--- !!data\n" +
                 "some more text\n" +
                 "...\n" +
-                "# 83885323 bytes remaining\n", q.dump());
+                "# 326923 bytes remaining\n", q.dump());
 
         assertEquals(5, q.countExcerpts(start, end));
     }

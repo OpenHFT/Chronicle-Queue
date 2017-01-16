@@ -52,8 +52,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     public void test() throws IOException, InterruptedException {
         Histogram histogram = new Histogram();
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(WireType.FIELDLESS_BINARY)
+        ChronicleQueue queue = SingleChronicleQueueBuilder
+                .fieldlessBinary(getTmpDir())
                 .blockSize(128 << 20)
                 .build();
 

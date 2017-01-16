@@ -20,7 +20,6 @@ import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,10 +52,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
         Runnable reader = () -> {
             long count = 0;
-            try (RollingChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
-                    .wireType(WireType.FIELDLESS_BINARY)
+            try (RollingChronicleQueue rqueue = SingleChronicleQueueBuilder
+                    .fieldlessBinary(path)
+                    .testBlockSize()
                     .rollCycle(RollCycles.TEST_SECONDLY)
-                    .blockSize(BLOCK_SIZE)
                     .build()) {
 
                 final ExcerptTailer tailer = rqueue.createTailer();
@@ -99,10 +98,10 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
         // Appender run in a different thread
         ExecutorService executorService1 = Executors.newSingleThreadExecutor();
         executorService1.submit(() -> {
-            ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
-                    .wireType(WireType.FIELDLESS_BINARY)
+            ChronicleQueue wqueue = SingleChronicleQueueBuilder
+                    .fieldlessBinary(path)
+                    .testBlockSize()
                     .rollCycle(TEST_SECONDLY)
-                    .blockSize(BLOCK_SIZE)
                     .build();
 
             final ExcerptAppender appender = wqueue.acquireAppender();

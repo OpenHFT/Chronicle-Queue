@@ -1,7 +1,6 @@
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.StopCharTesters;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
@@ -9,63 +8,42 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.LinkedList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static net.openhft.chronicle.queue.RollCycles.DAILY;
-import static net.openhft.chronicle.wire.WireType.FIELDLESS_BINARY;
 import static org.junit.Assert.assertEquals;
 
 public class RollCycleMultiThreadTest {
 
-    private Path path;
-
-    @Before
-    public void setUp() throws Exception {
-        path = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        Files.walk(path)
-                .collect(Collectors.toCollection(LinkedList::new))
-                .descendingIterator()
-                .forEachRemaining(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (Exception e) {
-                    }
-                });
-    }
-
     @Test
     public void testRead1() throws Exception {
+        File path = Utils.tempDir(getClass().getSimpleName());
         TestTimeProvider timeProvider = new TestTimeProvider();
 
-        ChronicleQueue queue0 = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build();
+        ChronicleQueue queue0 = SingleChronicleQueueBuilder
+                .fieldlessBinary(path)
+                .testBlockSize()
+                .rollCycle(DAILY)
+                .timeProvider(timeProvider).build();
 
         ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
 
         final ExecutorService scheduledExecutorService = Executors
                 .newSingleThreadScheduledExecutor();
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
-                .rollCycle(DAILY).timeProvider(timeProvider).wireType(FIELDLESS_BINARY).build()) {
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+                .fieldlessBinary(path)
+                .testBlockSize()
+                .rollCycle(DAILY)
+                .timeProvider(timeProvider)
+                .build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
             Assert.assertEquals(0, (int) scheduledExecutorService.submit(observer::call).get());
@@ -84,13 +62,14 @@ public class RollCycleMultiThreadTest {
 
     @Test
     public void testRead2() throws Exception {
+        File path = Utils.tempDir("testRead2");
         TestTimeProvider timeProvider = new TestTimeProvider();
 
         ChronicleQueue queue0 = SingleChronicleQueueBuilder
-                .binary(path)
+                .fieldlessBinary(path)
+                .testBlockSize()
                 .rollCycle(DAILY)
                 .timeProvider(timeProvider)
-                .wireType(FIELDLESS_BINARY)
                 .build();
 
         final ParallelQueueObserver observer = new ParallelQueueObserver(queue0);
@@ -98,10 +77,11 @@ public class RollCycleMultiThreadTest {
         final ExecutorService scheduledExecutorService = Executors
                 .newSingleThreadScheduledExecutor();
 
-        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+        try (SingleChronicleQueue queue = SingleChronicleQueueBuilder
+                .fieldlessBinary(path)
+                .testBlockSize()
                 .rollCycle(DAILY)
                 .timeProvider(timeProvider)
-                .wireType(FIELDLESS_BINARY)
                 .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();

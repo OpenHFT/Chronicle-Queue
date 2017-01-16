@@ -55,6 +55,7 @@ public class MultiThreadedRollTest {
         final File path = Utils.tempDir("MultiThreadedRollTest");
 
         final RollingChronicleQueue wqueue = binary(path)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
                 .build();
@@ -62,6 +63,7 @@ public class MultiThreadedRollTest {
         wqueue.acquireAppender().writeText("hello world");
 
         final RollingChronicleQueue rqueue = binary(path)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
                 .build();

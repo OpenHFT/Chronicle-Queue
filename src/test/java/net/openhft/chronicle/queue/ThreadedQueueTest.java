@@ -37,9 +37,7 @@ import static org.junit.Assert.*;
  */
 public class ThreadedQueueTest {
 
-    public static final int MESSAGE_SIZE = 1024;
     public static final int REQUIRED_COUNT = 10;
-    private static final int BLOCK_SIZE = 256 << 20;
     private ThreadDump threadDump;
 
     @Before
@@ -63,7 +61,7 @@ public class ThreadedQueueTest {
         Future tf = tailerES.submit(() -> {
             try {
                 final ChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(path)
-                        .blockSize(BLOCK_SIZE)
+                        .testBlockSize()
                         .build();
 
                 final ExcerptTailer tailer = rqueue.createTailer();
@@ -83,7 +81,7 @@ public class ThreadedQueueTest {
         Future af = appenderES.submit(() -> {
             try {
                 final ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
-                        .blockSize(BLOCK_SIZE)
+                        .testBlockSize()
                         .build();
 
                 final ExcerptAppender appender = wqueue.acquireAppender();

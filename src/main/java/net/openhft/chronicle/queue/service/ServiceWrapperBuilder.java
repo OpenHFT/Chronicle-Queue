@@ -140,11 +140,11 @@ public class ServiceWrapperBuilder<O> implements Supplier<ServiceWrapper> {
     }
 
     public SingleChronicleQueue inputQueue() {
-        return SingleChronicleQueueBuilder.binary(inputPaths.get(0)).sourceId(inputSourceId()).build();
+        return SingleChronicleQueueBuilder.binary(inputPaths.get(0)).testBlockSize().sourceId(inputSourceId()).build();
     }
 
     public SingleChronicleQueue outputQueue() {
-        return SingleChronicleQueueBuilder.binary(outputPath).sourceId(outputSourceId()).build();
+        return SingleChronicleQueueBuilder.binary(outputPath).testBlockSize().sourceId(outputSourceId()).build();
     }
 
     public MethodReader outputReader(Object... impls) {

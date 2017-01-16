@@ -77,7 +77,8 @@ public class WriteReadTextTest {
 
         String myPath = OS.TARGET + "/writeReadText-" + System.nanoTime();
 
-        try (SingleChronicleQueue theQueue = ChronicleQueueBuilder.single(myPath)
+        try (SingleChronicleQueue theQueue = ChronicleQueueBuilder
+                .single(myPath)
                 // .testBlockSize() not suitable as large message sizes.
                 .build()) {
 

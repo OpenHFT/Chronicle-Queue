@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -59,8 +60,9 @@ public class Queue28Test extends ChronicleQueueTestBase {
 
     @Test
     public void test() throws IOException, InterruptedException {
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(this.wireType)
+        File dir = getTmpDir();
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.builder(dir, wireType)
+                .testBlockSize()
                 .build();
 
         final ExcerptTailer tailer = queue.createTailer();

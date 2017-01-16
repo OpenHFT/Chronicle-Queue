@@ -57,8 +57,14 @@ public class MessageReaderWriterTest {
         File path1 = Utils.tempDir("testWriteWhileReading1");
         File path2 = Utils.tempDir("testWriteWhileReading2");
 
-        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path1).build();
-             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(path2).build()) {
+        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder
+                .binary(path1)
+                .testBlockSize()
+                .build();
+             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder
+                     .binary(path2)
+                     .testBlockSize()
+                     .build()) {
             MethodReader reader2 = queue1.createTailer().methodReader(ObjectUtils.printAll(MessageListener.class));
             MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);

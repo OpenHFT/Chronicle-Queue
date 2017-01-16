@@ -42,7 +42,7 @@ public class RollingCycleTest {
 
         String basePath = OS.TARGET + "/testRollCycle" + System.nanoTime();
         try (final ChronicleQueue queue = ChronicleQueueBuilder.single(basePath)
-//                .testBlockSize() changes size remaining
+                .testBlockSize()
                 .timeoutMS(5)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .timeProvider(stp)
@@ -113,7 +113,7 @@ public class RollingCycleTest {
                     "# position: 710, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885366 bytes remaining\n" +
+                    "# 326966 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -170,7 +170,7 @@ public class RollingCycleTest {
                     "# position: 708, header: 2 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 83885368 bytes remaining\n" +
+                    "# 326968 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
@@ -225,7 +225,7 @@ public class RollingCycleTest {
                     "000002b0 75 34 EB 57 76 F4 61 C5  94 9F 47 64 29 46 FC F6 u4·Wv·a· ··Gd)F··\n" +
                     "000002c0 48 2F AF 17 B1 30                                H/···0           \n" +
                     "...\n" +
-                    "# 83885366 bytes remaining\n", queue.dump());
+                    "# 326966 bytes remaining\n", queue.dump());
 
             System.out.println("Wrote: " + numWritten + " messages");
 

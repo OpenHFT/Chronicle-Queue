@@ -74,6 +74,7 @@ public class ToEndTest {
         timeProvider.currentTimeMillis(now);
 
         final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(timeProvider)
                 .build();
@@ -147,6 +148,7 @@ public class ToEndTest {
         time.currentTimeMillis(now);
 
         RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(path)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(time)
                 .build();
@@ -178,6 +180,7 @@ public class ToEndTest {
 
         List<Integer> results = new ArrayList<>();
         RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+                .testBlockSize()
                 .indexCount(8)
                 .indexSpacing(1)
                 .build();
@@ -221,7 +224,9 @@ public class ToEndTest {
         File baseDir = Utils.tempDir("toEndBeforeWriteTest");
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
-        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir).build();
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
+                .testBlockSize()
+                .build();
         checkOneFile(baseDir);
 
         // if this appender isn't created, the tailer toEnd doesn't cause a roll.
@@ -257,6 +262,7 @@ public class ToEndTest {
 
         RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
                 .binary(file)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build();
@@ -273,6 +279,7 @@ public class ToEndTest {
 
         ChronicleQueue rqueue = SingleChronicleQueueBuilder
                 .binary(file)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build();

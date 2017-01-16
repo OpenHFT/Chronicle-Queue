@@ -24,7 +24,10 @@ public class ChronicleQueueMethodsWithoutParameters extends ChronicleQueueTestBa
     public void test() throws IOException, InterruptedException {
         File file = getTmpDir();
 
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(file).rollCycle(TEST_DAILY).build()) {
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder
+                .binary(file)
+                .testBlockSize()
+                .rollCycle(TEST_DAILY).build()) {
 
             SomeListener someListener = queue.acquireAppender().methodWriter(SomeListener.class);
 

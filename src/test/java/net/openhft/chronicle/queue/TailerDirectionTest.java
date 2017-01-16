@@ -92,7 +92,8 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
     public void testTailerForwardBackwardRead() throws Exception {
         String basePath = OS.TARGET + "/tailerForwardBackward-" + System.nanoTime();
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(basePath)
+        ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+                .testBlockSize()
                 .rollCycle(RollCycles.HOURLY)
                 .build();
         ExcerptAppender appender = queue.acquireAppender();
@@ -144,6 +145,7 @@ public class TailerDirectionTest extends ChronicleQueueTestBase {
         File basePath = Utils.tempDir("tailerForwardBackwardBeyondCycle");
         SetTimeProvider timeProvider = new SetTimeProvider();
         ChronicleQueue queue = SingleChronicleQueueBuilder.binary(basePath)
+                .testBlockSize()
                 .timeProvider(timeProvider)
                 .build();
         ExcerptAppender appender = queue.acquireAppender();

@@ -41,7 +41,7 @@ public class ReadWriteTest {
     @Before
     public void setup() {
         chroniclePath = new File(OS.TARGET, "read_only");
-        try (SingleChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(false).build()) {
+        try (SingleChronicleQueue readWrite = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(false).testBlockSize().build()) {
             final ExcerptAppender appender = readWrite.acquireAppender();
             appender.writeText(STR1);
             try (DocumentContext dc = appender.writingDocument()) {
@@ -57,7 +57,11 @@ public class ReadWriteTest {
 
     @Test
     public void testReadFromReadOnlyChronicle() {
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(true).build()) {
+        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(true)
+                .build()) {
             // check dump
             assertTrue(out.dump().length() > 1);
             // and tailer
@@ -73,14 +77,22 @@ public class ReadWriteTest {
 
     @Test(expected = IllegalStateException.class)
     public void testWriteToReadOnlyChronicle() {
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(true).build()) {
+        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(true)
+                .build()) {
             out.acquireAppender();
         }
     }
     @Test
     public void testToEndOnReadOnly() {
 
-        try (SingleChronicleQueue out = SingleChronicleQueueBuilder.binary(chroniclePath).readOnly(true).build()) {
+        try (SingleChronicleQueue out = SingleChronicleQueueBuilder
+                .binary(chroniclePath)
+                .testBlockSize()
+                .readOnly(true)
+                .build()) {
             ExcerptTailer tailer = out.createTailer();
             tailer.toEnd();
             long index = tailer.index();

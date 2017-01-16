@@ -46,6 +46,7 @@ public class NotCompleteTest {
 
         File tmpDir = Utils.tempDir("testUsingANotCompleteQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
@@ -63,6 +64,7 @@ public class NotCompleteTest {
         BinaryLongReference.forceAllToNotCompleteState();
     }
         try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
                 .timeoutMS(500)
                 .build()) {
 //            System.out.println(queue.dump());
@@ -83,6 +85,7 @@ public class NotCompleteTest {
 
         File tmpDir = Utils.tempDir("testUsingANotCompleteArrayQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
@@ -100,6 +103,7 @@ public class NotCompleteTest {
         BinaryLongArrayReference.forceAllToNotCompleteState();
     }
         try (final ChronicleQueue queue = binary(tmpDir)
+                .testBlockSize()
                 .timeoutMS(500)
                 .build()) {
 //            System.out.println(queue.dump());
@@ -117,7 +121,7 @@ public class NotCompleteTest {
             throws TimeoutException, ExecutionException, InterruptedException {
 
         File tmpDir = Utils.tempDir("testMessageLeftNotComplete");
-        try (final ChronicleQueue queue = binary(tmpDir).rollCycle(RollCycles.TEST_DAILY).build()) {
+        try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
             ExcerptAppender appender = queue.acquireAppender();
 
             // start a message which was not completed.
@@ -126,7 +130,7 @@ public class NotCompleteTest {
             // didn't call dc.close();
         }
 
-        try (final ChronicleQueue queue = binary(tmpDir).build()) {
+        try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().build()) {
             ExcerptTailer tailer = queue.createTailer();
 
             try (DocumentContext dc = tailer.readingDocument()) {
@@ -170,7 +174,7 @@ public class NotCompleteTest {
                     "# position: 576, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 83885500 bytes remaining\n", queue.dump());
+                    "# 654780 bytes remaining\n", queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {

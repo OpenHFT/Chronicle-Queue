@@ -44,7 +44,7 @@ public class EventLoopServiceWrapper<O> implements ServiceWrapper, EventHandler 
 
     public EventLoopServiceWrapper(ServiceWrapperBuilder<O> builder) {
         this.priority = builder.priority();
-        outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath()).sourceId(builder.outputSourceId()).build();
+        outputQueue = SingleChronicleQueueBuilder.binary(builder.outputPath()).testBlockSize().sourceId(builder.outputSourceId()).build();
         serviceOut = outputQueue.acquireAppender().methodWriterBuilder(builder.outClass()).recordHistory(builder.outputSourceId() != 0).get();
         serviceImpl = builder.getServiceFunctions().stream().map(f -> f.apply(serviceOut)).toArray();
 
