@@ -29,7 +29,6 @@ import java.io.File;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -45,7 +44,7 @@ public class NotCompleteTest {
 
         BinaryLongReference.startCollecting();
 
-        File tmpDir = getTmpDir();
+        File tmpDir = Utils.tempDir("testUsingANotCompleteQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
@@ -82,7 +81,7 @@ public class NotCompleteTest {
 
         BinaryLongArrayReference.startCollecting();
 
-        File tmpDir = getTmpDir();
+        File tmpDir = Utils.tempDir("testUsingANotCompleteArrayQueue");
         try (final ChronicleQueue queue = binary(tmpDir)
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
@@ -117,7 +116,7 @@ public class NotCompleteTest {
     public void testMessageLeftNotComplete()
             throws TimeoutException, ExecutionException, InterruptedException {
 
-        File tmpDir = getTmpDir();
+        File tmpDir = Utils.tempDir("testMessageLeftNotComplete");
         try (final ChronicleQueue queue = binary(tmpDir).rollCycle(RollCycles.TEST_DAILY).build()) {
             ExcerptAppender appender = queue.acquireAppender();
 

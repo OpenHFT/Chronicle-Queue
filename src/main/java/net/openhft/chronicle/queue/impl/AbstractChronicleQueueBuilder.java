@@ -37,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.Cipher;
 import java.io.File;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -74,7 +75,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     private int sourceId = 0;
     private StoreRecoveryFactory recoverySupplier = TimedStoreRecovery.FACTORY;
     private StoreFileListener storeFileListener = (cycle, file) ->
-        Jvm.debug().on(getClass(), "File released " + file);
+            Jvm.debug().on(getClass(), "File released " + file);
 
     private boolean readOnly = false;
 
@@ -347,6 +348,14 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     public B readOnly(boolean readOnly) {
         this.readOnly = readOnly;
         return (B) this;
+    }
+
+    public AbstractChronicleQueueBuilder encryptSupplier(Supplier<Cipher> encryptSupplier) {
+        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
+    }
+
+    public AbstractChronicleQueueBuilder decryptSupplier(Supplier<Cipher> decryptSupplier) {
+        throw new UnsupportedOperationException("Encryption supported in Chronicle Queue Enterprise");
     }
 
     enum NoBytesRingBufferStats implements Consumer<BytesRingBufferStats> {

@@ -15,11 +15,8 @@
  */
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.WireKey;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.Rule;
 import org.junit.rules.*;
 import org.junit.runner.Description;
@@ -27,8 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class ChronicleQueueTestBase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ChronicleQueueTestBase.class);
@@ -64,82 +59,11 @@ public class ChronicleQueueTestBase {
     //
     // *************************************************************************
 
-    public static File getTmpDir() {
-        final File tmpDir = new File(OS.TARGET, "chronicle-" + System.nanoTime());
-
-        DeleteStatic.INSTANCE.add(tmpDir);
-
-        // Log the temporary directory in OSX as it is quite obscure
-        if (OS.isMacOSX()) {
-            LOGGER.info("Tmp dir: {}", tmpDir);
-        }
-
-        return tmpDir;
+    protected File getTmpDir() {
+        return Utils.tempDir(testName.getMethodName());
     }
-
-    public static RollingChronicleQueue createQueue(WireType type) {
-        return new SingleChronicleQueueBuilder(getTmpDir()).wireType(type).build();
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private static void deleteDir(File dir) {
-        if (dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDir(file);
-                    } else if (!file.delete()) {
-                        LOGGER.info("... unable to delete {}", file);
-                    }
-                }
-            }
-        }
-
-        dir.delete();
-    }
-
-    protected void warmup(WireType type, int iterations) {
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(type)
-                .blockSize(640_000)
-                .build();
-
-        ExcerptAppender appender = queue.acquireAppender();
-        ExcerptTailer tailer = queue.createTailer();
-
-        for (int i = 0; i < iterations; i++) {
-            appender.writeDocument(w -> w.write(TestKey.test).text("warmup"));
-        }
-
-        for (int i = 0; i < iterations; i++) {
-            tailer.readDocument(r -> r.read(TestKey.test).text());
-        }
-    }
-
-    // *************************************************************************
-    //
-    // *************************************************************************
 
     public enum TestKey implements WireKey {
         test, test2
-    }
-
-    enum DeleteStatic {
-        INSTANCE;
-        final Set<File> toDeleteList = new LinkedHashSet<>();
-
-        {
-            Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> toDeleteList.forEach(ChronicleQueueTestBase::deleteDir)
-            ));
-        }
-
-        synchronized void add(File path) {
-            toDeleteList.add(path);
-        }
     }
 }

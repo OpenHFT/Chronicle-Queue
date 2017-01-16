@@ -2,12 +2,13 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 import static net.openhft.chronicle.queue.RollCycles.TEST2_DAILY;
 import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
@@ -22,7 +23,8 @@ public class RollingChronicleQueueTest {
 
         final AtomicLong time = new AtomicLong();
 
-        final SingleChronicleQueue q = binary(getTmpDir())
+        File name = Utils.tempDir("testCountExcerptsWhenTheCycleIsRolled");
+        final SingleChronicleQueue q = binary(name)
                 .timeProvider(time::get)
                 .rollCycle(TEST2_DAILY)
                 .build();

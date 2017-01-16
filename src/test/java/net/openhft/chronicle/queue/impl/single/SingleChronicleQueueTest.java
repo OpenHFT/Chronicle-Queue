@@ -39,8 +39,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +47,8 @@ import java.util.stream.IntStream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static net.openhft.chronicle.queue.RollCycles.*;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.builder;
 import static net.openhft.chronicle.wire.MarshallableOut.Padding.ALWAYS;
 import static org.junit.Assert.*;
 
@@ -76,10 +76,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                //                {WireType.TEXT},
-                {WireType.BINARY},
+//                {WireType.TEXT},
+//                {WireType.BINARY},
+                {WireType.BINARY_LIGHT},
 //                {WireType.DELTA_BINARY}
-                //{ WireType.FIELDLESS_BINARY }
+//                {WireType.FIELDLESS_BINARY}
         });
     }
 
@@ -100,9 +101,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppend() {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .build()) {
+        try (final RollingChronicleQueue queue =
+                     binary(Utils.tempDir("testAppend"))
+                             .wireType(this.wireType)
+                             .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
             for (int i = 0; i < 10; i++) {
@@ -115,7 +117,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testWriteWithDocumentReadBytesDifferentThreads() throws InterruptedException {
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testWriteWithDocumentReadBytesDifferentThreads");
+        try (final ChronicleQueue queue = binary(name)
                 .wireType(this.wireType).build()) {
 
             final String expected = "some long message";
@@ -156,7 +159,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingLessBytesThanWritten() {
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -188,7 +191,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndRead() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testAppendAndRead");
+        try (final RollingChronicleQueue queue = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -221,9 +225,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadAndAppend() {
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
-                .build()) {
+        File name = Utils.tempDir("testReadAndAppend");
+        try (final ChronicleQueue queue =
+                     binary(name)
+                             .wireType(this.wireType)
+                             .build()) {
 
             int[] results = new int[2];
 
@@ -330,8 +336,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     void doTestCheckIndex(BiConsumer<ExcerptAppender, Integer> writeTo) {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir(getClass().getSimpleName());
+        try (final ChronicleQueue queue = binary(tmpDir)
                 .wireType(this.wireType)
                 .timeProvider(stp)
                 .build()) {
@@ -360,13 +366,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(System.currentTimeMillis() - 3 * 86400_000L);
 
-        File tmpDir = getTmpDir();
-        try (final ChronicleQueue queue = SingleChronicleQueueBuilder.binary(tmpDir)
-                .wireType(this.wireType)
-                .blockSize(ChronicleQueue.TEST_BLOCK_SIZE)
-                .rollCycle(TEST_DAILY)
-                .timeProvider(stp)
-                .build()) {
+        File tmpDir = Utils.tempDir("testAppendAndReadWithRollingB");
+        try (final ChronicleQueue queue =
+                     builder(tmpDir, this.wireType)
+                             .testBlockSize()
+                             .rollCycle(TEST_DAILY)
+                             .timeProvider(stp)
+                             .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
             appender.writeDocument(w -> w.write(TestKey.test).int32(0));
@@ -387,8 +393,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
              */
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -397,7 +403,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -406,35 +412,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 0\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1000\n" +
-                    "# position: 591, header: 1 EOF\n" +
+                    "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -443,7 +449,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -452,35 +458,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 1\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1001\n" +
-                    "# position: 591, header: 1 EOF\n" +
+                    "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -489,7 +495,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -498,35 +504,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 2\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1002\n" +
-                    "# position: 591, header: 1 EOF\n" +
+                    "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -535,7 +541,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -544,35 +550,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 3\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1003\n" +
-                    "# position: 591, header: 1 EOF\n" +
+                    "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -581,7 +587,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -590,35 +596,35 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 4\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1004\n" +
-                    "# position: 591, header: 1 EOF\n" +
+                    "# position: 599, header: 1 EOF\n" +
                     "--- !!not-ready-meta-data! #binary\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n" +
+                    "# 327077 bytes remaining\n" +
                     "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 578,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 586,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -627,7 +633,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 2\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -636,29 +642,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 2\n" +
-                    "  568,\n" +
-                    "  578,\n" +
+                    "  576,\n" +
+                    "  586,\n" +
                     "  0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data #binary\n" +
                     "test: 5\n" +
-                    "# position: 578, header: 1\n" +
+                    "# position: 586, header: 1\n" +
                     "--- !!data #binary\n" +
                     "test2: !short 1005\n" +
                     "...\n" +
-                    "# 327085 bytes remaining\n", queue.dump());
+                    "# 327077 bytes remaining\n", queue.dump());
 
             final ExcerptTailer tailer = queue.createTailer().toStart();
             for (int i = 0; i < 6; i++) {
@@ -678,7 +684,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendAndReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final RollingChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -705,7 +711,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSimpleWire() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue chronicle = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -726,7 +732,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIndexWritingDocument() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testIndexWritingDocument");
+        try (final ChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -750,7 +757,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingMarshallableDocument() {
 
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue chronicle = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -773,7 +780,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMetaData() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File chronicle1 = Utils.tempDir("testMetaData");
+        try (final ChronicleQueue chronicle = binary(chronicle1)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -829,7 +837,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingSecondDocumentNotExist() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue chronicle = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -855,7 +863,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testDocumentIndexTest() {
-        try (final SingleChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testDocumentIndexTest");
+        try (final SingleChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -899,7 +908,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingSecondDocumentNotExistIncludingMeta() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue chronicle = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -932,7 +941,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSimpleByteTest() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final ChronicleQueue chronicle = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
 
@@ -950,7 +959,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testReadAtIndex");
+        try (final RollingChronicleQueue queue = binary(name)
                 .wireType(this.wireType)
                 .indexCount(8)
                 .indexSpacing(8)
@@ -986,7 +996,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Ignore("long running test")
     @Test
     public void testReadAtIndex4MB() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final RollingChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
@@ -1025,7 +1035,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastWrittenIndexPerAppender() {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testLastWrittenIndexPerAppender");
+        try (final RollingChronicleQueue queue = binary(name)
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = queue.acquireAppender();
@@ -1037,7 +1048,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test(expected = IllegalStateException.class)
     public void testLastWrittenIndexPerAppenderNoData() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testLastWrittenIndexPerAppenderNoData");
+        try (final ChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .build()) {
             final ExcerptAppender appender = chronicle.acquireAppender();
@@ -1046,9 +1058,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         }
     }
 
-    @Test(expected = java.lang.IllegalStateException.class) //: no messages written
+    @Test(expected = IllegalStateException.class) //: no messages written
     public void testNoMessagesWritten() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testNoMessagesWritten");
+        try (final ChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1059,7 +1072,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testHeaderIndexReadAtIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testHeaderIndexReadAtIndex");
+        try (final RollingChronicleQueue queue = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1088,7 +1102,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
      */
     @Test
     public void testEPOC() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("SingleChronicleQueueTest");
+        try (final ChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .testBlockSize()
                 .epoch(System.currentTimeMillis())
@@ -1104,7 +1119,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testNegativeEPOC() {
         for (int h = -14; h <= 14; h++) {
-            try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+            File name = Utils.tempDir(testName.getMethodName());
+            try (final ChronicleQueue chronicle = binary(name)
                     .wireType(wireType)
                     .testBlockSize()
                     .epoch(TimeUnit.HOURS.toMillis(h))
@@ -1123,7 +1139,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testIndex() throws TimeoutException {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testIndex");
+        try (final RollingChronicleQueue queue = binary(name)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1158,7 +1175,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingDocument() {
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final RollingChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1226,7 +1243,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentWithFirstAMove() throws TimeoutException {
 
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final RollingChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1282,7 +1299,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingDocumentWithFirstAMoveWithEpoch() throws TimeoutException {
 
-        try (final RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(getTmpDir())
+        try (final RollingChronicleQueue queue = binary(Utils.tempDir("SingleChronicleQueueTest"))
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .epoch(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
@@ -1337,8 +1354,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testToEnd() {
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1347,7 +1364,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             // move to the end even though it doesn't exist yet.
             tailer.toEnd();
 
-            try (ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+            try (ChronicleQueue chronicle2 = binary(tmpDir)
                     .wireType(this.wireType)
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
@@ -1362,14 +1379,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testAppendedBeforeToEnd() throws Exception {
-        File tmpDir = getTmpDir();
-        ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("testAppendedBeforeToEnd");
+        ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build();
         ExcerptTailer tailer = chronicle.createTailer();
 
-        ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+        ChronicleQueue chronicle2 = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .build();
@@ -1389,11 +1406,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEnd2() {
 
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .build();
-             ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+             ChronicleQueue chronicle2 = binary(tmpDir)
                      .wireType(this.wireType)
                      .build()) {
 
@@ -1415,19 +1432,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     //    @Ignore("Not sure it is useful")
     public void testReadWrite() {
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .blockSize(2 << 20)
                 .build();
-             ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+             ChronicleQueue chronicle2 = binary(tmpDir)
                      .wireType(this.wireType)
                      .rollCycle(RollCycles.HOURLY)
                      .blockSize(2 << 20)
                      .build()) {
             ExcerptAppender append = chronicle2.acquireAppender();
-            for (int i = 0; i < 50000; i++)
+            for (int i = 0; i < 50_000; i++)
                 append.writeDocument(w -> w.write(() -> "test - message").text("text"));
 
             ExcerptTailer tailer = chronicle.createTailer();
@@ -1450,8 +1467,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadingDocumentForEmptyQueue() {
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(RollCycles.HOURLY)
                 .build()) {
@@ -1461,7 +1478,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertFalse(dc.isPresent());
             }
 
-            try (ChronicleQueue chronicle2 = SingleChronicleQueueBuilder.binary(tmpDir)
+            try (ChronicleQueue chronicle2 = binary(tmpDir)
                     .wireType(this.wireType)
                     .rollCycle(RollCycles.HOURLY)
                     .build()) {
@@ -1479,7 +1496,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMetaData6() {
-        try (final ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testMetaData6");
+        try (final ChronicleQueue chronicle = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1537,15 +1555,15 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalArgumentException.class)
     public void dontPassQueueToReader() {
         String dirname = OS.TARGET + "/dontPassQueueToReader-" + System.nanoTime();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dirname).build()) {
+        try (ChronicleQueue queue = binary(dirname).build()) {
             queue.createTailer().afterLastWritten(queue).methodReader();
         }
     }
 
     @Test
     public void testToEndBeforeWrite() {
-        File tmpDir = getTmpDir();
-        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (RollingChronicleQueue chronicle = binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1566,8 +1584,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testSomeMessages() {
-        File tmpDir = getTmpDir();
-        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (RollingChronicleQueue chronicle = binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1582,7 +1600,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 appender.writeDocument(w -> w.writeEventName("hello").int64(finalI));
                 long seq = chronicle.rollCycle().toSequenceNumber(appender.lastIndexAppended());
                 assertEquals(i, seq);
-                System.out.println(chronicle.dump());
+                //      System.out.println(chronicle.dump());
                 tailer.readDocument(w -> w.read().int64(finalI, (a, b) -> Assert.assertEquals((long) a, b)));
             }
         }
@@ -1590,8 +1608,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testForwardFollowedBackBackwardTailer() {
-        File tmpDir = getTmpDir();
-        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("testForwardFollowedBackBackwardTailer");
+        try (RollingChronicleQueue chronicle = binary(tmpDir)
                 .rollCycle(TEST2_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1658,7 +1676,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testOverreadForwardFromFutureCycleThenReadBackwardTailer() {
-        File tmpDir = getTmpDir();
+        File tmpDir = Utils.tempDir("testOverreadForwardFromFutureCycleThenReadBackwardTailer");
         RollCycle cycle = TEST2_DAILY;
         // when "forwardToFuture" flag is set, go one cycle to the future
         AtomicBoolean forwardToFuture = new AtomicBoolean(false);
@@ -1666,7 +1684,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 ? System.currentTimeMillis() + TimeUnit.MILLISECONDS.toDays(1)
                 : System.currentTimeMillis();
 
-        try (RollingChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (RollingChronicleQueue chronicle = binary(tmpDir)
                 .rollCycle(cycle)
                 .wireType(this.wireType)
                 .timeProvider(timeProvider)
@@ -1701,8 +1719,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testLastIndexAppended() {
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("testLastIndexAppended");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1718,8 +1736,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testZeroLengthMessage() {
-        File tmpDir = getTmpDir();
-        try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(tmpDir)
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
+        try (ChronicleQueue chronicle = binary(tmpDir)
                 .rollCycle(TEST_DAILY)
                 .wireType(this.wireType)
                 .build()) {
@@ -1737,12 +1755,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMoveToWithAppender() throws TimeoutException, StreamCorruptedException {
-        try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testMoveToWithAppender");
+        try (ChronicleQueue syncQ = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
             InternalAppender sync = (InternalAppender) syncQ.acquireAppender();
-            try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+            File name2 = Utils.tempDir("testMoveToWithAppender");
+            try (ChronicleQueue chronicle = binary(name2)
                     .wireType(this.wireType)
                     .build()) {
 
@@ -1766,11 +1786,13 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMapWrapper() throws TimeoutException, StreamCorruptedException {
-        try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testMapWrapper");
+        try (ChronicleQueue syncQ = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
-            try (ChronicleQueue chronicle = SingleChronicleQueueBuilder.binary(getTmpDir())
+            File name2 = Utils.tempDir("testMapWrapper2");
+            try (ChronicleQueue chronicle = binary(name2)
                     .wireType(this.wireType)
                     .build()) {
 
@@ -1798,7 +1820,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendedSkipToEnd() throws TimeoutException, ExecutionException, InterruptedException {
 
-        try (RollingChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testAppendedSkipToEnd");
+        try (RollingChronicleQueue q = binary(name)
                 .wireType(this.wireType)
                 .build()) {
 
@@ -1828,7 +1851,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         for (int i = 0; i < 5; i++) sb.append(UUID.randomUUID());
         String text = sb.toString();
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+        File name = Utils.tempDir("testAppendedSkipToEndMultiThreaded");
+        try (ChronicleQueue q = binary(name)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
@@ -1861,7 +1885,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         for (int i = 0; i < 20; i++) {
             ExecutorService executor = Executors.newWorkStealingPool(8);
-            try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(getTmpDir())
+            try (ChronicleQueue q = binary(Utils.tempDir("SingleChronicleQueueTest"))
                     .wireType(this.wireType)
                     .rollCycle(MINUTELY)
                     .build()) {
@@ -1893,9 +1917,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testToEndPrevCycleEOF() throws TimeoutException, ExecutionException, InterruptedException {
 
-        File tmpDir = getTmpDir();
+        File tmpDir = Utils.tempDir("SingleChronicleQueueTest");
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (ChronicleQueue q = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
@@ -1906,7 +1930,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         Thread.sleep(1100);
 
         // this will write an EOF
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (ChronicleQueue q = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
@@ -1918,7 +1942,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         }
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (ChronicleQueue q = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
@@ -1934,7 +1958,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
         }
 
-        try (ChronicleQueue q = SingleChronicleQueueBuilder.binary(tmpDir)
+        try (ChronicleQueue q = binary(tmpDir)
                 .wireType(this.wireType)
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
@@ -1954,12 +1978,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerWhenCyclesWhereSkippedOnWrite() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, "demo-" + System.nanoTime());
-        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY);
-        final RollingChronicleQueue queue = builder.build();
+        final File dir = Utils.tempDir("testTailerWhenCyclesWhereSkippedOnWrite");
+        final RollingChronicleQueue queue =
+                binary(dir)
+                        .rollCycle(RollCycles.TEST_SECONDLY)
+                        .build();
         final ExcerptAppender appender = queue.acquireAppender();
         final ExcerptTailer tailer = queue.createTailer();
 
@@ -2021,9 +2044,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testMultipleAppenders() {
-        try (ChronicleQueue syncQ = SingleChronicleQueueBuilder.binary(getTmpDir())
-                .wireType(this.wireType)
+        final File dir = Utils.tempDir("testMultipleAppenders");
+        try (ChronicleQueue syncQ = builder(dir, this.wireType)
                 .rollCycle(TEST_DAILY)
+                .testBlockSize()
                 .build()) {
 
             ExcerptAppender syncA = syncQ.acquireAppender();
@@ -2042,8 +2066,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
             assertEquals("--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
-                    "  wireType: !WireType BINARY,\n" +
-                    "  writePosition: 660,\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 668,\n" +
                     "  roll: !SCQSRoll {\n" +
                     "    length: !int 86400000,\n" +
                     "    format: yyyyMMdd,\n" +
@@ -2052,7 +2076,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  indexing: !SCQSIndexing {\n" +
                     "    indexCount: 8,\n" +
                     "    indexSpacing: 1,\n" +
-                    "    index2Index: 369,\n" +
+                    "    index2Index: 377,\n" +
                     "    lastIndex: 6\n" +
                     "  },\n" +
                     "  lastAcknowledgedIndexReplicated: -1,\n" +
@@ -2061,67 +2085,66 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     "  },\n" +
                     "  deltaCheckpointInterval: 0\n" +
                     "}\n" +
-                    "# position: 369, header: -1\n" +
+                    "# position: 377, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index2index: [\n" +
                     "  # length: 8, used: 1\n" +
-                    "  472,\n" +
+                    "  480,\n" +
                     "  0, 0, 0, 0, 0, 0, 0\n" +
                     "]\n" +
-                    "# position: 472, header: -1\n" +
+                    "# position: 480, header: -1\n" +
                     "--- !!meta-data #binary\n" +
                     "index: [\n" +
                     "  # length: 8, used: 6\n" +
-                    "  568,\n" +
-                    "  580,\n" +
-                    "  608,\n" +
-                    "  620,\n" +
-                    "  648,\n" +
-                    "  660,\n" +
+                    "  576,\n" +
+                    "  588,\n" +
+                    "  616,\n" +
+                    "  628,\n" +
+                    "  656,\n" +
+                    "  668,\n" +
                     "  0, 0\n" +
                     "]\n" +
-                    "# position: 568, header: 0\n" +
+                    "# position: 576, header: 0\n" +
                     "--- !!data\n" +
                     "hello A0\n" +
-                    "# position: 580, header: 1\n" +
+                    "# position: 588, header: 1\n" +
                     "--- !!data\n" +
                     "hello B0\n" +
-                    "# position: 592, header: 1\n" +
+                    "# position: 600, header: 1\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 0\n" +
-                    "# position: 608, header: 2\n" +
+                    "# position: 616, header: 2\n" +
                     "--- !!data\n" +
                     "hello A1\n" +
-                    "# position: 620, header: 3\n" +
+                    "# position: 628, header: 3\n" +
                     "--- !!data\n" +
                     "hello B1\n" +
-                    "# position: 632, header: 3\n" +
+                    "# position: 640, header: 3\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 1\n" +
-                    "# position: 648, header: 4\n" +
+                    "# position: 656, header: 4\n" +
                     "--- !!data\n" +
                     "hello A2\n" +
-                    "# position: 660, header: 5\n" +
+                    "# position: 668, header: 5\n" +
                     "--- !!data\n" +
                     "hello B2\n" +
-                    "# position: 672, header: 5\n" +
+                    "# position: 680, header: 5\n" +
                     "--- !!meta-data #binary\n" +
                     "some meta 2\n" +
                     "...\n" +
-                    "# 83885388 bytes remaining\n", syncQ.dump());
+                    "# 326980 bytes remaining\n", syncQ.dump());
         }
-
     }
 
     @Test
     @Ignore("Long running")
     public void testCountExceptsBetweenCycles() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY);
+        final File dir = Utils.tempDir("testCountExceptsBetweenCycles");
+        final SingleChronicleQueueBuilder builder =
+                binary(dir)
+                        .testBlockSize()
+                        .rollCycle(RollCycles.TEST_SECONDLY);
         final RollingChronicleQueue queue = builder.build();
         final ExcerptAppender appender = queue.createAppender();
 
@@ -2166,32 +2189,32 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenNextCycleIsInSequence() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testReadingWritingWhenNextCycleIsInSequence");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
 
         Thread.sleep(1100);
 
         // write second message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
@@ -2201,33 +2224,33 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenCycleIsSkipped() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testReadingWritingWhenCycleIsSkipped");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle)
-                .build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle)
+                             .build()) {
             queue.acquireAppender().writeText("first message");
         }
 
         Thread.sleep(2100);
 
         // write second message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             Assert.assertEquals("first message", tailer.readText());
             Assert.assertEquals("second message", tailer.readText());
@@ -2238,32 +2261,32 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testReadingWritingWhenCycleIsSkippedBackwards() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testReadingWritingWhenCycleIsSkippedBackwards");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("first message");
         }
 
         Thread.sleep(2100);
 
         // write second message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             queue.acquireAppender().writeText("second message");
         }
 
         // read both messages
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
             ExcerptTailer tailer = queue.createTailer();
             ExcerptTailer excerptTailer = tailer.direction(TailerDirection.BACKWARD).toEnd();
             Assert.assertEquals("second message", excerptTailer.readText());
@@ -2273,19 +2296,19 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     @Test
     public void testReadWritingWithTimeProvider() throws Exception {
-        final Path path = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testReadWritingWithTimeProvider");
 
         long time = System.currentTimeMillis();
 
-        try (ChronicleQueue q1 = SingleChronicleQueueBuilder
-                .binary(path)
-                .timeProvider(() -> time)
-                .build()) {
+        try (ChronicleQueue q1 =
+                     binary(dir)
+                             .timeProvider(() -> time)
+                             .build()) {
 
-            try (SingleChronicleQueue q2 = SingleChronicleQueueBuilder
-                    .binary(path)
-                    .timeProvider(() -> time)
-                    .build()) {
+            try (SingleChronicleQueue q2 =
+                         binary(dir)
+                                 .timeProvider(() -> time)
+                                 .build()) {
 
                 final ExcerptAppender appender2 = q2.acquireAppender();
 
@@ -2317,14 +2340,14 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testTailerSnappingRollWithNewAppender() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testTailerSnappingRollWithNewAppender");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
         // write first message
-        try (ChronicleQueue queue = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(rollCycle).build()) {
+        try (ChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle).build()) {
 
             ExcerptAppender excerptAppender = queue.acquireAppender();
             excerptAppender.writeText("someText");
@@ -2333,17 +2356,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             Future f1 = executorService.submit(() -> {
 
-                try (ChronicleQueue queue2 = ChronicleQueueBuilder
-                        .single(dir.toString())
-                        .testBlockSize()
-                        .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 =
+                             binary(dir)
+                                     .testBlockSize()
+                                     .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
                 Jvm.pause(1100);
-                try (ChronicleQueue queue2 = ChronicleQueueBuilder
-                        .single(dir.toString())
-                        .testBlockSize()
-                        .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 =
+                             binary(dir)
+                                     .testBlockSize()
+                                     .rollCycle(rollCycle).build()) {
                     queue2.acquireAppender().writeText("someText more");
                 }
 
@@ -2352,10 +2375,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             Future f2 = executorService.submit(() -> {
 
                 // write second message
-                try (ChronicleQueue queue2 = ChronicleQueueBuilder
-                        .single(dir.toString())
-                        .testBlockSize()
-                        .rollCycle(rollCycle).build()) {
+                try (ChronicleQueue queue2 =
+                             binary(dir)
+                                     .testBlockSize()
+                                     .rollCycle(rollCycle).build()) {
 
                     for (int i = 0; i < 5; i++) {
                         queue2.acquireAppender().writeText("someText more");
@@ -2375,24 +2398,23 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testLongLivingTailerAppenderReAcquiredEachSecond() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
+        final File dir = Utils.tempDir("testLongLivingTailerAppenderReAcquiredEachSecond");
         final RollCycles rollCycle = RollCycles.TEST_SECONDLY;
 
-        final String basePath = dir.toString();
-        try (ChronicleQueue queuet = ChronicleQueueBuilder
-                .single(basePath)
-                .testBlockSize()
-                .rollCycle(rollCycle)
-                .build()) {
+        try (ChronicleQueue queuet =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(rollCycle)
+                             .build()) {
 
             final ExcerptTailer tailer = queuet.createTailer();
 
             // write first message
-            try (ChronicleQueue queue = ChronicleQueueBuilder
-                    .single(basePath)
-                    .testBlockSize()
-                    .rollCycle(rollCycle)
-                    .build()) {
+            try (ChronicleQueue queue =
+                         binary(dir)
+                                 .testBlockSize()
+                                 .rollCycle(rollCycle)
+                                 .build()) {
 
                 for (int i = 0; i < 5; i++) {
 
@@ -2413,28 +2435,29 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test(expected = IllegalStateException.class)
     public void testCountExceptsWithRubbishData() throws Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                .single(dir.toString())
-                .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY);
-        final RollingChronicleQueue queue = builder.build();
+        final File dir = Utils.tempDir("testCountExceptsWithRubbishData");
+        try (final RollingChronicleQueue queue =
+                     binary(dir)
+                             .testBlockSize()
+                             .rollCycle(RollCycles.TEST_SECONDLY)
+                             .build()) {
 
-        // rubbish data
-        queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
+            // rubbish data
+            queue.countExcerpts(0x578F542D00000000L, 0x528F542D00000000L);
+        }
     }
 
     //    @Ignore("fails - Nested blocks of writingDocument() not supported")
     @Test
     public void testCopyQueue() throws Exception {
-        final Path source = Paths.get(OS.TARGET, getClass().getSimpleName() + "-source-" + System.nanoTime());
-        final Path target = Paths.get(OS.TARGET, getClass().getSimpleName() + "-target-" + System.nanoTime());
+        final File source = Utils.tempDir("testCopyQueue-source");
+        final File target = Utils.tempDir("testCopyQueue-target");
         {
 
-            final RollingChronicleQueue q = ChronicleQueueBuilder
-                    .single(source.toString())
-                    .testBlockSize()
-                    .build();
+            final RollingChronicleQueue q =
+                    binary(source)
+                            .testBlockSize()
+                            .build();
 
             ExcerptAppender excerptAppender = q.acquireAppender();
             excerptAppender.writeMessage(() -> "one", 1);
@@ -2443,17 +2466,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             excerptAppender.writeMessage(() -> "four", 4);
         }
         {
-            final RollingChronicleQueue s = ChronicleQueueBuilder
-                    .single(source.toString())
-                    .testBlockSize()
-                    .build();
+            final RollingChronicleQueue s =
+                    binary(source)
+                            .testBlockSize()
+                            .build();
 
             ExcerptTailer sourceTailer = s.createTailer();
 
-            final RollingChronicleQueue t = ChronicleQueueBuilder
-                    .single(target.toString())
-                    .testBlockSize()
-                    .build();
+            final RollingChronicleQueue t =
+                    binary(target)
+                            .testBlockSize()
+                            .build();
 
             ExcerptAppender appender = t.acquireAppender();
 
@@ -2482,12 +2505,10 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     public void testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection() throws
             Exception {
 
-        final Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-        final SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                .single(dir.toString())
+        final File name = Utils.tempDir("testIncorrectExcerptTailerReadsAfterSwitchingTailerDirection");
+        final RollingChronicleQueue queue = binary(name)
                 .testBlockSize()
-                .rollCycle(RollCycles.TEST_SECONDLY);
-        final RollingChronicleQueue queue = builder.build();
+                .rollCycle(RollCycles.TEST_SECONDLY).build();
 
         int value = 0;
         long cycle = 0;
@@ -2557,13 +2578,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         MappedFile mappedFile;
         {
-            Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-            SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                    .single(dir.toString())
-                    .testBlockSize()
-                    .rollCycle(RollCycles.DAILY);
-            File f;
-            try (RollingChronicleQueue queue = builder.build()) {
+            File dir = Utils.tempDir("checkReferenceCountingAndCheckFileDeletion");
+            try (RollingChronicleQueue queue =
+                         binary(dir)
+                                 .rollCycle(RollCycles.TEST_SECONDLY)
+                                 .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
 
                 try (DocumentContext documentContext1 = appender.writingDocument()) {
@@ -2591,13 +2610,12 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         MappedFile mappedFile1, mappedFile2, mappedFile3, mappedFile4;
         {
-            Path dir = Paths.get(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
-            SingleChronicleQueueBuilder builder = ChronicleQueueBuilder
-                    .single(dir.toString())
-                    .testBlockSize()
-                    .rollCycle(RollCycles.TEST_SECONDLY);
-            File f;
-            try (RollingChronicleQueue queue = builder.build()) {
+            File dir = Utils.tempDir("checkReferenceCountingWhenRollingAndCheckFileDeletion");
+            try (RollingChronicleQueue queue =
+                         binary(dir)
+                                 .testBlockSize()
+                                 .rollCycle(RollCycles.TEST_SECONDLY)
+                                 .build()) {
                 ExcerptAppender appender = queue.acquireAppender();
 
                 try (DocumentContext dc = appender.writingDocument()) {
@@ -2660,7 +2678,5 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
         public MyMarshable() {
         }
-
     }
-
 }

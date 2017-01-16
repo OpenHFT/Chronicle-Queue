@@ -18,6 +18,7 @@ package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.WireType;
 import org.junit.Assert;
@@ -45,10 +46,8 @@ public class CycleNotFoundTest extends ChronicleQueueTestBase {
 
     @Test(timeout = 50000)
     public void tailerCycleNotFoundTest() throws IOException, InterruptedException, ExecutionException {
-        String path = getTmpDir() + "/" + System.nanoTime();  // added nano time just to make
-        // sure the dir is unique ( and clean) , when testing sometime I found this was not the
-        // case.
-        new File(path).deleteOnExit();
+        File path = Utils.tempDir("tailerCycleNotFoundTest");  // added nano time just to make
+
         ExecutorService executorService = Executors.newFixedThreadPool((int) NUMBER_OF_MSG);
         AtomicLong counter = new AtomicLong();
 

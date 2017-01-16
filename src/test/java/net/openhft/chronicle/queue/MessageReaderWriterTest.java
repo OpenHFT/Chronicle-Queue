@@ -16,18 +16,19 @@
 
 package net.openhft.chronicle.queue;
 
-import net.openhft.chronicle.core.OS;
-import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.pool.ClassAliasPool;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.core.util.ObjectUtils;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -53,10 +54,11 @@ public class MessageReaderWriterTest {
         ClassAliasPool.CLASS_ALIASES.addAlias(Message1.class);
         ClassAliasPool.CLASS_ALIASES.addAlias(Message2.class);
 
-        String path = OS.TARGET + "/testWriteWhileReading-" + System.nanoTime() + "-";
+        File path1 = Utils.tempDir("testWriteWhileReading1");
+        File path2 = Utils.tempDir("testWriteWhileReading2");
 
-        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path + "1").build();
-             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(path + "2").build()) {
+        try (SingleChronicleQueue queue1 = SingleChronicleQueueBuilder.binary(path1).build();
+             SingleChronicleQueue queue2 = SingleChronicleQueueBuilder.binary(path2).build()) {
             MethodReader reader2 = queue1.createTailer().methodReader(ObjectUtils.printAll(MessageListener.class));
             MessageListener writer2 = queue2.acquireAppender().methodWriter(MessageListener.class);
             MessageListener processor = new MessageProcessor(writer2);
@@ -79,13 +81,6 @@ public class MessageReaderWriterTest {
                 assertFalse(reader2.readOne());
             }
 //            System.out.println(queue1.dump());
-        } finally {
-            try {
-                IOTools.shallowDeleteDirWithFiles(path + "1");
-                IOTools.shallowDeleteDirWithFiles(path + "2");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -100,7 +95,7 @@ public class MessageReaderWriterTest {
 
         public Message1(String text) {
             this.text = text;
-    }
+        }
     }
 
     static class Message2 extends AbstractMarshallable {
@@ -108,7 +103,7 @@ public class MessageReaderWriterTest {
 
         public Message2(long number) {
             this.number = number;
-    }
+        }
     }
 
     static class MessageProcessor implements MessageListener {

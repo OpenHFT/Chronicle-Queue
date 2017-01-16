@@ -18,14 +18,16 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
-import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
 
+import java.io.File;
+
 import static net.openhft.chronicle.queue.RollCycles.TEST4_DAILY;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -38,8 +40,8 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytes() {
-        String dir = OS.TARGET + "/WriteBytesTest-" + System.nanoTime();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir).build()) {
+        File dir = Utils.tempDir("WriteBytesTest");
+        try (ChronicleQueue queue = binary(dir).build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
             ExcerptTailer tailer = queue.createTailer();
@@ -71,8 +73,8 @@ public class WriteBytesTest {
 
     @Test
     public void testWriteBytesAndDump() {
-        String dir = OS.TARGET + "/WriteBytesTestAndDump-" + System.nanoTime();
-        try (ChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
+        File dir = Utils.tempDir("WriteBytesTestAndDump");
+        try (ChronicleQueue queue = binary(dir)
                 .rollCycle(TEST4_DAILY)
                 .build()) {
 

@@ -174,9 +174,8 @@ public class ToEndTest {
 
     @Test
     public void toEndTest() {
-        String baseDir = OS.TARGET + "/toEndTest-" + System.nanoTime();
-        System.out.println(baseDir);
-        IOTools.shallowDeleteDirWithFiles(baseDir);
+        File baseDir = Utils.tempDir("toEndTest");
+
         List<Integer> results = new ArrayList<>();
         RollingChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir)
                 .indexCount(8)
@@ -219,7 +218,7 @@ public class ToEndTest {
 
     @Test
     public void toEndBeforeWriteTest() {
-        String baseDir = OS.TARGET + "/toEndBeforeWriteTest";
+        File baseDir = Utils.tempDir("toEndBeforeWriteTest");
         IOTools.shallowDeleteDirWithFiles(baseDir);
 
         ChronicleQueue queue = SingleChronicleQueueBuilder.binary(baseDir).build();
@@ -250,14 +249,14 @@ public class ToEndTest {
 
     @Test
     public void toEndAfterWriteTest() {
-        String baseDir = OS.TARGET + "/toEndAfterWriteTest";
-        IOTools.shallowDeleteDirWithFiles(baseDir);
+        File file = Utils.tempDir("toEndAfterWriteTest");
+        IOTools.shallowDeleteDirWithFiles(file);
 
         final SetTimeProvider stp = new SetTimeProvider();
         stp.currentTimeMillis(1470757797000L);
 
         RollingChronicleQueue wqueue = SingleChronicleQueueBuilder
-                .binary(baseDir)
+                .binary(file)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build();
@@ -273,7 +272,7 @@ public class ToEndTest {
         }
 
         ChronicleQueue rqueue = SingleChronicleQueueBuilder
-                .binary(baseDir)
+                .binary(file)
                 .rollCycle(RollCycles.TEST_SECONDLY)
                 .timeProvider(stp)
                 .build();
@@ -291,11 +290,11 @@ public class ToEndTest {
         ExcerptTailer excerptTailer = tailer1.toEnd();
         assertNull(excerptTailer.readText());
 
-        IOTools.shallowDeleteDirWithFiles(baseDir);
+        IOTools.shallowDeleteDirWithFiles(file);
     }
 
-    private void checkOneFile(String baseDir) {
-        String[] files = new File(baseDir).list();
+    private void checkOneFile(File baseDir) {
+        String[] files = baseDir.list();
 
         if (files == null || files.length == 0)
             return;

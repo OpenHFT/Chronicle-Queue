@@ -55,6 +55,17 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     }
 
     @NotNull
+    public static SingleChronicleQueueBuilder builder(@NotNull Path path, WireType wireType) {
+        return builder(path.toFile(), wireType);
+    }
+
+    @NotNull
+    public static SingleChronicleQueueBuilder builder(@NotNull File file, WireType wireType) {
+        return new SingleChronicleQueueBuilder(file)
+                .wireType(wireType);
+    }
+
+    @NotNull
     public static SingleChronicleQueueBuilder binary(@NotNull Path path) {
         return binary(path.toFile());
     }
@@ -65,27 +76,24 @@ public class SingleChronicleQueueBuilder extends AbstractChronicleQueueBuilder<S
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull String basePath) {
-        return defaultZeroBinary(new File(basePath));
+    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
+        return builder(basePathFile, WireType.BINARY_LIGHT);
     }
 
     @NotNull
-    public static SingleChronicleQueueBuilder binary(@NotNull File basePathFile) {
-        return new SingleChronicleQueueBuilder(basePathFile)
-                .wireType(WireType.BINARY_LIGHT);
+    public static SingleChronicleQueueBuilder fieldlessBinary(@NotNull File name) {
+        return builder(name, WireType.FIELDLESS_BINARY);
     }
 
     @NotNull
     public static SingleChronicleQueueBuilder defaultZeroBinary(@NotNull File basePathFile) {
-        return new SingleChronicleQueueBuilder(basePathFile)
-                .wireType(DEFAULT_ZERO_BINARY);
+        return builder(basePathFile, DEFAULT_ZERO_BINARY);
     }
 
     @Deprecated
     @NotNull
     public static SingleChronicleQueueBuilder text(@NotNull File name) {
-        return new SingleChronicleQueueBuilder(name)
-                .wireType(WireType.TEXT);
+        return builder(name, WireType.TEXT);
     }
 
     // *************************************************************************

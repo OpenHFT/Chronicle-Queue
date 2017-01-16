@@ -26,13 +26,14 @@ import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static net.openhft.chronicle.queue.ChronicleQueueTestBase.getTmpDir;
 import static net.openhft.chronicle.queue.RollCycles.TEST_SECONDLY;
+import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder.binary;
 
 /**
  * @author Rob Austin.
@@ -51,16 +52,16 @@ public class MultiThreadedRollTest {
 
         final SetTimeProvider timeProvider = new SetTimeProvider();
         timeProvider.currentTimeMillis(1000);
-        final String path = getTmpDir() + "/backRoll.q";
+        final File path = Utils.tempDir("MultiThreadedRollTest");
 
-        final RollingChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
+        final RollingChronicleQueue wqueue = binary(path)
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
                 .build();
 
         wqueue.acquireAppender().writeText("hello world");
 
-        final RollingChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(path)
+        final RollingChronicleQueue rqueue = binary(path)
                 .timeProvider(timeProvider)
                 .rollCycle(TEST_SECONDLY)
                 .build();
