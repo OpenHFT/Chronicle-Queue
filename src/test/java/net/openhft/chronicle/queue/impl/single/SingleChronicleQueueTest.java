@@ -1454,6 +1454,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
+                assertFalse(dc.isMetaData());
                 dc.wire().write(() -> "FirstName").text("Rob");
             }
 
@@ -1842,7 +1843,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 .rollCycle(TEST_SECONDLY)
                 .build()) {
 
-            q.acquireAppender().writeText("first");
+            q.acquireAppender()
+                    .writeText("first");
         }
 
         Thread.sleep(1100);

@@ -23,6 +23,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
@@ -57,7 +58,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     protected RollCycle rollCycle;
     protected long epoch; // default is 1970-01-01 00:00:00.000 UTC
-    protected boolean isBuffered;
+    protected BufferMode writeBufferMode = BufferMode.None, readBufferMode = BufferMode.None;
     @Nullable
     protected EventLoop eventLoop;
     private long bufferCapacity;
@@ -84,7 +85,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
         this.path = path;
         this.wireType = WireType.BINARY_LIGHT;
         this.epoch = 0;
-        this.bufferCapacity = 2 << 20;
+        this.bufferCapacity = -1;
         this.indexSpacing = -1;
         this.indexCount = -1;
     }
@@ -156,17 +157,17 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     @Override
     public long bufferCapacity() {
-        return bufferCapacity;
+        return Math.min(blockSize / 4, bufferCapacity == -1 ? 2 << 20 : Math.max(4 << 10, bufferCapacity));
     }
 
     /**
-     * @param ringBufferSize sets the ring buffer capacity in bytes
+     * @param bufferCapacity sets the ring buffer capacity in bytes
      * @return this
      */
     @Override
     @NotNull
-    public B bufferCapacity(long ringBufferSize) {
-        this.bufferCapacity = ringBufferSize;
+    public B bufferCapacity(long bufferCapacity) {
+        this.bufferCapacity = bufferCapacity;
         return (B) this;
     }
 
@@ -208,8 +209,9 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      */
     @Override
     @NotNull
+    @Deprecated
     public B buffered(boolean isBuffered) {
-        this.isBuffered = isBuffered;
+        this.writeBufferMode = isBuffered ? BufferMode.Asynchronous : BufferMode.None;
         return (B) this;
     }
 
@@ -218,8 +220,33 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
      * Chronicle Queue using a background thread
      */
     @Override
+    @Deprecated
     public boolean buffered() {
-        return this.isBuffered;
+        return this.writeBufferMode == BufferMode.Asynchronous;
+    }
+
+    /**
+     * @return BufferMode to use for writes. Only None is available is the OSS
+     */
+    public BufferMode writeBufferMode() {
+        return wireType() == WireType.DELTA_BINARY ? BufferMode.None : writeBufferMode;
+    }
+
+    public B writeBufferMode(BufferMode writeBufferMode) {
+        this.writeBufferMode = writeBufferMode;
+        return (B) this;
+    }
+
+    /**
+     * @return BufferMode to use for reads. Only None is available is the OSS
+     */
+    public BufferMode readBufferMode() {
+        return readBufferMode;
+    }
+
+    public B readBufferMode(BufferMode readBufferMode) {
+        this.readBufferMode = readBufferMode;
+        return (B) this;
     }
 
     @Override
@@ -232,20 +259,6 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     @NotNull
     public B eventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
-        return (B) this;
-    }
-
-    /**
-     * setting the {@code bufferCapacity} also sets {@code buffered} to {@code true}
-     *
-     * @param bufferCapacity the capacity of the ring buffer
-     * @return this
-     */
-    @Override
-    @NotNull
-    public B bufferCapacity(int bufferCapacity) {
-        this.bufferCapacity = bufferCapacity;
-        this.isBuffered = true;
         return (B) this;
     }
 

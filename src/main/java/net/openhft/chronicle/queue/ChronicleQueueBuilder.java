@@ -81,11 +81,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     B rollCycle(@NotNull RollCycle rollCycle);
 
-    long bufferCapacity();
-
-    @NotNull
-    B bufferCapacity(long ringBufferSize);
-
     @NotNull
     B epoch(long epoch);
 
@@ -94,19 +89,53 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
     @NotNull
     RollCycle rollCycle();
 
+    /**
+     * @deprecated Use writeBufferMode
+     */
     @NotNull
+    @Deprecated
     B buffered(boolean isBuffered);
 
+    /**
+     * @deprecated Use writeBufferMode
+     */
+    @Deprecated
     boolean buffered();
 
-    @Nullable
-    EventLoop eventLoop();
+    /**
+     * @param bufferCapacity to use when buffering enabled.
+     * @return this
+     */
+    @NotNull
+    B bufferCapacity(long bufferCapacity);
 
+    long bufferCapacity();
+
+    /**
+     * @param writeBufferMode to use for writes. Only None is available in OSS
+     * @return this
+     */
+    B writeBufferMode(BufferMode writeBufferMode);
+
+    BufferMode writeBufferMode();
+
+    /**
+     * @param readBufferMode to use for read. Only None is available in OSS
+     * @return this
+     */
+    B readBufferMode(BufferMode readBufferMode);
+
+    BufferMode readBufferMode();
+
+    /**
+     * @param eventLoop to use when asynchronous buffering is used.
+     * @return this
+     */
     @NotNull
     B eventLoop(EventLoop eventLoop);
 
-    @NotNull
-    B bufferCapacity(int bufferCapacity);
+    @Nullable
+    EventLoop eventLoop();
 
     B indexCount(int indexCount);
 

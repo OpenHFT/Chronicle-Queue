@@ -20,6 +20,7 @@ import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.TimeProvider;
+import net.openhft.chronicle.queue.BufferMode;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.impl.AbstractChronicleQueueBuilder;
 import net.openhft.chronicle.queue.impl.RollingChronicleQueue;
@@ -211,8 +212,8 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> bufferCapacity(long ringBufferSize) {
-        return super.bufferCapacity(ringBufferSize);
+    public SingleChronicleQueueBuilder<S> bufferCapacity(long bufferCapacity) {
+        return super.bufferCapacity(bufferCapacity);
     }
 
     @NotNull
@@ -227,16 +228,20 @@ public class SingleChronicleQueueBuilder<S extends SingleChronicleQueueBuilder>
         return super.buffered(isBuffered);
     }
 
-    @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> eventLoop(EventLoop eventLoop) {
-        return super.eventLoop(eventLoop);
+    public SingleChronicleQueueBuilder<S> writeBufferMode(BufferMode writeBufferMode) {
+        return super.writeBufferMode(writeBufferMode);
+    }
+
+    @Override
+    public SingleChronicleQueueBuilder<S> readBufferMode(BufferMode readBufferMode) {
+        return super.readBufferMode(readBufferMode);
     }
 
     @NotNull
     @Override
-    public SingleChronicleQueueBuilder<S> bufferCapacity(int bufferCapacity) {
-        return super.bufferCapacity(bufferCapacity);
+    public SingleChronicleQueueBuilder<S> eventLoop(EventLoop eventLoop) {
+        return super.eventLoop(eventLoop);
     }
 
     @Override
