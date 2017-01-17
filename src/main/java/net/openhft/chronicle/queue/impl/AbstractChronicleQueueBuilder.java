@@ -23,7 +23,6 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.threads.EventLoop;
 import net.openhft.chronicle.core.time.SystemTimeProvider;
 import net.openhft.chronicle.core.time.TimeProvider;
-import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ChronicleQueueBuilder;
 import net.openhft.chronicle.queue.RollCycle;
 import net.openhft.chronicle.queue.RollCycles;
@@ -48,8 +47,8 @@ import static net.openhft.chronicle.queue.ChronicleQueue.TEST_BLOCK_SIZE;
  * Created by peter on 05/03/2016.
  */
 @SuppressWarnings("ALL")
-public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue>
-        implements ChronicleQueueBuilder<B, Q> {
+public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuilder>
+        implements ChronicleQueueBuilder<B> {
 
     protected final File path;
     protected long blockSize;

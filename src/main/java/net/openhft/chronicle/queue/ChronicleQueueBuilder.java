@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue> extends Cloneable {
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends Cloneable {
 
     static SingleChronicleQueueBuilder single(String basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
@@ -42,7 +42,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     }
 
     @NotNull
-    Q build();
+    ChronicleQueue build();
 
     @NotNull
     B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
