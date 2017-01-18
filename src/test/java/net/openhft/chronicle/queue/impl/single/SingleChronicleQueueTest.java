@@ -696,7 +696,9 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 final int n = i;
                 assertTrue(tailer.readDocument(r -> assertEquals(n, queue.rollCycle().toSequenceNumber(r.read(TestKey.test)
                         .int32()))));
-                assertEquals(n + 1, queue.rollCycle().toSequenceNumber(tailer.index()));
+                long index2 = tailer.index();
+                long sequenceNumber = queue.rollCycle().toSequenceNumber(index2);
+                assertEquals(n + 1, sequenceNumber);
             }
         }
     }
