@@ -55,6 +55,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     private static final long TIMES = (4L << 20L);
     protected final WireType wireType;
+    protected final boolean encryption;
 
     // *************************************************************************
     //
@@ -66,9 +67,11 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
     /**
      * @param wireType the type of wire
+     * @param encryption
      */
-    public SingleChronicleQueueTest(@NotNull WireType wireType) {
+    public SingleChronicleQueueTest(@NotNull WireType wireType, boolean encryption) {
         this.wireType = wireType;
+        this.encryption = encryption;
     }
 
     @Parameterized.Parameters
@@ -76,7 +79,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
         return Arrays.asList(new Object[][]{
 //                {WireType.TEXT},
 //                {WireType.BINARY},
-                {WireType.BINARY_LIGHT},
+                {WireType.BINARY_LIGHT, false},
 //                {WireType.DELTA_BINARY}
 //                {WireType.FIELDLESS_BINARY}
         });
@@ -380,6 +383,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
              */
             assertEquals(expectedAppendAndReadWithRolling(), queue.dump());
 
+            assumeFalse(encryption);
             assumeFalse(wireType == WireType.DEFAULT_ZERO_BINARY);
             final ExcerptTailer tailer = queue.createTailer().toStart();
             for (int i = 0; i < 6; i++) {
@@ -959,7 +963,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             assertEquals(queue.lastCycle(), cycle);
             final ExcerptTailer tailer = queue.createTailer();
 
-            //   QueueDumpMain.dump(file, new PrintWriter(System.out));
+            System.out.println(queue.dump());
 
             StringBuilder sb = new StringBuilder();
 
@@ -1979,7 +1983,8 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                     dc.wire().getValueOut().text("some meta " + i);
                 }
             }
-            assertEquals(expectedMultipleAppenders(), syncQ.dump());
+            String expected = expectedMultipleAppenders();
+            assertEquals(expected, syncQ.dump());
         }
     }
 
