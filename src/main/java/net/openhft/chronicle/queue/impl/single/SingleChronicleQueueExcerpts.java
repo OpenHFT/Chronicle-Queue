@@ -247,7 +247,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public DocumentContext writingDocument() throws UnrecoverableTimeoutException {
+        public DocumentContext writingDocument(boolean metaData) throws UnrecoverableTimeoutException {
             assert checkAppendingThread();
             assert checkWritePositionHeaderNumber();
             boolean ok = false;
@@ -299,6 +299,7 @@ public class SingleChronicleQueueExcerpts {
                 if (!ok)
                     assert resetAppendingThread();
             }
+            context.metaData(metaData);
             return context;
         }
 

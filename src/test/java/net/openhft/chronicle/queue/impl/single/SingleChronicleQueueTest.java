@@ -66,7 +66,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     private Map<ExceptionKey, Integer> exceptionKeyIntegerMap;
 
     /**
-     * @param wireType the type of wire
+     * @param wireType   the type of wire
      * @param encryption
      */
     public SingleChronicleQueueTest(@NotNull WireType wireType, boolean encryption) {
@@ -176,11 +176,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
                 Bytes b = Bytes.allocateDirect(8);
 
-                try {
-                    tailer.readBytes(b);
-                } catch (Error e) {
-
-                }
+                tailer.readBytes(b);
 
                 Assert.assertEquals(expected.readInt(0), b.readInt(0));
             }
@@ -682,6 +678,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testAppendAndReadAtIndex() throws TimeoutException {
         try (final RollingChronicleQueue queue = builder(getTmpDir(), this.wireType)
+                .rollCycle(TEST2_DAILY)
                 .build()) {
 
             final ExcerptAppender appender = queue.acquireAppender();
@@ -692,6 +689,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(i, queue.rollCycle().toSequenceNumber(appender.lastIndexAppended()));
             }
 
+//            System.out.println(queue.dump());
             final ExcerptTailer tailer = queue.createTailer();
             for (int i = 0; i < 5; i++) {
                 final long index = queue.rollCycle().toIndex(appender.cycle(), i);
@@ -740,8 +738,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 index = dc.index();
             }
 
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
+            try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write(() -> "FirstName").text("Quartilla");
             }
 
@@ -778,8 +775,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
 
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
+            try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write(() -> "FirstName").text("Quartilla");
             }
 
@@ -787,8 +783,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 dc.wire().write(() -> "FirstName").text("Rob");
             }
 
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
+            try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write(() -> "FirstName").text("Steve");
             }
 
@@ -929,11 +924,17 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testSimpleByteTest() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), wireType)
+                .rollCycle(TEST2_DAILY)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
-            appender.writeBytes(Bytes.allocateDirect("Steve".getBytes()));
-            appender.writeBytes(Bytes.allocateDirect("Jobs".getBytes()));
+            Bytes steve = Bytes.allocateDirect("Steve".getBytes());
+            appender.writeBytes(steve);
+            Bytes jobs = Bytes.allocateDirect("Jobs".getBytes());
+            appender.writeBytes(jobs);
+
+//            System.out.println(chronicle.dump());
+
             final ExcerptTailer tailer = chronicle.createTailer();
             Bytes bytes = Bytes.elasticByteBuffer();
             tailer.readBytes(bytes);
@@ -1450,25 +1451,25 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
     @Test
     public void testMetaData6() {
         try (final ChronicleQueue chronicle = builder(getTmpDir(), this.wireType)
+                .rollCycle(TEST2_DAILY)
                 .build()) {
 
             final ExcerptAppender appender = chronicle.acquireAppender();
 
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
+            try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write(() -> "FirstName").text("Quartilla");
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
                 assertFalse(dc.isMetaData());
-                dc.wire().write(() -> "FirstName").text("Rob");
+                dc.wire().write(() -> "FirstName").text("Helen");
             }
 
-            try (DocumentContext dc = appender.writingDocument()) {
-                dc.metaData(true);
+            try (DocumentContext dc = appender.writingDocument(true)) {
                 dc.wire().write(() -> "FirstName").text("Steve");
             }
 
+            assertEquals(expectedMetaData6(), chronicle.dump());
             final ExcerptTailer tailer = chronicle.createTailer();
 
             StringBuilder event = new StringBuilder();
@@ -1487,7 +1488,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
             try (DocumentContext dc = tailer.readingDocument(true)) {
                 assertTrue(dc.isData());
                 assertTrue(dc.isPresent());
-                dc.wire().read(() -> "FirstName").text("Rob", Assert::assertEquals);
+                dc.wire().read(() -> "FirstName").text("Helen", Assert::assertEquals);
             }
 
             while (true) {
@@ -1502,6 +1503,56 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 }
             }
         }
+    }
+
+    @NotNull
+    protected String expectedMetaData6() {
+        return "--- !!meta-data #binary\n" +
+                "header: !SCQStore {\n" +
+                "  wireType: !WireType BINARY_LIGHT,\n" +
+                "  writePosition: 728,\n" +
+                "  roll: !SCQSRoll {\n" +
+                "    length: !int 86400000,\n" +
+                "    format: yyyyMMdd,\n" +
+                "    epoch: 0\n" +
+                "  },\n" +
+                "  indexing: !SCQSIndexing {\n" +
+                "    indexCount: 16,\n" +
+                "    indexSpacing: 2,\n" +
+                "    index2Index: 377,\n" +
+                "    lastIndex: 2\n" +
+                "  },\n" +
+                "  lastAcknowledgedIndexReplicated: -1,\n" +
+                "  recovery: !TimedStoreRecovery {\n" +
+                "    timeStamp: 0\n" +
+                "  },\n" +
+                "  deltaCheckpointInterval: 0\n" +
+                "}\n" +
+                "# position: 377, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index2index: [\n" +
+                "  # length: 16, used: 1\n" +
+                "  544,\n" +
+                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 544, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "index: [\n" +
+                "  # length: 16, used: 1\n" +
+                "  728,\n" +
+                "  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\n" +
+                "]\n" +
+                "# position: 704, header: -1\n" +
+                "--- !!meta-data #binary\n" +
+                "FirstName: Quartilla\n" +
+                "# position: 728, header: 0\n" +
+                "--- !!data #binary\n" +
+                "FirstName: Helen\n" +
+                "# position: 748, header: 0\n" +
+                "--- !!meta-data #binary\n" +
+                "FirstName: Steve\n" +
+                "...\n" +
+                "# 326908 bytes remaining\n";
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -1978,8 +2029,7 @@ public class SingleChronicleQueueTest extends ChronicleQueueTestBase {
                 assertEquals(count++, (int) syncA.lastIndexAppended());
                 syncB.writeText("hello B" + i);
                 assertEquals(count++, (int) syncB.lastIndexAppended());
-                try (DocumentContext dc = syncC.writingDocument()) {
-                    dc.metaData(true);
+                try (DocumentContext dc = syncC.writingDocument(true)) {
                     dc.wire().getValueOut().text("some meta " + i);
                 }
             }
