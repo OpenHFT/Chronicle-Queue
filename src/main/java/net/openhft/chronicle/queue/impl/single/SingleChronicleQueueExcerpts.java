@@ -1470,22 +1470,25 @@ public class SingleChronicleQueueExcerpts {
 
         @UsedViaReflection
         public void lastAcknowledgedIndexReplicated(long acknowledgeIndex) {
+
+            Jvm.debug().on(getClass(), "received lastAcknowledgedIndexReplicated=" + Long.toHexString(acknowledgeIndex) + " ,file=" + queue().file().getAbsolutePath());
+
             // the reason that we use the temp tailer is to prevent this tailer from having its cycle changed
             StoreTailer temp = queue.acquireTailer();
             try {
                 RollCycle rollCycle = queue.rollCycle();
                 int cycle0 = rollCycle.toCycle(acknowledgeIndex);
-                if (cycle0 != temp.cycle) {
-                    if (!temp.cycle(cycle0, false)) {
-                        Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
-                        return;
-                    }
+
+                if (!temp.cycle(cycle0, false)) {
+                    Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " for a cycle which could not found");
+                    return;
                 }
+
                 if (temp.store == null) {
                     Jvm.warn().on(getClass(), "Got an acknowledge index " + Long.toHexString(acknowledgeIndex) + " discarded.");
                     return;
                 }
-                temp.store.lastAcknowledgedIndexReplicated(rollCycle.toSequenceNumber(acknowledgeIndex));
+                temp.store.lastAcknowledgedIndexReplicated(acknowledgeIndex);
             } finally {
                 temp.release();
             }
