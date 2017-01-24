@@ -20,15 +20,14 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.ValueIn;
-import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
+import java.io.File;
+
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author Rob Austin.
@@ -62,17 +61,16 @@ public class LastIndexAppendedTest {
         }
     }
 
-
     @Test
     public void testTwoAppenders() throws Exception {
-        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        File path = Utils.tempDir("testTwoAppenders");
         long a_index;
 
-         try (
-            SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
-                    .testBlockSize()
-                    .rollCycle(TEST_DAILY)
-                    .build()) {
+        try (
+                SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                        .testBlockSize()
+                        .rollCycle(TEST_DAILY)
+                        .build()) {
             ExcerptAppender appender = appender_queue.acquireAppender();
             for (int i = 0; i < 5; i++) {
                 appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
@@ -87,15 +85,15 @@ public class LastIndexAppendedTest {
         ExcerptTailer tailer = tailer_queue.createTailer();
         tailer = tailer.toStart();
         long t_index;
-        t_index = doRead(tailer,6);
-        assertEquals(a_index,t_index);
+        t_index = doRead(tailer, 5);
+        assertEquals(a_index, t_index);
         System.out.println("Continue appending");
         try (
-            SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
-                    .testBlockSize()
-                    .rollCycle(TEST_DAILY)
-                    //.buffered(false)
-                    .build()) {
+                SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                        .testBlockSize()
+                        .rollCycle(TEST_DAILY)
+                        //.buffered(false)
+                        .build()) {
             ExcerptAppender appender = appender_queue.acquireAppender();
             for (int i = 0; i < 5; i++) {
                 appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
@@ -104,8 +102,16 @@ public class LastIndexAppendedTest {
             a_index = appender.lastIndexAppended();
             assertTrue(a_index > t_index);
         }
-       t_index = doRead(tailer,11);
-        assertEquals(a_index,t_index);
+        // if the tailer continues as well it should see the 5 new messages
+        System.out.println("Reading messages added");
+        t_index = doRead(tailer, 5);
+        assertEquals(a_index, t_index);
+
+        // if the tailer is expecting to read all the message again
+        System.out.println("Reading all the messages again");
+        tailer.toStart();
+        t_index = doRead(tailer, 10);
+        assertEquals(a_index, t_index);
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception index) {
@@ -113,25 +119,22 @@ public class LastIndexAppendedTest {
     }
 
     private long doRead(ExcerptTailer tailer, int expected) {
-        int i1 = 0;
-        long t_index =0;
+        int[] i = {0};
+        long t_index = 0;
         while (true) {
-            i1++;
             try (DocumentContext dc = tailer.readingDocument()) {
-                Wire wire = dc.wire();
-                if (wire == null) {
+                if (!dc.isPresent())
                     break;
-                }
                 t_index = tailer.index();
-                ValueIn valueIn = wire.read("log");
-                valueIn.marshallable(m -> {
+                dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg);
-                    System.out.println("msg:"+msg);
+                    System.out.println("msg:" + msg);
+                    i[0]++;
                 });
             }
         }
-        assertEquals(expected,i1);
+        assertEquals(expected, i[0]);
         return t_index;
     }
 

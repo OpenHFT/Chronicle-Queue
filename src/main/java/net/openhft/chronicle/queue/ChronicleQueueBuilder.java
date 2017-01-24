@@ -36,6 +36,10 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends 
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
+    static SingleChronicleQueueBuilder single(File basePath) {
+        return SingleChronicleQueueBuilder.binary(basePath);
+    }
+
     @Deprecated
     static SingleChronicleQueueBuilder singleText(String basePath) {
         return SingleChronicleQueueBuilder.text(new File(basePath));
