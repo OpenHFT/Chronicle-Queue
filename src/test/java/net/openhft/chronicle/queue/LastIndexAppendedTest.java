@@ -21,10 +21,14 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.DocumentContext;
+import net.openhft.chronicle.wire.ValueIn;
+import net.openhft.chronicle.wire.Wire;
 import org.junit.Test;
 
 import static net.openhft.chronicle.queue.RollCycles.TEST_DAILY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rob Austin.
@@ -57,4 +61,78 @@ public class LastIndexAppendedTest {
         } catch (Exception index) {
         }
     }
+
+
+    @Test
+    public void testTwoAppenders() throws Exception {
+        String path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
+        long a_index;
+
+         try (
+            SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    .build()) {
+            ExcerptAppender appender = appender_queue.acquireAppender();
+            for (int i = 0; i < 5; i++) {
+                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                        m.write("msg").text("hello world ")));
+            }
+            a_index = appender.lastIndexAppended();
+        }
+        SingleChronicleQueue tailer_queue = ChronicleQueueBuilder.single(path)
+                .testBlockSize()
+                .rollCycle(TEST_DAILY)
+                .build();
+        ExcerptTailer tailer = tailer_queue.createTailer();
+        tailer = tailer.toStart();
+        long t_index;
+        t_index = doRead(tailer,6);
+        assertEquals(a_index,t_index);
+        System.out.println("Continue appending");
+        try (
+            SingleChronicleQueue appender_queue = ChronicleQueueBuilder.single(path)
+                    .testBlockSize()
+                    .rollCycle(TEST_DAILY)
+                    //.buffered(false)
+                    .build()) {
+            ExcerptAppender appender = appender_queue.acquireAppender();
+            for (int i = 0; i < 5; i++) {
+                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                        m.write("msg").text("hello world2 ")));
+            }
+            a_index = appender.lastIndexAppended();
+            assertTrue(a_index > t_index);
+        }
+       t_index = doRead(tailer,11);
+        assertEquals(a_index,t_index);
+        try {
+            IOTools.deleteDirWithFiles(path, 2);
+        } catch (Exception index) {
+        }
+    }
+
+    private long doRead(ExcerptTailer tailer, int expected) {
+        int i1 = 0;
+        long t_index =0;
+        while (true) {
+            i1++;
+            try (DocumentContext dc = tailer.readingDocument()) {
+                Wire wire = dc.wire();
+                if (wire == null) {
+                    break;
+                }
+                t_index = tailer.index();
+                ValueIn valueIn = wire.read("log");
+                valueIn.marshallable(m -> {
+                    String msg = m.read("msg").text();
+                    assertNotNull(msg);
+                    System.out.println("msg:"+msg);
+                });
+            }
+        }
+        assertEquals(expected,i1);
+        return t_index;
+    }
+
 }
