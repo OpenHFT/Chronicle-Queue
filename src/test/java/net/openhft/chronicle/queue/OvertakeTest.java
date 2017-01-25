@@ -21,7 +21,7 @@ public class OvertakeTest {
 
     private long a_index;
 
-    private int msgs = 500;
+    private int messages = 500;
 
     private static long doReadBad(ExcerptTailer tailer, int expected, boolean additionalClose) {
         int[] i = {0};
@@ -35,7 +35,6 @@ public class OvertakeTest {
                 dc.wire().read("log").marshallable(m -> {
                     String msg = m.read("msg").text();
                     assertNotNull(msg);
-                    //System.out.println("msg:" + msg);
                     i[0]++;
                 });
                 if (additionalClose) {
@@ -51,12 +50,11 @@ public class OvertakeTest {
     public void before() throws Exception {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (SingleChronicleQueue appender_queue = SingleChronicleQueueBuilder.binary(path)
-              // .testBlockSize()
-                   //     .rollCycle(TEST_DAILY)
+                .testBlockSize()
                 .buffered(false)
                         .build()) {
             ExcerptAppender appender = appender_queue.acquireAppender();
-            for (int i = 0; i < msgs; i++) {
+            for (int i = 0; i < messages; i++) {
                 final long l = i;
                 appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m -> {
                             m.write("msg").text("hello world ola multi-verse");
@@ -71,18 +69,17 @@ public class OvertakeTest {
     @Test
     public void appendAndTail() throws Exception {
         SingleChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
-               // .testBlockSize()
-                //.rollCycle(TEST_DAILY)
+                .testBlockSize()
                 .buffered(false)
                 .build();
         ExcerptTailer tailer = tailer_queue.createTailer();
         tailer = tailer.toStart();
         long t_index;
-        t_index = doReadBad(tailer, msgs,false);
+        t_index = doReadBad(tailer, messages,false);
         assertEquals(a_index, t_index);
         tailer = tailer_queue.createTailer();
         tailer = tailer.toStart();
-        t_index = doReadBad(tailer, msgs,true);
+        t_index = doReadBad(tailer, messages,true);
         assertEquals(a_index, t_index);
 
     }
