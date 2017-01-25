@@ -5,7 +5,6 @@ import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.Wire;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +22,31 @@ public class OvertakeTest {
     private long a_index;
 
     private int msgs = 500;
+
+    private static long doReadBad(ExcerptTailer tailer, int expected, boolean additionalClose) {
+        int[] i = {0};
+        long t_index = 0;
+        while (true) {
+            try (DocumentContext dc = tailer.readingDocument()) {
+                if (!dc.isPresent())
+                    break;
+                t_index = tailer.index();
+
+                dc.wire().read("log").marshallable(m -> {
+                    String msg = m.read("msg").text();
+                    assertNotNull(msg);
+                    //System.out.println("msg:" + msg);
+                    i[0]++;
+                });
+                if (additionalClose) {
+                    dc.close();
+                }
+            }
+        }
+        assertEquals(expected, i[0]);
+        return t_index;
+    }
+
     @Before
     public void before() throws Exception {
         path = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
@@ -69,32 +93,6 @@ public class OvertakeTest {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {
         }
-    }
-
-    private static long doReadBad(ExcerptTailer tailer, int expected, boolean additionalClose) {
-        int[] i = {0};
-        long t_index = 0;
-        while (true) {
-            try (DocumentContext dc = tailer.readingDocument()) {
-
-                Wire wire = dc.wire();
-                if (wire==null)
-                    break;
-                t_index = tailer.index();
-
-                dc.wire().read("log").marshallable(m -> {
-                    String msg = m.read("msg").text();
-                    assertNotNull(msg);
-                    //System.out.println("msg:" + msg);
-                    i[0]++;
-                });
-                if (additionalClose) {
-                    dc.close();
-                }
-            }
-        }
-        assertEquals(expected, i[0]);
-        return t_index;
     }
 
 }
