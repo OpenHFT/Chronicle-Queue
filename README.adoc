@@ -66,7 +66,7 @@ Snapshots are available on https://oss.sonatype.org/content/repositories/snapsho
 
 https://github.com/OpenHFT/Chronicle-Queue/blob/master/RELEASE-NOTES.adoc[Chronicle Queue Release Notes]
 
-===  Java Doc
+===  Java Doc (3.6)
 see http://openhft.github.io/Chronicle-Queue/apidocs/
 
 === Simple Step-By-Step Guide
