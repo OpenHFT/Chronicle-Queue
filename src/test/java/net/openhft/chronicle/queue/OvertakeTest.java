@@ -9,8 +9,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.*;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Index runs away on double close - AM
@@ -89,6 +92,100 @@ public class OvertakeTest {
         try {
             IOTools.deleteDirWithFiles(path, 2);
         } catch (Exception ignored) {
+        }
+    }
+
+
+    @Test
+    public void threadingTest() throws Exception  {
+        System.out.println("Continue appending");
+        ExecutorService execService = Executors.newFixedThreadPool(2);
+        SynchronousQueue<Long> sync = new SynchronousQueue<>();
+        long t_index;
+
+        MyAppender myapp = new MyAppender(
+                sync);
+        Future<Long> f = execService.submit(myapp);
+        SingleChronicleQueue tailer_queue = SingleChronicleQueueBuilder.binary(path)
+                .testBlockSize()
+                .buffered(false)
+                .build();
+        t_index = 0;
+        MyTailer mytailer = new MyTailer(tailer_queue,t_index,sync);
+        Future<Long> f2 = execService.submit(mytailer);
+        t_index = f2.get();
+        a_index = f.get();
+        assertTrue(a_index == t_index);
+    }
+
+    class MyAppender implements Callable<Long> {
+
+        SingleChronicleQueue queue;
+        ExcerptAppender appender;
+        SynchronousQueue<Long> sync;
+        MyAppender(
+                //SingleChronicleQueue q,
+                SynchronousQueue<Long> sync) {
+            //queue = q;
+
+            this.sync = sync;
+        }
+
+        @Override
+        public Long call() throws Exception {
+            queue = SingleChronicleQueueBuilder.binary(path)
+                    //.testBlockSize()
+                    //.rollCycle(TEST_DAILY)
+                    .buffered(false)
+                    .build();
+            appender = queue.acquireAppender();
+            for (int i = 0; i < 50; i++) {
+                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                        m.write("msg").text("hello world2 ")));
+            }
+            long index = appender.lastIndexAppended();
+            sync.put(index);
+            Long fromReader = sync.take();
+            if (index != fromReader) {
+                System.out.println("Writer:Not the same:"+index+" vs. "+fromReader );
+            }
+            for (int i = 0; i < 50; i++) {
+                appender.writeDocument(wireOut -> wireOut.write("log").marshallable(m ->
+                        m.write("msg").text("hello world2 ")));
+            }
+            index = appender.lastIndexAppended();
+            sync.put(index);
+            return index;
+        }
+    }
+
+    class MyTailer implements Callable<Long> {
+
+        SingleChronicleQueue queue;
+        long startIndex;
+        SynchronousQueue<Long> sync;
+        MyTailer(SingleChronicleQueue q, long s, SynchronousQueue<Long> sync) {
+            queue = q;
+            startIndex =s;
+            this.sync = sync;
+        }
+
+        @Override
+        public Long call() throws Exception {
+            ExcerptTailer tailer = queue.createTailer();
+            tailer.moveToIndex(startIndex);
+            Long fromWriter = sync.take();
+            long index = doReadBad(tailer, messages+50, false);
+            if (index != fromWriter) {
+                System.out.println("Reader:1 Not the same:"+index+" vs. "+fromWriter );
+            }
+            sync.put(index);
+            fromWriter = sync.take();
+            index = doReadBad(tailer, 50,false);
+            if (index != fromWriter) {
+                System.out.println("Reader:2 Not the same:"+index+" vs. "+fromWriter );
+            }
+            return index;
         }
     }
 
