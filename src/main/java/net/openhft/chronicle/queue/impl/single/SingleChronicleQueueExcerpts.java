@@ -124,7 +124,8 @@ public class SingleChronicleQueueExcerpts {
         @Override
         public void writeText(CharSequence text) throws UnrecoverableTimeoutException {
             try (DocumentContext dc = writingDocument()) {
-                dc.wire().bytes().append8bit(text);
+                dc.wire().bytes()
+                        .append8bit(text);
                 if (padToCacheAlign() != Padding.ALWAYS)
                     ((StoreAppenderContext) dc).padToCacheAlign = false;
             }

@@ -17,6 +17,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import org.junit.Assert;
@@ -35,22 +36,14 @@ public class WriteReadTextTest {
 
     static {
 
-        int largest = 20993248;
+        int largest = 20_993_248;
 
         StringBuilder tmpSB = new StringBuilder(largest + 6);
 
-        tmpSB.append("ABC");
-        for (int i = 0; i < largest; i++) {
-            tmpSB.append(' ');
-        }
-        tmpSB.append("xyz");
+        while (tmpSB.length() < largest)
+            tmpSB.append("0123456789ABCDE\n");
 
         EXTREMELY_LARGE = tmpSB.toString();
-    }
-
-    @Test
-    public void testAll() {
-        doTest(MINIMAL, CONSTRUCTED, REALISTIC, EXTREMELY_LARGE);
     }
 
     @Test
@@ -79,6 +72,7 @@ public class WriteReadTextTest {
 
         try (SingleChronicleQueue theQueue = ChronicleQueueBuilder
                 .single(myPath)
+                .blockSize(Maths.nextPower2(EXTREMELY_LARGE.length() * 4, 256 << 10))
                 // .testBlockSize() not suitable as large message sizes.
                 .build()) {
 
@@ -105,10 +99,13 @@ public class WriteReadTextTest {
                 for (int p = 0; p < problematic.length; p++) {
                     final String tmpText = problematic[p];
                     appender.writeDocument(writer -> writer.getValueOut().text(tmpText));
-                }
-                for (int p = 0; p < problematic.length; p++) {
+
                     tailer.readDocument(reader -> reader.getValueIn().textTo(tmpReadback));
-                    Assert.assertEquals("write/readDocument", problematic[p], tmpReadback.toString());
+                    String actual = tmpReadback.toString();
+                    Assert.assertEquals(problematic[p].length(), actual.length());
+                    for (int i = 0; i < actual.length(); i += 1024)
+                        Assert.assertEquals("i: " + i, problematic[p].substring(i, Math.min(actual.length(), i + 1024)), actual.substring(i, Math.min(actual.length(), i + 1024)));
+                    Assert.assertEquals(problematic[p], actual);
                 }
             }
         }
