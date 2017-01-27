@@ -314,47 +314,51 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     ScanResult moveToIndex0(StoreRecovery recovery, @NotNull final ExcerptContext ec, final long index)
             throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException {
 
-        LongArrayValues index2index = getIndex2index(recovery, ec, ec.timeoutMS());
+        try {
+            LongArrayValues index2index = getIndex2index(recovery, ec, ec.timeoutMS());
 
-        @NotNull final Bytes<?> bytes = ec.wireForIndex().bytes();
+            @NotNull final Bytes<?> bytes = ec.wireForIndex().bytes();
 
-        long primaryOffset = toAddress0(index);
+            long primaryOffset = toAddress0(index);
 
-        long secondaryAddress = 0;
-        long startIndex = index & ~(indexSpacing - 1);
-        while (primaryOffset >= 0) {
-            secondaryAddress = index2index.getValueAt(primaryOffset);
-            if (secondaryAddress == 0) {
-                startIndex -= indexCount * indexSpacing;
-                primaryOffset--;
-            } else {
-                break;
+            long secondaryAddress = 0;
+            long startIndex = index & ~(indexSpacing - 1);
+            while (primaryOffset >= 0) {
+                secondaryAddress = index2index.getValueAt(primaryOffset);
+                if (secondaryAddress == 0) {
+                    startIndex -= indexCount * indexSpacing;
+                    primaryOffset--;
+                } else {
+                    break;
+                }
             }
+
+            if (secondaryAddress <= 0) {
+                return null;
+            }
+            @NotNull final LongArrayValues array1 = arrayForAddress(ec.wireForIndex(), secondaryAddress);
+            long secondaryOffset = toAddress1(index);
+
+            do {
+                long fromAddress = array1.getValueAt(secondaryOffset);
+                if (fromAddress == 0) {
+                    secondaryOffset--;
+                    startIndex -= indexSpacing;
+                    continue;
+                }
+
+                if (index == startIndex) {
+                    ec.wire().bytes().readPositionUnlimited(fromAddress);
+                    return ScanResult.FOUND;
+                } else {
+                    return linearScan(ec.wire(), index, startIndex, fromAddress);
+                }
+
+            } while (secondaryOffset >= 0);
+            return null; // no index,
+        } catch (IllegalStateException e) {
+            return linearScan(ec.wire(), index, -1, 0);
         }
-
-        if (secondaryAddress <= 0) {
-            return null;
-        }
-        @NotNull final LongArrayValues array1 = arrayForAddress(ec.wireForIndex(), secondaryAddress);
-        long secondaryOffset = toAddress1(index);
-
-        do {
-            long fromAddress = array1.getValueAt(secondaryOffset);
-            if (fromAddress == 0) {
-                secondaryOffset--;
-                startIndex -= indexSpacing;
-                continue;
-            }
-
-            if (index == startIndex) {
-                ec.wire().bytes().readPositionUnlimited(fromAddress);
-                return ScanResult.FOUND;
-            } else {
-                return linearScan(ec.wire(), index, startIndex, fromAddress);
-            }
-
-        } while (secondaryOffset >= 0);
-        return null; // no index,
     }
 
     /**
@@ -515,6 +519,8 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
                 }
             }
         } catch (EOFException e) {
+            Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
+        } catch (IllegalStateException e) {
             Jvm.debug().on(getClass(), "Attempt to find " + Long.toHexString(position), e);
         }
         try {

@@ -1281,7 +1281,9 @@ public class SingleChronicleQueueExcerpts {
             }
             switch (moveToIndexResult(index)) {
                 case NOT_FOUND:
-                    throw new IllegalStateException("NOT_FOUND");
+                    if (moveToIndexResult(index - 1) == FOUND)
+                        state = FOUND_CYCLE;
+                    break;
 
                 case FOUND:
                     if (direction == FORWARD) {
