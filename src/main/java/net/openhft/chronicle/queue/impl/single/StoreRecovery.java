@@ -39,10 +39,11 @@ public interface StoreRecovery extends WriteMarshallable {
 
     default long writeHeader(Wire wire,
                              int length,
+                             int safeLength,
                              long timeoutMS,
                              @Nullable final LongValue lastPosition) throws EOFException, UnrecoverableTimeoutException {
         try {
-            return wire.writeHeader(length, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
+            return wire.writeHeader(length, safeLength, timeoutMS, TimeUnit.MILLISECONDS, lastPosition);
         } catch (TimeoutException e) {
             return recoverAndWriteHeader(wire, length, timeoutMS, lastPosition);
         }

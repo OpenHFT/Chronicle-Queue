@@ -260,7 +260,7 @@ public class SingleChronicleQueueExcerpts {
                 for (int i = 0; i <= 100; i++) {
                     try {
                         assert wire != null;
-                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, timeoutMS());
+                        long pos = store.writeHeader(wire, Wires.UNKNOWN_LENGTH, (int) (queue.blockSize() / 4), timeoutMS());
                         position(pos);
                         context.isClosed = false;
                         context.metaData = false;
@@ -355,7 +355,7 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
-        public void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
+        public void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException {
             // still uses append as it has a known length.
             append(Maths.toUInt31(bytes.readRemaining()), (m, w) -> w.bytes().write(m), bytes);
         }
@@ -386,7 +386,7 @@ public class SingleChronicleQueueExcerpts {
                     int length = bytes.length();
                     // sets the position
                     wire.headerNumber(index);
-                    position(store.writeHeader(wire, length, timeoutMS()));
+                    position(store.writeHeader(wire, length, length, timeoutMS()));
                     wireBytes.write(bytes);
                     wire.updateHeader(length, position, false);
 
@@ -525,7 +525,7 @@ public class SingleChronicleQueueExcerpts {
                     rollCycleTo(cycle);
 
                 try {
-                    position(store.writeHeader(wire, length, timeoutMS()));
+                    position(store.writeHeader(wire, length, length, timeoutMS()));
                     assert ((AbstractWire) wire).isInsideHeader();
                     beforeAppend(wire, wire.headerNumber() + 1);
                     wireWriter.write(writer, wire);
@@ -579,7 +579,7 @@ public class SingleChronicleQueueExcerpts {
         <T> void append2(int length, WireWriter<T> wireWriter, T writer) throws
                 UnrecoverableTimeoutException, EOFException, StreamCorruptedException {
             setCycle(Math.max(queue.cycle(), cycle + 1), true);
-            position(store.writeHeader(wire, length, timeoutMS()));
+            position(store.writeHeader(wire, length, length, timeoutMS()));
             beforeAppend(wire, wire.headerNumber() + 1);
             wireWriter.write(writer, wire);
             wire.updateHeader(length, position, false);
