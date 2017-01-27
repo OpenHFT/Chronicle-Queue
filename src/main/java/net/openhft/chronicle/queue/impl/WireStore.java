@@ -77,7 +77,7 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
-    long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+    long writeHeader(Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
     void writeEOF(Wire wire, long timeoutMS) throws TimeoutException;
 

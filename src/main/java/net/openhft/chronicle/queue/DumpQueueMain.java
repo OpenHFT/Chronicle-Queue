@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.WireDumper;
@@ -24,6 +25,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import static java.lang.System.err;
@@ -68,9 +70,10 @@ public class DumpQueueMain {
                 bytes.readLimit(bytes.realCapacity());
                 StringBuilder sb = new StringBuilder();
                 WireDumper dumper = WireDumper.of(bytes);
+                Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
                 while (bytes.readRemaining() >= 4) {
                     sb.setLength(0);
-                    boolean last = dumper.dumpOne(sb);
+                    boolean last = dumper.dumpOne(sb, buffer);
                     if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
                         // truncate trailing zeros
                         if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {

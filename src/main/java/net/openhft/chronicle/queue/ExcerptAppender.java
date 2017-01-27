@@ -16,6 +16,7 @@
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.BytesStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.MarshallableOut;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
@@ -33,7 +34,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     /**
      * @param bytes to write to excerpt.
      */
-    void writeBytes(@NotNull Bytes<?> bytes) throws UnrecoverableTimeoutException;
+    void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException;
+
+    default void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
+        writeBytes((BytesStore) bytes);
+    }
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
