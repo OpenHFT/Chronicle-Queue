@@ -1,17 +1,16 @@
 package net.openhft.chronicle.queue.impl.single;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.time.TimeProvider;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.queue.impl.StoreFileListener;
-import net.openhft.chronicle.queue.impl.WireStore;
 import net.openhft.chronicle.wire.DocumentContext;
 import net.openhft.chronicle.wire.Wires;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -99,29 +98,26 @@ public class RollCycleTest {
 
             ExcerptAppender appender = queue.acquireAppender();
 
-            long index;
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("hello world");
-                index = dc.index();
+            }
+            Bytes bytes;
+            long pos;
+            try (DocumentContext dc = appender.writingDocument()) {
+                bytes = dc.wire().bytes();
+                pos = bytes.writePosition() - 4;
             }
 
-            WireStore wireStore = queue.storeForCycle(queue.rollCycle().toCycle(index), 0, false);
+            // write as not complete.
+            bytes.writeInt(pos, Wires.NOT_COMPLETE_UNKNOWN_LENGTH);
 
-            try (FileOutputStream fileOutputStream = new FileOutputStream(wireStore.file(), true)) {
-                fileOutputStream.write(Wires.NOT_COMPLETE_UNKNOWN_LENGTH);
-                fileOutputStream.flush();
-
-            }
-
-            Thread.sleep(1000);
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write().text("hello world 2");
             }
 
             try (DocumentContext dc = appender.writingDocument()) {
-                dc.wire().write().text("hello world 2");
+                dc.wire().write().text("hello world 3");
             }
-
         }
     }
 

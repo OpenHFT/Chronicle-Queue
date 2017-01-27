@@ -173,6 +173,18 @@ public class SingleChronicleQueueExcerpts {
         }
 
         @Override
+        public ExcerptAppender lazyIndexing(boolean lazyIndexing) {
+            this.lazyIndexing = lazyIndexing;
+            resetPosition();
+            return this;
+        }
+
+        @Override
+        public boolean lazyIndexing() {
+            return lazyIndexing;
+        }
+
+        @Override
         public boolean recordHistory() {
             return sourceId() != 0;
         }

@@ -24,8 +24,12 @@ import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.RollCycles;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -33,7 +37,22 @@ import static net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilde
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+@RunWith(Parameterized.class)
 public class NotCompleteTest {
+
+    private final boolean lazyIndexing;
+
+    public NotCompleteTest(boolean lazyIndexing) {
+        this.lazyIndexing = lazyIndexing;
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {false},
+                {true}
+        });
+    }
 
     /**
      * tests that when flags are set to not complete we are able to recover
@@ -50,7 +69,8 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = queue.acquireAppender()
+                    .lazyIndexing(lazyIndexing);
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -60,9 +80,9 @@ public class NotCompleteTest {
 
 //            System.out.println(queue.dump());
 
-        // this is what will corrupt the queue
-        BinaryLongReference.forceAllToNotCompleteState();
-    }
+            // this is what will corrupt the queue
+            BinaryLongReference.forceAllToNotCompleteState();
+        }
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .timeoutMS(500)
@@ -89,7 +109,8 @@ public class NotCompleteTest {
                 .rollCycle(RollCycles.TEST_DAILY)
                 .build()) {
 
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = queue.acquireAppender()
+                    .lazyIndexing(lazyIndexing);
 
             try (DocumentContext dc = appender.writingDocument()) {
                 dc.wire().write("some").text("data");
@@ -99,9 +120,9 @@ public class NotCompleteTest {
 
 //            System.out.println(queue.dump());
 
-        // this is what will corrupt the queue
-        BinaryLongArrayReference.forceAllToNotCompleteState();
-    }
+            // this is what will corrupt the queue
+            BinaryLongArrayReference.forceAllToNotCompleteState();
+        }
         try (final ChronicleQueue queue = binary(tmpDir)
                 .testBlockSize()
                 .timeoutMS(500)
@@ -122,7 +143,8 @@ public class NotCompleteTest {
 
         File tmpDir = Utils.tempDir("testMessageLeftNotComplete");
         try (final ChronicleQueue queue = binary(tmpDir).testBlockSize().rollCycle(RollCycles.TEST_DAILY).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+            ExcerptAppender appender = queue.acquireAppender()
+                    .lazyIndexing(lazyIndexing);
 
             // start a message which was not completed.
             DocumentContext dc = appender.writingDocument();
@@ -137,7 +159,7 @@ public class NotCompleteTest {
                 assertFalse(dc.isPresent());
             }
 
-            assertEquals("--- !!meta-data #binary\n" +
+            String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 0,\n" +
@@ -174,7 +196,33 @@ public class NotCompleteTest {
                     "# position: 576, header: -1 or 0\n" +
                     "--- !!not-ready-data! #binary\n" +
                     "...\n" +
-                    "# 654780 bytes remaining\n", queue.dump());
+                    "# 654780 bytes remaining\n";
+            String expectedLazy = "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 0,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  },\n" +
+                    "  deltaCheckpointInterval: 0\n" +
+                    "}\n" +
+                    "# position: 377, header: -1 or 0\n" +
+                    "--- !!not-ready-data! #binary\n" +
+                    "...\n" +
+                    "# 654979 bytes remaining\n";
+            assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
         }
 
         try (final ChronicleQueue queue = binary(tmpDir).timeoutMS(500).build()) {

@@ -91,4 +91,18 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
 
     Padding padToCacheAlign();
 
+    /**
+     * Set whether to trigger indexing.
+     *
+     * @param lazyIndexing if true, don't do any indexing on the append.
+     * @return this
+     */
+    ExcerptAppender lazyIndexing(boolean lazyIndexing);
+
+    /**
+     * Whether to trigger indexing. If true, indexes are created only when needed.
+     *
+     * @return if false, index as you write, otherwise only index as needed.
+     */
+    boolean lazyIndexing();
 }

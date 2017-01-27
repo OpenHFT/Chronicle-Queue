@@ -26,13 +26,32 @@ import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.core.time.SetTimeProvider;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
+@RunWith(Parameterized.class)
 public class RollingCycleTest {
+
+    private final boolean lazyIndexing;
+
+    public RollingCycleTest(boolean lazyIndexing) {
+        this.lazyIndexing = lazyIndexing;
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][]{
+                {false},
+                {true}
+        });
+    }
 
     @Test
     public void testRollCycle() throws InterruptedException {
@@ -48,7 +67,7 @@ public class RollingCycleTest {
                 .timeProvider(stp)
                 .build()) {
 
-            final ExcerptAppender appender = queue.acquireAppender();
+            final ExcerptAppender appender = queue.acquireAppender().lazyIndexing(lazyIndexing);
             int numWritten = 0;
             for (int h = 0; h < 3; h++) {
                 stp.currentTimeMillis(start + TimeUnit.DAYS.toMillis(h));
@@ -57,7 +76,7 @@ public class RollingCycleTest {
                     numWritten++;
                 }
             }
-            assertEquals("--- !!meta-data #binary\n" +
+            String expectedEager = "--- !!meta-data #binary\n" +
                     "header: !SCQStore {\n" +
                     "  wireType: !WireType BINARY_LIGHT,\n" +
                     "  writePosition: 666,\n" +
@@ -225,7 +244,131 @@ public class RollingCycleTest {
                     "000002b0 75 34 EB 57 76 F4 61 C5  94 9F 47 64 29 46 FC F6 u4·Wv·a· ··Gd)F··\n" +
                     "000002c0 48 2F AF 17 B1 30                                H/···0           \n" +
                     "...\n" +
-                    "# 326966 bytes remaining\n", queue.dump());
+                    "# 326966 bytes remaining\n";
+            String expectedLazy = "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 466,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  },\n" +
+                    "  deltaCheckpointInterval: 0\n" +
+                    "}\n" +
+                    "# position: 377, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "00000170                                         10 6E 61               ·na\n" +
+                    "00000180 6D 65 5F 2D 31 39 37 33  39 37 39 35 37 37 8F 2F me_-1973 979577·/\n" +
+                    "00000190 4D F9 E8 37 67 20 65 46  D4 3E 84 5B 55 21 70 52 M··7g eF ·>·[U!pR\n" +
+                    "000001a0 FF 64 0E 7F CE 34                                ·d···4           \n" +
+                    "# position: 422, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "000001a0                                0F 6E 61 6D 65 5F            ·name_\n" +
+                    "000001b0 2D 36 36 32 39 30 33 38  33 33 6A 0F 13 68 D3 C5 -6629038 33j··h··\n" +
+                    "000001c0 B4 37 75 B4 28 F3 8F 00  98 6E 49 C8 51 85 02 19 ·7u·(··· ·nI·Q···\n" +
+                    "000001d0 B0 3B                                            ·;               \n" +
+                    "# position: 466, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "000001d0                   0F 6E  61 6D 65 5F 2D 34 37 32       ·n ame_-472\n" +
+                    "000001e0 38 33 38 33 32 35 96 CA  CF 09 EB D8 22 63 AE 2A 838325·· ····\"c·*\n" +
+                    "000001f0 A6 97 6E 4B 74 45 33 75  B9 A7 D4 D2 E1 1C       ··nKtE3u ······  \n" +
+                    "# position: 510, header: 2 EOF\n" +
+                    "--- !!not-ready-meta-data! #binary\n" +
+                    "...\n" +
+                    "# 327166 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 463,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  },\n" +
+                    "  deltaCheckpointInterval: 0\n" +
+                    "}\n" +
+                    "# position: 377, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "00000170                                         0E 6E 61               ·na\n" +
+                    "00000180 6D 65 5F 39 38 32 36 39  37 30 35 33 79 FC EB FD me_98269 7053y···\n" +
+                    "00000190 6C C5 AD 1E D2 5F 14 96  99 B6 08 A7 F3 B5 53 F6 l····_·· ······S·\n" +
+                    "000001a0 19 94 FC FB                                      ····             \n" +
+                    "# position: 420, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "000001a0                          0E 6E 61 6D 65 5F 38 38          ·name_88\n" +
+                    "000001b0 37 39 33 30 38 37 32 94  07 E9 5F 94 37 E1 43 7C 7930872· ··_·7·C|\n" +
+                    "000001c0 17 9E 76 A1 C0 E6 5C BC  7A 67 55 6F B6 E0 E0    ··v···\\· zgUo··· \n" +
+                    "# position: 463, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "000001d0          0F 6E 61 6D 65  5F 31 32 34 38 36 38 35    ·name _1248685\n" +
+                    "000001e0 32 34 38 7E B8 2B 0D 29  5F 76 71 57 7D FC 2E 6F 248~·+·) _vqW}·.o\n" +
+                    "000001f0 07 0F 81 A8 EB 09 A3 ED  34 BD FF                ········ 4··     \n" +
+                    "# position: 507, header: 2 EOF\n" +
+                    "--- !!not-ready-meta-data! #binary\n" +
+                    "...\n" +
+                    "# 327169 bytes remaining\n" +
+                    "--- !!meta-data #binary\n" +
+                    "header: !SCQStore {\n" +
+                    "  wireType: !WireType BINARY_LIGHT,\n" +
+                    "  writePosition: 465,\n" +
+                    "  roll: !SCQSRoll {\n" +
+                    "    length: !int 86400000,\n" +
+                    "    format: yyyyMMdd,\n" +
+                    "    epoch: 0\n" +
+                    "  },\n" +
+                    "  indexing: !SCQSIndexing {\n" +
+                    "    indexCount: 8,\n" +
+                    "    indexSpacing: 1,\n" +
+                    "    index2Index: 0,\n" +
+                    "    lastIndex: 0\n" +
+                    "  },\n" +
+                    "  lastAcknowledgedIndexReplicated: -1,\n" +
+                    "  recovery: !TimedStoreRecovery {\n" +
+                    "    timeStamp: 0\n" +
+                    "  },\n" +
+                    "  deltaCheckpointInterval: 0\n" +
+                    "}\n" +
+                    "# position: 377, header: 0\n" +
+                    "--- !!data #binary\n" +
+                    "00000170                                         10 6E 61               ·na\n" +
+                    "00000180 6D 65 5F 2D 31 35 38 37  33 39 38 39 39 33 F3 7F me_-1587 398993··\n" +
+                    "00000190 DA E8 52 E6 26 47 23 00  F6 81 6C 34 46 57 35 BF ··R·&G#· ··l4FW5·\n" +
+                    "000001a0 CF 7D F3 C8 0A 44                                ·}···D           \n" +
+                    "# position: 422, header: 1\n" +
+                    "--- !!data #binary\n" +
+                    "000001a0                                0E 6E 61 6D 65 5F            ·name_\n" +
+                    "000001b0 35 30 31 30 39 35 31 33  38 66 52 07 23 C1 CC C4 50109513 8fR·#···\n" +
+                    "000001c0 6D F9 83 CC 8B 53 2D DF  4E B1 60 9F 7E C9 70 A2 m····S-· N·`·~·p·\n" +
+                    "000001d0 B7                                               ·                \n" +
+                    "# position: 465, header: 2\n" +
+                    "--- !!data #binary\n" +
+                    "000001d0                0F 6E 61  6D 65 5F 2D 31 36 31 34      ·na me_-1614\n" +
+                    "000001e0 32 38 30 35 33 F4 50 A1  35 06 3B F0 03 A1 B6 32 28053·P· 5·;····2\n" +
+                    "000001f0 2C D6 11 E7 5B ED 26 88  8C 7D 0F 13 3E          ,···[·&· ·}··>   \n" +
+                    "...\n" +
+                    "# 327167 bytes remaining\n";
+            assertEquals(lazyIndexing ? expectedLazy : expectedEager, queue.dump());
 
             System.out.println("Wrote: " + numWritten + " messages");
 
