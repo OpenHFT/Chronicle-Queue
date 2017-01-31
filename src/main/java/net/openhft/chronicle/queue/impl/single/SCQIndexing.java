@@ -126,7 +126,7 @@ class SCQIndexing implements Demarshallable, WriteMarshallable, Closeable {
     /**
      * atomically gets or creates the address of the first index the index is create and another
      * except into the queue, however this except is treated as meta data and does not increment the
-     * last index, in otherword it is not possible to access this except by calling index(), it
+     * last index, in other words it is not possible to access this except by calling index(), it
      * effectively invisible to the end-user
      *
      * @param recovery

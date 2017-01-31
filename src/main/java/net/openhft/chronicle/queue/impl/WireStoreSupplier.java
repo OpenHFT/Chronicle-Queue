@@ -39,7 +39,7 @@ public interface WireStoreSupplier {
      * the cycles between a range, inclusive
      *
      * @param lowerCycle the lower cycle inclusive
-     * @param upperCycle the uper cycle inclusive
+     * @param upperCycle the upper cycle inclusive
      * @return the cycles between a range, inclusive
      * @throws ParseException
      */

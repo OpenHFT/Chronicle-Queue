@@ -216,7 +216,7 @@ public abstract class AbstractChronicleQueueBuilder<B extends ChronicleQueueBuil
     }
 
     /**
-     * @return if we uses a ring buffer to buffer the appends, the Excerts are written to the
+     * @return if we uses a ring buffer to buffer the appends, the Excerpts are written to the
      * Chronicle Queue using a background thread
      */
     @Override
