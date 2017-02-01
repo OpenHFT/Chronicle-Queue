@@ -10,7 +10,7 @@ Peter Lawrey, Rob Austin
 
 ==== About Chronicle Software
 
-video::201989439[vimeo]
+video::201989439[vimeo,width=640,height=360]
 
 https://player.vimeo.com/video/201989439
 
