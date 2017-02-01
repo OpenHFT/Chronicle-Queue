@@ -12,6 +12,8 @@ Peter Lawrey, Rob Austin
 
 video::201989439[vimeo]
 
+https://player.vimeo.com/video/201989439
+
 == Chronicle Queue
 
 === What is Chronicle Queue 
