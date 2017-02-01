@@ -8,6 +8,9 @@ Peter Lawrey, Rob Austin
 
 *Or you may already be using Chronicle and just want some help - http://chronicle.software/support/[find out more..]*
 
+==== About Chronicle Software
+
+video::201989439[vimeo]
 
 == Chronicle Queue
 
@@ -42,6 +45,8 @@ The 99th percentile latency is the worst 1 in 100, and the 99.9th percentile is 
 NOTE: 100 million events per minute is sending an event every 660 nano-seconds, replicated and persisted.
 
 IMPORTANT: This is not using a *large cluster of machines*, this is using one thread to publish and one thread to consume.
+
+
 
 ==== More benchmarks
 
