@@ -310,7 +310,7 @@ public class SingleChronicleQueue implements RollingChronicleQueue {
         try {
             long index = rollCycle.toIndex(cycle, 0);
             if (tailer.moveToIndex(index)) {
-                assert tailer.store.refCount() > 1;
+                assert tailer.store.refCount() > 0;
                 return tailer.store.lastSequenceNumber(tailer) + 1;
             } else {
                 return -1;

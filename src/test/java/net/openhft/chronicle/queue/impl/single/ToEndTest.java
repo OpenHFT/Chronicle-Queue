@@ -170,8 +170,8 @@ public class ToEndTest {
         storeF2.setAccessible(true);
         SingleChronicleQueueStore store2 = (SingleChronicleQueueStore) storeF2.get(tailer);
 
-        // the reference count here is 3, one of the reference is the appender, on the tailer and the underlyign store itself.
-        assertEquals(3, store2.refCount());
+        // the reference count here is 2, one of the reference is the appender, one the tailer.
+        assertEquals(2, store2.refCount());
     }
 
     @Test
