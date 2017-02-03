@@ -5,11 +5,10 @@
 Single Chronicle Queue is designed to be easier to work with compared with
 the previous Vanilla and Indexed Chronicles.
 
-It supports
-
+It supports;
 - concurrent readers in different JVMs.
 - concurrent writers in different JVMs.
-- Writing raw Bytes or use a Wire format to make schema changes and dumping the data easier.
+- writing raw Bytes or use a Wire format to make schema changes and dumping the data easier.
 - rolling files, weekly, daily or more often.
 - the header stores key information so there is no longer the requirement that the writers and reads be configured the same.
 - you don't need to know how big the message is.
