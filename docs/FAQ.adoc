@@ -78,6 +78,22 @@ Note: the Consumer can stop, restart and continue with minimal impact to the pro
 Having a faster disk sub-system helps in extreme conditions like these.
 Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s and an over-clocked hex core i7 PCI-SSD card which sustained write speed of 900 MB/s.
 
+=== Can Chronicle Queue be used like RMI?
+
+It's possible to use Chronicle Queue to invoke a method on the other JVM and wait for the return value. Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `IndexedChronicles`:
+
+`Q1` for sending requests from `C` to `S`
+`Q2` for sending responses from `S` to `C`
+Server has a thread that is polling (busy spin with back-off) on `Q1`. When it receives a request (with `id=x` it does whatever is needed and writes out response to `Q2` (with `id=x`. `C` polls `Q2` with some policy and reads out responses as they appear. It uses the `id` to tie responses to requests.
+
+Main task would be in devising a wire-level protocol for serialising your commands (equivalent of the method calls) from the client. This is application specific and can be done efficiently with the Chronicle tools.
+
+Another issues to consider:
+
+what should the client do with the historical responses on startup?
+some heartbeat system so that client knows the server is alive
+archiving of the old queues (`VanillaChronicle` makes it easier at some cost).
+
 === What types of Excerpt are there?
 
 Chronicle has three types of excerpt optimised for different purposes.
