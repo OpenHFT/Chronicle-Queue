@@ -104,6 +104,13 @@ appender.writeDocument(wire -> wire.write(() -> "FirstName").text("Steve")
                                    .write(() -> "Surname").text("Jobs"));
 ----
 
+Say you want to write different types of messages to a chronicle-queue, and process messages in consumers depending on their types.
+Chronicle-Queue provides low level building blocks you can use to write any kind of message, so it is up to you to choose the right data structure.
+
+For example, you can prefix the data you write to a chronicle. With a small header and some meta-data, you can then use it as a discriminator for data processing.
+
+You can also write/read a generic object. This will be slightly slower than using your own scheme, but is it a simple way to always read the type you wrote.
+
 === How does reading work?
 
 When you read an excerpt, it first checks that index entry is there (the last thing written)
