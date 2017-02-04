@@ -1,11 +1,11 @@
 = Frequently Asked Questions about Chronicle
 
-=== SingleChronicleQueue
+=== What is SingleChronicleQueue?
 
 Single Chronicle Queue is designed to be easier to work with compared with
 the previous Vanilla and Indexed Chronicles.
 
-It supports;
+It supports:
 
 - concurrent readers in different JVMs.
 - concurrent writers in different JVMs.
@@ -13,17 +13,6 @@ It supports;
 - rolling files, weekly, daily or more often.
 - the header stores key information so there is no longer the requirement that the writers and reads be configured the same.
 - you don't need to know how big the message is.
-
-=== Performance
-
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
-
-=== With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
-
-Two approaches for reducing CPU usage are;
-
- - combine tasks into the same thread. EventGroup in chronicle-threads helps to this dynamically.
- - use a Pauser such as a LongPauser to control how a thread backs off if there is nothing to do.  Note: There is a PauseMonitor to allow you to print how busy each thread is periodically.
 
 === What is Chronicle designed for?
 
@@ -33,6 +22,16 @@ that a monitoring system can recreate the state of the system monitored.  This a
 they need and perform queries without needed to touch the critical system as they can record anything they might need later.
 
 Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
+
+=== What is the performance like?
+While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+
+=== With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
+
+Two approaches for reducing CPU usage are;
+
+ - combine tasks into the same thread. EventGroup in chronicle-threads helps to this dynamically.
+ - use a Pauser such as a LongPauser to control how a thread backs off if there is nothing to do.  Note: There is a PauseMonitor to allow you to print how busy each thread is periodically.
 
 === What was the library originally designed for?
 
