@@ -80,7 +80,11 @@ Chronicle has been tested on a laptop with and HDD with a write speed of 12 MB/s
 
 === Can Chronicle Queue be used like RMI?
 
-It's possible to use Chronicle Queue to invoke a method on the other JVM and wait for the return value. Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `IndexedChronicles`:
+It's possible to use Chronicle Queue to invoke a method on the other JVM and wait for the return value. 
+
+However, this could be an overkill, especially if you don't have to keep the history of the request/responses. 
+
+Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `IndexedChronicles`:
 
 `Q1` for sending requests from `C` to `S`
 `Q2` for sending responses from `S` to `C`
