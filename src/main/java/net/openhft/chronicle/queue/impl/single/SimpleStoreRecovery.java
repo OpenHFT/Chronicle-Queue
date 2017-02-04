@@ -1,3 +1,20 @@
+/*
+ * Copyright 2016 higherfrequencytrading.com
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.core.Jvm;
@@ -6,7 +23,6 @@ import net.openhft.chronicle.core.values.LongValue;
 import net.openhft.chronicle.wire.AbstractMarshallable;
 import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
 import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.Wires;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +39,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     private static final Logger LOG = LoggerFactory.getLogger(SimpleStoreRecovery.class);
 
     @Override
-    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverIndex2Index(LongValue index2Index, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Rebuilding the index2index");
         index2Index.setValue(0);
         try {
@@ -34,7 +50,7 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
     }
 
     @Override
-    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException, EOFException {
+    public long recoverSecondaryAddress(LongArrayValues index2indexArr, int index2, Callable<Long> action, long timeoutMS) throws UnrecoverableTimeoutException {
         Jvm.warn().on(getClass(), "Timed out trying to get index2index[" + index2 + "]");
         index2indexArr.setValueAt(index2, 0L);
         try {
@@ -61,11 +77,5 @@ public class SimpleStoreRecovery extends AbstractMarshallable implements StoreRe
         } catch (TimeoutException | EOFException e) {
             throw new UnrecoverableTimeoutException(e);
         }
-    }
-
-    @Override
-    public void writeEndOfWire(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException {
-        Jvm.warn().on(getClass(), "Overwriting an incomplete header with an EOF header to the end store");
-        wire.bytes().writeInt(Wires.END_OF_DATA);
     }
 }

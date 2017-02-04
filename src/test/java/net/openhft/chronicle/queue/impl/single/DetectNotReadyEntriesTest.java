@@ -1,3 +1,20 @@
+/*
+ * Copyright 2016 higherfrequencytrading.com
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package net.openhft.chronicle.queue.impl.single;
 
 import net.openhft.chronicle.bytes.MappedBytes;
@@ -25,7 +42,7 @@ public class DetectNotReadyEntriesTest {
 
     @Test
     public void testDeadEntries() throws FileNotFoundException {
-        File dir = new File(OS.TARGET + "/deleteme-" + System.nanoTime());
+        File dir = new File(OS.TARGET, getClass().getSimpleName() + "-" + System.nanoTime());
         dir.mkdir();
 
         MappedBytes bytes = MappedBytes.mappedBytes(new File(dir, "19700101" + SingleChronicleQueue.SUFFIX), TEST_CHUNK_SIZE);
@@ -69,7 +86,7 @@ public class DetectNotReadyEntriesTest {
                 "--- !!not-ready-data! #binary\n" +
                 "test: Hello World\n", Wires.fromSizePrefixedBlobs(bytes.readPosition(0)));
 
-        bytes.close();
+        bytes.release();
 
         SingleChronicleQueue queue = SingleChronicleQueueBuilder.binary(dir)
                 .blockSize(TEST_CHUNK_SIZE)

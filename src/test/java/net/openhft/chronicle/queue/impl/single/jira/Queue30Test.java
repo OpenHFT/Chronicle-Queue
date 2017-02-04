@@ -37,8 +37,7 @@ public class Queue30Test extends ChronicleQueueTestBase {
     @Ignore("Stress test - doesn't finish")
     @Test
     public void testMT() throws IOException, InterruptedException {
-        final ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(WireType.TEXT)
+        final ChronicleQueue queue = SingleChronicleQueueBuilder.text(getTmpDir())
                 .blockSize(640_000)
                 .build();
 
@@ -74,6 +73,7 @@ public class Queue30Test extends ChronicleQueueTestBase {
 
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     @Ignore("Stress test - doesn't finish")
     @Test
     public void testST() throws IOException {

@@ -21,7 +21,6 @@ import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.NativeBytes;
 import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.WireType;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -44,18 +43,16 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         doTest(false);
     }
 
-    void doTest(boolean buffered) throws IOException, InterruptedException {
-        String path = getTmpDir() + "/deleteme.q";
-
-        new File(path).deleteOnExit();
+    void doTest(boolean buffered) throws InterruptedException {
+        File name = getTmpDir();
 
         AtomicLong counter = new AtomicLong();
         Thread tailerThread = new Thread(() -> {
             AffinityLock rlock = AffinityLock.acquireLock();
             Bytes bytes = NativeBytes.nativeBytes(BYTES_LENGTH).unchecked(true);
-            try (ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
-                    .wireType(WireType.FIELDLESS_BINARY)
-                    .blockSize(BLOCK_SIZE)
+            try (ChronicleQueue rqueue = SingleChronicleQueueBuilder
+                    .fieldlessBinary(name)
+                    .testBlockSize()
                     .build()) {
 
                 ExcerptTailer tailer = rqueue.createTailer();
@@ -80,10 +77,10 @@ public class ChronicleQueueTwoThreads extends ChronicleQueueTestBase {
         Thread appenderThread = new Thread(() -> {
             AffinityLock wlock = AffinityLock.acquireLock();
             try {
-                ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
-                        .wireType(WireType.FIELDLESS_BINARY)
+                ChronicleQueue wqueue = SingleChronicleQueueBuilder
+                        .fieldlessBinary(name)
                         .rollCycle(SMALL_DAILY)
-                        .blockSize(BLOCK_SIZE)
+                        .testBlockSize()
                         .buffered(buffered)
                         .build();
 

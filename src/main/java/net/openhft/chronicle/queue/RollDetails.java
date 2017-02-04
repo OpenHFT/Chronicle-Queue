@@ -29,4 +29,24 @@ public class RollDetails extends AbstractMarshallable {
     public int cycle() {
         return cycle;
     }
+
+    // generated for performance
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        RollDetails that = (RollDetails) o;
+
+        if (cycle != that.cycle) return false;
+        return epoch == that.epoch;
+    }
+
+    // generated for performance
+    @Override
+    public int hashCode() {
+        int epoch32 = (int) (epoch ^ (epoch >>> 32));
+        return cycle * 1019 + epoch32 * 37;
+    }
 }

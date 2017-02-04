@@ -30,9 +30,13 @@ import java.util.function.Consumer;
 /**
  * @author Rob Austin.
  */
-public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q extends ChronicleQueue> extends Cloneable {
+public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder> extends Cloneable {
 
     static SingleChronicleQueueBuilder single(String basePath) {
+        return SingleChronicleQueueBuilder.binary(basePath);
+    }
+
+    static SingleChronicleQueueBuilder single(File basePath) {
         return SingleChronicleQueueBuilder.binary(basePath);
     }
 
@@ -42,7 +46,7 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     }
 
     @NotNull
-    Q build();
+    ChronicleQueue build();
 
     @NotNull
     B onRingBufferStats(@NotNull Consumer<BytesRingBufferStats> onRingBufferStats);
@@ -55,6 +59,21 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     @NotNull
     B blockSize(int blockSize);
 
+    /**
+     * THIS IS FOR TESTING ONLY.
+     * This makes the block size small to speed up short tests and show up issues which occur when moving from one block to another.
+     * <p>
+     * Using this will be slower when you have many messages, and break when you have large messages.
+     * </p>
+     *
+     * @return this
+     */
+    @NotNull
+    default B testBlockSize() {
+        // small size for testing purposes only.
+        return blockSize(256 << 10);
+    }
+
     long blockSize();
 
     @NotNull
@@ -66,11 +85,6 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     @NotNull
     B rollCycle(@NotNull RollCycle rollCycle);
 
-    long bufferCapacity();
-
-    @NotNull
-    B bufferCapacity(long ringBufferSize);
-
     @NotNull
     B epoch(long epoch);
 
@@ -79,19 +93,53 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     @NotNull
     RollCycle rollCycle();
 
+    /**
+     * @deprecated Use writeBufferMode
+     */
     @NotNull
+    @Deprecated
     B buffered(boolean isBuffered);
 
+    /**
+     * @deprecated Use writeBufferMode
+     */
+    @Deprecated
     boolean buffered();
 
-    @Nullable
-    EventLoop eventLoop();
+    /**
+     * @param bufferCapacity to use when buffering enabled.
+     * @return this
+     */
+    @NotNull
+    B bufferCapacity(long bufferCapacity);
 
+    long bufferCapacity();
+
+    /**
+     * @param writeBufferMode to use for writes. Only None is available in OSS
+     * @return this
+     */
+    B writeBufferMode(BufferMode writeBufferMode);
+
+    BufferMode writeBufferMode();
+
+    /**
+     * @param readBufferMode to use for read. Only None is available in OSS
+     * @return this
+     */
+    B readBufferMode(BufferMode readBufferMode);
+
+    BufferMode readBufferMode();
+
+    /**
+     * @param eventLoop to use when asynchronous buffering is used.
+     * @return this
+     */
     @NotNull
     B eventLoop(EventLoop eventLoop);
 
-    @NotNull
-    B bufferCapacity(int bufferCapacity);
+    @Nullable
+    EventLoop eventLoop();
 
     B indexCount(int indexCount);
 
@@ -106,4 +154,8 @@ public interface ChronicleQueueBuilder<B extends ChronicleQueueBuilder<B, Q>, Q 
     B storeFileListener(StoreFileListener storeFileListener);
 
     StoreFileListener storeFileListener();
+
+    boolean readOnly();
+
+    B readOnly(boolean readOnly);
 }

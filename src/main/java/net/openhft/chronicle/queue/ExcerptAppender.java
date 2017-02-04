@@ -34,7 +34,11 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     /**
      * @param bytes to write to excerpt.
      */
-    void writeBytes(@NotNull Bytes<?> bytes) throws UnrecoverableTimeoutException;
+    void writeBytes(@NotNull BytesStore bytes) throws UnrecoverableTimeoutException;
+
+    default void writeBytes(@NotNull Bytes bytes) throws UnrecoverableTimeoutException {
+        writeBytes((BytesStore) bytes);
+    }
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
@@ -44,9 +48,10 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
      * @throws StreamCorruptedException the write failed is was unable to write the data at the
      *                                  given index.
      */
-    default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
+  /*  default void writeBytes(long index, BytesStore bytes) throws StreamCorruptedException {
         throw new UnsupportedOperationException();
     }
+*/
 
     /**
      * Write an entry at a given index. This can use used for rebuilding a queue, or replication.
@@ -79,9 +84,25 @@ public interface ExcerptAppender extends ExcerptCommon<ExcerptAppender>, Marshal
     }
 
     /**
-     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will not split a cache line.
+     * Enable padding if near the end of a cache line, pad it so a following 4-byte int value will
+     * not split a cache line.
      */
-    void padToCacheAlign(boolean padToCacheAlign);
+    void padToCacheAlign(Padding padToCacheAlign);
 
-    boolean padToCacheAlign();
+    Padding padToCacheAlign();
+
+    /**
+     * Set whether to trigger indexing.
+     *
+     * @param lazyIndexing if true, don't do any indexing on the append.
+     * @return this
+     */
+    ExcerptAppender lazyIndexing(boolean lazyIndexing);
+
+    /**
+     * Whether to trigger indexing. If true, indexes are created only when needed.
+     *
+     * @return if false, index as you write, otherwise only index as needed.
+     */
+    boolean lazyIndexing();
 }

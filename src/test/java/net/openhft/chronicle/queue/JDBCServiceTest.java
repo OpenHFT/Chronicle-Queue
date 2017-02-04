@@ -1,9 +1,27 @@
+/*
+ * Copyright 2016 higherfrequencytrading.com
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import net.openhft.chronicle.wire.MethodReader;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,7 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class JDBCServiceTest {
     @Test
     public void testCreateTable() throws SQLException, IOException {
-        doCreateTable(4, 10000);
+        doCreateTable(4, 5000);
     }
 
     @Test
@@ -29,16 +47,22 @@ public class JDBCServiceTest {
         doCreateTable(5, 200000);
     }
 
-    public void doCreateTable(int repeats, int noUpdates) throws SQLException, IOException {
+    public void doCreateTable(int repeats, int noUpdates) throws SQLException {
         for (int t = 0; t < repeats; t++) {
             long start = System.nanoTime(), written;
-            String path1 = OS.TARGET + "/createTable-" + System.nanoTime();
-            String path2 = OS.TARGET + "/createTable-" + System.nanoTime();
+            File path1 = Utils.tempDir("createTable1");
+            File path2 = Utils.tempDir("createTable2");
             File file = new File(OS.TARGET, "hsqldb-" + System.nanoTime());
             file.deleteOnExit();
 
-            try (ChronicleQueue in = SingleChronicleQueueBuilder.binary(path1).build();
-                 ChronicleQueue out = SingleChronicleQueueBuilder.binary(path2).build()) {
+            try (ChronicleQueue in = SingleChronicleQueueBuilder
+                    .binary(path1)
+                    .testBlockSize()
+                    .build();
+                 ChronicleQueue out = SingleChronicleQueueBuilder
+                         .binary(path2)
+                         .testBlockSize()
+                         .build()) {
 
                 JDBCService service = new JDBCService(in, out, () -> DriverManager.getConnection("jdbc:hsqldb:file:" + file.getAbsolutePath(), "SA", ""));
 

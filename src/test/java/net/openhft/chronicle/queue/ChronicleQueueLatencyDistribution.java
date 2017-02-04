@@ -24,8 +24,6 @@ import net.openhft.chronicle.core.util.Histogram;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,29 +31,46 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Results 27/10/2015 running on a MBP
  * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
- *
+ * <p>
  * Results 14/03/2016 running on E5-2650v2
  * 50/90 99/99.9 99.99 - worst was 0.88 / 1.4  10.0 / 19  72 - 483
- *
+ * <p>
  * Results 23/03/2016 running on E5-2643 Debian Kernel 4.2
  * 50/90 99/99.9 99.99 - worst was 0.56 / 0.82  5.0 / 12  40 - 258
- *
+ * <p>
  * Results 23/03/2016 running on Linux VM (i7-4800MQ) Debian Kernel 4.2
  * 50/90 99/99.9 99.99 - worst was 0.50 / 1.6  21 / 84  573 - 1,410
- *
+ * <p>
  * Results 23/03/2016 running on E3-1505Mv5 Debian Kernel 4.5
  * 50/90 99/99.9 99.99 - worst was 0.33 / 0.36  1.6 / 3.0  18 - 160
+ * <p>
+ * Results 03/02/2017 running on i7-6700HQ Win 10  100k/s * 5M * 40B
+ * 50/90 99/99.9 99.99/99.999 - worst was 0.59 / 0.94  17 / 135  12,850 / 15,470 - 15,990
+ * <p>
+ * Results 03/02/2017 running on i7-6700HQ Win 10  100k/s * 5M * 40B
+ * 50/90 99/99.9 99.99/99.999 - worst was 0.59 / 0.94  17 / 135  12,850 / 15,470 - 15,990
  */
 public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
-    @Ignore("long running")
-    @Test
-    public void test() throws IOException, InterruptedException {
-        Histogram histogram = new Histogram();
+    static final int warmup = 100_000;
 
-        ChronicleQueue queue = new SingleChronicleQueueBuilder(getTmpDir())
-                .wireType(WireType.FIELDLESS_BINARY)
+    public static void main(String[] args) throws IOException, InterruptedException {
+        assert false : "test runs slower with assertions on";
+        new ChronicleQueueLatencyDistribution().run();
+    }
+
+    public void run() throws IOException, InterruptedException {
+
+        try (ChronicleQueue queue = SingleChronicleQueueBuilder
+                .fieldlessBinary(getTmpDir())
                 .blockSize(128 << 20)
-                .build();
+                .build()) {
+
+            runTest(queue, 100_000);
+        }
+    }
+
+    protected void runTest(ChronicleQueue queue, int throughput) throws InterruptedException {
+        Histogram histogram = new Histogram();
 
         ExcerptAppender appender = queue.acquireAppender();
         ExcerptTailer tailer = queue.createTailer();
@@ -68,7 +83,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                     lock = Affinity.acquireLock();
                 }
 
-                while (true) {
+                while (!Thread.currentThread().isInterrupted()) {
                     try {
                         tailer.readDocument(myReadMarshallable);
                     } catch (Exception e) {
@@ -90,11 +105,17 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
                 }
 
                 TestTrade bt = new TestTrade();
+                bt.setId("0123456789001234");
+                bt.setPrice(Math.PI);
                 MyWriteMarshallable myWriteMarshallable = new MyWriteMarshallable(bt);
-                for (int i = 0; i < 1_000_000; i++) {
-                    Jvm.busyWaitMicros(20);
-                    bt.setTime(System.nanoTime());
+                long next = System.nanoTime();
+                long interval = 1_000_000_000 / throughput;
+                for (int i = -warmup; i < 5_000_000; i++) {
+                    while (System.nanoTime() < next) ;
+                    // time from when the next should have been sent to avoid co-ordinated omission.
+                    bt.setTime(next);
                     appender.writeDocument(myWriteMarshallable);
+                    next += interval;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -112,6 +133,8 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
 
         //Pause to allow tailer to catch up (if needed)
         Jvm.pause(500);
+        tailerThread.interrupt();
+        tailerThread.join();
 
         System.out.println(histogram.toMicrosFormat());
     }
@@ -119,15 +142,17 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     static class MyWriteMarshallable implements WriteMarshallable {
         private final TestTrade bt;
 
-        public MyWriteMarshallable(TestTrade bt) {
+        MyWriteMarshallable(TestTrade bt) {
 
             this.bt = bt;
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut w) {
+//            long start = w.bytes().writePosition();
             w.write(() -> "TestTrade")
                     .marshallable(bt);
+//            System.out.println(w.bytes().writePosition() - start);
         }
     }
 
@@ -137,7 +162,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
         final TestTrade testTrade = new TestTrade();
         private final Histogram histogram;
 
-        public MyReadMarshallable(Histogram histogram) {
+        MyReadMarshallable(Histogram histogram) {
             this.histogram = histogram;
         }
 
@@ -147,7 +172,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             vi.marshallable(testTrade);
 
             long time = testTrade.getTime();
-            if (counter.get() > 100_000) {
+            if (counter.get() > warmup) {
                 histogram.sample(System.nanoTime() - time);
             }
             if (counter.incrementAndGet() % 100_000 == 0) {
@@ -157,7 +182,7 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
     }
 
     static class TestTrade implements Marshallable {
-        private int price;
+        private double price;
         private String id;
         private long time;
 
@@ -177,26 +202,26 @@ public class ChronicleQueueLatencyDistribution extends ChronicleQueueTestBase {
             this.id = id;
         }
 
-        public int getPrice() {
+        public double getPrice() {
             return price;
         }
 
-        public void setPrice(int price) {
+        public void setPrice(double price) {
             this.price = price;
         }
 
         @Override
         public void readMarshallable(@NotNull WireIn wire) throws IORuntimeException {
-            wire.read(() -> "price").int32(this, (o, b) -> o.price = b)
+            wire.read(() -> "price").float64(this, (o, b) -> o.price = b)
                     .read(() -> "id").text(this, (o, b) -> o.id = b)
                     .read(() -> "time").int64(this, (o, b) -> o.time = b);
         }
 
         @Override
         public void writeMarshallable(@NotNull WireOut wire) {
-            wire.write(() -> "price").int32(price)
+            wire.write(() -> "price").fixedFloat64(price)
                     .write(() -> "id").text(id)
-                    .write(() -> "time").int64(time);
+                    .write(() -> "time").fixedInt64(time);
         }
 
         @Override

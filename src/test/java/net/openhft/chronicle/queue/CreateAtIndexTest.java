@@ -1,3 +1,20 @@
+/*
+ * Copyright 2016 higherfrequencytrading.com
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package net.openhft.chronicle.queue;
 
 import net.openhft.chronicle.bytes.Bytes;
@@ -5,6 +22,7 @@ import net.openhft.chronicle.core.OS;
 import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.io.IOTools;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueExcerpts.InternalAppender;
 import net.openhft.chronicle.wire.DocumentContext;
 import org.junit.Assert;
 import org.junit.Test;
@@ -20,17 +38,21 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWriteBytesWithIndex() throws Exception {
-        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
         try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
-                .rollCycle(TEST_DAILY).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+                .testBlockSize()
+                .rollCycle(TEST_DAILY)
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
             appender.writeBytes(0x421d00000001L, Bytes.from("hello world"));
         }
         // try again and fail.
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
 //            try {
                 appender.writeBytes(0x421d00000000L, Bytes.from("hello world"));
@@ -42,8 +64,10 @@ public class CreateAtIndexTest {
         }
 
         // try too far
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             try {
                 appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
@@ -54,8 +78,10 @@ public class CreateAtIndexTest {
             }
         }
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
-            ExcerptAppender appender = queue.acquireAppender();
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
+            InternalAppender appender = (InternalAppender) queue.acquireAppender();
 
             appender.writeBytes(0x421d00000002L, Bytes.from("hello world"));
             appender.writeBytes(0x421d00000003L, Bytes.from("hello world"));
@@ -69,11 +95,13 @@ public class CreateAtIndexTest {
 
     @Test
     public void testWrittenAndReadIndexesAreTheSameOfTheFirstExcerpt() throws Exception {
-        String tmp = OS.TARGET + "/CreateAtIndexTest-" + System.nanoTime();
+        String tmp = OS.TARGET + "/" + getClass().getSimpleName() + "-" + System.nanoTime();
 
         long expected = 0;
 
-        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp).build()) {
+        try (SingleChronicleQueue queue = ChronicleQueueBuilder.single(tmp)
+                .testBlockSize()
+                .build()) {
 
             ExcerptAppender appender = queue.acquireAppender();
 

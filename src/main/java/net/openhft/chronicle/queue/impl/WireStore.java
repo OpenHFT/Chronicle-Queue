@@ -17,18 +17,19 @@ package net.openhft.chronicle.queue.impl;
 
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.core.ReferenceCounted;
+import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.queue.impl.single.ScanResult;
-import net.openhft.chronicle.wire.Demarshallable;
-import net.openhft.chronicle.wire.UnrecoverableTimeoutException;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import net.openhft.chronicle.wire.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.EOFException;
 import java.io.File;
 import java.io.StreamCorruptedException;
+import java.util.concurrent.TimeoutException;
 
-public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable {
+public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarshallable, Closeable {
+
+
     /**
      * @return the file associated with this store.
      */
@@ -63,7 +64,10 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
      * @param position of the start of the message
      * @return index in this store.
      */
-    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive) throws EOFException, UnrecoverableTimeoutException, StreamCorruptedException;
+    long sequenceForPosition(ExcerptContext ec, long position, boolean inclusive)
+            throws UnrecoverableTimeoutException, StreamCorruptedException;
+
+    long lastSequenceNumber(ExcerptContext ec) throws StreamCorruptedException;
 
     String dump();
 
@@ -73,7 +77,16 @@ public interface WireStore extends ReferenceCounted, Demarshallable, WriteMarsha
 
     void setPositionForSequenceNumber(final ExcerptContext ec, long sequenceNumber, long position) throws UnrecoverableTimeoutException, StreamCorruptedException;
 
-    long writeHeader(Wire wire, int length, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
+    long writeHeader(Wire wire, int length, int safeLength, long timeoutMS) throws EOFException, UnrecoverableTimeoutException;
 
-    void writeEOF(Wire wire, long timeoutMS) throws UnrecoverableTimeoutException;
+    void writeEOF(Wire wire, long timeoutMS) throws TimeoutException;
+
+    int deltaCheckpointInterval();
+
+    /**
+     * @return the type of wire used
+     */
+    WireType wireType();
+
+    boolean indexable(long index);
 }

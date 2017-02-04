@@ -16,6 +16,7 @@
 
 package net.openhft.chronicle.queue;
 
+import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.bytes.MappedBytes;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.wire.WireDumper;
@@ -24,6 +25,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import static java.lang.System.err;
 
@@ -32,6 +35,7 @@ import static java.lang.System.err;
  */
 public class DumpQueueMain {
     static final String FILE = System.getProperty("file");
+    private static final int LENGTH = ", 0".length();
 
     public static void main(String[] args) throws FileNotFoundException {
         dump(args[0]);
@@ -50,6 +54,7 @@ public class DumpQueueMain {
             if (files == null)
                 err.println("Directory not found " + path);
 
+            Arrays.sort(files);
             for (File file : files)
                 dumpFile(file, out, upperLimit);
 
@@ -60,15 +65,27 @@ public class DumpQueueMain {
 
     public static void dumpFile(File file, PrintStream out, long upperLimit) {
         if (file.getName().endsWith(SingleChronicleQueue.SUFFIX)) {
-            try (MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20)) {
+            try {
+                MappedBytes bytes = MappedBytes.mappedBytes(file, 4 << 20);
                 bytes.readLimit(bytes.realCapacity());
                 StringBuilder sb = new StringBuilder();
                 WireDumper dumper = WireDumper.of(bytes);
+                Bytes<ByteBuffer> buffer = Bytes.elasticByteBuffer();
                 while (bytes.readRemaining() >= 4) {
                     sb.setLength(0);
+                    boolean last = dumper.dumpOne(sb, buffer);
+                    if (sb.indexOf("\nindex2index:") != -1 || sb.indexOf("\nindex:") != -1) {
+                        // truncate trailing zeros
+                        if (sb.indexOf(", 0\n]\n") == sb.length() - 6) {
+                            int i = indexOfLastZero(sb);
+                            if (i < sb.length())
+                                sb.setLength(i - 5);
+                            sb.append(" # truncated trailing zeros\n]");
+                        }
+                    }
 
-                    boolean last = dumper.dumpOne(sb);
                     out.println(sb);
+
                     if (last)
                         break;
                     if (bytes.readPosition() > upperLimit) {
@@ -80,5 +97,16 @@ public class DumpQueueMain {
                 err.println("Failed to read " + file + " " + ioe);
             }
         }
+    }
+
+    static int indexOfLastZero(CharSequence str) {
+        int i = str.length() - 3;
+        do {
+            i -= LENGTH;
+            CharSequence charSequence = str.subSequence(i, i + 3);
+            if (!", 0".contentEquals(charSequence))
+                return i + LENGTH;
+        } while (i > 3);
+        return 0;
     }
 }

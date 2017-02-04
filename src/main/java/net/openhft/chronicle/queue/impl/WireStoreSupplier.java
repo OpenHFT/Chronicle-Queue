@@ -15,13 +15,11 @@
  */
 package net.openhft.chronicle.queue.impl;
 
-
 import net.openhft.chronicle.queue.TailerDirection;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.ParseException;
 import java.util.NavigableSet;
-
 
 public interface WireStoreSupplier {
     @Nullable
@@ -41,7 +39,7 @@ public interface WireStoreSupplier {
      * the cycles between a range, inclusive
      *
      * @param lowerCycle the lower cycle inclusive
-     * @param upperCycle the uper cycle inclusive
+     * @param upperCycle the upper cycle inclusive
      * @return the cycles between a range, inclusive
      * @throws ParseException
      */

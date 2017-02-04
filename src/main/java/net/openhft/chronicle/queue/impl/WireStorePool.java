@@ -30,8 +30,8 @@ public class WireStorePool {
     private final WireStoreSupplier supplier;
     @NotNull
     private final Map<RollDetails, WireStore> stores;
-
     private final StoreFileListener storeFileListener;
+    private boolean isClosed = false;
 
     private WireStorePool(@NotNull WireStoreSupplier supplier, StoreFileListener storeFileListener) {
         this.supplier = supplier;
@@ -44,16 +44,27 @@ public class WireStorePool {
         return new WireStorePool(supplier, storeFileListener);
     }
 
-    public void close() {
-        stores.entrySet().forEach(e -> e.getValue().close());
+    public synchronized void close() {
+        if (isClosed)
+            return;
+        isClosed = true;
+
+        stores.values().forEach(this::release);
     }
 
     @Nullable
     public synchronized WireStore acquire(final int cycle, final long epoch, boolean createIfAbsent) {
         RollDetails rollDetails = new RollDetails(cycle, epoch);
         WireStore store = stores.get(rollDetails);
-        if (store != null && store.tryReserve())
-            return store;
+        if (store != null) {
+            if (store.tryReserve())
+                return store;
+            else
+                /// this should never happen,
+                // this method is synchronized
+                // and this remove below, is only any use if the acquire method below that fails
+                stores.remove(rollDetails);
+        }
 
         store = this.supplier.acquire(cycle, createIfAbsent);
         if (store != null) {
@@ -69,7 +80,10 @@ public class WireStorePool {
 
     public synchronized void release(@NotNull WireStore store) {
         store.release();
-        if (store.refCount() <= 0) {
+
+        long refCount = store.refCount();
+        assert refCount >= 0;
+        if (refCount == 0) {
             for (Map.Entry<RollDetails, WireStore> entry : stores.entrySet()) {
                 if (entry.getValue() == store) {
                     stores.remove(entry.getKey());
@@ -79,7 +93,6 @@ public class WireStorePool {
             }
         }
     }
-
 
     /**
      * list cycles between ( inclusive )

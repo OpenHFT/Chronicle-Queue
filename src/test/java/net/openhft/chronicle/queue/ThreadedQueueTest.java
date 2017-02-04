@@ -19,7 +19,7 @@ package net.openhft.chronicle.queue;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.core.threads.ThreadDump;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.queue.impl.single.Utils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,9 +37,7 @@ import static org.junit.Assert.*;
  */
 public class ThreadedQueueTest {
 
-    public static final int MESSAGE_SIZE = 1024;
     public static final int REQUIRED_COUNT = 10;
-    private static final int BLOCK_SIZE = 256 << 20;
     private ThreadDump threadDump;
 
     @Before
@@ -55,18 +53,15 @@ public class ThreadedQueueTest {
     @Test(timeout = 10000)
     public void testMultipleThreads() throws java.io.IOException, InterruptedException, ExecutionException, TimeoutException {
 
-        final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
-
-        new File(path).deleteOnExit();
+        final File path = Utils.tempDir("testMultipleThreads");
 
         final AtomicInteger counter = new AtomicInteger();
 
         ExecutorService tailerES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("tailer", true)*/);
         Future tf = tailerES.submit(() -> {
             try {
-                final ChronicleQueue rqueue = new SingleChronicleQueueBuilder(path)
-                        .wireType(WireType.BINARY)
-                        .blockSize(BLOCK_SIZE)
+                final ChronicleQueue rqueue = SingleChronicleQueueBuilder.binary(path)
+                        .testBlockSize()
                         .build();
 
                 final ExcerptTailer tailer = rqueue.createTailer();
@@ -85,9 +80,8 @@ public class ThreadedQueueTest {
         ExecutorService appenderES = Executors.newSingleThreadExecutor(/*new NamedThreadFactory("appender", true)*/);
         Future af = appenderES.submit(() -> {
             try {
-                final ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
-                        .wireType(WireType.BINARY)
-                        .blockSize(BLOCK_SIZE)
+                final ChronicleQueue wqueue = SingleChronicleQueueBuilder.binary(path)
+                        .testBlockSize()
                         .build();
 
                 final ExcerptAppender appender = wqueue.acquireAppender();
@@ -116,21 +110,17 @@ public class ThreadedQueueTest {
     @Test//(timeout = 5000)
     public void testTailerReadingEmptyQueue() throws java.io.IOException {
 
-        final String path = ChronicleQueueTestBase.getTmpDir() + "/deleteme.q";
+        final File path = Utils.tempDir("testTailerReadingEmptyQueue");
 
-        new File(path).deleteOnExit();
-
-        final ChronicleQueue rqueue = ChronicleQueueBuilder.single(path)
-                .wireType(WireType.FIELDLESS_BINARY)
-                .blockSize(BLOCK_SIZE)
+        final ChronicleQueue rqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+                .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build();
 
         final ExcerptTailer tailer = rqueue.createTailer();
 
-        final ChronicleQueue wqueue = new SingleChronicleQueueBuilder(path)
-                .wireType(WireType.FIELDLESS_BINARY)
-                .blockSize(BLOCK_SIZE)
+        final ChronicleQueue wqueue = SingleChronicleQueueBuilder.fieldlessBinary(path)
+                .testBlockSize()
                 .rollCycle(TEST_DAILY)
                 .build();
 
