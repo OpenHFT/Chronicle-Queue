@@ -17,7 +17,7 @@ It supports:
 
 === What is the performance like?
 
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
+While Single Chronicle (single file per cycle) supports sub-microsecond latencies. If you use Wire the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
@@ -34,9 +34,6 @@ that a monitoring system can recreate the state of the system monitored.  This a
 they need and perform queries without needed to touch the critical system as they can record anything they might need later.
 
 Chronicle works best in SEDA style event driven systems, where latency is critical and you need a record of exactly what was performed when. (Without expensive network sniffing/recording systems)
-
-=== What is the performance like?
-While Vanilla and Index Chronicle support sub-microsecond latencies. If you use Wire, the typical latencies tend to be around one micro-second.  You can still use raw writing of bytes if you need maximum performance.
 
 === With a tight reader loop I see 100% utilization, will there be processing capability left for anything else ?
 
@@ -95,7 +92,7 @@ It's possible to use Chronicle Queue to invoke a method on the other JVM and wai
 
 However, this could be an overkill, especially if you don't have to keep the history of the request/responses. 
 
-Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `IndexedChronicles`:
+Imagine a simple scenario with two processes: `C` (client) and `S` (server). Create two `SingleChronicleQueue`s:
 
 `Q1` for sending requests from `C` to `S`
 `Q2` for sending responses from `S` to `C`
@@ -108,6 +105,8 @@ Another issues to consider:
 what should the client do with the historical responses on startup?
 some heartbeat system so that client knows the server is alive
 archiving of the old queues (`VanillaChronicle` makes it easier at some cost).
+
+For more details on how to do this https://vanilla-java.github.io/2016/03/23/Microservices-in-the-Chronicle-world-Part-1.html[Read This series of posts]
 
 === What types of Excerpt are there?
 
