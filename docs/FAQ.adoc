@@ -264,3 +264,7 @@ A couple of prime examples are
 
 - market data consumers, you can't use flow control with an exchange.
 - compliance.  It's something you have to have but systems which send data to compliance never want to be slowed down by it.
+
+=== In Chronicle v4, will an error such as `IllegalStateException` appear when there is a high number of messages to write?
+
+Chronicle Queue v4+ doesn't have the limitation of using jusy one thread. It supports any number of threads with a single file per cycle.
